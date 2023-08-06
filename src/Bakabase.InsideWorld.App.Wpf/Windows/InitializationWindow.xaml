@@ -1,0 +1,30 @@
+﻿<Window
+    x:Class="Bakabase.InsideWorld.App.Wpf.Windows.InitializationWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:gif="http://wpfanimatedgif.codeplex.com"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Initialing..."
+    Width="500"
+    Height="150"
+    ResizeMode="NoResize"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d">
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Orientation="Horizontal">
+            <Image
+                Width="80"
+                Height="80"
+                Margin="0,0,20,0"
+                gif:ImageBehavior.AnimatedSource="/Assets/loading.gif" />
+            <TextBlock
+                x:Name="ProcessName"
+                MaxWidth="300"
+                MaxHeight="80"
+                VerticalAlignment="Center"
+                FontSize="32"
+                TextWrapping="Wrap" />
+        </StackPanel>
+    </StackPanel>
+</Window>

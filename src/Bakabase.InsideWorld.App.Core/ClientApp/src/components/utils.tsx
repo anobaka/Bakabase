@@ -1,0 +1,624 @@
+/**
+ * Created by S on 2018/6/21.
+ */
+
+import path from 'path';
+import React, { useEffect, useRef } from 'react';
+import i18n from 'i18next';
+import ReactDOM from 'react-dom/client';
+import { string } from 'prop-types';
+import { isStr } from 'react-toastify/dist/utils';
+import isUncPath from 'is-unc-path';
+import hoistNonReactStatic from 'hoist-non-react-statics';
+import { reservedResourceFileTypes, reservedResourceProperties } from '@/sdk/constants';
+import store from '@/store';
+import BusinessConstants from '@/components/BusinessConstants';
+
+export default { // 工具集
+  formatDate(date) { // 标准化时间格式
+    if (date === null) return '';
+    date = new Date(date);
+
+    function fillZero(num) {
+      num = +num;
+      return num <= 9 ? `0${num}` : `${num}`;
+    }
+
+    const [Y, M, D] = [
+      date.getFullYear(),
+      fillZero(date.getMonth() + 1),
+      fillZero(date.getDate()),
+    ];
+
+    const [h, m, s] = [
+      fillZero(date.getHours()),
+      fillZero(date.getMinutes()),
+      fillZero(date.getSeconds()),
+    ];
+    return `${Y}-${M}-${D} ${h}:${m}:${s}`;
+  },
+  date2Str(dt) {
+    dt = new Date(dt);
+    const [month, date, day] = [dt.getMonth() + 1, dt.getDate(), dt.getDay()];
+    return `${month < 10 ? `0${month}` : month}-${date < 10 ? `0${date}` : date}/星期${'日一二三四五六'[day]}`;
+  },
+};
+
+export const groupBy = (xs, key) => {
+  return xs.reduce((rv, x) => {
+    (rv[x[key]] = rv[x[key]] || []).push(x);
+    return rv;
+  }, {});
+};
+
+/* 重置对象的属性值为初始值 */
+export const resetObj = (obj) => {
+  if (obj == undefined) {
+    return undefined;
+  }
+  Object.keys(obj)
+    .map((prop) => {
+      if (typeof obj[prop] === 'string') {
+        obj[prop] = '';
+      } else if (typeof obj[prop] === 'number') {
+        obj[prop] = '';
+      } else if (typeof obj[prop] === 'boolean') {
+        obj[prop] = false;
+      } else if (typeof obj[prop] === 'object') {
+        if (obj[prop] instanceof Array) {
+          obj[prop] = [];
+        } else {
+          obj[prop] = resetObj(obj[prop]);
+        }
+      }
+    });
+  return obj;
+};
+
+export const deepClone = function (item) {
+  if (!item) {
+    return item;
+  } // null, undefined values check
+
+  const types = [Number, String, Boolean];
+  let result;
+
+  // normalizing primitives if someone did new String('aaa'), or new Number('444');
+  types.forEach((type) => {
+    if (item instanceof type) {
+      result = type(item);
+    }
+  });
+
+  if (typeof result === 'undefined') {
+    if (Object.prototype.toString.call(item) === '[object Array]') {
+      result = [];
+      item.forEach((child, index, array) => {
+        result[index] = deepClone(child);
+      });
+    } else if (typeof item === 'object') {
+      // testing that this is DOM
+      if (item.nodeType && typeof item.cloneNode === 'function') {
+        result = item.cloneNode(true);
+      } else if (!item.prototype) { // check that this is a literal
+        if (item instanceof Date) {
+          result = new Date(item);
+        } else {
+          // it is an object literal
+          result = {};
+          for (const i in item) {
+            result[i] = deepClone(item[i]);
+          }
+        }
+      } else {
+        // depends on what you would like here,
+        // just keep the reference, or create new object
+        if (false && item.constructor) {
+          // would not advice to do that, reason? Read below
+          result = new item.constructor();
+        } else {
+          result = item;
+        }
+      }
+    } else {
+      result = item;
+    }
+  }
+
+  return result;
+};
+
+export function camelize(str) {
+  return str.replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => {
+    return index === 0 ? word.toLowerCase() : word.toUpperCase();
+  })
+    .replace(/\s+/g, '');
+}
+
+export function findLongestPrefix(list) {
+  const prefix = list[0];
+  let prefixLen = prefix.length;
+  for (let i = 1; i < list.length && prefixLen > 0; i++) {
+    const word = list[i];
+    // The next line assumes 1st char of word and prefix always match.
+    // Initialize matchLen to -1 to test entire word.
+    let matchLen = 0;
+    const maxMatchLen = Math.min(word.length, prefixLen);
+    while (++matchLen < maxMatchLen) {
+      if (word.charAt(matchLen) != prefix.charAt(matchLen)) {
+        break;
+      }
+    }
+    prefixLen = matchLen;
+  }
+  return prefix.substring(0, prefixLen);
+}
+
+export function usePrevious(value) {
+  // The ref object is a generic container whose current property is mutable ...
+  // ... and can hold any value, similar to an instance property on a class
+  const ref = useRef();
+  // Store current value in ref
+  useEffect(() => {
+    ref.current = value;
+  }, [value]); // Only re-run if value changes
+  // Return previous value (happens before update in useEffect above)
+  return ref.current;
+}
+
+export function bytesToSize(bytes) {
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  if (bytes == 0) return '0 Byte';
+  const i = Math.floor(Math.floor(Math.log(bytes) / Math.log(1024)));
+  return `${Math.round(bytes / Math.pow(1024, i))} ${sizes[i]}`;
+}
+
+export function useTraceUpdate(props, logPrefix) {
+  const prev = useRef(props);
+  useEffect(() => {
+    const changedProps = Object.entries(props)
+      .reduce((ps, [k, v]) => {
+        if (prev.current[k] !== v) {
+          ps[k] = [prev.current[k], v];
+        }
+        return ps;
+      }, {});
+    if (Object.keys(changedProps).length > 0) {
+      console.log(`${logPrefix}Changed props:`, changedProps);
+    }
+    prev.current = props;
+  });
+}
+
+export function shadeColor(color, percent, opacity) {
+  if (color == undefined) {
+    return;
+  }
+
+  // console.log(color, percent);
+
+  let R = parseInt(color.substring(1, 3), 16);
+  let G = parseInt(color.substring(3, 5), 16);
+  let B = parseInt(color.substring(5, 7), 16);
+
+  R = Math.floor(R * (100 + percent) / 100);
+  G = Math.floor(G * (100 + percent) / 100);
+  B = Math.floor(B * (100 + percent) / 100);
+
+  R = (R < 255) ? R : 255;
+  G = (G < 255) ? G : 255;
+  B = (B < 255) ? B : 255;
+
+  return `rgba(${R}, ${G}, ${B}, ${opacity})`;
+}
+
+export function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Format bytes as human-readable text.
+ *
+ * @param bytes Number of bytes.
+ * @param si True to use metric (SI) units, aka powers of 1000. False to use
+ *           binary (IEC), aka powers of 1024.
+ * @param dp Number of decimal places to display.
+ *
+ * @return Formatted string.
+ */
+export function humanFileSize(bytes, si = false, dp = 1) {
+  const thresh = si ? 1000 : 1024;
+
+  if (Math.abs(bytes) < thresh) {
+    return `${bytes} B`;
+  }
+
+  const units = si
+    ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+  let u = -1;
+  const r = 10 ** dp;
+
+  do {
+    bytes /= thresh;
+    ++u;
+  } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+
+
+  return `${bytes.toFixed(dp)} ${units[u]}`;
+}
+
+const layerRegex = '[^\\/]+';
+const pathSeparatorInRegexStr = '\\/';
+
+export function buildLayerBasedPathRegexString(layer, extensions?: string[]): string {
+  let reg = '^';
+  for (let i = 0; i < layer; i++) {
+    reg += layerRegex;
+    if (i < layer - 1) {
+      reg += pathSeparatorInRegexStr;
+    } else {
+      if (extensions) {
+        if (extensions.length > 0) {
+          reg += `\\.(${extensions.map(e => e.replace(/^\./, '')
+            .replaceAll('.', '\\.'))
+            .join('|')})`;
+          break;
+        }
+      }
+    }
+  }
+  reg += '$';
+  return reg;
+}
+
+export function prependLayersToLayerBasedPathRegexString(regStr, layerCount): string {
+  if (layerCount == 0) {
+    return regStr;
+  } else {
+    if (layerCount > 0) {
+      const r = buildLayerBasedPathRegexString(layerCount);
+      const subR = r.substring(1, r.length - 1);
+      return `^${subR}${pathSeparatorInRegexStr}${regStr?.substring(1, regStr.length - 1) ?? ''}$`;
+    } else {
+      let core = regStr?.substring(1, regStr.length - 1) ?? '';
+      for (let i = layerCount; i < 0; i++) {
+        if (core.startsWith(layerRegex)) {
+          core = core.substring(layerRegex.length + pathSeparatorInRegexStr.length);
+        } else {
+          // invalid
+          return regStr;
+        }
+      }
+      return `^${core}$`;
+    }
+  }
+}
+
+//
+// export function appendLayersToLayerBasedPathRegexString(regStr, layerCount): string {
+//   if (layerCount == 0) {
+//     return regStr;
+//   } else {
+//     if (layerCount > 0) {
+//       const r = buildLayerBasedPathRegexString(layerCount);
+//       const subR = r.substring(1, r.length - 1);
+//       return `^${regStr?.substring(1, regStr.length - 1) ?? ''}${subR}$`;
+//     } else {
+//       let core = regStr?.substring(1, regStr.length - 1) ?? '';
+//       for (let i = layerCount; i < 0; i++) {
+//         if (core.endsWith(layerRegex)) {
+//           core = core.substring(0, core.length - layerRegex.length);
+//         } else {
+//           // invalid
+//           return regStr;
+//         }
+//       }
+//       return `^${core}$`;
+//     }
+//   }
+// }
+
+export function parseLayerCountFromLayerBasedPathRegexString(regStr, strict: boolean): number {
+  if (regStr == undefined) {
+    return 0;
+  }
+  let coreRegStr = regStr.replace(/^\^/, '')
+    .replace(/\$$/, '');
+  let count = 0;
+  while (coreRegStr.length > 0) {
+    if (coreRegStr.startsWith(layerRegex)) {
+      coreRegStr = coreRegStr.substring(layerRegex.length + pathSeparatorInRegexStr.length);
+      count += 1;
+    } else {
+      if (strict) {
+        return 0;
+      } else {
+        return count;
+      }
+    }
+  }
+  return count;
+}
+
+export function parseExtensionsFromPathRegex(regStr: string): string[] {
+  if (regStr == undefined) {
+    return [];
+  }
+  let coreRegStr = regStr.replace(/^\^/, '')
+    .replace(/\$$/, '');
+  console.log(coreRegStr);
+  if (coreRegStr[coreRegStr.length - 1] == ')') {
+    const startIdx = coreRegStr.lastIndexOf('(');
+    // \.(ext1|ext2|...)
+    if (startIdx > 1) {
+      if (coreRegStr.substring(startIdx - 2, startIdx) == '\\.') {
+        const value = coreRegStr.substring(startIdx, coreRegStr.length);
+        return value.split('|')
+          .map(a => `.${a}`);
+      }
+    }
+  }
+  return [];
+}
+
+export function getFileNameWithoutExtension(path?: string): string | undefined {
+  if (path && path.length > 0) {
+    const segments = path!.split('.');
+    const filename = segments[Math.max(0, segments.length - 2)];
+    const segments2 = filename.split('!');
+    return segments2[segments2.length - 1];
+  } else {
+    return undefined;
+  }
+}
+
+export function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    let r = Math.random() * 16 | 0,
+      v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+export function findCapturingGroupsInRegex(regex: string): string[] {
+  return regex?.match(/\(\?<(\w+)>/g)
+    ?.map(match => match.slice(3, -1)) || [];
+}
+
+export function extractEnhancerTargetDescription(target: string) {
+  const segs = target.split(':');
+  const type = segs[0];
+  const key = segs[1];
+  let typeName;
+  let keyName;
+  if (type == 'p') {
+    typeName = 'Property';
+    const reserved = reservedResourceProperties.find((x) => x.label.toLowerCase() == key.toLowerCase());
+    keyName = reserved ? i18n.t(reserved.label) : key;
+  } else if (type == 'f') {
+    typeName = 'File';
+    const reserved = reservedResourceFileTypes.find((x) => x.label.toLowerCase() == key.toLowerCase());
+    keyName = reserved ? i18n.t(reserved.label) : key;
+  } else {
+    typeName = 'Unknown';
+  }
+  return {
+    type: i18n.t(typeName),
+    key: keyName,
+  };
+}
+
+export function createPortalOfComponent(Component: React.ComponentType<any>, props: any) {
+  const key = uuidv4();
+  const node = document.createElement('div');
+  document.body.appendChild(node);
+
+  const root = ReactDOM.createRoot(node);
+
+  // console.log(19282, node, props, Component);
+
+  const unmount = () => {
+    console.log('Unmounting', key);
+    // console.trace(19282);
+    setTimeout(() => {
+      root.unmount();
+      node.parentElement?.removeChild(node);
+    }, 1);
+  };
+
+  console.log('Mounting', key);
+
+  root.render(
+    <store.Provider>
+      <Component
+        {...props}
+        afterClose={() => {
+          if (props.afterClose) {
+            props.afterClose();
+          }
+          unmount();
+        }}
+      />,
+    </store.Provider>,
+  );
+
+  return {
+    key,
+    close: unmount,
+  };
+}
+
+export function wrapWithStaticShowMethod<T extends {}>(Component: React.ComponentType<T>, props: T) {
+  class Enhance extends React.Component {
+    static show(props: T) {
+      return createPortalOfComponent(Component, props);
+    }
+  }
+  hoistNonReactStatic(Enhance, Component);
+  return Enhance;
+}
+
+export function standardizePath(path?: string) {
+  if (path == undefined) {
+    return;
+  }
+  const np = path.replace(/\\/g, BusinessConstants.pathSeparator);
+  if (isUncPath(path) && !np.startsWith(BusinessConstants.uncPathPrefix)) {
+    return `${BusinessConstants.uncPathPrefix}${np}`;
+  }
+  return np;
+}
+
+export function buildLogger(key: string) {
+  return ((...args) => {
+    return Function.prototype.bind.call(console.log, console, `[${key}]`);
+  })();
+}
+
+export function createSelection(field: any, start: number, end: number) {
+  if (field.createTextRange) {
+    const selRange = field.createTextRange();
+    selRange.collapse(true);
+    selRange.moveStart('character', start);
+    selRange.moveEnd('character', end);
+    selRange.select();
+    field.focus();
+  } else if (field.setSelectionRange) {
+    field.focus();
+    field.setSelectionRange(start, end);
+  } else if (typeof field.selectionStart !== 'undefined') {
+    field.selectionStart = start;
+    field.selectionEnd = end;
+    field.focus();
+  }
+}
+
+export function isString(value: any): boolean {
+  return typeof value === 'string' || value instanceof String;
+}
+
+export function forceFocus(nodeOrQuery: Element | string | null | undefined) {
+  let dom;
+  if (isString(nodeOrQuery)) {
+    const query = nodeOrQuery as string;
+    console.log(query);
+    dom = document.querySelector(query);
+  } else {
+    dom = nodeOrQuery;
+  }
+  // console.log(dom);
+  if (dom) {
+    dom.setAttribute('tabindex', '0');
+    dom.focus();
+  }
+}
+
+
+export function captureVideoFrame(video, format, quality) {
+  // console.trace();
+
+  if (typeof video === 'string') {
+    video = document.getElementById(video);
+  }
+
+  // console.log(video);
+
+  format = format || 'jpeg';
+  quality = quality || 0.92;
+
+  if (!video || (format !== 'png' && format !== 'jpeg')) {
+    return false;
+  }
+
+  const canvas = document.createElement('canvas');
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  canvas.getContext('2d')!.drawImage(video, 0, 0);
+
+  const dataUri = canvas.toDataURL(`image/${format}`, quality);
+  const data = dataUri.split(',')[1];
+  const mimeType = dataUri.split(';')[0].slice(5);
+
+  const bytes = window.atob(data);
+  const buf = new ArrayBuffer(bytes.length);
+  const arr = new Uint8Array(buf);
+
+  for (let i = 0; i < bytes.length; i++) {
+    arr[i] = bytes.charCodeAt(i);
+  }
+
+  const blob = new Blob([arr], { type: mimeType });
+  return {
+    blob,
+    dataUri,
+    format,
+  };
+}
+
+export function getValue(object: any, key: string, separator: string = '.') {
+  const segments = key.split(separator);
+  while (segments.length > 0) {
+    if (object == undefined) {
+      return object;
+    }
+    // console.log(obj, segments);
+    object = object[segments.splice(0, 1)[0]];
+  }
+  return object;
+}
+
+export function setValue(object: any, key: string, value: any, separator: string = '.') {
+  const segments = key.split(separator);
+  while (true) {
+    const first = segments.splice(0, 1)[0];
+    if (segments.length > 0) {
+      if (!(first in object)) {
+        object[first] = {};
+      }
+      object = object[first];
+    } else {
+      object[first] = value;
+      break;
+    }
+  }
+}
+
+export function equalsOrIsChildOf(child: HTMLElement | null, parent: HTMLElement | null) {
+  if (!child || !parent) {
+    return false;
+  }
+  let p: HTMLElement | null = child;
+  while (p) {
+    if (p == parent) {
+      return true;
+    }
+    p = p.parentElement;
+  }
+  return false;
+}
+
+export function execAll(regex: RegExp | string, str: string): RegExpExecArray[] | null {
+  const newReg = new RegExp(regex, 'g');
+  const matches: RegExpExecArray[] = [];
+  let match;
+  while ((match = newReg.exec(str))) {
+    console.log(match);
+    matches.push(match);
+  }
+  if (matches.length === 0) {
+    return null;
+  }
+  return matches;
+}
+
+export function splitPathIntoSegments(path: string): string[] {
+  const sp = standardizePath(path)!;
+  const segments = sp.split(BusinessConstants.pathSeparator).filter(a => a?.length > 0);
+  if (sp.startsWith(BusinessConstants.uncPathPrefix)) {
+    segments[0] = `${BusinessConstants.uncPathPrefix}${segments[0]}`;
+  }
+  return segments;
+}

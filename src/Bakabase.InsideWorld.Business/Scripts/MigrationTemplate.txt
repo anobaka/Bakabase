@@ -1,0 +1,10 @@
+﻿Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App.Core -Context InsideWorldDbContext;
+
+Remove-Migration -v -c InsideWorldDbContext -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App.Core;
+
+
+
+Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App -Context NotificationDbContext;
+Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App -Context LogDbContext;
+Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App -Context SystemPropertyDbContext;
+Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App -Context StorageDbContext;

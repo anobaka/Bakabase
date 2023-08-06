@@ -1,0 +1,47 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Bakabase.InsideWorld.Models.Extensions;
+using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bakabase.InsideWorld.Models.Models.Entities;
+using Bootstrap.Components.Orm;
+
+namespace Bakabase.InsideWorld.Business.Services
+{
+    public class VolumeService : FullMemoryCacheResourceService<InsideWorldDbContext, Volume, int>
+    {
+        public VolumeService(IServiceProvider serviceProvider) : base(serviceProvider)
+        {
+        }
+
+        public async Task<Dictionary<int, VolumeDto>> GetByResourceKeys(List<int> resourceIds)
+        {
+            var volumes = (await GetAll(a => resourceIds.Contains(a.ResourceId)))
+                .ToDictionary(a => a.ResourceId, a => a.ToDto());
+            return resourceIds.ToDictionary(a => a, a => volumes.TryGetValue(a, out var v) ? v : null);
+        }
+
+        public new async Task<VolumeRangeAddResult> AddRange(List<Volume> volumes)
+        {
+            var volumesMap = volumes.ToDictionary(a => a.ResourceId, a => a);
+            var resourceIds = volumesMap.Keys.ToList();
+            var exists = (await base.GetByKeys(resourceIds)).ToDictionary(a => a.ResourceId, a => a);
+            var existIds = exists.Values.Select(a => a.ResourceId).ToHashSet();
+            var toBeAdded = volumes.Where(a => !existIds.Contains(a.ResourceId)).ToList();
+            var @new = await base.AddRange(toBeAdded);
+            var toBeUpdated = volumes.Where(v => exists.TryGetValue(v.ResourceId, out var e) && !e.Equals(v))
+                .ToDictionary(a => a.ResourceId, a => a);
+            await base.UpdateRange(toBeUpdated.Values);
+            var data = exists.Select(e => toBeUpdated.TryGetValue(e.Key, out var v) ? v : e.Value).Concat(@new.Data)
+                .ToList();
+            return new VolumeRangeAddResult
+            {
+                AddedCount = @new.Data.Count,
+                Data = data,
+                ExistingCount = exists.Count
+            };
+        }
+    }
+}

@@ -1,0 +1,62 @@
+.bilibili-page {
+  .favorites {
+    .error {
+      color: red;
+    }
+    .next-tag {
+      margin-right: 10px;
+      margin-bottom: 5px;
+    }
+  }
+  .progressor {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    .info {
+      margin-left: 30px;
+      flex: 1;
+      &>* {
+        max-width: 500px;
+        display: grid;
+        grid-template-columns: 100px 1fr;
+        margin: 5px 0;
+        align-items: center;
+        .label {
+          display: flex;
+        }
+        .post-progressor {
+          grid-column-start: 1;
+          grid-column-end: 3;
+        }
+      }
+    }
+  }
+  .result {
+    margin-top: 10px;
+    &.successful {
+      color: #87d068;
+    }
+    &.fail {
+      color: red;
+    }
+  }
+
+  .form {
+    margin-bottom: 20px;
+    .item {
+      display: grid;
+      grid-template-columns: 1fr 10fr;
+      gap: 10px;
+      margin: 10px 0;
+      .label {
+        display: flex;
+        align-items: center;
+      }
+      .value {
+        &>* {
+          width: 90%;
+        }
+      }
+    }
+  }
+}

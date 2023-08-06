@@ -1,0 +1,19 @@
+﻿truncate table newresources;
+truncate table neworiginals;
+truncate table newpublishers;
+truncate table newserials;
+truncate table original_resource_mapping;
+truncate table publisher_resource_mapping;
+
+
+
+ALTER TABLE dbo.alias 
+ALTER COLUMN name NVARCHAR(128) COLLATE Latin1_General_100_CI_AI_SC
+ALTER TABLE dbo.neworiginals
+ALTER COLUMN name NVARCHAR(max) COLLATE Latin1_General_100_CI_AI_SC
+ALTER TABLE dbo.newpublishers 
+ALTER COLUMN name NVARCHAR(max) COLLATE Latin1_General_100_CI_AI_SC
+ALTER TABLE dbo.newresources 
+ALTER COLUMN name NVARCHAR(max) COLLATE Latin1_General_100_CI_AI_SC
+ALTER TABLE dbo.newserials 
+ALTER COLUMN name NVARCHAR(max) COLLATE Latin1_General_100_CI_AI_SC

@@ -1,0 +1,88 @@
+/**
+* {{&summary}}
+* request: {{&methodName}}
+* url: {{&methodName}}URL
+* method: {{&methodName}}_TYPE
+* raw_url: {{&methodName}}_RAW_URL
+{{#parameters}}
+    {{^isSingleton}} * @param {{&camelCaseName}} - {{&description}}{{/isSingleton}}
+{{/parameters}}
+*/
+export const {{&methodName}} = function(parameters = {}) {
+    const domain = parameters.$domain ? parameters.$domain : getDomain()
+    const config = parameters.$config
+    let path = '{{&path}}'
+    let body
+    let queryParameters = {}
+    let form = {}
+
+{{#parameters}}
+    {{#isQueryParameter}}
+        if(parameters['{{&camelCaseName}}'] !== undefined) {
+            queryParameters['{{&name}}'] = parameters['{{&camelCaseName}}']
+        }
+    {{/isQueryParameter}}
+
+    {{#isPathParameter}}
+        path = path.replace('{{brackets name}}', `${parameters['{{&camelCaseName}}']}`)
+    {{/isPathParameter}}
+
+    {{#isBodyParameter}}
+        if(parameters['{{&camelCaseName}}'] !== undefined) {
+            body = parameters['{{&camelCaseName}}']
+        }
+    {{/isBodyParameter}}
+
+    {{#isFormParameter}}
+        if(parameters['{{&camelCaseName}}'] !== undefined) {
+            form['{{&name}}'] = parameters['{{&camelCaseName}}']
+        }
+    {{/isFormParameter}}
+
+    {{#required}}
+        if(parameters['{{&camelCaseName}}'] === undefined) {
+            return Promise.reject(new Error('Missing required {{&paramType}} parameter: {{&camelCaseName}}'))
+        }
+    {{/required}}
+
+{{/parameters}}
+
+if(parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName){
+        queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+}
+
+    return request('{{toLowerCase method}}', domain + path, body, queryParameters, form, config)
+}
+
+export const {{&methodName}}_RAW_URL = function () {
+  return '{{&path}}'
+}
+export const {{&methodName}}_TYPE = function () {
+  return '{{toLowerCase method}}'
+}
+export const {{&methodName}}URL = function(parameters = {}){
+    let queryParameters = {}
+    const domain = parameters.$domain ? parameters.$domain : getDomain()
+    let path = '{{&path}}'
+    {{#parameters}}
+        {{#isQueryParameter}}
+            if(parameters['{{&camelCaseName}}'] !== undefined){
+                queryParameters['{{&name}}'] = parameters['{{&camelCaseName}}']
+            }
+        {{/isQueryParameter}}
+        {{#isPathParameter}}
+            path = path.replace('{{brackets name}}', `${parameters['{{&camelCaseName}}']}`)
+        {{/isPathParameter}}
+    {{/parameters}}
+
+    if(parameters.$queryParameters) {
+        Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+            queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+        })
+    }
+
+    let keys = Object.keys(queryParameters)
+    return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')): '')
+}

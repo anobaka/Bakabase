@@ -1,0 +1,40 @@
+.property-value.tags {
+  .tag-groups {
+    font-size: 13px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 5px;
+    border: 1px solid #ebebeb;
+    padding: 10px 5px;
+    border-radius: 4px;
+
+    .name {
+      text-align: right;
+      margin: 2px;
+      padding: 2px;
+    }
+
+    .tags {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+
+      .current-tags {
+        display: flex;
+        //gap: 10px;
+        flex-wrap: wrap;
+        .tag {
+          padding: 2px;
+          border: 1px solid #e1e1e1;
+          border-radius: 4px;
+          cursor: pointer;
+          margin: 2px;
+        }
+      }
+    }
+  }
+
+  .tag-groups + .add-tag-groups {
+    margin-top: 10px;
+  }
+}

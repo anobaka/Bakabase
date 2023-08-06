@@ -1,0 +1,78 @@
+.download-task-detail {
+
+  width: 700px;
+
+  .next-dialog-body {
+    min-height: 400px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 8fr);
+    gap: 10px;
+    .label, .value {
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .sources {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .source {
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      .next-tag-body {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        height: 40px;
+        width: 120px;
+        padding: 4px;
+        img {
+          max-width: 32px;
+          max-height: 32px;
+        }
+      }
+    }
+  }
+
+  .types {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .form {
+    margin-top: 10px;
+
+    .label {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      word-break: break-all;
+    }
+
+    .value {
+
+      flex-wrap: wrap;
+      gap: 5px;
+
+      &>.full {
+        width: 90%;
+      }
+
+      &.interval, &.pages {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        .next-input-group {
+          width: auto;
+        }
+      }
+    }
+  }
+}

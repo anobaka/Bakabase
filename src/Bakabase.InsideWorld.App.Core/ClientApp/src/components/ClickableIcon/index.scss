@@ -1,0 +1,21 @@
+.clickable-icon {
+  cursor: pointer;
+
+  &.normal {
+    color: #999;
+  }
+
+  &.danger {
+    color: #ffa6a6;
+  }
+
+  &:hover {
+    &.normal {
+      color: #666;
+    }
+
+    &.danger {
+      color: red;
+    }
+  }
+}

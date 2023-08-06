@@ -1,0 +1,129 @@
+// 载入默认全局样式 normalize 、.clearfix 和一些 mixin 方法等
+@import "@alifd/next/reset.scss";
+@import '@alifd/theme-design-pro/variables.css';
+@import '@alifd/theme-design-pro/dist/next.var.css';
+@import '@icedesign/label/build/index.css';
+
+
+@font-face {
+  font-family: 'Artypa-Regular';
+  src: url(./assets/Artypa-Regular.woff) format('woff');
+  /* other formats include: 'woff2', 'truetype, 'opentype',
+                            'embedded-opentype', and 'svg' */
+}
+
+html, body {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+
+  user-select: none;
+
+  .confirmation-button-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .confirmation-button {
+    padding: 5px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+
+    &:before {
+      content: none;
+    }
+  }
+
+  .icon {
+    //width: 1em;
+    //height: 1em;
+    vertical-align: -0.15em;
+    fill: currentColor;
+    overflow: hidden;
+  }
+
+  *,*:focus,*:hover{
+    outline:none;
+  }
+
+  #ice-container {
+    height: 100%;
+    width: 100%;
+  }
+
+  .next-balloon {
+    max-width: unset;
+  }
+
+  .next-rating {
+    .next-rating-underlay {
+      .next-rating-icon {
+        .next-icon {
+          color: #d8d8d8;
+        }
+      }
+    }
+    .next-rating-overlay {
+      .next-rating-icon {
+        .next-icon {
+          color: #EA9518;
+        }
+      }
+    }
+  }
+
+  .next-table {
+    border-radius: 8px;
+    table {
+      border-radius: 8px;
+
+      tr:first-child {
+        th:first-child, td:first-child {
+          border-top-left-radius: 8px !important;
+        }
+        th:last-child, td:last-child {
+          border-top-right-radius: 8px !important;
+        }
+      }
+
+      tbody.next-table-body {
+        tr:last-child {
+          th:first-child, td:first-child {
+            border-bottom-left-radius: 8px;
+          }
+          th:last-child, td:last-child {
+            border-bottom-right-radius: 8px;
+          }
+        }
+      }
+
+      thead.next-table-header + tbody.next-table-body {
+        th:first-child, td:first-child {
+          border-top-left-radius: 0!important;
+        }
+        th:last-child, td:last-child {
+          border-top-right-radius: 0!important;
+        }
+      }
+
+    }
+  }
+
+  .ice-label.ice-label-default.ice-label-no-inverse {
+    background-color: #ebebeb;
+  }
+
+  .ReactCollapse--collapse {
+    transition: height 500ms;
+  }
+
+  pre {
+    white-space: pre-wrap;       /* Since CSS 2.1 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+  }
+}

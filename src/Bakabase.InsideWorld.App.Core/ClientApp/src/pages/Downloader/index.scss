@@ -1,0 +1,243 @@
+.downloader-page {
+  user-select: none;
+  .panel-and-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    .form {
+      display: grid;
+      gap: 5px;
+      grid-template-columns: 80px minmax(0, 1fr);
+
+      .label {
+        display: flex;
+        align-items: center;
+      }
+
+      .value {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+
+        &.sources {
+
+          .source {
+            .next-tag-body {
+              display: flex;
+              align-items: center;
+              gap: 5px;
+
+              img {
+                width: 16px;
+                height: 16px;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .panel {
+      display: flex;
+      margin: 10px 0;
+      justify-content: space-between;
+      .left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        button {
+          &:before {
+            content: none;
+          }
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 0 10px;
+        }
+      }
+    }
+  }
+
+  .request-overview {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    margin: 5px 0;
+    .title {
+      color: #999;
+    }
+    .third-party {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      .statistics {
+        .success-count {
+          color: green;
+        }
+        .failure-count {
+          color: red;
+        }
+      }
+    }
+  }
+
+  .download-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 5px;
+    gap: 10px;
+
+    &:hover, &.selected {
+      background: #eee;
+    }
+
+    .icon {
+      width: 48px;
+      height: 48px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .content {
+      flex: 1;
+
+      .name {
+        font-size: 16px;
+        margin-bottom: 5px;
+
+        user-select: text;
+
+        span {
+          cursor: pointer;
+        }
+      }
+
+      .info {
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .left, .right {
+          display: flex;
+          gap: 5px;
+          align-items: center;
+        }
+
+        .left {
+          font-size: 12px;
+
+          .status {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px 5px;
+          }
+
+          .has-error-message {
+            cursor: pointer;
+          }
+
+          .current {
+            color: #777;
+          }
+        }
+
+        .right {
+          .ice-label {
+            span {
+              font-weight: 500;
+            }
+          }
+        }
+      }
+
+      .progress {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+
+        .bar {
+          flex: 1;
+          line-height: 4px;
+        }
+      }
+    }
+
+    .opt {
+      display: flex;
+      gap: 10px;
+      padding: 0 10px;
+
+      .iconfont {
+        cursor: pointer;
+        color: #999;
+
+        &:hover {
+          color: #111;
+        }
+      }
+    }
+  }
+
+  .no-task-yet {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+  }
+}
+
+.task-operations-dropdown {
+  .next-menu-item-text {
+    &>div {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+
+      &.enabled {
+        color: #46bc15;
+      }
+
+      &.disabled {
+        color: #ff9300;
+      }
+
+      &.remove {
+        color: #ff3000;
+      }
+    }
+  }
+}
+
+.downloader-page-context-menu {
+  ul {
+    li {
+      padding: 8px 15px;
+      &>div {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .iconfont {
+          font-size: 15px;
+        }
+
+        &.important {
+          margin: 0 5px;
+          color: #0394f5;
+        }
+
+        &.danger {
+          color: #c7254e;
+        }
+      }
+    }
+  }
+}

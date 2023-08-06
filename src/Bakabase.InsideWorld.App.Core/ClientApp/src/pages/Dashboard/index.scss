@@ -1,0 +1,56 @@
+.dashboard-page {
+  height: 100%;
+
+  .block {
+    margin-bottom: 20px;
+    background-color: rgba(0,0,0,0.03);
+    padding: 10px;
+    border-radius: 4px;
+
+    &>.title {
+      font-size: 24px;
+      font-weight: lighter;
+      margin-bottom: 20px;
+    }
+
+    .nothing {
+      width: 250px;
+      height: 250px;
+      font-size: 26px;
+      color: #888;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+    }
+  }
+
+  .resource {
+    width: 100%;
+    .counts {
+      justify-content: space-evenly;
+      width: 100%;
+      display: flex;
+
+      &>* {
+        flex: 1;
+        .title {
+          text-align: center;
+          font-size: 16px;
+        }
+      }
+    }
+  }
+
+  .line2, .line3 {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-evenly;
+
+    gap: 20px;
+
+    &>* {
+      flex: 1;
+    }
+  }
+}

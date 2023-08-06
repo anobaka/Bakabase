@@ -1,0 +1,66 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net6.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Version>1.6.2-beta</Version>
+		<ApplicationIcon>favicon.ico</ApplicationIcon>
+		<SpaRoot>ClientApp\</SpaRoot>
+		<InsideWorldCoreAssembly>Bakabase.InsideWorld.App.Core</InsideWorldCoreAssembly>
+		<AssemblyName>Bakabase.InsideWorld</AssemblyName>
+		<SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64\**" />
+	  <Content Remove="Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64\**" />
+	  <EmbeddedResource Remove="Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64\**" />
+	  <None Remove="Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="favicon.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1248-prerelease" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Bakabase.InsideWorld.App.Core\Bakabase.InsideWorld.App.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Update="wwwroot\error.html">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\index.html">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
+		<Message Text="Executing 'npm install' in ..\$(InsideWorldCoreAssembly)\$(SpaRoot)" Importance="high" />
+		<Exec WorkingDirectory="..\$(InsideWorldCoreAssembly)\$(SpaRoot)" Command="npm install" />
+		<Message Text="Executing 'npm run build' in ..\$(InsideWorldCoreAssembly)\$(SpaRoot)" Importance="high" />
+		<Exec WorkingDirectory="..\$(InsideWorldCoreAssembly)\$(SpaRoot)" Command="npm run build" />
+		<ItemGroup>
+			<DistFiles Include="..\$(InsideWorldCoreAssembly)\$(SpaRoot)build\**" />
+			<ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+				<RelativePath>$([System.String]::Copy('%(Identity)').Replace('..\$(InsideWorldCoreAssembly)\',''))</RelativePath>
+				<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+			</ResolvedFileToPublish>
+
+			<WebView2Env Include=".\Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64\**" />
+			<ResolvedFileToPublish Include="@(WebView2Env->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+				<RelativePath>%(WebView2Env.Identity)</RelativePath>
+				<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+			</ResolvedFileToPublish>
+		</ItemGroup>
+		<!-- <Message Text="??? %(DistFiles.Identity)" Importance="high" /> -->
+		<!-- <Message Text="??? @(DistFiles)->'$([System.String]::Copy('%(Identity)').Replace('..','123'))'" Importance="high" /> -->
+	</Target>
+</Project>

@@ -1,0 +1,13 @@
+.downloader-configurations {
+  min-width: 800px;
+
+  display: flex;
+  gap: 5px;
+
+  .forms {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+  }
+}

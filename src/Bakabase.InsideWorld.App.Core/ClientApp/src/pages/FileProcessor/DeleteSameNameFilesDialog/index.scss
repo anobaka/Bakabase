@@ -1,0 +1,15 @@
+.delete-same-name-files-dialog {
+  .next-dialog-body {
+    ul {
+      min-height: 50px;
+      li {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        span:last-child {
+          text-decoration: line-through;
+        }
+      }
+    }
+  }
+}

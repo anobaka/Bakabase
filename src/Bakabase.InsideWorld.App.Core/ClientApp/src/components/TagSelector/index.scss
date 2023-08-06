@@ -1,0 +1,56 @@
+.tag-selector {
+  margin: 5px;
+  min-width: 600px;
+  //max-width: 800px;
+  //max-height: 700px;
+  overflow-y: auto;
+
+  .opt {
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+  }
+
+  .tag-groups {
+    .icon-plus-circle {
+      margin-left: 10px;
+      color: #999;
+      cursor: pointer;
+
+      &:hover {
+        color: #666;
+      }
+    }
+    .group-name {
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      color: #999;
+      font-size: 14px;
+
+      .selected-tag-count {
+        color: rgba(16, 13, 177, 1);
+        margin-left: 5px;
+      }
+    }
+
+    .tag-group {
+      margin-bottom: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2.5px;
+      align-items: center;
+
+      .next-tag {
+        //margin-right: 5px;
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+.we-dialog {
+  .we {
+    margin: 0 30px;
+    display: flex;
+    align-items: flex-start;
+    gap: 50px;
+
+    .animated-arrow {
+      margin-top: 80px;
+    }
+
+    .entry {
+      max-width: 400px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: green;
+    }
+  }
+}

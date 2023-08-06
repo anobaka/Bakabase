@@ -1,0 +1,40 @@
+.jav-library-page {
+  .title {
+    font-size: 18px;
+    margin: 10px;
+  }
+  .error {
+    color: red;
+  }
+  .form {
+    .item {
+      display: grid;
+      grid-template-columns: 1fr 10fr;
+      gap: 10px;
+      margin-top: 10px;
+      .label {
+        display: flex;
+        align-items: center;
+        padding-left: 10px;
+      }
+      .value {
+        &.folder {
+          &>* {
+            width: auto;
+          }
+        }
+        &>* {
+          width: 90%;
+        }
+      }
+    }
+    .opt {
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+      button {
+        margin: 0 20px;
+      }
+    }
+  }
+}

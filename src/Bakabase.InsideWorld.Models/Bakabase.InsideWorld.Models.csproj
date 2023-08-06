@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<LangVersion>preview</LangVersion>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Models\Nfos\**" />
+	  <EmbeddedResource Remove="Models\Nfos\**" />
+	  <None Remove="Models\Nfos\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Bakabase.Infrastructures\Bakabase.Infrastructures\Bakabase.Infrastructures.csproj" />
+		<ProjectReference Include="..\..\..\LazyMortal\src\Bootstrap\Bootstrap.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="ElectronNET.API" Version="13.5.1" />
+		<PackageReference Include="Octokit" Version="0.50.0" />
+		<PackageReference Include="NJsonSchema" Version="10.8.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="RequestModels\Options\" />
+	</ItemGroup>
+
+</Project>

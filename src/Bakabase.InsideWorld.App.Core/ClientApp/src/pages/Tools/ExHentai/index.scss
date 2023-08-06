@@ -1,0 +1,35 @@
+.exhentai-downloader {
+  padding: 10px;
+  .form {
+    display: grid;
+    grid-template-columns: 100px 5fr;
+    gap: 5px;
+
+    .label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .value {
+      &>.next-input {
+        width: 100%;
+      }
+    }
+  }
+
+  .opt {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .error {
+    margin-top: 15px;
+    color: red;
+
+    .title {
+      font-size: 16px;
+      font-weight: bold;
+    }
+  }
+}

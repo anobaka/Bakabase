@@ -1,0 +1,93 @@
+.test-page {
+  .next-tabs-nav {
+    .next-tabs-tab {
+      &:before {
+        border-bottom: 2px solid #100DB1 !important;
+      }
+      .next-tabs-tab-inner {
+        color: #100DB1;
+      }
+    }
+
+  }
+  .commonly-used-tools {
+    .tool {
+      margin-top: 10px;
+      margin-bottom: 20px;
+      .name {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .line {
+        margin-bottom: 15px;
+        button {
+          width: 140px;
+          height: 40px;
+          background: #FFFFFF;
+          border-radius: 25px;
+          border: 1px solid #E7E7E7;
+        }
+      }
+      .result {
+        padding-top: 10px;
+        border-top: 1px solid #ddd;
+        display: flex;
+        justify-content: center;
+        .compare-result {
+          display: flex;
+          align-items: center;
+          width: 10%;
+        }
+        .resource {
+          width: 30%;
+        }
+      }
+    }
+  }
+
+  .extract-everything {
+    .opt {
+      margin: 5px 0;
+      display: flex;
+      button {
+        width: 10%;
+        margin-right: 10px;
+      }
+      .next-input {
+        flex: 1;
+      }
+    }
+
+    .progress {
+      margin: 25px;
+      display: flex;
+      align-items: center;
+      .info {
+        margin-left: 50px;
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 10fr);
+        gap: 10px;
+      }
+      .manual {
+        max-width: 800px;
+        .title {
+          font-weight: bold;
+        }
+        &>* {
+          margin-bottom: 5px;
+        }
+      }
+    }
+    .failed {
+      border-top: 1px solid #ccc;
+      padding-top: 10px;
+      .title {
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+    }
+  }
+
+
+}

@@ -1,0 +1,349 @@
+﻿using System.ComponentModel;
+using System.Net;
+using System.Reflection;
+using System.Text.Json;
+using System.Web;
+using Bakabase.Infrastructures.Components.App;
+using Bakabase.InsideWorld.Business.Components.Tasks;
+using Bakabase.InsideWorld.Models.Constants;
+using CsQuery;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Web.WebView2.Core;
+using Serilog;
+
+namespace Bakabase.InsideWorld.App.WinForms
+{
+    public partial class MainWindow : Form
+    {
+        private IHost? _host;
+        private NotifyIcon? _trayIcon;
+        private bool _forceExit;
+        private readonly string _appExecutableDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+        private readonly SemaphoreSlim _semaphore = new(0, 1);
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            Load += Loaded!;
+
+            this.ClientSizeChanged += (sender, args) => { webView21.Size = this.ClientSize; };
+
+            this.Closing += OnClose!;
+
+            this.Text = $"Bakabase.InsideWorld.App - {AppService.CoreVersion}";
+
+            this.Icon = new Icon(File.OpenRead(Path.Combine(_appExecutableDir, "Assets", "favicon.ico")), 16, 16);
+        }
+
+        private async void Loaded(object sender, EventArgs args)
+        {
+            webView21.Size = ClientSize;
+
+            this.webView21.CoreWebView2InitializationCompleted += (o, eventArgs) =>
+            {
+                Log.Logger.Information("WebView2 initialized");
+                _semaphore.Release();
+            };
+
+            Log.Logger.Information("Initializing WebView2");
+#if DEBUG
+            await this.webView21.EnsureCoreWebView2Async();
+#else
+            var webview2EnvPath =
+                Path.Combine(_appExecutableDir, "Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64");
+            var env = await CoreWebView2Environment.CreateAsync(webview2EnvPath);
+            await this.webView21.EnsureCoreWebView2Async(env);
+#endif
+
+
+            var cookies = "";
+            try
+            {
+                this.webView21.CoreWebView2.CookieManager.DeleteAllCookies();
+                foreach (var c in cookies.Split(';').Select(t => t.Trim()))
+                {
+                    var segs = c.Split('=');
+                    var k = segs[0];
+                    var v = segs[1];
+                    var cookie =
+                        this.webView21.CoreWebView2.CookieManager.CreateCookie(k, v, ".dufile.com", "/");
+                    this.webView21.CoreWebView2.CookieManager.AddOrUpdateCookie(cookie);
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
+
+            webView21.CoreWebView2.DOMContentLoaded += OnNavigationCompleted;
+
+            foreach (var (no, url) in _urls)
+            {
+                this.webView21.CoreWebView2.Navigate(url);
+                while (true)
+                {
+                    if (_doneNos.Contains(no))
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(100);
+                }
+
+                if (!_retry)
+                {
+                    _currentIndex++;
+                }
+            }
+
+
+
+            // this.webView21.CoreWebView2.Navigate(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+            //     "index.html"));
+        }
+
+        private static readonly HashSet<string> _doneNos = new();
+        private static bool _retry = false;
+        private static int _currentIndex = 0;
+
+        private static List<(string No, string Url)> _urls = new()
+        {
+        };
+
+        private static long _prevSize = 0;
+
+        private async void OnNavigationCompleted(object? o, CoreWebView2DOMContentLoadedEventArgs eventArgs)
+        {
+            await Task.Delay(3000);
+            var downloadUrlEncoded = await this.webView21.ExecuteScriptAsync(
+                "document.getElementById(\"vipdown\").getElementsByTagName(\"a\")[0].href");
+            var downloadUrl = JsonSerializer.Deserialize<string>(downloadUrlEncoded);
+            var client = new HttpClient()
+            {
+                DefaultRequestHeaders =
+                {
+                    {
+                        "cookie",
+                        ""
+                    }
+                }
+            };
+
+            var tryTimes = 0;
+            while (tryTimes < 3)
+            {
+                try
+                {
+                    var rsp = await client.GetAsync(downloadUrl);
+                    if (rsp.Content.Headers.ContentLength == _prevSize)
+                    {
+                        _retry = true;
+                        throw new Exception();
+                    }
+
+                    _prevSize = rsp.Content.Headers.ContentLength ?? 0;
+
+                    var filename = JsonSerializer.Deserialize<string>(rsp.Content.Headers.ContentDisposition.FileName);
+                    var fileExt = Path.GetExtension(filename);
+                    var fullname = Path.Combine(@"C:\Users\anoba\Downloads\New folder",
+                        $"{_urls[_currentIndex].Item1}{fileExt}");
+                    await using var fs = new FileStream(fullname, FileMode.Create, FileAccess.Write);
+                    await (await rsp.Content.ReadAsStreamAsync()).CopyToAsync(fs);
+
+                    if (fs.Length == 0)
+                    {
+                        throw new Exception();
+                    }
+
+                    _doneNos.Add(_urls[_currentIndex].No);
+                    break;
+                }
+                catch (Exception e)
+                {
+
+                }
+
+                tryTimes++;
+            }
+
+            _retry = false;
+        }
+
+        public async Task OnHostStarted(IHost host)
+        {
+//             Log.Logger.Information("Host Started");
+//
+//             _host = host;
+//
+// #if DEBUG
+//             var address = "http://localhost:4444";
+// #else
+//             var server = _host?.Services.GetRequiredService<IServer>();
+//             var features = server.Features;
+//             var address = features.Get<IServerAddressesFeature>()!
+//                 .Addresses.FirstOrDefault();
+// #endif
+//             await _semaphore.WaitAsync();
+//             webView21.BeginInvoke(() =>
+//             {
+//                 Log.Logger.Information($"Go to {address}");
+//                 webView21.CoreWebView2.Navigate(address);
+//             });
+        }
+
+        public async Task OnHostFailedToStart(string message)
+        {
+            var html = await File.ReadAllTextAsync(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                "error.html"));
+            html = html.Replace("{message}", message);
+
+            await _semaphore.WaitAsync();
+            webView21.BeginInvoke(() =>
+            {
+                Log.Logger.Information($"Go to {html}");
+
+                webView21.NavigateToString(html);
+            });
+        }
+
+        #region App Exit
+
+        private bool ConfirmExitIfCriticalTasksAreNotCompleted()
+        {
+            var taskManager = _host?.Services.GetRequiredService<BackgroundTaskManager>();
+            var tasks = taskManager?.Tasks;
+            if (tasks?.Any(t =>
+                    t.Status == BackgroundTaskStatus.Running &&
+                    t.Level == BackgroundTaskLevel.Critical) == true)
+            {
+                var result =
+                    MessageBox.Show(
+                        "Some critical tasks are not completed yet, data would be lost by forcing shutdown the app. Are you sure to exit now?",
+                        "Critical tasks are running", MessageBoxButtons.OKCancel);
+                if (result != DialogResult.OK)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ShowTrayIcon()
+        {
+            if (_trayIcon == null)
+            {
+                this._trayIcon = new NotifyIcon()
+                {
+                    Icon = new Icon("Assets/favicon.ico"),
+                    ContextMenuStrip = new ContextMenuStrip(),
+                    Visible = true
+                };
+
+                this._trayIcon.ContextMenuStrip.Items.AddRange(new ToolStripItem[]
+                {
+                    new ToolStripMenuItem("Open", null, (o, eventArgs) =>
+                    {
+                        this.Show();
+                        this._trayIcon!.Visible = false;
+                    }, "Open"),
+                    new ToolStripMenuItem("Exit", null,
+                        (o, eventArgs) => { this.Close(); },
+                        "Exit")
+                });
+            }
+            else
+            {
+                this._trayIcon.Visible = true;
+            }
+        }
+
+        private void OnClose(object sender, CancelEventArgs args)
+        {
+            if (_host != null)
+            {
+                if (_forceExit)
+                {
+                    return;
+                }
+
+                if (_trayIcon?.Visible == true)
+                {
+                    if (!ConfirmExitIfCriticalTasksAreNotCompleted())
+                    {
+                        args.Cancel = true;
+                        return;
+                    }
+                }
+                else
+                {
+                    var appOptions = AppService.GetOptions();
+                    if (!appOptions.MinimizeOnClose.HasValue)
+                    {
+                        var center = new Point(this.Location.X + this.Size.Width / 2,
+                            this.Location.Y + this.Size.Height / 2);
+                        var firstTimeExitDialog = new FirstTimeExitDialog();
+                        firstTimeExitDialog.Show();
+                        firstTimeExitDialog.Location = new Point(center.X - firstTimeExitDialog.Size.Width / 2,
+                            center.Y - firstTimeExitDialog.Size.Height / 2);
+                        args.Cancel = true;
+                        firstTimeExitDialog.OnOperate += (operation, remember) =>
+                        {
+                            firstTimeExitDialog.Close();
+                            if (remember)
+                            {
+                                AppService.SaveOptions(t =>
+                                    t.MinimizeOnClose = operation == FirstTimeExitDialog.OperationType.Minimize);
+                            }
+
+                            switch (operation)
+                            {
+                                case FirstTimeExitDialog.OperationType.Minimize:
+                                {
+                                    this.Hide();
+                                    this.ShowTrayIcon();
+                                    break;
+                                }
+                                case FirstTimeExitDialog.OperationType.Exit:
+                                    if (ConfirmExitIfCriticalTasksAreNotCompleted())
+                                    {
+                                        _forceExit = true;
+                                        this.Close();
+                                    }
+
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException(nameof(operation), operation, null);
+                            }
+                        };
+                    }
+                    else
+                    {
+                        if (appOptions.MinimizeOnClose.Value)
+                        {
+                            this.Hide();
+                            this.ShowTrayIcon();
+                            args.Cancel = true;
+                            return;
+                        }
+                        else
+                        {
+                            args.Cancel = !ConfirmExitIfCriticalTasksAreNotCompleted();
+                        }
+                    }
+                }
+
+                if (!args.Cancel)
+                {
+
+                }
+            }
+        }
+
+        #endregion
+    }
+}

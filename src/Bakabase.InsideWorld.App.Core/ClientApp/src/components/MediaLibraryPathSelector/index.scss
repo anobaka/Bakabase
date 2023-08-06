@@ -1,0 +1,88 @@
+.mlps {
+  min-width: 600px;
+  padding: 10px;
+
+  .next-dialog-body {
+    &::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      border-radius: 10px;
+      background: rgba(16, 13, 177, 0.1);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 10px;
+      background: rgba(16, 13, 177, 0.2);
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(16, 13, 177, 0.4);
+    }
+
+    &::-webkit-scrollbar-thumb:active {
+      background: rgba(16, 13, 177, .9);
+    }
+  }
+
+  .filters {
+    margin-bottom: 10px;
+  }
+
+  .categories, .custom {
+    &>.title {
+      font-size: 20px;
+    }
+  }
+
+  .categories {
+    .category {
+      margin-bottom: 10px;
+      &>.name {
+        font-size: 16px;
+        word-break: break-all;
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid #ccc;
+        font-weight: 500;
+      }
+      &>.libraries {
+        text-indent: 8px;
+        &>.library {
+          margin-bottom: 5px;
+          &>.name {
+            word-break: break-all;
+            font-size: 14px;
+          }
+          &>.paths {
+            text-indent: 16px;
+            &>.path {
+              font-size: 12px;
+              padding: 5px 0;
+
+              button {
+                word-break: break-all;
+              }
+
+              &:hover {
+                cursor: pointer;
+                background: rgba(0, 0, 0, 0.04);
+              }
+
+              .selected-recently {
+                border: 1px solid #08c29e;
+                padding: 2px 5px;
+                border-radius: 4px;
+                margin-left: 10px;
+                color: #08c29e;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+}

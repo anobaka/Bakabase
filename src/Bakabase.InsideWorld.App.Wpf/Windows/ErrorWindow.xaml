@@ -1,0 +1,34 @@
+﻿<Window
+    x:Class="Bakabase.InsideWorld.App.Wpf.Windows.ErrorWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:Bakabase.InsideWorld.App.Wpf"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="ErrorWindow"
+    MinWidth="600"
+    MinHeight="600"
+    MaxWidth="1000"
+    MaxHeight="800"
+    SizeToContent="WidthAndHeight"
+    WindowStartupLocation="CenterScreen"
+    mc:Ignorable="d">
+    <StackPanel VerticalAlignment="Center">
+        <StackPanel Margin="50">
+            <TextBlock
+                x:Name="Title"
+                Margin="0,0,0,30"
+                HorizontalAlignment="Left"
+                FontSize="32"
+                FontWeight="Bold"
+                Text="[DesignTime]Error" />
+            <TextBox
+                x:Name="StackTrace"
+                HorizontalAlignment="Left"
+                BorderThickness="0"
+                FontSize="14"
+                Text="[DesignTime]Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail"
+                TextWrapping="Wrap" />
+        </StackPanel>
+    </StackPanel>
+</Window>

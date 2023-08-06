@@ -1,0 +1,8 @@
+{
+  "dsnf-dialog-title": "Delete all contents with name <1> {{fileName}} </1> in <3> {{workingDirectory}} </3>",
+  "fp.te.db.defaultPassword": "We'll use <1> {{password}} </1> as password for decompressing by default",
+  "fp.mergeContents": "Merge <1> {{name}} </1> file system entries",
+  "fp.mergeContentsIn": "Merge contents in <1> {{name}} </1>",
+  "fp.bulkOperation": "{{operation}} <1> {{count}} </1> file system entries",
+  "resource.search-engine.tip": "Use <1> {{name}} </1> to search <3> {{keyword}} </3>"
+}

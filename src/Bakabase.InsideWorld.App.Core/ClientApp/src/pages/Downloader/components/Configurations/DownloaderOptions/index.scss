@@ -1,0 +1,79 @@
+.downloader-options {
+  margin-bottom: 40px;
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 7.5px;
+
+    .placeholder {
+      background: #666;
+      width: 3px;
+      height: 1em;
+    }
+
+    font-size: 18px;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 10px;
+  }
+
+  .items {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 5px;
+    margin: 10px 0;
+
+    .label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+
+    }
+    .value {
+      .full {
+        width: 100%;
+      }
+      &.naming-convention {
+        border-top: 1px solid #eee;
+        border-bottom: 1px solid #eee;
+        padding: 10px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        .example {
+          font-size: 12px;
+          span {
+            &.separator {
+              margin: 0 5px;
+              font-weight: bold;
+              color: black;
+            }
+            &.segment {
+              background: rgba(0, 0, 0, 0.05);
+              padding: 2px 5px;
+              border-radius: 4px;
+            }
+          }
+        }
+        &>.fields {
+          display: flex;
+          gap: 2.5px;
+          flex-wrap: wrap;
+          .field {
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            opacity: 0.75;
+            padding: 2px 5px;
+            &:hover {
+              opacity: 1;
+            }
+            .example {
+              font-size: 10px;
+              color: #1274E7;
+            }
+          }
+        }
+      }
+    }
+  }
+}

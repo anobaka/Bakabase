@@ -1,0 +1,58 @@
+.play-list-detail {
+  .info {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 5px;
+    margin-bottom: 5px;
+    &>* {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      .value {
+        &>.next-input, &>.next-number-picker {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+.sortable-playlist-item {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 2fr) minmax(0, 2fr) max-content;
+  padding: 2.5px;
+  gap: 2.5px;
+  &:first-child {
+    border-top: none;
+  }
+
+  &:hover {
+    background-color: #ddd;
+  }
+  border-top: 1px solid #ddd;
+
+  .resource-name {
+    cursor: pointer;
+
+    .type {
+      display: flex;
+      align-items: center;
+      color: #999;
+    }
+  }
+
+  &>* {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .opt {
+    button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+    }
+  }
+}

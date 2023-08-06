@@ -1,0 +1,44 @@
+.bakabase-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 5px;
+  padding-bottom: 5px;
+
+  .left {
+    display: flex;
+    align-items: center;
+    .title {
+      font-size: 16px;
+      font-weight: 400;
+      color: #343434;
+      line-height: 20px;
+    }
+    .title-after {
+      margin-left: 10px;
+    }
+    .buttons {
+      margin-left: 30px;
+      .button {
+        display: flex;
+        align-items: center;
+        color: #100DB1;
+        .icon {
+          margin-right: 7px;
+          width: 20px;
+          height: 20px;
+        }
+        button, a {
+          font-size: 14px;
+          font-weight: 400;
+          line-height: 20px;
+          color: #100DB1;
+        }
+      }
+    }
+  }
+
+  .right {
+
+  }
+}
