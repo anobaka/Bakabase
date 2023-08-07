@@ -2,8 +2,9 @@
   "name": "bxb",
   "version": "1.0.0",
   "dependencies": {
-    "@alifd/next": "^1.26.12",
-    "@alifd/theme-design-pro": "^0.8.1",
+    "@alifd/next": "1.26.15",
+    "@alifd/theme-design-pro": "0.8.1",
+    "@ice/runtime": "1.1.4",
     "@antv/data-set": "^0.11.8",
     "@dnd-kit/core": "^6.0.7",
     "@dnd-kit/sortable": "^7.0.2",
@@ -77,17 +78,25 @@
     "video.js": "^7.19.2"
   },
   "devDependencies": {
-    "@ice/app": "3.1.2",
-    "@ice/runtime": "1.1.3",
     "@applint/spec": "1.2.3",
+    "@ice/app": "3.1.4",
     "@ice/plugin-store": "1.0.3",
-    "@types/node": "^20.3.1",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
-    "eslint": "^8.34.0",
+    "@types/node": "^18.11.17",
+    "eslint": "^8.35.0",
+    "stylelint": "^15.2.0",
+    "typescript": "^4.8.4",
     "swagger-typescript-api": "^12.0.2",
-    "swagger-vue": "^1.0.3",
-    "typescript": "^4.8.4"
+    "swagger-vue": "^1.0.3"
+  },
+  "overrides": {
+    "@ice/app": {
+      "@ice/runtime": "$@ice/runtime"
+    }
+  },
+  "resolutions": {
+    "@ice/app/@ice/runtime": "1.1.4"
   },
   "scripts": {
     "start": "ice start --port 4444",

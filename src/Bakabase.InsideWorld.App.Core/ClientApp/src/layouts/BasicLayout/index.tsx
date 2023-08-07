@@ -4,7 +4,7 @@ import { Link, history, useLocation, Outlet } from 'ice';
 import { Button, Dialog } from '@alifd/next';
 import i18n from 'i18next';
 import { useNavigate } from '@ice/runtime/router';
-import PageNav from '@/layouts/BasicLayout/components/PageNav';
+import PageNav from './components/PageNav';
 import { CheckAppInitialized } from '@/sdk/apis';
 import { InitializationContentType } from '@/sdk/constants';
 import FloatingAssistant from '@/components/FloatingAssistant';

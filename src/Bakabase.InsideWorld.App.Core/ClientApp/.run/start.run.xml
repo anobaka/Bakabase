@@ -6,7 +6,9 @@
       <script value="start" />
     </scripts>
     <node-interpreter value="project" />
-    <envs />
+    <envs>
+      <env name="DEBUG_TAG" value="server-compiler" />
+    </envs>
     <method v="2" />
   </configuration>
 </component>

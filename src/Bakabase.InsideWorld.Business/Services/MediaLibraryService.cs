@@ -446,7 +446,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         // Remove resources belonged to unknown libraries
                         await ResourceService.RemoveByMediaLibraryIdsNotIn(librariesMap.Keys.ToArray());
-                        var prevResources = await ResourceService.GetAll(ResourceAdditionalItem.None);
+                        var prevResources = await ResourceService.GetAll(ResourceAdditionalItem.All);
 
                         var prevRawFullnameResourcesList = prevResources
                             .GroupBy(a => a.RawFullname.StandardizePath(), StringComparer.OrdinalIgnoreCase)

@@ -469,7 +469,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                       })
                         .then(t => {
                           if (!t.code) {
-                            reload(AbortSignal.prototype);
+                            reload(new AbortController().signal);
                           }
                         }),
                     });
