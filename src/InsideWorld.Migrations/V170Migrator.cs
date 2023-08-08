@@ -96,12 +96,12 @@ namespace InsideWorld.Migrations
                 t.WwwRootPath = _prevOptions.WwwRootPath;
             });
 
-            // Updater
-            var updaterOptions = new UpdaterOptions
-            {
-                AppUpdaterOssObjectPrefix = BusinessConstants.AppOssObjectPrefix
-            };
-            await GetRequiredService<IBOptionsManager<UpdaterOptions>>().SaveAsync(updaterOptions);
+            //// Updater
+            //var updaterOptions = new UpdaterOptions
+            //{
+            //    AppUpdaterOssObjectPrefix = BusinessConstants.AppOssObjectPrefix
+            //};
+            //await GetRequiredService<IBOptionsManager<UpdaterOptions>>().SaveAsync(updaterOptions);
 
             // Resource
             await GetRequiredService<IBOptionsManager<ResourceOptions>>().SaveAsync(t =>
