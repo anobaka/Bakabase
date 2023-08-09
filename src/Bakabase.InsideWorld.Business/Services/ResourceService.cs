@@ -1116,10 +1116,15 @@ namespace Bakabase.InsideWorld.Business.Services
                                             firstVideoFile.FullName
                                         }, true)
                                         .WithValidation(CommandResultValidation.None)
-                                        .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output));
+                                        .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
+                                        .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error));
 
                                     // var x2 = await FFmpeg.GetMediaInfo(firstVideoFile.FullName, ct);
                                     var rsp = await cmd.ExecuteAsync(ct);
+                                    if (rsp.ExitCode != 0)
+                                    {
+                                        throw new Exception(error.ToString());
+                                    }
                                     var jObject = JObject.Parse(output.ToString());
                                     var seconds = jObject["format"]!["duration"]!.Value<double>();
                                     var duration = TimeSpan.FromSeconds(seconds);
