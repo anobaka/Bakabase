@@ -1,4 +1,4 @@
-import { Button, Input, Radio, Tag } from '@alifd/next';
+import { Balloon, Button, Input, Radio, Tag } from '@alifd/next';
 import React, { useState } from 'react';
 import './index.scss';
 import { useUpdateEffect } from 'react-use';
@@ -8,6 +8,7 @@ import type { IMatcherValue } from '@/components/PathSegmentsConfiguration/model
 import { ResourceMatcherValueType } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 import { execAll } from '@/components/utils';
 import { getResultFromExecAll } from '@/components/PathSegmentsConfiguration/utils';
+import CustomIcon from '@/components/CustomIcon';
 
 interface IValue {
   layer?: number;
@@ -165,9 +166,20 @@ const SegmentMatcherConfiguration = (props: ISegmentMatcherConfiguration) => {
               label={t('Set by {{thing}}', { thing: t('regex') })}
               checked={mode == 'regex'}
             />
-            <div className="tip">
+            <Balloon.Tooltip
+              trigger={(
+                <CustomIcon type={'question-circle'} />
+              )}
+              triggerType={'hover'}
+              align={'t'}
+              v2
+            >
+              {t('/ is the directory separator always, not \\')}
+              <br />
+              <br />
               {t('The whole matched text will be ignored if capturing groups are used')}
-            </div>
+              {t('You should not use capturing groups on Resource property due to partial path is not available to match a file system entry')}
+            </Balloon.Tooltip>
           </div>
           <div className="value">
             <div className="text">

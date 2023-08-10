@@ -168,7 +168,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     case ResourceProperty.CustomProperty:
                     {
                         var matchResult =
-                            ResourcePropertyMatcher.Match(segments, s, rootPathSegments.Length - 1, segments.Length - 1);
+                            ResourcePropertyMatcher.Match(segments, s, rootPathSegments.Length - 1, segments.Length);
 
                         
                         if (matchResult != null)
@@ -853,8 +853,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     var segments = f.SplitPathIntoSegments();
                     var resourceMatchValue = ResourcePropertyMatcher.Match(segments, resourceMatcherValue,
-                        rootSegments.Length - 1, segments.Length - 1);
-                    if (resourceMatchValue is not {Type: MatchResultType.Layer} || resourceMatchValue.Index < segments.Length - 1)
+                        rootSegments.Length - 1, segments.Length);
+                    if (resourceMatchValue is not {Type: MatchResultType.Layer} || resourceMatchValue.Index < rootSegments.Length)
                     {
                         continue;
                     }
@@ -871,18 +871,12 @@ namespace Bakabase.InsideWorld.Business.Services
                         RelativePath = relativePath
                     };
 
-                    if (f.Contains("防嵌套"))
-                    {
-
-                    }
-
                     var otherMatchers = pc.RpmValues!.Where(a =>
                         a.Property != ResourceProperty.Resource && a.Property != ResourceProperty.RootPath).ToList();
 
                     foreach (var m in otherMatchers)
                     {
-                        var result = ResourcePropertyMatcher.Match(segments, m, rootSegments.Length - 1,
-                            segments.Length - 1);
+                        var result = ResourcePropertyMatcher.Match(segments, m, rootSegments.Length - 1, segments.Length);
                         if (result != null)
                         {
                             switch (result.Type)

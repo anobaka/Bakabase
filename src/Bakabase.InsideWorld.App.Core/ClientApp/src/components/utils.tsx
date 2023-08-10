@@ -260,7 +260,7 @@ export function buildLayerBasedPathRegexString(layer, extensions?: string[]): st
     } else {
       if (extensions) {
         if (extensions.length > 0) {
-          reg += `\\.(${extensions.map(e => e.replace(/^\./, '')
+          reg += `\\.(?:${extensions.map(e => e.replace(/^\./, '')
             .replaceAll('.', '\\.'))
             .join('|')})`;
           break;
