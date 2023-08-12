@@ -96,7 +96,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
         const rootSegmentIndex = rootMatch?.index ?? -1;
 
         const resourceSegmentIndex = PathSegmentMatcher
-          .match(segments, resourceMatcherValue, rootSegmentIndex, undefined)?.index ?? -1;
+          .match(segments, resourceMatcherValue, rootSegmentIndex, segments.length)?.index ?? -1;
         if (resourceSegmentIndex > -1) {
           const resourceMatcherMatchesLastLayer = resourceSegmentIndex == segments.length - 1;
           if (resourceMatcherMatchesLastLayer != resourceMatcherMatchesLastLayerRef.current) {
@@ -711,6 +711,13 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
                   setFileResourceExtensions(list);
                   if (currentFileExt) {
                     setFileResourceExtensionCandidates([currentFileExt]);
+
+                    // we should change the value of resource matcher to file-extension-based regex immediately when user click this button
+                    const newRegex = buildLayerBasedPathRegexString(segments.length - rootSegmentIndex - 1, [currentFileExt]);
+                    value[ResourceProperty.Resource] = [
+                      MatcherValue.Regex(newRegex),
+                    ];
+                    setValue({ ...value });
                   }
                 }
               })
@@ -765,7 +772,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
                         const idx = candidates.indexOf(e.ext);
 
                         const apply = candidates => {
-                          const newRegex = buildLayerBasedPathRegexString(segments.length, candidates);
+                          const newRegex = buildLayerBasedPathRegexString(segments.length - rootSegmentIndex - 1, candidates);
                           value[ResourceProperty.Resource] = [
                             MatcherValue.Regex(newRegex),
                           ];
