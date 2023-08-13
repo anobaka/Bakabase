@@ -231,6 +231,18 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 }
             }
 
+            if (source.MediaLibraryId != target.MediaLibraryId)
+            {
+                source.MediaLibraryId = target.MediaLibraryId;
+                changed = true;
+            }
+
+            if (source.CategoryId != target.CategoryId)
+            {
+                source.CategoryId = target.CategoryId;
+                changed = true;
+            }
+
             return changed;
         }
 
