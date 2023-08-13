@@ -73,8 +73,8 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyM
                                 var match = matches.FirstOrDefault()!;
                                 var matchedValue = subPath.Substring(0, match.Index + match.Value.Length);
                                 // matched value can't starts with unc prefix, so we can split it safely.
-                                var index = matchedValue.Split(BusinessConstants.DirSeparator).Length;
-                                return MatchResult.OfLayer(index - startIndex.Value, index);
+                                var layer = matchedValue.Split(BusinessConstants.DirSeparator).Length;
+                                return MatchResult.OfLayer(layer, layer + startIndex.Value);
                             }
                         }
                     }
