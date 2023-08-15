@@ -177,6 +177,9 @@
   <data name="Downloader_UnknownType" xml:space="preserve">
     <value>未知任务类型: {0}</value>
   </data>
+  <data name="FileDoesNotExistInPath" xml:space="preserve">
+    <value>在{1}中未找到文件{0}</value>
+  </data>
   <data name="FileMover_DuplicateSourcesAreFound" xml:space="preserve">
     <value>发现重复的源路径: {0}</value>
   </data>
@@ -189,10 +192,34 @@
   <data name="FileMover_TargetsCantBeSubOfSources" xml:space="preserve">
     <value>目标路径不能在源路径内: {0}</value>
   </data>
+  <data name="FilesDoNotExistInPath" xml:space="preserve">
+    <value>在{1}中未找到文件{0}</value>
+  </data>
+  <data name="PathIsNotFound" xml:space="preserve">
+    <value>未找到文件：{0}</value>
+  </data>
   <data name="PathsShouldBeInSameDirectory" xml:space="preserve">
     <value>所有路径必须要在同一目录下</value>
   </data>
+  <data name="Resource_CoverMustBeInDirectory" xml:space="preserve">
+    <value>封面图只能被保存在文件夹内</value>
+  </data>
+  <data name="Resource_MovingTaskSummary" xml:space="preserve">
+    <value>移动 {0} to {1}</value>
+  </data>
+  <data name="Resource_MovingTaskSummaryForSingleResource" xml:space="preserve">
+    <value>移动至 {0}</value>
+  </data>
+  <data name="Resource_MovingTaskSummaryForSingleResourceWithMediaLibrary" xml:space="preserve">
+    <value>移动至媒体库 {0}:{1}</value>
+  </data>
+  <data name="Resource_MovingTaskSummaryWithMediaLibrary" xml:space="preserve">
+    <value>移动 {0} 至媒体库 {1}:{2}</value>
+  </data>
+  <data name="Resource_NotFound" xml:space="preserve">
+    <value>未找到id={0}的资源</value>
+  </data>
   <data name="TypeIsNotFound" xml:space="preserve">
-    <value>未找到类型: {0}</value>
+    <value>未找到类型：{0}</value>
   </data>
 </root>

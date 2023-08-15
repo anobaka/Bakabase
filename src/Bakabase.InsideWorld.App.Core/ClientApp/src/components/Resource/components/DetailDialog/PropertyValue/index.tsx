@@ -3,32 +3,34 @@ import { Button, Icon } from '@alifd/next';
 import { RemoveResourceCustomProperty, PatchResource } from '@/sdk/apis';
 import CustomIcon from '@/components/CustomIcon';
 
+interface IProps {
+  renderValue: () => any;
+  resourceId?: number;
+  convertToRequesting?: ((v: any) => any);
+  reloadResource?: (cb: Function) => any;
+  initValue?: any;
+  isCustomProperty?: boolean;
+  EditComponent?: React.Component | any;
+  editComponentProps?: any;
+  defaultValueKeyOfEditComponent?: string;
+  editable?: boolean;
+  requestKey?: string;
+  className?: string;
+}
+
 export default ({
   renderValue: propsRenderValue,
   editable = false,
   convertToRequesting = (v) => v,
-  resourceId = undefined,
-  requestKey = undefined,
+  resourceId,
+  requestKey,
   initValue = undefined,
   isCustomProperty = false,
   EditComponent = undefined,
   editComponentProps = {},
   defaultValueKeyOfEditComponent = 'defaultValue',
   reloadResource = (cb) => {},
-  className = '' }: {
-  renderValue: () => any;
-  resourceId: number | undefined;
-  convertToRequesting: ((v: any) => any) | undefined;
-  reloadResource: ((cb: Function) => void) | undefined;
-  initValue: any;
-  isCustomProperty: boolean;
-  EditComponent: React.Component | any;
-  editComponentProps: any | undefined;
-  defaultValueKeyOfEditComponent: string | undefined;
-  editable: boolean;
-  requestKey: string| undefined;
-  className: string | undefined;
-}) => {
+  className = '' }: IProps) => {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState<any>();
 
@@ -79,7 +81,7 @@ export default ({
               PatchResource({
                 id: resourceId,
                 model: {
-                  [requestKey]: model,
+                  [requestKey!]: model,
                 },
               })
                 .invoke((x) => {

@@ -1,18 +1,22 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
@@ -24,11 +28,15 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
+using ElectronNET.API.Entities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Internal;
 using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
+using Xabe.FFmpeg;
 using Image = SixLabors.ImageSharp.Image;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
@@ -50,6 +58,15 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly FavoritesResourceMappingService _favoritesResourceMappingService;
         private readonly IWebHostEnvironment _env;
         private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
+        private readonly InsideWorldLocalizer _localizer;
+        private readonly FFMpegHelper _ffMpegHelper;
+
+        private static readonly MemoryCache CoverCache = new MemoryCache("ResourceCover");
+
+        private static readonly CacheItemPolicy _coverCacheItemPolicy = new CacheItemPolicy
+        {
+            SlidingExpiration = TimeSpan.FromMinutes(15)
+        };
 
         public ResourceController(ResourceService service,
             ResourceTagMappingService resourceTagMappingService,
@@ -57,7 +74,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             SpecialTextService specialTextService, MediaLibraryService mediaLibraryService,
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager,
             FavoritesResourceMappingService favoritesResourceMappingService, IWebHostEnvironment env,
-            InsideWorldOptionsManagerPool insideWorldOptionsManager)
+            InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
+            FFMpegHelper ffMpegHelper)
         {
             _service = service;
             _resourceTagMappingService = resourceTagMappingService;
@@ -70,6 +88,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _favoritesResourceMappingService = favoritesResourceMappingService;
             _env = env;
             _insideWorldOptionsManager = insideWorldOptionsManager;
+            _localizer = localizer;
+            _ffMpegHelper = ffMpegHelper;
         }
 
         [HttpPost("search")]
@@ -145,9 +165,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("{id}/cover")]
         [SwaggerOperation(OperationId = "GetResourceCover")]
-        [ResponseCache(VaryByQueryKeys = new[] {"id"}, Duration = 600)]
         public async Task<IActionResult> GetCover(int id)
         {
+            var cacheItem = CoverCache.Get(id.ToString());
+            if (cacheItem is byte[] byteData)
+            {
+                return File(byteData, MimeTypes.GetMimeType(".png"));
+            }
+
             var r = await _service.DiscoverAndPopulateCoverStream(id, HttpContext.RequestAborted);
             if (r != null)
             {
@@ -156,35 +181,42 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                     var contentType = MimeTypes.GetMimeType(".png");
                     return File(r.Cover, contentType);
                 }
+
+                var ext = Path.GetExtension(r.LogicalFullname);
+                if (ext == BusinessConstants.IcoFileExtension)
+                {
+                    var icon = new Icon(r.Cover);
+                    var bitmap = icon.ToBitmap();
+                    var ms = new MemoryStream();
+                    bitmap.Save(ms, ImageFormat.Png);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    var data = ms.ToArray();
+                    CoverCache.Set(id.ToString(), data, _coverCacheItemPolicy);
+                    return File(ms, MimeTypes.GetMimeType(".png"));
+                }
                 else
                 {
-                    var ext = Path.GetExtension(r.LogicalFullname);
-                    if (ext == BusinessConstants.IcoFileExtension)
-                    {
-                        var icon = new Icon(r.Cover);
-                        var bitmap = icon.ToBitmap();
-                        var ms = new MemoryStream();
-                        bitmap.Save(ms, ImageFormat.Png);
-                        ms.Seek(0, SeekOrigin.Begin);
-                        return File(ms, MimeTypes.GetMimeType(".png"));
-                    }
-                    else
-                    {
-                        var img = await Image.LoadAsync(r.Cover);
-                        var scale = Math.Min((decimal)700 / Math.Max(img.Width, img.Height), 1);
-                        var nw = (int)(img.Width * scale);
-                        var nh = (int)(img.Height * scale);
-                        img.Mutate(t => t.Resize(nw, nh));
-                        var data = await img.ToPngDataAsync();
-                        var contentType = MimeTypes.GetMimeType(r.Extension);
-                        return File(data, contentType);
-                        // return new FileStreamResult(r.Cover, contentType);
-                    }
+                    var img = await Image.LoadAsync(r.Cover);
+                    var scale = Math.Min((decimal) 700 / Math.Max(img.Width, img.Height), 1);
+                    var nw = (int) (img.Width * scale);
+                    var nh = (int) (img.Height * scale);
+                    img.Mutate(t => t.Resize(nw, nh));
+                    var data = (await img.ToPngDataAsync())!;
+                    var contentType = MimeTypes.GetMimeType(r.Extension);
+                    CoverCache.Set(id.ToString(), data, _coverCacheItemPolicy);
+                    return File(data, contentType);
                 }
             }
 
             return NotFound();
-            // return Redirect("/no-image-available.svg");
+        }
+
+        [HttpDelete("{id}/cover/cache")]
+        [SwaggerOperation(OperationId = "RemoveCoverCache")]
+        public Task<BaseResponse> RemoveCoverCache(int id)
+        {
+            CoverCache.Remove(id.ToString());
+            return Task.FromResult(BaseResponseBuilder.Ok);
         }
 
         [HttpGet("{id}/playable-files")]
@@ -261,14 +293,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 }
 
                 var maxLength = Math.Max(cleanName.Length, cn.Length);
-                var lengthDis = (decimal)Math.Abs(cleanName.Length - cn.Length);
+                var lengthDis = (decimal) Math.Abs(cleanName.Length - cn.Length);
                 var lengthDisRate = lengthDis / maxLength;
                 const decimal familiarDiffThreshold = 0.2m;
 
                 if (lengthDisRate <= familiarDiffThreshold)
                 {
                     var dis = cn.GetLevenshteinDistance(cleanName);
-                    var rate = (decimal)dis / maxLength;
+                    var rate = (decimal) dis / maxLength;
                     if (rate <= familiarDiffThreshold)
                     {
                         familiarNames.AddRange(names[n].Select(t => (t, rate)));
@@ -286,7 +318,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             }
 
             return new SingletonResponse<ResourceExistenceResult>(new ResourceExistenceResult
-            { Existence = ResourceExistence.New });
+                {Existence = ResourceExistence.New});
         }
 
         [HttpPut("move")]
@@ -299,9 +331,16 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 return BaseResponseBuilder.BuildBadRequest($"Resources [{string.Join(',', model.Ids)}] are not found");
             }
 
+            var mediaLibrary = model.MediaLibraryId.HasValue
+                ? await _mediaLibraryService.GetByKey(model.MediaLibraryId.Value)
+                : null;
+
             var taskName = $"Resource:BulkMove:{DateTime.Now:HH:mm:ss}";
             _taskManager.RunInBackground(taskName, new CancellationTokenSource(), async (bt, sp) =>
                 {
+                    var resourceService = sp.GetRequiredService<ResourceService>();
+                    bt.Message = _localizer.Resource_MovingTaskSummary(
+                        resources.Select(r => r.Value.DisplayName).ToArray(), mediaLibrary?.Name, model.Path);
                     foreach (var id in model.Ids)
                     {
                         await _resourceTaskManager.Add(new ResourceTaskInfo
@@ -309,7 +348,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                             BackgroundTaskId = bt.Id,
                             Id = id,
                             Type = ResourceTaskType.Moving,
-                            Summary = $"Moving to {model.Path}",
+                            Summary = _localizer.Resource_MovingTaskSummary(null, mediaLibrary?.Name, model.Path),
                             OperationOnComplete = ResourceTaskOperationOnComplete.RemoveOnResourceView
                         });
                     }
@@ -337,6 +376,15 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                         //     await _resourceTaskManager.Update(id, t => t.Percentage = p);
                         // }
 
+                        if (mediaLibrary != null && resource.MediaLibraryId != mediaLibrary.Id)
+                        {
+                            // todo: simpler way to change base info of resources.
+                            var resourceDto = (await resourceService.GetByKey(id, ResourceAdditionalItem.All, true))!;
+                            resourceDto.MediaLibraryId = mediaLibrary.Id;
+                            resourceDto.CategoryId = mediaLibrary.CategoryId;
+                            await resourceService.AddOrUpdateRange(new List<ResourceDto> {resourceDto});
+                        }
+
                         await _resourceTaskManager.Clear(id);
                     }
 
@@ -362,6 +410,11 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         public async Task<BaseResponse> SaveCover(int id, [FromBody] CoverSaveRequestModel model)
         {
             var resource = await _service.GetByKey(id, ResourceAdditionalItem.None, true);
+            if (resource == null)
+            {
+                return BaseResponseBuilder.BuildBadRequest(_localizer.Resource_NotFound(id));
+            }
+
             if (Directory.Exists(resource.RawFullname))
             {
                 var coverFileFullnamePrefix = Path.Combine(resource.RawFullname, "cover");
@@ -381,10 +434,11 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 var bytes = Convert.FromBase64String(data);
                 var newCoverFileFullname = $"{coverFileFullnamePrefix}.png";
                 await FileUtils.Save(newCoverFileFullname, bytes);
+                CoverCache.Set(id.ToString(), bytes, _coverCacheItemPolicy);
                 return BaseResponseBuilder.Ok;
             }
 
-            return BaseResponseBuilder.BuildBadRequest($"{resource.RawFullname} is not a directory");
+            return BaseResponseBuilder.BuildBadRequest(_localizer.Resource_CoverMustBeInDirectory());
         }
 
         [HttpGet("favorites-mappings")]
@@ -403,6 +457,66 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             await _service.TryToGenerateNfoInBackground();
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("{id}/previewer")]
+        [SwaggerOperation(OperationId = "GetResourceDataForPreviewer")]
+        public async Task<ListResponse<PreviewerItem>> GetResourceDataForPreviewer(int id)
+        {
+            var resource = await _service.GetByKey(id, false);
+
+            var filePaths = new List<string>();
+            if (System.IO.File.Exists(resource.RawFullname))
+            {
+                filePaths.Add(resource.RawFullname);
+            }
+            else
+            {
+                if (Directory.Exists(resource.RawFullname))
+                {
+                    filePaths.AddRange(Directory.GetFiles(resource.RawFullname, "*", SearchOption.AllDirectories));
+                }
+                else
+                {
+                    return ListResponseBuilder<PreviewerItem>.NotFound;
+                }
+            }
+
+            var items = new List<PreviewerItem>();
+
+            foreach (var f in filePaths)
+            {
+                var type = f.InferMediaType();
+                switch (type)
+                {
+                    case MediaType.Image:
+                        items.Add(new PreviewerItem
+                        {
+                            Duration = 1,
+                            FilePath = f.StandardizePath()!,
+                            Type = type
+                        });
+                        break;
+                    case MediaType.Video:
+                        items.Add(new PreviewerItem
+                        {
+                            Duration = (int) Math.Ceiling(
+                                (await _ffMpegHelper.GetDuration(f, HttpContext.RequestAborted))),
+                            FilePath = f.StandardizePath()!,
+                            Type = type
+                        });
+                        break;
+                    case MediaType.Text:
+                    case MediaType.Audio:
+                    case MediaType.Unknown:
+                        // Not available for previewing
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            return new ListResponse<PreviewerItem>(items);
         }
     }
 }

@@ -37,7 +37,7 @@ interface IProps extends React.HTMLAttributes<HTMLElement> {
   interval?: number;
   afterClose?: () => void;
   autoPlay?: boolean;
-  renderOperations?: (filePath: string, mediaType: MediaType, playing: boolean, reactPlayer: ReactPlayer | null) => any;
+  renderOperations?: (filePath: string, mediaType: MediaType, playing: boolean, reactPlayer: ReactPlayer | null, image: HTMLImageElement | null) => any;
 }
 
 class Node {
@@ -181,6 +181,8 @@ const MediaPlayer = (props: IProps) => {
   const log = buildLogger('MediaPlayer');
 
   const [visible, setVisible] = useState(true);
+
+  const imageRef = useRef<HTMLImageElement | null>(null);
 
 
   const [fileTree, setFileTree] = useState<Node>();
@@ -395,6 +397,8 @@ const MediaPlayer = (props: IProps) => {
       case MediaType.Image:
         return (
           <img
+            crossOrigin={'anonymous'}
+            ref={imageRef}
             className={'media'}
             src={`${serverConfig.apiEndpoint}${PlayFileURL({
               fullname: activeNode.key,
@@ -696,7 +700,7 @@ const MediaPlayer = (props: IProps) => {
           >
             {renderFile(activeNode.key)}
             <span>({(treeLeaves.indexOf(activeNode)) + 1} / {treeLeaves.length})</span>
-            {renderOperations && currentInitialized && renderOperations(activeNode.key, getMediaType(activeNode.key), playing, playerRef.current)}
+            {renderOperations && currentInitialized && renderOperations(activeNode.key, getMediaType(activeNode.key), playing, playerRef.current, imageRef.current)}
           </div>
         )}
         {autoPlay && progress && (

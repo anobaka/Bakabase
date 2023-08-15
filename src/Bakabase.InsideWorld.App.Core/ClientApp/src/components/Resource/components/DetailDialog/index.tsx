@@ -1,15 +1,27 @@
 import path from 'path';
-import React, { useEffect, useState } from 'react';
-import { Button, DatePicker2, Dialog, Input, Loading, Message, NumberPicker, Pagination, Range, Select } from '@alifd/next';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  Button,
+  DatePicker2,
+  Dialog,
+  Input,
+  Loading,
+  Message,
+  NumberPicker,
+  Pagination,
+  Range,
+  Select,
+} from '@alifd/next';
 import i18n from 'i18next';
 
 import './index.scss';
 import dayjs from 'dayjs';
 import { useUpdateEffect } from 'react-use';
+import { useTranslation } from 'react-i18next';
 import { IwFsType, ResourceLanguage, resourceLanguages } from '@/sdk/constants';
 import Property from '@/components/Resource/components/DetailDialog/PropertyValue';
 import PublisherProperty from '@/components/Resource/components/DetailDialog/PublisherPropertyValue';
-import { GetResourceFiles, PlayFileURL, PreviewPath, SearchResources } from '@/sdk/apis';
+import { PlayFileURL, PreviewPath, SearchResources } from '@/sdk/apis';
 import TagList from '@/components/Resource/components/DetailDialog/TagPropertyValue';
 import type { Entry } from '@/core/models/FileExplorer/Entry';
 import serverConfig from '@/serverConfig';
@@ -17,21 +29,40 @@ import CustomIcon from '@/components/CustomIcon';
 import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
 import Resource from '@/components/Resource';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
+import { createPortalOfComponent } from '@/components/utils';
+import BApi from '@/sdk/BApi';
 
-export default ({
-  dialogProps = {},
-  resource,
-  coverComponent,
-  reloadResource = (cb) => {
-  },
-  onPlay = () => {
-  },
-  onOpen = () => {
-  },
-  onRemove = () => {
-  },
-  noPlayableFile = false,
-} = {}) => {
+interface IProps {
+  dialogProps?: any;
+  resource: any;
+  onReloaded: (resource: any) => any;
+  onPlay?: () => void;
+  onOpen?: () => void;
+  onRemove?: () => void;
+  noPlayableFile?: boolean;
+  onTagSearch?: (tagId: number, append: boolean) => void;
+  ct: AbortSignal;
+}
+
+const ResourceDetailDialog = (props: IProps) => {
+  const {
+    resource: propsResource,
+    onReloaded = (resource: any) => {
+    },
+    onPlay = () => {
+    },
+    onOpen = () => {
+    },
+    onRemove = () => {
+    },
+    noPlayableFile = false,
+    onTagSearch = (tagId: number, append: boolean) => {
+    },
+    ct,
+  } = props;
+
+  const { t } = useTranslation();
+
   const [filesystemEntries, setFilesystemEntries] = useState<Entry[]>([]);
   const [filesystemEntriesForm, setFilesystemEntriesForm] = useState({
     pageIndex: 1,
@@ -46,6 +77,20 @@ export default ({
     pageIndex: 1,
     pageSize: 20,
   });
+
+  const [resource, setResource] = useState(propsResource);
+
+  const reload = async (cb?: any) => {
+    const newResourceRsp = await BApi.resource.getResourcesByKeys({ ids: [resource.id] });
+    const newResource = newResourceRsp.data![0];
+    setResource(newResource);
+    if (cb) {
+      cb();
+    }
+    onReloaded(newResource);
+  };
+
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     setPreviewingPath(resource.rawFullname);
@@ -89,7 +134,6 @@ export default ({
     const propertyComponents = {
       'Release Date': (
         <Property
-          label={'Release Date'}
           requestKey={'releaseDt'}
           renderValue={() => (resource.releaseDt ? dayjs(resource.releaseDt)
             .format('YYYY-MM-DD') : '')}
@@ -103,17 +147,16 @@ export default ({
           }}
           convertToRequesting={(dj) => dj.format('YYYY-MM-DD')}
           resourceId={resource.id}
-          reloadResource={reloadResource}
+          reloadResource={reload}
         />
       ),
       Publishers: (
         <PublisherProperty
           resource={resource}
-          reloadResource={reloadResource}
+          reloadResource={reload}
         />),
       Series: (
         <Property
-          label={'Series'}
           renderValue={() =>
             resource.series?.name && (
               <span
@@ -125,7 +168,7 @@ export default ({
               </span>
             )}
           resourceId={resource.id}
-          reloadResource={reloadResource}
+          reloadResource={reload}
           initValue={resource.series?.name}
           requestKey={'series'}
           EditComponent={Input}
@@ -136,10 +179,9 @@ export default ({
         />),
       Language: (
         <Property
-          label={'Language'}
           renderValue={() => i18n.t(ResourceLanguage[resource.language])}
           resourceId={resource.id}
-          reloadResource={reloadResource}
+          reloadResource={reload}
           initValue={resource.language}
           requestKey={'language'}
           EditComponent={Select}
@@ -156,7 +198,6 @@ export default ({
       ),
       Original: (
         <Property
-          label={'Original'}
           renderValue={() => resource.originals?.map((o) => (
             <span
               className={'original'}
@@ -167,7 +208,7 @@ export default ({
             </span>
           ))}
           resourceId={resource.id}
-          reloadResource={reloadResource}
+          reloadResource={reload}
           initValue={resource.originals?.map((t, i) => t.name) || []}
           requestKey={'originals'}
           EditComponent={Select}
@@ -181,10 +222,9 @@ export default ({
       ),
       Rate: (
         <Property
-          label={'Rate'}
           renderValue={() => resource.rate}
           resourceId={resource.id}
-          reloadResource={reloadResource}
+          reloadResource={reload}
           initValue={resource.rate}
           requestKey={'rate'}
           EditComponent={NumberPicker}
@@ -196,7 +236,7 @@ export default ({
         />
       ),
       // Tags: (
-      //   <TagPropertyValue resource={resource} reloadResource={reloadResource} />
+      //   <TagPropertyValue resource={resource} reload={reload} />
       // ),
     };
 
@@ -207,10 +247,9 @@ export default ({
           if (!(k in propertyComponents)) {
             propertyComponents[k] = (
               <Property
-                label={k}
                 renderValue={() => JSON.stringify(resource.customProperties[k])}
                 resourceId={resource.id}
-                reloadResource={reloadResource}
+                reloadResource={reload}
                 requestKey={k}
                 isCustomProperty
               />
@@ -243,18 +282,17 @@ export default ({
     times.forEach((t) => {
       propertyComponents[t.label] = (
         <Property
-          label={t.label}
           renderValue={() => dayjs(resource[t.key])
             .format('YYYY-MM-DD HH:mm:ss')}
         />
       );
     });
     return Object.keys(propertyComponents)
-      .map((t) => (
+      .map((a) => (
         <div className={'property'}>
-          <div className={'label'}>{i18n.t(t)}</div>
+          <div className={'label'}>{t(a)}</div>
           <div className="value-container">
-            {propertyComponents[t]}
+            {propertyComponents[a]}
           </div>
         </div>
       ));
@@ -291,7 +329,7 @@ export default ({
           <div className="label">
             <div className="left">
               <span>
-                {i18n.t('Files')}
+                {t('Files')}
               </span>
               <div className="path-segments">
                 {relativePathSegments && relativePathSegments
@@ -327,7 +365,11 @@ export default ({
                 value={fsEntriesColumnCount}
                 min={1}
                 max={15}
-                onProcess={(v) => setFsEntriesColumnCount(parseInt(v))}
+                onProcess={(v) => {
+                  if (typeof v == 'number') {
+                    setFsEntriesColumnCount(v);
+                  }
+                }}
               />
             </div>
           </div>
@@ -439,7 +481,7 @@ export default ({
       return (
         <div className={'children'}>
           <div className="label">
-            {i18n.t('Children resources')}
+            {t('Children resources')}
           </div>
           {hasPagination && (
             <Pagination
@@ -470,13 +512,13 @@ export default ({
               return (
                 <Resource
                   resource={a}
-                  requestTicketToRequest={() => true}
+                  ct={ct}
                 />
 
-              // <div className={'item'}>
-              //   <div className="square">
-              //   </div>
-              // </div>
+                // <div className={'item'}>
+                //   <div className="square">
+                //   </div>
+                // </div>
               );
             })}
           </div>
@@ -492,24 +534,30 @@ export default ({
         </div>
       );
     }
+    return;
   };
 
-  console.log(dialogProps);
+
+  const close = useCallback(() => {
+    setVisible(false);
+  }, []);
 
   return (
     <Dialog
-      closeable
+      closeMode={['close', 'mask', 'esc']}
       footerActions={['cancel']}
-      {...dialogProps}
       onKeyDown={(e) => {
         // e.preventDefault();
         e.stopPropagation();
       }}
       className={'resource-component-detail-dialog'}
+      visible={visible}
+      onClose={close}
+      onCancel={close}
+      cancelProps={{ children: t('Close') }}
     >
       <div className="top">
         <div className="left">
-          {/* {coverComponent} */}
           <ResourceCover
             resourceId={resource.id}
             loadImmediately
@@ -521,7 +569,7 @@ export default ({
               <Property
                 initValue={resource.name || resource.rawName}
                 resourceId={resource.id}
-                reloadResource={reloadResource}
+                reloadResource={reload}
                 renderValue={() => (
                   resource.name || resource.rawName
                 )}
@@ -537,9 +585,16 @@ export default ({
           </div>
           {renderOtherProperties()}
           <div className="property">
-            <div className="label">{i18n.t('Tags')}</div>
+            <div className="label">{t('Tags')}</div>
             <div className="value-container">
-              <TagList resource={resource} reloadResource={reloadResource} />
+              <TagList
+                resource={resource}
+                reloadResource={reload}
+                onSearch={(tagId, append) => {
+                  onTagSearch(tagId, append);
+                  setVisible(false);
+                }}
+              />
             </div>
           </div>
           <div className="opt">
@@ -548,28 +603,28 @@ export default ({
                 type="primary"
                 onClick={() => !noPlayableFile && onPlay()}
                 disabled={noPlayableFile}
-              >{i18n.t('Play')}
+              >{t('Play')}
               </Button>
               <Button
                 type="secondary"
                 onClick={() => onOpen()}
-              >{i18n.t('Open')}
+              >{t('Open')}
               </Button>
               <Button
                 warning
                 onClick={() => onRemove()}
-              >{i18n.t('Remove')}
+              >{t('Remove')}
               </Button>
             </Button.Group>
           </div>
         </div>
       </div>
       <div className="introduction-container">
-        <div className="label">{i18n.t('Introduction')}</div>
+        <div className="label">{t('Introduction')}</div>
         <Property
           initValue={resource.introduction}
           resourceId={resource.id}
-          reloadResource={reloadResource}
+          reloadResource={reload}
           renderValue={() => resource.introduction && (
             <pre className={'introduction'}>{resource.introduction}</pre>
           )}
@@ -588,3 +643,7 @@ export default ({
     </Dialog>
   );
 };
+
+ResourceDetailDialog.show = (props: IProps) => createPortalOfComponent(ResourceDetailDialog, props);
+
+export default ResourceDetailDialog;

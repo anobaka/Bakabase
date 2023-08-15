@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Http;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.Network;
@@ -111,6 +112,8 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddSingleton<ResourceTaskManager>();
 
             services.TryAddSingleton<IwFsWatcher>();
+
+            services.TryAddSingleton<FFMpegHelper>();
 
             return services;
         }

@@ -15,7 +15,7 @@ dayjs.extend(duration);
 
 const { Popup } = Overlay;
 
-export default (resourceId: number, resourcePath: string, onFrameCaptured: (base64String: string) => any, t: any) => {
+export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (base64String: string) => any, t: any) => {
   // const { t } = useTranslation();
 
   console.log('Showing resource media player');
@@ -35,7 +35,7 @@ export default (resourceId: number, resourcePath: string, onFrameCaptured: (base
             path: f,
           })),
           defaultActiveIndex: 0,
-          renderOperations: (filePath: string, mediaType: MediaType, playing: boolean, reactPlayer: ReactPlayer | null): any => {
+          renderOperations: (filePath: string, mediaType: MediaType, playing: boolean, reactPlayer: ReactPlayer | null, image: HTMLImageElement | null): any => {
             console.log(filePath, mediaType, playing, reactPlayer);
             console.log(reactPlayer, reactPlayer?.getDuration());
             const components = [
@@ -103,9 +103,9 @@ export default (resourceId: number, resourcePath: string, onFrameCaptured: (base
                     disabled={playing}
                     onClick={() => {
                       // Call captureVideoFrame() when you want to record a screenshot
-                      const frame = captureVideoFrame(reactPlayer, 'png', 1);
+                      const frame = captureVideoFrame(reactPlayer!.getInternalPlayer(), 'png', 1);
                       if (frame) {
-                        onFrameCaptured(frame.dataUri);
+                        onSaveAsNewCover(frame.dataUri);
                       } else {
                         Message.error(t('Failed to capture video frame'));
                       }
@@ -127,6 +127,28 @@ export default (resourceId: number, resourcePath: string, onFrameCaptured: (base
                 } else {
                   components.push(btn);
                 }
+              }
+              case MediaType.Image: {
+                if (image) {
+                  components.push(
+                    <Button
+                      type={'normal'}
+                      disabled={playing}
+                      onClick={() => {
+                        let canvas = document.createElement('canvas');
+                        canvas.width = image.width;
+                        canvas.height = image.height;
+                        let ctx = canvas.getContext('2d')!;
+                        ctx.drawImage(image, 0, 0);
+                        onSaveAsNewCover(canvas.toDataURL());
+                      }}
+                    >
+                      <CustomIcon type={'image-redo'} />
+                      {t('Save as a new cover')}
+                    </Button>,
+                  );
+                }
+                break;
               }
             }
             return (

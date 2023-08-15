@@ -693,6 +693,14 @@ export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResu
   properties?: BakabaseInsideWorldModelsConstantsResourceProperty[] | null;
 }
 
+export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
+  filePath?: string | null;
+  /** [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown] */
+  type?: BakabaseInsideWorldModelsConstantsMediaType;
+  /** @format int32 */
+  duration?: number;
+}
+
 /**
  * [1: Exist, 2: Maybe, 3: New]
  * @format int32
@@ -1401,6 +1409,8 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceCoverDiscardAndAu
 
 export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel {
   ids: number[];
+  /** @format int32 */
+  mediaLibraryId?: number | null;
   /** @minLength 1 */
   path: string;
 }
@@ -1541,6 +1551,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsAosPreviewerItem[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosComponentDescriptorDto {
@@ -3879,6 +3896,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name RemoveCoverCache
+     * @request DELETE:/resource/{id}/cover/cache
+     */
+    removeCoverCache: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/cover/cache`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name GetResourcePlayableFiles
      * @request GET:/resource/{id}/playable-files
      */
@@ -4032,6 +4064,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/nfo`,
         method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceDataForPreviewer
+     * @request GET:/resource/{id}/previewer
+     */
+    getResourceDataForPreviewer: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem, any>({
+        path: `/resource/${id}/previewer`,
+        method: "GET",
         format: "json",
         ...params,
       }),

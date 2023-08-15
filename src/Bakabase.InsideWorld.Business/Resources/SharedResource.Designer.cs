@@ -241,6 +241,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to {0} does not exist in {1}.
+        /// </summary>
+        internal static string FileDoesNotExistInPath {
+            get {
+                return ResourceManager.GetString("FileDoesNotExistInPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Duplicate sources are found: {0}.
         /// </summary>
         internal static string FileMover_DuplicateSourcesAreFound {
@@ -277,11 +286,83 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to {0} do not exist in {1}.
+        /// </summary>
+        internal static string FilesDoNotExistInPath {
+            get {
+                return ResourceManager.GetString("FilesDoNotExistInPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} is not found.
+        /// </summary>
+        internal static string PathIsNotFound {
+            get {
+                return ResourceManager.GetString("PathIsNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Paths should be in same directory.
         /// </summary>
         internal static string PathsShouldBeInSameDirectory {
             get {
                 return ResourceManager.GetString("PathsShouldBeInSameDirectory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The cover must be stored in a directory.
+        /// </summary>
+        internal static string Resource_CoverMustBeInDirectory {
+            get {
+                return ResourceManager.GetString("Resource_CoverMustBeInDirectory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Moving {0} to {1}.
+        /// </summary>
+        internal static string Resource_MovingTaskSummary {
+            get {
+                return ResourceManager.GetString("Resource_MovingTaskSummary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Moving to {0}.
+        /// </summary>
+        internal static string Resource_MovingTaskSummaryForSingleResource {
+            get {
+                return ResourceManager.GetString("Resource_MovingTaskSummaryForSingleResource", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Moving to media library {0}:{1}.
+        /// </summary>
+        internal static string Resource_MovingTaskSummaryForSingleResourceWithMediaLibrary {
+            get {
+                return ResourceManager.GetString("Resource_MovingTaskSummaryForSingleResourceWithMediaLibrary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Moving {0} to media library {1}:{2}.
+        /// </summary>
+        internal static string Resource_MovingTaskSummaryWithMediaLibrary {
+            get {
+                return ResourceManager.GetString("Resource_MovingTaskSummaryWithMediaLibrary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Resource with id:{0} is not found.
+        /// </summary>
+        internal static string Resource_NotFound {
+            get {
+                return ResourceManager.GetString("Resource_NotFound", resourceCulture);
             }
         }
         

@@ -536,6 +536,7 @@ export function captureVideoFrame(video, format, quality) {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
+  // console.log(typeof canvas.getContext('2d'), canvas.getContext('2d'), video);
   canvas.getContext('2d')!.drawImage(video, 0, 0);
 
   const dataUri = canvas.toDataURL(`image/${format}`, quality);

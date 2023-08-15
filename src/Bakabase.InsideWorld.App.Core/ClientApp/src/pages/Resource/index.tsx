@@ -181,9 +181,13 @@ const ResourcePage = (props) => {
   }, [searchForm]);
 
 
-  const onTagClickCallback = useCallback((tag) => {
-    const tagIds = (searchFormRef.current.tagIds ?? []).filter(a => a != tag.id);
-    tagIds.push(tag.id);
+  const onTagSearchCallback = useCallback((tagId: number, append: boolean) => {
+    const tagIds: number[] = (searchFormRef.current.tagIds ?? []).filter(a => a != tagId);
+    if (append) {
+      tagIds.push(tagId);
+    } else {
+      tagIds.splice(0, tagIds.length, tagId);
+    }
     search({
       ...searchFormRef.current,
       tagIds,
@@ -551,7 +555,7 @@ const ResourcePage = (props) => {
                 onRemove={afterResourceRemoving}
                 // @ts-ignore
                 searchEngines={thirdPartyOptions.simpleSearchEngines}
-                onTagClick={onTagClickCallback}
+                onTagSearch={onTagSearchCallback}
               />
             </div>
           );

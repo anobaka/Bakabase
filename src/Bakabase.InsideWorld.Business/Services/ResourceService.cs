@@ -39,6 +39,7 @@ using Volume = Bakabase.InsideWorld.Models.Models.Entities.Volume;
 using System.Drawing.Imaging;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Models.Configs;
 using CliWrap;
 using Newtonsoft.Json;
@@ -71,6 +72,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private static readonly SemaphoreSlim FindCoverInVideoSm = new SemaphoreSlim(2, 2);
         private readonly IBOptionsManager<ResourceOptions> _optionsManager;
         private readonly IBOptions<ThirdPartyOptions> _thirdPartyOptions;
+        private readonly FFMpegHelper _ffMpegHelper;
 
         public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
             PublisherService publisherService, AliasService aliasService,
@@ -82,7 +84,7 @@ namespace Bakabase.InsideWorld.Business.Services
             CustomResourcePropertyService customResourcePropertyService, BackgroundTaskManager backgroundTaskManager,
             BackgroundTaskHelper backgroundTaskHelper, FavoritesResourceMappingService favoritesResourceMappingService,
             TagGroupService tagGroupService, IBOptionsManager<ResourceOptions> optionsManager,
-            IBOptions<ThirdPartyOptions> thirdPartyOptions)
+            IBOptions<ThirdPartyOptions> thirdPartyOptions, FFMpegHelper ffMpegHelper)
         {
             _specialTextService = specialTextService;
             _publisherService = publisherService;
@@ -104,6 +106,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _tagGroupService = tagGroupService;
             _optionsManager = optionsManager;
             _thirdPartyOptions = thirdPartyOptions;
+            _ffMpegHelper = ffMpegHelper;
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>(serviceProvider);
         }
 
@@ -1098,36 +1101,11 @@ namespace Bakabase.InsideWorld.Business.Services
                             if (firstVideoFile != null)
                             {
                                 await FindCoverInVideoSm.WaitAsync(ct);
-                                // var consoleEncoding = Console.OutputEncoding;
                                 try
                                 {
-                                    // https://trac.ffmpeg.org/ticket/8890
-                                    // Console.OutputEncoding = Encoding.UTF8;
-                                    // ffprobe.exe simply writes utf8 data to stdout, and the Xabe.FFmpeg has no way to specify encoding.
-                                    // var info = await FFmpeg.GetMediaInfo(firstVideoFile.FullName, ct);
-                                    var output = new StringBuilder();
-                                    var error = new StringBuilder();
-                                    var cmd = Cli.Wrap($"{_thirdPartyOptions.Value.FFmpeg.BinDirectory}/ffprobe")
-                                        .WithArguments(new[]
-                                        {
-                                            "-v", "quiet",
-                                            "-print_format", "json",
-                                            "-show_entries", "format=duration",
-                                            firstVideoFile.FullName
-                                        }, true)
-                                        .WithValidation(CommandResultValidation.None)
-                                        .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
-                                        .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error));
+                                    var durationSeconds = await _ffMpegHelper.GetDuration(firstVideoFile.FullName, ct);
 
-                                    // var x2 = await FFmpeg.GetMediaInfo(firstVideoFile.FullName, ct);
-                                    var rsp = await cmd.ExecuteAsync(ct);
-                                    if (rsp.ExitCode != 0)
-                                    {
-                                        throw new Exception(error.ToString());
-                                    }
-                                    var jObject = JObject.Parse(output.ToString());
-                                    var seconds = jObject["format"]!["duration"]!.Value<double>();
-                                    var duration = TimeSpan.FromSeconds(seconds);
+                                    var duration = TimeSpan.FromSeconds(durationSeconds);
                                     const string ssExt = ".png";
                                     // var duration = info.Duration;
                                     var screenshotTime = duration * 0.2;
@@ -1135,24 +1113,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                     var tmpFile = !isTmp
                                         ? Path.Combine(path, $"cover{ssExt}")
                                         : Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{ssExt}");
-                                    // var c = (await FFmpeg.Conversions.FromSnippet.Snapshot(firstVideoFile.FullName,
-                                    //     tmpFile,
-                                    //     screenshotTime));
-                                    // var r = await c.Start(ct);
-                                    // ffmpeg -i input.mp4 -ss 00:00:05 -vframes 1 frame_out.jpg1.
-                                    var cmd2 = Cli.Wrap($"{_thirdPartyOptions.Value.FFmpeg.BinDirectory}/ffmpeg")
-                                        .WithArguments(new[]
-                                        {
-                                            "-i", firstVideoFile.FullName,
-                                            "-ss",
-                                            $"{screenshotTime.Hours:D2}:{screenshotTime.Minutes:D2}:{screenshotTime.Seconds:D2}",
-                                            "-vframes", "1",
-                                            tmpFile
-                                        }, true)
-                                        .WithValidation(CommandResultValidation.None)
-                                        .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
-                                        .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error));
-                                    var rsp2 = await cmd2.ExecuteAsync();
+                                    await _ffMpegHelper.CaptureFrame(firstVideoFile.FullName, screenshotTime, tmpFile,
+                                        ct);
                                     var ms = new MemoryStream();
                                     var fs = File.OpenRead(tmpFile);
                                     await fs.CopyToAsync(ms, ct);
@@ -1181,7 +1143,6 @@ namespace Bakabase.InsideWorld.Business.Services
                                 finally
                                 {
                                     FindCoverInVideoSm.Release();
-                                    // Console.OutputEncoding = consoleEncoding;
                                 }
                             }
 

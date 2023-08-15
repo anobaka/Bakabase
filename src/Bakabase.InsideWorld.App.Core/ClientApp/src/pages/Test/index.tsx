@@ -1,11 +1,8 @@
-import React, { useCallback, useRef, useState } from 'react';
-import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
-import { ResourceProperty } from '@/sdk/constants';
+import React, { useRef, useState } from 'react';
 import './index.scss';
 
-import type { RJSFSchema, UiSchema, FieldProps, RegistryFieldsType } from '@rjsf/utils';
-import validator from '@rjsf/validator-ajv8';
-import Form from '@rjsf/core';
+import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf/utils';
+import MediaPreviewer from '@/components/MediaPreviewer';
 
 const schema: RJSFSchema = {
   type: 'object',
@@ -58,7 +55,34 @@ const fields: RegistryFieldsType = { geo: GeoPosition };
 // Render the form with all the properties we just defined passed
 // as props
 export default () => {
-  return <Form schema={schema} uiSchema={uiSchema} validator={validator} fields={fields} />;
+  const hoverTimerRef = useRef<any>();
+  const [previewerVisible, setPreviewerVisible] = useState(false);
+
+  return (
+    <div className={'test-page'}>
+      <div
+        className={'media-previewer-container'}
+        onMouseOver={() => {
+          if (!hoverTimerRef.current) {
+            hoverTimerRef.current = setTimeout(() => {
+              setPreviewerVisible(true);
+            }, 1000);
+          }
+        }}
+        onMouseLeave={() => {
+          clearTimeout(hoverTimerRef.current);
+          hoverTimerRef.current = undefined;
+          if (previewerVisible) {
+            setPreviewerVisible(false);
+          }
+        }}
+      >
+        {previewerVisible && (
+          <MediaPreviewer resourceId={2501} />
+        )}
+      </div>
+    </div>
+  );
 };
 
 // export default () => {

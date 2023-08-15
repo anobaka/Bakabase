@@ -13,10 +13,10 @@ import {
   PlayResourceFile,
   RemoveResource,
 } from '@/sdk/apis';
-import { buildLogger, useTraceUpdate, uuidv4 } from '@/components/utils';
+import { buildLogger, useTraceUpdate } from '@/components/utils';
 import './index.scss';
 import { PlaylistItemType, ResourceLanguage, ResourceTaskOperationOnComplete, ResourceTaskType } from '@/sdk/constants';
-import DetailDialog from '@/components/Resource/components/DetailDialog';
+import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
 import store from '@/store';
 import { PlaylistCollection } from '@/components/Playlist';
 import { Tag as TagDto } from '@/core/models/Tag';
@@ -31,6 +31,7 @@ import ResourceEnhancementsDialog from '@/components/Resource/components/Resourc
 import type SimpleSearchEngine from '@/core/models/SimpleSearchEngine';
 import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
 import TagSelector from '@/components/TagSelector';
+import MediaPreviewer from '@/components/MediaPreviewer';
 
 const { Popup } = Overlay;
 
@@ -51,8 +52,8 @@ interface Props {
   onRemove?: (id: number) => void;
   showBiggerCoverOnHover?: boolean;
   searchEngines?: SimpleSearchEngine[] | null;
-  onTagClick: (tag: TagDto) => any;
   ct: AbortSignal;
+  onTagSearch?: (tagId: number, append: boolean) => any;
 }
 
 const displayModes = ['limited', 'full'];
@@ -64,20 +65,20 @@ const Resource = React.forwardRef((props: Props, ref) => {
     },
     showBiggerCoverOnHover = true,
     searchEngines = [],
-    onTagClick: propsOnTagClick = (tag) => {
+    onTagSearch = (tagId: number, append: boolean) => {
     },
     queue,
     ct,
   } = props;
+
+  const [previewerVisible, setPreviewerVisible] = useState(false);
+  const previewerHoverTimerRef = useRef<any>();
 
   const { t } = useTranslation();
   const log = buildLogger(`Resource:${resource.id}|${resource.rawFullname}`);
 
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const [playableFiles, setPlayableFiles] = useState<string[]>([]);
-
-  const [detailExist, setDetailExist] = useState(false);
-  const [detailVisible, setDetailVisible] = useState(false);
 
   useImperativeHandle(ref, (): IResourceHandler => {
     return {
@@ -222,11 +223,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
     }
   }, [playableFiles]);
 
-  const openDetail = useCallback(() => {
-    setDetailExist(true);
-    setDetailVisible(true);
-  }, []);
-
   const remove = useCallback(() => {
     if (confirm(t('Are you sure to delete this resource?(files on your disk will also be deleted)'))) {
       RemoveResource({
@@ -256,241 +252,284 @@ const Resource = React.forwardRef((props: Props, ref) => {
       languageIcon = (<img className={'language'} src={require(`@/assets/${languageIconName}.svg`)} />);
     }
     return (
-      <div className={'cover-rectangle'} id={elementId}>
+      <div
+        className={'cover-rectangle'}
+        id={elementId}
+      >
         <div
           className="cover-container"
+          onMouseOver={() => {
+            if (!previewerHoverTimerRef.current) {
+              previewerHoverTimerRef.current = setTimeout(() => {
+                setPreviewerVisible(true);
+              }, 1000);
+            }
+          }}
+          onMouseLeave={() => {
+            clearTimeout(previewerHoverTimerRef.current);
+            previewerHoverTimerRef.current = undefined;
+            if (previewerVisible) {
+              setPreviewerVisible(false);
+            }
+          }}
         >
+          {previewerVisible && (
+            <MediaPreviewer resourceId={resource.id} />
+          )}
           <ResourceCover
-            queue={queue}
+            loadImmediately={false}
             resourceId={resource.id}
-            onClick={openDetail}
+            onClick={() => {
+              ResourceDetailDialog.show({
+                onTagSearch,
+                onReloaded: () => reload(new AbortController().signal),
+                resource,
+                onPlay: clickPlayButton,
+                onOpen: open,
+                onRemove: remove,
+                noPlayableFile: !(playableFiles?.length > 0),
+                ct,
+              });
+            }}
             ref={coverRef}
             showBiggerOnHover={showBiggerCoverOnHover}
           />
-          {resource.id > 0 && (
-            <div className="rating">
-              <Rating
-                size={'medium'}
-                allowClear
-                onChange={(v) => {
-                  PatchResource({
-                    id: resource.id,
-                    model: {
-                      rate: v,
-                    },
-                  })
-                    .invoke((a) => {
-                      if (!a.code) {
-                        resource.rate = v;
-                        forceUpdate();
-                      }
-                    });
-                }}
-                value={resource.rate}
-              />
-            </div>
-          )}
-          <div className="play">
-            <Balloon.Tooltip
-              // popupContainer={elementId}
-              trigger={
-                <Button
-                  disabled={playableFiles.length == 0}
-                  type="normal"
-                  onClick={clickPlayButton}
-                >
-                  <CustomIcon type="play-circle" size={'xl'} />
-                </Button>
-              }
-              triggerType={['hover']}
-              align={'t'}
-            >
-              {playableFiles.length == 0 ? t('No playable file') : playableFiles.length == 1 ? t('Use player to play') : t('Select one file to play')}
-            </Balloon.Tooltip>
-          </div>
-          <div className="icons">
-            {languageIcon}
-            {resource.hasChildren && (
-              <CustomIcon
-                type={'package'}
-                size={'small'}
-                title={t('This is a parent resource')}
-              />
-            )}
-            {
-              resource.parentId > 0 && (
-                <CustomIcon
-                  type={'node'}
-                  size={'small'}
-                  title={t('This is a child resource')}
-                />
-              )
-            }
-            <CustomIcon
-              type={resource.isSingleFile ? 'file' : 'folder'}
-              title={t(`This is a ${resource.isSingleFile ? 'file' : 'folder'}`)}
-              size={'small'}
+        </div>
+        {resource.id > 0 && (
+          <div className="rating">
+            <Rating
+              size={'medium'}
+              allowClear
+              onChange={(v) => {
+                PatchResource({
+                  id: resource.id,
+                  model: {
+                    rate: v,
+                  },
+                })
+                  .invoke((a) => {
+                    if (!a.code) {
+                      resource.rate = v;
+                      forceUpdate();
+                    }
+                  });
+              }}
+              value={resource.rate}
             />
           </div>
-          <div className="opts">
-            {resource.id > 0 ? (
-              <>
-                <div className="opt" title={t('Enhancements')}>
-                  <CustomIcon
-                    type={'flashlight'}
-                    onClick={() => {
-                      BApi.resource.getResourceEnhancementRecords(resource.id)
-                        .then((t) => {
-                          ResourceEnhancementsDialog.show({
-                            resourceId: resource.id,
-                            enhancements: t.data || [],
-                          });
-                        });
-                    }}
-                  />
-                </div>
-                <div className={'opt'} title={t('Preview')}>
-                  <CustomIcon
-                    type={'eye'}
-                    onClick={() => {
-                      ShowResourceMediaPlayer(resource.id, resource.rawFullname, base64String => {
-                        coverRef.current?.save(base64String, false);
-                      }, t);
-                      // resourceMediaPlayerRef.current.show();
-                    }}
-                  />
-                </div>
-                <div className="opt" title={t('Open folder')}>
-                  <CustomIcon
-                    type={'folder-open'}
-                    onClick={() => open()}
-                  />
-                </div>
-                <div className="opt" title={t('Remove')}>
-                  <ClickableIcon
-                    type={'delete'}
-                    colorType={'danger'}
-                    onClick={remove}
-                  />
-                </div>
-                <div
-                  className="opt"
-                  title={t('Move')}
+        )}
+        <div className="play">
+          <Balloon.Tooltip
+            // popupContainer={elementId}
+            trigger={
+              <Button
+                disabled={playableFiles.length == 0}
+                type="normal"
+                onClick={clickPlayButton}
+              >
+                <CustomIcon type="play-circle" size={'xl'} />
+              </Button>
+            }
+            triggerType={['hover']}
+            align={'t'}
+          >
+            {playableFiles.length == 0 ? t('No playable file') : playableFiles.length == 1 ? t('Use player to play') : t('Select one file to play')}
+          </Balloon.Tooltip>
+        </div>
+        <div className="icons">
+          {languageIcon}
+          {resource.hasChildren && (
+            <CustomIcon
+              type={'package'}
+              size={'small'}
+              title={t('This is a parent resource')}
+            />
+          )}
+          {
+            resource.parentId > 0 && (
+              <CustomIcon
+                type={'node'}
+                size={'small'}
+                title={t('This is a child resource')}
+              />
+            )
+          }
+          <CustomIcon
+            type={resource.isSingleFile ? 'file' : 'folder'}
+            title={t(`This is a ${resource.isSingleFile ? 'file' : 'folder'}`)}
+            size={'small'}
+          />
+        </div>
+        <div className="opts">
+          {resource.id > 0 ? (
+            <>
+              <div className="opt" title={t('Enhancements')}>
+                <CustomIcon
+                  type={'flashlight'}
                   onClick={() => {
-                    MediaLibraryPathSelector.show({
-                      onSelect: path => BApi.resource.moveResources({
-                        ids: [resource.id],
-                        path,
-                      }),
-                    });
+                    BApi.resource.getResourceEnhancementRecords(resource.id)
+                      .then((t) => {
+                        ResourceEnhancementsDialog.show({
+                          resourceId: resource.id,
+                          enhancements: t.data || [],
+                        });
+                      });
                   }}
+                />
+              </div>
+              <div className={'opt'} title={t('Preview')}>
+                <CustomIcon
+                  type={'eye'}
+                  onClick={() => {
+                    ShowResourceMediaPlayer(resource.id, resource.rawFullname, base64String => {
+                      coverRef.current?.save(base64String, false);
+                    }, t);
+                    // resourceMediaPlayerRef.current.show();
+                  }}
+                />
+              </div>
+              <div className="opt" title={t('Open folder')}>
+                <CustomIcon
+                  type={'folder-open'}
+                  onClick={() => open()}
+                />
+              </div>
+              <div className="opt" title={t('Remove')}>
+                <ClickableIcon
+                  type={'delete'}
+                  colorType={'danger'}
+                  onClick={remove}
+                />
+              </div>
+              <div
+                className="opt"
+                title={t('Move')}
+                onClick={() => {
+                  MediaLibraryPathSelector.show({
+                    onSelect: path => BApi.resource.moveResources({
+                      ids: [resource.id],
+                      path,
+                    }),
+                  });
+                }}
+              >
+                <CustomIcon type={'move'} size={'small'} />
+              </div>
+              <div className={'opt'} title={t('Search')}>
+                <Dropdown
+                  autoFocus={false}
+                  trigger={
+                    <CustomIcon type={'search'} />
+                  }
+                  triggerType={'click'}
                 >
-                  <CustomIcon type={'move'} size={'small'} />
-                </div>
-                <div className={'opt'} title={t('Search')}>
-                  <Dropdown
-                    autoFocus={false}
-                    trigger={
-                      <CustomIcon type={'search'} />
-                    }
-                    triggerType={'click'}
-                  >
-                    <Menu className={'resource-component-search-dropdown-menu'}>
-                      {searchEngines?.filter(e => e.urlTemplate)
-                        .map((e, i) => {
-                          return (
-                            <Menu.Item
-                              key={i}
-                              onClick={() => {
+                  <Menu className={'resource-component-search-dropdown-menu'}>
+                    {searchEngines?.filter(e => e.urlTemplate)
+                      .map((e, i) => {
+                        return (
+                          <Menu.Item
+                            key={i}
+                            onClick={() => {
                               OpenUrlInDefaultBrowser({
                                 url: e.urlTemplate!.replace('{keyword}', encodeURIComponent(resource.rawName)),
                               })
                                 .invoke();
                             }}
-                            >
-                              <Trans i18nKey={'resource.search-engine.tip'}>
-                                Use <span>{{ name: e.name } as any}</span> to search <span>{{ keyword: resource.rawName } as any}</span>
-                              </Trans>
-                            </Menu.Item>
-                          );
-                        })}
-                    </Menu>
-                  </Dropdown>
-                </div>
-                <div
-                  className="opt"
-                  title={t('Add to favorites')}
-                  onClick={() => {
-                    FavoritesSelector.show({
-                      resourceIds: [resource.id],
-                    });
-                  }}
-                >
-                  <CustomIcon type={'star'} size={'small'} />
-                </div>
-                <div
-                  className="opt"
-                  title={t('Add to playlist')}
-                  onClick={() => {
-                    Dialog.show({
-                      title: t('Add to playlist'),
-                      content: (
-                        <PlaylistCollection defaultNewItem={{
-                          resourceId: resource.id,
-                          type: PlaylistItemType.Resource,
-                        }}
-                        />
-                      ),
-                      style: { minWidth: 600 },
-                      v2: true,
-                      closeMode: ['close', 'mask', 'esc'],
-                    });
-                  }}
-                >
-                  <CustomIcon type={'playlistadd'} size={'small'} />
-                </div>
-                <div
-                  className="opt"
-                  title={t('Set tags')}
-                  onClick={() => {
-                    let tagIds = (resource.tags || []).map(t => t.id);
-                    Dialog.show({
-                      title: t('Setting tags'),
-                      width: 'auto',
-                      content: (
-                        <TagSelector defaultValue={{ tagIds }} onChange={value => tagIds = value.tagIds} />
-                      ),
-                      v2: true,
-                      closeMode: ['close', 'mask', 'esc'],
-                      onOk: () => BApi.resource.updateResourceTags({
-                        resourceTagIds: {
-                          [resource.id]: tagIds,
-                        },
-                      })
-                        .then(t => {
-                          if (!t.code) {
-                            reload(new AbortController().signal);
-                          }
-                        }),
-                    });
-                  }}
-                >
-                  <CustomIcon type={'tags'} size={'small'} />
-                </div>
-              </>
-            ) : (
-              <div className="opt" title={t('Open folder')}>
-                <CustomIcon
-                  type={'folder-open'}
-                  onClick={() => OpenFileOrDirectory({
-                    path: resource.rawFullname,
-                    openInDirectory: true,
-                  })
-                    .invoke()}
-                />
+                          >
+                            <Trans i18nKey={'resource.search-engine.tip'}>
+                              Use <span>{{ name: e.name } as any}</span> to
+                              search <span>{{ keyword: resource.rawName } as any}</span>
+                            </Trans>
+                          </Menu.Item>
+                        );
+                      })}
+                  </Menu>
+                </Dropdown>
               </div>
-            )}
-          </div>
+              <div
+                className="opt"
+                title={t('Add to favorites')}
+                onClick={() => {
+                  FavoritesSelector.show({
+                    resourceIds: [resource.id],
+                  });
+                }}
+              >
+                <CustomIcon type={'star'} size={'small'} />
+              </div>
+              <div
+                className="opt"
+                title={t('Add to playlist')}
+                onClick={() => {
+                  Dialog.show({
+                    title: t('Add to playlist'),
+                    content: (
+                      <PlaylistCollection defaultNewItem={{
+                        resourceId: resource.id,
+                        type: PlaylistItemType.Resource,
+                      }}
+                      />
+                    ),
+                    style: { minWidth: 600 },
+                    v2: true,
+                    closeMode: ['close', 'mask', 'esc'],
+                  });
+                }}
+              >
+                <CustomIcon type={'playlistadd'} size={'small'} />
+              </div>
+              <div
+                className="opt"
+                title={t('Set tags')}
+                onClick={() => {
+                  let tagIds = (resource.tags || []).map(t => t.id);
+                  Dialog.show({
+                    title: t('Setting tags'),
+                    width: 'auto',
+                    content: (
+                      <TagSelector defaultValue={{ tagIds }} onChange={value => tagIds = value.tagIds} />
+                    ),
+                    v2: true,
+                    closeMode: ['close', 'mask', 'esc'],
+                    onOk: () => BApi.resource.updateResourceTags({
+                      resourceTagIds: {
+                        [resource.id]: tagIds,
+                      },
+                    })
+                      .then(t => {
+                        if (!t.code) {
+                          reload(new AbortController().signal);
+                        }
+                      }),
+                  });
+                }}
+              >
+                <CustomIcon type={'tags'} size={'small'} />
+              </div>
+
+              <div
+                className="opt"
+                title={t('Remove cover cache')}
+                onClick={async () => {
+                  await BApi.resource.removeCoverCache(resource.id);
+                  await coverRef.current?.reload(new AbortController().signal);
+                }}
+              >
+                <CustomIcon type={'image-redo'} size={'small'} />
+              </div>
+            </>
+          ) : (
+            <div className="opt" title={t('Open folder')}>
+              <CustomIcon
+                type={'folder-open'}
+                onClick={() => OpenFileOrDirectory({
+                  path: resource.rawFullname,
+                  openInDirectory: true,
+                })
+                  .invoke()}
+              />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -570,39 +609,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
     return;
   };
 
-
-  const onTagClick = useCallback((tag: TagDto) => {
-    if (propsOnTagClick) {
-      propsOnTagClick(tag);
-    }
-  }, [propsOnTagClick]);
-
   return (
     <div className={'resource-component'} key={resource.id}>
-      {detailExist && (
-        <DetailDialog
-          dialogProps={
-            {
-              afterClose: () => setDetailExist(false),
-              onOk: () => {
-              },
-              onCancel: () => {
-                setDetailVisible(false);
-              },
-              onClose: () => {
-                setDetailVisible(false);
-              },
-              visible: detailVisible,
-            }
-          }
-          reloadResource={reload}
-          resource={resource}
-          onPlay={() => clickPlayButton()}
-          onOpen={open}
-          onRemove={remove}
-          noPlayableFile={!(playableFiles?.length > 0)}
-        />
-      )}
       {renderTaskCover()}
       {renderCover()}
       <div className={'info'}>
@@ -650,7 +658,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                     text
                     style={{ color: t.color }}
                     size={'small'}
-                    onClick={() => onTagClick(tag)}
+                    onClick={() => onTagSearch(t.id, true)}
                   >#{tag.displayName}
                   </Button>
                 );

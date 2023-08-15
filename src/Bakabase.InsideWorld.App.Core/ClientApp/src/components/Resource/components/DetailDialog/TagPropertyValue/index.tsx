@@ -3,6 +3,7 @@ import './index.scss';
 import i18n from 'i18next';
 import { Balloon, Button, Dialog, Select } from '@alifd/next';
 import { useUpdateEffect } from 'react-use';
+import { useTranslation } from 'react-i18next';
 import { AddTagGroups, AddTags, GetAllTagGroups, PatchResource, SearchTags, UpdateResourceTags } from '@/sdk/apis';
 import { TagGroupAdditionalItem } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
@@ -13,7 +14,10 @@ import EditableTree from '@/components/EditableTree';
 export default ({
   reloadResource,
   resource,
-}: { resource: any; reloadResource: any }) => {
+  onSearch,
+}: { resource: any; reloadResource: any; onSearch: (tagId: number, append: boolean) => any }) => {
+  const { t } = useTranslation();
+
   const tagGroups: any[] = [];
   for (const tag of (resource.tags || [])) {
     let tagGroup = tagGroups.find((a) => a.name == tag.groupName || (tag.groupName == null && a.name == ''));
@@ -67,9 +71,42 @@ export default ({
                   </div>
                   <div className="tags">
                     <div className="current-tags">
-                      {g.tags.map((t) => {
+                      {g.tags.map((tag) => {
                         return (
-                          <div className={'tag'}>{renderAlias(t)}</div>
+                          <Balloon
+                            trigger={(
+                              <div className={'tag'}>{renderAlias(tag)}</div>
+                            )}
+                            triggerType={'click'}
+                            align={'t'}
+                            closable={false}
+                            v2
+                            autoFocus={false}
+                          >
+                            <Button
+                              type={'normal'}
+                              size={'small'}
+                              onClick={() => {
+                                if (onSearch) {
+                                  onSearch(tag.id, false);
+                                }
+                              }}
+                            >
+                              {t('Replace tags in search')}
+                            </Button>
+                            &nbsp;
+                            <Button
+                              type={'normal'}
+                              size={'small'}
+                              onClick={() => {
+                                if (onSearch) {
+                                  onSearch(tag.id, true);
+                                }
+                              }}
+                            >
+                              {t('Append to tags in search')}
+                            </Button>
+                          </Balloon>
                         );
                       })}
                     </div>
@@ -86,7 +123,7 @@ export default ({
         onClick={() => {
           let newTagIds;
           Dialog.show({
-            title: i18n.t('Edit tags'),
+            title: t('Edit tags'),
             content: (
               <TagSelector
                 defaultValue={{ tagIds }}
@@ -106,7 +143,7 @@ export default ({
               })
                 .invoke((a) => {
                   if (!a.code) {
-                    resolve();
+                    resolve(undefined);
                     reloadResource();
                   } else {
                     reject();

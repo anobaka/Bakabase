@@ -1,0 +1,84 @@
+.media-previewer {
+  width: 100%;
+  height: 100%;
+  background: #e3e3e3;
+  &>* {
+    width: 100%;
+    height: 100%;
+
+    &.loading, &.nothing-to-preview {
+      position: relative;
+      &>* {
+        width: 100%;
+        height: 100%;
+      }
+      .label {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        font-size: 18px;
+        z-index: 1;
+        position: relative;
+        word-break: break-all;
+        white-space: break-spaces;
+        text-align: center;
+      }
+      .mask {
+        position: absolute;
+        left: 0;
+        top: 0;
+        background: rgba(255,255,255,0.3);
+      }
+    }
+
+    &.playing {
+      position: relative;
+
+      .paused-cover {
+        position: absolute;
+        z-index: 1;
+        background: rgba(255,255,255,0.4);
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+
+      .media {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+
+        &>* {
+          max-width: 100%;
+          max-height: 100%;
+        }
+      }
+
+      .progress-bar {
+        cursor: pointer;
+        position: absolute;
+        left: 5%;
+        bottom: 0;
+        width: 90%;
+        padding: 10px 0;
+        z-index: 2;
+        .bar {
+          background: #666;
+          .progress {
+            max-width: 100%;
+            transition: width 0.2s;
+            height: 3px;
+            background: #fff;
+          }
+        }
+      }
+    }
+  }
+}

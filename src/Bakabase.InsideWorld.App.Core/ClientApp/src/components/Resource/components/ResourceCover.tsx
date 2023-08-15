@@ -61,6 +61,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     } else {
       Dialog.confirm({
         title: t('Sure to set new cover?'),
+        content: t('Previous cover file (cover.png) will be overwritten if it exists.'),
         closeMode: ['mask', 'close', 'esc'],
         v2: true,
         onOk: () => saveCoverInternal(base64Image, true),

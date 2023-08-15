@@ -866,5 +866,12 @@
   "Exit": "退出",
   "Prompt": "提示",
   "/ is the directory separator always, not \\": "除非特别说明，一般使用/作为目录路径分隔符，而不是\\",
-  "You should not use capturing groups on Resource property due to partial path is not available to match a file system entry": "您不应该在*资源*属性中使用捕获组，因为不完整的匹配结果将无法定位到文件系统中的文件(夹)"
+  "You should not use capturing groups on Resource property due to partial path is not available to match a file system entry": "您不应该在*资源*属性中使用捕获组，因为不完整的匹配结果将无法定位到文件系统中的文件(夹)",
+  "Replace tags in search": "仅搜索该标签",
+  "Append to tags in search": "追加搜索该标签",
+  "Remove cover cache": "清除封面緩存",
+  "Previous cover file (cover.png) will be overwritten if it exists.": "如果封面文件(cover.png)已存在，那么它将会被覆盖。",
+  "Save as a new cover": "保存为新封面",
+  "Initializing": "初始化中",
+  "NothingToPreview": "没有可预览的内容"
 }

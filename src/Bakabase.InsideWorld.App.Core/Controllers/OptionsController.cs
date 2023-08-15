@@ -7,9 +7,11 @@ using Bakabase.Infrastructures.Components.App.Models.RequestModels;
 using Bakabase.Infrastructures.Components.Configurations;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Configs.Infrastructures;
 using Bakabase.InsideWorld.Models.Configs.Resource;
@@ -32,17 +34,21 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     [Route("options")]
     public class OptionsController : Controller
     {
-        private readonly IStringLocalizer<SharedResource> _localizer;
+        private readonly IStringLocalizer<SharedResource> _prevLocalizer;
         private readonly IBOptionsManager<AppOptions> _appOptionsManager;
         private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
+        private readonly FFMpegHelper _ffMpegHelper;
+        private readonly InsideWorldLocalizer _localizer;
 
-        public OptionsController(IStringLocalizer<SharedResource> localizer,
+        public OptionsController(IStringLocalizer<SharedResource> prevLocalizer,
             IBOptionsManager<AppOptions> appOptionsManager,
-            InsideWorldOptionsManagerPool insideWorldOptionsManager)
+            InsideWorldOptionsManagerPool insideWorldOptionsManager, FFMpegHelper ffMpegHelper, InsideWorldLocalizer localizer)
         {
-            _localizer = localizer;
+            _prevLocalizer = prevLocalizer;
             _appOptionsManager = appOptionsManager;
             _insideWorldOptionsManager = insideWorldOptionsManager;
+            _ffMpegHelper = ffMpegHelper;
+            _localizer = localizer;
         }
 
         [HttpGet("app")]
@@ -91,7 +97,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         //{
         //    if (options.FileMover != null)
         //    {
-        //        var result = options.FileMover.StandardizeAndValidate(_localizer);
+        //        var result = options.FileMover.StandardizeAndValidate(_prevLocalizer);
         //        if (result.Code != 0)
         //        {
         //            return result;
@@ -199,7 +205,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         //            a.PixivDownloadThreads = options.PixivDownloadThreads;
         //        }
         //    }));
-        //    return BaseResponseBuilder.Ok.WithLocalization(_localizer);
+        //    return BaseResponseBuilder.Ok.WithLocalization(_prevLocalizer);
         //}
 
         [HttpGet("ui")]
@@ -298,7 +304,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "PatchFileSystemOptions")]
         public async Task<BaseResponse> PatchFileSystemOptions([FromBody] FileSystemOptions model)
         {
-            var result = model.FileMover.StandardizeAndValidate(_localizer);
+            var result = model.FileMover.StandardizeAndValidate(_prevLocalizer);
             if (result.Code != 0)
             {
                 return result;
@@ -435,26 +441,16 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             {
                 if (model.FFmpeg?.BinDirectory.IsNotEmpty() == true)
                 {
-                    var keyFiles = new string[] {"ffprobe.exe", "ffmpeg.exe"};
-                    var valid = false;
-                    if (Directory.Exists(model.FFmpeg.BinDirectory))
+                    var missingFiles = FFMpegHelper.CheckMissingFiles(model.FFmpeg.BinDirectory);
+                    if (missingFiles.Length > 0)
                     {
-                        var files = Directory.GetFiles(model.FFmpeg.BinDirectory);
-                        var names = files.Select(Path.GetFileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                        if (keyFiles.All(names.Contains))
-                        {
-                            FFmpeg.SetExecutablesPath(model.FFmpeg.BinDirectory);
-                            options.FFmpeg ??= new ThirdPartyOptions.FFmpegOptions();
-                            options.FFmpeg.BinDirectory = model.FFmpeg.BinDirectory;
-                            valid = true;
-                        }
+                        throw new FileNotFoundException(_localizer.FileNotFoundInPath(model.FFmpeg.BinDirectory,
+                            missingFiles));
                     }
 
-                    if (!valid)
-                    {
-                        throw new Exception(
-                            $"Can not find some of executable files: {string.Join(',', keyFiles)} in {model.FFmpeg.BinDirectory}");
-                    }
+                    FFmpeg.SetExecutablesPath(model.FFmpeg.BinDirectory);
+                    options.FFmpeg ??= new ThirdPartyOptions.FFmpegOptions();
+                    options.FFmpeg.BinDirectory = model.FFmpeg.BinDirectory;
                 }
 
                 if (model.SimpleSearchEngines != null)

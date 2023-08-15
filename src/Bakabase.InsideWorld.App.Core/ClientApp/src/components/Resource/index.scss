@@ -54,6 +54,13 @@
     //box-shadow: 1px 1px 3px 0px rgba(0, 0, 0, 0.5);
     border-radius: 3px;
 
+    .media-previewer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 10;
+    }
+
     .play, .opts {
       display: none;
     }
@@ -78,71 +85,71 @@
         max-width: 100%;
         max-height: 100%;
       }
+    }
 
-      .rating {
-        position: absolute;
-        left: 0;
-        top: 0;
-        .next-rating {
+    .rating {
+      position: absolute;
+      left: 0;
+      top: 0;
+      .next-rating {
 
-        }
       }
+    }
 
-      .play {
-        position: absolute;
-        left: 0;
-        bottom: 0;
-        button {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0;
-        }
-      }
-
-      .icons {
-        position: absolute;
-        right: 0;
-        bottom: 0;
+    .play {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      button {
         display: flex;
         align-items: center;
-        gap: 1px;
-        &>* {
-          background: white;
-          border: 1px solid #aaa;
-          border-radius: 4px;
-        }
-        .language {
-          max-width: 16px;
-          max-height: 16px;
-        }
-      }
-
-      .opts {
-        position: absolute;
-        right: 0;
-        top: 0;
+        justify-content: center;
         padding: 0;
-        flex-direction: column;
-        flex-wrap: wrap-reverse;
-        //display: flex;
-        gap: 2.5px;
-        max-height: 100%;
-        .opt {
-          cursor: pointer;
-          background: white;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          //padding: 2px;
-          border: 1px solid #9b9b9b;
-          border-radius: 4px;
-          height: 22px;
-          width: 22px;
-          color: #666;
-          &:hover {
-            color: #000;
-          }
+      }
+    }
+
+    .icons {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      &>* {
+        background: white;
+        border: 1px solid #aaa;
+        border-radius: 4px;
+      }
+      .language {
+        max-width: 16px;
+        max-height: 16px;
+      }
+    }
+
+    .opts {
+      position: absolute;
+      right: 0;
+      top: 0;
+      padding: 0;
+      flex-direction: column;
+      flex-wrap: wrap-reverse;
+      //display: flex;
+      gap: 2.5px;
+      max-height: 100%;
+      .opt {
+        cursor: pointer;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        //padding: 2px;
+        border: 1px solid #9b9b9b;
+        border-radius: 4px;
+        height: 22px;
+        width: 22px;
+        color: #666;
+        &:hover {
+          color: #000;
         }
       }
     }

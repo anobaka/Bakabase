@@ -94,5 +94,41 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
             return false;
         }
+
+        public static MediaType InferMediaType(this string? path)
+        {
+            if (path.IsNullOrEmpty())
+            {
+                return MediaType.Unknown;
+            }
+
+            var ext = Path.GetExtension(path);
+            if (ext.IsNullOrEmpty())
+            {
+                return MediaType.Unknown;
+            }
+
+            if (BusinessConstants.ImageExtensions.Contains(ext))
+            {
+                return MediaType.Image;
+            }
+
+            if (BusinessConstants.VideoExtensions.Contains(ext))
+            {
+                return MediaType.Video;
+            }
+
+            if (BusinessConstants.TextExtensions.Contains(ext))
+            {
+                return MediaType.Text;
+            }
+
+            if (BusinessConstants.AudioExtensions.Contains(ext))
+            {
+                return MediaType.Audio;
+            }
+
+            return MediaType.Unknown;
+        }
     }
 }

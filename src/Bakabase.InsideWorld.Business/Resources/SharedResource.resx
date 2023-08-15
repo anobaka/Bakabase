@@ -177,6 +177,9 @@
   <data name="Downloader_UnknownType" xml:space="preserve">
     <value>Unknown type: {0}</value>
   </data>
+  <data name="FileDoesNotExistInPath" xml:space="preserve">
+    <value>{0} does not exist in {1}</value>
+  </data>
   <data name="FileMover_DuplicateSourcesAreFound" xml:space="preserve">
     <value>Duplicate sources are found: {0}</value>
   </data>
@@ -189,8 +192,32 @@
   <data name="FileMover_TargetsCantBeSubOfSources" xml:space="preserve">
     <value>Targets can not be sub path of sources: {0}</value>
   </data>
+  <data name="FilesDoNotExistInPath" xml:space="preserve">
+    <value>{0} do not exist in {1}</value>
+  </data>
+  <data name="PathIsNotFound" xml:space="preserve">
+    <value>{0} is not found</value>
+  </data>
   <data name="PathsShouldBeInSameDirectory" xml:space="preserve">
     <value>Paths should be in same directory</value>
+  </data>
+  <data name="Resource_CoverMustBeInDirectory" xml:space="preserve">
+    <value>The cover must be stored in a directory</value>
+  </data>
+  <data name="Resource_MovingTaskSummary" xml:space="preserve">
+    <value>Moving {0} to {1}</value>
+  </data>
+  <data name="Resource_MovingTaskSummaryForSingleResource" xml:space="preserve">
+    <value>Moving to {0}</value>
+  </data>
+  <data name="Resource_MovingTaskSummaryForSingleResourceWithMediaLibrary" xml:space="preserve">
+    <value>Moving to media library {0}:{1}</value>
+  </data>
+  <data name="Resource_MovingTaskSummaryWithMediaLibrary" xml:space="preserve">
+    <value>Moving {0} to media library {1}:{2}</value>
+  </data>
+  <data name="Resource_NotFound" xml:space="preserve">
+    <value>Resource with id:{0} is not found</value>
   </data>
   <data name="TypeIsNotFound" xml:space="preserve">
     <value>Type {0} is not found</value>
