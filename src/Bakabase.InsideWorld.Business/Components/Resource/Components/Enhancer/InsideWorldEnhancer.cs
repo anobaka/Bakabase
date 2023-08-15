@@ -54,6 +54,9 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
             }
 
             var enhancements = new List<Enhancement>();
+
+            name = await _specialTextService.Pretreatment(name);
+
             if (IsValid(name))
             {
                 // ReleaseDt and Language can be matched simply
