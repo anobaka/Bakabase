@@ -144,6 +144,8 @@
           min-width: 120px;
           word-break: break-all;
           text-align: left;
+          white-space: break-spaces;
+          height: auto;
         }
         &>.libraries {
           margin-bottom: 5px;

@@ -223,14 +223,19 @@ namespace Bakabase.InsideWorld.Business.Services
             var matches = new List<(string Left, string Right, Match Match, string Content)>();
             foreach (var w in wrappers)
             {
-                var r = BuildRegexWithWrapper(w.Value1, w.Value2, ".+");
+                var r = BuildRegexWithWrapper(w.Value1, w.Value2, ".+?");
                 var m = r.Match(str);
+                var idx = 0;
                 while (m.Success)
                 {
-                    var content =
-                        m.Value[(w.Value1?.Length ?? 0)..][
-                            ..(m.Value.Length - w.Value1?.Length ?? 0 - w.Value2?.Length ?? 0)];
-                    matches.Add((w.Value1, w.Value2, m, content));
+                    if (m.Index >= idx)
+                    {
+                        var content =
+                            m.Value[(w.Value1?.Length ?? 0)..][
+                                ..((m.Value.Length - w.Value1?.Length ?? 0 - w.Value2?.Length ?? 0) - 1)];
+                        matches.Add((w.Value1, w.Value2, m, content));
+                        idx = m.Index + m.Length;
+                    }
                     m = m.NextMatch();
                 }
             }
