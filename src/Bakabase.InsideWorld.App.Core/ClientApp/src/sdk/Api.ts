@@ -15,6 +15,8 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptio
   enableAnonymousDataTracking?: boolean | null;
   /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
   closeBehavior?: BakabaseInfrastructuresComponentsGuiCloseBehavior;
+  /** [0: FollowSystem, 1: Light, 2: Dark] */
+  uiTheme?: BakabaseInfrastructuresComponentsGuiUiTheme;
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel {
@@ -87,6 +89,8 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   prevDataPath?: string | null;
   /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
   closeBehavior?: BakabaseInfrastructuresComponentsGuiCloseBehavior;
+  /** [0: FollowSystem, 1: Light, 2: Dark] */
+  uiTheme?: BakabaseInfrastructuresComponentsGuiUiTheme;
 }
 
 /**
@@ -98,6 +102,16 @@ export enum BakabaseInfrastructuresComponentsGuiCloseBehavior {
   Value1 = 1,
   Value2 = 2,
   Value1000 = 1000,
+}
+
+/**
+ * [0: FollowSystem, 1: Light, 2: Dark]
+ * @format int32
+ */
+export enum BakabaseInfrastructuresComponentsGuiUiTheme {
+  Value0 = 0,
+  Value1 = 1,
+  Value2 = 2,
 }
 
 export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {

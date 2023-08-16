@@ -1,9 +1,9 @@
 // 载入默认全局样式 normalize 、.clearfix 和一些 mixin 方法等
 @import "@alifd/next/reset.scss";
-@import '@alifd/theme-design-pro/variables.css';
-@import '@alifd/theme-design-pro/dist/next.var.css';
-@import '@icedesign/label/build/index.css';
+@import "./global.dark.scss";
+@import "./global.light.scss";
 
+@import '@alifd/theme-design-pro/dist/next.var.css';
 
 @font-face {
   font-family: 'Artypa-Regular';
@@ -12,12 +12,39 @@
                             'embedded-opentype', and 'svg' */
 }
 
-html, body {
+html, body, #ice-container {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-
   user-select: none;
+
+  background: var(--theme-body-background);
+  color: var(--theme-text);
+
+  --scrollbar-size: 7px;
+
+  /* Scroll bar styles */
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+
+  /* Track */
+  ::-webkit-scrollbar-track {
+    background: var(--theme-scrollbar-track-background);
+  }
+
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb-background);
+    border-radius: 5px;
+  }
+
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-scrollbar-thumb-hover-background);
+  }
+
 
   .confirmation-button-group {
     display: flex;

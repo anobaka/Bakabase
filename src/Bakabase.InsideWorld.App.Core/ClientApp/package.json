@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "dependencies": {
     "@alifd/next": "1.26.15",
+    "@alifd/theme-4602": "0.1.1",
     "@alifd/theme-design-pro": "0.8.1",
-    "@ice/runtime": "1.1.4",
     "@antv/data-set": "^0.11.8",
     "@dnd-kit/core": "^6.0.7",
     "@dnd-kit/sortable": "^7.0.2",
     "@dnd-kit/utilities": "^3.2.1",
+    "@ice/runtime": "1.1.4",
     "@icedesign/dynamic-icon": "^0.1.8",
     "@icedesign/label": "^1.0.6",
     "@microsoft/signalr": "^7.0.0",
@@ -81,14 +82,14 @@
     "@applint/spec": "1.2.3",
     "@ice/app": "3.1.4",
     "@ice/plugin-store": "1.0.3",
+    "@types/node": "^18.11.17",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
-    "@types/node": "^18.11.17",
     "eslint": "^8.35.0",
     "stylelint": "^15.2.0",
-    "typescript": "^4.8.4",
     "swagger-typescript-api": "^12.0.2",
-    "swagger-vue": "^1.0.3"
+    "swagger-vue": "^1.0.3",
+    "typescript": "^4.8.4"
   },
   "overrides": {
     "@ice/app": {

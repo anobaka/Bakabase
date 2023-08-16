@@ -873,5 +873,8 @@
   "Previous cover file (cover.png) will be overwritten if it exists.": "如果封面文件(cover.png)已存在，那么它将会被覆盖。",
   "Save as a new cover": "保存为新封面",
   "Initializing": "初始化中",
-  "NothingToPreview": "没有可预览的内容"
+  "NothingToPreview": "没有可预览的内容",
+  "Follow system": "跟随系统",
+  "Light mode": "浅色模式",
+  "Dark mode": "深色模式"
 }

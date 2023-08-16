@@ -5,7 +5,8 @@
   width: 100%;
   &>.nav-container {
     height: 100%;
-    background-color: #f7f7f7;
+    //background-color: #2f2f2f;
+    background-color: var(--theme-block-background);
     border-top-right-radius: 22px;
     border-bottom-right-radius: 22px;
     display: flex;
@@ -15,16 +16,18 @@
 
     &>.nav {
       height: 100%;
-      background-color: #f7f7f7;
+      background-color: var(--theme-block-background);
+      //background-color: #2f2f2f;
+
       display: flex;
       flex-direction: column;
       &>.top {
-        border-bottom: 1px solid #EAEAEA;
+        border-bottom: 1px solid var(--theme-border-accent);
         padding: 20px 0 20px 10px;
         font-size: 16px;
         font-family: Artypa-Regular, Artypa;
         font-weight: 400;
-        color: #100DB1;
+        color: var(--theme-text);
         line-height: 31px;
         text-align: center;
         &:active {
@@ -35,36 +38,22 @@
         flex: 1;
         min-height: 0;
         overflow-y: auto;
-        //padding: 0 35px;
-
-        &::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-        &::-webkit-scrollbar-track {
-          border-radius: 10px;
-          background: rgba(0,0,0,0.1);
-        }
-        &::-webkit-scrollbar-thumb{
-          border-radius: 10px;
-          background: rgba(0,0,0,0.2);
-        }
-        &::-webkit-scrollbar-thumb:hover{
-          background: rgba(0,0,0,0.4);
-        }
-        &::-webkit-scrollbar-thumb:active{
-          background: rgba(0,0,0,.9);
-        }
 
         .next-nav.next-ver {
           height: unset;
           line-height: unset;
+          border: none;
+          background: var(--theme-block-background);
+
           .next-menu-sub-menu {
           }
 
           .next-menu-item.next-nav-item {
             //padding: 0 35px;
-            color: #343434;
+            //color: #343434;
+
+            color: var(--theme-text);
+            background: var(--theme-block-background);
 
             .next-menu-item-inner {
               height: unset;
@@ -77,8 +66,8 @@
             }
 
             &.next-selected {
-              background-color: rgba(16, 13, 177, 0.1);
-              color: #100DB1;
+              background-color: var(--theme-primary-background);
+              color: var(--theme-primary-base);
               &:before {
                 content: none;
               }
@@ -105,12 +94,12 @@
       height: 100%;
       display: flex;
       align-items: center;
-      color: #333;
+      color: var(--theme-text-subtle);
       border-top-right-radius: 22px;
       border-bottom-right-radius: 22px;
 
       &:hover {
-        background: #e9e9e9;
+        background: var(--theme-hover-base);
       }
     }
   }

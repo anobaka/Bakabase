@@ -1,17 +1,23 @@
 import i18n from 'i18next';
 import { Balloon, Dialog, Input, Message, Radio, Switch, Table } from '@alifd/next';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Cookies from 'universal-cookie';
+import { useTranslation } from 'react-i18next';
 import Title from '@/components/Title';
 import CustomIcon from '@/components/CustomIcon';
 import { MoveCoreData, PatchAppOptions, PatchThirdPartyOptions } from '@/sdk/apis';
 import FileSelector from '@/components/FileSelector';
 import store from '@/store';
 import BApi from '@/sdk/BApi';
+import { UiTheme, uiThemes } from '@/sdk/constants';
 
 const cookies = new Cookies();
 
-export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: any, success: (rsp: any) => void) => void}) => {
+export default ({
+                  applyPatches = () => {
+                  },
+                }: { applyPatches: (API: any, patches: any, success: (rsp: any) => void) => void }) => {
+  const { t } = useTranslation();
   const [appOptions, appOptionsDispatcher] = store.useModel('appOptions');
   const thirdPartyOptions = store.useModelState('thirdPartyOptions');
   const networkOptions = store.useModelState('networkOptions');
@@ -22,7 +28,29 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
   }, [networkOptions]);
 
   const otherSettings = [
-    { label: 'Language',
+    {
+      label: 'Theme',
+      value: appOptions.uiTheme,
+      renderValue: () => (
+        <Radio.Group
+          // shape="button"
+          size={'small'}
+          dataSource={[{ label: t('Follow system'), value: UiTheme.FollowSystem }, { label: t('Light mode'), value: UiTheme.Light }, { label: t('Dark mode'), value: UiTheme.Dark }]}
+          value={appOptions.uiTheme}
+          onChange={(uiTheme) => {
+            PatchAppOptions({
+              model: {
+                uiTheme,
+              },
+            }).invoke((a) => {
+              location.reload();
+            });
+          }}
+        />
+      ),
+    },
+    {
+      label: 'Language',
       value: cookies.get('lng'),
       renderValue: () => (
         <Radio.Group
@@ -40,7 +68,8 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
             });
           }}
         />
-      ) },
+      ),
+    },
     {
       label: 'Proxy',
       tip: 'You can set a proxy for network requests, such as socks5://127.0.0.1:18888',
@@ -206,7 +235,11 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
               );
             }}
           />
-          <Table.Column dataIndex={'renderValue'} title={i18n.t('Value')} cell={(render, i, r) => (render ? render() : r.value)} />
+          <Table.Column
+            dataIndex={'renderValue'}
+            title={i18n.t('Value')}
+            cell={(render, i, r) => (render ? render() : r.value)}
+          />
         </Table>
       </div>
     </div>

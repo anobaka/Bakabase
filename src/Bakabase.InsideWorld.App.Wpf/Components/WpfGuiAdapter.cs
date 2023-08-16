@@ -287,5 +287,11 @@ namespace Bakabase.InsideWorld.App.Wpf.Components
             var result = MessageBox.Show(message, caption, MessageBoxButton.OKCancel);
             return result == MessageBoxResult.OK;
         }
+
+        public override void ChangeUiTheme(UiTheme theme)
+        {
+            // todo: implement
+            return;
+        }
     }
 }

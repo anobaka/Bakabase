@@ -1,10 +1,9 @@
 .configuration-page {
-  background: white;
   .group {
     //margin-bottom: 10px;
     .settings {
       .key {
-        background: #f7f7f7;
+        background: var(--theme-table-header-background);
         .next-table-cell-wrapper {
           display: flex;
           align-items: center;
@@ -19,10 +18,10 @@
         }
         .iconfont {
           margin-left: 2px;
-          color: #888;
-          &.error {
-            color: red;
-          }
+          //color: #888;
+          //&.error {
+          //  color: red;
+          //}
         }
         .balloon-container {
           display: flex;
@@ -43,7 +42,6 @@
   }
 
   .us, .others {
-    background: white;
     padding: 5px;
     margin: 5px 0;
     .title {

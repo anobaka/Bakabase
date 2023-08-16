@@ -6,7 +6,7 @@ import i18n from 'i18next';
 import { useNavigate } from '@ice/runtime/router';
 import PageNav from './components/PageNav';
 import { CheckAppInitialized } from '@/sdk/apis';
-import { InitializationContentType } from '@/sdk/constants';
+import { InitializationContentType, UiTheme } from '@/sdk/constants';
 import FloatingAssistant from '@/components/FloatingAssistant';
 import ErrorBoundary from '@/components/ErrorBoundary';
 

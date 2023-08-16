@@ -31,6 +31,8 @@ namespace Bakabase.InsideWorld.App.Wpf
 
         private async void App_OnStartup(object sender, StartupEventArgs e)
         {
+            _guiAdapter.ChangeUiTheme(AppOptionsManager.Instance.CalculatedUiTheme);
+
             Host = new InsideWorldHost(_guiAdapter);
             Host.Start(new string[] { });
         }

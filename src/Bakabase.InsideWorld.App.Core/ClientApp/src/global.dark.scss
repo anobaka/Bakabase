@@ -1,0 +1,184 @@
+.iw-theme-dark {
+  --theme-scrollbar-track-background: #444;
+  --theme-scrollbar-thumb-background: #686868;
+  --theme-scrollbar-thumb-hover-background: #7a7a7a;
+
+  --theme-table-row-background: transparent;
+  --theme-table-header-background: rgb(22, 27, 34);
+  --theme-table-background-hover: rgb(22, 27, 34);
+
+  --theme-button-normal-background: rgb(33, 38, 45);
+  --theme-button-normal-background-hover: rgb(48, 54, 61);
+  --theme-button-normal-background-active: rgb(40, 46, 51);
+  --theme-button-normal-border-color: rgba(240, 246, 252, 0.1);
+  --theme-button-normal-border-color-hover: rgb(139, 148, 158);
+  --theme-button-normal-border-color-active: rgb(110, 118, 129);
+
+  --theme-button-primary-background: rgb(35, 134, 54);
+  --theme-button-primary-background-hover: rgb(46, 160, 67);
+  --theme-button-primary-background-active: rgb(35, 134, 54);
+  --theme-button-primary-border-color: rgba(240, 246, 252, 0.1);
+  --theme-button-primary-border-color-hover: rgba(240, 246, 252, 0.1);
+  --theme-button-primary-border-color-active: rgb(110, 118, 129);
+
+  --theme-label-primary-background: rgba(56, 139, 253, 0.1);
+
+  --theme-button-warning-color: rgb(248, 81, 73);
+
+  --theme-input-background: rgb(1, 4, 9);
+
+  --theme-border-color: rgb(48, 54, 61);
+  --theme-border-color-muted: rgb(33, 38, 45);
+
+  --theme-body-background: rgb(13, 17, 23);
+
+  --theme-text: #e6e6e6;
+  --theme-text-subtle: #d2d2d2;
+  --theme-text-primary: rgb(47, 129, 247);
+
+  --theme-text-invert: #2f2f2f;
+  --theme-text-glow-high-contrast: #e6e6e6;
+  --theme-box-shadow-light: #0000001c;
+  --theme-box-shadow-medium: #00000021;
+  --theme-box-shadow-heavy: #0000002e;
+  --theme-box-shadow-extra-heavy: #00000038;
+  --theme-overlay: #000000b3;
+  --theme-overlay-invert: #fff;
+  --theme-block-background: #2f2f2f;
+  --theme-alternate-background: #f2f2f2;
+  --theme-alternate-background-medium: #fafafa;
+  --theme-card-background: #091f2c;
+  --theme-hover-base: #404040;
+  --theme-code-header: #404040;
+  --theme-code-block: #2f2f2f;
+  --theme-control-border: #d2d2d2;
+  --theme-inline-code: #404040;
+  --theme-code-highlight-background: #0b6413;
+  --theme-visited: #ac7ee1;
+  --theme-score-low-off: #a80000b3;
+  --theme-score-low: #b62626;
+  --theme-score-medium-off: #ffbb004d;
+  --theme-score-medium: #ffcb3f;
+  --theme-score-high-off: #489d48b3;
+  --theme-score-high: #489d48;
+  --theme-hyperlink: #75b6e7;
+  --theme-secondary-base: #757575;
+  --theme-secondary-background: #404040;
+  --theme-secondary-background-glow-high-contrast: #404040;
+  --theme-secondary-dark: #e6e6e6;
+  --theme-secondary-hover: #8e8e8e;
+  --theme-secondary-active: #a2a2a2;
+  --theme-secondary-box-shadow: #000000b3;
+  --theme-secondary-invert: #fff;
+  --theme-tertiary-base: #404040;
+  --theme-tertiary-background: #171717;
+  --theme-tertiary-background-glow-high-contrast: #171717;
+  --theme-tertiary-dark: #e6e6e6;
+  --theme-tertiary-hover: #505050;
+  --theme-tertiary-active: #757575;
+  --theme-tertiary-box-shadow: #0065b34d;
+  --theme-tertiary-invert: #fff;
+  --theme-success-base: #7cbb7b;
+  --theme-success-background: #054b16;
+  --theme-success-background-glow-high-contrast: #054b16;
+  --theme-success-dark: #dff6dd;
+  --theme-success-hover: #489d48;
+  --theme-success-active: #7cbb7b;
+  --theme-success-box-shadow: #489d48b3;
+  --theme-success-invert: #000;
+  --theme-info-base: #9970d3;
+  --theme-info-background: #3b2e58;
+  --theme-info-background-glow-high-contrast: #3b2e58;
+  --theme-info-dark: #efd9fd;
+  --theme-info-hover: #ac7ee1;
+  --theme-info-active: #d59dff;
+  --theme-info-box-shadow: #201843b3;
+  --theme-info-invert: #000;
+  --theme-warning-base: #ffb900;
+  --theme-warning-background: #6a4b16;
+  --theme-warning-background-glow-high-contrast: #6a4b16;
+  --theme-warning-dark: #fff4ce;
+  --theme-warning-hover: #ffcb3f;
+  --theme-warning-active: #ffdf84;
+  --theme-warning-box-shadow: #ffbb00b3;
+  --theme-warning-invert: #000;
+  --theme-danger-base: #e5a7a8;
+  --theme-danger-background: #630001;
+  --theme-danger-background-glow-high-contrast: #630001;
+  --theme-danger-dark: #fde7e9;
+  --theme-danger-hover: #c54f4f;
+  --theme-danger-active: #d4797a;
+  --theme-danger-box-shadow: #a80000b3;
+  --theme-danger-invert: #000;
+  --theme-facepile-red: #c54f4f;
+  --theme-facepile-teal: #50e6ff;
+  --theme-facepile-blue: #278cda;
+  --theme-gradient-text-purple: #cd9bcf;
+  --theme-gradient-text-blue: #9ccbee;
+  --theme-gradient-vivid-start: #b84dc6;
+  --theme-gradient-vivid-end: #75b6e7;
+
+  // fusion.design overrides
+  --btn-pure-primary-bg: var(--theme-button-primary-background);
+  --btn-pure-primary-bg-hover: var(--theme-button-primary-background-hover);
+  --btn-pure-primary-bg-active: var(--theme-button-primary-background-active);
+  --btn-pure-primary-color: var(--theme-text);
+  --btn-pure-primary-color-hover: var(--theme-text);
+  --btn-pure-primary-border-color: var(--theme-button-primary-border-color);
+  --btn-pure-primary-border-color-hover: var(--theme-button-primary-border-color-hover);
+  --btn-pure-primary-border-color-active: var(--theme-button-primary-border-color-active);
+
+  --btn-pure-normal-bg: var(--theme-button-normal-background);
+  --btn-pure-normal-bg-hover: var(--theme-button-normal-background-hover);
+  --btn-pure-normal-bg-active: var(--theme-button-normal-background-active);
+  --btn-pure-normal-color: var(--theme-text);
+  --btn-pure-normal-color-hover: var(--theme-text);
+  --btn-pure-normal-border-color: var(--theme-button-normal-border-color);
+  --btn-pure-normal-border-color-hover: var(--theme-button-normal-border-color-hover);
+  --btn-pure-normal-border-color-active: var(--theme-button-normal-border-color-active);
+
+  --btn-warning-normal-bg: var(--theme-button-normal-background);
+  --btn-warning-normal-border-color: var(--theme-button-normal-border-color);
+  --btn-warning-normal-color: var(--theme-button-warning-color);
+
+  --btn-text-primary-color: var(--theme-primary-base);
+  --btn-text-primary-color-hover: var(--theme-primary-hover);
+
+  --table-row-bg: var(--theme-table-row-background);
+  --table-row-color: var(--theme-text);
+  --table-row-hover-color: var(--theme-text);
+  --table-row-hover-bg: var(--theme-table-background-hover);
+  --table-normal-border-color: var(--theme-border-color);
+
+  --radio-normal-font-color: var(--theme-text);
+
+  --checkbox-label-color: var(--theme-text);
+  --checkbox-checked-bg-color: var(--theme-secondary-background);
+  --checkbox-checked-hovered-bg-color: var(--theme-secondary-base);
+  --checkbox-bg-color: var(--theme-secondary-background);
+  --checkbox-border-color: var(--theme-border-color);
+  --checkbox-hovered-border-color: var(--theme-border-color);
+  --checkbox-hovered-bg-color: var(--theme-secondary-base);
+
+  --balloon-tooltip-color-bg: var(--theme-alternate-background);
+  --balloon-tooltip-color: var(--theme-text-invert);
+
+  --list-divider-color: var(--theme-border-color-muted);
+
+  --input-bg-color: var(--theme-input-background);
+  --input-focus-bg-color: var(--theme-input-background);
+  --input-hover-bg-color: var(--theme-input-background);
+  --input-border-color: var(--theme-border-color);
+  --input-hover-border-color: var(--theme-border-color);
+  --input-text-color: var(--theme-text);
+  --input-addon-bg-color: var(--theme-button-normal-background);
+  --input-addon-text-color: var(--theme-text-subtle);
+  --input-label-color: var(--theme-text-subtle);
+  ::placeholder {
+    color: var(--theme-text-subtle);
+  }
+
+  --tag-closable-primary-fill-bg-color: var(--theme-label-primary-background);
+  --tag-closable-primary-fill-text-color: var(--theme-text-primary);
+
+}

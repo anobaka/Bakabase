@@ -6,6 +6,7 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.RequestModels;
 using Bakabase.Infrastructures.Components.Configurations;
 using Bakabase.Infrastructures.Components.Configurations.App;
+using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
@@ -39,16 +40,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
         private readonly FFMpegHelper _ffMpegHelper;
         private readonly InsideWorldLocalizer _localizer;
+        private readonly IGuiAdapter _guiAdapter;
 
         public OptionsController(IStringLocalizer<SharedResource> prevLocalizer,
             IBOptionsManager<AppOptions> appOptionsManager,
-            InsideWorldOptionsManagerPool insideWorldOptionsManager, FFMpegHelper ffMpegHelper, InsideWorldLocalizer localizer)
+            InsideWorldOptionsManagerPool insideWorldOptionsManager, FFMpegHelper ffMpegHelper, InsideWorldLocalizer localizer, IGuiAdapter guiAdapter)
         {
             _prevLocalizer = prevLocalizer;
             _appOptionsManager = appOptionsManager;
             _insideWorldOptionsManager = insideWorldOptionsManager;
             _ffMpegHelper = ffMpegHelper;
             _localizer = localizer;
+            _guiAdapter = guiAdapter;
         }
 
         [HttpGet("app")]
@@ -62,6 +65,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "PatchAppOptions")]
         public async Task<BaseResponse> PatchAppOptions([FromBody] AppOptionsPatchRequestModel model)
         {
+            UiTheme? newUiTheme = null;
             await _appOptionsManager.SaveAsync(options =>
             {
                 if (model.Language.IsNotEmpty())
@@ -87,7 +91,19 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 {
                     options.CloseBehavior = model.CloseBehavior.Value;
                 }
+
+                if (model.UiTheme.HasValue && model.UiTheme != options.UiTheme)
+                {
+                    options.UiTheme = model.UiTheme.Value;
+                    newUiTheme = model.UiTheme;
+                }
             });
+
+            if (newUiTheme.HasValue)
+            {
+                _guiAdapter.ChangeUiTheme(newUiTheme.Value);
+            }
+
             return BaseResponseBuilder.Ok;
         }
 

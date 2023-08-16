@@ -11,7 +11,7 @@ export default ({
   right,
 }) => {
   return (
-    <div className={'bakabase-title'}>
+    <div className={'iw-title'}>
       <div className="left">
         <div className="title">{i18n.t(title)}</div>
         {titleAfter && (
@@ -24,9 +24,8 @@ export default ({
             {buttons.map((b) => (
               <div className={'button'} key={b.key}>
                 <img className={'icon'} src={b.icon} alt="" />
-                {b.type == 'link' ? (<Link to={b.to}>{i18n.t(b.text)}</Link>) :
-                  (<Button type={'primary'} onClick={b.onClick} text>{i18n.t(b.text)}</Button>)
-                }
+                {b.type == 'link' ? (<Link to={b.to}>{i18n.t(b.text)}</Link>)
+                  : (<Button type={'primary'} onClick={b.onClick} text>{i18n.t(b.text)}</Button>)}
               </div>
             ))}
           </div>
