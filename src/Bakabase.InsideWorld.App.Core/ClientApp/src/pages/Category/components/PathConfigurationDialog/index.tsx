@@ -11,6 +11,7 @@ import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
 import TagSelector from '@/components/TagSelector';
 import './index.scss';
 import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
+import ClickableIcon from '@/components/ClickableIcon';
 
 const log = buildLogger('PathConfigurationDialog');
 
@@ -277,7 +278,8 @@ export default (props: Props) => {
                     }}
                   >{value?.path}
                   </Button>
-                  <CustomIcon
+                  <ClickableIcon
+                    colorType={'normal'}
                     type="folder-open"
                     onClick={(e) => {
                       e.preventDefault();

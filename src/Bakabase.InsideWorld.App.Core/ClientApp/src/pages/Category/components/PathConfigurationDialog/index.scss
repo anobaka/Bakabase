@@ -4,15 +4,6 @@
     padding-bottom: 10px;
   }
 
-  .icon-folder-open {
-    color: #666;
-    cursor: pointer;
-
-    &:hover {
-      color: #000;
-    }
-  }
-
   .path-configuration-validator {
     max-width: 100%;
     min-width: 1000px;
@@ -48,7 +39,8 @@
         margin-bottom: 15px;
         border-radius: 4px;
         padding: 15px 10px;
-        box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 5px 0px, rgba(0, 0, 0, 0.1) 0px 0px 1px 0px;
+        //box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 5px 0px, rgba(0, 0, 0, 0.1) 0px 0px 1px 0px;
+        box-shadow: var(--theme-border-color-accent) 0px 0px 5px 0px, var(--theme-border-color-accent) 0px 0px 1px 0px;
         position: relative;
         .title {
           //border-bottom: 1px solid #eee;
@@ -58,7 +50,7 @@
           font-size: 14px;
           position: absolute;
           top: -10px;
-          background: white;
+          background: var(--theme-block-background);
         }
 
         .items {

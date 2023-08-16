@@ -29,12 +29,16 @@
 
   --theme-border-color: rgb(48, 54, 61);
   --theme-border-color-muted: rgb(33, 38, 45);
+  --theme-border-color-accent: #666f79;
 
   --theme-body-background: rgb(13, 17, 23);
+  --theme-block-background: #252525;
 
   --theme-text: #e6e6e6;
   --theme-text-subtle: #d2d2d2;
   --theme-text-primary: rgb(47, 129, 247);
+
+  --theme-hover-base: #404040;
 
   --theme-text-invert: #2f2f2f;
   --theme-text-glow-high-contrast: #e6e6e6;
@@ -44,11 +48,9 @@
   --theme-box-shadow-extra-heavy: #00000038;
   --theme-overlay: #000000b3;
   --theme-overlay-invert: #fff;
-  --theme-block-background: #2f2f2f;
   --theme-alternate-background: #f2f2f2;
   --theme-alternate-background-medium: #fafafa;
   --theme-card-background: #091f2c;
-  --theme-hover-base: #404040;
   --theme-code-header: #404040;
   --theme-code-block: #2f2f2f;
   --theme-control-border: #d2d2d2;
@@ -137,6 +139,15 @@
   --btn-pure-normal-border-color-hover: var(--theme-button-normal-border-color-hover);
   --btn-pure-normal-border-color-active: var(--theme-button-normal-border-color-active);
 
+  --btn-pure-secondary-bg: var(--theme-button-normal-background);
+  --btn-pure-secondary-bg-hover: var(--theme-button-normal-background-hover);
+  --btn-pure-secondary-bg-active: var(--theme-button-normal-background-active);
+  --btn-pure-secondary-color: var(--theme-text);
+  --btn-pure-secondary-color-hover: var(--theme-text);
+  --btn-pure-secondary-border-color: var(--theme-button-normal-border-color);
+  --btn-pure-secondary-border-color-hover: var(--theme-button-normal-border-color-hover);
+  --btn-pure-secondary-border-color-active: var(--theme-button-normal-border-color-active);
+
   --btn-warning-normal-bg: var(--theme-button-normal-background);
   --btn-warning-normal-border-color: var(--theme-button-normal-border-color);
   --btn-warning-normal-color: var(--theme-button-warning-color);
@@ -181,4 +192,20 @@
   --tag-closable-primary-fill-bg-color: var(--theme-label-primary-background);
   --tag-closable-primary-fill-text-color: var(--theme-text-primary);
 
+  .ice-label {
+    &.ice-label-default {
+      &.ice-label-no-inverse {
+        background-color: var(--theme-label-primary-background) !important;
+      }
+    }
+  }
+
+  --menu-background: var(--theme-block-background);
+  --menu-background-hover: var(--theme-hover-base);
+
+  --popup-local-border-color: var(--theme-border-color-accent);
+
+  --dialog-bg: var(--theme-block-background);
+  --dialog-border-color: var(--theme-border-color-accent);
+  --dialog-title-color: var(--theme-text);
 }

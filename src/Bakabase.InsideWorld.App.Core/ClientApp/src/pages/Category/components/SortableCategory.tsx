@@ -19,6 +19,7 @@ import DragHandle from '@/components/DragHandle';
 import BasicCategoryComponentSelector from '@/components/BasicCategoryComponentSelector';
 import EnhancerSelector from '@/components/EnhancerSelector';
 import BApi from '@/sdk/BApi';
+import ClickableIcon from '@/components/ClickableIcon';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -216,10 +217,12 @@ export default (({
                   </div>
                 ) : null}
               </div>
-              <Icon
+              <ClickableIcon
                 className={'submit'}
+                colorType={'normal'}
                 size={'large'}
                 type="select"
+                useInBuildIcon
                 onClick={() => {
                   UpdateResourceCategory({
                     id: category.id,
@@ -237,7 +240,14 @@ export default (({
                     });
                 }}
               />
-              <Icon className={'cancel'} size={'large'} type="close" onClick={clearEditMode} />
+              <ClickableIcon
+                useInBuildIcon
+                colorType={'normal'}
+                className={'cancel'}
+                size={'large'}
+                type="close"
+                onClick={clearEditMode}
+              />
             </div>
           ) : (
             <span
@@ -258,7 +268,7 @@ export default (({
                 >{category.name}
                 </span>
                 &nbsp;
-                <CustomIcon type="edit-square" style={{ cursor: 'pointer' }} />
+                <ClickableIcon type={'edit-square'} colorType={'normal'} />
               </span>
             </span>
           )}
@@ -274,7 +284,7 @@ export default (({
         </Balloon.Tooltip>
         <Dropdown
           trigger={(
-            <CustomIcon type={'ellipsis-circle'} />
+            <ClickableIcon type={'ellipsis-circle'} colorType={'normal'} />
           )}
           className={'category-page-category-more-operations-popup'}
           triggerType={['click']}
@@ -326,7 +336,6 @@ export default (({
             >
               <CustomIcon
                 type="delete"
-
               />
               {i18n.t('Remove')}
             </Menu.Item>
@@ -354,7 +363,7 @@ export default (({
                     {i18n.t(ComponentTips[type.value])}
                   </Balloon.Tooltip>
                 </IceLabel>
-                &nbsp;
+                &emsp;
                 {comp ? (
                   <span
                     className="editable"
@@ -365,7 +374,7 @@ export default (({
                     <span className="hover-area">
                       {i18n.t(comp.descriptor?.name)}
                       &nbsp;
-                      <CustomIcon type="edit-square" style={{ cursor: 'pointer' }} size={'small'} />
+                      <CustomIcon type="edit-square" size={'small'} />
                     </span>
                   </span>
                 ) : (
@@ -374,7 +383,6 @@ export default (({
                       renderBasicComponentSelector(type.value);
                     }}
                     type="edit-square"
-                    style={{ cursor: 'pointer' }}
                     size={'small'}
                   />
                 )}
@@ -383,7 +391,7 @@ export default (({
           })}
         <div className={'setting'}>
           <IceLabel inverse={false} status={'default'}>{i18n.t('Priority on cover selection')}</IceLabel>
-          &nbsp;
+          &emsp;
           <span className="editable">
             <span
               className="hover-area"
@@ -454,7 +462,8 @@ export default (({
           >
             {i18n.t(ComponentTips[ComponentType.Enhancer])}
           </Balloon.Tooltip>
-          <CustomIcon
+          <ClickableIcon
+            colorType={'normal'}
             type="edit-square"
             onClick={() => {
               renderEnhancersSelector();
@@ -497,7 +506,8 @@ export default (({
                 'you can click "sync button" at top-right of current page to load your resources immediately, ' +
                 'or set a sync interval to load them periodically.')}
             </Balloon.Tooltip>
-            <CustomIcon
+            <ClickableIcon
+              colorType={'normal'}
               type={'plus-circle'}
               onClick={() => {
                 let n;
