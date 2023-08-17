@@ -66,8 +66,8 @@
             }
 
             &.next-selected {
-              background-color: var(--theme-primary-background);
-              color: var(--theme-primary-base);
+              background-color: var(--theme-block-background-accent);
+              color: var(--theme-text-primary);
               &:before {
                 content: none;
               }

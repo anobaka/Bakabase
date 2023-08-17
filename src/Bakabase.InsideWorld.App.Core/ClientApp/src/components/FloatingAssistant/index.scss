@@ -13,8 +13,8 @@
     overflow: hidden;
     //transition: all ease-in-out 0.2s;
     border-radius: 10px;
-    box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgb(209, 213, 219) 0px 0px 0px 1px inset;
-    background: white;
+    box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, var(--theme-border-color) 0px 0px 0px 1px inset;
+    background: var(--theme-body-background);
 
     .content {
       padding: 20px;
@@ -29,8 +29,8 @@
         }
         .task {
           overflow: hidden;
-          border: 1px solid #ccc;
-          background: white;
+          border: 1px solid var(--theme-border-color-accent);
+          background: var(--theme-block-background);
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -126,7 +126,7 @@
     box-shadow: rgba(6, 24, 44, 0.4) 0px 0px 0px 2px, rgba(6, 24, 44, 0.65) 0px 4px 6px -1px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset;
     height: 48px;
     width: 48px;
-    background: white;
+    background: var(--theme-block-background);
 
     transition: width 0.5s, right 0.3s;
 

@@ -22,6 +22,7 @@ import DeleteDialog from '@/pages/FileProcessor/DeleteDialog';
 import RootEntry from '@/core/models/FileExplorer/RootEntry';
 import { DecompressFiles, GetFileSystemOptions, OpenFileOrDirectory, OpenFolderSelector, OpenRecycleBin, PatchFileSystemOptions } from '@/sdk/apis';
 import { buildLogger } from '@/components/utils';
+import ClickableIcon from '@/components/ClickableIcon';
 
 enum SelectionMode {
   Single = 1,
@@ -891,7 +892,8 @@ export default () => {
         <div className={'file-explorer'}>
           <div className="line1">
             <div className="left">
-              <CustomIcon
+              <ClickableIcon
+                colorType={'normal'}
                 type={'return'}
                 title={t('Return to previous directory')}
                 className={`back ${lastWorkingDirectoryRef.current ? '' : 'disabled'} opt`}
@@ -901,7 +903,8 @@ export default () => {
                   }
                 }}
               />
-              <CustomIcon
+              <ClickableIcon
+                colorType={'normal'}
                 type={'arrowup'}
                 title={t('Go to parent directory')}
                 className={`back ${canGoBack ? '' : 'disabled'} opt`}
@@ -911,11 +914,17 @@ export default () => {
                   }
                 }}
               />
-              <CustomIcon type={'folder'} className={'folder'} title={t('Working directory')} />
+              <ClickableIcon
+                colorType={'normal'}
+                type={'folder'}
+                className={'folder'}
+                title={t('Working directory')}
+              />
               <div className="chain">
                 {renderDirectoryChain()}
               </div>
-              <CustomIcon
+              <ClickableIcon
+                colorType={'normal'}
                 className={'opt'}
                 type={'edit-square'}
                 title={t('Change working directory')}
@@ -928,7 +937,8 @@ export default () => {
                     });
                 }}
               />
-              <CustomIcon
+              <ClickableIcon
+                colorType={'normal'}
                 className={'opt'}
                 type={'folder-open'}
                 title={t('Open working directory in explorer')}

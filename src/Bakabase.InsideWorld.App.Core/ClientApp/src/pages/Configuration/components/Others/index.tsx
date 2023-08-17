@@ -35,7 +35,7 @@ export default ({
         <Radio.Group
           // shape="button"
           size={'small'}
-          dataSource={[{ label: t('Follow system'), value: UiTheme.FollowSystem }, { label: t('Light mode'), value: UiTheme.Light }, { label: t('Dark mode'), value: UiTheme.Dark }]}
+          dataSource={[{ label: t('Follow system'), value: UiTheme.FollowSystem }, { label: t('Light mode'), value: UiTheme.Light }, { label: `${t('Dark mode')}(beta)`, value: UiTheme.Dark }]}
           value={appOptions.uiTheme}
           onChange={(uiTheme) => {
             PatchAppOptions({

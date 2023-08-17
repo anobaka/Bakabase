@@ -21,7 +21,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #545454;
+      color: var(--theme-text-subtle);
     }
   }
   &>.tags {
@@ -31,7 +31,8 @@
     gap: 5px;
     padding: 10px;
     border-radius: 4px;
-    box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 1px 3px 1px;
+    background: var(--theme-block-background);
+    box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, var(--theme-border-color-accent) 0px 1px 3px 1px;
     &>button {
       padding: 0 8px;
     }
@@ -42,6 +43,7 @@
 .tag-page-draggable-tag {
   position: relative;
   border-radius: 4px;
+  background: var(--theme-block-background-accent);
 
   &:hover, &.selected {
     .selective {

@@ -23,7 +23,7 @@
 
     .source {
       cursor: pointer;
-      border: 1px solid #ccc;
+      border: 1px solid var(--theme-border-color-accent);
       border-radius: 4px;
       .next-tag-body {
         display: flex;

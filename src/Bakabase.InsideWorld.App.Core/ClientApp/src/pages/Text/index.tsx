@@ -56,7 +56,7 @@ const renderDetail = (text, cb) => {
         onChange={(v) => values[1] = v}
       />);
       break;
-    case SpecialTextType.UselessWithWrapper:
+    case SpecialTextType.Useless:
     case SpecialTextType.Trim:
       elements.push(<Input
         key="0"
@@ -67,7 +67,7 @@ const renderDetail = (text, cb) => {
         onChange={(v) => values[0] = v}
       />);
       break;
-    case SpecialTextType.LanguageWithWrapper:
+    case SpecialTextType.Language:
       elements.push(<Input
         key="0"
         placeholder="Text"
@@ -78,14 +78,14 @@ const renderDetail = (text, cb) => {
       />);
       elements.push(<Select
         key="1"
-        dataSource={resourceLanguages.map((l) => ({ ...l, label: t(l.label) }))}
-        defaultValue={value2 || ResourceLanguage.Default}
+        dataSource={resourceLanguages.map((l) => ({ ...l, label: i18n.t(l.label) }))}
+        defaultValue={value2 || ResourceLanguage.NotSet}
         style={detailInputStyles.Half}
         onChange={(v) => values[1] = v}
       />);
       break;
     case SpecialTextType.Wrapper:
-    case SpecialTextType.StandardizeName:
+    case SpecialTextType.Standardization:
       elements.push(<Input
         key="0"
         placeholder="Text"

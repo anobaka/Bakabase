@@ -3,11 +3,11 @@
   max-height: 500px;
   //border: 1px solid #ddd;
   padding: 5px;
-  background: white;
+  background: var(--theme-body-background);
   .next-list-item {
     padding: 5px;
     &:hover {
-      background: #eee;
+      background: var(--theme-block-background);
     }
 
     .next-list-item-extra {

@@ -799,7 +799,7 @@ export default React.memo((props: IProps) => {
               </Button>
             )}
             align={'tr tl'}
-            triggerType={['hover']}
+            triggerType={['click']}
           >
             <div className={'other-options-popup'}>
               <div className="filter hide-children item">

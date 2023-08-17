@@ -2,10 +2,10 @@
   .next-tabs-nav {
     .next-tabs-tab {
       &:before {
-        border-bottom: 2px solid #100DB1 !important;
+        border-bottom: 2px solid  var(--theme-text-primary) !important;
       }
       .next-tabs-tab-inner {
-        color: #100DB1;
+        color: var(--theme-text-primary);
       }
     }
 

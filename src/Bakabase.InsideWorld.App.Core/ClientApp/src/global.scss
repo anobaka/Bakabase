@@ -2,6 +2,7 @@
 @import "@alifd/next/reset.scss";
 @import "./global.dark.scss";
 @import "./global.light.scss";
+@import "./global.fusion.design.overrides";
 
 @import '@alifd/theme-design-pro/dist/next.var.css';
 
@@ -22,6 +23,7 @@ html, body, #ice-container {
   color: var(--theme-text);
 
   --scrollbar-size: 7px;
+  --path-separator-color: #ff8400;
 
   /* Scroll bar styles */
   ::-webkit-scrollbar {

@@ -78,6 +78,7 @@ export default SortableElement(({
       <div className="opt">
         <ClickableIcon
           colorType={'danger'}
+          type={'delete'}
           onClick={() => {
             onRemove(item);
           }}

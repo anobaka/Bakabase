@@ -3,7 +3,7 @@
 
   .block {
     margin-bottom: 20px;
-    background-color: rgba(0,0,0,0.03);
+    background-color: var(--theme-block-background);
     padding: 10px;
     border-radius: 4px;
 

@@ -31,7 +31,7 @@
   }
 
   .psc-block {
-    border: 1px solid #eee;
+    border: 1px solid var(--theme-border-color-accent);
     border-radius: 4px;
     padding: 15px 10px 10px 10px;
     position: relative;
@@ -40,8 +40,8 @@
     &>.title {
       position: absolute;
       top: -10px;
-      background: white;
-      color: #999;
+      background: var(--theme-block-background);
+      color: var(--theme-text-subtle);
     }
 
     .icon-delete {
@@ -76,7 +76,7 @@
 
       .path-separator {
         font-size: 24px;
-        color: #ff8400;
+        color: var(--path-separator-color);
       }
 
       .segment-container {
@@ -90,7 +90,7 @@
         }
 
         &:hover {
-          background: #eee;
+          background: var(--theme-block-background-accent);
         }
 
         .matched-matchers {

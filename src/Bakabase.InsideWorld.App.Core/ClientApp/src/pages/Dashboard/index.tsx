@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Axis, Chart, Coordinate, DonutChart, Interaction, Interval, Legend, Tooltip } from 'bizcharts';
+import { Axis, Chart, Coordinate, DonutChart, Interaction, Interval, Legend, Tooltip, useTheme } from 'bizcharts';
 import { GetStatistics, GetUIOptions } from '@/sdk/apis';
 import './index.scss';
 import i18n from 'i18next';
-import { DownloadTaskDtoStatus, StartupPage, ThirdPartyRequestResultType } from '@/sdk/constants';
+import { DownloadTaskDtoStatus, StartupPage, ThirdPartyRequestResultType, UiTheme } from '@/sdk/constants';
 import { history } from 'ice';
 import store from '@/store';
 
@@ -11,6 +11,8 @@ export default () => {
   const [statistics, setStatistics] = useState({});
 
   const [clientAppState, clientAppDispatchers] = store.useModel('clientApp');
+
+  const [theme, setTheme] = useTheme(window?.uiTheme == UiTheme.Dark ? 'dark' : 'light');
 
   const loadStatistics = () => {
     GetStatistics()
@@ -96,6 +98,7 @@ export default () => {
                 ) : (
                   <div className="pie">
                     <DonutChart
+                      theme={theme}
                       data={pd.data || []}
                       label={{
                         formatter: (d) => {
@@ -108,10 +111,10 @@ export default () => {
                       padding="auto"
                       angleField="count"
                       colorField="name"
-                      pieStyle={{
-                        stroke: 'white',
-                        lineWidth: 5,
-                      }}
+                      // pieStyle={{
+                      //   stroke: 'white',
+                      //   lineWidth: 5,
+                      // }}
                       legend={false}
                     />
                   </div>
@@ -131,6 +134,7 @@ export default () => {
           ) : (
             <div className={'chart'}>
               <Chart
+                theme={theme}
                 height={300}
                 data={tagData}
                 autoFit
@@ -168,6 +172,7 @@ export default () => {
                 height={300}
                 data={downloadTaskData}
                 autoFit
+                theme={theme}
               >
                 <Coordinate type="theta" radius={0.75} />
                 <Tooltip showTitle={false} />
@@ -212,6 +217,7 @@ export default () => {
           ) : (
             <div className={'chart'}>
               <Chart
+                theme={theme}
                 height={300}
                 padding="auto"
                 data={thirdPartyRequestCounts}

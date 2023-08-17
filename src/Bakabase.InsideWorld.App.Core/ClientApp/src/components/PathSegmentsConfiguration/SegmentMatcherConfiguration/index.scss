@@ -13,7 +13,7 @@
   .mode {
     padding: 15px;
     border-radius: 4px;
-    box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, rgba(0, 0, 0, 0.08) 0px 0px 0px 1px;
+    box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px, var(--theme-border-color) 0px 0px 0px 1px;
     margin-bottom: 10px;
     cursor: pointer;
 
@@ -37,7 +37,7 @@
     }
 
     &:hover, &.active {
-      box-shadow: rgba(0, 0, 0, 0.10) 0px 6px 24px 0px, rgba(0, 0, 0, 0.13) 0px 0px 0px 1px;
+      box-shadow: rgba(0, 0, 0, 0.10) 0px 6px 24px 0px, var(--theme-border-color-accent)0px 0px 0px 1px;
     }
 
     &.by-regex {

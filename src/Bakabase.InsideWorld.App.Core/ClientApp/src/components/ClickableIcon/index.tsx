@@ -10,10 +10,10 @@ interface IProps extends IconProps {
   useInBuildIcon?: boolean;
 }
 
-export default ({ colorType, useInBuildIcon = false, ...otherProps }: IProps) => {
+export default ({ colorType, useInBuildIcon = false, className, ...otherProps }: IProps) => {
   if (useInBuildIcon) {
     return (
-      <span className={`clickable-icon ${colorType}`}>
+      <span className={`clickable-icon ${colorType} ${className}`}>
         <Icon
           {...otherProps}
         />
@@ -22,7 +22,7 @@ export default ({ colorType, useInBuildIcon = false, ...otherProps }: IProps) =>
   }
   return (
     <CustomIcon
-      className={`clickable-icon ${colorType}`}
+      className={`clickable-icon ${colorType} ${className}`}
       {...otherProps}
     />
   );

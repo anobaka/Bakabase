@@ -5,12 +5,12 @@
 
     .down {
       text-align: center;
-      border-top: 1px solid #eee;
-      border-bottom: 1px solid #eee;
+      border-top: 1px solid var(--theme-border-color);
+      border-bottom: 1px solid var(--theme-border-color);
       cursor: pointer;
 
       &:hover {
-        background-color: #eee;
+        background-color: var(--theme-border-color);
       }
     }
   }
@@ -168,21 +168,21 @@
 
 .playlist-collection {
   &.resource-page {
-    border: 1px solid #ddd;
+    border: 1px solid var(--theme-border-color);
     border-radius: 4px;
   }
 }
 
 .other-options-popup {
-  background: white;
+  background: var(--theme-body-background);
   //min-width: 200px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--theme-border-color);
   border-radius: 4px;
   padding: 5px 0;
   .item {
     padding: 10px;
     &:hover {
-      background: #eee;
+      background: var(--theme-button-normal-background-hover);
     }
   }
 }

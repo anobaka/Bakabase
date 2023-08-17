@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button, Icon } from '@alifd/next';
 import { RemoveResourceCustomProperty, PatchResource } from '@/sdk/apis';
 import CustomIcon from '@/components/CustomIcon';
+import ClickableIcon from '@/components/ClickableIcon';
 
 interface IProps {
   renderValue: () => any;
@@ -68,9 +69,11 @@ export default ({
     if (editing) {
       return (
         <div className={'edit-opts'}>
-          <Button
+          <ClickableIcon
+            useInBuildIcon
+            colorType={'normal'}
             size={'small'}
-            type={'secondary'}
+            type={'select'}
             className={'submit'}
             onClick={() => {
               let model = value;
@@ -93,10 +96,11 @@ export default ({
                   }
                 });
             }}
-          >
-            <Icon type="select" />
-          </Button>
-          <Button
+          />
+          <ClickableIcon
+            useInBuildIcon
+            type={'close'}
+            colorType={'danger'}
             size={'small'}
             onClick={() => {
               setEditing(false);
@@ -104,9 +108,7 @@ export default ({
             }}
             warning
             className={'cancel'}
-          >
-            <Icon type="close" />
-          </Button>
+          />
         </div>
       );
     } else {
@@ -115,7 +117,8 @@ export default ({
           {
             editable && (
               <>
-                <CustomIcon
+                <ClickableIcon
+                  colorType={'normal'}
                   size={'small'}
                   type={'edit-square'}
                   onClick={() => {
@@ -129,7 +132,8 @@ export default ({
           }
           {
             isCustomProperty && (
-              <CustomIcon
+              <ClickableIcon
+                colorType={'danger'}
                 size={'small'}
                 type={'delete'}
                 onClick={() => {

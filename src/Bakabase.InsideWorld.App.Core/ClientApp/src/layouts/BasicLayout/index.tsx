@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './index.scss';
 import { Link, history, useLocation, Outlet } from 'ice';
-import { Button, Dialog } from '@alifd/next';
+import { Button, Dialog, Message } from '@alifd/next';
 import i18n from 'i18next';
 import { useNavigate } from '@ice/runtime/router';
 import PageNav from './components/PageNav';

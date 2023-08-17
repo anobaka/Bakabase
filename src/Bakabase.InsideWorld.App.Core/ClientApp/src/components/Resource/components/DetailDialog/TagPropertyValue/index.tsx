@@ -10,6 +10,7 @@ import CustomIcon from '@/components/CustomIcon';
 import TagSelector from '@/components/TagSelector';
 import Property from '@/components/Resource/components/DetailDialog/PropertyValue';
 import EditableTree from '@/components/EditableTree';
+import ClickableIcon from '@/components/ClickableIcon';
 
 export default ({
   reloadResource,
@@ -117,7 +118,8 @@ export default ({
           </div>
         </div>
       )}
-      <CustomIcon
+      <ClickableIcon
+        colorType={'normal'}
         type={'edit-square'}
         size={'small'}
         onClick={() => {

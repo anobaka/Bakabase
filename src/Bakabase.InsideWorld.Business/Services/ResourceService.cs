@@ -1104,36 +1104,23 @@ namespace Bakabase.InsideWorld.Business.Services
                                 try
                                 {
                                     var durationSeconds = await _ffMpegHelper.GetDuration(firstVideoFile.FullName, ct);
-
                                     var duration = TimeSpan.FromSeconds(durationSeconds);
-                                    const string ssExt = ".png";
+                                    const string ssExt = ".jpg";
                                     // var duration = info.Duration;
                                     var screenshotTime = duration * 0.2;
-                                    var isTmp = (attr & FileAttributes.Directory) == 0;
-                                    var tmpFile = !isTmp
-                                        ? Path.Combine(path, $"cover{ssExt}")
-                                        : Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{ssExt}");
-                                    await _ffMpegHelper.CaptureFrame(firstVideoFile.FullName, screenshotTime, tmpFile,
+                                    var saveCover = (attr & FileAttributes.Directory) != 0;
+                                    var tmpFile = Path.Combine(path, $"cover{ssExt}");
+                                    var ms = await _ffMpegHelper.CaptureFrame(firstVideoFile.FullName, screenshotTime,
                                         ct);
-                                    var ms = new MemoryStream();
-                                    var fs = File.OpenRead(tmpFile);
-                                    await fs.CopyToAsync(ms, ct);
-                                    await fs.DisposeAsync();
-                                    if (isTmp)
+                                    if (saveCover)
                                     {
-                                        try
-                                        {
-                                            File.Delete(tmpFile);
-                                        }
-                                        catch (Exception e)
-                                        {
-                                            _logger.LogError(e, "An error occurred during deleting temp cover file");
-                                        }
+                                        await using var fs = new FileStream(tmpFile, FileMode.Create, FileAccess.Write,
+                                            FileShare.Read);
+                                        await ms.CopyToAsync(fs, ct);
                                     }
 
                                     ms.Seek(0, SeekOrigin.Begin);
-                                    return CoverDiscoverResult.FromAdditionalSource(path, tmpFile,
-                                        $"{screenshotTime:hh\\-mm\\-ss\\-fff}{ssExt}", ms);
+                                    return CoverDiscoverResult.FromAdditionalSource(path, firstVideoFile.FullName, $"{screenshotTime:hh\\-mm\\-ss\\-fff}{ssExt}", ms);
                                 }
                                 catch (Exception e)
                                 {

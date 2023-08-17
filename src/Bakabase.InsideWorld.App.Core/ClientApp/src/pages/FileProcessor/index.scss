@@ -2,6 +2,8 @@
   height: 100%;
   width: 100%;
 
+  color: var(--theme-text-subtle);
+
   .next-loading, .next-loading-wrap {
     width: 100%;
     height: 100%;
@@ -37,12 +39,7 @@
 
         .back {
           &.disabled {
-            color: #ccc;
             cursor: not-allowed;
-
-            &:hover {
-              color: #ccc;
-            }
           }
         }
 
@@ -63,12 +60,7 @@
         //}
         .opt {
           margin-right: 5px;
-          color: #666;
           cursor: pointer;
-
-          &:hover {
-            color: #000;
-          }
         }
 
         .chain {
@@ -83,7 +75,7 @@
             border-radius: 4px;
 
             &:hover {
-              background-color: #eee;
+              background-color: var(--theme-block-background);
             }
           }
 
@@ -241,7 +233,7 @@
           .entry-main {
             box-sizing: content-box;
             max-height: 24px;
-            border-bottom: 1px solid #efefef;
+            border-bottom: 1px solid var(--theme-border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -258,13 +250,13 @@
             }
 
             &:hover {
-              border-color: #e5f3ff;
-              background-color: #e5f3ff;
+              border-color: var(--theme-file-processor-entry-background-color-hover);
+              background-color: var(--theme-file-processor-entry-background-color-hover);
             }
 
             &.selected {
-              border-color: #cce8ff;
-              background-color: #cce8ff;
+              border-color: var(--theme-file-processor-entry-background-color-selected);
+              background-color: var(--theme-file-processor-entry-background-color-selected);
             }
 
             .left, .right {
@@ -309,14 +301,14 @@
                     }
 
                     line-height: 14px;
-                    border: 1px solid #d9dbde;
                     border-radius: 4px;
-                    background-color: #fff;
+                    border: 1px solid var(--theme-button-normal-border-color);
+                    background-color: var(--theme-button-normal-background);
                     cursor: pointer;
 
                     &:hover {
-                      border-color: #c4c7cc;
-                      background-color: #f4f6f9;
+                      border: 1px solid var(--theme-button-normal-border-color-hover);
+                      background-color: var(--theme-button-normal-background-hover);
                     }
                   }
                 }
@@ -345,7 +337,7 @@
                 .file-system-info {
                   font-size: 12px;
                   line-height: 12px;
-                  color: #004639;
+                  color: var(--theme-text-primary);
 
                   & > * {
                     display: flex;
@@ -471,7 +463,7 @@
           //border-top: 1px solid #ccc;
           //box-sizing: border-box;
 
-          &>div {
+          & > div {
             //&::-webkit-scrollbar {
             //  width: 8px;
             //  height: 4px;

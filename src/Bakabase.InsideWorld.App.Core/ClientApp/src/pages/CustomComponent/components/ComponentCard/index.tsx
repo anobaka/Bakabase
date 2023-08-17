@@ -11,6 +11,7 @@ import Detail from '@/pages/CustomComponent/Detail';
 import BApi from '@/sdk/BApi';
 import ComponentDetail from '@/pages/CustomComponent/Detail';
 import { extractEnhancerTargetDescription } from '@/components/utils';
+import ClickableIcon from '@/components/ClickableIcon';
 
 interface DescriptorCardProps extends DOMAttributes<unknown> {
   descriptor: BakabaseInsideWorldModelsModelsDtosComponentDescriptor;
@@ -99,7 +100,7 @@ export default (props: DescriptorCardProps) => {
               });
             }}
           >
-            <CustomIcon type={'edit-square'} />
+            <ClickableIcon colorType={'normal'} type={'edit-square'} />
           </div>
           <div
             className={'delete'}
@@ -121,7 +122,7 @@ export default (props: DescriptorCardProps) => {
               });
             }}
           >
-            <CustomIcon type={'delete'} />
+            <ClickableIcon colorType={'danger'} type={'delete'} />
           </div>
         </div>
       )}

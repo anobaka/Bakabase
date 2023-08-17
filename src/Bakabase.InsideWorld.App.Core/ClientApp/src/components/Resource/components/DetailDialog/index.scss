@@ -4,29 +4,6 @@
     padding: 20px;
     min-width: 1100px;
 
-    &::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      border-radius: 10px;
-      background: rgba(16, 13, 177, 0.1);
-    }
-
-    &::-webkit-scrollbar-thumb {
-      border-radius: 10px;
-      background: rgba(16, 13, 177, 0.2);
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background: rgba(16, 13, 177, 0.4);
-    }
-
-    &::-webkit-scrollbar-thumb:active {
-      background: rgba(16, 13, 177, .9);
-    }
-
     .property-value {
       display: flex;
       align-items: center;
@@ -38,30 +15,9 @@
         }
       }
 
-      .icon-edit-square, .icon-delete {
-        cursor: pointer;
-        transition: all 100ms;
-      }
-
-      .icon-edit-square {
-        color: #999;
-
-        &:hover {
-          color: #666;
-        }
-      }
-
-      .icon-delete {
-        color: #fbacc3;
-
-        &:hover {
-          color: #c7254e;
-        }
-      }
-
       .edit-opts {
         padding-left: 10px;
-        margin-left: 50px;
+        //margin-left: 50px;
         border-left: 1px solid #ccc;
 
         .submit, .cancel {
@@ -141,7 +97,7 @@
 
               .original {
                 padding: 2px;
-                border: 1px solid #cfe5ff;
+                border: 1px solid var(--theme-border-color-accent);
                 border-radius: 4px;
               }
             }
@@ -158,10 +114,9 @@
     .introduction-container, .file-entries-block, .children {
       margin: 20px 0;
       .label {
-        color: #999;
+        color: var(--theme-text-subtle);
         font-weight: 500;
         margin-bottom: 5px;
-        color: black;
       }
     }
 

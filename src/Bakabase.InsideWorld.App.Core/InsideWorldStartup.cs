@@ -1,5 +1,4 @@
-﻿using System.Net.Http;
-using Bakabase.Infrastructures.Components.App;
+﻿using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Jobs;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.App.Core.Extensions;
@@ -25,7 +24,6 @@ using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
-using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
@@ -39,8 +37,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.App.Core
 {

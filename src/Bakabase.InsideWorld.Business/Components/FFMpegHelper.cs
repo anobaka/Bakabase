@@ -3,6 +3,7 @@ using CliWrap;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -70,7 +71,15 @@ namespace Bakabase.InsideWorld.Business.Components
             return seconds;
         }
 
-        public async Task CaptureFrame(string videoFilePath, TimeSpan time, string outputFilePath, CancellationToken ct)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="videoFilePath"></param>
+        /// <param name="time"></param>
+        /// <param name="ct"></param>
+        /// <returns>Jpeg format</returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<MemoryStream> CaptureFrame(string videoFilePath, TimeSpan time, CancellationToken ct)
         {
             // var c = (await FFmpeg.Conversions.FromSnippet.Snapshot(firstVideoFile.FullName,
             //     tmpFile,
@@ -79,23 +88,31 @@ namespace Bakabase.InsideWorld.Business.Components
             // ffmpeg -i input.mp4 -ss 00:00:05 -vframes 1 frame_out.jpg1.
             var output = new StringBuilder();
             var error = new StringBuilder();
-            var cmd = Cli.Wrap($"{thirdPartyOptions.Value.FFmpeg.BinDirectory}/ffmpeg")
+            var image = new MemoryStream();
+            var timeString = $"{time.Hours:D2}:{time.Minutes:D2}:{time.Seconds:D2}";
+            var cmd = Cli.Wrap($"{thirdPartyOptions.Value.FFmpeg!.BinDirectory}/ffmpeg")
                 .WithArguments(new[]
                 {
+                    "-ss", timeString,
+                    "-r", "1:1",
                     "-i", videoFilePath,
-                    "-ss",
-                    $"{time.Hours:D2}:{time.Minutes:D2}:{time.Seconds:D2}",
-                    "-vframes", "1",
-                    outputFilePath
+                    "-c:v", "mjpeg",
+                    "-f", "image2pipe",
+                    "-vframes:v", "1",
+                    "-preset", "ultrafast",
+                    "-"
                 }, true)
                 .WithValidation(CommandResultValidation.None)
-                .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
+                .WithStandardOutputPipe(PipeTarget.ToStream(image))
                 .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error));
-            var rsp = await cmd.ExecuteAsync();
+            var rsp = await cmd.ExecuteAsync(ct);
             if (rsp.ExitCode != 0)
             {
                 throw new Exception(error.ToString());
             }
+
+            image.Seek(0, SeekOrigin.Begin);
+            return image;
         }
     }
 }

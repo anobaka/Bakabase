@@ -122,8 +122,8 @@
 .resource-filter-popup {
   padding: 5px;
   border-radius: 4px;
-  border: 1px solid #ccc;
-  background-color: white;
+  border: 1px solid var(--theme-border-color);
+  background-color: var(--theme-body-background);
   max-width: 80%;
   max-height: 80%;
   overflow-y: auto;
@@ -167,7 +167,7 @@
 
             .count {
               font-size: 10px;
-              color: #100DB1;
+              color: var(--theme-text-primary);
             }
           }
 

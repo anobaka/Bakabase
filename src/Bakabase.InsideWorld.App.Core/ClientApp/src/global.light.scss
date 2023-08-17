@@ -1,99 +1,79 @@
 .iw-theme-light {
-  --theme-text: #161616;
-  --theme-text-subtle: #505050;
-  --theme-text-invert: #fff;
-  --theme-text-glow-high-contrast: #171717;
-  --theme-box-shadow-light: #0000001c;
-  --theme-box-shadow-medium: #00000021;
-  --theme-box-shadow-heavy: #0000002e;
-  --theme-box-shadow-extra-heavy: #00000038;
-  --theme-overlay: #000000b3;
-  --theme-overlay-invert: #fff;
-  --theme-body-background: #fff;
-  --theme-block-background: #e8e6df;
-  --theme-alternate-background: #171717;
-  --theme-alternate-background-medium: #2f2f2f;
-  --theme-card-background: #fff;
-  --theme-border: #e6e6e6;
-  --theme-border-accent: #e8e6df;
-  --theme-border-white-high-contrast: #fff0;
-  --theme-border-yellow-high-contrast: #0000;
+  //--theme-scrollbar-track-background: #444;
+  //--theme-scrollbar-thumb-background: #686868;
+  //--theme-scrollbar-thumb-hover-background: #7a7a7a;
+  //
+  //--theme-table-row-background: transparent;
+  --theme-table-header-background: #f7f7f7;
+  //--theme-table-background-hover: rgb(22, 27, 34);
+  //
+  --theme-button-normal-background: white;
+  --theme-button-normal-background-hover: #f9f9f9;
+  --theme-button-normal-background-active: #f9f9f9;
+  --theme-button-normal-border-color: #ccc;
+  --theme-button-normal-border-color-hover: #ccc;
+  --theme-button-normal-border-color-active: rgb(204, 204, 204);
+  //--theme-button-normal-color-disabled: rgb(72, 79, 88);
+  //
+  //--theme-button-primary-background: rgb(35, 134, 54);
+  //--theme-button-primary-background-hover: rgb(46, 160, 67);
+  //--theme-button-primary-background-active: rgb(35, 134, 54);
+  //--theme-button-primary-border-color: rgba(240, 246, 252, 0.1);
+  //--theme-button-primary-border-color-hover: rgba(240, 246, 252, 0.1);
+  //--theme-button-primary-border-color-active: rgb(110, 118, 129);
+  //
+  --theme-button-secondary-background: var(--theme-button-normal-background);
+  --theme-button-secondary-background-hover: #1274E7;
+  --theme-button-secondary-background-active: #1274E7;
+  --theme-button-secondary-border-color: #1274E7;
+  --theme-button-secondary-border-color-hover: #1274E7;
+  --theme-button-secondary-border-color-active: #1274E7;
+  --theme-button-secondary-color-disabled: var(--theme-button-normal-color-disabled);
 
-  --theme-hover-base: #2f2f2f;
-  --theme-code-header: #e6e6e6;
-  --theme-code-block: #f2f2f2;
-  --theme-control-border: #757575;
-  --theme-inline-code: #e6e6e6;
-  --theme-code-highlight-background: #fff4ce;
-  --theme-visited: #624991;
-  --theme-score-low-off: #a800004d;
-  --theme-score-low: #b62626;
-  --theme-score-medium-off: #ffbb004d;
-  --theme-score-medium: #ffb900;
-  --theme-score-high-off: #489d484d;
-  --theme-score-high: #2a8b2a;
-  --theme-hyperlink: #0065b3;
-  --theme-primary-base: #0078d4;
-  --theme-primary-background: #d7eaf8;
-  --theme-primary-background-glow-high-contrast: #d7eaf8;
-  --theme-primary-dark: #004173;
-  --theme-primary-hover: #0065b3;
-  --theme-primary-active: #00579a;
-  --theme-primary-box-shadow: #0065b34d;
-  --theme-primary-invert: #fff;
-  --theme-secondary-base: #a2a2a2;
-  --theme-secondary-background: #e6e6e6;
-  --theme-secondary-background-glow-high-contrast: #e6e6e6;
-  --theme-secondary-dark: #2f2f2f;
-  --theme-secondary-hover: #d2d2d2;
-  --theme-secondary-active: #d2d2d2;
-  --theme-secondary-box-shadow: #0000004d;
-  --theme-secondary-invert: #000;
-  --theme-tertiary-base: #243a5e;
-  --theme-tertiary-background: #061329;
-  --theme-tertiary-background-glow-high-contrast: #061329;
-  --theme-tertiary-dark: #a4b2c9;
-  --theme-tertiary-hover: #14294c;
-  --theme-tertiary-active: #70819f;
-  --theme-tertiary-box-shadow: #26173f4d;
-  --theme-tertiary-invert: #fff;
-  --theme-success-base: #107c10;
-  --theme-success-background: #dff6dd;
-  --theme-success-background-glow-high-contrast: #dff6dd;
-  --theme-success-dark: #054b16;
-  --theme-success-hover: #0b6413;
-  --theme-success-active: #054b16;
-  --theme-success-box-shadow: #489d484d;
-  --theme-success-invert: #fff;
-  --theme-info-base: #8661c5;
-  --theme-info-background: #efd9fd;
-  --theme-info-background-glow-high-contrast: #efd9fd;
-  --theme-info-dark: #3b2e58;
-  --theme-info-hover: #8661c5;
-  --theme-info-active: #624991;
-  --theme-info-box-shadow: #2018434d;
-  --theme-info-invert: #fff;
-  --theme-warning-base: #ffb900;
-  --theme-warning-background: #fff4ce;
-  --theme-warning-background-glow-high-contrast: #fff4ce;
-  --theme-warning-dark: #6a4b16;
-  --theme-warning-hover: #d19501;
-  --theme-warning-active: #966802;
-  --theme-warning-box-shadow: #ffbb004d;
-  --theme-warning-invert: #000;
-  --theme-danger-base: #a80000;
-  --theme-danger-background: #fde7e9;
-  --theme-danger-background-glow-high-contrast: #fde7e9;
-  --theme-danger-dark: #470001;
-  --theme-danger-hover: #870000;
-  --theme-danger-active: #630001;
-  --theme-danger-box-shadow: #a800004d;
-  --theme-danger-invert: #fff;
-  --theme-facepile-red: #a80000;
-  --theme-facepile-teal: #328e9f;
-  --theme-facepile-blue: #0078d4;
-  --theme-gradient-text-purple: #702573;
-  --theme-gradient-text-blue: #00579a;
-  --theme-gradient-vivid-start: #b84dc6;
-  --theme-gradient-vivid-end: #0078d4;
+  //--theme-checkbox-background: rgba(59, 59, 59, 1);
+  //--theme-checkbox-background-active: rgba(59, 59, 59, 1);
+  //--theme-checkbox-border-color: var(--theme-border-color-accent);
+  //--theme-checkbox-border-color-hover: rgb(255, 255, 255);
+  //
+  //--theme-radio-background: rgba(59, 59, 59, 1);
+  //--theme-radio-background-active: #777;
+  //
+  //--theme-switch-on-trigger-background: rgba(59, 59, 59, 1);
+  //
+  //--theme-label-primary-background: rgba(56, 139, 253, 0.1);
+  //
+  //--theme-tag-primary-background-hover: rgb(31, 111, 235);
+  //
+  //--theme-button-warning-color: rgb(248, 81, 73);
+  //
+  //--theme-input-background: rgb(1, 4, 9);
+  //
+  --theme-border-color: #f0f0f0;
+  //--theme-border-color-muted: rgb(33, 38, 45);
+  --theme-border-color-accent: #e5f3ff;
+  //
+  --theme-body-background: white;
+  --theme-block-background: #f7f7f7;
+  --theme-block-background-invert: #090909;
+  --theme-block-background-accent: #e7e7e7;
+  //
+  //--theme-text: #e6e6e6;
+  //--theme-text-invert: #2f2f2f;
+  --theme-text-subtle: #666;
+  --theme-text-primary: rgb(47, 129, 247);
+  //--theme-text-placeholder: #666;
+  //
+  //--theme-hover-base: #404040;
+
+  --theme-file-processor-entry-background-color: transparent;
+  --theme-file-processor-entry-background-color-hover: #e5f3ff;
+  --theme-file-processor-entry-background-color-selected: #e5f3ff;
+
+  --theme-dialog-background-color: var(--theme-body-background);
+
+  --theme-menu-background-color: white;
+
+  --theme-component-card-background-color: white;
+
+  --theme-category-block-background-color: white;
 }
