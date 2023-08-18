@@ -1143,10 +1143,12 @@ namespace Bakabase.InsideWorld.Business.Services
                                     var cmd2 = Cli.Wrap($"{_thirdPartyOptions.Value.FFmpeg.BinDirectory}/ffmpeg")
                                         .WithArguments(new[]
                                         {
-                                            "-i", firstVideoFile.FullName,
                                             "-ss",
                                             $"{screenshotTime.Hours:D2}:{screenshotTime.Minutes:D2}:{screenshotTime.Seconds:D2}",
+                                            "-r", "1:1",
+                                            "-i", firstVideoFile.FullName,
                                             "-vframes", "1",
+                                            "-preset", "ultrafast",
                                             tmpFile
                                         }, true)
                                         .WithValidation(CommandResultValidation.None)
