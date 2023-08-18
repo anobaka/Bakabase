@@ -80,7 +80,12 @@ namespace Bakabase.InsideWorld.Business.Services
 
         private static string[] DiscoverAllResourceFullnameList(string rootPath, MatcherValue resourceMatcherValue)
         {
-            rootPath = rootPath.StandardizePath();
+            rootPath = rootPath.StandardizePath()!;
+            if (!rootPath.EndsWith(BusinessConstants.DirSeparator))
+            {
+                rootPath += BusinessConstants.DirSeparator;
+            }
+
             var list = new List<string>();
             switch (resourceMatcherValue.ValueType)
             {
