@@ -5,7 +5,6 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai;
