@@ -13,7 +13,7 @@ import {
   PlayResourceFile,
   RemoveResource,
 } from '@/sdk/apis';
-import { buildLogger, useTraceUpdate } from '@/components/utils';
+import { buildLogger, splitPathIntoSegments, useTraceUpdate, uuidv4 } from '@/components/utils';
 import './index.scss';
 import { PlaylistItemType, ResourceLanguage, ResourceTaskOperationOnComplete, ResourceTaskType } from '@/sdk/constants';
 import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
@@ -68,7 +68,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     onTagSearch = (tagId: number, append: boolean) => {
     },
     queue,
-    ct,
+    ct = new AbortController().signal,
   } = props;
 
   const [previewerVisible, setPreviewerVisible] = useState(false);
@@ -188,33 +188,37 @@ const Resource = React.forwardRef((props: Props, ref) => {
         v2: true,
         content: (
           <Tag.Group>
-            {playableFiles.map((a) => ((
-              <Balloon.Tooltip
-                key={a}
-                trigger={(
-                  <Tag>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => {
-                        play(a);
-                      }}
+            {playableFiles.map((a) => {
+              const segments = splitPathIntoSegments(a);
+              return (
+                <Balloon.Tooltip
+                  key={a}
+                  trigger={(
+                    <Tag
+                      title={a}
                     >
-                      <CustomIcon type="play-circle" />
-                      {a.replace(resource.directory, '')
-                        .replace(/^\\/, '')}
-                    </div>
-                  </Tag>
-                )}
-                align={'t'}
-                triggerType={'hover'}
-              >
-                {t('Use player to play')}
-              </Balloon.Tooltip>
-            )))}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => {
+                          play(a);
+                        }}
+                      >
+                        <CustomIcon type="play-circle" />
+                        {segments[segments.length - 1]}
+                      </div>
+                    </Tag>
+                  )}
+                  align={'t'}
+                  triggerType={'hover'}
+                >
+                  {t('Use player to play')}
+                </Balloon.Tooltip>
+              );
+            })}
           </Tag.Group>
         ),
         footer: false,

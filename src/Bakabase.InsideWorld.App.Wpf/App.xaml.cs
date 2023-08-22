@@ -2,6 +2,7 @@
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.InsideWorld.App.Core;
 using Bakabase.InsideWorld.App.Wpf.Components;
 using Application = System.Windows.Application;
@@ -14,13 +15,15 @@ namespace Bakabase.InsideWorld.App.Wpf
     public partial class App : Application
     {
         private readonly IGuiAdapter _guiAdapter;
+        private readonly ISystemService _systemService;
         public InsideWorldHost Host { get; private set; }
 
         public App()
         {
             _guiAdapter = GuiAdapterCreator.Create<WpfGuiAdapter>(this);
+            _systemService = new WindowsSystemService();
 
-            var options = AppOptionsManager.Instance.Value;
+            var options = AppOptionsManager.Default.Value;
             AppService.SetCulture(options.Language);
         }
 
@@ -31,10 +34,8 @@ namespace Bakabase.InsideWorld.App.Wpf
 
         private async void App_OnStartup(object sender, StartupEventArgs e)
         {
-            _guiAdapter.ChangeUiTheme(AppOptionsManager.Instance.CalculatedUiTheme);
-
-            Host = new InsideWorldHost(_guiAdapter);
-            Host.Start(new string[] { });
+            Host = new InsideWorldHost(_guiAdapter, _systemService);
+            await Host.Start(e.Args);
         }
     }
 }

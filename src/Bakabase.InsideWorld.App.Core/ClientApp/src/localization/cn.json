@@ -867,6 +867,11 @@
   "Prompt": "提示",
   "/ is the directory separator always, not \\": "除非特别说明，一般使用/作为目录路径分隔符，而不是\\",
   "You should not use capturing groups on Resource property due to partial path is not available to match a file system entry": "您不应该在*资源*属性中使用捕获组，因为不完整的匹配结果将无法定位到文件系统中的文件(夹)",
+  "Capturing groups are not allowed on Resource property": "捕获组不可用于*资源*属性中",
+  "Custom property key": "自定义属性key",
+  "Type here": "在这里输入",
+  "This is a child resource": "这是一个子资源",
+  "This is a parent resource": "这是一个父级资源"
   "Replace tags in search": "仅搜索该标签",
   "Append to tags in search": "追加搜索该标签",
   "Remove cover cache": "清除封面緩存",

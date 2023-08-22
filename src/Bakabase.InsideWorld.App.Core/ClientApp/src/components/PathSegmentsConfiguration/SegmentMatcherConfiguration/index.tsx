@@ -6,9 +6,9 @@ import IceLabel from '@icedesign/label';
 import { useTranslation } from 'react-i18next';
 import type { IMatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 import { ResourceMatcherValueType } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
-import { execAll } from '@/components/utils';
 import { getResultFromExecAll } from '@/components/PathSegmentsConfiguration/utils';
 import CustomIcon from '@/components/CustomIcon';
+import { ResourceProperty } from '@/sdk/constants';
 
 interface IValue {
   layer?: number;
@@ -40,6 +40,7 @@ interface ISegmentMatcherConfiguration {
   isCustomProperty: boolean;
   modesData?: SegmentMatcherConfigurationModesData;
   onSubmit: (value: IMatcherValue) => void;
+  property: ResourceProperty;
   // onClose?: () => void;
 }
 
@@ -60,6 +61,7 @@ const SegmentMatcherConfiguration = (props: ISegmentMatcherConfiguration) => {
     modesData = new SegmentMatcherConfigurationModesData(),
     onSubmit,
     isCustomProperty,
+    property,
     // onClose,
   } = props;
   const { t } = useTranslation();
@@ -198,6 +200,10 @@ const SegmentMatcherConfiguration = (props: ISegmentMatcherConfiguration) => {
                     try {
                       const regex = new RegExp(value.regex);
                       const v = getResultFromExecAll(regex, modesData.regex!.text);
+                      console.log(v, property);
+                      if (v && v.groups && v.groups.length > 0 && property == ResourceProperty.Resource) {
+                        throw new Error(t('Capturing groups are not allowed on Resource property'));
+                      }
                       if (v) {
                         setTestResult({
                           success: true,

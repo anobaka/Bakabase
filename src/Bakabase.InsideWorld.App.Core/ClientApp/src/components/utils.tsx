@@ -601,18 +601,9 @@ export function equalsOrIsChildOf(child: HTMLElement | null, parent: HTMLElement
   return false;
 }
 
-export function execAll(regex: RegExp | string, str: string): RegExpExecArray[] | null {
+export function execAll(regex: RegExp | string, str: string, maxCount: number): IterableIterator<RegExpMatchArray> | null {
   const newReg = new RegExp(regex, 'g');
-  const matches: RegExpExecArray[] = [];
-  let match;
-  while ((match = newReg.exec(str))) {
-    console.log(match);
-    matches.push(match);
-  }
-  if (matches.length === 0) {
-    return null;
-  }
-  return matches;
+  return str.matchAll(newReg);
 }
 
 export function splitPathIntoSegments(path: string): string[] {

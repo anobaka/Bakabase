@@ -94,7 +94,17 @@ namespace Bakabase.InsideWorld.Business.Services
                     var paths = new List<string> {rootPath};
                     while (currentLayer++ < resourceMatcherValue.Layer! - 1)
                     {
-                        paths = paths.SelectMany(t => Directory.GetDirectories(t, "*", SearchOption.TopDirectoryOnly))
+                        paths = paths.SelectMany(t =>
+                            {
+                                try
+                                {
+                                    return Directory.GetDirectories(t, "*", SearchOption.TopDirectoryOnly);
+                                }
+                                catch
+                                {
+                                    return Array.Empty<string>();
+                                }
+                            })
                             .ToList();
                     }
 
@@ -172,9 +182,10 @@ namespace Bakabase.InsideWorld.Business.Services
                     case ResourceProperty.CustomProperty:
                     {
                         var matchResult =
-                            ResourcePropertyMatcher.Match(segments, s, rootPathSegments.Length - 1, segments.Length);
+                            ResourcePropertyMatcher.Match(segments, s, rootPathSegments.Length - 1,
+                                segments.Length - 1);
 
-                        
+
                         if (matchResult != null)
                         {
                             var values = matchedValues.GetOrAdd(s.Property, () => new());
@@ -193,13 +204,15 @@ namespace Bakabase.InsideWorld.Business.Services
                                     else
                                     {
                                         values.Add((s, segments[matchResult.Index!.Value]));
-
                                     }
 
                                     break;
                                 }
                                 case MatchResultType.Regex:
+                                {
+                                    values.AddRange(matchResult.Matches!.Select(m => (s, m)));
                                     break;
+                                }
                                 default:
                                     throw new ArgumentOutOfRangeException();
                             }
@@ -280,11 +293,13 @@ namespace Bakabase.InsideWorld.Business.Services
 
                         break;
                     case ResourceProperty.CustomProperty:
-                        pr.CustomProperties = values.GroupBy(a => a.MatcherValue.Key).ToDictionary(a => a.Key, a => a
+                        pr.CustomProperties = values.GroupBy(a => a.MatcherValue.Key!).ToDictionary(a => a.Key, a => a
                             .Select(b => new CustomResourceProperty
                             {
                                 Value = b.Value,
-                                ValueType = CustomDataType.String
+                                ValueType = CustomDataType.String,
+                                // todo: this is a hard code to make it compatible with enhancer temporarily
+                                Key = $"p:{a.Key}"
                             }).ToList());
                         break;
                     case ResourceProperty.Language:
@@ -880,7 +895,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                     foreach (var m in otherMatchers)
                     {
-                        var result = ResourcePropertyMatcher.Match(segments, m, rootSegments.Length - 1, segments.Length);
+                        var result = ResourcePropertyMatcher.Match(segments, m, rootSegments.Length - 1, segments.Length - 1);
                         if (result != null)
                         {
                             switch (result.Type)

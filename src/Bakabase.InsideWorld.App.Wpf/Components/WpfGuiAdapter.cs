@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Windows;
 using Bakabase.Infrastructures;
 using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.App.Wpf.Windows;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Models.Extensions;
@@ -261,8 +262,7 @@ namespace Bakabase.InsideWorld.App.Wpf.Components
             if (_exitConfirmationDialog == null)
             {
                 _exitConfirmationDialog =
-                    new ExitConfirmationDialog(_app.Host.Host.Services
-                        .GetRequiredService<IStringLocalizer<AppSharedResource>>());
+                    new ExitConfirmationDialog(_app.Host.Host.Services.GetRequiredService<AppLocalizer>());
                 _exitConfirmationDialog.ExitBtn.Click += (sender, args) =>
                 {
                     _onExitConfirmationDialogClosing(CloseBehavior.Exit, onClosed);
@@ -291,7 +291,6 @@ namespace Bakabase.InsideWorld.App.Wpf.Components
         public override void ChangeUiTheme(UiTheme theme)
         {
             // todo: implement
-            return;
         }
     }
 }
