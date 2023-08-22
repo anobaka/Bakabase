@@ -201,6 +201,9 @@
   <data name="PathsShouldBeInSameDirectory" xml:space="preserve">
     <value>Paths should be in same directory</value>
   </data>
+  <data name="Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource" xml:space="preserve">
+    <value>Cover file can not be saved to resource directory for single-file-resource</value>
+  </data>
   <data name="Resource_CoverMustBeInDirectory" xml:space="preserve">
     <value>The cover must be stored in a directory</value>
   </data>

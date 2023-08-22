@@ -81,5 +81,8 @@ namespace Bakabase.InsideWorld.Business.Resources
 
         private string FileDoesNotExistInPath(string file, string path) =>
             this[nameof(FileDoesNotExistInPath), file, path];
+
+        private string Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource() =>
+            this[nameof(Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource)];
     }
 }

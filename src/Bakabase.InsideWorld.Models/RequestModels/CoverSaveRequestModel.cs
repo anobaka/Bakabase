@@ -11,5 +11,6 @@ namespace Bakabase.InsideWorld.Models.RequestModels
     {
         [Required] public string Base64Image { get; set; } = null!;
         public bool Overwrite { get; set; }
+        public bool SaveToResourceDirectory { get; set; }
     }
 }

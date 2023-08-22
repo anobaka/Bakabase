@@ -11,6 +11,9 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Models.Models.Aos
 {
+    /// <summary>
+    /// todo: properties in this type are not defined clearly
+    /// </summary>
     public class CoverDiscoverResult
     {
         public CoverDiscoverResultType Type { get; set; }

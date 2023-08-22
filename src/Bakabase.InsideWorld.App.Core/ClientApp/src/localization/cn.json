@@ -871,7 +871,7 @@
   "Custom property key": "自定义属性key",
   "Type here": "在这里输入",
   "This is a child resource": "这是一个子资源",
-  "This is a parent resource": "这是一个父级资源"
+  "This is a parent resource": "这是一个父级资源",
   "Replace tags in search": "仅搜索该标签",
   "Append to tags in search": "追加搜索该标签",
   "Remove cover cache": "清除封面緩存",
@@ -881,5 +881,7 @@
   "NothingToPreview": "没有可预览的内容",
   "Follow system": "跟随系统",
   "Light mode": "浅色模式",
-  "Dark mode": "深色模式"
+  "Dark mode": "深色模式",
+  "It's a directory where static files stored, such as ui resources, temp files, etc.": "这是一个存放静态文件的目录，比如ui资源、临时文件等。",
+  "Static files path": "静态文件路径"
 }

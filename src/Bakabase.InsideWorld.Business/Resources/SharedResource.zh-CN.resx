@@ -201,6 +201,9 @@
   <data name="PathsShouldBeInSameDirectory" xml:space="preserve">
     <value>所有路径必须要在同一目录下</value>
   </data>
+  <data name="Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource" xml:space="preserve">
+    <value>封面文件不能被保存在单文件资源的同级目录内</value>
+  </data>
   <data name="Resource_CoverMustBeInDirectory" xml:space="preserve">
     <value>封面图只能被保存在文件夹内</value>
   </data>

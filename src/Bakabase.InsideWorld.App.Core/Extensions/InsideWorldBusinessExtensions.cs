@@ -113,6 +113,7 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
 
             services.TryAddSingleton<IwFsWatcher>();
 
+            services.TryAddSingleton<TempFileManager>();
             services.TryAddSingleton<FFMpegHelper>();
 
             return services;

@@ -313,6 +313,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cover file can not be saved to resource directory for single-file-resource.
+        /// </summary>
+        internal static string Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource {
+            get {
+                return ResourceManager.GetString("Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The cover must be stored in a directory.
         /// </summary>
         internal static string Resource_CoverMustBeInDirectory {

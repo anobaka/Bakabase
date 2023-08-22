@@ -1,4 +1,6 @@
 import { Balloon, Box, Button, Divider, Icon, Message, Progress, Table } from '@alifd/next';
+import i18n from 'i18next';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   GetAppUpdaterState,
   GetNewAppVersion,
@@ -8,8 +10,6 @@ import {
   StartUpdatingApp,
   StartUpdatingUpdater,
 } from '@/sdk/apis';
-import i18n from 'i18next';
-import React, { useEffect, useRef, useState } from 'react';
 import { UpdaterStatus } from '@/sdk/constants';
 import ExternalLink from '@/components/ExternalLink';
 import { bytesToSize } from '@/components/utils';
@@ -49,14 +49,11 @@ export default ({ appInfo }) => {
           //   totalFileCount: 100,
           //   downloadedFileCount: 70,
           // });
-        }).finally(() => {
           gettingStateRef.current = false;
         });
       } else {
         GetUpdaterUpdaterState().invoke((a) => {
           setUpdaterUpdaterState(a.data || {});
-          gettingStateRef.current = false;
-        }).finally(() => {
           gettingStateRef.current = false;
         });
       }
@@ -190,6 +187,11 @@ export default ({ appInfo }) => {
       label: 'App Data Path',
       tip: 'This is where core data files stored and DO NOT change them if not necessary.',
       value: <Button text type={'primary'} onClick={() => OpenFileOrDirectory({ path: appInfo.appDataPath }).invoke()}>{appInfo.appDataPath}</Button>,
+    },
+    {
+      label: 'Static files path',
+      tip: 'It\'s a directory where static files stored, such as ui resources, temp files, etc.',
+      value: <Button text type={'primary'} onClick={() => OpenFileOrDirectory({ path: appInfo.webRootPath }).invoke()}>{appInfo.webRootPath}</Button>,
     },
     {
       label: 'Log Path',
