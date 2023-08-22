@@ -1,8 +1,9 @@
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Badge, Balloon, Button, Dialog, Message, Tag } from '@alifd/next';
-import { useUpdateEffect } from 'react-use';
+import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
 import IceLabel from '@icedesign/label';
+import type { BalloonProps } from '@alifd/next/types/balloon';
 import SegmentMatcherConfiguration from './SegmentMatcherConfiguration';
 import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
 import './index.scss';
@@ -63,10 +64,12 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
   log('Rendering with props', props);
 
   const { t } = useTranslation();
+  const forceUpdate = useUpdate();
 
   const [value, setValue] = useState<{ [type in ResourceProperty]?: MatcherValue[]; }>(new PscValue(defaultValue || {}).toComponentValue());
 
   const [visibleSmcId, setVisibleSmcId] = useState<string>();
+  const smcAlignRef = useRef<BalloonProps['align']>();
 
   const valueRef = useRef(value);
   const visibleMatchers = matchers.map((a) => allMatchers.find((b) => b.property == a.property)!)
@@ -580,18 +583,24 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
                         type={'normal'}
                         className={'matcher-selector'}
                         disabled={!m.isConfigurable}
-                        onClick={() => {
+                        onClick={(e) => {
                           if (o.available) {
                             selectMatcher(visibleMatchers.find(t => t.property == m.property)!, {
                               type: ResourceMatcherValueType.FixedText,
                               fixedText: segments.slice(0, i + 1).join(BusinessConstants.pathSeparator),
                             });
                           } else {
+                            const hw = window.innerWidth / 2;
+                            const hh = window.innerHeight / 2;
+                            const cx = e.clientX;
+                            const cy = e.clientY;
+                            const align = cx > hw ? cy > hh ? 'lt' : 'l' : cy > hh ? 'rt' : 'r';
+                            smcAlignRef.current = align;
                             setVisibleSmcId(`${i}-${m.property}`);
                           }
                         }}
                       >
-                        <div>
+                        <div >
                           <div className="property">
                             {t(ResourceProperty[m.property])}
                           </div>
@@ -639,12 +648,15 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
                           // followTrigger
                           autoAdjust
                           autoFocus={false}
+                          shouldUpdatePosition
                           onClose={() => {
                             setVisibleSmcId(undefined);
                           }}
+                          align={smcAlignRef.current}
                           visible={visibleSmcId === `${i}-${m.property}`}
                         >
                           <SegmentMatcherConfiguration
+                            property={m.property}
                             modesData={m.buildModesData()}
                             isCustomProperty={m.property == ResourceProperty.CustomProperty}
                             onSubmit={value => {

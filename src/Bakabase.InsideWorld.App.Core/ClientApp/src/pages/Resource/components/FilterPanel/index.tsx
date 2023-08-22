@@ -509,9 +509,9 @@ export default React.memo((props: IProps) => {
                           onChange={(v) => {
                             value = v;
                           }}
-                          popupProps={{ v2: true }}
-                          useVirtual
-                          autoWidth
+                          // popupProps={{ v2: true }}
+                          // useVirtual
+                          // autoWidth
                           style={{ width: 300 }}
                         />
                         <Button

@@ -6,10 +6,13 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Orm;
+using Bakabase.Infrastructures.Components.SystemService;
+using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Caching;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants;
@@ -24,7 +27,7 @@ namespace Bakabase.InsideWorld.App.Core
 {
     public class InsideWorldHost : AppHost
     {
-        public InsideWorldHost(IGuiAdapter guiAdapter) : base(guiAdapter)
+        public InsideWorldHost(IGuiAdapter guiAdapter, ISystemService systemService) : base(guiAdapter, systemService)
         {
         }
 
@@ -40,8 +43,8 @@ namespace Bakabase.InsideWorld.App.Core
             V170Migrator.CopyCoreAppData();
         }
 
-        public override IHostBuilder CreateHostBuilder(params string[] args) =>
-            CreateHostBuilder<InsideWorldStartup>(args);
+        protected override IHostBuilder CreateHostBuilder(params string[] args) =>
+            AppUtils.CreateAppHostBuilder<InsideWorldStartup>(args);
 
         protected override string DisplayName => "Inside World";
 
@@ -77,14 +80,15 @@ namespace Bakabase.InsideWorld.App.Core
             }
         }
 
-        protected override Task<string> CheckIfAppCanExitSafely()
+        protected override Task<string?> CheckIfAppCanExitSafely()
         {
-            var taskManager = Host?.Services.GetRequiredService<BackgroundTaskManager>();
+            var taskManager = Host.Services.GetRequiredService<BackgroundTaskManager>();
+            var localizer = Host.Services.GetRequiredService<AppLocalizer>();
             var tasks = taskManager?.Tasks;
             return Task.FromResult(tasks?.Any(t =>
                 t.Status == BackgroundTaskStatus.Running &&
                 t.Level == BackgroundTaskLevel.Critical) == true
-                ? "Some critical tasks are not completed yet, data would be lost by forcing shutdown the app. Are you sure to exit now?"
+                ? localizer.App_CriticalTasksRunningOnExit()
                 : null);
         }
     }

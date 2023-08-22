@@ -19,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<int[]> SearchResourceIds(Dictionary<string, string> properties)
         {
-            var data = await base.GetAll(t => properties.ContainsKey(t.Key) && (properties[t.Key] == t.Value));
+            var data = await base.GetAll(t => properties.ContainsKey(t.Key) && (t.Value.Contains(properties[t.Key])));
             return data.Select(t => t.ResourceId).Distinct().ToArray();
         }
 
