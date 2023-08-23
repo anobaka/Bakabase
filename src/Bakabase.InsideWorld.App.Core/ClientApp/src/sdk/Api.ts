@@ -30,6 +30,7 @@ export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo
   logPath?: string | null;
   backupPath?: string | null;
   updaterPath?: string | null;
+  webRootPath?: string | null;
   notAcceptTerms?: boolean;
   needRestart?: boolean;
 }
@@ -1274,6 +1275,7 @@ export interface BakabaseInsideWorldModelsRequestModelsCoverSaveRequestModel {
   /** @minLength 1 */
   base64Image: string;
   overwrite?: boolean;
+  saveToResourceDirectory?: boolean;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel {
@@ -1415,10 +1417,6 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateReq
   /** @format int32 */
   order?: number | null;
   generateNfo?: boolean | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceCoverDiscardAndAutomaticallyFindAnotherOneRequestModel {
-  ids: number[];
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel {
@@ -3826,26 +3824,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/resource/directory`,
         method: "GET",
         query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name DiscardResourceCoverAndFindAnotherOne
-     * @request PUT:/resource/cover
-     */
-    discardResourceCoverAndFindAnotherOne: (
-      data: BakabaseInsideWorldModelsRequestModelsResourceCoverDiscardAndAutomaticallyFindAnotherOneRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/cover`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
         format: "json",
         ...params,
       }),

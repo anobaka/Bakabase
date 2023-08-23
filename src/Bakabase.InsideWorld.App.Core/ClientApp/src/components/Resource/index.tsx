@@ -31,9 +31,6 @@ import ResourceEnhancementsDialog from '@/components/Resource/components/Resourc
 import type SimpleSearchEngine from '@/core/models/SimpleSearchEngine';
 import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
 import TagSelector from '@/components/TagSelector';
-import MediaPreviewer from '@/components/MediaPreviewer';
-
-const { Popup } = Overlay;
 
 const languageIconMapping = {
   [ResourceLanguage.Chinese]: 'china',
@@ -260,29 +257,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
         className={'cover-rectangle'}
         id={elementId}
       >
-        <div
-          className="cover-container"
-          onMouseOver={() => {
-            if (!previewerHoverTimerRef.current) {
-              previewerHoverTimerRef.current = setTimeout(() => {
-                setPreviewerVisible(true);
-              }, 1000);
-            }
-          }}
-          onMouseLeave={() => {
-            clearTimeout(previewerHoverTimerRef.current);
-            previewerHoverTimerRef.current = undefined;
-            if (previewerVisible) {
-              setPreviewerVisible(false);
-            }
-          }}
-        >
-          {previewerVisible && (
-            <MediaPreviewer resourceId={resource.id} />
-          )}
+        <div className="absolute-rectangle">
           <ResourceCover
-            loadImmediately={false}
-            resourceId={resource.id}
             onClick={() => {
               ResourceDetailDialog.show({
                 onTagSearch,
@@ -295,6 +271,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 ct,
               });
             }}
+            loadImmediately={false}
+            resourceId={resource.id}
             ref={coverRef}
             showBiggerOnHover={showBiggerCoverOnHover}
           />
@@ -385,10 +363,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 <CustomIcon
                   type={'eye'}
                   onClick={() => {
-                    ShowResourceMediaPlayer(resource.id, resource.rawFullname, base64String => {
-                      coverRef.current?.save(base64String, false);
-                    }, t);
-                    // resourceMediaPlayerRef.current.show();
+                    ShowResourceMediaPlayer(resource.id, resource.rawFullname, (base64String: string, saveToResourceDirectory: boolean) => {
+                      coverRef.current?.save(base64String, false, saveToResourceDirectory);
+                    }, t, resource.isSingleFile);
                   }}
                 />
               </div>

@@ -5939,49 +5939,6 @@ export const OpenResourceDirectoryURL = function(parameters = {}) {
 }
 /**
  * 
- * request: DiscardResourceCoverAndFindAnotherOne
- * url: DiscardResourceCoverAndFindAnotherOneURL
- * method: DiscardResourceCoverAndFindAnotherOne_TYPE
- * raw_url: DiscardResourceCoverAndFindAnotherOne_RAW_URL
- * @param model - 
- */
-export const DiscardResourceCoverAndFindAnotherOne = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/cover'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const DiscardResourceCoverAndFindAnotherOne_RAW_URL = function() {
-  return '/resource/cover'
-}
-export const DiscardResourceCoverAndFindAnotherOne_TYPE = function() {
-  return 'put'
-}
-export const DiscardResourceCoverAndFindAnotherOneURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/cover'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: UpdateResourceRawName
  * url: UpdateResourceRawNameURL
  * method: UpdateResourceRawName_TYPE

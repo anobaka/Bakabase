@@ -875,7 +875,7 @@
   "Replace tags in search": "仅搜索该标签",
   "Append to tags in search": "追加搜索该标签",
   "Remove cover cache": "清除封面緩存",
-  "Previous cover file (cover.png) will be overwritten if it exists.": "如果封面文件(cover.png)已存在，那么它将会被覆盖。",
+  "Previous cover file (cover.*) will be overwritten if it exists.": "如果封面文件(cover.png)已存在，那么它将会被覆盖。",
   "Save as a new cover": "保存为新封面",
   "Initializing": "初始化中",
   "NothingToPreview": "没有可预览的内容",
@@ -883,5 +883,10 @@
   "Light mode": "浅色模式",
   "Dark mode": "深色模式",
   "It's a directory where static files stored, such as ui resources, temp files, etc.": "这是一个存放静态文件的目录，比如ui资源、临时文件等。",
-  "Static files path": "静态文件路径"
+  "Static files path": "静态文件路径",
+  "Cover of single-file-resource will be saved to temp folder": "单文件资源的封面将会被保存至临时文件夹",
+  "Save to temp folder": "保存至临时文件夹",
+  "Cover file may be lost if you change the resource name in file system": "如果您在文件系统中修改了资源名称，封面文件可能会丢失",
+  "Save to resource folder": "保存至资源文件夹",
+  "Your original resource files may be tainted because the cover file will be added to the resource folder": "由于封面文件会被添加至资源文件夹，您的原始资源文件可能会被污染"
 }
