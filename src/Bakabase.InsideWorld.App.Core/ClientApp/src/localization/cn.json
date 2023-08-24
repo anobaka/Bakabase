@@ -888,5 +888,7 @@
   "Save to temp folder": "保存至临时文件夹",
   "Cover file may be lost if you change the resource name in file system": "如果您在文件系统中修改了资源名称，封面文件可能会丢失",
   "Save to resource folder": "保存至资源文件夹",
-  "Your original resource files may be tainted because the cover file will be added to the resource folder": "由于封面文件会被添加至资源文件夹，您的原始资源文件可能会被污染"
+  "Your original resource files may be tainted because the cover file will be added to the resource folder": "由于封面文件会被添加至资源文件夹，您的原始资源文件可能会被污染",
+  "Quick preview is not fully enabled": "快速预览未完全启用",
+  "It's highly recommended to configure ffmpeg path in settings to enable the quick preview feature for videos.": "强烈建议您在系统配置中设置ffmpeg路径，以启用视频的快速预览功能。"
 }

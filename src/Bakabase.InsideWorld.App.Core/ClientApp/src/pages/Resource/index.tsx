@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './index.scss';
-import { Badge, Balloon, Button, Checkbox, Loading, Message, Pagination, Select } from '@alifd/next';
+import { Badge, Balloon, Button, Checkbox, Loading, Message, Notification, Pagination, Select } from '@alifd/next';
 import { Collapse } from 'react-collapse';
 import i18n from 'i18next';
 import Queue from 'queue';
@@ -115,6 +115,17 @@ const ResourcePage = (props) => {
         const t = a.data?.lastSearch || {};
         log('Got previous search form', t);
         search(t);
+      });
+
+    BApi.options.getThirdPartyOptions()
+      .then(a => {
+        if (a.data?.fFmpeg?.binDirectory == undefined) {
+          Notification.notice({
+            title: t('Quick preview is not fully enabled'),
+            content: t('It\'s highly recommended to configure ffmpeg path in settings to enable the quick preview feature for videos.'),
+            duration: 10000,
+          });
+        }
       });
 
     const onKeyDown = (e) => {

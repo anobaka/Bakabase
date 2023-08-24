@@ -82,4 +82,9 @@
 		<!-- <Message Text="??? %(DistFiles.Identity)" Importance="high" /> -->
 		<!-- <Message Text="??? @(DistFiles)->'$([System.String]::Copy('%(Identity)').Replace('..','123'))'" Importance="high" /> -->
 	</Target>
+
+	<Target Name="CreateWwwRoot" AfterTargets="Publish">
+		<Message Text="Try create wwwroot folder" Importance="high" />
+		<MakeDir Directories="$(PublishDir)wwwroot" Condition="!Exists('$(PublishDir)wwwroot')" />
+	</Target>
 </Project>

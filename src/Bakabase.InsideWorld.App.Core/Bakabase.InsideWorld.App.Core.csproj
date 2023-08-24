@@ -11,25 +11,15 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Remove="ClientApp\**" />
-		<Compile Remove="logs\**" />
 		<Content Remove="ClientApp\**" />
-		<Content Remove="logs\**" />
 		<None Remove="ClientApp\**" />
 		<EmbeddedResource Remove="ClientApp\**" />
 
-		<Compile Remove="wwwroot\cover\**" />
-
+		<Compile Remove="logs\**" />
+		<Content Remove="logs\**" />
 		<EmbeddedResource Remove="logs\**" />
-		<EmbeddedResource Remove="wwwroot\cover\**" />
 		<None Remove="logs\**" />
-		<None Remove="wwwroot\cover\**" />
-		<Content Remove="wwwroot\cover\**" />
-
-		<None Remove="wwwroot\temp\**" />
-		<EmbeddedResource Remove="wwwroot\temp\**" />
-		<Compile Remove="wwwroot\temp\**" />
-		<Content Remove="wwwroot\temp\**" />
-	</ItemGroup>
+</ItemGroup>
 	<ItemGroup>
 	  <Compile Remove="Controllers\SubscriptionController.cs" />
 	  <Compile Remove="Controllers\SystemPropertyController.cs" />
@@ -67,9 +57,7 @@
 	  <ProjectReference Include="..\InsideWorld.Migrations\InsideWorld.Migrations.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-	  <Content Update="wwwroot\no-image-available.svg">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </Content>
+		<None Include="wwwroot\*" />		
 	</ItemGroup>
 	<ItemGroup>
 	  <None Update="Assets\favicon.ico">
@@ -85,15 +73,7 @@
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>
-	<Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
-		<Exec WorkingDirectory="$(SpaRoot)" Command="npm install" />
-		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
-		<ItemGroup>
-			<DistFiles Include="$(SpaRoot)build\**" />
-			<ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
-				<RelativePath>%(DistFiles.Identity)</RelativePath>
-				<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-			</ResolvedFileToPublish>
-		</ItemGroup>
-	</Target>
+	<ItemGroup>
+	  <Folder Include="wwwroot\" />
+	</ItemGroup>
 </Project>

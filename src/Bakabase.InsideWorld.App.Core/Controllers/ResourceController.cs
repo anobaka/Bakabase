@@ -475,6 +475,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             }
 
             var items = new List<PreviewerItem>();
+            var ffmpegIsReady = _ffMpegHelper.IsReady();
 
             foreach (var f in filePaths)
             {
@@ -490,13 +491,17 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                         });
                         break;
                     case MediaType.Video:
-                        items.Add(new PreviewerItem
+                        if (ffmpegIsReady)
                         {
-                            Duration = (int) Math.Ceiling(
-                                (await _ffMpegHelper.GetDuration(f, HttpContext.RequestAborted))),
-                            FilePath = f.StandardizePath()!,
-                            Type = type
-                        });
+                            items.Add(new PreviewerItem
+                            {
+                                Duration = (int) Math.Ceiling(
+                                    (await _ffMpegHelper.GetDuration(f, HttpContext.RequestAborted))),
+                                FilePath = f.StandardizePath()!,
+                                Type = type
+                            });
+                        }
+
                         break;
                     case MediaType.Text:
                     case MediaType.Audio:
