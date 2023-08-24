@@ -445,7 +445,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
             };
         }
 
-        public static ResourceSearchDto ToDto(this ResourceSearchOptions options)
+        public static ResourceSearchDto? ToDto(this ResourceSearchOptions? options)
         {
             if (options == null)
             {

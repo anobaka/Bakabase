@@ -30,7 +30,7 @@ export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo
   logPath?: string | null;
   backupPath?: string | null;
   updaterPath?: string | null;
-  webRootPath?: string | null;
+  tempFilesPath?: string | null;
   notAcceptTerms?: boolean;
   needRestart?: boolean;
 }

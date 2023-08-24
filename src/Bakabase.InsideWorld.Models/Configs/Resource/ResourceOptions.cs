@@ -18,14 +18,16 @@ namespace Bakabase.InsideWorld.Models.Configs.Resource
     {
         public DateTime LastSyncDt { get; set; }
         public DateTime LastNfoGenerationDt { get; set; }
-        public ResourceSearchOptions LastSearch { get; set; }
-        public List<ResourceSearchSlotItemOptions> SearchSlots { get; set; }
-        public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; }
+        public ResourceSearchOptions? LastSearch { get; set; }
+        public List<ResourceSearchSlotItemOptions> SearchSlots { get; set; } = new();
+
+        public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; } =
+            Array.Empty<AdditionalCoverDiscoveringSource>();
     }
 
     public static class ResourceOptionsExtensions
     {
-        public static ResourceOptionsDto ToDto(this ResourceOptions options)
+        public static ResourceOptionsDto? ToDto(this ResourceOptions? options)
         {
             if (options == null)
             {
@@ -36,9 +38,10 @@ namespace Bakabase.InsideWorld.Models.Configs.Resource
             {
                 AdditionalCoverDiscoveringSources = options.AdditionalCoverDiscoveringSources,
                 LastNfoGenerationDt = options.LastNfoGenerationDt,
-                LastSearch = options.LastSearch.ToDto(),
+                LastSearch = options.LastSearch?.ToDto(),
                 LastSyncDt = options.LastSyncDt,
-                SearchSlots = options.SearchSlots?.Select(a => a.ToDto()).ToList()
+                SearchSlots = options.SearchSlots?.Select(a => a.ToDto()).ToList() ??
+                              new List<ResourceSearchSlotItemDto>()
             };
         }
     }

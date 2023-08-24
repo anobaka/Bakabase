@@ -189,9 +189,9 @@ export default ({ appInfo }) => {
       value: <Button text type={'primary'} onClick={() => OpenFileOrDirectory({ path: appInfo.appDataPath }).invoke()}>{appInfo.appDataPath}</Button>,
     },
     {
-      label: 'Static files path',
-      tip: 'It\'s a directory where static files stored, such as ui resources, temp files, etc.',
-      value: <Button text type={'primary'} onClick={() => OpenFileOrDirectory({ path: appInfo.webRootPath }).invoke()}>{appInfo.webRootPath}</Button>,
+      label: 'Temporary files path',
+      tip: 'It\'s a directory where temporary files stored, such as cover files, etc.',
+      value: <Button text type={'primary'} onClick={() => OpenFileOrDirectory({ path: appInfo.tempFilesPath }).invoke()}>{appInfo.tempFilesPath}</Button>,
     },
     {
       label: 'Log Path',

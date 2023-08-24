@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bootstrap.Components.Storage;
 using Microsoft.AspNetCore.Hosting;
@@ -15,10 +16,9 @@ namespace Bakabase.InsideWorld.Business.Components
     public class TempFileManager
     {
         private readonly string _coverBaseDirectory;
-
-        public TempFileManager(IWebHostEnvironment env)
+        public TempFileManager(AppService appService)
         {
-            _coverBaseDirectory = Path.Combine(env.WebRootPath, "cover").StandardizePath()!;
+            _coverBaseDirectory = Path.Combine(appService.TempFilesPath, "cover").StandardizePath()!;
         }
 
         public async Task<string?> GetCover(int resourceId)
