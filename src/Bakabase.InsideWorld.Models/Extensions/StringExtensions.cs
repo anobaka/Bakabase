@@ -44,27 +44,41 @@ namespace Bakabase.InsideWorld.Models.Extensions
                     .Select(a => a.TrimEnd())
                     .Where(a => a.IsNotEmpty()));
 
-            var tmp = path;
             // windows drive
-            if (tmp.EndsWith(':'))
+            if (sp.EndsWith(':'))
             {
-                tmp += '/';
+                sp += '/';
             }
 
-            // Uri can't handle // at the beginning
-            // todo: windows only
-            if (tmp.StartsWith(BusinessConstants.UncPathPrefix))
+            if (path.IsUncPath())
             {
-                tmp = $"{BusinessConstants.WindowsSpecificUncPathPrefix}{tmp[2..]}";
+                sp = BusinessConstants.UncPathPrefix + sp;
             }
 
-            var uri = new Uri(tmp, UriKind.RelativeOrAbsolute);
-            if (!uri.IsAbsoluteUri)
+            return sp;
+        }
+
+        public static bool IsUncPath(this string? path)
+        {
+            if (string.IsNullOrEmpty(path))
             {
-                return sp;
+                return false;
             }
 
-            return uri.IsUnc ? $"{BusinessConstants.UncPathPrefix}{sp}" : sp;
+            if (path.StartsWith(BusinessConstants.UncPathPrefix))
+            {
+                path = $"{BusinessConstants.WindowsSpecificUncPathPrefix}{path[2..]}";
+            }
+
+            var uri = new Uri(path);
+            try
+            {
+                return uri.IsUnc;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
