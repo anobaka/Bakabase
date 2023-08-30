@@ -12,6 +12,8 @@ const ChildrenIndent = 15;
 
 export interface IEntryFilter {
   keyword?: string;
+  types?: IwFsType[];
+  custom?: (e: Entry) => boolean;
 }
 
 export enum EntryError {
@@ -72,6 +74,7 @@ export class Entry {
 
   expireFilteredChildren(): void {
     this._tmpFilter = {};
+    this._filteredChildren = this.children?.slice() || [];
   }
 
   /**
@@ -87,10 +90,23 @@ export class Entry {
   }
 
   private refreshFilteredChildren() {
-    const { keyword } = this._tmpFilter;
+    const { keyword, types, custom } = this._tmpFilter;
     const lowerCasedKeyword = keyword?.toLowerCase();
-    this._filteredChildren = (this.children ?? []).filter(c => (lowerCasedKeyword == undefined || c.name.toLowerCase()
-      .includes(lowerCasedKeyword)));
+    this._filteredChildren = (this.children ?? []).filter(c => {
+      if (!(lowerCasedKeyword == undefined || c.name.toLowerCase().includes(lowerCasedKeyword))) {
+        return false;
+      }
+      if (!(types == undefined || !types.includes(c.type))) {
+        return false;
+      }
+      if (custom != undefined) {
+        const r = custom(c);
+        if (!r) {
+          return false;
+        }
+      }
+      return true;
+    });
   }
 
   get childrenCount(): number | undefined {
@@ -180,7 +196,7 @@ export class Entry {
     try {
       if (this.type == IwFsType.Directory) {
         this.initializationStatus = EntryAsyncOperationStatus.Running;
-        const info = await BApi.file.getIwFsInfo({ path: this.path });
+        const info = await BApi.file.getIwFsInfo({ path: this.path }, { ignoreError: true });
         if (info.code) {
           this.errors[EntryError.InitializationFailed] = info.message!;
         } else {
@@ -188,7 +204,7 @@ export class Entry {
           Object.assign(this, info.data);
         }
       }
-      const taskInfo = await BApi.file.getEntryTaskInfo({ path: this.path });
+      const taskInfo = await BApi.file.getEntryTaskInfo({ path: this.path }, { ignoreError: true });
       if (taskInfo.code) {
         this.errors[EntryError.InitializationFailed] = taskInfo.message!;
       } else {
@@ -340,8 +356,16 @@ export class Entry {
     this.simpleRefCall('highlight', 'highlighted', highlight);
   }
 
-  expand(expand): void {
-    this.simpleRefCall('expand', 'expanded', expand);
+  expand(refresh?: boolean): void {
+    if (this._ref) {
+      this._ref.expand(refresh);
+    }
+  }
+
+  collapse(): void {
+    if (this._ref) {
+      this._ref.collapse();
+    }
   }
 
   get dom(): HTMLElement | null | undefined {
@@ -384,6 +408,7 @@ export class Entry {
   }
 
   private simpleRefCall(method: string, fallbackProperty: string, value: any): void {
+    console.log(this._ref, method, this);
     if (this._ref) {
       this._ref[method](value);
     } else {
@@ -396,6 +421,9 @@ export interface IEntryRef {
   select: (select) => void;
 
   get dom(): HTMLElement | undefined | null;
+
+  expand: (refresh?: boolean) => void;
+  collapse: () => void;
 
   forceUpdate: () => void;
   renderChildren: () => void;

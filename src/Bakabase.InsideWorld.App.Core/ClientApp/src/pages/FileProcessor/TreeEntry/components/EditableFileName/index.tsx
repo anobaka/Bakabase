@@ -9,11 +9,13 @@ import BApi from '@/sdk/BApi';
 
 interface Props {
   entry: Entry;
+  disabled?: boolean;
 }
 
 const EditableText = memo((props: Props) => {
   const {
     entry,
+    disabled = false,
   } = props;
   const [editing, setEditing] = useState(false);
   const editingRef = useRef(editing);
@@ -54,6 +56,9 @@ const EditableText = memo((props: Props) => {
 
   const onKeyDown = useCallback(
     (e) => {
+      if (disabled) {
+        return;
+      }
       log('Key down', e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey, e);
       switch (e.key) {
         case 'F2':

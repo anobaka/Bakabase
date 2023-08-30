@@ -171,10 +171,10 @@ export default () => {
 
   const workingDirectoryPathSegments = root?.path?.split(BusinessConstants.pathSeparator) || [];
 
-  const onDeleteKeyDownCallback = useCallback((evt, en) => {
-    console.log('Delete key down with selected entries', selectedEntriesRef.current);
-    showDeleteConfirmDialog(selectedEntriesRef.current);
-  }, []);
+  // const onDeleteKeyDownCallback = useCallback((evt, en) => {
+  //   console.log('Delete key down with selected entries', selectedEntriesRef.current);
+  //   showDeleteConfirmDialog(selectedEntriesRef.current);
+  // }, []);
 
   const findNextEntry = (e, findInChildren) => {
     // Children
@@ -575,7 +575,7 @@ export default () => {
                 }
               }}
               onChildrenLoaded={onChildrenLoadCallback}
-              onDeleteKeyDown={onDeleteKeyDownCallback}
+              // onDeleteKeyDown={onDeleteKeyDownCallback}
               onDoubleClick={onDoubleClickCallback}
               trySelect={trySelectCallback}
               keyword={keywordRef.current}

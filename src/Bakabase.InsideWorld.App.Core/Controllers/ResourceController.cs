@@ -457,6 +457,11 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             var resource = await _service.GetByKey(id, false);
 
+            if (resource == null)
+            {
+                return ListResponseBuilder<PreviewerItem>.NotFound;
+            }
+
             var filePaths = new List<string>();
             if (System.IO.File.Exists(resource.RawFullname))
             {

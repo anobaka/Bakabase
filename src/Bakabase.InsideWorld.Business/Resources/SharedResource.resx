@@ -195,6 +195,9 @@
   <data name="FilesDoNotExistInPath" xml:space="preserve">
     <value>{0} do not exist in {1}</value>
   </data>
+  <data name="NewFolderName" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
   <data name="PathIsNotFound" xml:space="preserve">
     <value>{0} is not found</value>
   </data>

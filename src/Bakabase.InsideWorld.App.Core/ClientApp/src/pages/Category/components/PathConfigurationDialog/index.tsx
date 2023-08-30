@@ -12,6 +12,7 @@ import TagSelector from '@/components/TagSelector';
 import './index.scss';
 import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
 import ClickableIcon from '@/components/ClickableIcon';
+import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 
 const log = buildLogger('PathConfigurationDialog');
 
@@ -311,50 +312,58 @@ export default (props: Props) => {
                         size={'small'}
                         text
                         onClick={() => {
-                          BApi.gui.openFileSelector({ initialDirectory: value.path })
-                            .then((a) => {
-                              if (a.data) {
-                                const std = standardizePath(a.data)!;
-                                const stdPrev = standardizePath(value.path);
-                                if (stdPrev && std.startsWith(stdPrev)) {
-                                  const segments = splitPathIntoSegments(a.data);
-                                  const pscValue: IPscValue = {};
+                          FileSystemSelectorDialog.show({
+                            // targetType: 'folder',
+                            startPath: value.path,
+                            onSelected: (e) => {
+                              const std = standardizePath(e.path)!;
+                              const stdPrev = standardizePath(value.path);
+                              if (stdPrev && std.startsWith(stdPrev)) {
+                                const segments = splitPathIntoSegments(e.path);
+                                const pscValue: IPscValue = {};
 
-                                  // todo: 修复数据前临时调整数据，后端修复后移除
-                                  if (value) {
-                                    pscValue.rpmValues = JSON.parse(JSON.stringify(value.rpmValues ?? []));
-                                    pscValue.path = value.path;
-                                    const resourceSegment = value.rpmValues?.find((s) => s.property == ResourceProperty.Resource);
-                                    if (!resourceSegment && value.regex) {
-                                      const layer = parseLayerCountFromLayerBasedPathRegexString(value.regex!, true);
-                                      const rv: IPscMatcherValue = {
-                                        property: ResourceProperty.Resource,
-                                        valueType: layer > 0 ? ResourceMatcherValueType.Layer : ResourceMatcherValueType.Regex,
-                                      };
-                                      if (layer > 0) {
-                                        rv.layer = layer;
-                                        rv.valueType = ResourceMatcherValueType.Layer;
-                                      } else {
-                                        rv.regex = value.regex;
-                                        rv.valueType = ResourceMatcherValueType.Regex;
-                                      }
-
-                                      (pscValue.rpmValues)!.push(rv);
+                                // todo: 修复数据前临时调整数据，后端修复后移除
+                                if (value) {
+                                  pscValue.rpmValues = JSON.parse(JSON.stringify(value.rpmValues ?? []));
+                                  pscValue.path = value.path;
+                                  const resourceSegment = value.rpmValues?.find((s) => s.property == ResourceProperty.Resource);
+                                  if (!resourceSegment && value.regex) {
+                                    const layer = parseLayerCountFromLayerBasedPathRegexString(value.regex!, true);
+                                    const rv: IPscMatcherValue = {
+                                      property: ResourceProperty.Resource,
+                                      valueType: layer > 0 ? ResourceMatcherValueType.Layer : ResourceMatcherValueType.Regex,
+                                    };
+                                    if (layer > 0) {
+                                      rv.layer = layer;
+                                      rv.valueType = ResourceMatcherValueType.Layer;
+                                    } else {
+                                      rv.regex = value.regex;
+                                      rv.valueType = ResourceMatcherValueType.Regex;
                                     }
+
+                                    (pscValue.rpmValues)!.push(rv);
                                   }
-                                  setPscData({
-                                    segments,
-                                    value: pscValue,
-                                  });
-                                } else {
-                                  Dialog.error({
-                                    title: t('Error'),
-                                    content: t('You can select a file out of root path. If you want to change the root path of your library, you should click on your root path.'),
-                                    closeable: true,
-                                  });
                                 }
+                                setPscData({
+                                  segments,
+                                  value: pscValue,
+                                });
+                              } else {
+                                Dialog.error({
+                                  title: t('Error'),
+                                  content: t('You can select a file out of root path. If you want to change the root path of your library, you should click on your root path.'),
+                                  closeable: true,
+                                });
                               }
-                            });
+                            },
+                          });
+
+                          // BApi.gui.openFileSelector({ initialDirectory: value.path })
+                          //   .then((a) => {
+                          //     if (a.data) {
+                          //
+                          //     }
+                          //   });
                         }}
                       >
                         {t('Setup')}

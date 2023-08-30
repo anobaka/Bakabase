@@ -64,7 +64,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             BackgroundTaskHelper backgroundTaskHelper, InsideWorldOptionsManagerPool insideWorldOptionsManager,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
-            IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger)
+            IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger, InsideWorldLocalizer localizer)
         {
             _specialTextService = specialTextService;
             _env = env;
@@ -77,39 +77,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _fileProcessorWatcher = fileProcessorWatcher;
             _passwordService = passwordService;
             _logger = logger;
+            _localizer = localizer;
 
             _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
         }
-
-        // [HttpGet("media-info")]
-        // [SwaggerOperation(OperationId = "GetEntryMediaInfo")]
-        // public async Task<SingletonResponse<IwFsMediaInfo>> GetEntryMediaInfo(string path)
-        // {
-        //     var ei = new IwFsMediaInfo {Path = path};
-        //     if (System.IO.File.Exists(path))
-        //     {
-        //         var ext = Path.GetExtension(path);
-        //         if (BusinessConstants.VideoExtensions.Contains(ext) ||
-        //             BusinessConstants.AudioExtensions.Contains(ext))
-        //         {
-        //             if (FFmpeg.ExecutablesPath.IsNotEmpty())
-        //             {
-        //                 try
-        //                 {
-        //                     var info = await FFmpeg.GetMediaInfo(path);
-        //                     ei.Duration = info.Duration.TotalMilliseconds;
-        //                 }
-        //                 catch
-        //                 {
-        //                     // ignored
-        //                 }
-        //             }
-        //         }
-        //
-        //     }
-        //
-        //     return new SingletonResponse<IwFsMediaInfo>(ei);
-        // }
 
         [HttpGet("task-info")]
         [SwaggerOperation(OperationId = "GetEntryTaskInfo")]
@@ -135,58 +106,77 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return new SingletonResponse<IwFsEntry>(new IwFsEntry(path));
         }
 
-        // [HttpGet("file-system-info")]
-        // [SwaggerOperation(OperationId = "GetEntryFileSystemInfo")]
-        // public async Task<SingletonResponse<IwFsEntryInfo>> GetEntryFileSystemInfo(string path)
-        // {
-        //     var ei = new IwFsEntryInfo {Path = path};
-        //     if (Directory.Exists(path))
-        //     {
-        //         try
-        //         {
-        //             var di = new DirectoryInfo(path);
-        //             ei.FileCount = di.GetFiles().Length;
-        //             ei.DirectoryCount = di.GetDirectories().Length;
-        //         }
-        //         catch (Exception e)
-        //         {
-        //             // ignored
-        //         }
-        //     }
-        //
-        //     return new SingletonResponse<IwFsEntryInfo>(ei);
-        // }
-
-        [HttpGet("path-preview")]
-        [SwaggerOperation(OperationId = "PreviewPath")]
-        public async Task<SingletonResponse<IwFsPreview>> Preview(string path)
+        [HttpPost("directory")]
+        [SwaggerOperation(OperationId = "CreateDirectory")]
+        public async Task<BaseResponse> CreateDirectory(string parent)
         {
-            var isDirectory = false;
-
-            if (Directory.Exists(path))
+            if (!Directory.Exists(parent))
             {
-                isDirectory = true;
+                return BaseResponseBuilder.BuildBadRequest(_localizer.PathIsNotFound(parent));
             }
-            else
+
+            var dirs = Directory.GetDirectories(parent).Select(Path.GetFileName).ToHashSet();
+
+            for (var i = 0; i < 10000; i++)
             {
-                if (!System.IO.File.Exists(path))
+                var dirName = _localizer.NewFolderName();
+                if (i > 0)
                 {
-                    return SingletonResponseBuilder<IwFsPreview>.Build(ResponseCode.NotFound, $"{path} does not exist");
+                    dirName += $" ({i})";
+                }
+
+                if (!dirs.Contains(dirName))
+                {
+                    Directory.CreateDirectory(Path.Combine(parent, dirName));
+                    return BaseResponseBuilder.Ok;
                 }
             }
 
-            // standardize
-            path = path.StandardizePath()!;
+            return BaseResponseBuilder.SystemError;
+        }
 
+        [HttpGet("children/iwfs-info")]
+        [SwaggerOperation(OperationId = "GetChildrenIwFsInfo")]
+        public async Task<SingletonResponse<IwFsPreview>> Preview(string? root)
+        {
+            var isDirectory = false;
             string[] files;
-            if (isDirectory)
+
+            root = root.StandardizePath();
+            if (string.IsNullOrEmpty(root))
             {
-                var dirWithPathSep = $"{path.StandardizePath()}{BusinessConstants.DirSeparator}";
-                files = Directory.GetFileSystemEntries(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
+                files = DriveInfo.GetDrives().Select(f => f.Name).ToArray();
             }
             else
             {
-                files = new[] {path};
+                if (Directory.Exists(root))
+                {
+                    isDirectory = true;
+                }
+                else
+                {
+                    if (!root.StartsWith(BusinessConstants.UncPathPrefix))
+                    {
+                        if (!System.IO.File.Exists(root))
+                        {
+                            return SingletonResponseBuilder<IwFsPreview>.Build(ResponseCode.NotFound, $"{root} does not exist");
+                        }
+                    }
+                    else
+                    {
+                        isDirectory = true;
+                    }
+                }
+
+                if (isDirectory)
+                {
+                    var dirWithPathSep = $"{root.StandardizePath()}{BusinessConstants.DirSeparator}";
+                    files = Directory.GetFileSystemEntries(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
+                }
+                else
+                {
+                    files = new[] { root };
+                }
             }
 
             var entries = files.AsParallel().Select(t => new IwFsEntry(t)).OrderBy(t => t.Type == IwFsType.Directory ? 0 : 1)
@@ -255,13 +245,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             // }
 
             var fileChain = new List<IwFsEntry> { };
-            string lastFileChainPath = null;
-            var pathSegments = path
+            var pathSegments = root?
                 .Split(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-                .Where(t => t.IsNotEmpty()).ToArray();
+                .Where(t => t.IsNotEmpty()).ToArray() ?? Array.Empty<string>();
+            string? lastFileChainPath = null;
             foreach (var s in pathSegments.Take(isDirectory ? pathSegments.Length : pathSegments.Length - 1))
             {
-                lastFileChainPath = lastFileChainPath.IsNullOrEmpty() ? s : Path.Combine(lastFileChainPath, s);
+                lastFileChainPath = lastFileChainPath.IsNullOrEmpty() ? s : Path.Combine(lastFileChainPath!, s);
 
                 fileChain.Add(new IwFsEntry
                 {

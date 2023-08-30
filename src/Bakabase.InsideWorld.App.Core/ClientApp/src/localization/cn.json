@@ -890,5 +890,8 @@
   "Save to resource folder": "保存至资源文件夹",
   "Your original resource files may be tainted because the cover file will be added to the resource folder": "由于封面文件会被添加至资源文件夹，您的原始资源文件可能会被污染",
   "Quick preview is not fully enabled": "快速预览未完全启用",
-  "It's highly recommended to configure ffmpeg path in settings to enable the quick preview feature for videos.": "强烈建议您在系统配置中设置ffmpeg路径，以启用视频的快速预览功能。"
+  "It's highly recommended to configure ffmpeg path in settings to enable the quick preview feature for videos.": "强烈建议您在系统配置中设置ffmpeg路径，以启用视频的快速预览功能。",
+  "OK": "确定",
+  "Cancel": "取消",
+  "New Folder": "新文件夹"
 }

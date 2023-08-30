@@ -3,6 +3,7 @@ import './index.scss';
 
 import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf/utils';
 import MediaPreviewer from '@/components/MediaPreviewer';
+import FileSystemSelector from '@/components/FileSystemSelector';
 
 const schema: RJSFSchema = {
   type: 'object',
@@ -60,27 +61,30 @@ export default () => {
 
   return (
     <div className={'test-page'}>
-      <div
-        className={'media-previewer-container'}
-        onMouseOver={() => {
-          if (!hoverTimerRef.current) {
-            hoverTimerRef.current = setTimeout(() => {
-              setPreviewerVisible(true);
-            }, 1000);
-          }
-        }}
-        onMouseLeave={() => {
-          clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = undefined;
-          if (previewerVisible) {
-            setPreviewerVisible(false);
-          }
-        }}
-      >
-        {previewerVisible && (
-          <MediaPreviewer resourceId={2501} />
-        )}
-      </div>
+
+      <FileSystemSelector targetType={'folder'} />
+
+      {/* <div */}
+      {/*   className={'media-previewer-container'} */}
+      {/*   onMouseOver={() => { */}
+      {/*     if (!hoverTimerRef.current) { */}
+      {/*       hoverTimerRef.current = setTimeout(() => { */}
+      {/*         setPreviewerVisible(true); */}
+      {/*       }, 1000); */}
+      {/*     } */}
+      {/*   }} */}
+      {/*   onMouseLeave={() => { */}
+      {/*     clearTimeout(hoverTimerRef.current); */}
+      {/*     hoverTimerRef.current = undefined; */}
+      {/*     if (previewerVisible) { */}
+      {/*       setPreviewerVisible(false); */}
+      {/*     } */}
+      {/*   }} */}
+      {/* > */}
+      {/*   {previewerVisible && ( */}
+      {/*     <MediaPreviewer resourceId={2501} /> */}
+      {/*   )} */}
+      {/* </div> */}
     </div>
   );
 };

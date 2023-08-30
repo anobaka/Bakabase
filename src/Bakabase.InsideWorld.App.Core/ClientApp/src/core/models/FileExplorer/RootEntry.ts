@@ -213,7 +213,7 @@ class RootEntry extends Entry {
     await this._stop();
   }
 
-  constructor(path: string) {
+  constructor(path?: string) {
     super({ path });
     this.root = this;
     this.expanded = true;

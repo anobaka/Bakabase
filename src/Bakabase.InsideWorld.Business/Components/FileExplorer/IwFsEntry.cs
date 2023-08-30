@@ -7,6 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Models.Extensions;
+using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 {
@@ -18,6 +20,13 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 
         public IwFsEntry(string path)
         {
+            Path = path.StandardizePath()!;
+            Name = System.IO.Path.GetFileName(path).StandardizePath()!;
+            if (string.IsNullOrEmpty(Name))
+            {
+                Name = Path;
+            }
+
             FileSystemInfo? fileSystemInfo = null;
             var type = IwFsType.Unknown;
             if (Directory.Exists(path))
@@ -39,7 +48,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 
             if (fileSystemInfo != null)
             {
-                if (fileSystemInfo.Name != System.IO.Path.GetFileName(path))
+                if (fileSystemInfo.Name.StandardizePath() != Name)
                 {
                     type = IwFsType.Invalid;
                     fileSystemInfo = null;
@@ -90,8 +99,6 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
                 }
             }
 
-            Path = path;
-            Name = System.IO.Path.GetFileName(path);
             Ext = ext;
             Type = type;
             MeaningfulName = System.IO.Path.GetFileNameWithoutExtension(Name);

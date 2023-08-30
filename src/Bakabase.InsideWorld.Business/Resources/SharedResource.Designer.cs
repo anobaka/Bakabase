@@ -295,6 +295,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to New Folder.
+        /// </summary>
+        internal static string NewFolderName {
+            get {
+                return ResourceManager.GetString("NewFolderName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to {0} is not found.
         /// </summary>
         internal static string PathIsNotFound {

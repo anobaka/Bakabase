@@ -18,16 +18,18 @@ class BApi extends Api<any> {
             break;
           default:
             if ((rsp.code >= 400 || rsp.code < 200)) {
-              Message.error({
-                duration: 0,
-                title: `${params.path}: [${rsp.code}]`,
-                content: (
-                  <pre>
-                    {i18n.t(rsp.message)}
-                  </pre>
-                ),
-                closeable: true,
-              });
+              if (!params.ignoreError) {
+                Message.error({
+                  duration: 0,
+                  title: `${params.path}: [${rsp.code}]`,
+                  content: (
+                    <pre>
+                      {i18n.t(rsp.message)}
+                    </pre>
+                  ),
+                  closeable: true,
+                });
+              }
             }
         }
         return rsp;

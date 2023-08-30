@@ -493,7 +493,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<List<Resource>> GetAll(Expression<Func<Resource, bool>> selector = null,
             bool returnCopy = true) => await _orm.GetAll(selector, returnCopy);
 
-        public async Task<Resource> GetByKey(int id, bool returnCopy)
+        public async Task<Resource?> GetByKey(int id, bool returnCopy)
         {
             var resource = await _orm.GetByKey(id, returnCopy);
             return resource;

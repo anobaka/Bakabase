@@ -53,7 +53,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
             // Uri can't handle // at the beginning
             // todo: windows only
-            if (tmp[..2] == BusinessConstants.UncPathPrefix)
+            if (tmp.StartsWith(BusinessConstants.UncPathPrefix))
             {
                 tmp = $"{BusinessConstants.WindowsSpecificUncPathPrefix}{tmp[2..]}";
             }

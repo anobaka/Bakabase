@@ -195,6 +195,9 @@
   <data name="FilesDoNotExistInPath" xml:space="preserve">
     <value>在{1}中未找到文件{0}</value>
   </data>
+  <data name="NewFolderName" xml:space="preserve">
+    <value>新文件夹</value>
+  </data>
   <data name="PathIsNotFound" xml:space="preserve">
     <value>未找到文件：{0}</value>
   </data>

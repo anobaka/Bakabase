@@ -2381,21 +2381,67 @@ export const GetIwFsEntryURL = function(parameters = {}) {
 }
 /**
  * 
- * request: PreviewPath
- * url: PreviewPathURL
- * method: PreviewPath_TYPE
- * raw_url: PreviewPath_RAW_URL
- * @param path - 
+ * request: CreateDirectory
+ * url: CreateDirectoryURL
+ * method: CreateDirectory_TYPE
+ * raw_url: CreateDirectory_RAW_URL
+ * @param parent - 
  */
-export const PreviewPath = function(parameters = {}) {
+export const CreateDirectory = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/file/path-preview'
+  let path = '/file/directory'
   let body
   let queryParameters = {}
   let form = {}
-  if (parameters['path'] !== undefined) {
-    queryParameters['path'] = parameters['path']
+  if (parameters['parent'] !== undefined) {
+    queryParameters['parent'] = parameters['parent']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const CreateDirectory_RAW_URL = function() {
+  return '/file/directory'
+}
+export const CreateDirectory_TYPE = function() {
+  return 'post'
+}
+export const CreateDirectoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/file/directory'
+  if (parameters['parent'] !== undefined) {
+    queryParameters['parent'] = parameters['parent']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetChildrenIwFsInfo
+ * url: GetChildrenIwFsInfoURL
+ * method: GetChildrenIwFsInfo_TYPE
+ * raw_url: GetChildrenIwFsInfo_RAW_URL
+ * @param root - 
+ */
+export const GetChildrenIwFsInfo = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/file/children/iwfs-info'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['root'] !== undefined) {
+    queryParameters['root'] = parameters['root']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -2404,18 +2450,18 @@ export const PreviewPath = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const PreviewPath_RAW_URL = function() {
-  return '/file/path-preview'
+export const GetChildrenIwFsInfo_RAW_URL = function() {
+  return '/file/children/iwfs-info'
 }
-export const PreviewPath_TYPE = function() {
+export const GetChildrenIwFsInfo_TYPE = function() {
   return 'get'
 }
-export const PreviewPathURL = function(parameters = {}) {
+export const GetChildrenIwFsInfoURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/file/path-preview'
-  if (parameters['path'] !== undefined) {
-    queryParameters['path'] = parameters['path']
+  let path = '/file/children/iwfs-info'
+  if (parameters['root'] !== undefined) {
+    queryParameters['root'] = parameters['root']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {

@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { IwFsType, ResourceLanguage, resourceLanguages } from '@/sdk/constants';
 import Property from '@/components/Resource/components/DetailDialog/PropertyValue';
 import PublisherProperty from '@/components/Resource/components/DetailDialog/PublisherPropertyValue';
-import { PlayFileURL, PreviewPath, SearchResources } from '@/sdk/apis';
+import { PlayFileURL, SearchResources } from '@/sdk/apis';
 import TagList from '@/components/Resource/components/DetailDialog/TagPropertyValue';
 import type { Entry } from '@/core/models/FileExplorer/Entry';
 import serverConfig from '@/serverConfig';
@@ -115,8 +115,8 @@ const ResourceDetailDialog = (props: IProps) => {
       return;
     }
     setLoadingFiles(true);
-    PreviewPath({
-      path: previewingPath,
+    BApi.file.getChildrenIwFsInfo({
+      root: previewingPath,
     })
       .invoke((a) => {
         setFilesystemEntries(a.data.entries);

@@ -4581,12 +4581,33 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags File
-     * @name PreviewPath
-     * @request GET:/file/path-preview
+     * @name CreateDirectory
+     * @request POST:/file/directory
      */
-    previewPath: (
+    createDirectory: (
       query?: {
-        path?: string;
+        parent?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/file/directory`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags File
+     * @name GetChildrenIwFsInfo
+     * @request GET:/file/children/iwfs-info
+     */
+    getChildrenIwFsInfo: (
+      query?: {
+        root?: string;
       },
       params: RequestParams = {},
     ) =>
@@ -4594,7 +4615,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview,
         any
       >({
-        path: `/file/path-preview`,
+        path: `/file/children/iwfs-info`,
         method: "GET",
         query: query,
         format: "json",
