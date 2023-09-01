@@ -555,7 +555,7 @@ export default (({
           </div>
           <div className="path-configuration header">
             <div className="path">{i18n.t('Root path')}</div>
-            <div className="filter">{i18n.t('Filter')}</div>
+            <div className="filter">{i18n.t('Resource discovery')}</div>
             <div className="tags">{i18n.t('Fixed tags')}</div>
             <div className="tags">{i18n.t('Additional properties')}</div>
           </div>

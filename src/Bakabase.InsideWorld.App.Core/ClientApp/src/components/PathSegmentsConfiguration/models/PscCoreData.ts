@@ -1,8 +1,10 @@
 import i18n from 'i18next';
-import type { ResourceMatcherValueType } from '@/sdk/constants';
 import { ResourceProperty } from '@/sdk/constants';
-import { SegmentMatcherConfigurationModesData } from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
+import {
+  SegmentMatcherConfigurationModesData,
+} from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
 import { allMatchers } from '@/components/PathSegmentsConfiguration/models/instances';
+import type { IMatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 
 class PscCoreData {
   segments: PscCoreData.Segment[] = [];
@@ -109,6 +111,7 @@ namespace PscCoreData {
   class LayerMatchMode extends CommonMatchMode {
     layers: number[] = [];
   }
+
   export class SimpleGlobalMatch extends SimplePscCoreDataItem {
     matches: string[];
 

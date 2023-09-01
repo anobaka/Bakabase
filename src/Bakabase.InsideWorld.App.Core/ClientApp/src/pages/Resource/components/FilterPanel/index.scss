@@ -5,7 +5,7 @@
   flex-direction: column;
   gap: 5px;
 
-  &>.group {
+  & > .group {
     display: flex;
     flex-wrap: wrap;
     gap: 5px 10px;
@@ -83,6 +83,7 @@
 
         &:hover {
           background: #ddd !important;
+          color: var(--theme-text-invert);
         }
       }
 
@@ -102,6 +103,8 @@
         .clear {
           visibility: visible;
         }
+
+        color: var(--theme-text-invert);
       }
     }
 
@@ -133,12 +136,13 @@
 
     .categories {
 
-      &>.category {
+      & > .category {
         display: flex;
         align-items: center;
         gap: 10px;
         margin: 10px 0;
-        &>.name {
+
+        & > .name {
           width: 120px;
           max-width: 120px;
           min-width: 120px;
@@ -147,13 +151,15 @@
           white-space: break-spaces;
           height: auto;
         }
-        &>.libraries {
+
+        & > .libraries {
           margin-bottom: 5px;
           display: flex;
           align-items: center;
           flex-wrap: wrap;
           column-gap: 10px;
           row-gap: 2.5px;
+
           .next-checkbox {
             margin-right: 3px;
           }

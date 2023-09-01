@@ -21,6 +21,7 @@ import type { MatchResult } from '@/components/PathSegmentsConfiguration/models/
 import { MatchResultType } from '@/components/PathSegmentsConfiguration/models/MatchResult';
 import { allMatchers, matchersAfter, matchersBefore } from '@/components/PathSegmentsConfiguration/models/instances';
 import BusinessConstants from '@/components/BusinessConstants';
+import ValidationResult from '@/components/PathSegmentsConfiguration/ValidationResult';
 import SimpleGlobalError = PscCoreData.SimpleGlobalError;
 import SimpleGlobalMatch = PscCoreData.SimpleGlobalMatch;
 
@@ -281,7 +282,10 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
             }
           }
           if (invalidOrderResultLabels.length > 0) {
-            errors.push(t(`{{target}} should come ${j == 1 ? 'after' : 'before'} {{invalidMatchers}}`, { target: t(ResourceProperty[vm.property]), invalidMatchers: invalidOrderResultLabels.join(',') }));
+            errors.push(t(`{{target}} should come ${j == 1 ? 'after' : 'before'} {{invalidMatchers}}`, {
+              target: t(ResourceProperty[vm.property]),
+              invalidMatchers: invalidOrderResultLabels.join(','),
+            }));
           }
         }
         return errors;
@@ -392,26 +396,32 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
       return (
         <div className={'global-errors psc-block'}>
           <div className="title">{t('Errors')}</div>
-          {errors.map(e => (
-            <div className={'error'}>
-              <IceLabel inverse={false} status={'danger'}>
-                {e.label}
-              </IceLabel>
-              {e.message}
-              {e.deletable && (
-                <CustomIcon
-                  type={'delete'}
-                  size={'small'}
-                  onClick={() => {
-                    value[e.property]!.splice(e.valueIndex ?? 0, 1);
-                    setValue({
-                      ...value,
-                    });
-                  }}
-                />
-              )}
-            </div>
-          ))}
+          {errors.map(e => {
+            const v = e.valueIndex == undefined ? value[e.property]?.[0] : value[e.property]?.[e.valueIndex];
+            return (
+              <div className={'error'}>
+                <IceLabel inverse={false} status={'danger'}>
+                  {e.label}
+                </IceLabel>
+                {v && (
+                  <span>{MatcherValue.ToString(v)}</span>
+                )}
+                {e.message}
+                {e.deletable && (
+                  <CustomIcon
+                    type={'delete'}
+                    size={'small'}
+                    onClick={() => {
+                      value[e.property]!.splice(e.valueIndex ?? 0, 1);
+                      setValue({
+                        ...value,
+                      });
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       );
     }
@@ -423,9 +433,13 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
         <div className={'global-matches psc-block'}>
           <div className="title">{t('Global matches')}</div>
           {matches.map(gm => {
+            const v = gm.valueIndex == undefined ? value[gm.property]?.[0] : value[gm.property]?.[gm.valueIndex];
             return (
               <div className={'global-match'}>
                 <IceLabel inverse={false} status={'info'} className={'label'}>{gm.label}</IceLabel>
+                {v && (
+                  <span>{MatcherValue.ToString(v)}</span>
+                )}
                 {t('Matched {{count}} results', { count: gm.matches.length })}
                 {gm.matches.map(m => (
                   <IceLabel inverse={false} status={'default'}>{m}</IceLabel>
@@ -510,12 +524,16 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
                     errors = [],
                   } = mr;
                   const hasError = errors.length > 0;
+                  const v = mr.valueIndex == undefined ? value[mr.property]?.[0] : value[mr.property]?.[mr.valueIndex];
                   const comp = (
                     <div className={`matched-matcher ${hasError ? 'error' : ''} type-${ResourceProperty[mr.property]}`}>
                       {hasError && (
                         <CustomIcon type={'warning-circle'} size={'small'} />
                       )}
                       {label}
+                      {v && (
+                        <span>{MatcherValue.ToString(v)}</span>
+                      )}
                       {!mr.readonly && (
                         <CustomIcon
                           type={'delete'}
@@ -576,7 +594,11 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
                 </Message>
                 <div className="matcher-selectors">
                   {selectiveMatchers.map(m => {
-                    const { layer: l, regex: r, oneClick: o } = m.matchModes;
+                    const {
+                      layer: l,
+                      regex: r,
+                      oneClick: o,
+                    } = m.matchModes;
                     const showReplace = m.isConfigurable && m.replaceCurrent;
                     const btn = (
                       <Button
@@ -600,7 +622,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
                           }
                         }}
                       >
-                        <div >
+                        <div>
                           <div className="property">
                             {t(ResourceProperty[m.property])}
                           </div>
@@ -835,6 +857,43 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
 
   const coreData = buildCoreData();
 
+  const renderBottomOpts = () => {
+    const validationButton = (
+      <Button
+        disabled={coreData.hasError}
+        type={'primary'}
+        size={'small'}
+        onClick={() => {
+          const dialog = Dialog.show({
+            title: t('Validating'),
+            footer: false,
+            closeable: false,
+          });
+
+          // @ts-ignore
+          BApi.mediaLibrary.validatePathConfiguration(PscValue.fromComponentValue(value))
+            .then((t) => {
+              ValidationResult.show({
+                // @ts-ignore
+                testResult: t.data,
+              });
+            })
+            .finally(() => {
+              dialog.hide();
+            });
+        }}
+      >
+        {t('Validate')}
+      </Button>
+    );
+
+    return (
+      <div className="bottom-opts">
+        {validationButton}
+      </div>
+    );
+  };
+
   return (
     <div className={'path-segments-configuration'}>
       <Message
@@ -860,6 +919,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
       </div>
       {renderFileExtensionLoader()}
       {renderGlobalMatches(coreData.globalMatches)}
+      {renderBottomOpts()}
     </div>
   );
 });

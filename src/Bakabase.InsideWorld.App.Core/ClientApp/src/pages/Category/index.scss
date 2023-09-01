@@ -342,7 +342,7 @@
     }
 
     .unset {
-      color: #999;
+      color: var(--theme-text-subtle);
     }
 
 
@@ -392,6 +392,10 @@
       display: flex;
       align-items: center;
       gap: 2px;
+
+      &.unset {
+        color: red;
+      }
     }
   }
 }

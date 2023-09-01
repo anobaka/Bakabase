@@ -225,7 +225,9 @@ namespace Bakabase.InsideWorld.Business.Services
                     allTags.All(a => !a.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || a.GroupId != t.Key))
                 .Select(name => new Tag {Name = name, GroupId = t.Key})).ToList();
             newTags = (await _orm.AddRange(newTags)).Data;
-            var exists = allTags.Where(t => optimizedModel.Any(a => a.Key == t.GroupId && a.Value.Contains(t.Name)));
+            var exists = allTags.Where(t =>
+                optimizedModel.Any(
+                    a => a.Key == t.GroupId && a.Value.Contains(t.Name, StringComparer.OrdinalIgnoreCase)));
             return newTags.Concat(exists).ToList();
         }
 

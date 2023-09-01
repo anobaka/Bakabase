@@ -225,4 +225,7 @@
   <data name="TypeIsNotFound" xml:space="preserve">
     <value>未找到类型：{0}</value>
   </data>
+  <data name="ValueIsNotSet" xml:space="preserve">
+    <value>未设置{0}</value>
+  </data>
 </root>

@@ -1360,8 +1360,8 @@ export interface BakabaseInsideWorldModelsRequestModelsOptionsResourceOptionsPat
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsPathConfigurationRemoveRequestModel {
-  /** @minLength 1 */
-  path: string;
+  /** @format int32 */
+  index: number;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsPublisherUpdateModel {

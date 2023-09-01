@@ -5,11 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
     public class PathConfigurationRemoveRequestModel
     {
-        [Required] public string Path { get; set; } = string.Empty;
+        [Required][BindRequired] public int Index { get; set; } = -1;
     }
 }

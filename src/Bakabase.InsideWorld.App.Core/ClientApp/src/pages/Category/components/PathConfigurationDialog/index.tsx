@@ -2,16 +2,22 @@ import { Balloon, Button, Dialog, Icon, Message } from '@alifd/next';
 import IceLabel from '@icedesign/label';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDeepCompareEffect, usePrevious } from 'react-use';
-import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
-import { buildLogger, parseLayerCountFromLayerBasedPathRegexString, splitPathIntoSegments, standardizePath } from '@/components/utils';
+import {
+  buildLogger,
+  parseLayerCountFromLayerBasedPathRegexString,
+  splitPathIntoSegments,
+  standardizePath,
+} from '@/components/utils';
 import type { IPscMatcherValue, IPscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
 import TagSelector from '@/components/TagSelector';
 import './index.scss';
-import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
+import PathSegmentsConfiguration, {
+  PathSegmentConfigurationPropsMatcherOptions,
+} from '@/components/PathSegmentsConfiguration';
 import ClickableIcon from '@/components/ClickableIcon';
+import { MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 
 const log = buildLogger('PathConfigurationDialog');
 
@@ -32,10 +38,8 @@ export default (props: Props) => {
   } = props;
   const { t } = useTranslation();
   const [value, setValue] = useState(structuredClone(propsValue));
-  const [testResult, setTestResult] = useState<any>();
   const [checkingPathRelations, setCheckingPathRelations] = useState(false);
   const [relativeLibraries, setRelativeLibraries] = useState<any[]>([]);
-  const [pathConfigurationChanged, setPathConfigurationChanged] = useState(false);
   const [pscData, setPscData] = useState<{ value: IPscValue; segments: string[] }>();
 
 
@@ -47,13 +51,6 @@ export default (props: Props) => {
     log('Props value changed', newValue);
     setValue(newValue);
   }, [propsValue]);
-
-  const prevValue = usePrevious(value);
-
-  useEffect(() => {
-    log('Value changed', value, 'prev', prevValue, value == prevValue);
-    setPathConfigurationChanged(prevValue != value);
-  }, [value]);
 
   const checkPathRelations = useCallback((pc) => {
     setCheckingPathRelations(true);
@@ -74,24 +71,6 @@ export default (props: Props) => {
     log('Initialize with', props);
   }, []);
 
-  const renderTestResultError = useCallback((testResult) => {
-    let error;
-    if (!(testResult?.entries?.length > 0)) {
-      error = t('Unable to find any resource');
-    }
-    if (!error) {
-      if (testResult?.conflictSegmentConfigurationCount > 0) {
-        error = t('{{count}} possible conflicts segment configurations are found.', { count: testResult.conflictSegmentConfigurationCount });
-      }
-    }
-    return error && (
-      <span className={'error'}>{error}      </span>
-    );
-  }, []);
-
-  console.log(pathConfigurationChanged, testResult);
-  const testThenSave = pathConfigurationChanged || !testResult;
-
   let error;
   if (!value?.path) {
     error = 'Root path is not set';
@@ -102,74 +81,57 @@ export default (props: Props) => {
     error = t(error);
   }
 
-  const renderSubmitButton = (validate: boolean) => {
+  const renderSubmitButton = () => {
     return (
       <Button
-        type={validate ? 'primary' : 'normal'}
+        type={'primary'}
         disabled={!!error}
         onClick={() => {
-          if (!testThenSave || !validate) {
-            const error = renderTestResultError(testResult);
-            const save = (onSuccess?, onFail?) => {
-              log(library.pathConfigurations, value);
-              const pcIdx = library.pathConfigurations.findIndex((p) => p.path == value.prevPath);
-              if (pcIdx > -1) {
-                const newPcs = library.pathConfigurations.slice();
-                newPcs.splice(pcIdx, 1, value);
-                log(`Saving ${pcIdx} of ${library.pathConfigurations.length} in ${library.name}`, value, newPcs);
-                BApi.mediaLibrary.patchMediaLibrary(library.id, {
-                  pathConfigurations: newPcs,
-                })
-                  .then((t) => {
-                    if (!t.code) {
-                      onSaved();
-                      setValue(undefined);
-                      onSuccess && onSuccess();
-                    } else {
-                      onFail && onFail();
-                    }
-                  })
-                  .catch(() => {
-                    onFail && onFail();
-                  });
-              } else {
-                return Message.error(t('Unable to locate prev value in media library path configurations'));
-              }
-            };
-            if (error) {
-              Dialog.confirm({
-                title: t('Potential risks have been detected'),
-                content: (
-                  <>
-                    <div>{error}</div>
-                    <div>{t('Sure to continue?')}</div>
-                  </>
-                ),
-                onOk: () => new Promise((resolve, reject) => {
-                  save(resolve, reject);
-                }),
-                closeable: true,
-              });
-            } else {
-              save();
-            }
-          } else {
-            const dialog = Dialog.show({
-              title: t('Validating'),
-              footer: false,
-              closeable: false,
-            });
-            BApi.mediaLibrary.validatePathConfiguration(value)
-              .then((t) => {
-                setPathConfigurationChanged(false);
-                setTestResult(t.data || {});
+          const save = (onSuccess?, onFail?) => {
+            log(library.pathConfigurations, value);
+            const pcIdx = library.pathConfigurations.findIndex((p) => p.path == value.prevPath);
+            if (pcIdx > -1) {
+              const newPcs = library.pathConfigurations.slice();
+              newPcs.splice(pcIdx, 1, value);
+              log(`Saving ${pcIdx} of ${library.pathConfigurations.length} in ${library.name}`, value, newPcs);
+              BApi.mediaLibrary.patchMediaLibrary(library.id, {
+                pathConfigurations: newPcs,
               })
-              .finally(() => {
-                dialog.hide();
-              });
+                .then((t) => {
+                  if (!t.code) {
+                    onSaved();
+                    setValue(undefined);
+                    onSuccess && onSuccess();
+                  } else {
+                    onFail && onFail();
+                  }
+                })
+                .catch(() => {
+                  onFail && onFail();
+                });
+            } else {
+              return Message.error(t('Unable to locate prev value in media library path configurations'));
+            }
+          };
+          if (error) {
+            Dialog.confirm({
+              title: t('Potential risks have been detected'),
+              content: (
+                <>
+                  <div>{error}</div>
+                  <div>{t('Sure to continue?')}</div>
+                </>
+              ),
+              onOk: () => new Promise((resolve, reject) => {
+                save(resolve, reject);
+              }),
+              closeable: true,
+            });
+          } else {
+            save();
           }
         }}
-      >{t(validate ? testThenSave ? 'Test then save' : 'Save' : 'Save without validation')}
+      >{t('Save')}
       </Button>
     );
   };
@@ -238,6 +200,40 @@ export default (props: Props) => {
           defaultValue={pscData?.value}
         />
       </Dialog>
+    );
+  };
+
+  const renderRpmValues = () => {
+    const values = value?.rpmValues || [];
+    if (values.length == 0) {
+      return (
+        <div className={'not-set'}>{t('You have to set this to discover resources')}</div>
+      );
+    }
+
+    console.log(values);
+
+    return (
+      <div className="items">
+        {(values).map((s, i) => {
+          return (
+            <div className={'segment'}>
+              <div className="label">
+                <IceLabel
+                  inverse={false}
+                  status={s.property == ResourceProperty.Resource ? 'primary' : 'default'}
+                >{t(ResourceProperty[s.property])}{s.property == ResourceProperty.CustomProperty ? `:${s.key}` : ''}</IceLabel>
+              </div>
+              <div className="value">
+                {MatcherValue.ToString({
+                  ...s,
+                  type: s.valueType,
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     );
   };
 
@@ -368,25 +364,8 @@ export default (props: Props) => {
                   <br />
                   {t('If you want to populate properties as many as possible, you should pick up a file with more layers in path.')}
                 </Balloon.Tooltip>
-
               </div>
-              <div className="items">
-                {(value?.rpmValues || []).map((s, i) => {
-                  return (
-                    <div className={'segment'}>
-                      <div className="label">
-                        <IceLabel
-                          inverse={false}
-                          status={s.property == ResourceProperty.Resource ? 'primary' : 'default'}
-                        >{t(ResourceProperty[s.property])}{s.property == ResourceProperty.CustomProperty ? `:${s.key}` : ''}</IceLabel>
-                      </div>
-                      <div className="value">
-                        {s.regex ? value?.regex : s.isReverse ? t('The {{layer}} layer to the resource', { layer: s.layer }) : t('The {{layer}} layer after root path', { layer: s.layer })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {renderRpmValues()}
             </section>
             <section className="tag-indicator">
               <div className="title">
@@ -441,134 +420,17 @@ export default (props: Props) => {
             <div className="opt">
               {error ? (
                 <Balloon.Tooltip
-                  trigger={renderSubmitButton(true)}
+                  trigger={renderSubmitButton()}
                   align={'t'}
                 >
                   {error}
                 </Balloon.Tooltip>
               ) : (
                 <>
-                  {renderSubmitButton(true)}
-                  {renderSubmitButton(false)}
+                  {renderSubmitButton()}
                 </>
               )}
             </div>
-            {testResult && (
-              <section className="test-result">
-                {t('Found top {{count}} resources. (shows up to 100 results)', { count: (testResult.entries || []).length })}
-                {renderTestResultError(testResult)}
-                {testResult.entries?.length > 0 && (
-                  <div className="entries">
-                    {
-                      testResult.entries.map((e, i) => {
-                        const {
-                          globalMatchedValues = {},
-                          fixedTags = [],
-                          isDirectory,
-                        } = e;
-
-                        console.log(globalMatchedValues);
-
-                        const segments: any[] = [];
-                        for (let j = 0; j < e.segmentAndMatchedValues?.length; j++) {
-                          const ps = e.segmentAndMatchedValues[j];
-                          const types: ResourceProperty[] = [];
-                          if (j == e.segmentAndMatchedValues.length - 1) {
-                            types.push(ResourceProperty.Resource);
-                          }
-                          if (ps.properties?.length > 0) {
-                            for (const p of ps.properties) {
-                              // if (mc.property == ResourceProperty.CustomProperty) {
-                              //   types.push(`${t('Custom property')}:${mc.customPropertyKey}`);
-                              // } else {
-                              //   types.push(t(ResourceProperty[mc.property]));
-                              // }
-                              types.push(p);
-                            }
-                          }
-                          // console.log(types, ps);
-                          segments.push(
-                            <div className={'segment'}>
-                              {types.length > 0 && (
-                                <div className={`types ${types.length > 1 ? 'conflict' : ''}`}>
-                                  {types.map(x => t(ResourceProperty[x]))
-                                    .join(', ')}
-                                </div>
-                              )}
-                              <div className="value">{ps.value}</div>
-                            </div>,
-                          );
-                          if (j != e.segmentAndMatchedValues.length - 1) {
-                            segments.push(
-                              <span className={'path-separator'}>/</span>,
-                            );
-                          }
-                        }
-
-                        const globalMatchesElements: any[] = [];
-                        if (globalMatchedValues) {
-                          Object.keys(globalMatchedValues)
-                            .forEach(propertyStr => {
-                              const property: ResourceProperty = parseInt(propertyStr, 10);
-                              const values = globalMatchedValues[property] || [];
-                              if (values?.length > 0) {
-                                globalMatchesElements.push(
-                                  <div className={'gm'}>
-                                    <div className="property">{t(ResourceProperty[property])}</div>
-                                    <div className="values">
-                                      {values.map(v => (
-                                        <IceLabel inverse={false} status={'default'}>{v}</IceLabel>
-                                      ))}
-                                    </div>
-                                  </div>,
-                                );
-                              }
-                            });
-                        }
-
-                        if (fixedTags) {
-                          if (fixedTags.length > 0) {
-                            globalMatchesElements.push(
-                              <div className={'gm'}>
-                                <div className="property">{t('Fixed tags')}</div>
-                                <div className="values">
-                                  {fixedTags.map(t => (
-                                    <IceLabel inverse={false} status={'default'}>{t.displayName}</IceLabel>
-                                  ))}
-                                </div>
-                              </div>,
-                            );
-                          }
-                        }
-
-                        return (
-                          <div className={'entry'}>
-                            <div className="no">
-                              <IceLabel status={'default'} inverse={false} className="no">{i + 1}</IceLabel>
-                            </div>
-                            <div className="result">
-                              <div className="segments">
-                                <IceLabel
-                                  className="fs-type"
-                                  inverse={false}
-                                  status={isDirectory ? 'success' : 'info'}
-                                >{t(isDirectory ? 'Directory' : 'File')}</IceLabel>
-                                {segments}
-                              </div>
-                              {globalMatchesElements.length > 0 && (
-                                <div className="global-matches">
-                                  {globalMatchesElements}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
-                    }
-                  </div>
-                )}
-              </section>
-            )}
           </div>
         </div>
       </Dialog>

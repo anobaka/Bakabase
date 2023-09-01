@@ -99,7 +99,7 @@
       align-items: center;
       gap: 1px;
       &>* {
-        background: white;
+        background: var(--theme-block-background-accent);
         border: 1px solid #aaa;
         border-radius: 4px;
       }
@@ -121,7 +121,7 @@
       max-height: 100%;
       .opt {
         cursor: pointer;
-        background: white;
+        background: var(--theme-block-background-accent);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -130,10 +130,10 @@
         border-radius: 4px;
         height: 22px;
         width: 22px;
-        color: #666;
-        &:hover {
-          color: #000;
-        }
+        //color: #666;
+        //&:hover {
+        //  color: #000;
+        //}
       }
     }
   }

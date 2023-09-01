@@ -518,8 +518,12 @@ export default React.memo((props: IProps) => {
                         <Select.AutoComplete
                           dataSource={f.dataSource}
                           hasClear
-                          onChange={(v) => {
-                            value = v;
+                          onChange={(v, actionType) => {
+                            if (actionType == 'itemClick') {
+                              patchSearchFormByKey(f.key, v, true);
+                            } else {
+                              value = v;
+                            }
                           }}
                           // popupProps={{ v2: true }}
                           // useVirtual

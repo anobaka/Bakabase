@@ -346,7 +346,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
           {resource.id > 0 ? (
             <>
               <div className="opt" title={t('Enhancements')}>
-                <CustomIcon
+                <ClickableIcon
+                  colorType={'normal'}
                   type={'flashlight'}
                   onClick={() => {
                     BApi.resource.getResourceEnhancementRecords(resource.id)
@@ -360,7 +361,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 />
               </div>
               <div className={'opt'} title={t('Preview')}>
-                <CustomIcon
+                <ClickableIcon
+                  colorType={'normal'}
                   type={'eye'}
                   onClick={() => {
                     ShowResourceMediaPlayer(resource.id, resource.rawFullname, (base64String: string, saveToResourceDirectory: boolean) => {
@@ -370,7 +372,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 />
               </div>
               <div className="opt" title={t('Open folder')}>
-                <CustomIcon
+                <ClickableIcon
+                  colorType={'normal'}
                   type={'folder-open'}
                   onClick={() => open()}
                 />
@@ -394,13 +397,20 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   });
                 }}
               >
-                <CustomIcon type={'move'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'move'}
+                  size={'small'}
+                />
               </div>
               <div className={'opt'} title={t('Search')}>
                 <Dropdown
                   autoFocus={false}
                   trigger={
-                    <CustomIcon type={'search'} />
+                    <ClickableIcon
+                      colorType={'normal'}
+                      type={'search'}
+                    />
                   }
                   triggerType={'click'}
                 >
@@ -436,7 +446,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   });
                 }}
               >
-                <CustomIcon type={'star'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'star'}
+                  size={'small'}
+                />
               </div>
               <div
                 className="opt"
@@ -457,7 +471,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   });
                 }}
               >
-                <CustomIcon type={'playlistadd'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'playlistadd'}
+                  size={'small'}
+                />
               </div>
               <div
                 className="opt"
@@ -485,7 +503,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   });
                 }}
               >
-                <CustomIcon type={'tags'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'tags'}
+                  size={'small'}
+                />
               </div>
 
               <div
@@ -496,12 +518,17 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   await coverRef.current?.reload(new AbortController().signal);
                 }}
               >
-                <CustomIcon type={'image-redo'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'image-redo'}
+                  size={'small'}
+                />
               </div>
             </>
           ) : (
             <div className="opt" title={t('Open folder')}>
-              <CustomIcon
+              <ClickableIcon
+                colorType={'normal'}
                 type={'folder-open'}
                 onClick={() => OpenFileOrDirectory({
                   path: resource.rawFullname,
@@ -640,7 +667,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                     style={{ color: t.color }}
                     size={'small'}
                     onClick={() => onTagSearch(t.id, true)}
-                  >#{tag.displayName}
+                  >#{tag.displayName}&nbsp;
                   </Button>
                 );
               })}

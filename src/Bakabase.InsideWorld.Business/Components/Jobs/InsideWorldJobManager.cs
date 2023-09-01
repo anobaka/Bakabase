@@ -19,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.Jobs
 
         protected override async Task ScheduleJobs()
         {
-            await ScheduleJob<MediaLibrarySyncingTrigger>(TimeSpan.FromMinutes(1));
+            // await ScheduleJob<MediaLibrarySyncingTrigger>(TimeSpan.FromMinutes(1));
             await ScheduleJob<NfoGeneratingTrigger>(TimeSpan.FromMinutes(1));
             await ScheduleJob<EnhancementTrigger>(TimeSpan.FromMinutes(1));
             await ScheduleJob<FileMovingTrigger>(TimeSpan.FromMinutes(1));

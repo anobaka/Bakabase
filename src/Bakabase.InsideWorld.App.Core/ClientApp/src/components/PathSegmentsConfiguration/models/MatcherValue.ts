@@ -8,6 +8,8 @@ interface IMatcherValue {
   key?: string;
   regex?: string;
   fixedText?: string;
+
+  toString: () => string;
 }
 
 class MatcherValue implements IMatcherValue {
@@ -46,6 +48,21 @@ class MatcherValue implements IMatcherValue {
     });
   }
 
+  static ToString(value: IMatcherValue): string {
+    switch (value.type) {
+      case ResourceMatcherValueType.FixedText:
+        return i18n.t('Fixed text: {{text}}', { text: value.fixedText });
+      case ResourceMatcherValueType.Regex:
+        return i18n.t('Regex: {{regex}}', { regex: value.regex });
+      case ResourceMatcherValueType.Layer:
+        if (value.layer && value.layer < 0) {
+          return i18n.t('Layer: the {{layer}} layer to the last', { layer: -value.layer });
+        } else {
+          return i18n.t('Layer: the {{layer}} layer', { layer: value.layer });
+        }
+    }
+  }
+
   equals(other: IMatcherValue): boolean {
     if (this.type !== other.type) {
       return false;
@@ -62,18 +79,7 @@ class MatcherValue implements IMatcherValue {
   }
 
   toString(): string {
-    switch (this.type) {
-      case ResourceMatcherValueType.FixedText:
-        return i18n.t('Fixed text: {{text}}', { text: this.fixedText });
-      case ResourceMatcherValueType.Regex:
-        return i18n.t('Regex: {{regex}}', { regex: this.regex });
-      case ResourceMatcherValueType.Layer:
-        if (this.layer && this.layer < 0) {
-          return i18n.t('Layer: the {{layer}} layer to the last', { layer: -this.layer });
-        } else {
-          return i18n.t('Layer: the {{layer}} layer', { layer: this.layer });
-        }
-    }
+    return MatcherValue.ToString(this);
   }
 }
 
