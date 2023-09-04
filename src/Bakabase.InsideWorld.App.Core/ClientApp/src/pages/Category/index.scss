@@ -58,12 +58,12 @@
     top: 15vh;
     right: 30px;
     border-radius: 4px;
-    background-color: white;
+    background-color: var(--theme-block-background-accent);
     padding: 5px;
     text-align: center;
     opacity: 0.5;
     transition: all 300ms;
-    box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgb(209, 213, 219) 0px 0px 0px 1px inset;
+    box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, var(--theme-block-background-accent) 0px 0px 0px 1px inset;
 
     &::-webkit-scrollbar {
       width: 4px;
@@ -103,6 +103,8 @@
       li {
         padding: 2px;
         cursor: pointer;
+        max-width: 140px;
+        word-break: break-all;
 
         &:hover {
           color: white;
