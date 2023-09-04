@@ -6,6 +6,7 @@ import IceLabel from '@icedesign/label';
 import { useUpdateEffect } from 'react-use';
 import { AddTagGroups, BulkDeleteTags, GetAllTagGroups, GetAllTags, SortTagGroups, SortTagsInGroup, UpdateTag } from '@/sdk/apis';
 import SortableTagGroupList from '@/pages/Tag/components/SortableTagGroupList';
+import SimpleLabel from '@/components/SimpleLabel';
 
 export default () => {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -23,7 +24,7 @@ export default () => {
         <div className="left">
           <div className="label">{i18n.t('Tags')}</div>
           {/* <Badge count={filteredTags.length} overflowCount={999999} /> */}
-          <IceLabel inverse={false} status={'info'}>{i18n.t('Alias applied')}</IceLabel>
+          <SimpleLabel status={'default'}>{i18n.t('Alias applied')}</SimpleLabel>
         </div>
         <div className="right">
           <Button

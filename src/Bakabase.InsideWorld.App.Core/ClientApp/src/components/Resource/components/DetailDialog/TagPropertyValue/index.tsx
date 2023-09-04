@@ -11,6 +11,7 @@ import TagSelector from '@/components/TagSelector';
 import Property from '@/components/Resource/components/DetailDialog/PropertyValue';
 import EditableTree from '@/components/EditableTree';
 import ClickableIcon from '@/components/ClickableIcon';
+import SimpleLabel from '@/components/SimpleLabel';
 
 export default ({
   reloadResource,
@@ -76,7 +77,7 @@ export default ({
                         return (
                           <Balloon
                             trigger={(
-                              <div className={'tag'}>{renderAlias(tag)}</div>
+                              <SimpleLabel>{renderAlias(tag)}</SimpleLabel>
                             )}
                             triggerType={'click'}
                             align={'t'}

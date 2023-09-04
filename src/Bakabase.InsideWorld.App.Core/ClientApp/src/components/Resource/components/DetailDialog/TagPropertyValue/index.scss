@@ -4,7 +4,7 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     gap: 5px;
-    border: 1px solid #ebebeb;
+    border: 1px solid var(--theme-border-color);
     padding: 10px 5px;
     border-radius: 4px;
 
@@ -22,13 +22,14 @@
       .current-tags {
         display: flex;
         //gap: 10px;
+        gap: 2px;
         flex-wrap: wrap;
         .tag {
-          padding: 2px;
-          border: 1px solid #e1e1e1;
-          border-radius: 4px;
+          //padding: 2px;
+          //border: 1px solid #e1e1e1;
+          //border-radius: 4px;
           cursor: pointer;
-          margin: 2px;
+          //margin: 2px;
         }
       }
     }

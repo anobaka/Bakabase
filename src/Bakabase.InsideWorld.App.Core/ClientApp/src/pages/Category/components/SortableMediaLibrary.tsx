@@ -19,6 +19,7 @@ import { buildLogger, parseLayerCountFromLayerBasedPathRegexString } from '@/com
 import BApi from '@/sdk/BApi';
 import PathConfigurationDialog from '@/pages/Category/components/PathConfigurationDialog';
 import ClickableIcon from '@/components/ClickableIcon';
+import SimpleLabel from '@/components/SimpleLabel';
 
 export default (({
                    library,
@@ -85,11 +86,9 @@ export default (({
     if (valueComponent) {
       return (
         <div className={'filter'}>
-          <IceLabel
-            inverse={false}
-            status={'info'}
-            className="type"
-          >{t(ResourceMatcherValueType[resourceValue.valueType])}</IceLabel>
+          <SimpleLabel
+            status={'default'}
+          >{t(ResourceMatcherValueType[resourceValue.valueType])}</SimpleLabel>
           {valueComponent}
         </div>
       );
@@ -274,9 +273,9 @@ export default (({
                 <span>
                   {p.path}
                 </span>
-                <div className="capacity">
+                <SimpleLabel status={'default'}>
                   {library.rootPathInformation[p.path]?.freeSpaceInGb}GB
-                </div>
+                </SimpleLabel>
                 <ClickableIcon
                   type="delete"
                   colorType={'danger'}

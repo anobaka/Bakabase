@@ -79,6 +79,11 @@
               font-size: 12px;
               font-weight: bold;
             }
+            .values {
+              display: flex;
+              gap: 5px;
+              flex-wrap: wrap;
+            }
           }
         }
       }

@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import './index.scss';
 import i18n from 'i18next';
-import IceLabel from '@icedesign/label';
-import { Balloon, Icon, Message, Table } from '@alifd/next';
+import { Message, Table } from '@alifd/next';
 import { useUpdateEffect } from 'react-use';
-import { GetAllEnhancers, GetComponentDescriptors } from '@/sdk/apis';
-import { ComponentType, reservedResourceFileTypes, reservedResourceProperties } from '@/sdk/constants';
+import { useTranslation } from 'react-i18next';
+import { ComponentType } from '@/sdk/constants';
 import SortableEnhancerList from '@/components/EnhancerSelector/components/SortableEnhancerList';
 import BasicCategoryComponentSelector from '@/components/BasicCategoryComponentSelector';
 import type {
@@ -14,6 +13,7 @@ import type {
 } from '@/sdk/Api';
 import BApi from '@/sdk/BApi';
 import { extractEnhancerTargetDescription } from '@/components/utils';
+import SimpleLabel from '@/components/SimpleLabel';
 
 interface EnhancerSelectorValue extends BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions {
   enhancerKeys?: string[];
@@ -23,7 +23,8 @@ export default ({
                   defaultValue = {},
                   onChange = (v) => {
                   },
-                }: {defaultValue?: EnhancerSelectorValue; onChange?: (v: EnhancerSelectorValue) => void}) => {
+                }: { defaultValue?: EnhancerSelectorValue; onChange?: (v: EnhancerSelectorValue) => void }) => {
+  const { t } = useTranslation();
   const [value, setValue] = useState<EnhancerSelectorValue>(JSON.parse(JSON.stringify(defaultValue || {})));
   const [allEnhancers, setAllEnhancers] = useState<BakabaseInsideWorldModelsModelsDtosComponentDescriptor[]>([]);
   const [enhanceTargetDescriptions, setEnhanceTargetDescriptions] = useState({});
@@ -107,11 +108,10 @@ export default ({
             }
             return (
               <>
-                <IceLabel
-                  inverse={false}
+                <SimpleLabel
                   status={'info'}
                 >{enhanceTargetDescriptions[c].type}
-                </IceLabel>
+                </SimpleLabel>
                 &nbsp;
                 {enhanceTargetDescriptions[c].key}
               </>
@@ -128,7 +128,7 @@ export default ({
                   {
                     es.map((e, i) => (
                       <>
-                        <div className={'sortable-enhancer-order'}>{i18n.t(e.name)}</div>
+                        <SimpleLabel className={'sortable-enhancer-order'}>{i18n.t(e.name)}</SimpleLabel>
                         {i != es.length - 1 && '∪'}
                       </>
                     ))
@@ -174,6 +174,11 @@ export default ({
 
   return (
     <div className={'enhancer-selector'}>
+      {value.enhancerKeys?.length > 1 && (
+        <Message type={'notice'}>
+          {t('You\'ve set multiple enhancers, so you should set priories of their enhancements below.')}
+        </Message>
+      )}
       <div className={'enhancers'}>
         <BasicCategoryComponentSelector
           maxCount={99999}

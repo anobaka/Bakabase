@@ -24,6 +24,7 @@ import BusinessConstants from '@/components/BusinessConstants';
 import ValidationResult from '@/components/PathSegmentsConfiguration/ValidationResult';
 import SimpleGlobalError = PscCoreData.SimpleGlobalError;
 import SimpleGlobalMatch = PscCoreData.SimpleGlobalMatch;
+import SimpleLabel from '@/components/SimpleLabel';
 
 export class PathSegmentConfigurationPropsMatcherOptions {
   property: ResourceProperty;
@@ -400,9 +401,9 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
             const v = e.valueIndex == undefined ? value[e.property]?.[0] : value[e.property]?.[e.valueIndex];
             return (
               <div className={'error'}>
-                <IceLabel inverse={false} status={'danger'}>
+                <SimpleLabel status={'danger'}>
                   {e.label}
-                </IceLabel>
+                </SimpleLabel>
                 {v && (
                   <span>{MatcherValue.ToString(v)}</span>
                 )}
@@ -436,13 +437,13 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
             const v = gm.valueIndex == undefined ? value[gm.property]?.[0] : value[gm.property]?.[gm.valueIndex];
             return (
               <div className={'global-match'}>
-                <IceLabel inverse={false} status={'info'} className={'label'}>{gm.label}</IceLabel>
+                <SimpleLabel status={'default'}>{gm.label}</SimpleLabel>
                 {v && (
                   <span>{MatcherValue.ToString(v)}</span>
                 )}
                 {t('Matched {{count}} results', { count: gm.matches.length })}
                 {gm.matches.map(m => (
-                  <IceLabel inverse={false} status={'default'}>{m}</IceLabel>
+                  <SimpleLabel status={'default'}>{m}</SimpleLabel>
                 ))}
                 <CustomIcon
                   type={'delete'}

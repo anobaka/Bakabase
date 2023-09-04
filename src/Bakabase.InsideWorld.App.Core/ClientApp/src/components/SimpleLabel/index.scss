@@ -1,0 +1,37 @@
+.simple-label {
+
+  display: inline-block;
+  padding: .3em .6em;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: .25em;
+
+  &.default {
+    background: var(--theme-label-default-background);
+    color: var(--theme-label-default-color);
+  }
+  &.primary {
+    background: var(--theme-label-primary-background);
+    color: var(--theme-label-primary-color);
+  }
+  &.success {
+    background: var(--theme-label-success-background);
+    color: var(--theme-label-success-color);
+  }
+  &.warning {
+    background: var(--theme-label-warning-background);
+    color: var(--theme-label-warning-color);
+  }
+  &.info {
+    background: var(--theme-label-info-background);
+    color: var(--theme-label-info-color);
+  }
+  &.danger {
+    background: var(--theme-label-danger-background);
+    color: var(--theme-label-danger-color);
+  }
+}

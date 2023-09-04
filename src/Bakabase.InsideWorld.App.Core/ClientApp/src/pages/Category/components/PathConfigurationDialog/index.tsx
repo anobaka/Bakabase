@@ -18,6 +18,7 @@ import PathSegmentsConfiguration, {
 } from '@/components/PathSegmentsConfiguration';
 import ClickableIcon from '@/components/ClickableIcon';
 import { MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
+import SimpleLabel from '@/components/SimpleLabel';
 
 const log = buildLogger('PathConfigurationDialog');
 
@@ -219,10 +220,9 @@ export default (props: Props) => {
           return (
             <div className={'segment'}>
               <div className="label">
-                <IceLabel
-                  inverse={false}
+                <SimpleLabel
                   status={s.property == ResourceProperty.Resource ? 'primary' : 'default'}
-                >{t(ResourceProperty[s.property])}{s.property == ResourceProperty.CustomProperty ? `:${s.key}` : ''}</IceLabel>
+                >{t(ResourceProperty[s.property])}{s.property == ResourceProperty.CustomProperty ? `:${s.key}` : ''}</SimpleLabel>
               </div>
               <div className="value">
                 {MatcherValue.ToString({
@@ -406,11 +406,10 @@ export default (props: Props) => {
                   <div className="tags">
                     {value.fixedTags.map((t) => {
                       return (
-                        <IceLabel
-                          inverse={false}
+                        <SimpleLabel
                           status={'default'}
                         >{(t.groupNamePreferredAlias ?? t.groupName)}:{(t.namePreferredAlias ?? t.name)}
-                        </IceLabel>
+                        </SimpleLabel>
                       );
                     })}
                   </div>

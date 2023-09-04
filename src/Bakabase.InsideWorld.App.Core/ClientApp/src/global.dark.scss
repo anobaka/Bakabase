@@ -1,4 +1,8 @@
 .iw-theme-dark {
+
+  --theme-color-success: rgb(35, 134, 54);
+  --theme-color-warning: #cd7600;
+
   --theme-scrollbar-track-background: #444;
   --theme-scrollbar-thumb-background: #686868;
   --theme-scrollbar-thumb-hover-background: #7a7a7a;
@@ -15,7 +19,7 @@
   --theme-button-normal-border-color-active: rgb(110, 118, 129);
   --theme-button-normal-color-disabled: rgb(72, 79, 88);
 
-  --theme-button-primary-background: rgb(35, 134, 54);
+  --theme-button-primary-background: var(--theme-color-success);
   --theme-button-primary-background-hover: rgb(46, 160, 67);
   --theme-button-primary-background-active: rgb(35, 134, 54);
   --theme-button-primary-border-color: rgba(240, 246, 252, 0.1);
@@ -44,7 +48,18 @@
 
   --theme-switch-on-trigger-background: rgba(59, 59, 59, 1);
 
-  --theme-label-primary-background: rgba(56, 139, 253, 0.1);
+  --theme-label-default-background: #454545;
+  --theme-label-default-color: var(--theme-text);
+  --theme-label-primary-background: #5584ff;
+  --theme-label-primary-color: var(--theme-text);
+  --theme-label-success-background: var(--theme-color-success);
+  --theme-label-success-color: var(--theme-text);
+  --theme-label-warning-background: var(--theme-color-warning);
+  --theme-label-warning-color: var(--theme-text);
+  --theme-label-info-background: #4494f9;
+  --theme-label-info-color: var(--theme-text);
+  --theme-label-danger-background: #ff3000;
+  --theme-label-danger-color: var(--theme-text);
 
   --theme-tag-primary-background-hover: rgb(31, 111, 235);
 
@@ -62,6 +77,7 @@
   --theme-block-background-accent: #3a3a3a;
 
   --theme-text: #e6e6e6;
+  --theme-text-error: #fde7e9;
   --theme-text-invert: #2f2f2f;
   --theme-text-subtle: #c0c0c0;
   --theme-text-primary: rgb(47, 129, 247);

@@ -236,6 +236,8 @@
 
     .enhancers {
       margin-top: 10px;
+      gap: 5px;
+      display: flex;
 
       .enhancer {
         cursor: pointer;
@@ -351,14 +353,14 @@
       align-items: center;
       gap: 5px;
 
-      .capacity {
-        font-size: 12px;
-        line-height: 12px;
-        padding: 2px 2px;
-        color: #7f7f7f;
-        border: 1px solid #7f7f7f;
-        border-radius: 4px;
-      }
+      //.capacity {
+      //  font-size: 12px;
+      //  line-height: 12px;
+      //  padding: 2px 2px;
+      //  color: #7f7f7f;
+      //  border: 1px solid #7f7f7f;
+      //  border-radius: 4px;
+      //}
 
       & > * {
         //margin-right: 8px;

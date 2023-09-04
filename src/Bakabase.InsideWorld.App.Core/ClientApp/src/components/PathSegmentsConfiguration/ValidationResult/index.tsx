@@ -7,6 +7,7 @@ import { createPortalOfComponent } from '@/components/utils';
 
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
+import SimpleLabel from '@/components/SimpleLabel';
 
 interface IProps {
   // todo: typo
@@ -121,7 +122,7 @@ const ValidationResult = (props: IProps) => {
                           <div className="property">{propertyLabel}</div>
                           <div className="values">
                             {values.map(v => (
-                              <IceLabel inverse={false} status={'default'}>{v}</IceLabel>
+                              <SimpleLabel status={'default'}>{v}</SimpleLabel>
                             ))}
                           </div>
                         </div>,

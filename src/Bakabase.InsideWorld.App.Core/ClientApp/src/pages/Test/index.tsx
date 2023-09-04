@@ -3,6 +3,7 @@ import './index.scss';
 
 import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf/utils';
 import MediaPreviewer from '@/components/MediaPreviewer';
+import SimpleLabel from '@/components/SimpleLabel';
 
 const schema: RJSFSchema = {
   type: 'object',
@@ -60,6 +61,19 @@ export default () => {
 
   return (
     <div className={'test-page'}>
+      {['dark', 'light'].map(t => {
+        return (
+          <div className={`iw-theme-${t}`} style={{ background: 'var(--theme-body-background)', padding: 10 }}>
+            {['default', 'primary', 'success', 'warning', 'info', 'danger'].map(s => {
+              return (
+                <SimpleLabel status={s}>
+                  {s}
+                </SimpleLabel>
+              );
+            })}
+          </div>
+        );
+      })}
       <div
         className={'media-previewer-container'}
         onMouseOver={() => {

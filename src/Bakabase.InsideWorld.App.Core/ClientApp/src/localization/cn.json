@@ -895,5 +895,7 @@
   "You have to set this to discover resources": "设置该项后才能扫描到资源",
   "Capturing groups are used, only matched text will be applied": "已使用捕获组，仅被捕获的文本会被应用",
   "Whole segment will be applied if capturing group is not used": "未使用捕获组，完整的路径片段将会被应用",
-  "Match result": "匹配结果"
+  "Match result": "匹配结果",
+  "Applied to {{count}} categories": "已应用于{{count}}个分类",
+  "You've set multiple enhancers, so you should set priories of their enhancements below.": "您设置了多个增强器，请在页面下方设置它们的增强优先级。"
 }
