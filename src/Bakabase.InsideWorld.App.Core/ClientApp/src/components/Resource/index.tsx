@@ -15,7 +15,14 @@ import {
 } from '@/sdk/apis';
 import { buildLogger, splitPathIntoSegments, useTraceUpdate, uuidv4 } from '@/components/utils';
 import './index.scss';
-import { PlaylistItemType, ResourceLanguage, ResourceTaskOperationOnComplete, ResourceTaskType } from '@/sdk/constants';
+import type {
+  CoverSaveTarget } from '@/sdk/constants';
+import {
+  PlaylistItemType,
+  ResourceLanguage,
+  ResourceTaskOperationOnComplete,
+  ResourceTaskType,
+} from '@/sdk/constants';
 import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
 import store from '@/store';
 import { PlaylistCollection } from '@/components/Playlist';
@@ -68,14 +75,13 @@ const Resource = React.forwardRef((props: Props, ref) => {
     ct = new AbortController().signal,
   } = props;
 
-  const [previewerVisible, setPreviewerVisible] = useState(false);
-  const previewerHoverTimerRef = useRef<any>();
-
   const { t } = useTranslation();
   const log = buildLogger(`Resource:${resource.id}|${resource.rawFullname}`);
 
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const [playableFiles, setPlayableFiles] = useState<string[]>([]);
+
+  const resourceOptions = store.useModelState('resourceOptions');
 
   useImperativeHandle(ref, (): IResourceHandler => {
     return {
@@ -365,9 +371,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   colorType={'normal'}
                   type={'eye'}
                   onClick={() => {
-                    ShowResourceMediaPlayer(resource.id, resource.rawFullname, (base64String: string, saveToResourceDirectory: boolean) => {
-                      coverRef.current?.save(base64String, false, saveToResourceDirectory);
-                    }, t, resource.isSingleFile);
+                    ShowResourceMediaPlayer(resource.id, resource.rawFullname, (base64String: string, saveTarget?: CoverSaveTarget) => {
+                      coverRef.current?.save(base64String, saveTarget);
+                      // @ts-ignore
+                    }, t, resource.isSingleFile, resourceOptions.coverOptions?.target);
                   }}
                 />
               </div>

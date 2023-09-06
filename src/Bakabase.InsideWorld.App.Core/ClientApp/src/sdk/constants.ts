@@ -46,6 +46,8 @@ export enum ComponentType {Enhancer = 1, PlayableFileSelector = 2, Player = 3}
 export const componentTypes = Object.keys(ComponentType).filter(k => typeof ComponentType[k] === 'number').map(t => ({label: t, value: ComponentType[t]}));
 export enum CookieValidatorTarget {BiliBili = 1, ExHentai = 2, Pixiv = 3}
 export const cookieValidatorTargets = Object.keys(CookieValidatorTarget).filter(k => typeof CookieValidatorTarget[k] === 'number').map(t => ({label: t, value: CookieValidatorTarget[t]}));
+export enum CoverSaveLocation {ResourceDirectory = 1, TempDirectory = 2}
+export const coverSaveLocations = Object.keys(CoverSaveLocation).filter(k => typeof CoverSaveLocation[k] === 'number').map(t => ({label: t, value: CoverSaveLocation[t]}));
 export enum CoverSelectOrder {FilenameAscending = 1, FileModifyDtDescending = 2}
 export const coverSelectOrders = Object.keys(CoverSelectOrder).filter(k => typeof CoverSelectOrder[k] === 'number').map(t => ({label: t, value: CoverSelectOrder[t]}));
 export enum CustomDataType {String = 1, DateTime = 2, Number = 3, Enum = 4}

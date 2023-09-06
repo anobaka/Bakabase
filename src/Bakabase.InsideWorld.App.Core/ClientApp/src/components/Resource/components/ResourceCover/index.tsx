@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Balloon, Dialog, Icon, Message } from '@alifd/next';
+import { Balloon, Checkbox, Dialog, Icon, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import type { BalloonProps } from '@alifd/next/types/balloon';
 import { useUpdate } from 'react-use';
@@ -11,6 +11,9 @@ import BApi from '@/sdk/BApi';
 import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import './index.scss';
+import store from '@/store';
+import type { CoverSaveLocation } from '@/sdk/constants';
+import { ResponseCode } from '@/sdk/constants';
 
 interface Props {
   resourceId: number;
@@ -20,7 +23,7 @@ interface Props {
 }
 
 export interface IResourceCoverRef {
-  save: (base64Image: string, overwrite: boolean, saveToResourceDirectory: boolean) => any;
+  save: (base64Image: string, saveTarget?: CoverSaveLocation) => any;
   reload: (ct: AbortSignal) => Promise<any>;
 }
 
@@ -50,32 +53,55 @@ const Index = React.forwardRef((props: Props, ref) => {
     }
   }, []);
 
-  const saveCoverInternal = useCallback((base64Image: string, overwrite: boolean, saveToResourceDirectory: boolean) => {
-    BApi.resource.saveCover(resourceId, {
+  const saveCoverInternal = useCallback((base64Image: string, overwrite?: boolean, saveLocation?: CoverSaveLocation) => {
+    return BApi.resource.saveCover(resourceId, {
       base64Image,
       overwrite,
-      saveToResourceDirectory,
+      // @ts-ignore
+      saveLocation,
+    }, {
+      ignoreError: rsp => rsp.code == ResponseCode.Conflict,
     })
       .then(a => {
         if (!a.code) {
           setCover(base64Image);
+          Message.success(t('Cover saved successfully'));
+          return a;
+        }
+        if (a.code == ResponseCode.Conflict) {
           return a;
         }
         throw new Error(a.message!);
       });
   }, []);
 
-  const saveCover = useCallback((base64Image: string, overwrite: boolean, saveToResourceDirectory: boolean) => {
-    const confirm = (!cover && loading) || !!cover;
-    if (overwrite || !confirm) {
-      saveCoverInternal(base64Image, overwrite, saveToResourceDirectory);
-    } else {
+  const saveCover = useCallback(async (base64Image: string, saveLocation?: CoverSaveLocation) => {
+    const rsp = await saveCoverInternal(base64Image, undefined, saveLocation);
+    if (rsp.code == ResponseCode.Conflict) {
+      let remember = false;
       Dialog.confirm({
         title: t('Sure to set new cover?'),
-        content: t('Previous cover file (cover.*) will be overwritten if it exists.'),
+        content: (
+          <div>
+            <div>{t('Current cover file will be overwritten.')}</div>
+            <div style={{ wordBreak: 'break-word', marginBottom: 10 }}>{rsp.message}</div>
+            <Checkbox label={t('Remember my choice')} onChange={c => remember = c} />
+          </div>
+        ),
         closeMode: ['mask', 'close', 'esc'],
         v2: true,
-        onOk: () => saveCoverInternal(base64Image, true, saveToResourceDirectory),
+        onOk: async () => {
+          if (remember) {
+            const options = store.getModelState('resourceOptions').coverOptions || {};
+            await BApi.options.patchResourceOptions({
+              coverOptions: {
+                ...options,
+                overwrite: true,
+              },
+            });
+          }
+          await saveCoverInternal(base64Image, true, saveLocation);
+        },
       });
     }
   }, [cover, loading]);

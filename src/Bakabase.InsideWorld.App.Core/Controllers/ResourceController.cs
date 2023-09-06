@@ -18,15 +18,18 @@ using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
+using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using ElectronNET.API.Entities;
 using Microsoft.AspNetCore.Hosting;
@@ -62,6 +65,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly InsideWorldLocalizer _localizer;
         private readonly FFMpegHelper _ffMpegHelper;
         private readonly TempFileManager _tempFileManager;
+        private readonly IBOptions<ResourceOptions> _resourceOptions;
 
         private static readonly MemoryCache CoverCache = new MemoryCache("ResourceCover");
 
@@ -77,7 +81,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager,
             FavoritesResourceMappingService favoritesResourceMappingService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            FFMpegHelper ffMpegHelper, TempFileManager tempFileManager)
+            FFMpegHelper ffMpegHelper, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions)
         {
             _service = service;
             _resourceTagMappingService = resourceTagMappingService;
@@ -93,6 +97,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _localizer = localizer;
             _ffMpegHelper = ffMpegHelper;
             _tempFileManager = tempFileManager;
+            _resourceOptions = resourceOptions;
         }
 
         [HttpPost("search")]
@@ -390,12 +395,19 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 return BaseResponseBuilder.BuildBadRequest(_localizer.Resource_NotFound(id));
             }
 
-            if (resource.IsSingleFile && model.SaveToResourceDirectory)
+            var saveTarget = model.SaveLocation ??
+                             _resourceOptions.Value.CoverOptions.SaveLocation ?? (resource.IsSingleFile
+                                 ? CoverSaveLocation.TempDirectory
+                                 : CoverSaveLocation.ResourceDirectory);
+
+            if (resource.IsSingleFile && saveTarget == CoverSaveLocation.ResourceDirectory)
             {
                 return BaseResponseBuilder.BuildBadRequest(_localizer.Resource_CoverMustBeInDirectory());
             }
 
-            if (model.SaveToResourceDirectory)
+            var overwrite = _resourceOptions.Value.CoverOptions.Overwrite ?? model.Overwrite;
+
+            if (saveTarget == CoverSaveLocation.ResourceDirectory)
             {
                 if (Directory.Exists(resource.RawFullname))
                 {
@@ -404,9 +416,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                         .FirstOrDefault(t => t.StartsWith(coverFileFullnamePrefix));
                     if (currentCoverFileFullname != null)
                     {
-                        if (!model.Overwrite)
+                        if (!overwrite)
                         {
-                            return BaseResponseBuilder.Conflict;
+                            return BaseResponseBuilder.Build(ResponseCode.Conflict, currentCoverFileFullname);
                         }
 
                         FileUtils.Delete(currentCoverFileFullname, false, true);
@@ -426,6 +438,15 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             }
             else
             {
+                var currentPath = await _tempFileManager.GetCover(id);
+                if (!string.IsNullOrEmpty(currentPath))
+                {
+                    if (!overwrite)
+                    {
+                        return BaseResponseBuilder.Build(ResponseCode.Conflict, currentPath);
+                    }
+                }
+
                 var data = model.Base64Image.Split(',')[1];
                 var bytes = Convert.FromBase64String(data);
                 var path = await _tempFileManager.SaveCover(id, new MemoryStream(bytes), HttpContext.RequestAborted);

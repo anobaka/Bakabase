@@ -16,6 +16,7 @@ namespace Bakabase.InsideWorld.Business.Components
     public class TempFileManager
     {
         private readonly string _coverBaseDirectory;
+
         public TempFileManager(AppService appService)
         {
             _coverBaseDirectory = Path.Combine(appService.TempFilesPath, "cover").StandardizePath()!;
@@ -31,6 +32,13 @@ namespace Bakabase.InsideWorld.Business.Components
             }
 
             return null;
+        }
+
+        public async Task<string> SaveCover(int resourceId, byte[] data, CancellationToken ct)
+        {
+            var ms = new MemoryStream(data);
+            ms.Seek(0, SeekOrigin.Begin);
+            return await SaveCover(resourceId, ms, ct);
         }
 
         public async Task<string> SaveCover(int resourceId, Stream data, CancellationToken ct)

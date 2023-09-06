@@ -316,6 +316,12 @@ export interface BakabaseInsideWorldModelsConfigsPixivOptions {
   downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
 }
 
+export interface BakabaseInsideWorldModelsConfigsResourceResourceOptionsCoverOptionsModel {
+  /** [1: ResourceDirectory, 2: TempDirectory] */
+  saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
+  overwrite?: boolean | null;
+}
+
 export interface BakabaseInsideWorldModelsConfigsResourceResourceOptionsDto {
   /** @format date-time */
   lastSyncDt?: string;
@@ -323,6 +329,7 @@ export interface BakabaseInsideWorldModelsConfigsResourceResourceOptionsDto {
   lastNfoGenerationDt?: string;
   lastSearch?: BakabaseInsideWorldModelsModelsAosResourceSearchDto;
   searchSlots?: BakabaseInsideWorldModelsModelsAosResourceSearchSlotItemDto[] | null;
+  coverOptions?: BakabaseInsideWorldModelsConfigsResourceResourceOptionsCoverOptionsModel;
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
 }
 
@@ -477,6 +484,15 @@ export enum BakabaseInsideWorldModelsConstantsCookieValidatorTarget {
   Value1 = 1,
   Value2 = 2,
   Value3 = 3,
+}
+
+/**
+ * [1: ResourceDirectory, 2: TempDirectory]
+ * @format int32
+ */
+export enum BakabaseInsideWorldModelsConstantsCoverSaveLocation {
+  Value1 = 1,
+  Value2 = 2,
 }
 
 /**
@@ -689,23 +705,39 @@ export interface BakabaseInsideWorldModelsModelsAosMatcherValue {
 }
 
 export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult {
+  rootPath?: string | null;
   entries?: BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntry[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntry {
   isDirectory?: boolean;
   relativePath?: string | null;
-  fixedTags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
   segmentAndMatchedValues?:
     | BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResult[]
     | null;
-  globalMatchedValues?: Record<string, string[]>;
+  globalMatchedValues?:
+    | BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntryGlobalMatchedValue[]
+    | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntryGlobalMatchedValue {
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  key?: string | null;
+  values?: string[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResult {
   value?: string | null;
-  /** @uniqueItems true */
-  properties?: BakabaseInsideWorldModelsConstantsResourceProperty[] | null;
+  properties?:
+    | BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResultSegmentPropertyResult[]
+    | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResultSegmentPropertyResult {
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  keys?: string[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
@@ -1275,7 +1307,8 @@ export interface BakabaseInsideWorldModelsRequestModelsCoverSaveRequestModel {
   /** @minLength 1 */
   base64Image: string;
   overwrite?: boolean;
-  saveToResourceDirectory?: boolean;
+  /** [1: ResourceDirectory, 2: TempDirectory] */
+  saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel {
@@ -1357,6 +1390,7 @@ export interface BakabaseInsideWorldModelsRequestModelsOptionsResourceOptionsPat
   lastSearch?: BakabaseInsideWorldModelsModelsAosResourceSearchDto;
   searchSlots?: BakabaseInsideWorldModelsModelsAosResourceSearchSlotItemDto[] | null;
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
+  coverOptions?: BakabaseInsideWorldModelsConfigsResourceResourceOptionsCoverOptionsModel;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsPathConfigurationRemoveRequestModel {
@@ -2233,12 +2267,12 @@ export enum SystemReflectionGenericParameterAttributes {
 export type SystemReflectionICustomAttributeProvider = object;
 
 export interface SystemReflectionMemberInfo {
+  module?: SystemReflectionModule;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
   declaringType?: SystemType;
   reflectedType?: SystemType;
   name?: string | null;
-  module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
   /** @format int32 */

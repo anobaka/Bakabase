@@ -437,6 +437,12 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 {
                     options.SearchSlots = model.SearchSlots?.Select(a => a.ToOptions()).ToList();
                 }
+
+                if (model.CoverOptions != null)
+                {
+                    options.CoverOptions = model.CoverOptions;
+                }
+
             });
             return BaseResponseBuilder.Ok;
         }

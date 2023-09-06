@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Tasks;
@@ -43,6 +44,7 @@ namespace Bakabase.InsideWorld.Business.Services
         protected TagService TagService => GetRequiredService<TagService>();
         protected LogService LogService => GetRequiredService<LogService>();
         protected BackgroundTaskHelper BackgroundTaskHelper => GetRequiredService<BackgroundTaskHelper>();
+        protected TempFileManager TempFileManager => GetRequiredService<TempFileManager>();
 
         protected CustomResourcePropertyService CustomResourcePropertyService =>
             GetRequiredService<CustomResourcePropertyService>();
@@ -474,13 +476,12 @@ namespace Bakabase.InsideWorld.Business.Services
                                 {
                                     case ReservedResourceFileType.Cover:
                                     {
-                                        var file = files.FirstOrDefault();
-                                        var fullname = resource.IsSingleFile
-                                            ? Path.Combine(resource.Directory, file.RelativePath)
-                                            : Path.Combine(resource.RawFullname, file.RelativePath);
-                                        if (!File.Exists(fullname))
+                                        var currentCoverPath = await TempFileManager.GetCover(resource.Id);
+                                        if (string.IsNullOrEmpty(currentCoverPath))
                                         {
-                                            await File.WriteAllBytesAsync(fullname, file.Data);
+                                            var file = files.FirstOrDefault();
+                                            await TempFileManager.SaveCover(resource.Id, file.Data,
+                                                new CancellationToken());
                                         }
 
                                         break;
