@@ -889,10 +889,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
   id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
-  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
-  status?: BakabaseInsideWorldModelsConstantsDownloadTaskStatus;
-  /** @format int32 */
-  taskCount?: number;
+  statusAndCounts?: Record<string, number>;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMoverInfo {
@@ -2314,12 +2311,12 @@ export enum SystemReflectionGenericParameterAttributes {
 export type SystemReflectionICustomAttributeProvider = object;
 
 export interface SystemReflectionMemberInfo {
+  module?: SystemReflectionModule;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
   declaringType?: SystemType;
   reflectedType?: SystemType;
   name?: string | null;
-  module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
   /** @format int32 */

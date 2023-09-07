@@ -181,8 +181,13 @@ export default () => {
                   return (
                     <div className={'downloader-item'}>
                       <div>{t(ThirdPartyId[c.id as number])}</div>
-                      <div>{t(DownloadTaskStatus[c.status as number])}</div>
-                      <div>{c.taskCount}</div>
+                      {downloadTaskStatuses.map(s => {
+                        return (
+                          <div>
+                            {c.statusAndCounts?.[s.value] ?? 0}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}

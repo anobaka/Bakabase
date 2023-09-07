@@ -1496,7 +1496,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 var tagsMap = tags.ToDictionary(a => a.Id, a => a);
 
-                statistics.TagResourceCounts = top30TagResourceCountsMap!.Select(kv =>
+                statistics.TagResourceCounts = top30TagResourceCountsMap.Select(kv =>
                 {
                     var a = tagsMap.GetValueOrDefault(kv.Key);
                     if (a != null)
@@ -1507,7 +1507,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                     return null;
 
-                }).Where(a => a != null).ToList();
+                }).Where(a => a != null).ToList()!;
             }
 
             // Properties
@@ -1564,7 +1564,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
 
                 statistics.PropertyResourceCounts =
-                    propertyCountList.OrderByDescending(d => d.Count).Take(maxPropertyCount).ToList();
+                    propertyCountList.OrderByDescending(d => d.Count).Take(maxPropertyCount).Where(a => a.Count > 0)
+                        .ToList();
 
                 #endregion
             }

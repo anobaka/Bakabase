@@ -67,10 +67,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
             // Downloader
             var allDownloadTasks = await _downloadTaskService.GetAll();
-            ds.DownloaderDataCounts = allDownloadTasks.GroupBy(a => a.ThirdPartyId).SelectMany(a =>
-                a.GroupBy(b => b.Status)
-                    .Select(b => new DashboardStatistics.DownloaderTaskCount(a.Key, b.Key, b.Count()))
-            ).ToList();
+            ds.DownloaderDataCounts = allDownloadTasks.GroupBy(a => a.ThirdPartyId).Select(a =>
+                new DashboardStatistics.DownloaderTaskCount(a.Key,
+                    a.GroupBy(b => b.Status).ToDictionary(b => (int) b.Key, b => b.Count()))).ToList();
 
             // Third party
             var requests = _thirdPartyService.GetAllThirdPartyRequestStatistics();

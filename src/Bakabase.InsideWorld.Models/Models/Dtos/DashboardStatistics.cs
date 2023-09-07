@@ -33,7 +33,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
 
         public record PropertyAndCount(ResourceProperty Property, string? PropertyKey, string Value, int Count);
 
-        public record DownloaderTaskCount(ThirdPartyId Id, DownloadTaskStatus Status, int TaskCount);
+        public record DownloaderTaskCount(ThirdPartyId Id, Dictionary<int, int> StatusAndCounts);
         public record ThirdPartyRequestCount(ThirdPartyId Id, int ResultType, int TaskCount);
 
         public record FileMoverInfo(int SourceCount, int TargetCount);
