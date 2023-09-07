@@ -1456,29 +1456,71 @@ namespace Bakabase.InsideWorld.Business.Services
             statistics.ThisMonthAddedCategoryResourceCounts = thisMonthCounts;
 
             // 12 weeks added counts trending
-            for (var i = 0; i < 12; i++)
             {
-                var offset = -i * 7;
-                var weekStart = today.AddDays(offset - weekdayDiff);
-                var weekEnd = weekStart.AddDays(7);
-                var count = allEntities.Count(a => a.CreateDt >= weekStart && a.CreateDt < weekEnd);
-                statistics.ResourceTrending.Add(new DashboardStatistics.WeekCount(-i, count));
+                var total = allEntities.Count;
+                for (var i = 0; i < 12; i++)
+                {
+                    var offset = -i * 7;
+                    var weekStart = today.AddDays(offset - weekdayDiff);
+                    var weekEnd = weekStart.AddDays(7);
+                    var count = allEntities.Count(a => a.CreateDt >= weekStart && a.CreateDt < weekEnd);
+                    statistics.ResourceTrending.Add(new DashboardStatistics.WeekCount(-i, total));
+                    total -= count;
+                }
+
+                statistics.ResourceTrending.Reverse();
             }
 
-            statistics.ResourceTrending.Reverse();
+            const int maxPropertyCount = 30;
+
+            // Tags
+            {
+                var allTagMappings = await _resourceTagMappingService.GetAll(null, false);
+                var top30TagResourceCountsMap = allTagMappings.GroupBy(a => a.TagId)
+                    .ToDictionary(a => a.Key, a => a.ToHashSet().Count(b => allEntitiesMap.ContainsKey(b.ResourceId)))
+                    .OrderByDescending(a => a.Value).Take(maxPropertyCount).Where(a => a.Value > 0)
+                    .ToList();
+                var tagIds = top30TagResourceCountsMap.Select(s => s.Key).ToArray();
+                var tags = await _tagService.GetByKeys(tagIds, TagAdditionalItem.PreferredAlias);
+                var groupIds = tags.Select(a => a.GroupId).ToHashSet().ToArray();
+                var groups = await _tagGroupService.GetByKeys(groupIds, TagGroupAdditionalItem.PreferredAlias);
+                var groupsMap = groups.ToDictionary(a => a.Id, a => a);
+                foreach (var tag in tags)
+                {
+                    if (groupsMap.TryGetValue(tag.GroupId, out var g))
+                    {
+                        tag.GroupName = g.Name;
+                        tag.GroupNamePreferredAlias = g.PreferredAlias;
+                    }
+                }
+
+                var tagsMap = tags.ToDictionary(a => a.Id, a => a);
+
+                statistics.TagResourceCounts = top30TagResourceCountsMap!.Select(kv =>
+                {
+                    var a = tagsMap.GetValueOrDefault(kv.Key);
+                    if (a != null)
+                    {
+                        return new DashboardStatistics.TextAndCount(a.PreferredAlias ?? a.Name,
+                            kv.Value, a.GroupNamePreferredAlias ?? a.GroupName);
+                    }
+
+                    return null;
+
+                }).Where(a => a != null).ToList();
+            }
 
             // Properties
             {
-                const int MaxPropertyCount = 30;
                 var propertyCountList = new List<DashboardStatistics.PropertyAndCount>();
 
                 #region Publisher
 
-                var publisherMappings = (await _publisherMappingService.GetAll(null, false)).GroupBy(a => a.PublisherId)
-                    .ToDictionary(a => a.Key, a => a.Select(b => b.ResourceId).ToHashSet());
-                var publisherResourceCounts =
-                    publisherMappings.ToDictionary(a => a.Key, a => a.Value.Count(b => allEntitiesMap.ContainsKey(b)));
-                var top30PublisherResourceCounts = publisherResourceCounts.OrderByDescending(a => a.Value).Take(MaxPropertyCount)
+                var publisherResourceCounts = (await _publisherMappingService.GetAll(null, false))
+                    .GroupBy(a => a.PublisherId)
+                    .ToDictionary(a => a.Key, a => a.Count(b => allEntitiesMap.ContainsKey(b.ResourceId)));
+                var top30PublisherResourceCounts = publisherResourceCounts.OrderByDescending(a => a.Value)
+                    .Take(maxPropertyCount)
                     .ToDictionary(a => a.Key, a => a.Value);
                 var publisherIds = top30PublisherResourceCounts.Keys.ToArray();
                 var publisherNames = await _publisherService.GetNamesByIds(publisherIds);
@@ -1491,16 +1533,17 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 #region Original
 
-                var originalMappings = (await _originalMappingService.GetAll(null, false)).GroupBy(a => a.OriginalId)
-                    .ToDictionary(a => a.Key, a => a.Select(b => b.ResourceId).ToHashSet());
-                var originalResourceCounts =
-                    originalMappings.ToDictionary(a => a.Key, a => a.Value.Count(b => allEntitiesMap.ContainsKey(b)));
-                var top30OriginalResourceCounts = originalResourceCounts.OrderByDescending(a => a.Value).Take(MaxPropertyCount)
+                var originalResourceCounts = (await _originalMappingService.GetAll(null, false))
+                    .GroupBy(a => a.OriginalId)
+                    .ToDictionary(a => a.Key, a => a.Count(b => allEntitiesMap.ContainsKey(b.ResourceId)));
+                var top30OriginalResourceCounts = originalResourceCounts.OrderByDescending(a => a.Value)
+                    .Take(maxPropertyCount)
                     .ToDictionary(a => a.Key, a => a.Value);
                 var originalIds = top30OriginalResourceCounts.Keys.ToArray();
                 var originalNames = await _originalService.GetNamesByIds(originalIds);
                 var originalResourceTextAndCounts = originalIds.Select((a, i) =>
-                    new DashboardStatistics.PropertyAndCount(ResourceProperty.Original, null, originalNames[i], top30OriginalResourceCounts[a])).ToList();
+                    new DashboardStatistics.PropertyAndCount(ResourceProperty.Original, null, originalNames[i],
+                        top30OriginalResourceCounts[a])).ToList();
                 propertyCountList.AddRange(originalResourceTextAndCounts);
 
                 #endregion
@@ -1512,7 +1555,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     .GroupBy(a => a.Key).SelectMany(s => s.GroupBy(b => b.Value).Select(c =>
                         (Key: s.Key, Value: c.Key, Count: c.Count(b => allEntitiesMap.ContainsKey(b.ResourceId)))))
                     .OrderByDescending(a => a.Count).ToList();
-                var top30CustomPropertyResourceCounts = customPropertyResourceCounts.Take(MaxPropertyCount).ToList();
+                var top30CustomPropertyResourceCounts = customPropertyResourceCounts.Take(maxPropertyCount).ToList();
                 var customPropertyResourceTextAndCounts = top30CustomPropertyResourceCounts.Select((a, i) =>
                         new DashboardStatistics.PropertyAndCount(ResourceProperty.CustomProperty, a.Key, a.Value,
                             a.Count))
@@ -1521,7 +1564,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
 
                 statistics.PropertyResourceCounts =
-                    propertyCountList.OrderByDescending(d => d.Count).Take(MaxPropertyCount).ToList();
+                    propertyCountList.OrderByDescending(d => d.Count).Take(maxPropertyCount).ToList();
 
                 #endregion
             }

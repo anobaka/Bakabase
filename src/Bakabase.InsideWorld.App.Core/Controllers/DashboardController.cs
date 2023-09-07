@@ -65,28 +65,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             // Resource & Properties
             await _resourceService.PopulateStatistics(ds);
 
-            // Tag
-            var allTagMappings = await _resourceTagMappingService.GetAll(null, false);
-            var top30TagMappings = allTagMappings.GroupBy(a => a.TagId).OrderByDescending(a => a.Count()).Take(30)
-                .ToDictionary(a => a.Key, a => a.Count());
-            var tagIds = top30TagMappings.Keys.ToArray();
-            var tags = await _tagService.GetByKeys(tagIds, TagAdditionalItem.PreferredAlias);
-            var groupIds = tags.Select(a => a.GroupId).ToHashSet().ToArray();
-            var groups = await _tagGroupService.GetByKeys(groupIds, TagGroupAdditionalItem.PreferredAlias);
-            var groupsMap = groups.ToDictionary(a => a.Id, a => a);
-            foreach (var tag in tags)
-            {
-                if (groupsMap.TryGetValue(tag.GroupId, out var g))
-                {
-                    tag.GroupName = g.Name;
-                    tag.GroupNamePreferredAlias = g.PreferredAlias;
-                }
-            }
-
-            ds.TagResourceCounts = tags.Select(a =>
-                new DashboardStatistics.TextAndCount(a.PreferredAlias ?? a.Name,
-                    top30TagMappings.GetValueOrDefault(a.Id), a.GroupNamePreferredAlias ?? a.GroupName)).ToList();
-
             // Downloader
             var allDownloadTasks = await _downloadTaskService.GetAll();
             ds.DownloaderDataCounts = allDownloadTasks.GroupBy(a => a.ThirdPartyId).SelectMany(a =>
