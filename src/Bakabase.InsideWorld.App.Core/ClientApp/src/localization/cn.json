@@ -907,5 +907,15 @@
   "TempDirectory": "临时文件夹",
   "Yes": "是",
   "No": "否",
-  "Cover saved successfully": "封面保存成功"
+  "Cover saved successfully": "封面保存成功",
+  "Added this month": "本月新增",
+  "Overview": "总览",
+  "Trending": "趋势",
+  "Aliases": "别名",
+  "SpecialTexts": "特殊字符",
+  "Third party": "第三方",
+  "InProgress": "进行中",
+  "Last week": "上周",
+  "{{count}} weeks ago": "{{count}}周前",
+  "Resource properties": "资源属性"
 }

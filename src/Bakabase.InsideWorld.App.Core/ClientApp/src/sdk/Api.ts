@@ -873,16 +873,63 @@ export interface BakabaseInsideWorldModelsModelsDtosComponentDescriptorDto {
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
-  totalResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsNameAndCount[] | null;
-  resourceAddedCountsToday?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsNameAndCount[] | null;
-  resourceAddedCountsThisWeek?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsNameAndCount[] | null;
-  top10TagCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsNameAndCount[] | null;
-  downloadTaskStatusCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsNameAndCount[] | null;
-  thirdPartyRequestCounts?: BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics[] | null;
+  categoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  todayAddedCategoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  thisWeekAddedCategoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  thisMonthAddedCategoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  resourceTrending?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount[] | null;
+  propertyResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount[] | null;
+  tagResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  downloaderDataCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount[] | null;
+  thirdPartyRequestCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount[] | null;
+  fileMover?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMoverInfo;
+  otherCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[][] | null;
 }
 
-export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsNameAndCount {
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
+  status?: BakabaseInsideWorldModelsConstantsDownloadTaskStatus;
+  /** @format int32 */
+  taskCount?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMoverInfo {
+  /** @format int32 */
+  sourceCount?: number;
+  /** @format int32 */
+  targetCount?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount {
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  propertyKey?: string | null;
+  value?: string | null;
+  /** @format int32 */
+  count?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount {
+  label?: string | null;
   name?: string | null;
+  /** @format int32 */
+  count?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  resultType?: number;
+  /** @format int32 */
+  taskCount?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount {
+  /** @format int32 */
+  offset?: number;
   /** @format int32 */
   count?: number;
 }
@@ -2267,12 +2314,12 @@ export enum SystemReflectionGenericParameterAttributes {
 export type SystemReflectionICustomAttributeProvider = object;
 
 export interface SystemReflectionMemberInfo {
-  module?: SystemReflectionModule;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
   declaringType?: SystemType;
   reflectedType?: SystemType;
   name?: string | null;
+  module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
   /** @format int32 */

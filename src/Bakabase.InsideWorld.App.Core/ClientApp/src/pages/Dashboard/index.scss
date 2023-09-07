@@ -1,56 +1,104 @@
 .dashboard-page {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
 
-  .block {
-    margin-bottom: 20px;
-    background-color: var(--theme-block-background);
-    padding: 10px;
-    border-radius: 4px;
-
-    &>.title {
-      font-size: 24px;
-      font-weight: lighter;
-      margin-bottom: 20px;
-    }
-
-    .nothing {
-      width: 250px;
-      height: 250px;
-      font-size: 26px;
-      color: #888;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto;
-    }
+  .hidden {
+    visibility: hidden;
   }
 
-  .resource {
-    width: 100%;
-    .counts {
-      justify-content: space-evenly;
-      width: 100%;
+  section {
+    display: flex;
+    gap: 10px;
+    //align-items: flex-start;
+    &+section {
+      margin-top: 10px;
+    }
+    .block {
+      .title {
+        font-size: 18px;
+        border-left: 3px solid var(--theme-color-success);
+        padding-left: 10px;
+        color: var(--theme-text-subtle)
+      }
       display: flex;
+      flex-direction: column;
+      padding: 10px;
+      background: var(--theme-block-background);
+      border-radius: 4px;
+      overflow: auto;
+      gap: 10px;
 
-      &>* {
-        flex: 1;
-        .title {
-          text-align: center;
-          font-size: 16px;
+      &.trending {
+        .content {
+          flex: 1;
+        }
+      }
+
+      .content {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+
+        .downloader-item {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          font-size: 14px;
+          //background: var(--theme-block-background-accent);
+          padding: 5px;
+          border-radius: 4px;
+
+          &:first-child {
+            background: unset;
+          }
+        }
+
+        // type-text-count
+        .t-t-c {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          .left {
+            background: var(--theme-block-background-accent);
+            border-radius: 4px;
+            padding: 3px;
+            .label {
+              font-size: 10px;
+              line-height: 10px;
+              margin-bottom: 3px;
+            }
+
+            .label, .text {
+              max-width: 140px;
+              text-overflow: ellipsis;
+              overflow: hidden;
+              white-space: nowrap;
+              line-height: 1em;
+            }
+
+            .text {
+              background: var(--theme-block-background-accent);
+              border-radius: 4px;
+              font-size: 12px;
+            }
+          }
+          .right {
+
+          }
+
+          .count {
+            font-size: 12px;
+          }
         }
       }
     }
   }
 
-  .line2, .line3 {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-evenly;
-
-    gap: 20px;
-
-    &>* {
-      flex: 1;
+  .file-mover {
+    .count {
+      line-height: 18px;
     }
   }
 }

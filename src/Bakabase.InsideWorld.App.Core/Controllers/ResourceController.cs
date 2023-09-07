@@ -37,6 +37,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Internal;
+using Org.BouncyCastle.Utilities;
 using SharpCompress.IO;
 using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
@@ -389,69 +390,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "SaveCover")]
         public async Task<BaseResponse> SaveCover(int id, [FromBody] CoverSaveRequestModel model)
         {
-            var resource = await _service.GetByKey(id, ResourceAdditionalItem.None, true);
-            if (resource == null)
+            var rsp = await _service.SaveCover(id, model.SaveLocation, model.Overwrite, () =>
             {
-                return BaseResponseBuilder.BuildBadRequest(_localizer.Resource_NotFound(id));
-            }
-
-            var saveTarget = model.SaveLocation ??
-                             _resourceOptions.Value.CoverOptions.SaveLocation ?? (resource.IsSingleFile
-                                 ? CoverSaveLocation.TempDirectory
-                                 : CoverSaveLocation.ResourceDirectory);
-
-            if (resource.IsSingleFile && saveTarget == CoverSaveLocation.ResourceDirectory)
-            {
-                return BaseResponseBuilder.BuildBadRequest(_localizer.Resource_CoverMustBeInDirectory());
-            }
-
-            var overwrite = _resourceOptions.Value.CoverOptions.Overwrite ?? model.Overwrite;
-
-            if (saveTarget == CoverSaveLocation.ResourceDirectory)
-            {
-                if (Directory.Exists(resource.RawFullname))
-                {
-                    var coverFileFullnamePrefix = Path.Combine(resource.RawFullname, "cover");
-                    var currentCoverFileFullname = Directory.GetFiles(resource.RawFullname)
-                        .FirstOrDefault(t => t.StartsWith(coverFileFullnamePrefix));
-                    if (currentCoverFileFullname != null)
-                    {
-                        if (!overwrite)
-                        {
-                            return BaseResponseBuilder.Build(ResponseCode.Conflict, currentCoverFileFullname);
-                        }
-
-                        FileUtils.Delete(currentCoverFileFullname, false, true);
-                    }
-
-                    var data = model.Base64Image.Split(',')[1];
-                    var bytes = Convert.FromBase64String(data);
-                    var newCoverFileFullname = $"{coverFileFullnamePrefix}.png";
-                    await FileUtils.Save(newCoverFileFullname, bytes);
-                    CoverCache.Set(id.ToString(), bytes, _coverCacheItemPolicy);
-                    return BaseResponseBuilder.Ok;
-                }
-                else
-                {
-                    return BaseResponseBuilder.BuildBadRequest(_localizer.PathIsNotFound(resource.RawFullname));
-                }
-            }
-            else
-            {
-                var currentPath = await _tempFileManager.GetCover(id);
-                if (!string.IsNullOrEmpty(currentPath))
-                {
-                    if (!overwrite)
-                    {
-                        return BaseResponseBuilder.Build(ResponseCode.Conflict, currentPath);
-                    }
-                }
-
                 var data = model.Base64Image.Split(',')[1];
                 var bytes = Convert.FromBase64String(data);
-                var path = await _tempFileManager.SaveCover(id, new MemoryStream(bytes), HttpContext.RequestAborted);
-                return BaseResponseBuilder.Ok;
+                return bytes;
+            }, HttpContext.RequestAborted);
+            if (rsp.Code == (int) ResponseCode.Success)
+            {
+                CoverCache.Set(id.ToString(), rsp.Data.Data, _coverCacheItemPolicy);
             }
+
+            return rsp;
         }
 
         [HttpGet("favorites-mappings")]
