@@ -917,5 +917,6 @@
   "InProgress": "进行中",
   "Last week": "上周",
   "{{count}} weeks ago": "{{count}}周前",
-  "Resource properties": "资源属性"
+  "Resource properties": "资源属性",
+  "Resource tags": "资源标签"
 }

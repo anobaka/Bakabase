@@ -72,9 +72,9 @@ export default (props: DescriptorCardProps) => {
             <div className={'target-groups'}>
               {descriptionGroups.map((t, i) => {
                 return (
-                  <div className={'group'}>
+                  <div className={'group'} key={t.type}>
                     {t.type}
-                    {t.keys.map(k => (<SimpleLabel status={'default'}>{k}</SimpleLabel>))}
+                    {t.keys.map(k => (<SimpleLabel key={k} status={'default'}>{k}</SimpleLabel>))}
                   </div>
                 );
               })}

@@ -469,7 +469,7 @@ export default React.memo((props: IProps) => {
                             const ml = cl?.libraries.find(l => l.id == id);
                             if (ml) {
                               return (
-                                <div>
+                                <div key={ml.id}>
                                   <span className={'name'}>{ml.name}</span>
                                   <span className={'category'}>[{cl!.name}]</span>
                                   {i < value.length - 1 && ','}

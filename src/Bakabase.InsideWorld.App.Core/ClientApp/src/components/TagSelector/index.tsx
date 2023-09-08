@@ -188,7 +188,7 @@ const TagSelector = (props: IProps) => {
         {filteredTagGroups.map((g) => {
           const selectedTagsCount = finalValue.tagIds.filter((id) => g.tags?.some((gt) => gt.id == id)).length ?? 0;
           return (
-            <>
+            <React.Fragment key={g.id}>
               <div className={'group-name'}>
                 {g.displayName?.length > 0 ? g.displayName : t('Default')}
                 {selectedTagsCount > 0 && (
@@ -279,7 +279,7 @@ const TagSelector = (props: IProps) => {
                   )}
                 </div>
               )}
-            </>
+            </React.Fragment>
           );
         })}
       </div>

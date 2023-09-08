@@ -481,7 +481,7 @@ export default (({
           }}
         >
           {enhancers.map((e, i) => (
-            <div className={'enhancer'}>
+            <div className={'enhancer'} key={e.id}>
               <SimpleLabel
                 key={i}
                 style={{ margin: '0 5px 2px 0' }}

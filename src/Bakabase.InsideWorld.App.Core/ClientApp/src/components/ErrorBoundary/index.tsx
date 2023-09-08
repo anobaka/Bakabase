@@ -8,13 +8,12 @@ interface IErrorProps {
 
 interface IErrorState {
   error?: Error;
-  visible: boolean;
 }
 
 class ErrorBoundary extends React.Component<IErrorProps, IErrorState> {
   constructor(props) {
     super(props);
-    this.state = { error: undefined, visible: true };
+    this.state = { error: undefined };
   }
 
   static getDerivedStateFromError(error) {
@@ -28,23 +27,17 @@ class ErrorBoundary extends React.Component<IErrorProps, IErrorState> {
     // alert(error.message);
   }
 
-  close() {
-    this.setState({ ...this.state, visible: false });
-  }
-
   render() {
-    const { error, visible } = this.state;
+    const { error } = this.state;
     if (error) {
       return (
         <Dialog
           className={'error-boundary'}
-          visible={visible}
+          visible
           v2
           style={{ minWidth: 800 }}
           title={i18n.t('An error occurred')}
-          closeMode={['close']}
-          onClose={close}
-          onCancel={close}
+          closeMode={[]}
           footer={(
             <Button
               type={'primary'}

@@ -72,13 +72,7 @@ export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterS
  * [1: Idle, 2: Running, 3: PendingRestart, 4: UpToDate, 5: Failed]
  * @format int32
  */
-export enum BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterStatus {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
-}
+export type BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterStatus = 1 | 2 | 3 | 4 | 5;
 
 export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   language?: string | null;
@@ -98,22 +92,13 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
  * [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel]
  * @format int32
  */
-export enum BakabaseInfrastructuresComponentsGuiCloseBehavior {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value1000 = 1000,
-}
+export type BakabaseInfrastructuresComponentsGuiCloseBehavior = 0 | 1 | 2 | 1000;
 
 /**
  * [0: FollowSystem, 1: Light, 2: Dark]
  * @format int32
  */
-export enum BakabaseInfrastructuresComponentsGuiUiTheme {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-}
+export type BakabaseInfrastructuresComponentsGuiUiTheme = 0 | 1 | 2;
 
 export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   path?: string | null;
@@ -152,9 +137,7 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwF
  * [1: Hidden]
  * @format int32
  */
-export enum BakabaseInsideWorldBusinessComponentsFileExplorerIwFsAttribute {
-  Value1 = 1,
-}
+export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsAttribute = 1;
 
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
   path?: string | null;
@@ -179,10 +162,7 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
  * [1: Decompressing, 2: Moving]
  * @format int32
  */
-export enum BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntryTaskType {
-  Value1 = 1,
-  Value2 = 2,
-}
+export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntryTaskType = 1 | 2;
 
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview {
   entries?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[] | null;
@@ -194,17 +174,16 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview {
  * [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 10000: Invalid]
  * @format int32
  */
-export enum BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType {
-  Value0 = 0,
-  Value100 = 100,
-  Value200 = 200,
-  Value300 = 300,
-  Value400 = 400,
-  Value500 = 500,
-  Value600 = 600,
-  Value700 = 700,
-  Value10000 = 10000,
-}
+export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
+  | 0
+  | 100
+  | 200
+  | 300
+  | 400
+  | 500
+  | 600
+  | 700
+  | 10000;
 
 export interface BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
   id?: string | null;
@@ -225,10 +204,7 @@ export interface BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
  * [1: Default, 2: Critical]
  * @format int32
  */
-export enum BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskLevel {
-  Value1 = 1,
-  Value2 = 2,
-}
+export type BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskLevel = 1 | 2;
 
 export interface BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites {
   /** @format int64 */
@@ -368,311 +344,183 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
  * [1: CompressedFile, 2: Video]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource {
-  Value1 = 1,
-  Value2 = 2,
-}
+export type BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource = 1 | 2;
 
 /**
  * [1: Candidates]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsAdditionalItemsAliasAdditionalItem {
-  Value1 = 1,
-}
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsAliasAdditionalItem = 1;
 
 /**
  * [0: None, 1: AssociatedCategories]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem {
-  Value0 = 0,
-  Value1 = 1,
-}
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem = 0 | 1;
 
 /**
  * [0: None, 1: Components, 3: Validation]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem {
-  Value0 = 0,
-  Value1 = 1,
-  Value3 = 3,
-}
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem = 0 | 1 | 3;
 
 /**
  * [0: None, 1: GroupName, 2: PreferredAlias]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsAdditionalItemsTagAdditionalItem {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-}
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsTagAdditionalItem = 0 | 1 | 2;
 
 /**
  * [1: Tags, 2: PreferredAlias, 4: TagNamePreferredAlias]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsAdditionalItemsTagGroupAdditionalItem {
-  Value1 = 1,
-  Value2 = 2,
-  Value4 = 4,
-}
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsTagGroupAdditionalItem = 1 | 2 | 4;
 
 /**
  * [1: Latest, 2: Frequency]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder {
-  Value1 = 1,
-  Value2 = 2,
-}
+export type BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder = 1 | 2;
 
 /**
  * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 4: Rate, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary, 9: Name]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsAosResourceSearchOrder {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
-  Value6 = 6,
-  Value7 = 7,
-  Value8 = 8,
-  Value9 = 9,
-}
+export type BakabaseInsideWorldModelsConstantsAosResourceSearchOrder = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 /**
  * [1: Running, 2: Complete, 3: Failed]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsBackgroundTaskStatus {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-}
+export type BakabaseInsideWorldModelsConstantsBackgroundTaskStatus = 1 | 2 | 3;
 
 /**
  * [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsComponentDescriptorType {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-}
+export type BakabaseInsideWorldModelsConstantsComponentDescriptorType = 0 | 1 | 2 | 3;
 
 /**
  * [1: Enhancer, 2: PlayableFileSelector, 3: Player]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsComponentType {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-}
+export type BakabaseInsideWorldModelsConstantsComponentType = 1 | 2 | 3;
 
 /**
  * [1: BiliBili, 2: ExHentai, 3: Pixiv]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsCookieValidatorTarget {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-}
+export type BakabaseInsideWorldModelsConstantsCookieValidatorTarget = 1 | 2 | 3;
 
 /**
  * [1: ResourceDirectory, 2: TempDirectory]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsCoverSaveLocation {
-  Value1 = 1,
-  Value2 = 2,
-}
+export type BakabaseInsideWorldModelsConstantsCoverSaveLocation = 1 | 2;
 
 /**
  * [1: FilenameAscending, 2: FileModifyDtDescending]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsCoverSelectOrder {
-  Value1 = 1,
-  Value2 = 2,
-}
+export type BakabaseInsideWorldModelsConstantsCoverSelectOrder = 1 | 2;
 
 /**
  * [1: String, 2: DateTime, 3: Number, 4: Enum]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsCustomDataType {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-}
+export type BakabaseInsideWorldModelsConstantsCustomDataType = 1 | 2 | 3 | 4;
 
 /**
  * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsDownloadTaskAction {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-}
+export type BakabaseInsideWorldModelsConstantsDownloadTaskAction = 1 | 2 | 3 | 4;
 
 /**
  * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsDownloadTaskDtoStatus {
-  Value100 = 100,
-  Value200 = 200,
-  Value300 = 300,
-  Value400 = 400,
-  Value500 = 500,
-  Value600 = 600,
-  Value700 = 700,
-  Value800 = 800,
-}
+export type BakabaseInsideWorldModelsConstantsDownloadTaskDtoStatus = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
 
 /**
  * [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsDownloadTaskStatus {
-  Value100 = 100,
-  Value200 = 200,
-  Value300 = 300,
-  Value400 = 400,
-}
+export type BakabaseInsideWorldModelsConstantsDownloadTaskStatus = 100 | 200 | 300 | 400;
 
 /**
  * [1: NotAcceptTerms, 2: NeedRestart]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsInitializationContentType {
-  Value1 = 1,
-  Value2 = 2,
-}
+export type BakabaseInsideWorldModelsConstantsInitializationContentType = 1 | 2;
 
 /**
  * [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsMediaLibraryError {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-}
+export type BakabaseInsideWorldModelsConstantsMediaLibraryError = 1 | 2 | 3;
 
 /**
  * [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsMediaType {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value1000 = 1000,
-}
+export type BakabaseInsideWorldModelsConstantsMediaType = 1 | 2 | 3 | 4 | 1000;
 
 /**
  * [1: Resource, 2: Video, 3: Image, 4: Audio]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsPlaylistItemType {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-}
+export type BakabaseInsideWorldModelsConstantsPlaylistItemType = 1 | 2 | 3 | 4;
 
 /**
  * [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsResourceLanguage {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
-  Value6 = 6,
-  Value7 = 7,
-  Value8 = 8,
-}
+export type BakabaseInsideWorldModelsConstantsResourceLanguage = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 /**
  * [1: Layer, 2: Regex, 3: FixedText]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsResourceMatcherValueType {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-}
+export type BakabaseInsideWorldModelsConstantsResourceMatcherValueType = 1 | 2 | 3;
 
 /**
  * [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsResourceProperty {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
-  Value6 = 6,
-  Value7 = 7,
-  Value8 = 8,
-  Value9 = 9,
-  Value10 = 10,
-  Value11 = 11,
-  Value12 = 12,
-  Value13 = 13,
-  Value14 = 14,
-}
+export type BakabaseInsideWorldModelsConstantsResourceProperty =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14;
 
 /**
  * [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsSpecialTextType {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value6 = 6,
-  Value7 = 7,
-  Value8 = 8,
-}
+export type BakabaseInsideWorldModelsConstantsSpecialTextType = 1 | 2 | 3 | 4 | 6 | 7 | 8;
 
 /**
  * [0: Default, 1: Resource]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsStartupPage {
-  Value0 = 0,
-  Value1 = 1,
-}
+export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
 
 /**
  * [1: Bilibili, 2: ExHentai, 3: Pixiv]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsConstantsThirdPartyId {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-}
+export type BakabaseInsideWorldModelsConstantsThirdPartyId = 1 | 2 | 3;
 
 export interface BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
   fields?: BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitionsField[] | null;
@@ -752,11 +600,7 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
  * [1: Exist, 2: Maybe, 3: New]
  * @format int32
  */
-export enum BakabaseInsideWorldModelsModelsAosResourceExistence {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-}
+export type BakabaseInsideWorldModelsModelsAosResourceExistence = 1 | 2 | 3;
 
 export interface BakabaseInsideWorldModelsModelsAosResourceExistenceResult {
   /** [1: Exist, 2: Maybe, 3: New] */
@@ -2092,15 +1936,7 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
  * [0: Trace, 1: Debug, 2: Information, 3: Warning, 4: Error, 5: Critical, 6: None]
  * @format int32
  */
-export enum MicrosoftExtensionsLoggingLogLevel {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
-  Value6 = 6,
-}
+export type MicrosoftExtensionsLoggingLogLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export type SystemIntPtr = object;
 
@@ -2137,13 +1973,7 @@ export interface SystemReflectionAssembly {
  * [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis]
  * @format int32
  */
-export enum SystemReflectionCallingConventions {
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value32 = 32,
-  Value64 = 64,
-}
+export type SystemReflectionCallingConventions = 1 | 2 | 3 | 32 | 64;
 
 export interface SystemReflectionConstructorInfo {
   name?: string | null;
@@ -2208,11 +2038,7 @@ export interface SystemReflectionCustomAttributeTypedArgument {
  * [0: None, 512: SpecialName, 1024: ReservedMask, 1024: ReservedMask]
  * @format int32
  */
-export enum SystemReflectionEventAttributes {
-  Value0 = 0,
-  Value512 = 512,
-  Value1024 = 1024,
-}
+export type SystemReflectionEventAttributes = 0 | 512 | 1024;
 
 export interface SystemReflectionEventInfo {
   name?: string | null;
@@ -2239,27 +2065,26 @@ export interface SystemReflectionEventInfo {
  * [0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: FieldAccessMask, 16: Static, 32: InitOnly, 64: Literal, 128: NotSerialized, 256: HasFieldRVA, 512: SpecialName, 1024: RTSpecialName, 4096: HasFieldMarshal, 8192: PinvokeImpl, 32768: HasDefault, 38144: ReservedMask]
  * @format int32
  */
-export enum SystemReflectionFieldAttributes {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
-  Value6 = 6,
-  Value7 = 7,
-  Value16 = 16,
-  Value32 = 32,
-  Value64 = 64,
-  Value128 = 128,
-  Value256 = 256,
-  Value512 = 512,
-  Value1024 = 1024,
-  Value4096 = 4096,
-  Value8192 = 8192,
-  Value32768 = 32768,
-  Value38144 = 38144,
-}
+export type SystemReflectionFieldAttributes =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 16
+  | 32
+  | 64
+  | 128
+  | 256
+  | 512
+  | 1024
+  | 4096
+  | 8192
+  | 32768
+  | 38144;
 
 export interface SystemReflectionFieldInfo {
   name?: string | null;
@@ -2297,26 +2122,17 @@ export interface SystemReflectionFieldInfo {
  * [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask]
  * @format int32
  */
-export enum SystemReflectionGenericParameterAttributes {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value8 = 8,
-  Value16 = 16,
-  Value28 = 28,
-}
+export type SystemReflectionGenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 | 16 | 28;
 
 export type SystemReflectionICustomAttributeProvider = object;
 
 export interface SystemReflectionMemberInfo {
-  module?: SystemReflectionModule;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
   declaringType?: SystemType;
   reflectedType?: SystemType;
   name?: string | null;
+  module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
   /** @format int32 */
@@ -2327,46 +2143,35 @@ export interface SystemReflectionMemberInfo {
  * [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All]
  * @format int32
  */
-export enum SystemReflectionMemberTypes {
-  Value1 = 1,
-  Value2 = 2,
-  Value4 = 4,
-  Value8 = 8,
-  Value16 = 16,
-  Value32 = 32,
-  Value64 = 64,
-  Value128 = 128,
-  Value191 = 191,
-}
+export type SystemReflectionMemberTypes = 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128 | 191;
 
 /**
  * [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask]
  * @format int32
  */
-export enum SystemReflectionMethodAttributes {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
-  Value6 = 6,
-  Value7 = 7,
-  Value8 = 8,
-  Value16 = 16,
-  Value32 = 32,
-  Value64 = 64,
-  Value128 = 128,
-  Value256 = 256,
-  Value512 = 512,
-  Value1024 = 1024,
-  Value2048 = 2048,
-  Value4096 = 4096,
-  Value8192 = 8192,
-  Value16384 = 16384,
-  Value32768 = 32768,
-  Value53248 = 53248,
-}
+export type SystemReflectionMethodAttributes =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 16
+  | 32
+  | 64
+  | 128
+  | 256
+  | 512
+  | 1024
+  | 2048
+  | 4096
+  | 8192
+  | 16384
+  | 32768
+  | 53248;
 
 export interface SystemReflectionMethodBase {
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
@@ -2412,22 +2217,21 @@ export interface SystemReflectionMethodBase {
  * [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal]
  * @format int32
  */
-export enum SystemReflectionMethodImplAttributes {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value8 = 8,
-  Value16 = 16,
-  Value32 = 32,
-  Value64 = 64,
-  Value128 = 128,
-  Value256 = 256,
-  Value512 = 512,
-  Value4096 = 4096,
-  Value65535 = 65535,
-}
+export type SystemReflectionMethodImplAttributes =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 8
+  | 16
+  | 32
+  | 64
+  | 128
+  | 256
+  | 512
+  | 4096
+  | 65535;
 
 export interface SystemReflectionMethodInfo {
   name?: string | null;
@@ -2491,19 +2295,7 @@ export interface SystemReflectionModule {
  * [0: None, 1: In, 2: Out, 4: Lcid, 8: Retval, 16: Optional, 4096: HasDefault, 8192: HasFieldMarshal, 16384: Reserved3, 32768: Reserved4, 61440: ReservedMask]
  * @format int32
  */
-export enum SystemReflectionParameterAttributes {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value4 = 4,
-  Value8 = 8,
-  Value16 = 16,
-  Value4096 = 4096,
-  Value8192 = 8192,
-  Value16384 = 16384,
-  Value32768 = 32768,
-  Value61440 = 61440,
-}
+export type SystemReflectionParameterAttributes = 0 | 1 | 2 | 4 | 8 | 16 | 4096 | 8192 | 16384 | 32768 | 61440;
 
 export interface SystemReflectionParameterInfo {
   /** [0: None, 1: In, 2: Out, 4: Lcid, 8: Retval, 16: Optional, 4096: HasDefault, 8192: HasFieldMarshal, 16384: Reserved3, 32768: Reserved4, 61440: ReservedMask] */
@@ -2530,16 +2322,7 @@ export interface SystemReflectionParameterInfo {
  * [0: None, 512: SpecialName, 1024: RTSpecialName, 4096: HasDefault, 8192: Reserved2, 16384: Reserved3, 32768: Reserved4, 62464: ReservedMask]
  * @format int32
  */
-export enum SystemReflectionPropertyAttributes {
-  Value0 = 0,
-  Value512 = 512,
-  Value1024 = 1024,
-  Value4096 = 4096,
-  Value8192 = 8192,
-  Value16384 = 16384,
-  Value32768 = 32768,
-  Value62464 = 62464,
-}
+export type SystemReflectionPropertyAttributes = 0 | 512 | 1024 | 4096 | 8192 | 16384 | 32768 | 62464;
 
 export interface SystemReflectionPropertyInfo {
   name?: string | null;
@@ -2566,34 +2349,33 @@ export interface SystemReflectionPropertyInfo {
  * [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: VisibilityMask, 7: VisibilityMask, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: StringFormatMask, 196608: StringFormatMask, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask]
  * @format int32
  */
-export enum SystemReflectionTypeAttributes {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
-  Value6 = 6,
-  Value7 = 7,
-  Value8 = 8,
-  Value16 = 16,
-  Value24 = 24,
-  Value32 = 32,
-  Value128 = 128,
-  Value256 = 256,
-  Value1024 = 1024,
-  Value2048 = 2048,
-  Value4096 = 4096,
-  Value8192 = 8192,
-  Value16384 = 16384,
-  Value65536 = 65536,
-  Value131072 = 131072,
-  Value196608 = 196608,
-  Value262144 = 262144,
-  Value264192 = 264192,
-  Value1048576 = 1048576,
-  Value12582912 = 12582912,
-}
+export type SystemReflectionTypeAttributes =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 16
+  | 24
+  | 32
+  | 128
+  | 256
+  | 1024
+  | 2048
+  | 4096
+  | 8192
+  | 16384
+  | 65536
+  | 131072
+  | 196608
+  | 262144
+  | 264192
+  | 1048576
+  | 12582912;
 
 export interface SystemReflectionTypeInfo {
   name?: string | null;
@@ -2688,24 +2470,13 @@ export interface SystemReflectionTypeInfo {
  * [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x]
  * @format int32
  */
-export enum SystemRuntimeInteropServicesArchitecture {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-  Value3 = 3,
-  Value4 = 4,
-  Value5 = 5,
-}
+export type SystemRuntimeInteropServicesArchitecture = 0 | 1 | 2 | 3 | 4 | 5;
 
 /**
  * [0: Sequential, 2: Explicit, 3: Auto]
  * @format int32
  */
-export enum SystemRuntimeInteropServicesLayoutKind {
-  Value0 = 0,
-  Value2 = 2,
-  Value3 = 3,
-}
+export type SystemRuntimeInteropServicesLayoutKind = 0 | 2 | 3;
 
 export type SystemRuntimeInteropServicesOSPlatform = object;
 
@@ -2731,11 +2502,7 @@ export interface SystemRuntimeTypeHandle {
  * [0: None, 1: Level1, 2: Level2]
  * @format int32
  */
-export enum SystemSecuritySecurityRuleSet {
-  Value0 = 0,
-  Value1 = 1,
-  Value2 = 2,
-}
+export type SystemSecuritySecurityRuleSet = 0 | 1 | 2;
 
 export interface SystemTimeSpan {
   /** @format int64 */

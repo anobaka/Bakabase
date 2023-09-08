@@ -8,7 +8,7 @@ import type {
   BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
   BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount,
 } from '@/sdk/Api';
-import { DownloadTaskStatus, downloadTaskStatuses, ResourceProperty, ThirdPartyId } from '@/sdk/constants';
+import { downloadTaskStatuses, ResourceProperty, ThirdPartyId } from '@/sdk/constants';
 
 export default () => {
   const { t } = useTranslation();
@@ -82,7 +82,7 @@ export default () => {
         <div className="block" style={{ flex: 1 }}>
           <div className={'title'}>{t('Overview')}</div>
           <div className={'content'}>
-            {data.categoryResourceCounts?.map(c => {
+            {data.categoryResourceCounts && data.categoryResourceCounts.length > 0 && data.categoryResourceCounts.map(c => {
               return (
                 <div className="t-t-c" title={c.name!}>
                   <div className="left">
@@ -97,7 +97,9 @@ export default () => {
                   </div>
                 </div>
               );
-            })}
+            }) || (
+              t('No content')
+            )}
           </div>
         </div>
         <div className="block" style={{ flex: 1 }}>
@@ -114,16 +116,16 @@ export default () => {
       </section>
       <section style={{ maxHeight: '40%' }}>
         <div className="block" style={{ flex: 1.5 }}>
-          <div className={'title'}>{t('Tags')}</div>
+          <div className={'title'}>{t('Resource tags')}</div>
           <div className={'content'}>
-            {data.tagResourceCounts?.map(t => {
+            {data.tagResourceCounts && data.tagResourceCounts.length > 0 && data.tagResourceCounts.map(t => {
               return (
-                <div className="t-t-c" title={t.name!}>
+                <div className="t-t-c">
                   <div className="left">
-                    <div className="label">
+                    <div className="label" title={t.label!}>
                       {t.label}
                     </div>
-                    <div className="text">
+                    <div className="text" title={t.name!}>
                       {t.name}
                     </div>
                   </div>
@@ -134,30 +136,40 @@ export default () => {
                   </div>
                 </div>
               );
-            })}
+            }) || (
+              t('No content')
+            )}
           </div>
         </div>
         <div className="block" style={{ flex: 2.5 }}>
           <div className={'title'}>{t('Resource properties')}</div>
           <div className={'content'}>
-            {data.propertyResourceCounts?.map(c => {
+            {data.propertyResourceCounts && data.propertyResourceCounts.length > 0 && data.propertyResourceCounts.map(c => {
               const property = c.property as number as ResourceProperty;
               let propertyLabel = t(ResourceProperty[property]);
               if (property == ResourceProperty.CustomProperty) {
                 propertyLabel += `:${c.propertyKey}`;
               }
               return (
-                <div className="t-t-c" title={c.value!}>
+                <div className="t-t-c">
                   <div className="left">
-                    <div className="label">{propertyLabel}</div>
-                    <div className="text">{c.value}</div>
+                    <div
+                      className="label"
+                      title={propertyLabel!}
+                    >{propertyLabel}</div>
+                    <div
+                      className="text"
+                      title={c.value!}
+                    >{c.value}</div>
                   </div>
                   <div className="right">
                     <div className="count">{c.count}</div>
                   </div>
                 </div>
               );
-            })}
+            }) || (
+              t('No content')
+            )}
           </div>
         </div>
       </section>
