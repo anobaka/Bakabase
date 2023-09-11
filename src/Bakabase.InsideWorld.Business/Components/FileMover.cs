@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.InsideWorld.Models.Extensions;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -80,21 +81,23 @@ namespace Bakabase.InsideWorld.Business.Components
                         var tasks = new Dictionary<string, string>();
                         foreach (var target in options.Targets!)
                         {
-                            var targetPath = target.Path;
-                            var sources = target.Sources;
+                            var targetPath = target.Path.StandardizePath()!;
+                            var sources = target.Sources.Select(a => a.StandardizePath()!).ToArray();
                             Directory.CreateDirectory(targetPath);
                             foreach (var s in sources)
                             {
-                                var files = Directory.GetFiles(s).Where(a => _shouldMove(a, dtExpired)).ToArray();
+                                var files = Directory.GetFiles(s).Where(a => _shouldMove(a, dtExpired))
+                                    .Select(a => a.StandardizePath()!).ToArray();
                                 var dirs = Directory.GetDirectories(s).Where(a => _shouldMove(a, dtExpired))
-                                    .ToArray();
+                                    .Select(a => a.StandardizePath()!).ToArray();
 
-                                foreach (var e in files.Concat(dirs))
+                                foreach (var e in dirs.Concat(files))
                                 {
                                     var relativeName = e.Replace(s, null).Trim(Path.DirectorySeparatorChar,
                                         Path.VolumeSeparatorChar, Path.AltDirectorySeparatorChar);
-                                    var targetFullname = Path.Combine(targetPath, relativeName);
-                                    tasks.Add(e, targetFullname);
+                                    var targetDirectory = Path.Combine(targetPath,
+                                        Path.GetDirectoryName(relativeName).StandardizePath() ?? string.Empty);
+                                    tasks.Add(e, targetDirectory);
                                 }
                             }
                         }
