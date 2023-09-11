@@ -281,9 +281,9 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
                   ValidateCookie({
                     cookie: tmpExHentaiOptions.cookie,
                     target: CookieValidatorTarget.ExHentai,
-                  }).invoke((t) => {
-                    if (t.code) {
-                      Message.error(`${t('Invalid cookie')}:${t.message}`);
+                  }).invoke((r) => {
+                    if (r.code) {
+                      Message.error(`${t('Invalid cookie')}:${r.message}`);
                     } else {
                       Message.success(t('Cookie is good'));
                     }

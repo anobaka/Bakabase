@@ -11,6 +11,7 @@
     MaxWidth="1000"
     MaxHeight="800"
     SizeToContent="WidthAndHeight"
+    Topmost="True"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
     <StackPanel VerticalAlignment="Center">

@@ -1436,6 +1436,7 @@ namespace Bakabase.InsideWorld.Business.Services
             var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
                 .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
                 .Where(a => a.Count > 0)
+                .OrderByDescending(a => a.Count)
                 .ToList();
 
             statistics.TodayAddedCategoryResourceCounts = todayCounts;
@@ -1444,14 +1445,18 @@ namespace Bakabase.InsideWorld.Business.Services
             var monday = today.AddDays(-1 * weekdayDiff);
             var thisWeekCounts = allEntities.Where(a => a.CreateDt >= monday).GroupBy(a => a.CategoryId)
                 .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-                .Where(a => a.Count > 0).ToList();
+                .Where(a => a.Count > 0)
+                .OrderByDescending(a => a.Count)
+                .ToList();
 
             statistics.ThisWeekAddedCategoryResourceCounts = thisWeekCounts;
 
             var thisMonth = today.GetFirstDayOfMonth();
             var thisMonthCounts = allEntities.Where(a => a.CreateDt >= thisMonth).GroupBy(a => a.CategoryId)
                 .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-                .Where(a => a.Count > 0).ToList();
+                .Where(a => a.Count > 0)
+                .OrderByDescending(a => a.Count)
+                .ToList();
 
             statistics.ThisMonthAddedCategoryResourceCounts = thisMonthCounts;
 
