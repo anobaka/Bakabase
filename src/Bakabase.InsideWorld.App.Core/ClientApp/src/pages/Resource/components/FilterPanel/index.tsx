@@ -389,7 +389,7 @@ export default React.memo((props: IProps) => {
     }
   }, [searchForm]);
 
-  log('Rendering', props);
+  log('Rendering', props, filterGroups, searchForm);
 
   return (
     <div className="new-search-panel">

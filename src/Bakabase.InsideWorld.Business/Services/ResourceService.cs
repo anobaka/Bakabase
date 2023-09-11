@@ -329,7 +329,7 @@ namespace Bakabase.InsideWorld.Business.Services
             var plainEverythingSegments = everyThingSegments.Except(regexEverythingSegments).ToList();
             var regexs = regexEverythingSegments.Select(t => Regex.Replace(t, @"^reg\:", string.Empty)).ToHashSet();
 
-            var names = new[] {model.Name, model.Publisher, model.Original}.Concat(plainEverythingSegments)
+            var names = new[] {model.Name, model.Publisher, model.Original, model.Series}.Concat(plainEverythingSegments)
                 .Where(a => a.IsNotEmpty())
                 .ToArray();
 
@@ -359,6 +359,16 @@ namespace Bakabase.InsideWorld.Business.Services
                     var originalIds = await _originalService.GetAllIdsByNames(aliasesMap[model.Original], true);
                     var resourceIds = (await _originalMappingService.GetAll(a => originalIds.Contains(a.OriginalId)))
                         .Select(a => a.ResourceId).Distinct().ToList();
+                    var exp1 = exp;
+                    exp = a => exp1(a) && resourceIds.Contains(a.Id);
+                }
+
+                if (model.Series.IsNotEmpty())
+                {
+                    var seriesIds = await _serialService.GetAllIdsByNames(aliasesMap[model.Series], true);
+                    var resourceIds = (await _volumeService.GetAll(a => seriesIds.Contains(a.SerialId)))
+                        .Select(a => a.ResourceId).ToHashSet();
+
                     var exp1 = exp;
                     exp = a => exp1(a) && resourceIds.Contains(a.Id);
                 }
