@@ -57,9 +57,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly MediaLibraryService _mediaLibraryService;
         private readonly ResourceTaskManager _resourceTaskManager;
         private readonly BackgroundTaskManager _taskManager;
-        private static readonly object PretreatmentCacheLock = new object();
-        private static ConcurrentDictionary<string, string> _pretreatmentCache;
-        private static string _pretreatmentCacheVersion;
         private readonly FavoritesResourceMappingService _favoritesResourceMappingService;
         private readonly IWebHostEnvironment _env;
         private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
@@ -68,9 +65,19 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly TempFileManager _tempFileManager;
         private readonly IBOptions<ResourceOptions> _resourceOptions;
 
-        private static readonly MemoryCache CoverCache = new MemoryCache("ResourceCover");
+        private static readonly MemoryCache CoverCache;
 
-        private static readonly CacheItemPolicy _coverCacheItemPolicy = new CacheItemPolicy
+        static ResourceController()
+        {
+            var config = new NameValueCollection
+            {
+                {"physicalMemoryLimitPercentage", "10"},
+                {"cacheMemoryLimitMegabytes", "2000"}
+            };
+            CoverCache = new MemoryCache("ResourceCover", config);
+        }
+
+        private static readonly CacheItemPolicy CoverCacheItemPolicy = new CacheItemPolicy
         {
             SlidingExpiration = TimeSpan.FromMinutes(15)
         };
@@ -185,7 +192,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 }
 
                 var data = ms.ToArray();
-                CoverCache.Set(id.ToString(), data, _coverCacheItemPolicy);
+                CoverCache.Set(id.ToString(), data, CoverCacheItemPolicy);
                 return File(data, MimeTypes.GetMimeType(ext));
             }
 
@@ -232,74 +239,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         public async Task<BaseResponse> DeleteCustomProperty(int id, string propertyKey)
         {
             return await _customResourcePropertyService.RemoveAll(t => t.ResourceId == id && t.Key == propertyKey);
-        }
-
-        [HttpGet("existence")]
-        [SwaggerOperation(OperationId = "CheckResourceExistence")]
-        public async Task<SingletonResponse<ResourceExistenceResult>> CheckExistence(string name)
-        {
-            lock (PretreatmentCacheLock)
-            {
-                if (_pretreatmentCacheVersion != SpecialTextService.Version)
-                {
-                    _pretreatmentCacheVersion = SpecialTextService.Version;
-                    _pretreatmentCache = new();
-                }
-            }
-
-            var cleanName = await _specialTextService.Pretreatment(name);
-            var allResources = (await _service.GetAllEntities(null, false)).GroupBy(t => t.RawName)
-                .ToDictionary(t => t.Key, t => t.ToList());
-            var names = allResources.ToDictionary(t => t.Key, t => t.Value.Select(r => r.RawFullname).ToArray());
-            var familiarNames = new List<(string RawFullname, decimal Diff)>();
-            foreach (var n in names.Keys)
-            {
-                if (HttpContext.RequestAborted.IsCancellationRequested)
-                {
-                    return null;
-                }
-
-                if (!_pretreatmentCache.TryGetValue(n, out var cn))
-                {
-                    _pretreatmentCache[n] = cn = await _specialTextService.Pretreatment(n);
-                }
-
-                if (cn == cleanName)
-                {
-                    return new SingletonResponse<ResourceExistenceResult>(new ResourceExistenceResult
-                    {
-                        Existence = ResourceExistence.Exist,
-                        Resources = names[n]
-                    });
-                }
-
-                var maxLength = Math.Max(cleanName.Length, cn.Length);
-                var lengthDis = (decimal) Math.Abs(cleanName.Length - cn.Length);
-                var lengthDisRate = lengthDis / maxLength;
-                const decimal familiarDiffThreshold = 0.2m;
-
-                if (lengthDisRate <= familiarDiffThreshold)
-                {
-                    var dis = cn.GetLevenshteinDistance(cleanName);
-                    var rate = (decimal) dis / maxLength;
-                    if (rate <= familiarDiffThreshold)
-                    {
-                        familiarNames.AddRange(names[n].Select(t => (t, rate)));
-                    }
-                }
-            }
-
-            if (familiarNames.Any())
-            {
-                return new SingletonResponse<ResourceExistenceResult>(new ResourceExistenceResult
-                {
-                    Existence = ResourceExistence.Maybe,
-                    Resources = familiarNames.OrderBy(t => t.Diff).Take(15).Select(t => t.RawFullname).ToArray()
-                });
-            }
-
-            return new SingletonResponse<ResourceExistenceResult>(new ResourceExistenceResult
-                {Existence = ResourceExistence.New});
         }
 
         [HttpPut("move")]
@@ -398,7 +337,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             }, HttpContext.RequestAborted);
             if (rsp.Code == (int) ResponseCode.Success)
             {
-                CoverCache.Set(id.ToString(), rsp.Data.Data, _coverCacheItemPolicy);
+                CoverCache.Set(id.ToString(), rsp.Data.Data, CoverCacheItemPolicy);
             }
 
             return rsp;

@@ -67,7 +67,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
             watcher.Renamed += OnRenamed;
 
             watcher.Error += OnError;
-            watcher.Disposed += (sender, args) => { _logger.LogError($"[2]Watcher for [{watcher.Path}] is disposed"); };
+            watcher.Disposed += (sender, args) => { _logger.LogInformation($"[2]Watcher for [{watcher.Path}] is disposed"); };
 
             SendDataInBackground(ct);
             watcher.EnableRaisingEvents = true;
@@ -77,16 +77,16 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
                 try
                 {
                     watcher.EnableRaisingEvents = false;
-                    _logger.LogError("[1]Disposing watcher");
+                    _logger.LogInformation("[1]Disposing watcher");
                     watcher.Dispose();
-                    _logger.LogError("[3]Disposed watcher");
+                    _logger.LogInformation("[3]Disposed watcher");
                 }
                 catch (Exception e)
                 {
                     _logger.LogError(e, "[-1]Error disposing watcher");
                 }
 
-                _logger.LogError("[4]After disposing watcher");
+                _logger.LogInformation("[4]After disposing watcher");
 
                 _pendingEvents.Clear();
                 _sendingEvents.Clear();
