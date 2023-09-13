@@ -6,7 +6,7 @@
 	  <Nullable>enable</Nullable>
 	  <UseWPF>true</UseWPF>
 	  <ImplicitUsings>enable</ImplicitUsings>
-	  <Version>1.7.2-beta3</Version>
+	  <Version>1.7.2</Version>
 	  <SpaRoot>ClientApp\</SpaRoot>
 	  <ApplicationIcon>Assets/favicon.ico</ApplicationIcon>
 	  <InsideWorldCoreAssembly>Bakabase.InsideWorld.App.Core</InsideWorldCoreAssembly>
