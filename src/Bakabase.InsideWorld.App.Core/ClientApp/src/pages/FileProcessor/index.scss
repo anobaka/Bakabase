@@ -224,7 +224,8 @@
               }
 
               .percentage {
-                background: white;
+                background: var(--theme-block-background);
+                color: var(--theme-text);
                 padding: 2px 50px;
               }
             }
