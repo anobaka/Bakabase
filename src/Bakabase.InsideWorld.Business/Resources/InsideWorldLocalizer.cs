@@ -84,6 +84,7 @@ namespace Bakabase.InsideWorld.Business.Resources
 
         private string Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource() =>
             this[nameof(Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource)];
+        public string ValueIsNotSet(string name) => this[nameof(ValueIsNotSet), name];
 
         public string NewFolderName() => this[nameof(NewFolderName)];
     }

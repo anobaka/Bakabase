@@ -126,11 +126,16 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         public async Task<BaseResponse> RemovePathConfiguration(int id,
             [FromBody] PathConfigurationRemoveRequestModel model)
         {
+            if (model.Index < 0)
+            {
+                return BaseResponseBuilder.BadRequestOrOperation;
+            }
+
             var library = await _service.GetByKey(id);
             var dto = library.ToDto();
             if (dto.PathConfigurations != null)
             {
-                dto.PathConfigurations = dto.PathConfigurations.Where(t => t.Path != model.Path).ToArray();
+                dto.PathConfigurations = dto.PathConfigurations.Where((t, i) => i != model.Index).ToArray();
             }
 
             return await _service.Patch(id, new MediaLibraryUpdateRequestModel

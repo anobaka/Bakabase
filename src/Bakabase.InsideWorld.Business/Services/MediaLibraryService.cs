@@ -14,6 +14,7 @@ using System.Xml.Serialization;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
@@ -27,6 +28,7 @@ using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
+using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CsQuery.ExtensionMethods.Internal;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -39,6 +41,7 @@ using NPOI.SS.Formula.Functions;
 using SharpCompress.Readers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using static Bakabase.InsideWorld.Models.Models.Aos.PathConfigurationValidateResult.Entry;
 using SearchOption = System.IO.SearchOption;
 
 namespace Bakabase.InsideWorld.Business.Services
@@ -51,20 +54,15 @@ namespace Bakabase.InsideWorld.Business.Services
         protected ResourceService ResourceService => GetRequiredService<ResourceService>();
         protected TagService TagService => GetRequiredService<TagService>();
         protected BackgroundTaskHelper BackgroundTaskHelper => GetRequiredService<BackgroundTaskHelper>();
-
-        protected ResourceTagMappingService ResourceTagMappingService =>
-            GetRequiredService<ResourceTagMappingService>();
-
-        protected FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int> ResourceServiceOrm =>
-            GetRequiredService<FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>>();
-
+        private InsideWorldLocalizer _localizer;
         protected LogService LogService => GetRequiredService<LogService>();
 
         protected InsideWorldOptionsManagerPool InsideWorldAppService =>
             GetRequiredService<InsideWorldOptionsManagerPool>();
 
-        public MediaLibraryService(IServiceProvider serviceProvider) : base(serviceProvider)
+        public MediaLibraryService(IServiceProvider serviceProvider, InsideWorldLocalizer localizer) : base(serviceProvider)
         {
+            _localizer = localizer;
         }
 
         public async Task StopSync()
@@ -77,7 +75,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public const string SyncTaskBackgroundTaskName = $"MediaLibraryService:Sync";
 
-        private static string[] DiscoverAllResourceFullnameList(string rootPath, MatcherValue resourceMatcherValue)
+        private static string[] DiscoverAllResourceFullnameList(string rootPath, MatcherValue resourceMatcherValue,
+            int maxCount = int.MaxValue)
         {
             rootPath = rootPath.StandardizePath()!;
             if (!rootPath.EndsWith(BusinessConstants.DirSeparator))
@@ -92,20 +91,29 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     var currentLayer = 0;
                     var paths = new List<string> {rootPath};
+                    var nextLayerPaths = new List<string>();
                     while (currentLayer++ < resourceMatcherValue.Layer! - 1)
                     {
-                        paths = paths.SelectMany(t =>
+                        var isTargetLayer = currentLayer == resourceMatcherValue.Layer - 1;
+                        foreach (var path in paths)
+                        {
+                            try
                             {
-                                try
-                                {
-                                    return Directory.GetDirectories(t, "*", SearchOption.TopDirectoryOnly);
-                                }
-                                catch
-                                {
-                                    return Array.Empty<string>();
-                                }
-                            })
-                            .ToList();
+                                nextLayerPaths.AddRange(Directory.GetDirectories(path, "*",
+                                    SearchOption.TopDirectoryOnly));
+                            }
+                            catch
+                            {
+                            }
+
+                            if (nextLayerPaths.Count > maxCount && isTargetLayer)
+                            {
+                                break;
+                            }
+                        }
+
+                        paths = nextLayerPaths;
+                        nextLayerPaths = new();
                     }
 
                     var allFileEntries = paths.SelectMany(p =>
@@ -119,19 +127,39 @@ namespace Bakabase.InsideWorld.Business.Services
                             return Array.Empty<string>();
                         }
                     });
-                    list.AddRange(allFileEntries.Select(s => s.StandardizePath()));
+                    list.AddRange(allFileEntries.Select(s => s.StandardizePath()!));
                     break;
                 }
                 case ResourceMatcherValueType.Regex:
                 {
                     var allEntries = Directory.GetFileSystemEntries(rootPath, "*", SearchOption.AllDirectories)
-                        .Select(e => e.StandardizePath()).ToArray();
+                        .Select(e => e.StandardizePath()).OrderBy(a => a).ToArray();
                     foreach (var e in allEntries)
                     {
-                        var relativePath = e[(rootPath.Length + 1)..];
-                        if (Regex.IsMatch(relativePath, resourceMatcherValue.Regex!))
+                        var relativePath = e![rootPath.Length..];
+
+                        // ignore sub contents
+                        if (list.Any(l => e.StartsWith(l)))
                         {
-                            list.Add(e);
+                            continue;
+                        }
+
+                        var match = Regex.Match(relativePath, resourceMatcherValue.Regex!);
+                        if (match.Success)
+                        {
+                            var length = match.Index + match.Value.Length;
+                            var matchedPath = relativePath[..length];
+
+                            if (matchedPath.SplitPathIntoSegments().Length ==
+                                relativePath.SplitPathIntoSegments().Length)
+                            {
+                                list.Add(e);
+
+                                if (list.Count > maxCount)
+                                {
+                                    break;
+                                }
+                            }
                         }
                     }
 
@@ -155,160 +183,205 @@ namespace Bakabase.InsideWorld.Business.Services
                 async (service, task) => await service.Sync(task));
         }
 
-        private void SetPropertiesByMatchers(ResourceDto pr, string rootPath, List<MatcherValue> matchers,
-            Dictionary<string, ResourceDto> parentResources, MediaLibrary library)
+        private void SetPropertiesByMatchers(string rootPath, PathConfigurationValidateResult.Entry e, ResourceDto pr,
+            Dictionary<string, ResourceDto> parentResources)
         {
-            var standardRootPath = rootPath.StandardizePath();
-            var otherMatchers = matchers.Where(a =>
-                a.Property != ResourceProperty.RootPath && a.Property != ResourceProperty.Resource);
-            var rootPathSegments = standardRootPath.SplitPathIntoSegments();
+            // var standardRootPath = rootPath.StandardizePath();
+            // var otherMatchers = matchers.Where(a =>
+            //     a.Property != ResourceProperty.RootPath && a.Property != ResourceProperty.Resource);
+            // var rootPathSegments = standardRootPath.SplitPathIntoSegments();
+            //
+            // var segments = pr.RawFullname.SplitPathIntoSegments();
+            // var matchedValues =
+            //     new Dictionary<ResourceProperty, List<(MatcherValue MatcherValue, string Value)>>();
+            // foreach (var s in otherMatchers)
+            // {
+            //     switch (s.Property)
+            //     {
+            //         case ResourceProperty.ParentResource:
+            //         case ResourceProperty.ReleaseDt:
+            //         case ResourceProperty.Name:
+            //         case ResourceProperty.Volume:
+            //         case ResourceProperty.Series:
+            //         case ResourceProperty.Rate:
+            //         case ResourceProperty.Original:
+            //         case ResourceProperty.Publisher:
+            //         case ResourceProperty.Tag:
+            //         case ResourceProperty.CustomProperty:
+            //         {
+            //             var matchResult =
+            //                 ResourcePropertyMatcher.Match(segments, s, rootPathSegments.Length - 1,
+            //                     segments.Length - 1);
+            //
+            //
+            //             if (matchResult != null)
+            //             {
+            //                 var values = matchedValues.GetOrAdd(s.Property, () => new());
+            //
+            //                 switch (matchResult.Type)
+            //                 {
+            //                     case MatchResultType.Layer:
+            //                     {
+            //                         // Value of parent resource should be a complete path
+            //                         if (s.Property == ResourceProperty.ParentResource)
+            //                         {
+            //                             var prPath = string.Join(BusinessConstants.DirSeparator,
+            //                                 segments.Take(matchResult.Index!.Value + 1));
+            //                             values.Add((s, prPath));
+            //                         }
+            //                         else
+            //                         {
+            //                             values.Add((s, segments[matchResult.Index!.Value]));
+            //                         }
+            //
+            //                         break;
+            //                     }
+            //                     case MatchResultType.Regex:
+            //                     {
+            //                         values.AddRange(matchResult.Matches!.Select(m => (s, m)));
+            //                         break;
+            //                     }
+            //                     default:
+            //                         throw new ArgumentOutOfRangeException();
+            //                 }
+            //             }
+            //
+            //             break;
+            //         }
+            //         case ResourceProperty.Introduction:
+            //         case ResourceProperty.RootPath:
+            //         case ResourceProperty.Resource:
+            //         case ResourceProperty.Language:
+            //             break;
+            //         default:
+            //             throw new ArgumentOutOfRangeException();
+            //     }
+            // }
 
-            var segments = pr.RawFullname.SplitPathIntoSegments();
-            var matchedValues =
-                new Dictionary<ResourceProperty, List<(MatcherValue MatcherValue, string Value)>>();
-            foreach (var s in otherMatchers)
+            // property - custom key/string.empty - values
+            // For Property=ParentResource, value will be a absolute path.
+            var matchedValues = new Dictionary<ResourceProperty, Dictionary<string, List<string>>>();
+
+            for (var i = 0; i < e.SegmentAndMatchedValues.Count; i++)
             {
-                switch (s.Property)
+                var t = e.SegmentAndMatchedValues[i];
+                if (t.Properties.Any())
                 {
-                    case ResourceProperty.ParentResource:
-                    case ResourceProperty.ReleaseDt:
-                    case ResourceProperty.Name:
-                    case ResourceProperty.Volume:
-                    case ResourceProperty.Series:
-                    case ResourceProperty.Rate:
-                    case ResourceProperty.Original:
-                    case ResourceProperty.Publisher:
-                    case ResourceProperty.Tag:
-                    case ResourceProperty.CustomProperty:
+                    foreach (var p in t.Properties)
                     {
-                        var matchResult =
-                            ResourcePropertyMatcher.Match(segments, s, rootPathSegments.Length - 1,
-                                segments.Length - 1);
-
-
-                        if (matchResult != null)
+                        var keyAndValues = matchedValues.GetOrAdd(p.Property, () => new());
+                        if (p.Keys.Any())
                         {
-                            var values = matchedValues.GetOrAdd(s.Property, () => new());
-
-                            switch (matchResult.Type)
+                            foreach (var k in p.Keys)
                             {
-                                case MatchResultType.Layer:
+                                var v = t.Value;
+                                if (p.Property == ResourceProperty.ParentResource)
                                 {
-                                    // Value of parent resource should be a complete path
-                                    if (s.Property == ResourceProperty.ParentResource)
-                                    {
-                                        var prPath = string.Join(BusinessConstants.DirSeparator,
-                                            segments.Take(matchResult.Index!.Value + 1));
-                                        values.Add((s, prPath));
-                                    }
-                                    else
-                                    {
-                                        values.Add((s, segments[matchResult.Index!.Value]));
-                                    }
+                                    v = Path.Combine(rootPath,
+                                            string.Join(BusinessConstants.DirSeparator,
+                                                e.SegmentAndMatchedValues.Take(i + 1).Select(a => a.Value)))
+                                        .StandardizePath()!;
+                                }
 
-                                    break;
-                                }
-                                case MatchResultType.Regex:
-                                {
-                                    values.AddRange(matchResult.Matches!.Select(m => (s, m)));
-                                    break;
-                                }
-                                default:
-                                    throw new ArgumentOutOfRangeException();
+                                keyAndValues.GetOrAdd(k, () => new()).Add(v);
                             }
                         }
-
-                        break;
                     }
-                    case ResourceProperty.Introduction:
-                    case ResourceProperty.RootPath:
-                    case ResourceProperty.Resource:
-                    case ResourceProperty.Language:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
                 }
             }
 
-            foreach (var (t, values) in matchedValues)
+
+            foreach (var t in e.GlobalMatchedValues)
             {
-                var (firstMatcher, firstValue) = values[0];
-                switch (t)
+                var keyAndValues = matchedValues.GetOrAdd(t.Property, () => new());
+                var values = keyAndValues.GetOrAdd(string.IsNullOrEmpty(t.Key) ? string.Empty : t.Key, () => new());
+                values.AddRange(t.Values);
+            }
+
+            foreach (var (t, keyAndValues) in matchedValues)
+            {
+                foreach (var (key, values) in keyAndValues)
                 {
-                    case ResourceProperty.ParentResource:
+                    var firstValue = values.FirstOrDefault()!;
+                    switch (t)
                     {
-                        if (firstValue != pr.RawFullname)
+                        case ResourceProperty.ParentResource:
                         {
-                            if (!parentResources.TryGetValue(firstValue, out var parent))
+                            if (firstValue != pr.RawFullname)
                             {
-                                parentResources[firstValue] = parent = new ResourceDto
+                                if (!parentResources.TryGetValue(firstValue, out var parent))
                                 {
-                                    Directory = Path.GetDirectoryName(firstValue)!.StandardizePath(),
-                                    RawName = Path.GetFileName(firstValue),
-                                    CategoryId = library.CategoryId,
-                                    MediaLibraryId = library.Id,
-                                    IsSingleFile = false
-                                };
+                                    parentResources[firstValue] = parent = new ResourceDto
+                                    {
+                                        Directory = Path.GetDirectoryName(firstValue)!.StandardizePath()!,
+                                        RawName = Path.GetFileName(firstValue),
+                                        CategoryId = pr.CategoryId,
+                                        MediaLibraryId = pr.MediaLibraryId,
+                                        IsSingleFile = false
+                                    };
+                                }
+
+                                pr.Parent = parent;
                             }
 
-                            pr.Parent = parent;
+                            break;
                         }
-
-                        break;
-                    }
-                    case ResourceProperty.ReleaseDt:
-                    {
-                        DateTime dt = default;
-                        if (!(firstMatcher.Key.IsNotEmpty() && DateTime.TryParseExact(firstValue, firstMatcher.Key,
-                                null, DateTimeStyles.None, out dt)) || DateTime.TryParse(firstValue, out dt))
+                        case ResourceProperty.ReleaseDt:
                         {
-                            pr.ReleaseDt = dt;
-                        }
-
-                        break;
-                    }
-                    case ResourceProperty.Publisher:
-                        pr.Publishers = values.Select(a => new PublisherDto {Name = a.Value}).ToList();
-                        break;
-                    case ResourceProperty.Name:
-                        pr.Name = firstValue;
-                        break;
-                    case ResourceProperty.Volume:
-                        pr.Volume = new VolumeDto {Name = firstValue};
-                        break;
-                    case ResourceProperty.Original:
-                        pr.Originals = values.Select(a => new OriginalDto {Name = a.Value}).ToList();
-                        break;
-                    case ResourceProperty.Series:
-                        pr.Series = new SeriesDto {Name = firstValue};
-                        break;
-                    case ResourceProperty.Tag:
-                        pr.Tags.AddRange(values.Select(a => new TagDto {Name = a.Value}));
-                        break;
-                    case ResourceProperty.Rate:
-                        if (decimal.TryParse(firstValue, out var r))
-                        {
-                            pr.Rate = r;
-                        }
-
-                        break;
-                    case ResourceProperty.CustomProperty:
-                        pr.CustomProperties = values.GroupBy(a => a.MatcherValue.Key!).ToDictionary(a => a.Key, a => a
-                            .Select(b => new CustomResourceProperty
+                            DateTime dt = default;
+                            // todo: where does this key come from?
+                            if (!(key.IsNotEmpty() &&
+                                  DateTime.TryParseExact(firstValue, key, null, DateTimeStyles.None, out dt)) ||
+                                DateTime.TryParse(firstValue, out dt))
                             {
-                                Value = b.Value,
-                                ValueType = CustomDataType.String,
-                                // todo: this is a hard code to make it compatible with enhancer temporarily
-                                Key = $"p:{a.Key}"
-                            }).ToList());
-                        break;
-                    case ResourceProperty.Language:
-                    case ResourceProperty.Introduction:
-                    case ResourceProperty.RootPath:
-                    case ResourceProperty.Resource:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
+                                pr.ReleaseDt = dt;
+                            }
+
+                            break;
+                        }
+                        case ResourceProperty.Publisher:
+                            pr.Publishers = values.Select(a => new PublisherDto {Name = a}).ToList();
+                            break;
+                        case ResourceProperty.Name:
+                            pr.Name = firstValue;
+                            break;
+                        case ResourceProperty.Volume:
+                            pr.Volume = new VolumeDto {Name = firstValue};
+                            break;
+                        case ResourceProperty.Original:
+                            pr.Originals = values.Select(a => new OriginalDto {Name = a}).ToList();
+                            break;
+                        case ResourceProperty.Series:
+                            pr.Series = new SeriesDto {Name = firstValue};
+                            break;
+                        case ResourceProperty.Tag:
+                            pr.Tags.AddRange(values.Select(a => new TagDto {Name = a}));
+                            break;
+                        case ResourceProperty.Rate:
+                            if (decimal.TryParse(firstValue, out var r))
+                            {
+                                pr.Rate = r;
+                            }
+
+                            break;
+                        case ResourceProperty.CustomProperty:
+                            pr.CustomProperties = keyAndValues.Where(a => !string.IsNullOrEmpty(a.Key))
+                                .ToDictionary(b => b.Key, c => c.Value.Select(b => new CustomResourceProperty
+                                {
+                                    Value = b,
+                                    ValueType = CustomDataType.String,
+                                    // todo: this is a hard code to make it compatible with enhancer temporarily
+                                    Key = $"p:{c.Key}"
+                                }).ToList());
+                            break;
+                        case ResourceProperty.Language:
+                        case ResourceProperty.Introduction:
+                        case ResourceProperty.RootPath:
+                        case ResourceProperty.Resource:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
             }
         }
@@ -390,50 +463,90 @@ namespace Bakabase.InsideWorld.Business.Services
                                     continue;
                                 }
 
-                                var standardRootPath = pathConfiguration.Path.StandardizePath();
-                                var resourcePaths =
-                                    DiscoverAllResourceFullnameList(pathConfiguration.Path, resourceMatcher);
-                                if (!resourcePaths.Any())
+                                var pscResult = await Test(pathConfiguration, int.MaxValue);
+                                if (pscResult.Code == (int) ResponseCode.Success)
                                 {
-                                    continue;
+                                    var percentagePerItem =
+                                        (decimal) 1 / pscResult.Data.Entries.Count * percentagePerPathConfiguration;
+                                    var count = 0;
+                                    foreach (var e in pscResult.Data.Entries)
+                                    {
+                                        var resourcePath =
+                                            $"{pscResult.Data.RootPath}{BusinessConstants.DirSeparator}{e.RelativePath}";
+                                        var pr = new ResourceDto()
+                                        {
+                                            CategoryId = library.CategoryId,
+                                            MediaLibraryId = library.Id,
+                                            IsSingleFile = new FileInfo(resourcePath).Exists,
+                                            Directory = Path.GetDirectoryName(resourcePath).StandardizePath()!,
+                                            RawName = Path.GetFileName(resourcePath),
+                                            Tags = new List<TagDto>(),
+                                        };
+
+                                        if (pathConfiguration.FixedTagIds?.Any() == true)
+                                        {
+                                            pr.Tags.AddRange(
+                                                pathConfiguration.FixedTagIds.Select(a =>
+                                                    new TagDto {Id = a}));
+                                        }
+
+                                        if (pathConfiguration.RpmValues?.Any() ==
+                                            true)
+                                        {
+                                            SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr, parentResources);
+                                        }
+
+                                        patchingResources.TryAdd(pr.RawFullname, pr);
+                                        task.Percentage = basePercentage + (int) (i * percentagePerLibrary +
+                                            percentagePerPathConfiguration * j +
+                                            percentagePerItem * (++count));
+                                    }
                                 }
 
-                                var otherMatchers = pathConfiguration.RpmValues
-                                    .Where(m => m != resourceMatcher && m.IsValid).ToList();
-                                var percentagePerItem =
-                                    (decimal) 1 / resourcePaths.Length * percentagePerPathConfiguration;
-                                var count = 0;
-                                foreach (var resourcePath in resourcePaths)
-                                {
-                                    var pr = new ResourceDto()
-                                    {
-                                        CategoryId = library.CategoryId,
-                                        MediaLibraryId = library.Id,
-                                        IsSingleFile = new FileInfo(resourcePath).Exists,
-                                        Directory = Path.GetDirectoryName(resourcePath).StandardizePath()!,
-                                        RawName = Path.GetFileName(resourcePath),
-                                        Tags = new List<TagDto>(),
-                                    };
+                                // var standardRootPath = pathConfiguration.Path.StandardizePath();
+                                // var resourcePaths =
+                                //     DiscoverAllResourceFullnameList(pathConfiguration.Path, resourceMatcher);
+                                // if (!resourcePaths.Any())
+                                // {
+                                //     continue;
+                                // }
 
-                                    if (pathConfiguration.FixedTagIds?.Any() == true)
-                                    {
-                                        pr.Tags.AddRange(
-                                            pathConfiguration.FixedTagIds.Select(a =>
-                                                new TagDto {Id = a}));
-                                    }
-
-                                    if (pathConfiguration.RpmValues?.Any() ==
-                                        true)
-                                    {
-                                        SetPropertiesByMatchers(pr, standardRootPath, otherMatchers, parentResources,
-                                            library);
-                                    }
-
-                                    patchingResources.TryAdd(pr.RawFullname, pr);
-                                    task.Percentage = basePercentage + (int) (i * percentagePerLibrary +
-                                                                              percentagePerPathConfiguration * j +
-                                                                              percentagePerItem * (++count));
-                                }
+                                // var otherMatchers = pathConfiguration.RpmValues
+                                    // .Where(m => m != resourceMatcher && m.IsValid).ToList();
+                                // var percentagePerItem =
+                                //     (decimal) 1 / pscResult.Data.Entries.Count * percentagePerPathConfiguration;
+                                // var count = 0;
+                                // foreach (var resourcePath in resourcePaths)
+                                // {
+                                //     var pr = new ResourceDto()
+                                //     {
+                                //         CategoryId = library.CategoryId,
+                                //         MediaLibraryId = library.Id,
+                                //         IsSingleFile = new FileInfo(resourcePath).Exists,
+                                //         Directory = Path.GetDirectoryName(resourcePath).StandardizePath()!,
+                                //         RawName = Path.GetFileName(resourcePath),
+                                //         Tags = new List<TagDto>(),
+                                //     };
+                                //
+                                //     if (pathConfiguration.FixedTagIds?.Any() == true)
+                                //     {
+                                //         pr.Tags.AddRange(
+                                //             pathConfiguration.FixedTagIds.Select(a =>
+                                //                 new TagDto {Id = a}));
+                                //     }
+                                //
+                                //     if (pathConfiguration.RpmValues?.Any() ==
+                                //         true)
+                                //     {
+                                //         SetPropertiesByMatchers(pr, standardRootPath, otherMatchers, parentResources,
+                                //             library);
+                                //     }
+                                //
+                                //     patchingResources.TryAdd(pr.RawFullname, pr);
+                                //     task.Percentage = basePercentage + (int) (i * percentagePerLibrary +
+                                //                                               percentagePerPathConfiguration * j +
+                                //                                               percentagePerItem * (++count));
+                                // }
                             }
                         }
 
@@ -839,13 +952,13 @@ namespace Bakabase.InsideWorld.Business.Services
             return await UpdateRange(changed);
         }
 
-        public async Task<SingletonResponse<PathConfigurationValidateResult>> Test(MediaLibrary.PathConfiguration pc,
-            int maxResourceCount = 1)
+        public async Task<SingletonResponse<PathConfigurationValidateResult>> Test(
+            MediaLibrary.PathConfiguration pc, int maxResourceCount = int.MaxValue)
         {
             if (pc.Path.IsNullOrEmpty())
             {
                 return SingletonResponseBuilder<PathConfigurationValidateResult>.BuildBadRequest(
-                    "Root path is required");
+                    _localizer.ValueIsNotSet(nameof(pc.Path)));
             }
 
             var resourceMatcherValue =
@@ -857,65 +970,58 @@ namespace Bakabase.InsideWorld.Business.Services
                     "A valid resource matcher value is required");
             }
 
-            pc.Path = pc.Path?.StandardizePath();
+            pc.Path = pc.Path?.StandardizePath()!;
             var dir = new DirectoryInfo(pc.Path!);
             var entries = new List<PathConfigurationValidateResult.Entry>();
             if (dir.Exists)
             {
+                var resourceFullnameList =
+                    DiscoverAllResourceFullnameList(pc.Path, resourceMatcherValue, maxResourceCount);
+
                 var rootSegments = pc.Path!.SplitPathIntoSegments();
-                var fixedTags = pc.FixedTagIds?.Any() == true
-                    ? (await TagService.GetByKeys(pc.FixedTagIds,
-                        TagAdditionalItem.PreferredAlias | TagAdditionalItem.GroupName)).ToList()
-                    : new();
-                var filesystemItems = Directory.GetFileSystemEntries(dir.FullName, "*.*", SearchOption.AllDirectories);
-                foreach (var f in filesystemItems)
+                foreach (var f in resourceFullnameList)
                 {
                     var segments = f.SplitPathIntoSegments();
-                    var resourceMatchValue = ResourcePropertyMatcher.Match(segments, resourceMatcherValue,
-                        rootSegments.Length - 1, segments.Length);
-                    if (resourceMatchValue is not {Type: MatchResultType.Layer} || resourceMatchValue.Index < rootSegments.Length)
-                    {
-                        continue;
-                    }
 
                     var relativeSegments = segments[rootSegments.Length..];
                     var relativePath = string.Join(BusinessConstants.DirSeparator, relativeSegments);
 
-                    var entry = new PathConfigurationValidateResult.Entry(Directory.Exists(f), relativePath)
-                    {
-                        FixedTags = fixedTags,
-                        SegmentAndMatchedValues = relativeSegments
-                            .Select(s => new PathConfigurationValidateResult.Entry.SegmentMatchResult(s)).ToList(),
-                        IsDirectory = Directory.Exists(f),
-                        RelativePath = relativePath
-                    };
-
                     var otherMatchers = pc.RpmValues!.Where(a =>
                         a.Property != ResourceProperty.Resource && a.Property != ResourceProperty.RootPath).ToList();
 
+                    // Index - Property - Custom Keys/String.Empty
+                    var tmpSegmentProperties = new Dictionary<int, Dictionary<ResourceProperty, List<string>>>();
+                    // Property - Custom Keys/String.Empty - Values
+                    var tmpGlobalMatchedValues =
+                        new Dictionary<ResourceProperty, Dictionary<string, List<string>>>();
+
                     foreach (var m in otherMatchers)
                     {
-                        var result = ResourcePropertyMatcher.Match(segments, m, rootSegments.Length - 1, segments.Length - 1);
+                        var result = ResourcePropertyMatcher.Match(segments, m, rootSegments.Length - 1,
+                            segments.Length - 1);
                         if (result != null)
                         {
                             switch (result.Type)
                             {
                                 case MatchResultType.Layer:
                                 {
-                                    entry.SegmentAndMatchedValues[
-                                            result.Layer > 0 ? result.Layer.Value - 1 : ^(1-result.Layer!.Value)]
-                                        .Properties
-                                        .Add(m.Property);
+                                    var idx = result.Layer > 0
+                                        ? result.Layer.Value - 1
+                                        : relativeSegments.Length + result.Layer!.Value - 1;
+
+                                    var customKeys = tmpSegmentProperties
+                                        .GetOrAdd(idx, () => new())
+                                        .GetOrAdd(m.Property, () => new());
+                                    customKeys.Add(!string.IsNullOrEmpty(m.Key) ? m.Key : string.Empty);
+
                                     break;
                                 }
                                 case MatchResultType.Regex:
                                 {
-                                    var list = entry.GlobalMatchedValues.GetOrAdd((int)m.Property,
-                                        () => new HashSet<string>());
-                                    foreach (var t in result.Matches!)
-                                    {
-                                        list.Add(t);
-                                    }
+                                    var values = tmpGlobalMatchedValues
+                                        .GetOrAdd(m.Property, () => new())
+                                        .GetOrAdd(m.Key ?? string.Empty, () => new());
+                                    values.AddRange(result.Matches!);
 
                                     break;
                                 }
@@ -924,6 +1030,30 @@ namespace Bakabase.InsideWorld.Business.Services
                             }
                         }
                     }
+
+                    var list = new List<SegmentMatchResult>();
+
+                    for (var i = 0; i < relativeSegments.Length; i++)
+                    {
+                        var segment = relativeSegments[i];
+                        var segmentProperties = tmpSegmentProperties.TryGetValue(i, out var t)
+                            ? t.Select(a => new SegmentMatchResult.SegmentPropertyResult(a.Key, a.Value)).ToList()
+                            : new List<SegmentMatchResult.SegmentPropertyResult>();
+
+                        var r = new SegmentMatchResult(segment, segmentProperties);
+                        list.Add(r);
+                    }
+
+                    var globalValues = tmpGlobalMatchedValues.SelectMany(a => a.Value.Select(b =>
+                        new GlobalMatchedValue(a.Key, b.Value, string.IsNullOrEmpty(b.Key) ? null : b.Key))).ToList();
+
+                    var entry = new PathConfigurationValidateResult.Entry(Directory.Exists(f), relativePath)
+                    {
+                        SegmentAndMatchedValues = list,
+                        IsDirectory = Directory.Exists(f),
+                        RelativePath = relativePath,
+                        GlobalMatchedValues = globalValues
+                    };
 
                     entries.Add(entry);
 
@@ -934,7 +1064,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
 
                 return new SingletonResponse<PathConfigurationValidateResult>(
-                    new PathConfigurationValidateResult(entries));
+                    new PathConfigurationValidateResult(dir.FullName.StandardizePath()!, entries));
             }
 
             return SingletonResponseBuilder<PathConfigurationValidateResult>.NotFound;

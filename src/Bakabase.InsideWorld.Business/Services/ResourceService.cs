@@ -41,8 +41,11 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
+using Bootstrap.Models.Constants;
 using CliWrap;
+using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -75,6 +78,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IBOptions<ThirdPartyOptions> _thirdPartyOptions;
         private readonly TempFileManager _tempFileManager;
         private readonly FFMpegHelper _ffMpegHelper;
+        private readonly InsideWorldLocalizer _localizer;
 
         public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
             PublisherService publisherService, AliasService aliasService,
@@ -87,7 +91,7 @@ namespace Bakabase.InsideWorld.Business.Services
             BackgroundTaskHelper backgroundTaskHelper, FavoritesResourceMappingService favoritesResourceMappingService,
             TagGroupService tagGroupService, IBOptionsManager<ResourceOptions> optionsManager,
             IBOptions<ThirdPartyOptions> thirdPartyOptions, TempFileManager tempFileManager,
-            FFMpegHelper ffMpegHelper)
+            FFMpegHelper ffMpegHelper, InsideWorldLocalizer localizer)
         {
             _specialTextService = specialTextService;
             _publisherService = publisherService;
@@ -111,6 +115,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _thirdPartyOptions = thirdPartyOptions;
             _tempFileManager = tempFileManager;
             _ffMpegHelper = ffMpegHelper;
+            _localizer = localizer;
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>(serviceProvider);
         }
 
@@ -324,7 +329,7 @@ namespace Bakabase.InsideWorld.Business.Services
             var plainEverythingSegments = everyThingSegments.Except(regexEverythingSegments).ToList();
             var regexs = regexEverythingSegments.Select(t => Regex.Replace(t, @"^reg\:", string.Empty)).ToHashSet();
 
-            var names = new[] {model.Name, model.Publisher, model.Original}.Concat(plainEverythingSegments)
+            var names = new[] {model.Name, model.Publisher, model.Original, model.Series}.Concat(plainEverythingSegments)
                 .Where(a => a.IsNotEmpty())
                 .ToArray();
 
@@ -354,6 +359,16 @@ namespace Bakabase.InsideWorld.Business.Services
                     var originalIds = await _originalService.GetAllIdsByNames(aliasesMap[model.Original], true);
                     var resourceIds = (await _originalMappingService.GetAll(a => originalIds.Contains(a.OriginalId)))
                         .Select(a => a.ResourceId).Distinct().ToList();
+                    var exp1 = exp;
+                    exp = a => exp1(a) && resourceIds.Contains(a.Id);
+                }
+
+                if (model.Series.IsNotEmpty())
+                {
+                    var seriesIds = await _serialService.GetAllIdsByNames(aliasesMap[model.Series], true);
+                    var resourceIds = (await _volumeService.GetAll(a => seriesIds.Contains(a.SerialId)))
+                        .Select(a => a.ResourceId).ToHashSet();
+
                     var exp1 = exp;
                     exp = a => exp1(a) && resourceIds.Contains(a.Id);
                 }
@@ -1044,7 +1059,8 @@ namespace Bakabase.InsideWorld.Business.Services
         /// <param name="additionalSources"></param>
         /// <returns>If ShouldSave is true, it usually means the cost of discovering cover is high, and we should save the result for better performance.</returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public async Task<(Stream Stream, string Ext, bool ShouldSave)?> DiscoverCover(string path, CancellationToken ct, CoverSelectOrder order,
+        public async Task<(Stream Stream, string Ext, bool ShouldSave)?> DiscoverCover(string path,
+            CancellationToken ct, CoverSelectOrder order,
             AdditionalCoverDiscoveringSource[] additionalSources)
         {
             var imageExtensions = BusinessConstants.ImageExtensions;
@@ -1156,7 +1172,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                                     await using var s = imageFile.OpenEntryStream();
                                                     await s.CopyToAsync(imageStream = new MemoryStream(), ct);
                                                     imageStream.Seek(0, SeekOrigin.Begin);
-}
+                                                }
                                             }
                                             else
                                             {
@@ -1418,33 +1434,226 @@ namespace Bakabase.InsideWorld.Business.Services
             var categories = (await _categoryService.GetAll()).ToDictionary(a => a.Id, a => a.Name);
             var allEntities = await GetAllEntities();
 
-            var totalCount = allEntities.GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.NameAndCount
-                {
-                    Name = categories.TryGetValue(a.Key, out var c) ? c : string.Empty,
-                    Count = a.Count()
-                }).ToArray();
+            var allEntitiesMap = allEntities.ToDictionary(a => a.Id, a => a);
+
+            var totalCounts = allEntities.GroupBy(a => a.CategoryId)
+                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+                .ToList();
+
+            statistics.CategoryResourceCounts = totalCounts;
 
             var today = DateTime.Today;
-            var todayCount = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.NameAndCount
-                {
-                    Name = categories.TryGetValue(a.Key, out var c) ? c : string.Empty,
-                    Count = a.Count()
-                }).ToArray();
+            var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
+                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+                .Where(a => a.Count > 0)
+                .OrderByDescending(a => a.Count)
+                .ToList();
+
+            statistics.TodayAddedCategoryResourceCounts = todayCounts;
 
             var weekdayDiff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
             var monday = today.AddDays(-1 * weekdayDiff);
-            var thisWeekCount = allEntities.Where(a => a.CreateDt >= monday).GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.NameAndCount
-                {
-                    Name = categories.TryGetValue(a.Key, out var c) ? c : string.Empty,
-                    Count = a.Count()
-                }).ToArray();
+            var thisWeekCounts = allEntities.Where(a => a.CreateDt >= monday).GroupBy(a => a.CategoryId)
+                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+                .Where(a => a.Count > 0)
+                .OrderByDescending(a => a.Count)
+                .ToList();
 
-            statistics.TotalResourceCounts = totalCount;
-            statistics.ResourceAddedCountsToday = todayCount;
-            statistics.ResourceAddedCountsThisWeek = thisWeekCount;
+            statistics.ThisWeekAddedCategoryResourceCounts = thisWeekCounts;
+
+            var thisMonth = today.GetFirstDayOfMonth();
+            var thisMonthCounts = allEntities.Where(a => a.CreateDt >= thisMonth).GroupBy(a => a.CategoryId)
+                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+                .Where(a => a.Count > 0)
+                .OrderByDescending(a => a.Count)
+                .ToList();
+
+            statistics.ThisMonthAddedCategoryResourceCounts = thisMonthCounts;
+
+            // 12 weeks added counts trending
+            {
+                var total = allEntities.Count;
+                for (var i = 0; i < 12; i++)
+                {
+                    var offset = -i * 7;
+                    var weekStart = today.AddDays(offset - weekdayDiff);
+                    var weekEnd = weekStart.AddDays(7);
+                    var count = allEntities.Count(a => a.CreateDt >= weekStart && a.CreateDt < weekEnd);
+                    statistics.ResourceTrending.Add(new DashboardStatistics.WeekCount(-i, total));
+                    total -= count;
+                }
+
+                statistics.ResourceTrending.Reverse();
+            }
+
+            const int maxPropertyCount = 30;
+
+            // Tags
+            {
+                var allTagMappings = await _resourceTagMappingService.GetAll(null, false);
+                var top30TagResourceCountsMap = allTagMappings.GroupBy(a => a.TagId)
+                    .ToDictionary(a => a.Key, a => a.ToHashSet().Count(b => allEntitiesMap.ContainsKey(b.ResourceId)))
+                    .OrderByDescending(a => a.Value).Take(maxPropertyCount).Where(a => a.Value > 0)
+                    .ToList();
+                var tagIds = top30TagResourceCountsMap.Select(s => s.Key).ToArray();
+                var tags = await _tagService.GetByKeys(tagIds, TagAdditionalItem.PreferredAlias);
+                var groupIds = tags.Select(a => a.GroupId).ToHashSet().ToArray();
+                var groups = await _tagGroupService.GetByKeys(groupIds, TagGroupAdditionalItem.PreferredAlias);
+                var groupsMap = groups.ToDictionary(a => a.Id, a => a);
+                foreach (var tag in tags)
+                {
+                    if (groupsMap.TryGetValue(tag.GroupId, out var g))
+                    {
+                        tag.GroupName = g.Name;
+                        tag.GroupNamePreferredAlias = g.PreferredAlias;
+                    }
+                }
+
+                var tagsMap = tags.ToDictionary(a => a.Id, a => a);
+
+                statistics.TagResourceCounts = top30TagResourceCountsMap.Select(kv =>
+                {
+                    var a = tagsMap.GetValueOrDefault(kv.Key);
+                    if (a != null)
+                    {
+                        return new DashboardStatistics.TextAndCount(a.PreferredAlias ?? a.Name,
+                            kv.Value, a.GroupNamePreferredAlias ?? a.GroupName);
+                    }
+
+                    return null;
+
+                }).Where(a => a != null).ToList()!;
+            }
+
+            // Properties
+            {
+                var propertyCountList = new List<DashboardStatistics.PropertyAndCount>();
+
+                #region Publisher
+
+                var publisherResourceCounts = (await _publisherMappingService.GetAll(null, false))
+                    .GroupBy(a => a.PublisherId)
+                    .ToDictionary(a => a.Key, a => a.Count(b => allEntitiesMap.ContainsKey(b.ResourceId)));
+                var top30PublisherResourceCounts = publisherResourceCounts.OrderByDescending(a => a.Value)
+                    .Take(maxPropertyCount)
+                    .ToDictionary(a => a.Key, a => a.Value);
+                var publisherIds = top30PublisherResourceCounts.Keys.ToArray();
+                var publisherNames = await _publisherService.GetNamesByIds(publisherIds);
+                var publisherResourceTextAndCounts = publisherIds.Select((a, i) =>
+                    new DashboardStatistics.PropertyAndCount(ResourceProperty.Publisher, null, publisherNames[i],
+                        top30PublisherResourceCounts[a])).ToList();
+                propertyCountList.AddRange(publisherResourceTextAndCounts);
+
+                #endregion
+
+                #region Original
+
+                var originalResourceCounts = (await _originalMappingService.GetAll(null, false))
+                    .GroupBy(a => a.OriginalId)
+                    .ToDictionary(a => a.Key, a => a.Count(b => allEntitiesMap.ContainsKey(b.ResourceId)));
+                var top30OriginalResourceCounts = originalResourceCounts.OrderByDescending(a => a.Value)
+                    .Take(maxPropertyCount)
+                    .ToDictionary(a => a.Key, a => a.Value);
+                var originalIds = top30OriginalResourceCounts.Keys.ToArray();
+                var originalNames = await _originalService.GetNamesByIds(originalIds);
+                var originalResourceTextAndCounts = originalIds.Select((a, i) =>
+                    new DashboardStatistics.PropertyAndCount(ResourceProperty.Original, null, originalNames[i],
+                        top30OriginalResourceCounts[a])).ToList();
+                propertyCountList.AddRange(originalResourceTextAndCounts);
+
+                #endregion
+
+                #region Custom Properties
+
+                // key - value - count
+                var customPropertyResourceCounts = (await _customResourcePropertyService.GetAll(null, false))
+                    .GroupBy(a => a.Key).SelectMany(s => s.GroupBy(b => b.Value).Select(c =>
+                        (Key: s.Key, Value: c.Key, Count: c.Count(b => allEntitiesMap.ContainsKey(b.ResourceId)))))
+                    .OrderByDescending(a => a.Count).ToList();
+                var top30CustomPropertyResourceCounts = customPropertyResourceCounts.Take(maxPropertyCount).ToList();
+                var customPropertyResourceTextAndCounts = top30CustomPropertyResourceCounts.Select((a, i) =>
+                        new DashboardStatistics.PropertyAndCount(ResourceProperty.CustomProperty, a.Key, a.Value,
+                            a.Count))
+                    .ToList();
+                propertyCountList.AddRange(customPropertyResourceTextAndCounts);
+
+
+                statistics.PropertyResourceCounts =
+                    propertyCountList.OrderByDescending(d => d.Count).Take(maxPropertyCount).Where(a => a.Count > 0)
+                        .ToList();
+
+                #endregion
+            }
+        }
+
+        public async Task<SingletonResponse<(string Path, byte[] Data)>> SaveCover(int id,
+            CoverSaveLocation? saveLocation, bool overwrite, Func<byte[]> getImageData, CancellationToken ct)
+        {
+            var resource = await GetByKey(id, ResourceAdditionalItem.None, true);
+            if (resource == null)
+            {
+                return SingletonResponseBuilder<(string Path, byte[] Data)>.BuildBadRequest(
+                    _localizer.Resource_NotFound(id));
+            }
+
+            var saveTarget = saveLocation ??
+                             _optionsManager.Value.CoverOptions.SaveLocation ?? (resource.IsSingleFile
+                                 ? CoverSaveLocation.TempDirectory
+                                 : CoverSaveLocation.ResourceDirectory);
+
+            if (resource.IsSingleFile && saveTarget == CoverSaveLocation.ResourceDirectory)
+            {
+                return SingletonResponseBuilder<(string Path, byte[] Data)>.BuildBadRequest(
+                    _localizer.Resource_CoverMustBeInDirectory());
+            }
+
+            var finalOverwrite = _optionsManager.Value.CoverOptions.Overwrite ?? overwrite;
+
+            if (saveTarget == CoverSaveLocation.ResourceDirectory)
+            {
+                if (Directory.Exists(resource.RawFullname))
+                {
+                    var coverFileFullnamePrefix = Path.Combine(resource.RawFullname, "cover");
+                    var currentCoverFileFullname = Directory.GetFiles(resource.RawFullname)
+                        .FirstOrDefault(t => t.StartsWith(coverFileFullnamePrefix));
+                    if (currentCoverFileFullname != null)
+                    {
+                        if (!finalOverwrite)
+                        {
+                            return SingletonResponseBuilder<(string Path, byte[] Data)>.Build(ResponseCode.Conflict,
+                                currentCoverFileFullname);
+                        }
+
+                        FileUtils.Delete(currentCoverFileFullname, false, true);
+                    }
+
+                    var bytes = getImageData();
+                    var newCoverFileFullname = $"{coverFileFullnamePrefix}.png";
+                    await FileUtils.Save(newCoverFileFullname, bytes);
+                    return new SingletonResponse<(string Path, byte[] Data)>((newCoverFileFullname, bytes));
+                }
+                else
+                {
+                    return SingletonResponseBuilder<(string Path, byte[] Data)>.BuildBadRequest(
+                        _localizer.PathIsNotFound(resource.RawFullname));
+                }
+            }
+            else
+            {
+                var currentPath = await _tempFileManager.GetCover(id);
+                if (!string.IsNullOrEmpty(currentPath))
+                {
+                    if (!finalOverwrite)
+                    {
+                        return SingletonResponseBuilder<(string Path, byte[] Data)>.Build(ResponseCode.Conflict,
+                            currentPath);
+                    }
+                }
+
+                var bytes = getImageData();
+                var path = await _tempFileManager.SaveCover(id, new MemoryStream(bytes), ct);
+                return new SingletonResponse<(string Path, byte[] Data)>((path, bytes));
+            }
         }
     }
 }

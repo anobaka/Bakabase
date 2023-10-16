@@ -20,6 +20,7 @@ import BasicCategoryComponentSelector from '@/components/BasicCategoryComponentS
 import EnhancerSelector from '@/components/EnhancerSelector';
 import BApi from '@/sdk/BApi';
 import ClickableIcon from '@/components/ClickableIcon';
+import SimpleLabel from '@/components/SimpleLabel';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -275,7 +276,11 @@ export default (({
         </div>
         <Balloon.Tooltip
           trigger={(
-            <Badge className={'count'} count={libraries.reduce((s, t) => s + t.resourceCount, 0)} overflowCount={9999999} />
+            <Badge
+              className={'count'}
+              count={libraries.reduce((s, t) => s + t.resourceCount, 0)}
+              overflowCount={9999999}
+            />
           )}
           triggerType={'hover'}
           align={'t'}
@@ -349,20 +354,19 @@ export default (({
             // console.log(components, comp);
             return (
               <div className={'component setting'} key={type.value}>
-                <IceLabel
-                  inverse={false}
+                <SimpleLabel
                   status={'default'}
                 >{i18n.t(type.label)}
                   <Balloon.Tooltip
                     triggerType={'hover'}
                     align={'t'}
                     trigger={(
-                      <CustomIcon type={'question-circle'} size={'small'} />
+                      <CustomIcon type={'question-circle'} size={'xs'} />
                     )}
                   >
                     {i18n.t(ComponentTips[type.value])}
                   </Balloon.Tooltip>
-                </IceLabel>
+                </SimpleLabel>
                 &emsp;
                 {comp ? (
                   <span
@@ -390,7 +394,7 @@ export default (({
             );
           })}
         <div className={'setting'}>
-          <IceLabel inverse={false} status={'default'}>{i18n.t('Priority on cover selection')}</IceLabel>
+          <SimpleLabel status={'default'}>{i18n.t('Priority on cover selection')}</SimpleLabel>
           &emsp;
           <span className="editable">
             <span
@@ -418,14 +422,14 @@ export default (({
           </span>
         </div>
         <div className={'setting'}>
-          <IceLabel inverse={false} status={'default'}>
+          <SimpleLabel status={'default'}>
             {i18n.t('Generate nfo')}
             <Balloon.Tooltip
-              trigger={<CustomIcon type={'question-circle'} size={'small'} />}
+              trigger={<CustomIcon type={'question-circle'} size={'xs'} />}
               align={'t'}
             >{i18n.t('You can share tags and rate of same physical filesystem item from different app instances by enabling this option, but it may cause poor performance of tag-related operations.')}
             </Balloon.Tooltip>
-          </IceLabel>
+          </SimpleLabel>
           &emsp;
           <Checkbox
             checked={category.generateNfo}
@@ -476,17 +480,16 @@ export default (({
             renderEnhancersSelector();
           }}
         >
-          <div className={'enhancer'}>
-            {enhancers.map((e, i) => (
-              <IceLabel
+          {enhancers.map((e, i) => (
+            <div className={'enhancer'} key={e.id}>
+              <SimpleLabel
                 key={i}
-                inverse={false}
                 style={{ margin: '0 5px 2px 0' }}
                 status={'default'}
               >{i18n.t(e.descriptor?.name)}
-              </IceLabel>
-            ))}
-          </div>
+              </SimpleLabel>
+            </div>
+          ))}
         </div>
       </div>
       <div className="libraries-line block">
@@ -555,7 +558,7 @@ export default (({
           </div>
           <div className="path-configuration header">
             <div className="path">{i18n.t('Root path')}</div>
-            <div className="filter">{i18n.t('Filter')}</div>
+            <div className="filter">{i18n.t('Resource discovery')}</div>
             <div className="tags">{i18n.t('Fixed tags')}</div>
             <div className="tags">{i18n.t('Additional properties')}</div>
           </div>

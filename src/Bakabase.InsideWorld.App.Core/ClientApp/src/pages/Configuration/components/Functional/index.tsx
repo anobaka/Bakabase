@@ -9,7 +9,7 @@ import {
   AdditionalCoverDiscoveringSource,
   additionalCoverDiscoveringSources, CloseBehavior,
   closeBehaviors,
-  CookieValidatorTarget,
+  CookieValidatorTarget, coverSaveLocations,
   startupPages,
 } from '@/sdk/constants';
 import ConfirmationButton from '@/components/ConfirmationButton';
@@ -76,6 +76,56 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
               );
             })}
           </Checkbox.Group>
+        );
+      },
+    },
+    {
+      label: 'Cover save location',
+      renderCell: () => {
+        return (
+          <Radio.Group
+            value={resourceOptions?.coverOptions?.saveLocation ?? undefined}
+            onChange={(v) => {
+              applyPatches(PatchResourceOptions, {
+                coverOptions: {
+                  ...(resourceOptions?.coverOptions ?? {}),
+                  saveLocation: v,
+                },
+              });
+            }}
+            dataSource={[
+              { label: t('Prompt'), value: undefined },
+              ...coverSaveLocations.map(c => ({
+                label: t(c.label),
+                value: c.value,
+              })),
+            ]}
+          />
+        );
+      },
+    },
+    {
+      label: 'Overwrite existed cover',
+      tip: 'Overwrite existed cover when save a new cover',
+      renderCell: () => {
+        return (
+          // @ts-ignore
+          <Radio.Group
+            value={resourceOptions?.coverOptions?.overwrite ?? undefined}
+            onChange={(v) => {
+              applyPatches(PatchResourceOptions, {
+                coverOptions: {
+                  ...(resourceOptions?.coverOptions ?? {}),
+                  overwrite: v,
+                },
+              });
+            }}
+            dataSource={[
+              { label: t('Prompt'), value: undefined },
+              { label: t('Yes'), value: true },
+              { label: t('No'), value: false },
+            ]}
+          />
         );
       },
     },
@@ -231,9 +281,9 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
                   ValidateCookie({
                     cookie: tmpExHentaiOptions.cookie,
                     target: CookieValidatorTarget.ExHentai,
-                  }).invoke((t) => {
-                    if (t.code) {
-                      Message.error(`${t('Invalid cookie')}:${t.message}`);
+                  }).invoke((r) => {
+                    if (r.code) {
+                      Message.error(`${t('Invalid cookie')}:${r.message}`);
                     } else {
                       Message.success(t('Cookie is good'));
                     }

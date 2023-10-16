@@ -107,9 +107,9 @@ body {
   --tag-closable-bordered-border-color-hover: var(--theme-button-normal-border-color-hover);
   --tag-closable-bordered-tail-color-hover: var(--theme-text);
   --tag-closable-bordered-border-color: var(--theme-button-normal-border-color);
-  --tag-closable-primary-fill-bg-color: var(--theme-label-primary-background);
-  --tag-closable-primary-fill-bg-color-hover: var(--theme-tag-primary-background-hover);
-  --tag-closable-primary-fill-text-color: var(--theme-text-primary);
+  --tag-closable-primary-fill-bg-color: var(--theme-block-background);
+  --tag-closable-primary-fill-bg-color-hover: var(--theme-block-background-accent);
+  --tag-closable-primary-fill-text-color: var(--theme-text-subtle);
   --tag-closable-primary-fill-text-color-hover: var(--theme-text);
   --tag-fill-tail-color-hover: var(--theme-text);
   --tag-checkable-normal-text-color: var(--btn-pure-normal-color);
@@ -119,13 +119,13 @@ body {
   --tag-bordered-text-color-hover: var(--theme-text);
   --tag-bordered-text-color: var(--theme-text-subtle);
 
-  .ice-label {
-    &.ice-label-default {
-      &.ice-label-no-inverse {
-        background-color: var(--theme-label-primary-background) !important;
-      }
-    }
-  }
+  //.ice-label {
+  //  &.ice-label-default {
+  //    &.ice-label-no-inverse {
+  //      background-color: var(--theme-label-primary-background) !important;
+  //    }
+  //  }
+  //}
 
   --menu-background: var(--theme-menu-background-color);
   --menu-background-hover: var(--theme-hover-base);

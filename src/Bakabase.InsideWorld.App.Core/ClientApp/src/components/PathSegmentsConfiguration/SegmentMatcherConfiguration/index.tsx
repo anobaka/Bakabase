@@ -1,4 +1,4 @@
-import { Balloon, Button, Input, Radio, Tag } from '@alifd/next';
+import { Balloon, Button, Input, Message, Radio, Tag } from '@alifd/next';
 import React, { useState } from 'react';
 import './index.scss';
 import { useUpdateEffect } from 'react-use';
@@ -9,6 +9,7 @@ import { ResourceMatcherValueType } from '@/components/PathSegmentsConfiguration
 import { getResultFromExecAll } from '@/components/PathSegmentsConfiguration/utils';
 import CustomIcon from '@/components/CustomIcon';
 import { ResourceProperty } from '@/sdk/constants';
+import { splitPathIntoSegments } from '@/components/utils';
 
 interface IValue {
   layer?: number;
@@ -73,6 +74,8 @@ const SegmentMatcherConfiguration = (props: ISegmentMatcherConfiguration) => {
     error?: string;
     groups?: string[];
     text?: string;
+    tip?: string;
+    index?: number;
   }>();
 
   console.log(props);
@@ -141,16 +144,48 @@ const SegmentMatcherConfiguration = (props: ISegmentMatcherConfiguration) => {
             {t('Test failed, please check your regex')}
           </div>
         );
+      } else {
+        let tip: string | undefined;
+        if (testResult.groups && testResult.groups.length > 0) {
+          tip = t('Capturing groups are used, only matched text will be applied');
+        } else {
+          if (testResult.text != undefined && testResult.text.length > 0) {
+            tip = t('Whole segment will be applied if capturing group is not used');
+          }
+        }
+
+        let values: string[] | undefined;
+
+        if (testResult.groups != undefined) {
+          values = testResult.groups;
+        } else {
+            const sub = modesData.regex!.text.substring(0, testResult.index! + testResult.text!.length);
+            const segments = splitPathIntoSegments(sub);
+            const match = splitPathIntoSegments(modesData.regex!.text)[segments.length - 1];
+            values = [match];
+        }
+
+        return (
+          <div className="test-result">
+            {tip && (
+              <div className={'tip'}>
+                <CustomIcon type={'question-circle'} size={'small'} />
+                {tip}
+              </div>
+            )}
+            <div className="values">
+              <div className="label">
+                {t('Match result')}
+              </div>
+              {(values)!.map(v => (
+                <IceLabel inverse={false} status={'default'}>
+                  {v}
+                </IceLabel>
+              ))}
+            </div>
+          </div>
+        );
       }
-      return (
-        <div className="test-result values">
-          {(testResult.groups ?? [testResult.text])!.map(v => (
-            <IceLabel inverse={false} status={'default'}>
-              {v}
-            </IceLabel>
-          ))}
-        </div>
-      );
     }
     return;
   };

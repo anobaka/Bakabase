@@ -203,7 +203,7 @@ class RootEntry extends Entry {
 
   async _stop() {
     if (this._fsWatcher) {
-      console.trace();
+      // console.trace();
       clearInterval(this._fsWatcher);
       await BApi.file.stopWatchingChangesInFileProcessorWorkspace();
     }

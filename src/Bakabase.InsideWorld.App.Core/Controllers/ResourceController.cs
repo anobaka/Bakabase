@@ -18,15 +18,18 @@ using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
+using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using ElectronNET.API.Entities;
 using Microsoft.AspNetCore.Hosting;
@@ -34,6 +37,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Internal;
+using Org.BouncyCastle.Utilities;
 using SharpCompress.IO;
 using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
@@ -53,19 +57,27 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly MediaLibraryService _mediaLibraryService;
         private readonly ResourceTaskManager _resourceTaskManager;
         private readonly BackgroundTaskManager _taskManager;
-        private static readonly object PretreatmentCacheLock = new object();
-        private static ConcurrentDictionary<string, string> _pretreatmentCache;
-        private static string _pretreatmentCacheVersion;
         private readonly FavoritesResourceMappingService _favoritesResourceMappingService;
         private readonly IWebHostEnvironment _env;
         private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
         private readonly InsideWorldLocalizer _localizer;
         private readonly FFMpegHelper _ffMpegHelper;
         private readonly TempFileManager _tempFileManager;
+        private readonly IBOptions<ResourceOptions> _resourceOptions;
 
-        private static readonly MemoryCache CoverCache = new MemoryCache("ResourceCover");
+        private static readonly MemoryCache CoverCache;
 
-        private static readonly CacheItemPolicy _coverCacheItemPolicy = new CacheItemPolicy
+        static ResourceController()
+        {
+            var config = new NameValueCollection
+            {
+                {"physicalMemoryLimitPercentage", "10"},
+                {"cacheMemoryLimitMegabytes", "2000"}
+            };
+            CoverCache = new MemoryCache("ResourceCover", config);
+        }
+
+        private static readonly CacheItemPolicy CoverCacheItemPolicy = new CacheItemPolicy
         {
             SlidingExpiration = TimeSpan.FromMinutes(15)
         };
@@ -77,7 +89,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager,
             FavoritesResourceMappingService favoritesResourceMappingService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            FFMpegHelper ffMpegHelper, TempFileManager tempFileManager)
+            FFMpegHelper ffMpegHelper, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions)
         {
             _service = service;
             _resourceTagMappingService = resourceTagMappingService;
@@ -93,6 +105,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _localizer = localizer;
             _ffMpegHelper = ffMpegHelper;
             _tempFileManager = tempFileManager;
+            _resourceOptions = resourceOptions;
         }
 
         [HttpPost("search")]
@@ -179,7 +192,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 }
 
                 var data = ms.ToArray();
-                CoverCache.Set(id.ToString(), data, _coverCacheItemPolicy);
+                CoverCache.Set(id.ToString(), data, CoverCacheItemPolicy);
                 return File(data, MimeTypes.GetMimeType(ext));
             }
 
@@ -226,74 +239,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         public async Task<BaseResponse> DeleteCustomProperty(int id, string propertyKey)
         {
             return await _customResourcePropertyService.RemoveAll(t => t.ResourceId == id && t.Key == propertyKey);
-        }
-
-        [HttpGet("existence")]
-        [SwaggerOperation(OperationId = "CheckResourceExistence")]
-        public async Task<SingletonResponse<ResourceExistenceResult>> CheckExistence(string name)
-        {
-            lock (PretreatmentCacheLock)
-            {
-                if (_pretreatmentCacheVersion != SpecialTextService.Version)
-                {
-                    _pretreatmentCacheVersion = SpecialTextService.Version;
-                    _pretreatmentCache = new();
-                }
-            }
-
-            var cleanName = await _specialTextService.Pretreatment(name);
-            var allResources = (await _service.GetAllEntities(null, false)).GroupBy(t => t.RawName)
-                .ToDictionary(t => t.Key, t => t.ToList());
-            var names = allResources.ToDictionary(t => t.Key, t => t.Value.Select(r => r.RawFullname).ToArray());
-            var familiarNames = new List<(string RawFullname, decimal Diff)>();
-            foreach (var n in names.Keys)
-            {
-                if (HttpContext.RequestAborted.IsCancellationRequested)
-                {
-                    return null;
-                }
-
-                if (!_pretreatmentCache.TryGetValue(n, out var cn))
-                {
-                    _pretreatmentCache[n] = cn = await _specialTextService.Pretreatment(n);
-                }
-
-                if (cn == cleanName)
-                {
-                    return new SingletonResponse<ResourceExistenceResult>(new ResourceExistenceResult
-                    {
-                        Existence = ResourceExistence.Exist,
-                        Resources = names[n]
-                    });
-                }
-
-                var maxLength = Math.Max(cleanName.Length, cn.Length);
-                var lengthDis = (decimal) Math.Abs(cleanName.Length - cn.Length);
-                var lengthDisRate = lengthDis / maxLength;
-                const decimal familiarDiffThreshold = 0.2m;
-
-                if (lengthDisRate <= familiarDiffThreshold)
-                {
-                    var dis = cn.GetLevenshteinDistance(cleanName);
-                    var rate = (decimal) dis / maxLength;
-                    if (rate <= familiarDiffThreshold)
-                    {
-                        familiarNames.AddRange(names[n].Select(t => (t, rate)));
-                    }
-                }
-            }
-
-            if (familiarNames.Any())
-            {
-                return new SingletonResponse<ResourceExistenceResult>(new ResourceExistenceResult
-                {
-                    Existence = ResourceExistence.Maybe,
-                    Resources = familiarNames.OrderBy(t => t.Diff).Take(15).Select(t => t.RawFullname).ToArray()
-                });
-            }
-
-            return new SingletonResponse<ResourceExistenceResult>(new ResourceExistenceResult
-                {Existence = ResourceExistence.New});
         }
 
         [HttpPut("move")]
@@ -384,53 +329,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "SaveCover")]
         public async Task<BaseResponse> SaveCover(int id, [FromBody] CoverSaveRequestModel model)
         {
-            var resource = await _service.GetByKey(id, ResourceAdditionalItem.None, true);
-            if (resource == null)
-            {
-                return BaseResponseBuilder.BuildBadRequest(_localizer.Resource_NotFound(id));
-            }
-
-            if (resource.IsSingleFile && model.SaveToResourceDirectory)
-            {
-                return BaseResponseBuilder.BuildBadRequest(_localizer.Resource_CoverMustBeInDirectory());
-            }
-
-            if (model.SaveToResourceDirectory)
-            {
-                if (Directory.Exists(resource.RawFullname))
-                {
-                    var coverFileFullnamePrefix = Path.Combine(resource.RawFullname, "cover");
-                    var currentCoverFileFullname = Directory.GetFiles(resource.RawFullname)
-                        .FirstOrDefault(t => t.StartsWith(coverFileFullnamePrefix));
-                    if (currentCoverFileFullname != null)
-                    {
-                        if (!model.Overwrite)
-                        {
-                            return BaseResponseBuilder.Conflict;
-                        }
-
-                        FileUtils.Delete(currentCoverFileFullname, false, true);
-                    }
-
-                    var data = model.Base64Image.Split(',')[1];
-                    var bytes = Convert.FromBase64String(data);
-                    var newCoverFileFullname = $"{coverFileFullnamePrefix}.png";
-                    await FileUtils.Save(newCoverFileFullname, bytes);
-                    CoverCache.Set(id.ToString(), bytes, _coverCacheItemPolicy);
-                    return BaseResponseBuilder.Ok;
-                }
-                else
-                {
-                    return BaseResponseBuilder.BuildBadRequest(_localizer.PathIsNotFound(resource.RawFullname));
-                }
-            }
-            else
+            var rsp = await _service.SaveCover(id, model.SaveLocation, model.Overwrite, () =>
             {
                 var data = model.Base64Image.Split(',')[1];
                 var bytes = Convert.FromBase64String(data);
-                var path = await _tempFileManager.SaveCover(id, new MemoryStream(bytes), HttpContext.RequestAborted);
-                return BaseResponseBuilder.Ok;
+                return bytes;
+            }, HttpContext.RequestAborted);
+            if (rsp.Code == (int) ResponseCode.Success)
+            {
+                CoverCache.Set(id.ToString(), rsp.Data.Data, CoverCacheItemPolicy);
             }
+
+            return rsp;
         }
 
         [HttpGet("favorites-mappings")]

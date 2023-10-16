@@ -392,5 +392,14 @@ namespace Bakabase.InsideWorld.Business.Resources {
                 return ResourceManager.GetString("TypeIsNotFound", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} is not set.
+        /// </summary>
+        internal static string ValueIsNotSet {
+            get {
+                return ResourceManager.GetString("ValueIsNotSet", resourceCulture);
+            }
+        }
     }
 }

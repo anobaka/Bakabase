@@ -9,16 +9,19 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Resources;
+using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Cryptography;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -43,9 +46,12 @@ namespace Bakabase.InsideWorld.Business.Services
         protected TagService TagService => GetRequiredService<TagService>();
         protected LogService LogService => GetRequiredService<LogService>();
         protected BackgroundTaskHelper BackgroundTaskHelper => GetRequiredService<BackgroundTaskHelper>();
+        protected TempFileManager TempFileManager => GetRequiredService<TempFileManager>();
 
         protected CustomResourcePropertyService CustomResourcePropertyService =>
             GetRequiredService<CustomResourcePropertyService>();
+
+        protected IBOptions<ResourceOptions> ResourceOptions => GetRequiredService<IBOptions<ResourceOptions>>();
 
         protected BackgroundTaskManager BackgroundTaskManager => GetRequiredService<BackgroundTaskManager>();
         protected ComponentService ComponentService => GetRequiredService<ComponentService>();
@@ -264,7 +270,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 var tasks = new List<Task>();
                 var records = new ConcurrentBag<EnhancementRecord>();
                 var enhancerEnhancements = new ConcurrentDictionary<IEnhancer, Enhancement[]>();
-                var resource = await ResourceService.GetByKey(rId, ResourceAdditionalItem.All, true);
+                var resource = (await ResourceService.GetByKey(rId, ResourceAdditionalItem.All, true))!;
                 foreach (var enhancer in et.OrderedEnhancers)
                 {
                     var cd = et.EnhancerDescriptors[enhancer];
@@ -474,15 +480,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                 {
                                     case ReservedResourceFileType.Cover:
                                     {
-                                        var file = files.FirstOrDefault();
-                                        var fullname = resource.IsSingleFile
-                                            ? Path.Combine(resource.Directory, file.RelativePath)
-                                            : Path.Combine(resource.RawFullname, file.RelativePath);
-                                        if (!File.Exists(fullname))
-                                        {
-                                            await File.WriteAllBytesAsync(fullname, file.Data);
-                                        }
-
+                                        await ResourceService.SaveCover(resource.Id, null, false,
+                                            () => files.FirstOrDefault()!.Data, new CancellationToken());
                                         break;
                                     }
                                     default:

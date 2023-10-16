@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
@@ -11,6 +12,6 @@ namespace Bakabase.InsideWorld.Models.RequestModels
     {
         [Required] public string Base64Image { get; set; } = null!;
         public bool Overwrite { get; set; }
-        public bool SaveToResourceDirectory { get; set; }
+        public CoverSaveLocation? SaveLocation { get; set; }
     }
 }

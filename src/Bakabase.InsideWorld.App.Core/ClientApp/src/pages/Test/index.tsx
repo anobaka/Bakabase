@@ -3,6 +3,7 @@ import './index.scss';
 
 import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf/utils';
 import MediaPreviewer from '@/components/MediaPreviewer';
+import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelector from '@/components/FileSystemSelector';
 
 const schema: RJSFSchema = {
@@ -61,30 +62,40 @@ export default () => {
 
   return (
     <div className={'test-page'}>
-
-      <FileSystemSelector targetType={'folder'} />
-
-      {/* <div */}
-      {/*   className={'media-previewer-container'} */}
-      {/*   onMouseOver={() => { */}
-      {/*     if (!hoverTimerRef.current) { */}
-      {/*       hoverTimerRef.current = setTimeout(() => { */}
-      {/*         setPreviewerVisible(true); */}
-      {/*       }, 1000); */}
-      {/*     } */}
-      {/*   }} */}
-      {/*   onMouseLeave={() => { */}
-      {/*     clearTimeout(hoverTimerRef.current); */}
-      {/*     hoverTimerRef.current = undefined; */}
-      {/*     if (previewerVisible) { */}
-      {/*       setPreviewerVisible(false); */}
-      {/*     } */}
-      {/*   }} */}
-      {/* > */}
-      {/*   {previewerVisible && ( */}
-      {/*     <MediaPreviewer resourceId={2501} /> */}
-      {/*   )} */}
-      {/* </div> */}
+      {['dark', 'light'].map(t => {
+        return (
+          <div className={`iw-theme-${t}`} style={{ background: 'var(--theme-body-background)', padding: 10 }}>
+            {['default', 'primary', 'success', 'warning', 'info', 'danger'].map(s => {
+              return (
+                <SimpleLabel status={s}>
+                  {s}
+                </SimpleLabel>
+              );
+            })}
+          </div>
+        );
+      })}
+      <div
+        className={'media-previewer-container'}
+        onMouseOver={() => {
+          if (!hoverTimerRef.current) {
+            hoverTimerRef.current = setTimeout(() => {
+              setPreviewerVisible(true);
+            }, 1000);
+          }
+        }}
+        onMouseLeave={() => {
+          clearTimeout(hoverTimerRef.current);
+          hoverTimerRef.current = undefined;
+          if (previewerVisible) {
+            setPreviewerVisible(false);
+          }
+        }}
+      >
+        {previewerVisible && (
+          <MediaPreviewer resourceId={2501} />
+        )}
+      </div>
     </div>
   );
 };

@@ -104,7 +104,7 @@
     "start": "ice start --port 4444",
     "build": "ice build",
     "lint": "eslint . --ext '.js,.jsx' --fix",
-    "gen-sdk": "swagger-typescript-api -p http://localhost:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk --unwrap-response-data && node ./src/sdk/api-generator.js",
+    "gen-sdk": "swagger-typescript-api --union-enums -p http://localhost:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk --unwrap-response-data && node ./src/sdk/api-generator.js",
     "postinstall": "patch-package"
   },
   "title": "bxb"

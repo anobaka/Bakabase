@@ -5,10 +5,12 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Http;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Logging;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -26,10 +28,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly TagGroupService _tagGroupService;
         private readonly ThirdPartyHttpRequestLogger _thirdPartyHttpRequestLogger;
         private readonly ThirdPartyService _thirdPartyService;
+        private readonly IBOptions<FileSystemOptions> _fsOptions;
+        private readonly AliasService _aliasService;
+        private readonly SpecialTextService _specialTextService;
+        private readonly ComponentService _componentService;
+        private readonly ComponentOptionsService _componentOptionsService;
+        private readonly PasswordService _passwordService;
 
         public DashboardController(ResourceService resourceService, DownloadTaskService downloadTaskService,
             ResourceTagMappingService resourceTagMappingService, TagService tagService, TagGroupService tagGroupService,
-            ThirdPartyHttpRequestLogger thirdPartyHttpRequestLogger, ThirdPartyService thirdPartyService)
+            ThirdPartyHttpRequestLogger thirdPartyHttpRequestLogger, ThirdPartyService thirdPartyService,
+            IBOptions<FileSystemOptions> fsOptions, AliasService aliasService, SpecialTextService specialTextService,
+            ComponentService componentService, PasswordService passwordService, ComponentOptionsService componentOptionsService)
         {
             _resourceService = resourceService;
             _downloadTaskService = downloadTaskService;
@@ -38,6 +48,12 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _tagGroupService = tagGroupService;
             _thirdPartyHttpRequestLogger = thirdPartyHttpRequestLogger;
             _thirdPartyService = thirdPartyService;
+            _fsOptions = fsOptions;
+            _aliasService = aliasService;
+            _specialTextService = specialTextService;
+            _componentService = componentService;
+            _passwordService = passwordService;
+            _componentOptionsService = componentOptionsService;
         }
 
         [HttpGet]
@@ -46,56 +62,45 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             var ds = new DashboardStatistics();
 
+            // Resource & Properties
             await _resourceService.PopulateStatistics(ds);
 
-            var allDownloadTasks = await _downloadTaskService.GetAllDto();
-            ds.DownloadTaskStatusCounts = allDownloadTasks.GroupBy(a => a.Status).Select(a =>
-                new DashboardStatistics.NameAndCount {Count = a.Count(), Name = a.Key.ToString()}).ToArray();
-
-            var allTagMappings = await _resourceTagMappingService.GetAll(null, false);
-            var top10TagMappings = allTagMappings.GroupBy(a => a.TagId).OrderByDescending(a => a.Count()).Take(10)
-                .ToDictionary(a => a.Key, a => a.Count());
-            var tagIds = top10TagMappings.Keys.ToArray();
-            var tags = await _tagService.GetByKeys(tagIds, TagAdditionalItem.PreferredAlias);
-            var groupIds = tags.Select(a => a.GroupId).ToHashSet().ToArray();
-            var groups = await _tagGroupService.GetByKeys(groupIds, TagGroupAdditionalItem.PreferredAlias);
-            var groupsMap = groups.ToDictionary(a => a.Id, a => a);
-            foreach (var tag in tags)
-            {
-                if (groupsMap.TryGetValue(tag.GroupId, out var g))
-                {
-                    tag.GroupName = g.Name;
-                    tag.GroupNamePreferredAlias = g.PreferredAlias;
-                }
-            }
-
-            ds.Top10TagCounts =
-                tags.Select(a => new DashboardStatistics.NameAndCount
-                {
-                    Name = $"{a.GroupNamePreferredAlias ?? a.GroupName}:{a.PreferredAlias ?? a.Name}",
-                    Count = top10TagMappings.TryGetValue(a.Id, out var count) ? count : 0
-                }).Where(a => a.Count > 0).OrderByDescending(a => a.Count).ToArray();
+            // Downloader
+            var allDownloadTasks = await _downloadTaskService.GetAll();
+            ds.DownloaderDataCounts = allDownloadTasks.GroupBy(a => a.ThirdPartyId).Select(a =>
+                new DashboardStatistics.DownloaderTaskCount(a.Key,
+                    a.GroupBy(b => b.Status).ToDictionary(b => (int) b.Key, b => b.Count()))).ToList();
 
             // Third party
-            ds.ThirdPartyRequestCounts = _thirdPartyService.GetAllThirdPartyRequestStatistics();
+            var requests = _thirdPartyService.GetAllThirdPartyRequestStatistics();
+            ds.ThirdPartyRequestCounts = requests.SelectMany(a =>
+                a.Counts.Select(b => new DashboardStatistics.ThirdPartyRequestCount(a.Id, b.Key, b.Value))).ToList();
 
-            // var rand = new Random(DateTime.Now.Millisecond);
-            // ds.ThirdPartyRequestCounts = new[]
-            //         {ReservedThirdPartyIds.Bilibili, ReservedThirdPartyIds.ExHentai, ReservedThirdPartyIds.Pixiv}
-            //     .Select(a =>
-            //     {
-            //         var dict = new Dictionary<int, int>();
-            //         foreach (var r in SpecificEnumUtils<ThirdPartyRequestResultType>.Values)
-            //         {
-            //             dict[(int) r] = rand.Next(1000);
-            //         }
-            //
-            //         return new DashboardStatistics.ThirdPartyRequestCountsModel
-            //         {
-            //             Id = a,
-            //             Counts = dict
-            //         };
-            //     }).ToArray();
+            // File Mover
+            var fileMoverTargets = _fsOptions.Value.FileMover?.Targets;
+            if (fileMoverTargets != null)
+            {
+                ds.FileMover = new DashboardStatistics.FileMoverInfo(fileMoverTargets.Sum(t => t.Sources.Count),
+                    fileMoverTargets.Count);
+            }
+
+            // Alias, Special Text
+            var aliasCount = await _aliasService.Count();
+            var stCount = await _specialTextService.Count();
+            ds.OtherCounts.Add(new List<DashboardStatistics.TextAndCount>
+            {
+                new("Aliases", aliasCount),
+                new("SpecialTexts", stCount)
+            });
+            // Players, PlayableFileSelectors, Enhancers
+            var descriptors = await _componentOptionsService.GetAll();
+            ds.OtherCounts.Add(descriptors.GroupBy(a => a.ComponentType)
+                .Select(d => new DashboardStatistics.TextAndCount(d.Key.ToString(), d.Count())).ToList());
+            // Passwords
+            ds.OtherCounts.Add(new List<DashboardStatistics.TextAndCount>
+            {
+                new("Passwords", await _passwordService.Count(null))
+            });
 
             return new SingletonResponse<DashboardStatistics>(ds);
         }

@@ -15,7 +15,14 @@ import {
 } from '@/sdk/apis';
 import { buildLogger, splitPathIntoSegments, useTraceUpdate, uuidv4 } from '@/components/utils';
 import './index.scss';
-import { PlaylistItemType, ResourceLanguage, ResourceTaskOperationOnComplete, ResourceTaskType } from '@/sdk/constants';
+import type {
+  CoverSaveTarget } from '@/sdk/constants';
+import {
+  PlaylistItemType,
+  ResourceLanguage,
+  ResourceTaskOperationOnComplete,
+  ResourceTaskType,
+} from '@/sdk/constants';
 import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
 import store from '@/store';
 import { PlaylistCollection } from '@/components/Playlist';
@@ -68,14 +75,13 @@ const Resource = React.forwardRef((props: Props, ref) => {
     ct = new AbortController().signal,
   } = props;
 
-  const [previewerVisible, setPreviewerVisible] = useState(false);
-  const previewerHoverTimerRef = useRef<any>();
-
   const { t } = useTranslation();
   const log = buildLogger(`Resource:${resource.id}|${resource.rawFullname}`);
 
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const [playableFiles, setPlayableFiles] = useState<string[]>([]);
+
+  const resourceOptions = store.useModelState('resourceOptions');
 
   useImperativeHandle(ref, (): IResourceHandler => {
     return {
@@ -346,7 +352,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
           {resource.id > 0 ? (
             <>
               <div className="opt" title={t('Enhancements')}>
-                <CustomIcon
+                <ClickableIcon
+                  colorType={'normal'}
                   type={'flashlight'}
                   onClick={() => {
                     BApi.resource.getResourceEnhancementRecords(resource.id)
@@ -360,17 +367,20 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 />
               </div>
               <div className={'opt'} title={t('Preview')}>
-                <CustomIcon
+                <ClickableIcon
+                  colorType={'normal'}
                   type={'eye'}
                   onClick={() => {
-                    ShowResourceMediaPlayer(resource.id, resource.rawFullname, (base64String: string, saveToResourceDirectory: boolean) => {
-                      coverRef.current?.save(base64String, false, saveToResourceDirectory);
-                    }, t, resource.isSingleFile);
+                    ShowResourceMediaPlayer(resource.id, resource.rawFullname, (base64String: string, saveTarget?: CoverSaveTarget) => {
+                      coverRef.current?.save(base64String, saveTarget);
+                      // @ts-ignore
+                    }, t, resource.isSingleFile, resourceOptions.coverOptions?.target);
                   }}
                 />
               </div>
               <div className="opt" title={t('Open folder')}>
-                <CustomIcon
+                <ClickableIcon
+                  colorType={'normal'}
                   type={'folder-open'}
                   onClick={() => open()}
                 />
@@ -394,13 +404,20 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   });
                 }}
               >
-                <CustomIcon type={'move'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'move'}
+                  size={'small'}
+                />
               </div>
               <div className={'opt'} title={t('Search')}>
                 <Dropdown
                   autoFocus={false}
                   trigger={
-                    <CustomIcon type={'search'} />
+                    <ClickableIcon
+                      colorType={'normal'}
+                      type={'search'}
+                    />
                   }
                   triggerType={'click'}
                 >
@@ -436,7 +453,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   });
                 }}
               >
-                <CustomIcon type={'star'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'star'}
+                  size={'small'}
+                />
               </div>
               <div
                 className="opt"
@@ -457,7 +478,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   });
                 }}
               >
-                <CustomIcon type={'playlistadd'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'playlistadd'}
+                  size={'small'}
+                />
               </div>
               <div
                 className="opt"
@@ -485,7 +510,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   });
                 }}
               >
-                <CustomIcon type={'tags'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'tags'}
+                  size={'small'}
+                />
               </div>
 
               <div
@@ -496,12 +525,17 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   await coverRef.current?.reload(new AbortController().signal);
                 }}
               >
-                <CustomIcon type={'image-redo'} size={'small'} />
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'image-redo'}
+                  size={'small'}
+                />
               </div>
             </>
           ) : (
             <div className="opt" title={t('Open folder')}>
-              <CustomIcon
+              <ClickableIcon
+                colorType={'normal'}
                 type={'folder-open'}
                 onClick={() => OpenFileOrDirectory({
                   path: resource.rawFullname,
@@ -640,7 +674,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                     style={{ color: t.color }}
                     size={'small'}
                     onClick={() => onTagSearch(t.id, true)}
-                  >#{tag.displayName}
+                  >#{tag.displayName}&nbsp;
                   </Button>
                 );
               })}

@@ -1,263 +1,267 @@
-import React, { useEffect, useState } from 'react';
-import { Axis, Chart, Coordinate, DonutChart, Interaction, Interval, Legend, Tooltip, useTheme } from 'bizcharts';
-import { GetStatistics, GetUIOptions } from '@/sdk/apis';
+import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
-import i18n from 'i18next';
-import { DownloadTaskDtoStatus, StartupPage, ThirdPartyRequestResultType, UiTheme } from '@/sdk/constants';
-import { history } from 'ice';
-import store from '@/store';
+import { Icon, Loading } from '@alifd/next';
+import { useTranslation } from 'react-i18next';
+import { Chart, LineAdvance } from 'bizcharts';
+import BApi from '@/sdk/BApi';
+import type {
+  BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
+  BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount,
+} from '@/sdk/Api';
+import { downloadTaskStatuses, ResourceProperty, ThirdPartyId } from '@/sdk/constants';
 
 export default () => {
-  const [statistics, setStatistics] = useState({});
-
-  const [clientAppState, clientAppDispatchers] = store.useModel('clientApp');
-
-  const [theme, setTheme] = useTheme(window?.uiTheme == UiTheme.Dark ? 'dark' : 'light');
-
-  const loadStatistics = () => {
-    GetStatistics()
-      .invoke((a) => {
-        setStatistics(a.data || {});
-      });
-  };
+  const { t } = useTranslation();
+  const [data, setData] = useState<BakabaseInsideWorldModelsModelsDtosDashboardStatistics>({});
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (!clientAppState.firstPageViewed) {
-      clientAppDispatchers.setState({
-        firstPageViewed: true,
-      });
-      GetUIOptions().invoke((a) => {
-        console.log(a.data);
-
-        switch (a.data?.startupPage) {
-          case StartupPage.Resource:
-            history.push('/resource');
-            break;
-          default:
-            loadStatistics();
-            break;
-        }
-      });
-    } else {
-      loadStatistics();
-    }
-  }, []);
-
-  const resourcePieDataList = [
-    {
-      title: 'Added today',
-      className: 'today',
-      data: statistics.resourceAddedCountsToday || [],
-    },
-    {
-      title: 'Added this week',
-      className: 'this-week',
-      data: statistics.resourceAddedCountsThisWeek || [],
-    },
-    {
-      title: 'Total',
-      className: 'total',
-      data: statistics.totalResourceCounts || [],
-    },
-  ];
-
-  const tagData = (statistics.top10TagCounts || []).reverse();
-  const downloadTaskData = statistics.downloadTaskStatusCounts || [];
-  const thirdPartyRequestCounts = (statistics.thirdPartyRequestCounts || []).reduce((s, t) => {
-    Object.keys(t.counts || {}).forEach((r) => {
-      s.push({
-        id: t.id.id,
-        name: t.id.name,
-        result: ThirdPartyRequestResultType[r],
-        count: t.counts[r],
-      });
+    BApi.dashboard.getStatistics().then(res => {
+      initializedRef.current = true;
+      setData(res.data || {});
     });
-    return s;
   }, []);
 
-  console.log(thirdPartyRequestCounts);
-
-  return (
-    <div className={'dashboard-page'}>
-      <div className="resource block">
-        <div className="title">
-          {i18n.t('Resource overview')}
-        </div>
-        <div className="counts">
-          {resourcePieDataList.map((pd) => {
-            const sum = pd.data?.reduce((s, t) => {
-              return s + t.count;
-            }, 0) ?? 0;
+  const renderPeriodResourceAddition = (period: string, counts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[]) => {
+    return (
+      <>
+        <div className={'title'}>{t(period)}</div>
+        <div className={'content'}>
+          {(counts && counts.length > 0) ? counts.map((c, i) => {
             return (
-              <div className={pd.className}>
-                <div className="title">
-                  {i18n.t(pd.title)}
-                </div>
-                {sum == 0 ? (
-                  <div className={'nothing'}>{i18n.t('No data')}</div>
-                ) : (
-                  <div className="pie">
-                    <DonutChart
-                      theme={theme}
-                      data={pd.data || []}
-                      label={{
-                        formatter: (d) => {
-                          return `${d.name}(${d.count})`;
-                        },
-                      }}
-                      autoFit
-                      height={250}
-                      radius={0.8}
-                      padding="auto"
-                      angleField="count"
-                      colorField="name"
-                      // pieStyle={{
-                      //   stroke: 'white',
-                      //   lineWidth: 5,
-                      // }}
-                      legend={false}
-                    />
+              <div className="t-t-c" title={c.name!} key={i}>
+                <div className="left">
+                  <div className="text">
+                    {c.name}
                   </div>
-                )}
+                </div>
+                <div className="right">
+                  <div className="count">
+                    {c.count}
+                  </div>
+                </div>
               </div>
             );
-          })}
-        </div>
-      </div>
-      <div className="line2">
-        <div className="tags block">
-          <div className="title">{i18n.t('Tag')}</div>
-          {tagData.length == 0 ? (
-            <div className={'nothing'}>
-              {i18n.t('No data')}
-            </div>
-          ) : (
-            <div className={'chart'}>
-              <Chart
-                theme={theme}
-                height={300}
-                data={tagData}
-                autoFit
-                scale={{
-                  tickInterval: 1,
-                }}
-              >
-                <Coordinate transpose />
-                <Interval
-                  position="name*count"
-                  label={[
-                    'count',
-                    (val) => ({
-                      position: 'middle',
-                      offsetX: -15,
-                      style: {
-                        fill: '#fff',
-                      },
-                    }),
-                  ]}
-                />
-              </Chart>
-            </div>
+          }) : (
+            t('No content')
           )}
         </div>
-        <div className="download-tasks block">
-          <div className="title">{i18n.t('Download task')}</div>
-          {downloadTaskData.length == 0 ? (
-            <div className={'nothing'}>
-              {i18n.t('No data')}
+      </>
+    );
+  };
+
+  const trendingContentDomRef = useRef<HTMLDivElement>(null);
+
+  const renderTrending = () => {
+    if (data && trendingContentDomRef.current && data.resourceTrending) {
+      const chartData = data.resourceTrending?.map(r => ({
+        week: r.offset == 0 ? t('This week') : r.offset == -1 ? t('Last week') : `${t('{{count}} weeks ago', { count: -(r.offset!) })}`,
+        count: r.count,
+      }));
+      console.log(chartData, trendingContentDomRef.current.clientHeight);
+      return (
+        <Chart
+          padding={[10, 20, 50, 40]}
+          autoFit
+          height={trendingContentDomRef.current.clientHeight}
+          data={chartData}
+        >
+          <LineAdvance
+            shape="smooth"
+            point
+            area
+            position="week*count"
+          />
+
+        </Chart>
+      );
+    }
+    return;
+  };
+  return (
+    <div className={'dashboard-page'}>
+      <Loading visible={!initializedRef.current}>
+        <section style={{ maxHeight: '40%' }}>
+          <div className="block" style={{ flex: 1 }}>
+            <div className={'title'}>{t('Overview')}</div>
+            <div className={'content'}>
+              {data.categoryResourceCounts && data.categoryResourceCounts.length > 0 && data.categoryResourceCounts.map((c, i) => {
+                return (
+                  <div className="t-t-c" title={c.name!} key={i}>
+                    <div className="left">
+                      <div className="text">
+                        {c.name}
+                      </div>
+                    </div>
+                    <div className="right">
+                      <div className="count">
+                        {c.count}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }) || (
+                t('No content')
+              )}
             </div>
-          ) : (
-            <div className={'chart'}>
-              <Chart
-                height={300}
-                data={downloadTaskData}
-                autoFit
-                theme={theme}
-              >
-                <Coordinate type="theta" radius={0.75} />
-                <Tooltip showTitle={false} />
-                <Axis visible={false} />
-                <Interval
-                  position="count"
-                  adjust="stack"
-                  color={
-                    ['name', (name) => {
-                      switch (name) {
-                        case DownloadTaskDtoStatus[DownloadTaskDtoStatus.Failed]:
-                          return '#dd5546';
-                      }
-                      return undefined;
-                    }]
-                  }
-                  style={{
-                    lineWidth: 1,
-                    stroke: '#fff',
-                  }}
-                  label={['count', {
-                    // label 太长自动截断
-                    layout: { type: 'limit-in-plot', cfg: { action: 'ellipsis' } },
-                    content: (data) => {
-                      return `${data.name}: ${data.count}`;
-                    },
-                  }]}
-                />
-                <Interaction type="element-single-selected" />
-              </Chart>
+          </div>
+          <div className="block" style={{ flex: 1 }}>
+            {renderPeriodResourceAddition('Added today', data.todayAddedCategoryResourceCounts || [])}
+            {renderPeriodResourceAddition('Added this week', data.thisWeekAddedCategoryResourceCounts || [])}
+            {renderPeriodResourceAddition('Added this month', data.thisMonthAddedCategoryResourceCounts || [])}
+          </div>
+          <div className="block trending" style={{ flex: 1 }}>
+            <div className="title">{t('Trending')}</div>
+            <div className="content" ref={trendingContentDomRef}>
+              {renderTrending()}
             </div>
-          )}
-        </div>
-      </div>
-      <div className="line3">
-        <div className="third-party-request-counts block">
-          <div className="title">{i18n.t('Third party requests')}</div>
-          {thirdPartyRequestCounts.length == 0 ? (
-            <div className={'nothing'}>
-              {i18n.t('No data')}
+          </div>
+        </section>
+        <section style={{ maxHeight: '40%' }}>
+          <div className="block" style={{ flex: 1.5 }}>
+            <div className={'title'}>{t('Resource tags')}</div>
+            <div className={'content'}>
+              {data.tagResourceCounts && data.tagResourceCounts.length > 0 && data.tagResourceCounts.map((t, i) => {
+                return (
+                  <div className="t-t-c" key={i}>
+                    <div className="left">
+                      <div className="label" title={t.label!}>
+                        {t.label}
+                      </div>
+                      <div className="text" title={t.name!}>
+                        {t.name}
+                      </div>
+                    </div>
+                    <div className="right">
+                      <div className="count">
+                        {t.count}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }) || (
+                t('No content')
+              )}
             </div>
-          ) : (
-            <div className={'chart'}>
-              <Chart
-                theme={theme}
-                height={300}
-                padding="auto"
-                data={thirdPartyRequestCounts}
-                autoFit
-              >
-                <Interval
-                  adjust={[
-                    {
-                      type: 'stack',
-                    },
-                  ]}
-                  color={[
-                    'result',
-                    (result) => {
-                      switch (result) {
-                        case ThirdPartyRequestResultType[ThirdPartyRequestResultType.Failed]:
-                          return '#dd5546';
-                      }
-                    },
-                  ]}
-                  position={'id*count'}
-                />
-                <Axis
-                  name={'id'}
-                  label={{
-                    formatter: (id, item, index) => {
-                      return thirdPartyRequestCounts.find((a) => a.id == id)?.name;
-                    } }}
-                />
-                <Tooltip
-                  shared
-                  title={'name'}
-                />
-                <Legend name={'result'} />
-              </Chart>
+          </div>
+          <div className="block" style={{ flex: 2.5 }}>
+            <div className={'title'}>{t('Resource properties')}</div>
+            <div className={'content'}>
+              {data.propertyResourceCounts && data.propertyResourceCounts.length > 0 && data.propertyResourceCounts.map((c, i) => {
+                const property = c.property as number as ResourceProperty;
+                let propertyLabel = t(ResourceProperty[property]);
+                if (property == ResourceProperty.CustomProperty) {
+                  propertyLabel += `:${c.propertyKey}`;
+                }
+                return (
+                  <div className="t-t-c" key={i}>
+                    <div className="left">
+                      <div
+                        className="label"
+                        title={propertyLabel!}
+                      >{propertyLabel}</div>
+                      <div
+                        className="text"
+                        title={c.value!}
+                      >{c.value}</div>
+                    </div>
+                    <div className="right">
+                      <div className="count">{c.count}</div>
+                    </div>
+                  </div>
+                );
+              }) || (
+                t('No content')
+              )}
             </div>
-          )}
-        </div>
-        <div />
-      </div>
+          </div>
+        </section>
+        <section>
+          <div className="block" style={{ flex: 1.5 }}>
+            <div className={'title'}>{t('Downloader')}</div>
+            <div className="content">
+              {(data.downloaderDataCounts && data.downloaderDataCounts.length > 0) ? (
+                <>
+                  <div className={'downloader-item'}>
+                    <div>{t('Third party')}</div>
+                    {downloadTaskStatuses.map((s, i) => {
+                      return (
+                        <div key={i}>
+                          {t(s.label)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {data.downloaderDataCounts?.map(c => {
+                    return (
+                      <div className={'downloader-item'}>
+                        <div>{t(ThirdPartyId[c.id as number])}</div>
+                        {downloadTaskStatuses.map((s, i) => {
+                          return (
+                            <div key={i}>
+                              {c.statusAndCounts?.[s.value] ?? 0}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </>
+              ) : (
+                t('No content')
+              )}
+            </div>
+          </div>
+          <div className="blocks">
+            {data.otherCounts?.map((list, r) => {
+              return (
+                <section key={r}>
+                  {list.map((c, j) => {
+                    return (
+                      <div className="block" key={j}>
+                        <div className="content">
+                          <div className="t-t-c" title={c.name!}>
+                            <div className="left">
+                              <div className="text">
+                                {t(c.name!)}
+                              </div>
+                            </div>
+                            <div className="right">
+                              <div className="count">{c.count}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                </section>
+              );
+            })}
+            <section>
+              <div className="block">
+                <div className="content">
+                  <div className="t-t-c file-mover">
+                    <div className="left">
+                      <div className="text">
+                        {t('File mover')}
+                      </div>
+                    </div>
+                    <div className="right">
+                      <div className="count">
+                        {data.fileMover?.sourceCount ?? 0}
+                        <Icon type="arrow-double-right" size={'xs'} />
+                        {data.fileMover?.targetCount ?? 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div className="block hidden" style={{ flex: 1.5 }} />
+        </section>
+      </Loading>
     </div>
   );
 };

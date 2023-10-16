@@ -17,6 +17,11 @@ class BApi extends Api<any> {
           case 0:
             break;
           default:
+            if (params.ignoreError) {
+              if (params.ignoreError(rsp)) {
+                return rsp;
+              }
+            }
             if ((rsp.code >= 400 || rsp.code < 200)) {
               if (!params.ignoreError) {
                 Message.error({

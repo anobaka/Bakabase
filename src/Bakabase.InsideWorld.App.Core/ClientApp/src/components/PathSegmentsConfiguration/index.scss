@@ -2,7 +2,7 @@
 
   .global-errors {
     display: flex;
-    color: red;
+    color: var(--theme-text-error);
     font-size: 12px;
     flex-wrap: wrap;
     gap: 10px;
@@ -129,7 +129,7 @@
             }
 
             &.error {
-              color: red;
+              color: var(--theme-text-error);
               border-color: red;
             }
 
@@ -149,6 +149,10 @@
         }
       }
     }
+  }
+
+  .bottom-opts {
+    margin-top: 5px;
   }
 }
 

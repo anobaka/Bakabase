@@ -674,6 +674,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                         tryPSwitch ? $"-aos" : null,
                                         $"-o{targetDir}",
                                         // redirect process to stderr stream
+                                        "-sccUTF-8",
+                                        "-scsUTF-16LE",
                                         "-bsp2"
                                     }.Where(t => t.IsNotEmpty())!, true)
                                     .WithStandardErrorPipe(PipeTarget.Merge(PipeTarget.ToDelegate(async line =>
@@ -688,7 +690,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                             }
                                         }
                                     }, Encoding.UTF8), PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
-                                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb));
+                                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb, Encoding.UTF8));
                                 // Input password via stdin
                                 if (group.Password.IsNotEmpty() && !tryPSwitch)
                                 {
@@ -767,6 +769,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                     {
                                         tryPSwitch = true;
                                         messageSb.AppendLine("Try to use -p switch, re-decompressing");
+                                        esb.Clear();
+                                        osb.Clear();
                                         goto BuildCommand;
                                     }
                                 }

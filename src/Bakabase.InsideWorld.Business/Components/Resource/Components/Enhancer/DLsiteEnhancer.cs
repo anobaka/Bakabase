@@ -174,7 +174,10 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
                 var productInfoStr = await HttpClient.GetStringAsync(string.Format(InfoJsonUrlTemplate, no));
                 var productInfo = JsonConvert.DeserializeObject<Dictionary<string, ProductInfo>>(productInfoStr);
                 var rate = productInfo[no].RateAverage2Dp;
-                enhancements.Add(Enhancement.BuildRate(rate));
+                if (rate.HasValue)
+                {
+                    enhancements.Add(Enhancement.BuildRate(rate.Value));
+                }
                 // todo: Forms
             }
 
@@ -184,7 +187,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
         private class ProductInfo
         {
             [JsonProperty(propertyName: "rate_average_2dp")]
-            public decimal RateAverage2Dp { get; set; }
+            public decimal? RateAverage2Dp { get; set; }
             // [JsonProperty("work_name")]
             // public string WorkName { get; set; }
             // [JsonProperty("work_image")]

@@ -62,11 +62,24 @@
           color: red;
         }
 
-        &.values {
+        .tip {
+          //color: var(--theme-text-primary);
+          color: var(--theme-text-subtle);
+          display: flex;
+          align-items: center;
+          gap: 2px;
+          margin-bottom: 5px;
+        }
+
+        .values {
           display: flex;
           flex-wrap: wrap;
           align-items: flex-start;
           gap: 5px;
+
+          .label {
+            color: var(--theme-text-subtle);
+          }
 
           &>* {
             margin: 0;

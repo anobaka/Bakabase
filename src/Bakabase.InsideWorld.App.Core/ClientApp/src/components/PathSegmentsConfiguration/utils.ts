@@ -3,6 +3,8 @@ import { execAll } from '@/components/utils';
 export function getResultFromExecAll(regex: RegExp | string, str: string): {
   groups?: string[];
   text?: string;
+  // Available when it's a text result
+  index?: number;
 } | null {
   const matches = execAll(regex, str, 50);
   console.log(matches);
@@ -11,6 +13,7 @@ export function getResultFromExecAll(regex: RegExp | string, str: string): {
     // 否则使用match[0]
     const capturedMap: Record<string, any> = {};
     let firstMatch: string | undefined;
+    let index: number | undefined;
     for (const m of matches) {
       if (m.groups) {
         Object.keys(m.groups)
@@ -23,18 +26,21 @@ export function getResultFromExecAll(regex: RegExp | string, str: string): {
       }
       if (firstMatch == undefined) {
         firstMatch = m[0];
+        index = m.index;
       }
     }
     const values = Object.keys(capturedMap);
     const result: {
       groups?: string[];
       text?: string;
+      index?: number;
     } = {};
     if (values.length == 0) {
       if (firstMatch == undefined) {
         return null;
       }
       result.text = firstMatch;
+      result.index = index;
     } else {
       result.groups = values;
     }

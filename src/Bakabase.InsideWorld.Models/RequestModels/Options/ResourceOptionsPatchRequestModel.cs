@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Bakabase.InsideWorld.Models.Configs.Resource.ResourceOptions;
 
 namespace Bakabase.InsideWorld.Models.RequestModels.Options
 {
@@ -16,5 +17,6 @@ namespace Bakabase.InsideWorld.Models.RequestModels.Options
         public ResourceSearchDto? LastSearch { get; set; }
         public List<ResourceSearchSlotItemDto>? SearchSlots { get; set; }
         public AdditionalCoverDiscoveringSource[]? AdditionalCoverDiscoveringSources { get; set; }
+        public CoverOptionsModel? CoverOptions { get; set; }
     }
 }

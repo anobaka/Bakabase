@@ -4,6 +4,7 @@ import i18n from 'i18next';
 import { Balloon, Button, Dialog } from '@alifd/next';
 import { useEffect, useRef, useState } from 'react';
 import IceLabel from '@icedesign/label';
+import { useTranslation } from 'react-i18next';
 import type { BakabaseInsideWorldModelsModelsDtosComponentDescriptor } from '@/sdk/Api';
 import CustomIcon from '@/components/CustomIcon';
 import { ComponentDescriptorType, ComponentType } from '@/sdk/constants';
@@ -12,6 +13,7 @@ import BApi from '@/sdk/BApi';
 import ComponentDetail from '@/pages/CustomComponent/Detail';
 import { extractEnhancerTargetDescription } from '@/components/utils';
 import ClickableIcon from '@/components/ClickableIcon';
+import SimpleLabel from '@/components/SimpleLabel';
 
 interface DescriptorCardProps extends DOMAttributes<unknown> {
   descriptor: BakabaseInsideWorldModelsModelsDtosComponentDescriptor;
@@ -31,6 +33,7 @@ const TypeLabelProps = {
 };
 
 export default (props: DescriptorCardProps) => {
+  const { t } = useTranslation();
   const {
     descriptor: propsDescriptor,
     selected,
@@ -52,13 +55,26 @@ export default (props: DescriptorCardProps) => {
     switch (descriptor.componentType) {
       case ComponentType.Enhancer: {
         if (descriptor.targets?.length > 0) {
+          const descriptions = descriptor.targets.map(t => extractEnhancerTargetDescription(t));
+          const descriptionGroups = descriptions.reduce<{type: string; keys: string[]}[]>((s, t) => {
+            let g = s.find(g => g.type == t.type);
+            if (g == undefined) {
+              g = {
+                type: t.type,
+                keys: [],
+              };
+              s.push(g);
+            }
+            g.keys.push(t.key);
+            return s;
+          }, []);
           return (
-            <div className={'targets'}>
-              {descriptor.targets.map((t, i) => {
-                const description = extractEnhancerTargetDescription(t);
+            <div className={'target-groups'}>
+              {descriptionGroups.map((t, i) => {
                 return (
-                  <div className={'target'} key={i}>
-                    {description.type}:{description.key}
+                  <div className={'group'} key={t.type}>
+                    {t.type}
+                    {t.keys.map(k => (<SimpleLabel key={k} status={'default'}>{k}</SimpleLabel>))}
                   </div>
                 );
               })}
@@ -108,8 +124,8 @@ export default (props: DescriptorCardProps) => {
               e.preventDefault();
               e.stopPropagation();
               Dialog.confirm({
-                title: i18n.t('Sure to delete?'),
-                content: i18n.t(''),
+                title: t('Sure to delete?'),
+                content: t(''),
                 v2: true,
                 closeMode: ['mask', 'esc', 'close'],
                 onOk: () => BApi.componentOptions.removeComponentOptions(descriptor.optionsId).then(a => {
@@ -129,35 +145,34 @@ export default (props: DescriptorCardProps) => {
       <div className="top">
         <div className="name">
           {labelProps && (
-            <IceLabel inverse={false} status={labelProps.status}>{i18n.t(labelProps.label)}</IceLabel>
+            <>
+              <SimpleLabel status={labelProps.status}>{t(labelProps.label)}</SimpleLabel>
+              &nbsp;
+            </>
           )}
-          {i18n.t(descriptor.name)}
+          {t(descriptor.name)}
         </div>
-        {descriptor.description && <div className="description">{i18n.t(descriptor.description)}</div>}
+        {descriptor.description && <div className="description">{t(descriptor.description)}</div>}
         {renderExtra()}
       </div>
       <div className="bottom">
         {categories.length > 0 && (
           <div className="categories">
             <div className="label">
-              {i18n.t('Applied to')}
+              {t('Applied to {{count}} categories', { count: categories.length })}
             </div>
-            {categories.map(c => (
-              <div className={'category'} key={c.id}>
-                {c.name}
-              </div>
-          ))}
           </div>
         )}
         <div className="versions">
-          <div
+          <SimpleLabel
+            status={'default'}
             className={`version ${descriptor.version?.length > 0 ? '' : 'empty'}`}
-            title={`${i18n.t('Version')}:${i18n.t('May be different in incoming versions of app')}`}
-          >{descriptor.version}</div>
-          <div
+            title={`${t('Version')}:${t('May be different in incoming versions of app')}`}
+          >{descriptor.version}</SimpleLabel>
+          <SimpleLabel
             className={`version ${descriptor.dataVersion?.length > 0 ? '' : 'empty'}`}
-            title={`${i18n.t('Data version')}:${i18n.t('May be different after configuration change')}`}
-          >{descriptor.dataVersion}</div>
+            title={`${t('Data version')}:${t('May be different after configuration change')}`}
+          >{descriptor.dataVersion}</SimpleLabel>
         </div>
       </div>
     </div>

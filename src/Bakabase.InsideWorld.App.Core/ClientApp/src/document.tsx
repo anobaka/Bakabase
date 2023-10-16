@@ -1,9 +1,6 @@
 import { Meta, Title, Links, Main, Scripts, useAppData } from 'ice';
 
 export default function Document() {
-  const appData = useAppData();
-  console.log(appData, 12345);
-
   return (
     <html>
       <head>

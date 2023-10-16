@@ -26,6 +26,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
         public string? Publisher { get; set; }
 
         public string? Original { get; set; }
+        public string? Series { get; set; }
         public decimal? MinRate { get; set; }
         public ResourceLanguage[]? Languages { set; get; }
         public int[]? MediaLibraryIds { get; set; }

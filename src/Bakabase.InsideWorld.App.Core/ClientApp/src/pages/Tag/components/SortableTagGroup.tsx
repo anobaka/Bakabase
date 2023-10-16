@@ -11,6 +11,7 @@ import DragHandle from '@/components/DragHandle';
 import ButtonsBalloon from '@/components/ButtonsBalloon';
 import type { TagGroup as TagGroupDto } from '@/core/models/TagGroup';
 import SortableTag from '@/pages/Tag/components/SortableTag';
+import SimpleLabel from '@/components/SimpleLabel';
 
 export default (({
                    group,
@@ -65,7 +66,7 @@ export default (({
         {group.id > 0 ? (
           <ButtonsBalloon
             trigger={(
-              <span
+              <SimpleLabel
                 style={{ cursor: 'pointer' }}
                 onClick={() => {
                   let { name } = group;
@@ -99,7 +100,7 @@ export default (({
                 }}
               >
                 {group.displayName}
-              </span>
+              </SimpleLabel>
             )}
             operations={[
               {
@@ -121,7 +122,7 @@ export default (({
           >
             {group.preferredAlias && group.preferredAlias != group.name && `${i18n.t('Raw name')}: ${group.name}`}
           </ButtonsBalloon>
-        ) : group.name}
+        ) : <SimpleLabel>{group.name}</SimpleLabel>}
         <Button
           className={'add'}
           size={'small'}

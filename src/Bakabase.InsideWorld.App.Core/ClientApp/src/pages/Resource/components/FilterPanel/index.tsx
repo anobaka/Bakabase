@@ -389,7 +389,7 @@ export default React.memo((props: IProps) => {
     }
   }, [searchForm]);
 
-  log('Rendering', props);
+  log('Rendering', props, filterGroups, searchForm);
 
   return (
     <div className="new-search-panel">
@@ -469,7 +469,7 @@ export default React.memo((props: IProps) => {
                             const ml = cl?.libraries.find(l => l.id == id);
                             if (ml) {
                               return (
-                                <div>
+                                <div key={ml.id}>
                                   <span className={'name'}>{ml.name}</span>
                                   <span className={'category'}>[{cl!.name}]</span>
                                   {i < value.length - 1 && ','}
@@ -518,8 +518,12 @@ export default React.memo((props: IProps) => {
                         <Select.AutoComplete
                           dataSource={f.dataSource}
                           hasClear
-                          onChange={(v) => {
-                            value = v;
+                          onChange={(v, actionType) => {
+                            if (actionType == 'itemClick') {
+                              patchSearchFormByKey(f.key, v, true);
+                            } else {
+                              value = v;
+                            }
                           }}
                           // popupProps={{ v2: true }}
                           // useVirtual

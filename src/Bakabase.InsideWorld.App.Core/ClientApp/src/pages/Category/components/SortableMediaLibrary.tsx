@@ -1,9 +1,9 @@
-import React, {useCallback, useEffect, useReducer, useState} from 'react';
+import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import i18n from 'i18next';
-import {Badge, Balloon, Dialog, Dropdown, Input, Menu, Message} from '@alifd/next';
-import {useSortable} from '@dnd-kit/sortable';
-import {CSS} from '@dnd-kit/utilities';
-import {useTranslation} from 'react-i18next';
+import { Badge, Balloon, Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { useTranslation } from 'react-i18next';
 import IceLabel from '@icedesign/label';
 import CustomIcon from '@/components/CustomIcon';
 import {
@@ -14,11 +14,12 @@ import {
   RemoveMediaLibraryPathConfiguration,
 } from '@/sdk/apis';
 import DragHandle from '@/components/DragHandle';
-import {ResourceMatcherValueType, ResourceProperty} from '@/sdk/constants';
-import {buildLogger, parseLayerCountFromLayerBasedPathRegexString} from '@/components/utils';
+import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
+import { buildLogger, parseLayerCountFromLayerBasedPathRegexString } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import PathConfigurationDialog from '@/pages/Category/components/PathConfigurationDialog';
 import ClickableIcon from '@/components/ClickableIcon';
+import SimpleLabel from '@/components/SimpleLabel';
 
 export default (({
                    library,
@@ -30,11 +31,11 @@ export default (({
     setNodeRef,
     transform,
     transition,
-  } = useSortable({id: library.id});
+  } = useSortable({ id: library.id });
 
   const log = buildLogger('SortableMediaLibrary');
 
-  const {t} = useTranslation();
+  const { t } = useTranslation();
 
   const style = {
     transform: CSS.Translate.toString({
@@ -67,7 +68,7 @@ export default (({
       switch (resourceValue.valueType) {
         case ResourceMatcherValueType.Layer:
           valueComponent = (
-            <div>{t(resourceValue.layer > 0 ? 'The {{layer}} layer after root path' : 'The {{layer}} layer to the resource', {layer: Math.abs(resourceValue.layer)})}</div>
+            <div>{t(resourceValue.layer > 0 ? 'The {{layer}} layer after root path' : 'The {{layer}} layer to the resource', { layer: Math.abs(resourceValue.layer) })}</div>
           );
           break;
         case ResourceMatcherValueType.Regex:
@@ -85,13 +86,14 @@ export default (({
     if (valueComponent) {
       return (
         <div className={'filter'}>
-          <IceLabel inverse={false} status={'info'}
-                    className="type">{t(ResourceMatcherValueType[resourceValue.valueType])}</IceLabel>
+          <SimpleLabel
+            status={'default'}
+          >{t(ResourceMatcherValueType[resourceValue.valueType])}</SimpleLabel>
           {valueComponent}
         </div>
       );
     }
-    return (<div className={'unset'}>{t('Not set')}</div>);
+    return (<div className={'unset filter'}>{t('Not set')}</div>);
   }, []);
 
   const renderAdditionalProperties = useCallback(p => {
@@ -125,13 +127,13 @@ export default (({
                 title: t('Change name'),
                 content: (<Input
                   size={'large'}
-                  style={{width: '100%'}}
+                  style={{ width: '100%' }}
                   defaultValue={n}
                   onChange={(v) => {
                     n = v;
                   }}
                 />),
-                style: {width: 800},
+                style: { width: 800 },
                 onOk: () => {
                   return new Promise(((resolve, reject) => {
                     if (n?.length > 0) {
@@ -226,7 +228,7 @@ export default (({
                     });
                   }}
                 >
-                  <CustomIcon type="flashlight"/>
+                  <CustomIcon type="flashlight" />
                   {t('Remove all enhancement records')}
                 </Menu.Item>
                 <Menu.Item
@@ -249,7 +251,7 @@ export default (({
                     });
                   }}
                 >
-                  <CustomIcon type="delete"/>
+                  <CustomIcon type="delete" />
                   {t('Remove')}
                 </Menu.Item>
               </Menu>
@@ -271,9 +273,9 @@ export default (({
                 <span>
                   {p.path}
                 </span>
-                <div className="capacity">
+                <SimpleLabel status={'default'}>
                   {library.rootPathInformation[p.path]?.freeSpaceInGb}GB
-                </div>
+                </SimpleLabel>
                 <ClickableIcon
                   type="delete"
                   colorType={'danger'}
@@ -283,25 +285,16 @@ export default (({
                     Dialog.confirm({
                       title: `${t('Deleting')} ${p.path}`,
                       closeable: true,
-                      onOk: () => new Promise(((resolve, reject) => {
-                        RemoveMediaLibraryPathConfiguration({
-                          id: library.id,
-                          model: {
-                            path: p.path,
-                          },
-                        })
-                          .invoke((a) => {
-                            if (!a.code) {
-                              loadAllMediaLibraries();
-                              resolve(a);
-                            } else {
-                              reject();
-                            }
-                          })
-                          .catch(() => {
-                            reject();
-                          });
-                      })),
+                      onOk: async () => {
+                        const rsp = await BApi.mediaLibrary.removeMediaLibraryPathConfiguration(library.id, {
+                          index: i,
+                        });
+                        if (rsp.code) {
+                          throw new Error(rsp.message!);
+                        } else {
+                          loadAllMediaLibraries();
+                        }
+                      },
                     });
                   }}
                 />
@@ -311,7 +304,7 @@ export default (({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    BApi.tool.openFileOrDirectory({path: p.path});
+                    BApi.tool.openFileOrDirectory({ path: p.path });
                   }}
                 />
               </div>

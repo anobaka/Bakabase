@@ -231,13 +231,13 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 }
             }
 
-            if (source.MediaLibraryId != target.MediaLibraryId)
+            if (source.MediaLibraryId != target.MediaLibraryId && target.MediaLibraryId > 0)
             {
                 source.MediaLibraryId = target.MediaLibraryId;
                 changed = true;
             }
 
-            if (source.CategoryId != target.CategoryId)
+            if (source.CategoryId != target.CategoryId && target.CategoryId > 0)
             {
                 source.CategoryId = target.CategoryId;
                 changed = true;
