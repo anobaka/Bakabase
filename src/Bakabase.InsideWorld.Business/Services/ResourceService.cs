@@ -48,6 +48,7 @@ using CliWrap;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using IComparer = System.Collections.IComparer;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -329,7 +330,8 @@ namespace Bakabase.InsideWorld.Business.Services
             var plainEverythingSegments = everyThingSegments.Except(regexEverythingSegments).ToList();
             var regexs = regexEverythingSegments.Select(t => Regex.Replace(t, @"^reg\:", string.Empty)).ToHashSet();
 
-            var names = new[] {model.Name, model.Publisher, model.Original, model.Series}.Concat(plainEverythingSegments)
+            var names = new[] {model.Name, model.Publisher, model.Original, model.Series}
+                .Concat(plainEverythingSegments)
                 .Where(a => a.IsNotEmpty())
                 .ToArray();
 
@@ -467,31 +469,33 @@ namespace Bakabase.InsideWorld.Business.Services
                 exp = a => exp1(a) && resourceIds.Contains(a.Id);
             }
 
-            var orders = new List<(Func<Resource, object> SelectKey, bool Asc)>();
+            var orders = new List<(Func<Resource, object> SelectKey, bool Asc, IComparer<object>? Comparer)>();
             if (model.Orders != null)
             {
                 orders.AddRange(from om in model.Orders
                     let o = om.Order
                     let a = om.Asc
-                    let s = (Func<Resource, object>) (o switch
+                    let s = ((Func<Resource, object> SelectKey, IComparer<object>? Comparer)) (o switch
                     {
-                        ResourceSearchOrder.AddDt => x => x.CreateDt,
-                        ResourceSearchOrder.ReleaseDt => x => x.ReleaseDt,
-                        ResourceSearchOrder.Rate => x => x.Rate,
-                        ResourceSearchOrder.Category => x => x.CategoryId,
-                        ResourceSearchOrder.MediaLibrary => x => x.MediaLibraryId,
-                        ResourceSearchOrder.Name => x => x.Name,
-                        ResourceSearchOrder.FileCreateDt => x => x.FileCreateDt,
-                        ResourceSearchOrder.FileModifyDt => x => x.FileModifyDt,
-                        ResourceSearchOrder.Filename => x => x.RawName,
+                        ResourceSearchOrder.AddDt => (x => x.CreateDt, null),
+                        ResourceSearchOrder.ReleaseDt => (x => x.ReleaseDt, null),
+                        ResourceSearchOrder.Rate => (x => x.Rate, null),
+                        ResourceSearchOrder.Category => (x => x.CategoryId, null),
+                        ResourceSearchOrder.MediaLibrary => (x => x.MediaLibraryId, null),
+                        ResourceSearchOrder.Name => (x => x.Name,
+                            Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
+                        ResourceSearchOrder.FileCreateDt => (x => x.FileCreateDt, null),
+                        ResourceSearchOrder.FileModifyDt => (x => x.FileModifyDt, null),
+                        ResourceSearchOrder.Filename => (x => x.RawName,
+                            Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
                         _ => throw new ArgumentOutOfRangeException()
                     })
-                    select (s, a));
+                    select (s.SelectKey, a, s.Comparer));
             }
 
             if (!orders.Any())
             {
-                orders.Add((t => t.RawName, true));
+                orders.Add((t => t.Id, false, null));
             }
 
             var resources = await _orm.Search(exp, model.PageIndex, model.PageSize, orders.ToArray(), returnCopy);

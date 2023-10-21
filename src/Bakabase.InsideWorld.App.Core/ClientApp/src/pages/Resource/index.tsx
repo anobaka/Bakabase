@@ -59,7 +59,6 @@ const ResourcePage = (props) => {
   const resourcesRef = useRef<ResourceDto[]>([]);
 
   // Functional
-  const [showBiggerCoverOnHover, setShowBiggerCoverOnHover] = useState(true);
   const multiselectionRef = useRef<boolean>();
   const shiftIsDownRef = useRef<boolean>();
 
@@ -389,10 +388,20 @@ const ResourcePage = (props) => {
           trigger={(
             <Checkbox
               onChange={(c) => {
-                // console.log(44444);
-                setShowBiggerCoverOnHover(c);
+                BApi.options.patchUiOptions({
+                  resource: {
+                    ...(uiOptions?.resource || {}),
+                    showBiggerCoverWhileHover: c,
+                  },
+                }).then(r => {
+                  if (!r.code) {
+                    Notification.success({
+                      title: t('Saved'),
+                    });
+                  }
+                });
               }}
-              checked={showBiggerCoverOnHover}
+              checked={uiOptions?.resource?.showBiggerCoverWhileHover}
             >
               {t('Larger cover')}
             </Checkbox>
@@ -422,7 +431,7 @@ const ResourcePage = (props) => {
         />
       </div>
     </>
-  ), [showBiggerCoverOnHover, colCount]);
+  ), [uiOptions?.resource?.showBiggerCoverWhileHover, colCount]);
 
   return (
     <div className="resource-page">
@@ -559,7 +568,7 @@ const ResourcePage = (props) => {
               </div>
               <Resource
                 queue={queueRef.current}
-                showBiggerCoverOnHover={showBiggerCoverOnHover}
+                showBiggerCoverOnHover={uiOptions?.resource?.showBiggerCoverWhileHover ?? false}
                 ref={setResourceRef}
                 resource={r}
                 ct={resourceLoadCtsRef.current!.signal}

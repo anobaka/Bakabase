@@ -1,5 +1,4 @@
 import { Balloon, Button, Dialog, Icon, Message } from '@alifd/next';
-import IceLabel from '@icedesign/label';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import BApi from '@/sdk/BApi';
@@ -177,7 +176,7 @@ export default (props: Props) => {
         v2
         width={1200}
         visible={!!pscData}
-        closeable
+        closeMode={['close', 'mask', 'esc']}
         onClose={onClose}
         onCancel={onClose}
         top={20}
@@ -261,17 +260,18 @@ export default (props: Props) => {
                     text
                     type={'primary'}
                     onClick={() => {
-                      BApi.gui.openFolderSelector()
-                        .then((t) => {
-                          if (t.data) {
-                            const newPc = {
-                              ...value,
-                              path: t.data,
-                            };
-                            setValue(newPc);
-                            checkPathRelations(newPc);
-                          }
-                        });
+                      FileSystemSelectorDialog.show({
+                        startPath: value.path,
+                        targetType: 'folder',
+                        onSelected: e => {
+                          const newPc = {
+                            ...value,
+                            path: e.path,
+                          };
+                          setValue(newPc);
+                          checkPathRelations(newPc);
+                        },
+                      });
                     }}
                   >{value?.path}
                   </Button>
@@ -311,6 +311,7 @@ export default (props: Props) => {
                           FileSystemSelectorDialog.show({
                             // targetType: 'folder',
                             startPath: value.path,
+                            targetType: 'file',
                             onSelected: (e) => {
                               const std = standardizePath(e.path)!;
                               const stdPrev = standardizePath(value.path);

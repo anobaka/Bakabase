@@ -21,7 +21,8 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
         public IwFsEntry(string path)
         {
             Path = path.StandardizePath()!;
-            Name = System.IO.Path.GetFileName(path).StandardizePath()!;
+            Name = System.IO.Path.GetFileName(path);
+
             if (string.IsNullOrEmpty(Name))
             {
                 Name = Path;

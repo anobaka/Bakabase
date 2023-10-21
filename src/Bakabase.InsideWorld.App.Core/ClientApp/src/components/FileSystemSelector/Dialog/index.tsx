@@ -22,12 +22,24 @@ const FileSystemSelectorDialog = (props: IProps) => {
     setVisible(false);
   };
 
+  let title = 'Select file system entry';
+  if (props.targetType != undefined) {
+    switch (props.targetType) {
+      case 'file':
+        title = 'Select file';
+        break;
+      case 'folder':
+        title = 'Select folder';
+        break;
+    }
+  }
+
   return (
     <Dialog
       v2
       width={700}
       closeMode={['close', 'esc', 'mask']}
-      title={t('Select file system entry')}
+      title={t(title)}
       visible={visible}
       footer={false}
       closeIcon={false}

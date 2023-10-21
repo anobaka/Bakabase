@@ -2,9 +2,11 @@ import React, { useRef, useState } from 'react';
 import './index.scss';
 
 import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf/utils';
+import { Button } from '@alifd/next';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelector from '@/components/FileSystemSelector';
+import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 
 const schema: RJSFSchema = {
   type: 'object',
@@ -62,6 +64,20 @@ export default () => {
 
   return (
     <div className={'test-page'}>
+      <Button
+        type={'normal'}
+        onClick={() => {
+                FileSystemSelectorDialog.show({ targetType: 'file', startPath: 'D:\\FE Test' });
+              }}
+      >File Selector</Button>
+
+      <Button
+        type={'normal'}
+        onClick={() => {
+          FileSystemSelectorDialog.show({ targetType: 'folder', startPath: 'D:\\FE Test' });
+        }}
+      >Folder Selector</Button>
+
       {['dark', 'light'].map(t => {
         return (
           <div className={`iw-theme-${t}`} style={{ background: 'var(--theme-body-background)', padding: 10 }}>

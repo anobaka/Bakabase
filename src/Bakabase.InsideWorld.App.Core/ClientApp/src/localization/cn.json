@@ -918,8 +918,13 @@
   "Last week": "上周",
   "{{count}} weeks ago": "{{count}}周前",
   "Resource properties": "资源属性",
-  "Resource tags": "资源标签"
+  "Resource tags": "资源标签",
   "OK": "确定",
   "Cancel": "取消",
-  "New Folder": "新文件夹"
+  "New Folder": "新文件夹",
+  "Select file": "选择文件",
+  "Select folder": "选择文件夹",
+  "Selected": "已选择",
+  "You can type a path here": "您可以输入一个路径",
+  "Sort by name": "按名称排序"
 }

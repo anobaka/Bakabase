@@ -6347,52 +6347,6 @@ export const RemoveResourceCustomPropertyURL = function(parameters = {}) {
 }
 /**
  * 
- * request: CheckResourceExistence
- * url: CheckResourceExistenceURL
- * method: CheckResourceExistence_TYPE
- * raw_url: CheckResourceExistence_RAW_URL
- * @param name - 
- */
-export const CheckResourceExistence = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/existence'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['name'] !== undefined) {
-    queryParameters['name'] = parameters['name']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const CheckResourceExistence_RAW_URL = function() {
-  return '/resource/existence'
-}
-export const CheckResourceExistence_TYPE = function() {
-  return 'get'
-}
-export const CheckResourceExistenceURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/existence'
-  if (parameters['name'] !== undefined) {
-    queryParameters['name'] = parameters['name']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: MoveResources
  * url: MoveResourcesURL
  * method: MoveResources_TYPE

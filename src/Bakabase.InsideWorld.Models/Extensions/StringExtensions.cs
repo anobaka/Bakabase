@@ -70,9 +70,9 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 path = $"{BusinessConstants.WindowsSpecificUncPathPrefix}{path[2..]}";
             }
 
-            var uri = new Uri(path);
             try
             {
+                var uri = new Uri(path);
                 return uri.IsUnc;
             }
             catch

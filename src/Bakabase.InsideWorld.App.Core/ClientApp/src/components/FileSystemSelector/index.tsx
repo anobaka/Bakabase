@@ -44,37 +44,43 @@ export default (props: IFileSystemSelectorProps) => {
   const highlightNameRef = useRef<string>();
   const startPathRef = useRef(startPath);
 
+  /**
+   * todo: Optimize Entry to use TreeEntry immediately instead of handling first layer manually.
+   * @param root
+   */
   const initializeRoot = async (root?: string) => {
     startPathRef.current = root;
     BApi.file.getChildrenIwFsInfo({ root }).then(r => {
       const rootEntry = new RootEntry();
-      const filter = (entry: Entry) => {
-        if (targetType) {
-          switch (targetType) {
-            case 'file':
-              if (entry.type == IwFsType.Directory || entry.type == IwFsType.Invalid) {
-                return false;
-              }
-              break;
-            case 'folder':
-              if (entry.type != IwFsType.Directory) {
-                return false;
-              }
-              break;
-          }
+      let types: IwFsType[] | undefined;
+      if (targetType) {
+        switch (targetType) {
+          case 'file':
+            types = [IwFsType.Audio, IwFsType.CompressedFilePart, IwFsType.CompressedFileEntry, IwFsType.Image, IwFsType.Unknown, IwFsType.Video];
+            break;
+          case 'folder':
+            types = [IwFsType.Directory];
+            break;
         }
-        if (propsFilter) {
-          return propsFilter(entry);
-        }
-        return true;
-      };
+      }
 
-      rootEntry.patchFilter({ custom: filter });
+      rootEntry.patchFilter({
+        custom: propsFilter,
+        types,
+      });
       // @ts-ignore
       const newEntries = r.data?.entries?.map(e => new Entry({
         ...e,
         parent: rootEntry,
-      })) || [];
+        properties: [],
+      })).filter(e => {
+        if (!types || types.includes(e.type) || e.type == IwFsType.Directory) {
+          if (!propsFilter || propsFilter(e)) {
+            return true;
+          }
+        }
+        return false;
+      }) || [];
 
       setEntries(newEntries);
 
@@ -94,6 +100,29 @@ export default (props: IFileSystemSelectorProps) => {
   useEffect(() => {
     initializeRoot(startPath);
   }, []);
+
+  const isAvailable = (e: Entry) => {
+    if (targetType) {
+      switch (targetType) {
+        case 'file':
+          if (![IwFsType.Audio, IwFsType.CompressedFilePart, IwFsType.CompressedFileEntry, IwFsType.Image, IwFsType.Unknown, IwFsType.Video].includes(e.type)) {
+            return false;
+          }
+          break;
+        case 'folder':
+          if (e.type != IwFsType.Directory) {
+            return false;
+          }
+          break;
+      }
+    }
+    if (propsFilter && !propsFilter(e)) {
+      return false;
+    }
+    return true;
+  };
+
+  const selectionIsAvailable = selectedEntryRef.current && isAvailable(selectedEntryRef.current);
 
   return (
     <div
@@ -115,7 +144,7 @@ export default (props: IFileSystemSelectorProps) => {
           }}
         />
         <Input
-          size={'small'}
+          // size={'small'}
           placeholder={t('You can type a path here')}
           defaultValue={startPath}
           onChange={v => {
@@ -146,6 +175,16 @@ export default (props: IFileSystemSelectorProps) => {
               key={e.path}
               basicMode
               entry={e}
+              trySelect={e => {
+                if (selectedEntryRef.current != e) {
+                  selectedEntryRef.current?.select(false);
+                  selectedEntryRef.current = e;
+                } else {
+                  selectedEntryRef.current = undefined;
+                }
+                forceUpdate();
+                return true;
+              }}
               onDeleteKeyDown={(evt, en) => {
                 DeleteDialog.show({
                   paths: [en.path],
@@ -155,14 +194,6 @@ export default (props: IFileSystemSelectorProps) => {
                     }
                   },
                 });
-              }}
-              onClick={e => {
-                if (selectedEntryRef.current != e) {
-                  selectedEntryRef.current?.select(false);
-                  selectedEntryRef.current = e;
-                  // forceUpdate();
-                  e.select(true);
-                }
               }}
               onDoubleClick={(evt, en) => {
                 if (en.expandable) {
@@ -180,12 +211,19 @@ export default (props: IFileSystemSelectorProps) => {
           ))}
         </div>
       )}
+      {
+        selectionIsAvailable && (
+          <div className="selected">
+            {t('Selected')}: {selectedEntryRef.current!.path}
+          </div>
+        )
+      }
       <div className="opt">
         <div className="left">
           <Button
             type={'normal'}
             size={'small'}
-            disabled={selectedEntryRef.current == undefined}
+            disabled={selectedEntryRef.current?.type != IwFsType.Directory}
             className={'new-folder'}
             onClick={() => {
               BApi.file.createDirectory({ parent: selectedEntryRef.current!.path }).then(r => {
@@ -203,6 +241,7 @@ export default (props: IFileSystemSelectorProps) => {
           <Button
             type={'primary'}
             size={'small'}
+            disabled={!selectionIsAvailable}
             onClick={() => {
               if (onSelected) {
                 onSelected(selectedEntryRef.current!);

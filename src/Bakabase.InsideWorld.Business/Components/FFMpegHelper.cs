@@ -16,29 +16,6 @@ namespace Bakabase.InsideWorld.Business.Components
 {
     public class FFMpegHelper(IBOptions<ThirdPartyOptions> thirdPartyOptions, InsideWorldLocalizer localizer)
     {
-        private static readonly string[] KeyExecutables = {"ffprobe.exe", "ffmpeg.exe"};
-
-        protected string FfProbeExecutable
-        {
-            get
-            {
-                var path = $"{thirdPartyOptions.Value.FFmpeg?.BinDirectory}/ffprobe.exe";
-                if (File.Exists(path))
-                {
-                    return path;
-                }
-
-                throw new FileNotFoundException(localizer.PathIsNotFound(path));
-            }
-        }
-
-        public static string[] CheckMissingFiles(string? rootPath) =>
-            string.IsNullOrEmpty(rootPath)
-                ? KeyExecutables.ToArray()
-                : KeyExecutables.Where(x => !File.Exists(Path.Combine(rootPath, x))).ToArray();
-
-        public bool IsReady() => CheckMissingFiles(thirdPartyOptions.Value.FFmpeg?.BinDirectory).Length == 0;
-
         public async Task<double> GetDuration(string path, CancellationToken ct)
         {
             // https://trac.ffmpeg.org/ticket/8890

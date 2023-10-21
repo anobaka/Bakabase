@@ -20,6 +20,12 @@ export enum EntryError {
   InitializationFailed = 1,
 }
 
+export enum EntryProperty {
+  ChildrenCount = 1,
+  TaskInfo = 2,
+  Size = 3,
+}
+
 export enum EntryStatus {
   Default = 0,
   Loading = 1,
@@ -62,6 +68,8 @@ export class Entry {
 
   root: RootEntry;
 
+  properties: EntryProperty[];
+
   get isRoot(): boolean {
     return !this.parent;
   }
@@ -96,7 +104,7 @@ export class Entry {
       if (!(lowerCasedKeyword == undefined || c.name.toLowerCase().includes(lowerCasedKeyword))) {
         return false;
       }
-      if (!(types == undefined || !types.includes(c.type))) {
+      if (!types?.includes(c.type) && c.type != IwFsType.Directory) {
         return false;
       }
       if (custom != undefined) {
@@ -193,23 +201,33 @@ export class Entry {
     if (this.initializationStatus != EntryAsyncOperationStatus.NotStarted) {
       return;
     }
+    this.initializationStatus = EntryAsyncOperationStatus.Running;
     try {
-      if (this.type == IwFsType.Directory) {
-        this.initializationStatus = EntryAsyncOperationStatus.Running;
-        const info = await BApi.file.getIwFsInfo({ path: this.path }, { ignoreError: true });
-        if (info.code) {
-          this.errors[EntryError.InitializationFailed] = info.message!;
-        } else {
-          // console.log(info.data, this);
-          Object.assign(this, info.data);
+      for (const property of this.properties) {
+        switch (property) {
+          case EntryProperty.ChildrenCount: {
+            if (this.type == IwFsType.Directory) {
+              const info = await BApi.file.getIwFsInfo({ path: this.path }, { ignoreError: true });
+              if (info.code) {
+                this.errors[EntryError.InitializationFailed] = info.message!;
+              } else {
+                // console.log(info.data, this);
+                Object.assign(this, info.data);
+              }
+            }
+            break;
+          }
+          case EntryProperty.TaskInfo: {
+            const taskInfo = await BApi.file.getEntryTaskInfo({ path: this.path }, { ignoreError: true });
+            if (taskInfo.code) {
+              this.errors[EntryError.InitializationFailed] = taskInfo.message!;
+            } else {
+              // @ts-ignore
+              this.task = taskInfo.data;
+            }
+            break;
+          }
         }
-      }
-      const taskInfo = await BApi.file.getEntryTaskInfo({ path: this.path }, { ignoreError: true });
-      if (taskInfo.code) {
-        this.errors[EntryError.InitializationFailed] = taskInfo.message!;
-      } else {
-        // @ts-ignore
-        this.task = taskInfo.data;
       }
     } catch (e) {
       this.errors[EntryError.InitializationFailed] = e.message;
@@ -285,7 +303,7 @@ export class Entry {
   }
 
   get expandable(): boolean {
-    return this.type == IwFsType.Directory && (this.childrenCount != undefined && this.childrenCount > 0);
+    return this.type == IwFsType.Directory && (this.childrenCount == undefined || this.childrenCount > 0);
   }
 
   get isMedia(): boolean {
@@ -319,6 +337,10 @@ export class Entry {
       this.root = this.parent.root;
       this.childrenWidth = this.parent.childrenWidth - ChildrenIndent;
       this.root.nodeMap[this.path] = this;
+    }
+
+    if (!this.properties) {
+      this.properties = Object.keys(EntryProperty).filter((item) => !isNaN(Number(item))).map(n => parseInt(n, 10));
     }
   }
 

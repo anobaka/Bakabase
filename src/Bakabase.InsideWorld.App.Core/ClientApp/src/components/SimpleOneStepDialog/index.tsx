@@ -4,7 +4,8 @@ import { Dialog } from '@alifd/next';
 import type { DialogProps } from '@alifd/next/types/dialog';
 import { useUpdateEffect } from 'react-use';
 import { act } from 'react-dom/test-utils';
-import { buildLogger, forceFocus, uuidv4 } from '@/components/utils';
+import { buildLogger, createPortalOfComponent, forceFocus, uuidv4 } from '@/components/utils';
+import ValidationResult from '@/components/PathSegmentsConfiguration/ValidationResult';
 
 interface IResult {
   code?: number;
@@ -14,12 +15,12 @@ interface IResult {
 export interface ISimpleOneStepDialogProps extends DialogProps {
   onOk: () => (boolean | IResult | Promise<boolean | IResult>);
   title: any;
-  children: any;
+  children?: any;
 }
 
 const log = buildLogger('SimpleOneStepDialog');
 
-export default (props: ISimpleOneStepDialogProps) => {
+const SimpleOneStepDialog = (props: ISimpleOneStepDialogProps) => {
   const {
     onOk: propsOnOk,
     okProps: propsOkProps,
@@ -116,3 +117,7 @@ export default (props: ISimpleOneStepDialogProps) => {
     </Dialog>
   );
 };
+
+SimpleOneStepDialog.show = (props: ISimpleOneStepDialogProps) => createPortalOfComponent(SimpleOneStepDialog, props);
+
+export default SimpleOneStepDialog;

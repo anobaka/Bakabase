@@ -22,7 +22,7 @@ namespace Bakabase.InsideWorld.Models.Configs.Resource
         public ResourceSearchOptions? LastSearch { get; set; }
         public List<ResourceSearchSlotItemOptions> SearchSlots { get; set; } = new();
         public CoverOptionsModel CoverOptions { get; set; } = new();
-
+        public bool HideChildren { get; set; }
 
         public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; } =
             Array.Empty<AdditionalCoverDiscoveringSource>();

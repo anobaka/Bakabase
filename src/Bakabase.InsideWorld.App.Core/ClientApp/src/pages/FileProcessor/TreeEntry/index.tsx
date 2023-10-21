@@ -11,7 +11,7 @@ import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
 import WrapEntriesDialog from '@/pages/FileProcessor/WrapEntriesDialog';
 import type { IEntryRef } from '@/core/models/FileExplorer/Entry';
-import { Entry, EntryStatus, IwFsEntryAction } from '@/core/models/FileExplorer/Entry';
+import { Entry, EntryProperty, EntryStatus, IwFsEntryAction } from '@/core/models/FileExplorer/Entry';
 import { buildLogger, humanFileSize, uuidv4 } from '@/components/utils';
 import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
 import MediaPlayer from '@/components/MediaPlayer';
@@ -56,7 +56,6 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
     onLoadFail = (rsp, entry) => {
     },
     basicMode = false,
-    onClick,
   } = props;
   const { t } = useTranslation();
   // useTraceUpdate(props, `[${entry.path}]`);
@@ -134,7 +133,7 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
     const en = entryRef.current;
     if (en.type != IwFsType.Invalid) {
       const elements: any[] = [];
-      if (en.childrenCount != undefined && en.type == IwFsType.Directory) {
+      if (en.childrenCount != undefined && en.type == IwFsType.Directory && en.properties.includes(EntryProperty.ChildrenCount)) {
         elements.push(
           <>
             <CustomIcon type={'file'} size={'xs'} />
@@ -142,7 +141,7 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
           </>,
         );
       }
-      if (en.size != undefined && en.size > 0) {
+      if (en.size != undefined && en.size > 0 && en.properties.includes(EntryProperty.Size)) {
         return (
           <div className={'file-system-info'}>
             {humanFileSize(en.size, false)}
@@ -353,6 +352,7 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
           entryRef.current.children = entries!.map((e) => new Entry({
             ...e,
             parent: entry,
+            properties: entry.properties,
           }));
         }
       }
@@ -651,15 +651,11 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
             tabIndex={0}
             className={`entry-main entry-keydown-listener ${entry?.selected ? 'selected' : ''} ${entry.expanded ? 'expanded' : ''}`}
             onClick={() => {
-              if (onClick) {
-                onClick(entry);
-              } else {
-                const r = trySelect(entry);
-                log(`Trying ${entry?.selected ? 'unselect' : 'select'} ${entry?.name}, and get blocked: ${!r}`);
-                if (r) {
-                  entry.selected = !entry?.selected;
-                  forceUpdate();
-                }
+              const r = trySelect(entry);
+              log(`Trying ${entry?.selected ? 'unselect' : 'select'} ${entry?.name}, and get blocked: ${!r}`);
+              if (r) {
+                entry.selected = !entry?.selected;
+                forceUpdate();
               }
             }}
           >

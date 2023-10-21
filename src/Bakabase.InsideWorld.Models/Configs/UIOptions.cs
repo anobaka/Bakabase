@@ -18,6 +18,7 @@ namespace Bakabase.InsideWorld.Models.Configs
         public class UIResourceOptions
         {
             public int ColCount { get; set; }
+            public bool ShowBiggerCoverWhileHover { get; set; }
         }
     }
 }

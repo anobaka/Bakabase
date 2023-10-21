@@ -338,6 +338,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
 export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   /** @format int32 */
   colCount?: number;
+  showBiggerCoverWhileHover?: boolean;
 }
 
 /**
@@ -596,18 +597,6 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   duration?: number;
 }
 
-/**
- * [1: Exist, 2: Maybe, 3: New]
- * @format int32
- */
-export type BakabaseInsideWorldModelsModelsAosResourceExistence = 1 | 2 | 3;
-
-export interface BakabaseInsideWorldModelsModelsAosResourceExistenceResult {
-  /** [1: Exist, 2: Maybe, 3: New] */
-  existence?: BakabaseInsideWorldModelsModelsAosResourceExistence;
-  resources?: string[] | null;
-}
-
 export interface BakabaseInsideWorldModelsModelsAosResourceSearchDto {
   /** @format int32 */
   pageIndex?: number;
@@ -635,6 +624,7 @@ export interface BakabaseInsideWorldModelsModelsAosResourceSearchDto {
   categoryId?: number | null;
   publisher?: string | null;
   original?: string | null;
+  series?: string | null;
   /** @format double */
   minRate?: number | null;
   languages?: BakabaseInsideWorldModelsConstantsResourceLanguage[] | null;
@@ -1803,13 +1793,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosResourceExistenceResult {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsAosResourceExistenceResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
@@ -3806,30 +3789,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/resource/${id}/custom-property/${propertyKey}`,
         method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name CheckResourceExistence
-     * @request GET:/resource/existence
-     */
-    checkResourceExistence: (
-      query?: {
-        name?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosResourceExistenceResult,
-        any
-      >({
-        path: `/resource/existence`,
-        method: "GET",
-        query: query,
         format: "json",
         ...params,
       }),

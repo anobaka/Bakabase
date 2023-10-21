@@ -14,6 +14,8 @@ import MediaLibrarySynchronization from '@/pages/Category/components/MediaLibrar
 import store from '@/store';
 import BApi from '@/sdk/BApi';
 import { ResourceCategoryAdditionalItem } from '@/sdk/constants';
+import ConfirmationButton from '@/components/ConfirmationButton';
+import SimpleOneStepDialog from '@/components/SimpleOneStepDialog';
 
 export default () => {
   const { t } = useTranslation();
@@ -85,6 +87,26 @@ export default () => {
           </Button>
         </div>
         <div className="right">
+          <Button
+            type={'secondary'}
+            size={'small'}
+            onClick={() => {
+              SimpleOneStepDialog.show({
+                onOk: async () => {
+                  const orderedCategoryIds = categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(a => a.id);
+                  const rsp = await BApi.resourceCategory.sortCategories({
+                    ids: orderedCategoryIds,
+                  });
+                  if (!rsp.code) {
+                    loadAllCategories();
+                    return true;
+                  }
+                  return false;
+                },
+                title: t('Sort by name'),
+              });
+            }}
+          >{t('Sort by name')}</Button>
           <div className={'last-sync-time'}>
             {t('Last sync time')}: {resourceOptions?.lastSyncDt ? dayjs(resourceOptions.lastSyncDt).format('YYYY-MM-DD HH:mm:ss') : t('Never')}
           </div>
