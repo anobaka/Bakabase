@@ -9,12 +9,13 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.ThirdParty.Installer.FfMpeg;
 using Bakabase.InsideWorld.Business.Resources;
 using Bootstrap.Components.Configuration.Abstractions;
 
 namespace Bakabase.InsideWorld.Business.Components
 {
-    public class FFMpegHelper(IBOptions<ThirdPartyOptions> thirdPartyOptions, InsideWorldLocalizer localizer)
+    public class FFMpegHelper(IBOptions<ThirdPartyOptions> thirdPartyOptions, InsideWorldLocalizer localizer, FfMpegInstaller ffMpegInstaller)
     {
         public async Task<double> GetDuration(string path, CancellationToken ct)
         {
@@ -24,7 +25,7 @@ namespace Bakabase.InsideWorld.Business.Components
             // var info = await FFmpeg.GetMediaInfo(firstVideoFile.FullName, ct);
             var output = new StringBuilder();
             var error = new StringBuilder();
-            var cmd = Cli.Wrap(FfProbeExecutable)
+            var cmd = Cli.Wrap(ffMpegInstaller.FfProbeExecutable)
                 .WithArguments(new[]
                 {
                     "-v", "quiet",

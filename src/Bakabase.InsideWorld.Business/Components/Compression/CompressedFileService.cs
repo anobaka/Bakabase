@@ -29,6 +29,26 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             _env = env;
         }
 
+        public async Task ExtractToCurrentDirectory(string compressedFilePath, bool overwrite, CancellationToken ct)
+        {
+            var password = compressedFilePath.GetPasswordsFromPath().FirstOrDefault();
+
+            var arguments = new List<string>
+            {
+                password.IsNotEmpty() ? $"-p{password}" : null!,
+                overwrite ? "-y" : null!,
+                "x", compressedFilePath
+            }.Where(a => a.IsNotEmpty()).ToArray();
+
+            var command = Cli.Wrap(_sevenZExecutable).WithArguments(arguments, true);
+
+            var result = await command.ExecuteAsync(ct);
+            if (result.ExitCode != 0)
+            {
+                throw new Exception($"Got exit code: {result.ExitCode} while executing [{command}]");
+            }
+        }
+
         public async Task<MemoryStream> ExtractOneEntry(string compressedFilePath, string entryPath,
             CancellationToken ct)
         {

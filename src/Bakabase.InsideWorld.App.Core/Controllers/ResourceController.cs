@@ -15,6 +15,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Components.Tasks;
+using Bakabase.InsideWorld.Business.Components.ThirdParty.Installer.FfMpeg;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
@@ -64,6 +65,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly FFMpegHelper _ffMpegHelper;
         private readonly TempFileManager _tempFileManager;
         private readonly IBOptions<ResourceOptions> _resourceOptions;
+        private readonly FfMpegInstaller _ffMpegInstaller;
 
         private static readonly MemoryCache CoverCache;
 
@@ -89,7 +91,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager,
             FavoritesResourceMappingService favoritesResourceMappingService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            FFMpegHelper ffMpegHelper, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions)
+            FFMpegHelper ffMpegHelper, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions, FfMpegInstaller ffMpegInstaller)
         {
             _service = service;
             _resourceTagMappingService = resourceTagMappingService;
@@ -106,6 +108,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _ffMpegHelper = ffMpegHelper;
             _tempFileManager = tempFileManager;
             _resourceOptions = resourceOptions;
+            _ffMpegInstaller = ffMpegInstaller;
         }
 
         [HttpPost("search")]
@@ -390,7 +393,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             }
 
             var items = new List<PreviewerItem>();
-            var ffmpegIsReady = _ffMpegHelper.IsReady();
+            var ffmpegIsReady = await _ffMpegInstaller.CheckInstallation() != null;
 
             foreach (var f in filePaths)
             {

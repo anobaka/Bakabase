@@ -10,6 +10,7 @@ using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
+using Bakabase.InsideWorld.Business.Components.ThirdParty.Installer.FfMpeg;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Resources;
@@ -41,10 +42,11 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly FFMpegHelper _ffMpegHelper;
         private readonly InsideWorldLocalizer _localizer;
         private readonly IGuiAdapter _guiAdapter;
+        private readonly FfMpegInstaller _ffMpegInstaller;
 
         public OptionsController(IStringLocalizer<SharedResource> prevLocalizer,
             IBOptionsManager<AppOptions> appOptionsManager,
-            InsideWorldOptionsManagerPool insideWorldOptionsManager, FFMpegHelper ffMpegHelper, InsideWorldLocalizer localizer, IGuiAdapter guiAdapter)
+            InsideWorldOptionsManagerPool insideWorldOptionsManager, FFMpegHelper ffMpegHelper, InsideWorldLocalizer localizer, IGuiAdapter guiAdapter, FfMpegInstaller ffMpegInstaller)
         {
             _prevLocalizer = prevLocalizer;
             _appOptionsManager = appOptionsManager;
@@ -52,6 +54,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _ffMpegHelper = ffMpegHelper;
             _localizer = localizer;
             _guiAdapter = guiAdapter;
+            _ffMpegInstaller = ffMpegInstaller;
         }
 
         [HttpGet("app")]
@@ -463,7 +466,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             {
                 if (model.FFmpeg?.BinDirectory.IsNotEmpty() == true)
                 {
-                    var missingFiles = FFMpegHelper.CheckMissingFiles(model.FFmpeg.BinDirectory);
+                    var missingFiles = _ffMpegInstaller.CheckMissingFiles();
                     if (missingFiles.Length > 0)
                     {
                         throw new FileNotFoundException(_localizer.FileNotFoundInPath(model.FFmpeg.BinDirectory,
