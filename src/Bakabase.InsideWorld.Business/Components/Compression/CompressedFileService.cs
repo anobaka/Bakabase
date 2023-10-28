@@ -32,11 +32,13 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         public async Task ExtractToCurrentDirectory(string compressedFilePath, bool overwrite, CancellationToken ct)
         {
             var password = compressedFilePath.GetPasswordsFromPath().FirstOrDefault();
+            var dir = Path.GetDirectoryName(compressedFilePath);
 
             var arguments = new List<string>
             {
                 password.IsNotEmpty() ? $"-p{password}" : null!,
                 overwrite ? "-y" : null!,
+                $"-o{dir}",
                 "x", compressedFilePath
             }.Where(a => a.IsNotEmpty()).ToArray();
 

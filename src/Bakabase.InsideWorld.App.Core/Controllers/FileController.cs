@@ -39,7 +39,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;
-using Xabe.FFmpeg;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
 {

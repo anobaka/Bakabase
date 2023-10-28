@@ -26,7 +26,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Swashbuckle.AspNetCore.Annotations;
-using Xabe.FFmpeg;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
 {

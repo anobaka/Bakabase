@@ -12,10 +12,11 @@ using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Components.Tasks;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Installer.FfMpeg;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
@@ -42,7 +43,6 @@ using Org.BouncyCastle.Utilities;
 using SharpCompress.IO;
 using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
-using Xabe.FFmpeg;
 using Image = SixLabors.ImageSharp.Image;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
@@ -62,10 +62,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
         private readonly InsideWorldLocalizer _localizer;
-        private readonly FFMpegHelper _ffMpegHelper;
+        private readonly FfMpegService _ffMpegService;
         private readonly TempFileManager _tempFileManager;
         private readonly IBOptions<ResourceOptions> _resourceOptions;
-        private readonly FfMpegInstaller _ffMpegInstaller;
+        private readonly Business.Components.Dependency.Implementations.FfMpeg.FfMpegService _ffMpegInstaller;
 
         private static readonly MemoryCache CoverCache;
 
@@ -91,7 +91,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager,
             FavoritesResourceMappingService favoritesResourceMappingService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            FFMpegHelper ffMpegHelper, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions, FfMpegInstaller ffMpegInstaller)
+            FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions, Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller)
         {
             _service = service;
             _resourceTagMappingService = resourceTagMappingService;
@@ -105,7 +105,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _env = env;
             _insideWorldOptionsManager = insideWorldOptionsManager;
             _localizer = localizer;
-            _ffMpegHelper = ffMpegHelper;
+            _ffMpegService = ffMpegService;
             _tempFileManager = tempFileManager;
             _resourceOptions = resourceOptions;
             _ffMpegInstaller = ffMpegInstaller;
@@ -393,7 +393,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             }
 
             var items = new List<PreviewerItem>();
-            var ffmpegIsReady = await _ffMpegInstaller.CheckInstallation() != null;
+            var ffmpegIsReady = _ffMpegInstaller.Status == DependentComponentStatus.Installed;
 
             foreach (var f in filePaths)
             {
@@ -414,7 +414,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                             items.Add(new PreviewerItem
                             {
                                 Duration = (int) Math.Ceiling(
-                                    (await _ffMpegHelper.GetDuration(f, HttpContext.RequestAborted))),
+                                    (await _ffMpegService.GetDuration(f, HttpContext.RequestAborted))),
                                 FilePath = f.StandardizePath()!,
                                 Type = type
                             });

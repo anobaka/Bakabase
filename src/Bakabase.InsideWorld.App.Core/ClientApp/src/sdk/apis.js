@@ -977,6 +977,144 @@ export const GetComponentDescriptorByKeyURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: DiscoverDependentComponent
+ * url: DiscoverDependentComponentURL
+ * method: DiscoverDependentComponent_TYPE
+ * raw_url: DiscoverDependentComponent_RAW_URL
+ * @param id - 
+ */
+export const DiscoverDependentComponent = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/component/dependency/discovery'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const DiscoverDependentComponent_RAW_URL = function() {
+  return '/component/dependency/discovery'
+}
+export const DiscoverDependentComponent_TYPE = function() {
+  return 'get'
+}
+export const DiscoverDependentComponentURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/component/dependency/discovery'
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetDependentComponentLatestVersion
+ * url: GetDependentComponentLatestVersionURL
+ * method: GetDependentComponentLatestVersion_TYPE
+ * raw_url: GetDependentComponentLatestVersion_RAW_URL
+ * @param id - 
+ */
+export const GetDependentComponentLatestVersion = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/component/dependency/latest-version'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetDependentComponentLatestVersion_RAW_URL = function() {
+  return '/component/dependency/latest-version'
+}
+export const GetDependentComponentLatestVersion_TYPE = function() {
+  return 'get'
+}
+export const GetDependentComponentLatestVersionURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/component/dependency/latest-version'
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: InstallDependentComponent
+ * url: InstallDependentComponentURL
+ * method: InstallDependentComponent_TYPE
+ * raw_url: InstallDependentComponent_RAW_URL
+ * @param id - 
+ */
+export const InstallDependentComponent = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/component/dependency'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const InstallDependentComponent_RAW_URL = function() {
+  return '/component/dependency'
+}
+export const InstallDependentComponent_TYPE = function() {
+  return 'post'
+}
+export const InstallDependentComponentURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/component/dependency'
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: AddComponentOptions
  * url: AddComponentOptionsURL
  * method: AddComponentOptions_TYPE

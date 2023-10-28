@@ -926,5 +926,9 @@
   "Select folder": "选择文件夹",
   "Selected": "已选择",
   "You can type a path here": "您可以输入一个路径",
-  "Sort by name": "按名称排序"
+  "Sort by name": "按名称排序",
+  "Not installed": "未安装",
+  "Click to update to version": "点击更新至版本",
+  "Dependent components": "依赖组件",
+  "Default location": "默认位置"
 }

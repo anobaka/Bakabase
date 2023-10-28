@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.AspNetCore.SignalR;
 

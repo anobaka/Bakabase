@@ -33,13 +33,14 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileS
 using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bootstrap.Components.Configuration.Abstractions;
-using Xabe.FFmpeg;
 using SearchOption = System.IO.SearchOption;
 using Volume = Bakabase.InsideWorld.Models.Models.Entities.Volume;
 using System.Drawing.Imaging;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
@@ -78,7 +79,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IBOptionsManager<ResourceOptions> _optionsManager;
         private readonly IBOptions<ThirdPartyOptions> _thirdPartyOptions;
         private readonly TempFileManager _tempFileManager;
-        private readonly FFMpegHelper _ffMpegHelper;
+        private readonly FfMpegService _ffMpegService;
         private readonly InsideWorldLocalizer _localizer;
 
         public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
@@ -92,7 +93,7 @@ namespace Bakabase.InsideWorld.Business.Services
             BackgroundTaskHelper backgroundTaskHelper, FavoritesResourceMappingService favoritesResourceMappingService,
             TagGroupService tagGroupService, IBOptionsManager<ResourceOptions> optionsManager,
             IBOptions<ThirdPartyOptions> thirdPartyOptions, TempFileManager tempFileManager,
-            FFMpegHelper ffMpegHelper, InsideWorldLocalizer localizer)
+            FfMpegService ffMpegService, InsideWorldLocalizer localizer)
         {
             _specialTextService = specialTextService;
             _publisherService = publisherService;
@@ -115,7 +116,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _optionsManager = optionsManager;
             _thirdPartyOptions = thirdPartyOptions;
             _tempFileManager = tempFileManager;
-            _ffMpegHelper = ffMpegHelper;
+            _ffMpegService = ffMpegService;
             _localizer = localizer;
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>(serviceProvider);
         }
@@ -1113,7 +1114,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         case AdditionalCoverDiscoveringSource.Video:
                         {
-                            if (string.IsNullOrEmpty(_thirdPartyOptions.Value.FFmpeg?.BinDirectory))
+                            if (_ffMpegService.Status != DependentComponentStatus.Installed)
                             {
                                 continue;
                             }
@@ -1128,10 +1129,10 @@ namespace Bakabase.InsideWorld.Business.Services
                             await FindCoverInVideoSm.WaitAsync(ct);
                             try
                             {
-                                var durationSeconds = await _ffMpegHelper.GetDuration(firstVideoFile.FullName, ct);
+                                var durationSeconds = await _ffMpegService.GetDuration(firstVideoFile.FullName, ct);
                                 var duration = TimeSpan.FromSeconds(durationSeconds);
                                 var screenshotTime = duration * 0.2;
-                                var ms = await _ffMpegHelper.CaptureFrame(firstVideoFile.FullName, screenshotTime, ct);
+                                var ms = await _ffMpegService.CaptureFrame(firstVideoFile.FullName, screenshotTime, ct);
                                 return (ms, ".jpg", true);
                             }
                             catch (Exception e)

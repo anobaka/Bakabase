@@ -8,11 +8,15 @@ using Bakabase.InsideWorld.Business.Components.Caching;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.CookieValidation;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Downloader;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsValidator;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
+using Bakabase.InsideWorld.Business.Components.Gui;
+using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
 using Bakabase.InsideWorld.Business.Components.Jobs;
 using Bakabase.InsideWorld.Business.Components.Network;
 using Bakabase.InsideWorld.Business.Components.Tasks;
@@ -107,6 +111,9 @@ namespace Bakabase.InsideWorld.App.Core
 
             services.RegisterAllRegisteredTypeAs<ICookieValidator>();
 
+            services.TryAddSingleton<FfMpegService>();
+            services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
+
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();
             services.TryAddSingleton<CompressedFileService>();
 
@@ -126,7 +133,9 @@ namespace Bakabase.InsideWorld.App.Core
 
         public override void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime)
         {
+            // todo: merge gui configuration
             app.ApplicationServices.GetRequiredService<WebGuiHubConfigurationAdapter>().Initialize();
+            app.ConfigureGui();
 
             base.Configure(app, lifetime);
         }

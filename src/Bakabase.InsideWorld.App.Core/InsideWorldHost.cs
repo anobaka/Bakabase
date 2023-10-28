@@ -21,7 +21,6 @@ using Bootstrap.Extensions;
 using InsideWorld.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Xabe.FFmpeg;
 
 namespace Bakabase.InsideWorld.App.Core
 {
@@ -56,15 +55,6 @@ namespace Bakabase.InsideWorld.App.Core
 
         protected override async Task ExecuteCustomProgress(IServiceProvider serviceProvider)
         {
-            var om = serviceProvider.GetRequiredService<InsideWorldOptionsManagerPool>();
-
-            var options = (om.ThirdParty).Value;
-
-            if (options.FFmpeg != null && options.FFmpeg.BinDirectory.IsNotEmpty())
-            {
-                FFmpeg.SetExecutablesPath(options.FFmpeg.BinDirectory);
-            }
-
             {
                 using var scope = serviceProvider.CreateScope();
                 var textService = scope.ServiceProvider.GetRequiredService<SpecialTextService>();

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Notification } from '@alifd/next';
+import { useTranslation } from 'react-i18next';
+import Dependency from './components/Dependency';
 import { GetAppInfo } from '@/sdk/apis';
 import './index.scss';
 import i18n from 'i18next';
@@ -9,6 +11,7 @@ import Functional from '@/pages/Configuration/components/Functional';
 import Others from '@/pages/Configuration/components/Others';
 
 const ConfigurationPage = function (props) {
+  const { t } = useTranslation();
   const [appInfo, setAppInfo] = useState({});
 
   useEffect(() => {
@@ -23,7 +26,7 @@ const ConfigurationPage = function (props) {
     }).invoke((a) => {
       if (!a.code) {
         Notification.success({
-          title: i18n.t('Saved'),
+          title: t('Saved'),
         });
         success(a);
       }
@@ -32,6 +35,7 @@ const ConfigurationPage = function (props) {
 
   return (
     <div className={'configuration-page'}>
+      <Dependency />
       <Functional applyPatches={applyPatches} />
       <Others applyPatches={applyPatches} />
       <AppInfo appInfo={appInfo} />

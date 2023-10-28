@@ -102,6 +102,7 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             //        Cookie = options.Value.ExHentaiCookie
             //    });
             //});
+
             services.RegisterAllRegisteredTypeAs<IEnhancer>();
 
             services.RegisterAllRegisteredTypeAs<IDownloader>();
@@ -114,7 +115,6 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.TryAddSingleton<IwFsWatcher>();
 
             services.TryAddSingleton<TempFileManager>();
-            services.TryAddSingleton<FFMpegHelper>();
 
             return services;
         }

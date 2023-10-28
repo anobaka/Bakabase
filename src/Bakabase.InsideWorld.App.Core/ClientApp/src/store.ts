@@ -8,6 +8,7 @@ import resourceTasks from '@/models/resourceTasks';
 import icons from '@/models/icons';
 import downloadTasks from '@/models/downloadTasks';
 import iwFsEntryChangeEvents from '@/models/iwFsEntryChangeEvents';
+import dependentComponentContexts from '@/models/dependentComponentContexts';
 
 const {
   appOptions,
@@ -30,6 +31,7 @@ export default createStore({
   downloadTasks,
   clientApp,
   iwFsEntryChangeEvents,
+  dependentComponentContexts,
 
   appOptions,
   uiOptions,

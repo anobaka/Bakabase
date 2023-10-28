@@ -122,10 +122,6 @@ namespace InsideWorld.Migrations
             // ThirdParty
             await GetRequiredService<IBOptionsManager<ThirdPartyOptions>>().SaveAsync(t =>
             {
-                t.FFmpeg = new ThirdPartyOptions.FFmpegOptions
-                {
-                    BinDirectory = _prevOptions.FFmpegBinDirectory
-                };
                 t.SimpleSearchEngines = _prevOptions.SimpleSearchEngines?.ToList();
             });
 

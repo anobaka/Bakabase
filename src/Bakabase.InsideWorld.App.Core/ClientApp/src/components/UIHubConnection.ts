@@ -33,15 +33,22 @@ export default class UIHubConnection {
         case 'DownloadTask':
           store.dispatch.downloadTasks.setState(data);
           break;
+        case 'DependentComponentContext':
+          store.dispatch.dependentComponentContexts.setState(data);
+          break;
       }
     });
     conn.on('GetIncrementalData', (key, data) => {
+      console.log(`Got incremental data ${key}`, data);
       switch (key) {
         case 'BackgroundTask':
           store.dispatch.backgroundTasks.update(data);
           break;
         case 'DownloadTask':
           store.dispatch.downloadTasks.update(data);
+          break;
+        case 'DependentComponentContext':
+          store.dispatch.dependentComponentContexts.update(data);
           break;
       }
     });

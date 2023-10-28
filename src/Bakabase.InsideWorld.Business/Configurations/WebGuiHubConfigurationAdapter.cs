@@ -1,5 +1,4 @@
-﻿using Bakabase.InsideWorld.Business.Components;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +11,7 @@ using Bootstrap.Components.Configuration;
 using Bootstrap.Extensions;
 using Humanizer;
 using Microsoft.AspNetCore.SignalR;
+using Bakabase.InsideWorld.Business.Components.Gui;
 
 namespace Bakabase.InsideWorld.Business.Configurations
 {

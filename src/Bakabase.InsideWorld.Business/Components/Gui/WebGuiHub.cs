@@ -5,6 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Configurations;
 using Bakabase.Infrastructures.Components.Configurations.App;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.InsideWorld.Business.Components.Dependency.Extensions;
+using Bakabase.InsideWorld.Business.Components.Dependency.Models.Dto;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
@@ -21,7 +24,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Bakabase.InsideWorld.Business.Components
+namespace Bakabase.InsideWorld.Business.Components.Gui
 {
     public interface IWebGuiClient
     {
@@ -42,11 +45,13 @@ namespace Bakabase.InsideWorld.Business.Components
         private readonly DownloadTaskService _downloadTaskService;
         private readonly InsideWorldOptionsManagerPool _optionsManagerPool;
         private readonly ILogger<WebGuiHub> _logger;
+        private readonly IEnumerable<IDependentComponentService> _dependentComponentServices;
 
         public WebGuiHub(
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
-            InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger)
+            InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
+            IEnumerable<IDependentComponentService> dependentComponentServices)
         {
             _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
@@ -54,13 +59,13 @@ namespace Bakabase.InsideWorld.Business.Components
             _downloadTaskService = downloadTaskService;
             _optionsManagerPool = optionsManagerPool;
             _logger = logger;
+            _dependentComponentServices = dependentComponentServices;
         }
 
         public async Task GetInitialData()
         {
             await Clients.Caller.GetData(nameof(BackgroundTask), _backgroundTaskManager.Tasks);
             await Clients.Caller.GetData(nameof(DownloadTask), await _downloadTaskService.GetAllDto());
-
 
             foreach (var (optionsType, optionsManagerObj) in _optionsManagerPool.AllOptionsManagers)
             {
@@ -70,6 +75,9 @@ namespace Bakabase.InsideWorld.Business.Components
                 var options = valueGetter!.GetMethod!.Invoke(optionsManagerObj, null);
                 await Clients.Caller.OptionsChanged(optionsType.Name.Camelize(), options);
             }
+
+            var componentContexts = _dependentComponentServices.Select(a => a.BuildContextDto()).ToList();
+            await Clients.Caller.GetData(nameof(DependentComponentContext), componentContexts);
         }
     }
 }

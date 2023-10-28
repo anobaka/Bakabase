@@ -108,6 +108,12 @@ export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileE
   sizeInMb?: number;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
+  version?: string | null;
+  description?: string | null;
+  canUpdate?: boolean;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup {
   keyName?: string | null;
   files?: string[] | null;
@@ -317,11 +323,6 @@ export interface BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsOr
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
   simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[] | null;
-  fFmpeg?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsFFmpegOptions;
-}
-
-export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsFFmpegOptions {
-  binDirectory?: string | null;
 }
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions {
@@ -1673,6 +1674,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastr
   code?: number;
   message?: string | null;
   data?: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo {
@@ -3214,6 +3222,72 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/component/key`,
         method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Component
+     * @name DiscoverDependentComponent
+     * @request GET:/component/dependency/discovery
+     */
+    discoverDependentComponent: (
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/component/dependency/discovery`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Component
+     * @name GetDependentComponentLatestVersion
+     * @request GET:/component/dependency/latest-version
+     */
+    getDependentComponentLatestVersion: (
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion,
+        any
+      >({
+        path: `/component/dependency/latest-version`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Component
+     * @name InstallDependentComponent
+     * @request POST:/component/dependency
+     */
+    installDependentComponent: (
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/component/dependency`,
+        method: "POST",
         query: query,
         format: "json",
         ...params,

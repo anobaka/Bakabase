@@ -9,8 +9,8 @@ using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Installer.FfMpeg;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Resources;
@@ -29,7 +29,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
-using Xabe.FFmpeg;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
 {
@@ -39,19 +38,17 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly IStringLocalizer<SharedResource> _prevLocalizer;
         private readonly IBOptionsManager<AppOptions> _appOptionsManager;
         private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
-        private readonly FFMpegHelper _ffMpegHelper;
         private readonly InsideWorldLocalizer _localizer;
         private readonly IGuiAdapter _guiAdapter;
-        private readonly FfMpegInstaller _ffMpegInstaller;
+        private readonly FfMpegService _ffMpegInstaller;
 
         public OptionsController(IStringLocalizer<SharedResource> prevLocalizer,
             IBOptionsManager<AppOptions> appOptionsManager,
-            InsideWorldOptionsManagerPool insideWorldOptionsManager, FFMpegHelper ffMpegHelper, InsideWorldLocalizer localizer, IGuiAdapter guiAdapter, FfMpegInstaller ffMpegInstaller)
+            InsideWorldOptionsManagerPool insideWorldOptionsManager,  InsideWorldLocalizer localizer, IGuiAdapter guiAdapter, FfMpegService ffMpegInstaller)
         {
             _prevLocalizer = prevLocalizer;
             _appOptionsManager = appOptionsManager;
             _insideWorldOptionsManager = insideWorldOptionsManager;
-            _ffMpegHelper = ffMpegHelper;
             _localizer = localizer;
             _guiAdapter = guiAdapter;
             _ffMpegInstaller = ffMpegInstaller;
@@ -464,20 +461,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             await _insideWorldOptionsManager.ThirdParty.SaveAsync(options =>
             {
-                if (model.FFmpeg?.BinDirectory.IsNotEmpty() == true)
-                {
-                    var missingFiles = _ffMpegInstaller.CheckMissingFiles();
-                    if (missingFiles.Length > 0)
-                    {
-                        throw new FileNotFoundException(_localizer.FileNotFoundInPath(model.FFmpeg.BinDirectory,
-                            missingFiles));
-                    }
-
-                    FFmpeg.SetExecutablesPath(model.FFmpeg.BinDirectory);
-                    options.FFmpeg ??= new ThirdPartyOptions.FFmpegOptions();
-                    options.FFmpeg.BinDirectory = model.FFmpeg.BinDirectory;
-                }
-
                 if (model.SimpleSearchEngines != null)
                 {
                     options.SimpleSearchEngines = model.SimpleSearchEngines;
