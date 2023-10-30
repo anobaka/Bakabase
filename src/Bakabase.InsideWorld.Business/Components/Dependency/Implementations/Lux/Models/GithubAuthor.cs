@@ -1,24 +1,44 @@
-﻿namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux.Models
+﻿using Newtonsoft.Json;
+using System;
+
+namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux.Models
 {
     public class GithubAuthor
     {
-        public string login { get; set; }
-        public int id { get; set; }
-        public string node_id { get; set; }
-        public string avatar_url { get; set; }
-        public string gravatar_id { get; set; }
-        public string url { get; set; }
-        public string html_url { get; set; }
-        public string followers_url { get; set; }
-        public string following_url { get; set; }
-        public string gists_url { get; set; }
-        public string starred_url { get; set; }
-        public string subscriptions_url { get; set; }
-        public string organizations_url { get; set; }
-        public string repos_url { get; set; }
-        public string events_url { get; set; }
-        public string received_events_url { get; set; }
-        public string type { get; set; }
-        public bool site_admin { get; set; }
+        [JsonProperty("login")] public string Login { get; set; }
+
+        [JsonProperty("id")] public long Id { get; set; }
+
+        [JsonProperty("node_id")] public string NodeId { get; set; }
+
+        [JsonProperty("avatar_url")] public Uri AvatarUrl { get; set; }
+
+        [JsonProperty("gravatar_id")] public string GravatarId { get; set; }
+
+        [JsonProperty("url")] public string Url { get; set; }
+
+        [JsonProperty("html_url")] public Uri HtmlUrl { get; set; }
+
+        [JsonProperty("followers_url")] public string FollowersUrl { get; set; }
+
+        [JsonProperty("following_url")] public string FollowingUrl { get; set; }
+
+        [JsonProperty("gists_url")] public string GistsUrl { get; set; }
+
+        [JsonProperty("starred_url")] public string StarredUrl { get; set; }
+
+        [JsonProperty("subscriptions_url")] public string SubscriptionsUrl { get; set; }
+
+        [JsonProperty("organizations_url")] public string OrganizationsUrl { get; set; }
+
+        [JsonProperty("repos_url")] public string ReposUrl { get; set; }
+
+        [JsonProperty("events_url")] public string EventsUrl { get; set; }
+
+        [JsonProperty("received_events_url")] public string ReceivedEventsUrl { get; set; }
+
+        [JsonProperty("type")] public string Type { get; set; }
+
+        [JsonProperty("site_admin")] public bool SiteAdmin { get; set; }
     }
 }

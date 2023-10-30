@@ -1,22 +1,58 @@
 ﻿using System;
+using System.Collections.Generic;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili.Models;
+using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux.Models
 {
     public class GithubRelease
     {
-        public string url { get; set; }
-        public int id { get; set; }
-        public string node_id { get; set; }
-        public string name { get; set; }
-        public string label { get; set; }
-        public Uploader uploader { get; set; }
-        public string content_type { get; set; }
-        public string state { get; set; }
-        public int size { get; set; }
-        public int download_count { get; set; }
-        public DateTime created_at { get; set; }
-        public DateTime updated_at { get; set; }
-        public string browser_download_url { get; set; }
+        [JsonProperty("url")]
+        public string Url { get; set; }
+
+        [JsonProperty("assets_url")]
+        public string AssetsUrl { get; set; }
+
+        [JsonProperty("upload_url")]
+        public string UploadUrl { get; set; }
+
+        [JsonProperty("html_url")]
+        public string HtmlUrl { get; set; }
+
+        [JsonProperty("id")]
+        public long Id { get; set; }
+
+        [JsonProperty("author")]
+        public GithubAuthor Author { get; set; }
+
+        [JsonProperty("node_id")]
+        public string NodeId { get; set; }
+
+        [JsonProperty("tag_name")]
+        public string TagName { get; set; }
+
+        [JsonProperty("target_commitish")]
+        public string TargetCommitish { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("draft")]
+        public bool Draft { get; set; }
+
+        [JsonProperty("prerelease")]
+        public bool Prerelease { get; set; }
+
+        [JsonProperty("created_at")]
+        public DateTimeOffset CreatedAt { get; set; }
+
+        [JsonProperty("published_at")]
+        public DateTimeOffset PublishedAt { get; set; }
+
+        [JsonProperty("assets")]
+        public List<GithubAsset> Assets { get; set; }
+
+        [JsonProperty("body")]
+        public string Body { get; set; }
     }
 }
