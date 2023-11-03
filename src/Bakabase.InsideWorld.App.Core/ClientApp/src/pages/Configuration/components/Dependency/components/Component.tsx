@@ -20,15 +20,15 @@ export default ({ id }: { id: string }) => {
   }, [context]);
 
   const init = useCallback(async () => {
-    const latestVersionRsp = await BApi.component.getDependentComponentLatestVersion({ id });
-    // @ts-ignore
-    setLatestVersion(latestVersionRsp.data);
-
     try {
       await BApi.component.discoverDependentComponent({ id });
     } finally {
       setDiscovering(false);
     }
+
+    const latestVersionRsp = await BApi.component.getDependentComponentLatestVersion({ id });
+    // @ts-ignore
+    setLatestVersion(latestVersionRsp.data);
   }, []);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default ({ id }: { id: string }) => {
         <Icon type={'loading'} size={'small'} />
       );
     } else {
-      if (latestVersion.version == context?.version) {
+      if (!latestVersion.canUpdate) {
         return (
           <CustomIcon style={{ color: 'green' }} type={'check-circle'} />
         );

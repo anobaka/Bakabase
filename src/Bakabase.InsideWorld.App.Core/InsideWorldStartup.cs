@@ -3,18 +3,20 @@ using Bakabase.Infrastructures.Components.Jobs;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.App.Core.Extensions;
 using Bakabase.InsideWorld.Business;
-using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Caching;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.CookieValidation;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Updater;
 using Bakabase.InsideWorld.Business.Components.Downloader;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsValidator;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
+using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
 using Bakabase.InsideWorld.Business.Components.Jobs;
@@ -112,6 +114,8 @@ namespace Bakabase.InsideWorld.App.Core
             services.RegisterAllRegisteredTypeAs<ICookieValidator>();
 
             services.TryAddSingleton<FfMpegService>();
+            services.TryAddSingleton<LuxService>();
+            services.TryAddSingleton<UpdaterService>();
             services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
 
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();
@@ -121,7 +125,7 @@ namespace Bakabase.InsideWorld.App.Core
 
             services.TryAddTransient<InsideWorldLocalizer>();
 
-            services.TryAddSingleton<FileMover>();
+            services.TryAddSingleton<IFileMover, FileMover>();
 
             services.TryAddSingleton<InsideWorldWebProxy>();
         }

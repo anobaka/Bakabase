@@ -4,18 +4,28 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import CustomIcon from '@/components/CustomIcon';
 import Title from '@/components/Title';
-import { PatchAppOptions, PatchExHentaiOptions, PatchResourceOptions, PatchThirdPartyOptions, PatchUIOptions, ValidateCookie } from '@/sdk/apis';
+import {
+  PatchAppOptions,
+  PatchExHentaiOptions,
+  PatchResourceOptions,
+  PatchThirdPartyOptions,
+  PatchUIOptions,
+  ValidateCookie,
+} from '@/sdk/apis';
 import {
   AdditionalCoverDiscoveringSource,
-  additionalCoverDiscoveringSources, CloseBehavior,
-  closeBehaviors,
-  CookieValidatorTarget, coverSaveLocations,
+  additionalCoverDiscoveringSources,
+  CloseBehavior,
+  CookieValidatorTarget,
+  coverSaveLocations,
+  DependentComponentStatus,
   startupPages,
 } from '@/sdk/constants';
 import ConfirmationButton from '@/components/ConfirmationButton';
 import store from '@/store';
 import type { BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions } from '@/sdk/Api';
 import { uuidv4 } from '@/components/utils';
+import dependentComponentIds from '@/core/models/Constants/DependentComponentIds';
 
 export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: any) => void}) => {
   const { t } = useTranslation();
@@ -29,6 +39,8 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
 
   const [simpleSearchEngines, setSimpleSearchEngines] = useState<BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[]>([]);
   const [tmpExHentaiOptions, setTmpExHentaiOptions] = useState(exhentaiOptions || {});
+
+  const ffmpegState = store.useModelState('dependentComponentContexts')?.find(d => d.id == dependentComponentIds.FFMpeg);
 
   useEffect(() => {
     setSimpleSearchEngines(JSON.parse(JSON.stringify(thirdPartyOptions.simpleSearchEngines || [])));
@@ -56,7 +68,7 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
           >
             {additionalCoverDiscoveringSources.map((s) => {
               if (s.value == AdditionalCoverDiscoveringSource.Video) {
-                if (!thirdPartyOptions.fFmpeg?.binDirectory) {
+                if (ffmpegState?.status != DependentComponentStatus.Installed) {
                   return (
                     <Balloon.Tooltip
                       key={s.value}
@@ -130,7 +142,7 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
       },
     },
     {
-      label: 'Search engines',
+      label: 'External search engines',
       tip: 'You can set external search engines for searching resource by name quickly in resource list, ' +
         "'{keyword}' will replaced by resource name or filename.",
       renderCell: () => {

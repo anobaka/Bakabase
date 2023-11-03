@@ -22,17 +22,10 @@
     align-items: center;
     justify-content: space-between;
 
-    .opts {
+    .left, .status, .right {
       display: flex;
-      gap: 5px;
       align-items: center;
-      .next-icon, .iconfont {
-        cursor: pointer;
-        color: #999;
-        &:hover {
-          color: #333;
-        }
-      }
+      gap: 5px;
     }
   }
 

@@ -19,7 +19,9 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
     {
         public abstract string Id { get; }
         public abstract string DisplayName { get; }
+        public abstract string? Description { get; }
         public string DefaultLocation { get; }
+        public abstract bool IsRequired { get; }
         protected ILogger Logger;
         protected string DirectoryName { get; }
         protected string TempDirectory { get; }
@@ -34,6 +36,10 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
                 DirectoryName);
             TempDirectory = Path.Combine(DefaultLocation, BusinessConstants.TempDirectoryName);
         }
+
+        protected string GetExecutableWithValidation(string name) => Status == DependentComponentStatus.Installed
+            ? Path.Combine(Context.Location!, name)
+            : throw new Exception($"{DisplayName} is not ready");
 
         protected abstract Task InstallCore(CancellationToken ct);
 
@@ -74,6 +80,13 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
         public virtual async Task Discover(CancellationToken ct)
         {
             var r = await Discoverer.Discover(DefaultLocation, ct);
+            if (Status != DependentComponentStatus.Installing)
+            {
+                Status = string.IsNullOrEmpty(r?.Version)
+                    ? DependentComponentStatus.NotInstalled
+                    : DependentComponentStatus.Installed;
+            }
+
             if (r.HasValue)
             {
                 await UpdateContext(c =>

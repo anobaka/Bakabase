@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -69,16 +70,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                          blockStart < fileSize;
                          blockStart += DownloadBlockSize)
                     {
-                        var blockRsp = await _client.SendAsync(new HttpRequestMessage(HttpMethod.Get, downloadUrl)
-                        {
-                            Headers =
-                            {
-                                {
-                                    "Range",
-                                    $"bytes={blockStart}-{Math.Min(fileSize, blockStart + DownloadBlockSize) - 1}"
-                                }
-                            }
-                        }, ct);
+                        var downloadReq = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
+                        downloadReq.Headers.Range = new RangeHeaderValue(blockStart,
+                            Math.Min(fileSize, blockStart + DownloadBlockSize) - 1);
+                        var blockRsp = await _client.SendAsync(downloadReq, ct);
                         blockRsp.EnsureSuccessStatusCode();
                         await blockRsp.Content.CopyToAsync(fs, ct);
 

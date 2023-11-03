@@ -4,29 +4,42 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Aliyun.OSS;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux.Models;
 using Bootstrap.Components.Storage;
+using Bootstrap.Components.Terminal.Cmd;
+using CliWrap;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux
 {
     public class LuxService
-    (ILoggerFactory loggerFactory, AppService appService, IHttpClientFactory httpClientFactory,
+    (IServiceProvider serviceProvider, ILoggerFactory loggerFactory, AppService appService,
+        IHttpClientFactory httpClientFactory,
         CompressedFileService compressedFileService) :
         HttpSourceComponentService(loggerFactory, appService, "lux", httpClientFactory)
     {
         public override string Id => "6cb4ac7f-f60d-45c9-86bc-a48918623654";
         public override string DisplayName => "lux";
-
+        public override bool IsRequired => false;
+        public override string? Description => "https://github.com/iawia002/lux";
         private const string LatestReleaseApiUrl = "https://api.github.com/repos/iawia002/lux/releases/latest";
+        protected FfMpegService FfMpegService => serviceProvider.GetRequiredService<FfMpegService>();
+
+        protected string LuxBin => GetExecutableWithValidation("lux");
 
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)
         {
@@ -55,7 +68,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
             var targetAsset = release.Assets.FirstOrDefault(asset =>
             {
                 var name = asset.Name;
-                var segments = name.Split('-');
+                var segments = name.Split('_');
                 var lastSegment = segments.Last();
                 var dotIndexInLastSegment = lastSegment.IndexOf('.');
                 if (dotIndexInLastSegment > -1)
@@ -80,7 +93,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
 
             return new LuxVersion()
             {
-                CanUpdate = Context.Version != version,
+                // version from cli has not leading 'v'
+                CanUpdate = Context.Version != version.TrimStart('v'),
                 Description = release.Body,
                 Version = version,
                 DownloadUrl = targetAsset.BrowserDownloadUrl
@@ -89,10 +103,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
 
         protected override IDiscoverer Discoverer { get; } = new LuxDiscover(loggerFactory);
 
-        protected override async Task<List<string>> GetDownloadUrls(DependentComponentVersion version,
+        protected override async Task<Dictionary<string, string>> GetDownloadUrls(DependentComponentVersion version,
             CancellationToken ct)
         {
-            return new List<string> {(version as LuxVersion)!.DownloadUrl};
+            return new List<string> {(version as LuxVersion)!.DownloadUrl}.ToDictionary(a => a,
+                a => Path.GetFileName(a)!);
         }
 
         protected override async Task PostDownloading(List<string> files, CancellationToken ct)
@@ -112,6 +127,87 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
                     await DirectoryUtils.MoveAsync(e, DefaultLocation, true, null, ct);
                 }
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="cookie"></param>
+        /// <param name="downloadCaptions"></param>
+        /// <param name="threadsCount"></param>
+        /// <param name="outputDirectory"></param>
+        /// <param name="outputName">Do not put file extension here.</param>
+        /// <param name="onProgress"></param>
+        /// <param name="otherArgs"></param>
+        /// <returns></returns>
+        public async Task<CmdResult> Download(string url, string? cookie, bool downloadCaptions, int threadsCount,
+            string outputDirectory, string outputName, Func<int, Task>? onProgress, List<(string, object?)>? otherArgs)
+        {
+            var args = new List<(string Key, object? Value)>();
+            if (!string.IsNullOrEmpty(cookie))
+            {
+                args.Add(("-c", cookie));
+            }
+
+            if (downloadCaptions)
+            {
+                args.Add(("-C", null));
+            }
+
+            if (threadsCount > 0)
+            {
+                args.Add(("-n", threadsCount));
+            }
+
+            args.Add(("-o", outputDirectory));
+            args.Add(("-O", outputName));
+
+            if (otherArgs?.Any() == true)
+            {
+                args.AddRange(otherArgs);
+            }
+
+            args.Add((url, null));
+
+            var arguments = args
+                .SelectMany(a => new[] {a.Key, a.Value?.ToString()}.Where(b => !string.IsNullOrEmpty(b))).ToList();
+            var regex = new Regex(@"(\d+(\.\d+)?)%");
+            var osb = new StringBuilder();
+            var esb = new StringBuilder();
+
+            var prevProgress = 0;
+
+            var cmd = Cli.Wrap(LuxBin)
+                .WithValidation(CommandResultValidation.None)
+                .WithArguments(arguments!, true)
+                .WithEnvironmentVariables(new Dictionary<string, string?>
+                {
+                    {"PATH", FfMpegService.FfMpegExecutable}
+                })
+                .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb, Encoding.UTF8))
+                .WithStandardErrorPipe(new CustomCliWrapPipeTarget(async str =>
+                {
+                    var match = regex.Match(str);
+                    if (match.Success)
+                    {
+                        var partProgress = (int) decimal.Parse(match.Groups[1].Value);
+                        if (prevProgress != partProgress)
+                        {
+                            prevProgress = partProgress;
+                            if (onProgress != null)
+                            {
+                                await onProgress(partProgress);
+                            }
+                        }
+                    }
+
+                    esb.Append(str);
+                }, Encoding.UTF8));
+            // It will take several seconds to cancel the CancellationToken if ct was passed here.
+            var r = await cmd.ExecuteAsync();
+
+            return new CmdResult(r.ExitCode, osb.ToString(), esb.ToString());
         }
     }
 }

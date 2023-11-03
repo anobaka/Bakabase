@@ -29,12 +29,14 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
     {
         public override string Id => "364e3884-4c6f-446f-b72c-1ec84e8da2c2";
         public override string DisplayName => "ffmpeg";
+        public override string? Description => "https://www.ffmpeg.org/";
+        public override bool IsRequired => false;
 
         protected override IDiscoverer Discoverer { get; } = new FfMpegDiscoverer(loggerFactory);
 
         private const string HttpApi = "https://ffbinaries.com/api/v1/version/latest";
 
-        protected override async Task<List<string>> GetDownloadUrls(DependentComponentVersion version,
+        protected override async Task<Dictionary<string, string>> GetDownloadUrls(DependentComponentVersion version,
             CancellationToken ct)
         {
             var ffmpegVer = (version as FfMpegVersion)!;
@@ -45,7 +47,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
                 ffmpegVer.FfPlayUrl
             }.Where(a => !string.IsNullOrEmpty(a)).ToList();
 
-            return urls!;
+            return urls!.ToDictionary(a => a!, a => Path.GetFileName(a)!);
         }
 
         protected override async Task PostDownloading(List<string> filePaths, CancellationToken ct)
@@ -118,8 +120,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
             return fv;
         }
 
-        private string FfProbeExecutable => Path.Combine(Context.Location, "ffprobe");
-        private string FfMpegExecutable => Path.Combine(Context.Location, "ffmpeg");
+        public string FfProbeExecutable => GetExecutableWithValidation("ffprobe");
+        public string FfMpegExecutable => GetExecutableWithValidation("ffmpeg");
 
         public async Task<double> GetDuration(string path, CancellationToken ct)
         {

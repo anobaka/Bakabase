@@ -4,6 +4,7 @@ import { Message } from '@alifd/next';
 import store from '@/store';
 import { buildLogger, sleep, uuidv4 } from '@/components/utils';
 import serverConfig from '@/serverConfig';
+import fileMovingProgresses from '@/models/fileMovingProgresses';
 
 const hubEndpoint = `${serverConfig.apiEndpoint}/hub/ui`;
 export default class UIHubConnection {
@@ -22,6 +23,7 @@ export default class UIHubConnection {
       await this._start();
     });
 
+    // todo: auto mapping
     conn.on('GetData', (key, data) => {
       // this.log(projects);
       // this.log(store);
@@ -36,8 +38,13 @@ export default class UIHubConnection {
         case 'DependentComponentContext':
           store.dispatch.dependentComponentContexts.setState(data);
           break;
+        case 'FileMovingProgress':
+          store.dispatch.fileMovingProgresses.setState(data);
+          break;
       }
     });
+
+    // todo: auto mapping
     conn.on('GetIncrementalData', (key, data) => {
       console.log(`Got incremental data ${key}`, data);
       switch (key) {
@@ -49,6 +56,9 @@ export default class UIHubConnection {
           break;
         case 'DependentComponentContext':
           store.dispatch.dependentComponentContexts.update(data);
+          break;
+        case 'FileMovingProgress':
+          store.dispatch.fileMovingProgresses.update(data);
           break;
       }
     });

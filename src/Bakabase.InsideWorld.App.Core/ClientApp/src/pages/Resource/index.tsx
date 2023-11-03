@@ -5,7 +5,7 @@ import { Collapse } from 'react-collapse';
 import i18n from 'i18next';
 import Queue from 'queue';
 import { useTranslation } from 'react-i18next';
-import { resourceSearchOrders } from '@/sdk/constants';
+import { DependentComponentStatus, resourceSearchOrders } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import type { IResourceHandler } from '@/components/Resource';
 import Resource from '@/components/Resource';
@@ -18,6 +18,7 @@ import BApi from '@/sdk/BApi';
 import { buildLogger } from '@/components/utils';
 import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
 import ShowTagSelector from '@/components/Resource/components/ShowTagSelector';
+import dependentComponentIds from '@/core/models/Constants/DependentComponentIds';
 
 const orderDataSource = resourceSearchOrders.reduce<{ label: string; value: string }[]>((s, x) => {
   [{
@@ -87,6 +88,8 @@ const ResourcePage = (props) => {
 
   const resourceLoadCtsRef = useRef<AbortController>();
 
+  const ffmpegState = store.useModelState('dependentComponentContexts')?.find(d => d.id == dependentComponentIds.FFMpeg);
+
   const queueRef = useRef(new Queue({
     concurrency: 6,
     autostart: true,
@@ -116,16 +119,14 @@ const ResourcePage = (props) => {
         search(t);
       });
 
-    BApi.options.getThirdPartyOptions()
-      .then(a => {
-        if (a.data?.fFmpeg?.binDirectory == undefined) {
-          Notification.notice({
-            title: t('Quick preview is not fully enabled'),
-            content: t('It\'s highly recommended to configure ffmpeg path in settings to enable the quick preview feature for videos.'),
-            duration: 10000,
-          });
-        }
+
+    if (ffmpegState?.status == DependentComponentStatus.NotInstalled) {
+      Notification.notice({
+        title: t('Quick preview is not fully enabled'),
+        content: t('It\'s highly recommended to configure ffmpeg path in settings to enable the quick preview feature for videos.'),
+        duration: 10000,
       });
+    }
 
     const onKeyDown = (e) => {
       log('Keydown', e);

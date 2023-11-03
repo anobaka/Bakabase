@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
@@ -10,6 +12,9 @@ using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Caching;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Updater;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
@@ -21,6 +26,7 @@ using Bootstrap.Extensions;
 using InsideWorld.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.App.Core
 {
@@ -55,18 +61,39 @@ namespace Bakabase.InsideWorld.App.Core
 
         protected override async Task ExecuteCustomProgress(IServiceProvider serviceProvider)
         {
+            using var scope = serviceProvider.CreateScope();
+            var textService = scope.ServiceProvider.GetRequiredService<SpecialTextService>();
+
+            var bcc = scope.ServiceProvider.GetRequiredService<GlobalCacheContainer>();
+            bcc.SpecialTextVersion = await textService.CalcVersion();
+
+            var updaterOptionsManager =
+                scope.ServiceProvider.GetRequiredService<IBOptionsManager<UpdaterOptions>>();
+            // force fixing oss configuration
+            await updaterOptionsManager.SaveAsync(a =>
+                a.AppUpdaterOssObjectPrefix = BusinessConstants.AppOssObjectPrefix);
+
+            var dependencies = serviceProvider.GetRequiredService<IEnumerable<IDependentComponentService>>().ToList();
+            foreach (var d in dependencies)
             {
-                using var scope = serviceProvider.CreateScope();
-                var textService = scope.ServiceProvider.GetRequiredService<SpecialTextService>();
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        Logger.LogInformation($"Trying to discover dependency [{d.DisplayName}({d.Id})]");
+                        await d.Discover(new CancellationToken());
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogError(e, $"Failed to discover dependency [{d.DisplayName}({d.Id})]: {e.Message}");
+                    }
 
-                var bcc = scope.ServiceProvider.GetRequiredService<GlobalCacheContainer>();
-                bcc.SpecialTextVersion = await textService.CalcVersion();
-
-                var updaterOptionsManager =
-                    scope.ServiceProvider.GetRequiredService<IBOptionsManager<UpdaterOptions>>();
-                // force fixing oss configuration
-                await updaterOptionsManager.SaveAsync(a =>
-                    a.AppUpdaterOssObjectPrefix = BusinessConstants.AppOssObjectPrefix);
+                    if (d is {IsRequired: true, Status: DependentComponentStatus.NotInstalled})
+                    {
+                        Logger.LogInformation($"Dependency [{d.DisplayName}({d.Id})] is not installed, installing...");
+                        await d.Install(new CancellationToken());
+                    }
+                });
             }
         }
 

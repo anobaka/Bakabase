@@ -67,8 +67,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Discovery
                 }
                 else
                 {
-                    Logger.LogError(
-                        $"Failed to find location by executable: {RelativeFileNameWithoutExtensionForAcquiringVersion}, exit code: {r.ExitCode}, output: {osb}, error: {esb}");
+                    if (r.ExitCode != 1)
+                    {
+                        Logger.LogError(
+                            $"Failed to find location by executable: {RelativeFileNameWithoutExtensionForAcquiringVersion}, exit code: {r.ExitCode}, output: {osb}, error: {esb}");
+                    }
                     return null;
                 }
             }
@@ -101,7 +104,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Discovery
                     }
                     catch (Exception e)
                     {
-                        Logger.LogError(
+                        Logger.LogError(e,
                             $"Failed to find version from output:{e.Message}{Environment.NewLine}{output}{Environment.NewLine}of command: {cmd}");
                         throw;
                     }

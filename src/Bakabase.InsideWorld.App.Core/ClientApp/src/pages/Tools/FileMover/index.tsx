@@ -8,6 +8,8 @@ import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
 import CustomIcon from '@/components/CustomIcon';
 import AnimatedArrow from '@/components/AnimatedArrow';
 import BApi from '@/sdk/BApi';
+import store from '@/store';
+import ClickableIcon from '@/components/ClickableIcon';
 
 interface IValue {
   targets: {
@@ -30,6 +32,10 @@ export default () => {
   const [preferredSource, setPreferredSource] = useState();
 
   const [value, setValue] = useState<IValue>(new Value());
+
+  const progresses = store.useModelState('fileMovingProgresses');
+
+  console.log(progresses);
 
   const loadOptions = () => {
     BApi.options.getFileSystemOptions()
@@ -165,13 +171,14 @@ export default () => {
     rowSpan: 1,
   });
 
-    // console.log(value, ds);
+  // console.log(value, ds);
 
   const renderCommonOperations = (path) => {
     return (
       <>
-        <CustomIcon
+        <ClickableIcon
           type={'folder-open'}
+          colorType={'normal'}
           onClick={() => {
             OpenFileOrDirectory({
               path,
@@ -240,49 +247,52 @@ export default () => {
             // console.log(`rendering table col ${i}-1`, target, i);
             return (
               <div className={'target'}>
-                <Dropdown
-                  trigger={
-                    <div>
-                      <FileSelector
-                        multiple={false}
-                        type={'folder'}
-                        value={target ?? null}
-                        size={'small'}
-                        onChange={(newPath) => {
-                          if (!target) {
-                            addTarget(newPath);
-                          } else {
-                            updateTarget(target, newPath);
-                          }
-                        }}
-                      />
-                    </div>
-                  }
-                  triggerType={['hover']}
-                >
-                  <Menu>
-                    <Menu.Item onClick={() => {
-                      MediaLibraryPathSelector.show({
-                        onSelect: (newPath) => {
-                          if (!target) {
-                            addTarget(newPath);
-                          } else {
-                            updateTarget(target, newPath);
-                          }
-                          return;
-                        },
-                      });
-                    }}
-                    >
-                      {t('Select from media library')}
-                    </Menu.Item>
-                  </Menu>
-                </Dropdown>
+                <div className="left">
+                  <Dropdown
+                    trigger={
+                      <div>
+                        <FileSelector
+                          multiple={false}
+                          type={'folder'}
+                          value={target ?? null}
+                          size={'small'}
+                          onChange={(newPath) => {
+                            if (!target) {
+                              addTarget(newPath);
+                            } else {
+                              updateTarget(target, newPath);
+                            }
+                          }}
+                        />
+                      </div>
+                    }
+                    triggerType={['hover']}
+                  >
+                    <Menu>
+                      <Menu.Item onClick={() => {
+                        MediaLibraryPathSelector.show({
+                          onSelect: (newPath) => {
+                            if (!target) {
+                              addTarget(newPath);
+                            } else {
+                              updateTarget(target, newPath);
+                            }
+                            return;
+                          },
+                        });
+                      }}
+                      >
+                        {t('Select from media library')}
+                      </Menu.Item>
+                    </Menu>
+                  </Dropdown>
+                </div>
                 {target && (
-                  <div className={'opts'}>
+                  <div className={'right'}>
                     {renderCommonOperations(target)}
-                    <Icon
-                      type={'close'}
+                    <ClickableIcon
+                      colorType={'danger'}
+                      type={'delete'}
                       onClick={() => {
                         Dialog.confirm({
                           title: t('Sure to remove?'),
@@ -319,28 +329,64 @@ export default () => {
           cell={(s, i, r) => {
             if (i > 0) {
               // console.log(`rendering table col ${i}-2`, s, i);
+              const progress = progresses[s];
               return (
                 <div className={'source'}>
-                  <FileSelector
-                    multiple={false}
-                    type={'folder'}
-                    value={s}
-                    size={'small'}
-                    onChange={(newPath) => {
-                      // console.log(s, newPath, r);
-                      if (!s) {
-                        // console.log(r.target, newPath);
-                        addSource(r.target, newPath);
-                      } else {
-                        updateSource(r.target, s, newPath);
-                      }
-                    }}
-                  />
+                  <div className="left">
+                    <FileSelector
+                      multiple={false}
+                      type={'folder'}
+                      value={s}
+                      size={'small'}
+                      onChange={(newPath) => {
+                        // console.log(s, newPath, r);
+                        if (!s) {
+                          // console.log(r.target, newPath);
+                          addSource(r.target, newPath);
+                        } else {
+                          updateSource(r.target, s, newPath);
+                        }
+                      }}
+                    />
+                    {progress && (
+                      <div className={'status'}>
+                        {progress.error && (
+                          <ClickableIcon
+                            type={'warning-circle'}
+                            colorType={'danger'}
+                            onClick={() => {
+                              Dialog.alert({
+                                title: t('Error'),
+                                v2: true,
+                                width: 'auto',
+                                closeMode: ['esc', 'close', 'mask'],
+                                content: (
+                                  <pre>
+                                    {progress.error}
+                                  </pre>
+                                ),
+                              });
+                            }}
+                          />
+                        )}
+                        {progress.moving && (
+                          <Icon type={'loading'} />
+                        )}
+                        {progress.percentage > 0 && progress.percentage < 100 && (
+                          `${progress.percentage}%`
+                        )}
+                        {progress.percentage == 100 && (
+                          <CustomIcon type={'check-circle'} style={{ color: 'var(--theme-color-success)' }} />
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {s && (
-                    <div className={'opts'}>
+                    <div className={'right'}>
                       {renderCommonOperations(s)}
-                      <Icon
-                        type={'close'}
+                      <ClickableIcon
+                        type={'delete'}
+                        colorType={'danger'}
                         onClick={() => {
                           Dialog.confirm({
                             title: t('Sure to remove?'),

@@ -14,20 +14,21 @@ using Semver;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
 {
-    public abstract class HttpSourceComponentService(ILoggerFactory loggerFactory, AppService appService, string directoryName,
+    public abstract class HttpSourceComponentService(ILoggerFactory loggerFactory, AppService appService,
+            string directoryName,
             IHttpClientFactory httpClientFactory)
         : DependentComponentService(loggerFactory, appService, directoryName)
     {
         protected HttpClient HttpClient = httpClientFactory.CreateClient(BusinessConstants.HttpClientNames.Default);
 
-        protected abstract Task<List<string>> GetDownloadUrls(DependentComponentVersion version,
+        protected abstract Task<Dictionary<string, string>> GetDownloadUrls(DependentComponentVersion version,
             CancellationToken ct);
 
         protected abstract Task PostDownloading(List<string> files, CancellationToken ct);
         private const int InstallationProgressForDownloading = 90;
 
         protected override async Task InstallCore(CancellationToken ct)
-        { 
+        {
             await Discover(ct);
             var latestVersion = await GetLatestVersion(ct);
             Logger.LogInformation($"Try to install latest version: {latestVersion.Version}");
@@ -35,11 +36,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
             if (Context.Version == null || SemVersion.Parse(latestVersion.Version, SemVersionStyles.Any)
                     .ComparePrecedenceTo(SemVersion.Parse(Context.Version, SemVersionStyles.Any)) > 0)
             {
-                var urls = await GetDownloadUrls(latestVersion, ct);
-                if (urls.Any())
+                var urlAndFileNames = await GetDownloadUrls(latestVersion, ct);
+                if (urlAndFileNames.Any())
                 {
                     Directory.CreateDirectory(TempDirectory);
-                    var perFileProgress = (decimal)InstallationProgressForDownloading / urls.Count;
+                    var perFileProgress = (decimal) InstallationProgressForDownloading / urlAndFileNames.Count;
                     var singleFileDownloader = new SingleFileHttpDownloader(HttpClient,
                         loggerFactory.CreateLogger<SingleFileHttpDownloader>());
                     var allFilePaths = new List<string>();
@@ -54,10 +55,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
                             });
                         }
                     };
-                    foreach (var url in urls)
+                    foreach (var (url, fileName) in urlAndFileNames)
                     {
-                        var filename = Path.GetFileName(url);
-                        var filePath = Path.Combine(TempDirectory, filename);
+                        var filePath = Path.Combine(TempDirectory, fileName);
+                        var dir = Path.GetDirectoryName(filePath)!;
+                        Directory.CreateDirectory(dir);
                         await singleFileDownloader.Download(url, filePath, ct);
                         allFilePaths.Add(filePath);
                     }

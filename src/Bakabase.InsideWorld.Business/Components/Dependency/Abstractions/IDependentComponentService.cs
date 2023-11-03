@@ -13,7 +13,10 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Abstractions
     {
         string Id { get; }
         string DisplayName { get; }
+        string? Description { get; }
         string DefaultLocation { get; }
+
+        bool IsRequired { get; }
 
         Task Install(CancellationToken ct);
         Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct);

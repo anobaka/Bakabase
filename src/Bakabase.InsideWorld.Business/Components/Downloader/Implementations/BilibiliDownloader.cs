@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
@@ -42,15 +43,18 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
 
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.Bilibili;
 
+        private readonly LuxService _luxService;
+
         public BilibiliDownloader(IStringLocalizer<SharedResource> localizer,
             BilibiliClient client, InsideWorldOptionsManagerPool optionsManager, SpecialTextService specialTextService,
-            IHostEnvironment env, IServiceProvider serviceProvider) : base(serviceProvider)
+            IHostEnvironment env, IServiceProvider serviceProvider, LuxService luxService) : base(serviceProvider)
         {
             _localizer = localizer;
             _client = client;
             _optionsManager = optionsManager;
             _specialTextService = specialTextService;
             _env = env;
+            _luxService = luxService;
         }
 
         private string LuxBin => BuildLuxBinPath(_env);
@@ -224,62 +228,78 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
                                             var urlForLux = BiliBiliApiConstants.PostPartPage
                                                 .Replace("{aid}", postInfo.Aid.ToString())
                                                 .Replace("{part}", i.ToString());
-                                            var arguments = new[]
-                                            {
-                                                "-c", cookie,
-                                                "-C",
-                                                "-n", 1.ToString(),
-                                                "-o", tempVideoDirectory,
-                                                "-O", tempFilenameWithoutExtension,
-                                                // "-o", dirFullname,
-                                                // "-O", filenameWithoutExtension,
-                                                urlForLux
-                                            };
-                                            var regex = new Regex(@"(\d+(\.\d+)?)%");
-                                            var cmdErrorSb = new StringBuilder();
-                                            var error2Sb = new StringBuilder();
-                                            var cmd = Cli.Wrap(LuxBin)
-                                                .WithValidation(CommandResultValidation.None)
-                                                .WithArguments(arguments, true)
-                                                .WithStandardOutputPipe(
-                                                    PipeTarget.ToDelegate(str =>
-                                                    {
-                                                        if (cmdErrorSb.Length > 0)
-                                                        {
-                                                            cmdErrorSb.Append(Environment.NewLine).Append(str);
-                                                        }
-                                                        else
-                                                        {
-                                                            if (str.Contains("error:"))
-                                                            {
-                                                                cmdErrorSb.Append(str);
-                                                            }
-                                                        }
-                                                    }, Encoding.UTF8)
-                                                )
-                                                .WithStandardErrorPipe(new CustomCliWrapPipeTarget(async str =>
-                                                {
-                                                    var match = regex.Match(str);
-                                                    if (match.Success)
-                                                    {
-                                                        var partProgress = decimal.Parse(match.Groups[1].Value);
-                                                        var newGlobalProgress = _getGlobalProgress(partProgress, i,
-                                                            postInfo.Pages.Count, postIndex, totalCount);
-                                                        if (globalProgress != newGlobalProgress)
-                                                        {
-                                                            globalProgress = newGlobalProgress;
-                                                            await OnProgressInternal(globalProgress);
-                                                        }
-                                                    }
 
-                                                    error2Sb.Append(str);
-                                                }, Encoding.UTF8));
-                                            // It will take several seconds to cancel the CancellationToken if ct was passed here.
-                                            var r = await cmd.ExecuteAsync();
-                                            if (r.ExitCode != 0)
+                                            var luxRet = await _luxService.Download(urlForLux, cookie, true, 1,
+                                                tempVideoDirectory, tempFilenameWithoutExtension,
+                                                async p =>
+                                                {
+                                                    var newGlobalProgress = _getGlobalProgress(p, i,
+                                                        postInfo.Pages.Count, postIndex, totalCount);
+                                                    if (globalProgress != newGlobalProgress)
+                                                    {
+                                                        globalProgress = newGlobalProgress;
+                                                        await OnProgressInternal(globalProgress);
+                                                    }
+                                                }, null);
+
+                                            // var arguments = new string[]
+                                            // {
+                                            //     "-c", cookie!,
+                                            //     "-C",
+                                            //     "-n", 1.ToString(),
+                                            //     "-o", tempVideoDirectory,
+                                            //     "-O", tempFilenameWithoutExtension,
+                                            //     urlForLux
+                                            // };
+                                            // var regex = new Regex(@"(\d+(\.\d+)?)%");
+                                            // var cmdErrorSb = new StringBuilder();
+                                            // var error2Sb = new StringBuilder();
+                                            // var cmd = Cli.Wrap(LuxBin)
+                                            //     .WithValidation(CommandResultValidation.None)
+                                            //     .WithArguments(arguments, true)
+                                            //     .WithStandardOutputPipe(
+                                            //         PipeTarget.ToDelegate(str =>
+                                            //         {
+                                            //             if (cmdErrorSb.Length > 0)
+                                            //             {
+                                            //                 cmdErrorSb.Append(Environment.NewLine).Append(str);
+                                            //             }
+                                            //             else
+                                            //             {
+                                            //                 if (str.Contains("error:"))
+                                            //                 {
+                                            //                     cmdErrorSb.Append(str);
+                                            //                 }
+                                            //             }
+                                            //         }, Encoding.UTF8)
+                                            //     )
+                                            //     .WithStandardErrorPipe(new CustomCliWrapPipeTarget(async str =>
+                                            //     {
+                                            //         var match = regex.Match(str);
+                                            //         if (match.Success)
+                                            //         {
+                                            //             var partProgress = decimal.Parse(match.Groups[1].Value);
+                                            //             var newGlobalProgress = _getGlobalProgress(partProgress, i,
+                                            //                 postInfo.Pages.Count, postIndex, totalCount);
+                                            //             if (globalProgress != newGlobalProgress)
+                                            //             {
+                                            //                 globalProgress = newGlobalProgress;
+                                            //                 await OnProgressInternal(globalProgress);
+                                            //             }
+                                            //         }
+                                            //
+                                            //         error2Sb.Append(str);
+                                            //     }, Encoding.UTF8));
+                                            // // It will take several seconds to cancel the CancellationToken if ct was passed here.
+                                            // var r = await cmd.ExecuteAsync();
+                                            if (luxRet.ExitCode != 0)
                                             {
-                                                throw new Exception(
-                                                    $"Lux error code: {r.ExitCode}, output: {Environment.NewLine}{cmdErrorSb}");
+                                                var message =
+                                                    new StringBuilder(
+                                                            $"An error occurred during using lux: {luxRet.ExitCode}")
+                                                        .AppendLine($"[Output]{luxRet.Output}")
+                                                        .AppendLine($"[Error]{luxRet.Error}");
+                                                throw new Exception(message.ToString());
                                             }
 
                                             var targetFiles = Directory.GetFiles(tempVideoDirectory).Where(t =>

@@ -115,6 +115,7 @@ body {
   --tag-checkable-normal-text-color: var(--btn-pure-normal-color);
   --tag-checkable-normal-text-color-hover: var(--btn-pure-normal-color);
   --tag-checkable-normal-border-color: var(--btn-pure-normal-border-color);
+  --tag-checkable-normal-bg-selected-disabled: var(--theme-button-normal-color-disabled);
   --tag-bordered-border-color: var(--theme-border-color);
   --tag-bordered-text-color-hover: var(--theme-text);
   --tag-bordered-text-color: var(--theme-text-subtle);
@@ -171,6 +172,9 @@ body {
   --message-success-color-border-toast: var(--theme-border-color);
   --message-success-color-title-toast: var(--theme-text);
   --message-success-color-content-toast: var(--theme-text-subtle);
+
+  --message-warning-color-title-addon: var(--theme-text);
+  --message-warning-color-content-addon: var(--theme-text-subtle);
 
   --message-error-color-bg-toast: var(--theme-block-background);
   --message-error-color-border-toast: var(--theme-border-color);

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import './index.scss';
-import { Button, Checkbox, Dialog, Icon, Input, MenuButton, Message } from '@alifd/next';
+import { Button, Checkbox, Dialog, Icon, Input, Loading, MenuButton, Message } from '@alifd/next';
 import IceLabel from '@icedesign/label';
 import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import { Trans, useTranslation } from 'react-i18next';
@@ -886,7 +886,6 @@ export default () => {
 
   return (
     <div className={'file-explorer-page'}>
-      {/* <Loading visible={loading}> */}
       {renderContextMenu()}
       {root ? (
         <div className={'file-explorer'}>
@@ -922,6 +921,9 @@ export default () => {
               />
               <div className="chain">
                 {renderDirectoryChain()}
+                {loading && (
+                  <Icon type={'loading'} />
+                )}
               </div>
               <ClickableIcon
                 colorType={'normal'}
@@ -1107,7 +1109,6 @@ export default () => {
           </Button>
         </div>
       )}
-      {/* </Loading> */}
     </div>
   );
 };

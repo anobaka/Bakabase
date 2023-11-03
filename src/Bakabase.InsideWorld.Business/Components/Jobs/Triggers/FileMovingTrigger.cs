@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Jobs;
+using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Services;
@@ -21,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Jobs.Triggers
     [DisallowConcurrentExecution]
     public class FileMovingTrigger : SimpleJob
     {
-        private FileMover FileMover => GetRequiredService<FileMover>();
+        private IFileMover FileMover => GetRequiredService<IFileMover>();
 
         public override async Task Execute(AsyncServiceScope scope)
         {

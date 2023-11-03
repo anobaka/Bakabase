@@ -36,7 +36,25 @@ export default () => {
               return (
                 <>
                   {name}
-                  <CustomIcon size={'small'} type={'question-circle'} title={`${t('Default location')}: ${c.defaultLocation}`} />
+                  <Balloon
+                    trigger={(
+                      <CustomIcon size={'small'} type={'question-circle'} />
+                    )}
+                    triggerType={'click'}
+                    align={'r'}
+                  >
+                    <div style={{ userSelect: 'text' }}>
+                      {c.description && (
+                        <div>
+                          {c.description}
+                        </div>
+                      )}
+                      <div>
+                        {t('Default location')}: {c.defaultLocation}
+                      </div>
+                    </div>
+
+                  </Balloon>
                 </>
               );
             }}

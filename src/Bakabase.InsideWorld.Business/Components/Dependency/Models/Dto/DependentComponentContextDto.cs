@@ -14,5 +14,6 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Models.Dto
         public string Name { get; set; } = null!;
         public string DefaultLocation { get; set; } = null!;
         public DependentComponentStatus Status { get; set; }
+        public string? Description { get; set; }
     }
 }

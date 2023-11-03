@@ -22,8 +22,6 @@ namespace Bakabase.InsideWorld.Business.Components
 
         public override async Task CopyFromAsync(Stream source, CancellationToken cancellationToken = default)
         {
-            var reader = new StreamReader(source, _encoding);
-
             var buffer = new byte[1024];
             int bytesRead;
 

@@ -10,6 +10,8 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Extensions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Models.Dto;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
+using Bakabase.InsideWorld.Business.Components.FileMover;
+using Bakabase.InsideWorld.Business.Components.FileMover.Models;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
@@ -46,12 +48,13 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly InsideWorldOptionsManagerPool _optionsManagerPool;
         private readonly ILogger<WebGuiHub> _logger;
         private readonly IEnumerable<IDependentComponentService> _dependentComponentServices;
+        private readonly IFileMover _fileMover;
 
         public WebGuiHub(
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
-            IEnumerable<IDependentComponentService> dependentComponentServices)
+            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover)
         {
             _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
@@ -60,6 +63,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             _optionsManagerPool = optionsManagerPool;
             _logger = logger;
             _dependentComponentServices = dependentComponentServices;
+            _fileMover = fileMover;
         }
 
         public async Task GetInitialData()
@@ -78,6 +82,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
             var componentContexts = _dependentComponentServices.Select(a => a.BuildContextDto()).ToList();
             await Clients.Caller.GetData(nameof(DependentComponentContext), componentContexts);
+
+            await Clients.Caller.GetData(nameof(FileMovingProgress), _fileMover.Progresses);
         }
     }
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   BilibiliDownloadTaskType,
   bilibiliDownloadTaskTypes,
+  DependentComponentStatus,
   ExHentaiDownloadTaskType,
   exHentaiDownloadTaskTypes,
   PixivDownloadTaskType,
@@ -13,7 +14,7 @@ import {
 import NameIcon from '@/pages/Downloader/components/NameIcon';
 
 import './index.scss';
-import { Balloon, Button, Dialog, Divider, Icon, Input, Message, NumberPicker, Select, Tag } from '@alifd/next';
+import { Balloon, Button, Dialog, Divider, Icon, Input, NumberPicker, Select, Tag } from '@alifd/next';
 import i18n from 'i18next';
 import { useUpdateEffect } from 'react-use';
 import {
@@ -28,6 +29,9 @@ import {
 import Configurations from '@/pages/Downloader/components/Configurations';
 import CustomIcon from '@/components/CustomIcon';
 import FileSelector from '@/components/FileSelector';
+import store from '@/store';
+import dependentComponentIds from '@/core/models/Constants/DependentComponentIds';
+import { useTranslation } from 'react-i18next';
 
 const timeUnits = [
   {
@@ -109,6 +113,8 @@ export default ({
   onClose,
   taskId,
 }) => {
+  const { t } = useTranslation();
+
   const [thirdPartyId, setThirdPartyId] = useState<ThirdPartyId | undefined>();
   const [type, setType] = useState<number | undefined>();
   const [form, setForm] = useState<any>({
@@ -127,6 +133,9 @@ export default ({
   const [pixivOptions, setPixivOptions] = useState({});
   const [bilibiliOptions, setBilibiliOptions] = useState({});
 
+  const dependentComponentContexts = store.useModelState('dependentComponentContexts');
+  const luxState = dependentComponentContexts?.find(d => d.id == dependentComponentIds.Lux);
+  const ffmpegState = dependentComponentContexts?.find(d => d.id == dependentComponentIds.FFMpeg);
 
   const createDefaultFormValue = () => {
     let options;
@@ -216,10 +225,7 @@ export default ({
         getBilibiliFavorites();
       }
     }
-  }, [type]);
-
-  useUpdateEffect(() => {
-    if (ThirdPartyId == ThirdPartyId.ExHentai) {
+    if (thirdPartyId == ThirdPartyId.ExHentai) {
       form.key = type == ExHentaiDownloadTaskType.Watched ? 'https://exhentai.org/watched' : undefined;
     }
     setForm({ ...form });
@@ -239,20 +245,20 @@ export default ({
         break;
     }
 
-    return types.map((t) => {
-      console.log(type, t);
+    return types.map((type) => {
+      console.log(type, type);
       return (
         <Tag.Selectable
           className={'type'}
           onChange={(checked) => {
             if (checked) {
-              setType(t.value);
+              setType(type.value);
             }
           }}
-          checked={type == t.value}
+          checked={type == type.value}
           disabled={disableEditing}
         >
-          {i18n.t(t.label)}
+          {t(type.label)}
         </Tag.Selectable>
       );
     });
@@ -291,7 +297,7 @@ export default ({
         className={'full'}
         onChange={onChange}
         value={value}
-        placeholder={i18n.t(placeholder)}
+        placeholder={placeholder == undefined ? undefined : t(placeholder)}
         disabled={disableEditing}
       />
     );
@@ -331,13 +337,13 @@ export default ({
         break;
       case ThirdPartyId.Pixiv: {
         switch (type) {
-          case PixivDownloadTaskType.List:
+          case PixivDownloadTaskType.Search:
             items.push({
               label: 'Url',
               component: createSimpleFormInput(false),
               tip: (
                 <>
-                  {i18n.t('Novel is not supported now, please make sure your url likes: ')}
+                  {t('Novel is not supported now, please make sure your url likes: ')}
                   <br />
                   https://www.pixiv.net/tags/azurlane
                   <br />
@@ -359,7 +365,7 @@ export default ({
               component: createSimpleFormInput(false),
               tip: (
                 <>
-                  {i18n.t('Novel is not supported now, please make sure your url likes: ')}
+                  {t('Novel is not supported now, please make sure your url likes: ')}
                   <br />
                   https://www.pixiv.net/ranking.php
                   <br />
@@ -374,7 +380,7 @@ export default ({
               component: createSimpleFormInput(false),
               tip: (
                 <>
-                  {i18n.t('Novel is not supported now, please make sure your url likes: ')}
+                  {t('Novel is not supported now, please make sure your url likes: ')}
                   <br />
                   https://www.pixiv.net/bookmark_new_illust.php
                   <br />
@@ -421,7 +427,7 @@ export default ({
                     );
                   }) : (
                     <div>
-                      {i18n.t('Unable to get bilibili favorites, make sure your cookie is set properly')}
+                      {t('Unable to get bilibili favorites, make sure your cookie is set properly')}
                       <Button
                         onClick={() => {
                           setConfigurationsVisible(true);
@@ -429,7 +435,7 @@ export default ({
                         style={{ marginLeft: 5 }}
                         type={'primary'}
                         text
-                      >{i18n.t('Set now')}
+                      >{t('Set now')}
                       </Button>
                     </div>
                   )
@@ -536,7 +542,7 @@ export default ({
             setConfigurationsVisible(true);
           }}
         >
-          {i18n.t('Check')}
+          {t('Check')}
         </Button>
       ),
     });
@@ -550,7 +556,7 @@ export default ({
             return (
               <>
                 <div className={'label'}>
-                  {i18n.t(i.label)}
+                  {t(i.label)}
                   {i.tip && (
                     <Balloon.Tooltip
                       align={'t'}
@@ -562,7 +568,7 @@ export default ({
                         <CustomIcon type={'question-circle'} />
                       )}
                       triggerType={'hover'}
-                    >{tipIsString ? i18n.t(i.tip) : i.tip}
+                    >{tipIsString ? t(i.tip) : i.tip}
                     </Balloon.Tooltip>
                   )}
                 </div>
@@ -606,7 +612,7 @@ export default ({
           onCreatedOrUpdated && onCreatedOrUpdated();
         } else if (a.code == ResponseCode.Conflict) {
           Dialog.confirm({
-            title: i18n.t('Duplicates are found'),
+            title: t('Duplicates are found'),
             content: (
               <pre>
                 {a.message}
@@ -639,7 +645,7 @@ export default ({
         />
       )}
       <Dialog
-        title={taskId > 0 ? i18n.t('Download task') : i18n.t('Creating download task')}
+        title={taskId > 0 ? t('Download task') : t('Creating download task')}
         className={'download-task-detail'}
         visible
         closeable
@@ -663,15 +669,31 @@ export default ({
       >
         <div className={'grid'}>
           <div className="label">
-            {i18n.t('Site')}
+            {t('Site')}
           </div>
           <div className="sources value">
             {thirdPartyIds.map((tpId) => {
-              return (
+              // todo: This is a temporary solution.
+              // Tag.Selectable with disabled status will block the hover event, which makes the balloon not working.
+              let blockChanging = false;
+              let disabledTip: string | undefined;
+              if (tpId.value == ThirdPartyId.Bilibili) {
+                if (luxState?.status != DependentComponentStatus.Installed || ffmpegState?.status != DependentComponentStatus.Installed) {
+                  blockChanging = true;
+                  disabledTip = (
+                    t('This function is not working because lux or ffmpeg is not found, check them in system configurations')
+                  );
+                }
+              }
+
+              const tag = (
                 <Tag.Selectable
                   className={'source'}
                   size={'large'}
                   onChange={(checked) => {
+                    if (blockChanging) {
+                      return;
+                    }
                     if (checked) {
                       setThirdPartyId(tpId.value);
                     }
@@ -681,14 +703,26 @@ export default ({
                 >
                   <img src={NameIcon[tpId.value]} alt="" />
                   <span>{tpId.label}</span>
+                  {disabledTip && (
+                    <Balloon.Tooltip
+                      trigger={(
+                        <CustomIcon type={'warning-circle'} />
+                      )}
+                      triggerType={'hover'}
+                      align={'t'}
+                    >
+                      {disabledTip}
+                    </Balloon.Tooltip>
+                  )}
                 </Tag.Selectable>
               );
+              return tag;
             })}
           </div>
           {thirdPartyId && (
             <>
               <div className="label">
-                {i18n.t('Type')}
+                {t('Type')}
               </div>
               <div className="types value">
                 {renderTypes()}

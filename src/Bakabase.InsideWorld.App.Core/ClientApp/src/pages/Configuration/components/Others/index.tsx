@@ -96,30 +96,30 @@ export default ({
         );
       },
     },
-    {
-      label: 'FFmpeg bin directory',
-      tip: 'You can download binary files from https://ffmpeg.org/download.html, and make sure you have ffprobe.exe and ffmpeg.exe in your directory.',
-      renderValue: () => {
-        return (
-          <FileSelector
-            size={'small'}
-            value={thirdPartyOptions.fFmpeg?.binDirectory}
-            type={'folder'}
-            // multiple
-            onChange={(path) => {
-              if (path) {
-                applyPatches(PatchThirdPartyOptions, {
-                  fFmpeg: {
-                    ...(thirdPartyOptions.fFmpeg || {}),
-                    binDirectory: path,
-                  },
-                });
-              }
-            }}
-          />
-        );
-      },
-    },
+    // {
+    //   label: 'FFmpeg bin directory',
+    //   tip: 'You can download binary files from https://ffmpeg.org/download.html, and make sure you have ffprobe.exe and ffmpeg.exe in your directory.',
+    //   renderValue: () => {
+    //     return (
+    //       <FileSelector
+    //         size={'small'}
+    //         value={thirdPartyOptions.fFmpeg?.binDirectory}
+    //         type={'folder'}
+    //         // multiple
+    //         onChange={(path) => {
+    //           if (path) {
+    //             applyPatches(PatchThirdPartyOptions, {
+    //               fFmpeg: {
+    //                 ...(thirdPartyOptions.fFmpeg || {}),
+    //                 binDirectory: path,
+    //               },
+    //             });
+    //           }
+    //         }}
+    //       />
+    //     );
+    //   },
+    // },
     {
       label: 'Enable pre-release channel',
       tip: 'Prefer pre-release version which has new features but less stability',

@@ -19,6 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Extensions
                 Name = service.DisplayName,
                 DefaultLocation = service.DefaultLocation,
                 Status = service.Status,
+                Description = service.Description,
 
                 Error = ctx.Error,
                 InstallationProgress = ctx.InstallationProgress,

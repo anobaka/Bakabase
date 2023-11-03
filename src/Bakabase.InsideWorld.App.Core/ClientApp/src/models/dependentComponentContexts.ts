@@ -20,15 +20,15 @@ export default createModel(
     // 定义改变该模型状态的纯函数
     reducers: {
       setState: (prevState, contexts) => {
-        console.log('background tasks changed', contexts);
-        return contexts.slice().sort((a, b) => b.startDt.localeCompare(a.startDt));
+        console.log('dependent component context changed', contexts);
+        return contexts.slice().sort((a, b) => a.id.localeCompare(b.id));
       },
-      update: (prevState, contexts) => {
-        const idx = prevState.findIndex((t) => t.id == contexts.id);
+      update: (prevState, context) => {
+        const idx = prevState.findIndex((t) => t.id == context.id);
         if (idx > -1) {
-          prevState[idx] = contexts;
+          prevState[idx] = context;
         } else {
-          prevState.push(contexts);
+          prevState.push(context);
         }
         return prevState;
       },

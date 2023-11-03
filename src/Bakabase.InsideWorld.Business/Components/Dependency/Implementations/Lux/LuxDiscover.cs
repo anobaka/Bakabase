@@ -27,7 +27,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
             // lux: version v0.16.0, A fast and simple video downloader.
             //
 
-            var core = output.Split(Environment.NewLine)[1];
+            // lux returns \n instead of Environment.NewLine
+            var core = output.Split('\n').Select(a => a.Trim()).ToArray()[1];
             var segments = core.Split(' ', ',').ToList();
 
             var versionIndex = segments.IndexOf("version");

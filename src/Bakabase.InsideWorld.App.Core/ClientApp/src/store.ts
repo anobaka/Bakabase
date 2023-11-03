@@ -9,6 +9,7 @@ import icons from '@/models/icons';
 import downloadTasks from '@/models/downloadTasks';
 import iwFsEntryChangeEvents from '@/models/iwFsEntryChangeEvents';
 import dependentComponentContexts from '@/models/dependentComponentContexts';
+import fileMovingProgresses from '@/models/fileMovingProgresses';
 
 const {
   appOptions,
@@ -32,6 +33,7 @@ export default createStore({
   clientApp,
   iwFsEntryChangeEvents,
   dependentComponentContexts,
+  fileMovingProgresses,
 
   appOptions,
   uiOptions,
