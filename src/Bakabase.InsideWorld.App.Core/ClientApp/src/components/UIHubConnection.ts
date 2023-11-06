@@ -99,6 +99,10 @@ export default class UIHubConnection {
       store.dispatch[name].update(options);
     });
 
+    conn.on('GetAppUpdaterState', state => {
+      store.dispatch.appUpdaterState.setState(state);
+    });
+
     this._conn = conn;
     this._start().then((r) => {});
   }

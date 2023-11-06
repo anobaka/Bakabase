@@ -59,12 +59,14 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             try
             {
                 await InstallCore(ct);
+                Status = DependentComponentStatus.Installed;
                 await UpdateContext(d => { d.InstallationProgress = 100; });
             }
             catch (Exception e)
             {
                 await UpdateContext(d => { d.Error = e.Message; });
                 Logger.LogError(e, $"An error occurred during installing {DisplayName}: {e.Message}");
+                throw;
             }
             finally
             {
@@ -110,7 +112,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             await TriggerOnStateChange();
         }
 
-        public DependentComponentContext Context { get; } = new();
+        public virtual DependentComponentContext Context { get; } = new();
 
         public event Func<DependentComponentContext, Task>? OnStateChange;
 

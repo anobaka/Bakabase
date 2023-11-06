@@ -62,6 +62,7 @@ export default ({ id }: { id: string }) => {
                   type={'primary'}
                   size={'small'}
                   onClick={() => {
+                    setLatestVersion(undefined);
                     BApi.component.installDependentComponent({ id });
                   }}
                 >

@@ -14,7 +14,6 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Caching;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
-using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Updater;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;

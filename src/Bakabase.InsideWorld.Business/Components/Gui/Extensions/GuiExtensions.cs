@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -26,6 +27,12 @@ namespace Bakabase.InsideWorld.Business.Components.Gui.Extensions
                         service.BuildContextDto());
                 };
             }
+
+            var appUpdater = app.ApplicationServices.GetRequiredService<AppUpdater>();
+            appUpdater.OnStateChange += async (context) =>
+            {
+                await hubContext.Clients.All.GetAppUpdaterState(appUpdater.State);
+            };
 
             return app;
         }

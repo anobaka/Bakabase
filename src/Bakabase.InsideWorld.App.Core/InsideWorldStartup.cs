@@ -1,4 +1,5 @@
 ﻿using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.Infrastructures.Components.Jobs;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.App.Core.Extensions;
@@ -8,9 +9,9 @@ using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.CookieValidation;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
-using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Updater;
 using Bakabase.InsideWorld.Business.Components.Downloader;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsValidator;
@@ -115,8 +116,10 @@ namespace Bakabase.InsideWorld.App.Core
 
             services.TryAddSingleton<FfMpegService>();
             services.TryAddSingleton<LuxService>();
-            services.TryAddSingleton<UpdaterService>();
+            services.TryAddSingleton<BakabaseUpdaterService>();
             services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
+
+            services.TryAddSingleton<IBakabaseUpdater>(sp => sp.GetRequiredService<BakabaseUpdaterService>());
 
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();
             services.TryAddSingleton<CompressedFileService>();

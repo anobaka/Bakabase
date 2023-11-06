@@ -4,26 +4,25 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Aliyun.OSS;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
+using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
+using Bakabase.InsideWorld.Business.Components.Gui;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Storage;
-using ElectronNET.API;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Semver;
 
-namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Updater
+namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater
 {
-    public class UpdaterService : HttpSourceComponentService
+    public class BakabaseUpdaterService : HttpSourceComponentService, IBakabaseUpdater
     {
         public override string Id => "274f8ab5-a0a6-4415-8466-137d986d3ddb";
         public override string DisplayName => "Bakabase.Updater";
@@ -32,14 +31,17 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Up
         private const string OssPrefix = "app/bakabase/updater/";
         public override bool IsRequired => true;
         private readonly OssClient _ossClient = null!;
+        private readonly IHubContext<WebGuiHub, IWebGuiClient> _uiHub;
 
         protected string Executable => GetExecutableWithValidation("Bakabase.Updater");
 
-        public UpdaterService(ILoggerFactory loggerFactory, AppService appService, IBOptions<UpdaterOptions> options,
-            IHttpClientFactory httpClientFactory) :
+        public BakabaseUpdaterService(ILoggerFactory loggerFactory, AppService appService,
+            IBOptions<UpdaterOptions> options,
+            IHttpClientFactory httpClientFactory, IHubContext<WebGuiHub, IWebGuiClient> uiHub) :
             base(loggerFactory, appService, "updater", httpClientFactory)
         {
             _options = options;
+            _uiHub = uiHub;
             try
             {
                 _ossClient = new OssClient(_options.Value.OssEndpoint,
@@ -136,46 +138,23 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Up
             await DirectoryUtils.MergeAsync(TempDirectory, DefaultLocation, true, null, ct);
         }
 
-        protected override IDiscoverer Discoverer { get; } = new UpdaterDiscover();
+        protected override IDiscoverer Discoverer { get; } = new BakabaseUpdaterDiscover();
 
-        public async Task PrepareNewAppVersion()
+        public Task StartUpdater(int pid, string processName, string appDir, string newFilesDir,
+            string executable, AppVersionInfo.Installer? installer)
         {
-            AppUpdater appUpdater;
-
-            await appUpdater.StartUpdating();
-        }
-
-        public async Task UpdateAndRestartApp()
-        {
-
-            var newVersion = await CheckNewVersion();
-            var updaterExecutable = Path.Combine(AppService.AppDataDirectory, "updater", "Bakabase.Updater.exe");
-            if (!File.Exists(updaterExecutable))
-            {
-                throw new Exception($"{updaterExecutable} does not exits");
-            }
-
-            newVersion.Installers[0].OsPlatform = OSPlatform.Windows;
-            newVersion.Installers[0].OsArchitecture = Architecture.X64;
-
-            var installer = newVersion.Installers?.FirstOrDefault(a =>
-                a.OsPlatform != null && RuntimeInformation.IsOSPlatform(a.OsPlatform.Value) &&
-                RuntimeInformation.OSArchitecture == a.OsArchitecture);
-
-            var process = Process.GetCurrentProcess();
-
             var rawArguments = new List<object>
             {
                 "--pid",
-                process.Id,
+                pid,
                 "--process-name",
-                process.ProcessName,
+                processName,
                 "--app-dir",
-                Path.GetDirectoryName(process.MainModule!.FileName)!,
+                appDir,
                 "--new-files-dir",
-                DownloadDir,
+                newFilesDir,
                 "--executable",
-                process.MainModule!.FileName!
+                executable
             };
 
             if (installer != null)
@@ -188,11 +167,17 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Up
 
             var argumentsString = string.Join(' ', arguments);
 
-            var startInfo = new ProcessStartInfo(updaterExecutable, argumentsString)
+            var startInfo = new ProcessStartInfo(Executable, argumentsString)
             {
                 Verb = "runas",
                 CreateNoWindow = true
             };
+
+            Logger.LogInformation($"Starting {Executable} with arguments {argumentsString}");
+
+            Process.Start(startInfo);
+
+            return Task.CompletedTask;
         }
     }
 }

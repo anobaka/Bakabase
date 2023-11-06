@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Infrastructures.Components.App.Upgrade;
+using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Configurations;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
@@ -37,6 +39,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         Task GetIwFsEntryTask(string path, IwFsTaskInfo task);
         Task GetResourceTask(int id, ResourceTaskInfo task);
         Task IwFsEntriesChange(List<IwFsEntryChangeEvent> events, CancellationToken ct);
+        Task GetAppUpdaterState(UpdaterState state);
     }
 
     public class WebGuiHub : Hub<IWebGuiClient>
@@ -49,12 +52,13 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly ILogger<WebGuiHub> _logger;
         private readonly IEnumerable<IDependentComponentService> _dependentComponentServices;
         private readonly IFileMover _fileMover;
+        private readonly AppUpdater _appUpdater;
 
         public WebGuiHub(
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
-            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover)
+            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover, AppUpdater appUpdater)
         {
             _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
@@ -64,6 +68,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             _logger = logger;
             _dependentComponentServices = dependentComponentServices;
             _fileMover = fileMover;
+            _appUpdater = appUpdater;
         }
 
         public async Task GetInitialData()
@@ -84,6 +89,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             await Clients.Caller.GetData(nameof(DependentComponentContext), componentContexts);
 
             await Clients.Caller.GetData(nameof(FileMovingProgress), _fileMover.Progresses);
+
+            await Clients.Caller.GetAppUpdaterState(_appUpdater.State);
         }
     }
 }

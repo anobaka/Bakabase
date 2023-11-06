@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 
-namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Updater
+namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater
 {
-    public class UpdaterDiscover : IDiscoverer
+    public class BakabaseUpdaterDiscover : IDiscoverer
     {
         private const string KeyName = "Bakabase.Updater";
 
