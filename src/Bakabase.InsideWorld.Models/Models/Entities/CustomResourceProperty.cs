@@ -12,16 +12,14 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
     {
         public int Id { get; set; }
         public int ResourceId { get; set; }
-        [Required]
-        public string Key { get; set; }
+        [Required] public string Key { get; set; } = null!;
         public int? Index { get; set; }
-        [Required]
-        public string Value { get; set; }
+        [Required] public string Value { get; set; } = null!;
         public CustomDataType ValueType { get; set; }
 
         private sealed class CustomResourcePropertyEqualityComparer : IEqualityComparer<CustomResourceProperty>
         {
-            public bool Equals(CustomResourceProperty x, CustomResourceProperty y)
+            public bool Equals(CustomResourceProperty? x, CustomResourceProperty? y)
             {
                 if (ReferenceEquals(x, y)) return true;
                 if (ReferenceEquals(x, null)) return false;
@@ -36,6 +34,7 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
             }
         }
 
-        public static IEqualityComparer<CustomResourceProperty> CustomResourcePropertyComparer { get; } = new CustomResourcePropertyEqualityComparer();
+        public static IEqualityComparer<CustomResourceProperty> CustomResourcePropertyComparer { get; } =
+            new CustomResourcePropertyEqualityComparer();
     }
 }
