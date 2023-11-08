@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,6 +23,31 @@ namespace Bakabase.InsideWorld.Models.Extensions
 {
     public static class ResourceExtensions
     {
+        #region Helpers
+
+        public static ConcurrentDictionary<ResourceProperty, Func<ResourceDto, object?>> ResourcePropertyGetters =
+            new(new Dictionary<ResourceProperty, Func<ResourceDto, object?>>
+            {
+                {ResourceProperty.ReleaseDt, r => r.ReleaseDt},
+                {ResourceProperty.Publisher, r => r.Publishers},
+                {ResourceProperty.Name, r => r.Name},
+                {ResourceProperty.Language, r => r.Language},
+                {ResourceProperty.Volume, r => r.Volume},
+                {ResourceProperty.Original, r => r.Originals},
+                {ResourceProperty.Series, r => r.Series},
+                {ResourceProperty.Tag, r => r.Tags},
+                {ResourceProperty.Introduction, r => r.Introduction},
+                {ResourceProperty.Rate, r => r.Rate},
+                {ResourceProperty.CustomProperty, r => r.CustomProperties}
+            });
+
+        public static Func<ResourceDto, object?> GetGetter(this ResourceProperty property) =>
+            ResourcePropertyGetters.TryGetValue(property, out var getter)
+                ? getter
+                : throw new InvalidOperationException($"Can\'t get getter of property [{(int) property}:{property}]");
+
+        #endregion
+
         #region Compatible
 
         #endregion
@@ -276,6 +303,80 @@ namespace Bakabase.InsideWorld.Models.Extensions
             }
         }
 
+        private static ResourceDiff? BuildDiff<T>(ResourceProperty property, IEqualityComparer<T> comparer, object? oldValue, object? newValue) where T : class
+        {
+            if (!comparer.Equals(oldValue as T, newValue as T))
+            {
+                return new ResourceDiff
+                {
+                    Property = property,
+                    OldValue = oldValue,
+                    NewValue = newValue
+                };
+            }
+
+            return null;
+        }
+
+        public static List<ResourceDiff> Compare(this ResourceDto a, ResourceDto b)
+        {
+            var diffs = new List<ResourceDiff?>();
+            foreach (var property in SpecificEnumUtils<ResourceProperty>.Values)
+            {
+                var getter = property.GetGetter();
+                var va = getter(a);
+                var vb = getter(b);
+                switch (property)
+                {
+                    case ResourceProperty.ReleaseDt:
+                    case ResourceProperty.Name:
+                    case ResourceProperty.Language:
+                    case ResourceProperty.Introduction:
+                    case ResourceProperty.Rate:
+                        if (va != vb)
+                        {
+                            diffs.Add(new ResourceDiff
+                            {
+                                NewValue = vb,
+                                OldValue = va,
+                                Property = property
+                            });
+                        }
+
+                        break;
+                    case ResourceProperty.Volume:
+                        diffs.Add(BuildDiff(property, VolumeDto.BizComparer, va, vb));
+                        break;
+                    case ResourceProperty.Series:
+                        diffs.Add(BuildDiff(property, SeriesDto.BizComparer, va, vb));
+                        break;
+                    case ResourceProperty.Publisher:
+                        diffs.Add(BuildDiff(property, PublisherDto.BizComparer, va, vb));
+                        break;
+                    case ResourceProperty.Tag:
+                        diffs.Add(BuildDiff(property, VolumeDto.BizComparer, va, vb));
+                        break;
+                    case ResourceProperty.Original:
+                        diffs.Add(BuildDiff(property, VolumeDto.BizComparer, va, vb));
+
+                        break;
+                    case ResourceProperty.CustomProperty:
+                        diffs.Add(BuildDiff(property, VolumeDto.BizComparer, va, vb));
+
+                        break;
+                    case ResourceProperty.RootPath:
+                    case ResourceProperty.ParentResource:
+                    case ResourceProperty.Resource:
+                        // ignore
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            return diffs;
+        }
+
         #endregion
 
         #region Strings
@@ -474,7 +575,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 Publisher = options.Publisher,
                 ReleaseEndDt = options.ReleaseEndDt,
                 ReleaseStartDt = options.ReleaseStartDt,
-                TagIds = options.TagIds, 
+                TagIds = options.TagIds,
                 CustomPropertyKeys = options.CustomPropertyKeys,
                 HideChildren = options.HideChildren
             };

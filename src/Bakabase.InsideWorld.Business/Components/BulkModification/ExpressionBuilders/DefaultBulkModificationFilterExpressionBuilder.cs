@@ -21,7 +21,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
         public Expression<Func<ResourceDto, bool>> Build(BulkModificationFilter filter)
         {
             var targetType =
-                SpecificTypeUtils<BulkModificationFilterProperty>.Type.GetField(filter.Property.ToString())!
+                SpecificTypeUtils<BulkModificationProperty>.Type.GetField(filter.Property.ToString())!
                     .GetCustomAttributes<BulkModificationFilterPropertyOperationAttribute>(false)
                     .FirstOrDefault(a => a.Operation == filter.Operation)!.TargetType;
             var targetValue = string.IsNullOrEmpty(filter.Target) || targetType == null

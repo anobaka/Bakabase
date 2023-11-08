@@ -8,7 +8,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         public int Id { get; set; }
         public string Name { get; set; } = null!;
         public BulkModificationStatus Status { get; set; } = BulkModificationStatus.Initial;
-        public string? Filters { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public string? Filter { get; set; }
+        public string? Modification { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

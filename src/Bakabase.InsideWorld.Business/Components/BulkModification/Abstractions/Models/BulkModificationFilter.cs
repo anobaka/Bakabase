@@ -11,9 +11,14 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public record BulkModificationFilter
     {
-        public BulkModificationFilterProperty Property { get; set; }
+        public BulkModificationProperty Property { get; set; }
         public string? PropertyKey { get; set; }
         public BulkModificationFilterOperation Operation { get; set; }
         public string? Target { get; set; }
+
+        public override string ToString()
+        {
+            return $"[p]{Property},[k]{PropertyKey},[o]{Operation},[t]{Target}";
+        }
     }
 }

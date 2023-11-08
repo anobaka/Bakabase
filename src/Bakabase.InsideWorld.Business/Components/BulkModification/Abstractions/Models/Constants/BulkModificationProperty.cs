@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants
 {
-    public enum BulkModificationFilterProperty
+    public enum BulkModificationProperty
     {
         [BulkModificationFilterPropertyOperation(BulkModificationFilterOperation.In, typeof(HashSet<int>))]
         [BulkModificationFilterPropertyOperation(BulkModificationFilterOperation.NotIn, typeof(HashSet<int>))]

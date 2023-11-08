@@ -6,33 +6,34 @@ using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Mod
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bootstrap.Extensions;
+using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public static class BulkModificationExtensions
     {
-        public static string GetPropertyName(this BulkModificationFilterProperty property)
+        public static string GetPropertyName(this BulkModificationProperty property)
         {
             return property switch
             {
-                BulkModificationFilterProperty.Category => nameof(ResourceDto.CategoryId),
-                BulkModificationFilterProperty.MediaLibrary => nameof(ResourceDto.MediaLibraryId),
-                BulkModificationFilterProperty.Name => nameof(ResourceDto.Name),
-                BulkModificationFilterProperty.RawName => nameof(ResourceDto.RawName),
-                BulkModificationFilterProperty.RawFullname => nameof(ResourceDto.RawFullname),
-                BulkModificationFilterProperty.ReleaseDt => nameof(ResourceDto.ReleaseDt),
-                BulkModificationFilterProperty.CreateDt => nameof(ResourceDto.CreateDt),
-                BulkModificationFilterProperty.FileCreateDt => nameof(ResourceDto.FileCreateDt),
-                BulkModificationFilterProperty.FileModifyDt => nameof(ResourceDto.FileModifyDt),
-                BulkModificationFilterProperty.Publisher => nameof(ResourceDto.Publishers),
-                BulkModificationFilterProperty.Language => nameof(ResourceDto.Language),
-                BulkModificationFilterProperty.Volume => nameof(ResourceDto.Volume),
-                BulkModificationFilterProperty.Original => nameof(ResourceDto.Originals),
-                BulkModificationFilterProperty.Series => nameof(ResourceDto.Series),
-                BulkModificationFilterProperty.Tag => nameof(ResourceDto.Tags),
-                BulkModificationFilterProperty.Introduction => nameof(ResourceDto.Introduction),
-                BulkModificationFilterProperty.Rate => nameof(ResourceDto.Rate),
-                BulkModificationFilterProperty.CustomProperty => nameof(ResourceDto.CustomProperties),
+                BulkModificationProperty.Category => nameof(ResourceDto.CategoryId),
+                BulkModificationProperty.MediaLibrary => nameof(ResourceDto.MediaLibraryId),
+                BulkModificationProperty.Name => nameof(ResourceDto.Name),
+                BulkModificationProperty.RawName => nameof(ResourceDto.RawName),
+                BulkModificationProperty.RawFullname => nameof(ResourceDto.RawFullname),
+                BulkModificationProperty.ReleaseDt => nameof(ResourceDto.ReleaseDt),
+                BulkModificationProperty.CreateDt => nameof(ResourceDto.CreateDt),
+                BulkModificationProperty.FileCreateDt => nameof(ResourceDto.FileCreateDt),
+                BulkModificationProperty.FileModifyDt => nameof(ResourceDto.FileModifyDt),
+                BulkModificationProperty.Publisher => nameof(ResourceDto.Publishers),
+                BulkModificationProperty.Language => nameof(ResourceDto.Language),
+                BulkModificationProperty.Volume => nameof(ResourceDto.Volume),
+                BulkModificationProperty.Original => nameof(ResourceDto.Originals),
+                BulkModificationProperty.Series => nameof(ResourceDto.Series),
+                BulkModificationProperty.Tag => nameof(ResourceDto.Tags),
+                BulkModificationProperty.Introduction => nameof(ResourceDto.Introduction),
+                BulkModificationProperty.Rate => nameof(ResourceDto.Rate),
+                BulkModificationProperty.CustomProperty => nameof(ResourceDto.CustomProperties),
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }
@@ -64,6 +65,44 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 BulkModificationFilterGroupOperation.Or => restExps.Aggregate(exp, (s, t) => s.Or(t)),
                 _ => throw new ArgumentOutOfRangeException()
             };
+        }
+
+        public static BulkModificationDto ToDto(this Models.BulkModification bm)
+        {
+            return new BulkModificationDto
+            {
+                CreatedAt = bm.CreatedAt,
+                Id = bm.Id,
+                Name = bm.Name,
+                Status = bm.Status,
+
+                Filter = string.IsNullOrEmpty(bm.Filter)
+                    ? null
+                    : JsonConvert.DeserializeObject<BulkModificationFilterGroup>(bm.Filter),
+            };
+        }
+
+        public static Dictionary<ResourceDto, List<BulkModificationDiff>> Process(this BulkModificationProcess process,
+            List<ResourceDto> resources)
+        {
+            var diffs = new Dictionary<ResourceDto, List<BulkModificationDiff>>();
+
+            foreach (var r in resources)
+            {
+                switch (process.Operation)
+                {
+                    case BulkModificationProcessOperation.Standardize:
+                        break;
+                    case BulkModificationProcessOperation.Add:
+                        break;
+                    case BulkModificationProcessOperation.Replace:
+                        break;
+                    case BulkModificationProcessOperation.Remove:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
         }
     }
 }
