@@ -9,7 +9,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
 
         private sealed class BizEqualityComparer : IEqualityComparer<SeriesDto>
         {
-            public bool Equals(SeriesDto x, SeriesDto y)
+            public bool Equals(SeriesDto? x, SeriesDto? y)
             {
                 if (ReferenceEquals(x, y)) return true;
                 if (ReferenceEquals(x, null)) return false;

@@ -396,9 +396,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                     case ReservedResourceProperty.Tag:
                                     {
                                         var tags = candidates.SelectMany(t => t.Enhancement.Data as IEnumerable<TagDto>)
-                                            .Distinct(TagGroupNameAndNameEqualityComparer.Instance).ToList();
+                                            .Distinct(TagDto.BizComparer).ToList();
                                         var newTags = tags.Except(resource.Tags ?? new List<TagDto>(),
-                                                TagGroupNameAndNameEqualityComparer.Instance)
+                                                TagDto.BizComparer)
                                             .ToArray();
                                         if (newTags.Any())
                                         {

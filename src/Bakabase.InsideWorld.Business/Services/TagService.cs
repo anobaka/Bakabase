@@ -148,7 +148,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<List<TagDto>> AddRangeByNameAndGroupName(TagDto[] model,
             bool autoMatchGroupForTagsWithoutGroup)
         {
-            var dict = model.Where(a => a.Name.IsNotEmpty()).Distinct(TagGroupNameAndNameEqualityComparer.Instance)
+            var dict = model.Where(a => a.Name.IsNotEmpty()).Distinct(TagDto.BizComparer)
                 .GroupBy(t => t.GroupName ?? string.Empty)
                 .ToDictionary(a => a.Key, a => a.Select(b => b.Name).ToArray());
             return await AddRange(dict, autoMatchGroupForTagsWithoutGroup);

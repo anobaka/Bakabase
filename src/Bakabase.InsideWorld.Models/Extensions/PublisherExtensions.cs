@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bakabase.InsideWorld.Models.Extensions
 {
@@ -287,11 +290,13 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 {
                     p.Id = publisherIds[p.Name];
                 }
+
                 p.SubPublishers?.PopulateId(publisherIds);
             }
         }
 
-        public static List<PublisherResourceMapping> BuildMappings(this IEnumerable<PublisherDto> publishers, int resourceId,
+        public static List<PublisherResourceMapping> BuildMappings(this IEnumerable<PublisherDto> publishers,
+            int resourceId,
             int? parentId = null)
         {
             return publishers.SelectMany(a =>
@@ -324,6 +329,43 @@ namespace Bakabase.InsideWorld.Models.Extensions
                     p.SubPublishers.RemoveInvalid();
                 }
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        public static List<ResourceDiff>? Compare(this List<PublisherDto>? a, List<PublisherDto>? b)
+        {
+            return ResourceDiff.Build(ResourceProperty.Publisher, a.PairByString(b, x => x.Name),
+                PublisherDto.NameComparer, nameof(ResourceDto.Publishers), Compare);
+        }
+
+        public static List<ResourceDiff>? Compare(this PublisherDto a, PublisherDto b)
+        {
+            var nameDiff = ResourceDiff.Build(ResourceProperty.Publisher, a.Name, b.Name,
+                StringComparer.OrdinalIgnoreCase, nameof(PublisherDto.Name), null);
+            var subPublisherDiff = a?.SubPublishers.Compare(b?.SubPublishers);
+
+            if (nameDiff != null || subPublisherDiff?.Any() == true)
+            {
+                var diffs = new List<ResourceDiff>();
+                if (nameDiff != null)
+                {
+                    diffs.Add(nameDiff);
+                }
+
+                if (subPublisherDiff?.Any() == true)
+                {
+                    diffs.AddRange(subPublisherDiff);
+                }
+
+                return diffs;
+            }
+
+            return null;
         }
     }
 }

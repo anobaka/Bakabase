@@ -1,11 +1,15 @@
-﻿using Bakabase.InsideWorld.Models.Models.Dtos;
+﻿using System;
+using System.Collections.Generic;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 
 namespace Bakabase.InsideWorld.Models.Extensions
 {
     public static class VolumeExtensions
     {
-        public static VolumeDto ToDto(this Volume v)
+        public static VolumeDto? ToDto(this Volume? v)
         {
             if (v == null)
             {
@@ -22,7 +26,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
             };
         }
 
-        public static Volume ToResource(this VolumeDto v)
+        public static Volume? ToResource(this VolumeDto? v)
         {
             if (v == null)
             {
@@ -37,6 +41,34 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 ResourceId = v.ResourceId,
                 SerialId = v.SerialId
             };
+        }
+
+        public static List<ResourceDiff>? Compare(this VolumeDto? a, VolumeDto? b)
+        {
+            var indexDiff = ResourceDiff.Build(ResourceProperty.Volume, a?.Index, b?.Index,
+                EqualityComparer<int?>.Default, nameof(VolumeDto.Index), null);
+            var nameDiff = ResourceDiff.Build(ResourceProperty.Volume, a?.Name, b?.Name,
+                StringComparer.OrdinalIgnoreCase, nameof(VolumeDto.Name), null);
+            var titleDiff = ResourceDiff.Build(ResourceProperty.Volume, a?.Title, b?.Title,
+                StringComparer.OrdinalIgnoreCase, nameof(VolumeDto.Title), null);
+
+            if (indexDiff != null || nameDiff != null || titleDiff != null)
+            {
+                var diffs = new List<ResourceDiff>();
+                if (indexDiff != null)
+                {
+                    diffs.Add(indexDiff);
+                }
+
+                if (nameDiff != null)
+                {
+                    diffs.Add(nameDiff);
+                }
+
+                return diffs;
+            }
+
+            return null;
         }
     }
 }

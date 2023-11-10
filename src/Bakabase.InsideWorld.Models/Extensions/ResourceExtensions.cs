@@ -213,7 +213,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 source.Tags ??= new List<TagDto>();
 
                 foreach (var t in target.Tags.Where(t =>
-                             !source.Tags.Contains(t, TagGroupNameAndNameEqualityComparer.Instance)))
+                             !source.Tags.Contains(t, TagDto.BizComparer)))
                 {
                     source.Tags.Add(t);
                     changed = true;
@@ -303,7 +303,8 @@ namespace Bakabase.InsideWorld.Models.Extensions
             }
         }
 
-        private static ResourceDiff? BuildDiff<T>(ResourceProperty property, IEqualityComparer<T> comparer, object? oldValue, object? newValue) where T : class
+        private static ResourceDiff? BuildDiff<T>(ResourceProperty property, IEqualityComparer<T> comparer,
+            object? oldValue, object? newValue) where T : class
         {
             if (!comparer.Equals(oldValue as T, newValue as T))
             {
@@ -333,36 +334,45 @@ namespace Bakabase.InsideWorld.Models.Extensions
                     case ResourceProperty.Language:
                     case ResourceProperty.Introduction:
                     case ResourceProperty.Rate:
-                        if (va != vb)
-                        {
-                            diffs.Add(new ResourceDiff
-                            {
-                                NewValue = vb,
-                                OldValue = va,
-                                Property = property
-                            });
-                        }
-
+                    {
+                        diffs.Add(ResourceDiff.Build(property, va, vb, EqualityComparer<object>.Default,
+                            property.GetPropertyName(), null));
                         break;
+                    }
                     case ResourceProperty.Volume:
-                        diffs.Add(BuildDiff(property, VolumeDto.BizComparer, va, vb));
+                    {
+                        diffs.Add(ResourceDiff.Build(property, va as VolumeDto, vb as VolumeDto, VolumeDto.BizComparer,
+                            property.GetPropertyName(), VolumeExtensions.Compare));
                         break;
+                    }
                     case ResourceProperty.Series:
-                        diffs.Add(BuildDiff(property, SeriesDto.BizComparer, va, vb));
+                    {
+                        diffs.Add(ResourceDiff.Build(property, va as SeriesDto, vb as SeriesDto, SeriesDto.BizComparer,
+                            property.GetPropertyName(), SeriesExtensions.Compare));
                         break;
+                    }
                     case ResourceProperty.Publisher:
-                        diffs.Add(BuildDiff(property, PublisherDto.BizComparer, va, vb));
+                    {
+                        diffs.Add(ResourceDiff.Build(property, va as List<PublisherDto>, vb as List<PublisherDto>,
+                            EqualityComparer<List<PublisherDto>>.Default,
+                            property.GetPropertyName(), PublisherExtensions.Compare));
                         break;
+                    }
                     case ResourceProperty.Tag:
-                        diffs.Add(BuildDiff(property, VolumeDto.BizComparer, va, vb));
+                    {
+                        diffs.Add(ResourceDiff.Build(property, va as List<TagDto>, vb as List<TagDto>,
+                            EqualityComparer<List<TagDto>>.Default, property.GetPropertyName(), TagExtensions.Compare));
                         break;
+                    }
                     case ResourceProperty.Original:
-                        diffs.Add(BuildDiff(property, VolumeDto.BizComparer, va, vb));
-
+                    {
+                        diffs.Add(ResourceDiff.Build(property, va as List<OriginalDto>, vb as List<OriginalDto>,
+                            EqualityComparer<List<OriginalDto>>.Default, property.GetPropertyName(),
+                            OriginalExtensions.Compare));
                         break;
+                    }
                     case ResourceProperty.CustomProperty:
                         diffs.Add(BuildDiff(property, VolumeDto.BizComparer, va, vb));
-
                         break;
                     case ResourceProperty.RootPath:
                     case ResourceProperty.ParentResource:
@@ -374,8 +384,9 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 }
             }
 
-            return diffs;
+            return diffs.Where(d => d != null).ToList()!;
         }
+
 
         #endregion
 
@@ -440,6 +451,26 @@ namespace Bakabase.InsideWorld.Models.Extensions
             return str;
         }
 
+        public static string GetPropertyName(this ResourceProperty property)
+        {
+            return property switch
+            {
+                ResourceProperty.ReleaseDt => nameof(ResourceDto.ReleaseDt),
+                ResourceProperty.Name => nameof(ResourceDto.Name),
+                ResourceProperty.Language => nameof(ResourceDto.Language),
+                ResourceProperty.Introduction => nameof(ResourceDto.Introduction),
+                ResourceProperty.Rate => nameof(ResourceDto.Rate),
+                ResourceProperty.Volume => nameof(ResourceDto.Volume),
+                ResourceProperty.Original => nameof(ResourceDto.Originals),
+                ResourceProperty.Series => nameof(ResourceDto.Series),
+                ResourceProperty.Publisher => nameof(ResourceDto.Publishers),
+                ResourceProperty.Tag => nameof(ResourceDto.Tags),
+                ResourceProperty.CustomProperty => nameof(ResourceDto.CustomProperties),
+                ResourceProperty.ParentResource => nameof(ResourceDto.Parent),
+                _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
+            };
+        }
+
         #endregion
 
         #region Converter
@@ -458,7 +489,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 // Cover = r.Cover,
                 // RawCover = r.RawCover
                 // StartFiles = JsonConvert.DeserializeObject<string[]>(r.StartFiles ?? string.Empty),
-                Directory = r.Directory.StandardizePath(),
+                Directory = r.Directory.StandardizePath()!,
                 Language = r.Language,
                 Rate = r.Rate,
                 ReleaseDt = r.ReleaseDt,

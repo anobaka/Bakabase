@@ -70,7 +70,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers
             {
                 Rate = resource.Rate,
                 TagGroups = resource.Tags?.Any() == true
-                    ? resource.Tags.Distinct(TagGroupNameAndNameEqualityComparer.Instance).GroupBy(t => t.GroupName)
+                    ? resource.Tags.Distinct(TagDto.BizComparer).GroupBy(t => t.GroupName)
                         .Select(
                             a => new ResourceNfoV1.TagGroupNfo
                             {

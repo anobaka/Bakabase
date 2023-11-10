@@ -775,7 +775,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 // Tags
                 // Cares name and group name only
                 var tags = tmpResources.Where(a => a.Tags != null).SelectMany(a => a.Tags).Where(a => a.Id == 0)
-                    .Distinct(TagGroupNameAndNameEqualityComparer.Instance).ToArray();
+                    .Distinct(TagDto.BizComparer).ToArray();
                 var savedTags = await _tagService.AddRangeByNameAndGroupName(tags, false);
                 var resourceTagsMap = tmpResources.Where(a => a.Tags != null).ToDictionary(a => a.Id,
                     a => a.Tags.Select(b =>
@@ -786,7 +786,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
 
                         var tag = savedTags.FirstOrDefault(t =>
-                            TagGroupNameAndNameEqualityComparer.Instance.Equals(b, t));
+                            TagDto.BizComparer.Equals(b, t));
                         if (tag == null)
                         {
 #if DEBUG

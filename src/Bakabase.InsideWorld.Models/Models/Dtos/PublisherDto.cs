@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Bakabase.InsideWorld.Models.Models.Entities;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
@@ -13,7 +14,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         public bool Favorite { get; set; }
         public List<TagDto> Tags { get; set; } = new();
 
-        private sealed class BizEqualityComparer : IEqualityComparer<PublisherDto>
+        private sealed class NameEqualityComparer : IEqualityComparer<PublisherDto>
         {
             public bool Equals(PublisherDto? x, PublisherDto? y)
             {
@@ -21,32 +22,29 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
                 if (ReferenceEquals(x, null)) return false;
                 if (ReferenceEquals(y, null)) return false;
                 if (x.GetType() != y.GetType()) return false;
-                if (x.Name == y.Name && x.Rank == y.Rank && x.Favorite == y.Favorite)
-                {
-                    if (x.SubPublishers.Count == y.SubPublishers.Count)
-                    {
-                        var count = x.SubPublishers.Count;
-                        for (var i = 0; i < count; i++)
-                        {
-                            if (!Equals(x.SubPublishers[i], y.SubPublishers[i]))
-                            {
-                                return false;
-                            }
-                        }
 
-                        return true;
-                    }
+                if (!string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
                 }
 
-                return false;
+                if (x.SubPublishers.Count != y.SubPublishers.Count)
+                {
+                    return false;
+                }
+
+                return !x.SubPublishers.Where((t, i) => !Equals(t, y.SubPublishers[i])).Any();
             }
 
             public int GetHashCode(PublisherDto obj)
             {
-                return HashCode.Combine(obj.Name, obj.SubPublishers, obj.Rank, obj.Favorite, obj.Tags);
+                var hashCode = new HashCode();
+                hashCode.Add(obj.Name, StringComparer.OrdinalIgnoreCase);
+                hashCode.Add(obj.SubPublishers);
+                return hashCode.ToHashCode();
             }
         }
 
-        public static IEqualityComparer<PublisherDto> BizComparer { get; } = new BizEqualityComparer();
+        public static IEqualityComparer<PublisherDto> NameComparer { get; } = new NameEqualityComparer();
     }
 }

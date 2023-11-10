@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Extensions;
@@ -27,6 +29,37 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 GroupNamePreferredAlias = groupNamePreferredAlias
             };
         }
+
+        public static List<ResourceDiff>? Compare(this List<TagDto>? a, List<TagDto>? b)
+        {
+            var pairs = a.Pair(b, TagDto.BizComparer, null, 0);
+            return ResourceDiff.Build(ResourceProperty.Tag, pairs, TagDto.BizComparer, null, Compare);
+        }
+
+        public static List<ResourceDiff>? Compare(this TagDto a, TagDto b)
+        {
+            var groupNameDiff = ResourceDiff.Build(ResourceProperty.Tag, a.GroupName, b.GroupName,
+                StringComparer.OrdinalIgnoreCase, nameof(TagDto.GroupName), null);
+            var nameDiff = ResourceDiff.Build(ResourceProperty.Tag, a.Name, b.Name, StringComparer.OrdinalIgnoreCase,
+                nameof(TagDto.Name), null);
+            if (groupNameDiff != null || nameDiff != null)
+            {
+                var diffs = new List<ResourceDiff>();
+                if (groupNameDiff != null)
+                {
+                    diffs.Add(groupNameDiff);
+                }
+
+                if (nameDiff != null)
+                {
+                    diffs.Add(nameDiff);
+                }
+
+                return diffs;
+            }
+
+            return null;
+        }
     }
 
     public static class TagGroupExtensions
@@ -44,32 +77,6 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 Name = group.Name,
                 Order = group.Order
             };
-        }
-    }
-
-    public class TagGroupNameAndNameEqualityComparer : IEqualityComparer<TagDto>
-    {
-        public static TagGroupNameAndNameEqualityComparer Instance = new();
-
-        public bool Equals(TagDto? x, TagDto? y)
-        {
-            if (ReferenceEquals(x, y)) return true;
-            if (ReferenceEquals(x, null)) return false;
-            if (ReferenceEquals(y, null)) return false;
-            if (x.GetType() != y.GetType()) return false;
-            if (!string.IsNullOrEmpty(x.GroupName) && !string.IsNullOrEmpty(y.GroupName))
-            {
-                return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) &&
-                       x.GroupName.Equals(y.GroupName, StringComparison.OrdinalIgnoreCase);
-            }
-
-            return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) && x.GroupName.IsNullOrEmpty() &&
-                   y.GroupName.IsNullOrEmpty();
-        }
-
-        public int GetHashCode(TagDto obj)
-        {
-            return HashCode.Combine(obj.Name, obj.GroupName);
         }
     }
 }

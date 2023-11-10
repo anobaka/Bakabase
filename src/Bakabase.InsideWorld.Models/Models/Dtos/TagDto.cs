@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Extensions;
 
@@ -30,5 +32,28 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
                 return sb.ToString();
             }
         }
+
+        private sealed class BizEqualityComparer : IEqualityComparer<TagDto>
+        {
+            public bool Equals(TagDto? x, TagDto? y)
+            {
+                if (ReferenceEquals(x, y)) return true;
+                if (ReferenceEquals(x, null)) return false;
+                if (ReferenceEquals(y, null)) return false;
+                if (x.GetType() != y.GetType()) return false;
+                return string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase) &&
+                       string.Equals(x.GroupName, y.GroupName, StringComparison.OrdinalIgnoreCase);
+            }
+
+            public int GetHashCode(TagDto obj)
+            {
+                var hashCode = new HashCode();
+                hashCode.Add(obj.Name, StringComparer.OrdinalIgnoreCase);
+                hashCode.Add(obj.GroupName, StringComparer.OrdinalIgnoreCase);
+                return hashCode.ToHashCode();
+            }
+        }
+
+        public static IEqualityComparer<TagDto> BizComparer { get; } = new BizEqualityComparer();
     }
 }
