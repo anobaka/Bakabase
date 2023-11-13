@@ -171,12 +171,14 @@ export default (props: Props) => {
       setPscData(undefined);
     };
 
+    // todo: if close mode includes mask, the click in inner balloon will trigger onClose of this dialog.
+    // tried: set popupContainer of inner Balloon, but the balloon be the wrong position (V2 enabled) or shrinked by container (V2 disabled)
     return (
       <Dialog
         v2
         width={1200}
         visible={!!pscData}
-        closeMode={['close', 'mask', 'esc']}
+        closeMode={['close', 'esc']}
         onClose={onClose}
         onCancel={onClose}
         top={20}
