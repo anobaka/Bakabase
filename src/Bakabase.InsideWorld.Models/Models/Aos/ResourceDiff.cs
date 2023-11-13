@@ -12,21 +12,21 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
 {
     public record ResourceDiff
     {
-        public ResourceProperty Property { get; set; }
+        public ResourceDiffProperty Property { get; set; }
         public object? OldValue { get; set; }
         public object? NewValue { get; set; }
         public ResourceDiffType Type { get; set; }
         public string? Key { get; set; }
         public List<ResourceDiff>? SubDiffs { get; set; }
 
-        public static ResourceDiff Added(ResourceProperty property, object? newValue) => new()
+        public static ResourceDiff Added(ResourceDiffProperty property, object? newValue) => new()
             {Type = ResourceDiffType.Added, NewValue = newValue, Property = property};
 
-        public static ResourceDiff Removed(ResourceProperty property, object? oldValue) => new()
+        public static ResourceDiff Removed(ResourceDiffProperty property, object? oldValue) => new()
             {Type = ResourceDiffType.Removed, OldValue = oldValue, Property = property};
 
 
-        public static ResourceDiff? Build<T>(ResourceProperty property, T? a, T? b,
+        public static ResourceDiff? Build<T>(ResourceDiffProperty property, T? a, T? b,
             IEqualityComparer<T> equalityComparer,
             string? key,
             Func<T, T, List<ResourceDiff>?>? buildSubDiffs)
@@ -64,7 +64,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
             };
         }
 
-        public static List<ResourceDiff>? Build<T>(ResourceProperty property,
+        public static List<ResourceDiff>? Build<T>(ResourceDiffProperty property,
             List<(T? A, T? B)>? pairs,
             IEqualityComparer<T> equalityComparer,
             string? key,

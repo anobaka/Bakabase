@@ -45,11 +45,11 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
         public static List<ResourceDiff>? Compare(this VolumeDto? a, VolumeDto? b)
         {
-            var indexDiff = ResourceDiff.Build(ResourceProperty.Volume, a?.Index, b?.Index,
+            var indexDiff = ResourceDiff.Build(ResourceDiffProperty.Volume, a?.Index, b?.Index,
                 EqualityComparer<int?>.Default, nameof(VolumeDto.Index), null);
-            var nameDiff = ResourceDiff.Build(ResourceProperty.Volume, a?.Name, b?.Name,
+            var nameDiff = ResourceDiff.Build(ResourceDiffProperty.Volume, a?.Name, b?.Name,
                 StringComparer.OrdinalIgnoreCase, nameof(VolumeDto.Name), null);
-            var titleDiff = ResourceDiff.Build(ResourceProperty.Volume, a?.Title, b?.Title,
+            var titleDiff = ResourceDiff.Build(ResourceDiffProperty.Volume, a?.Title, b?.Title,
                 StringComparer.OrdinalIgnoreCase, nameof(VolumeDto.Title), null);
 
             if (indexDiff != null || nameDiff != null || titleDiff != null)

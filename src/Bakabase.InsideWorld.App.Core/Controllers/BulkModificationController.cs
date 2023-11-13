@@ -27,22 +27,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     [Route("bulk-modification")]
     public class BulkModificationController : Controller
     {
-        static BulkModificationController()
-        {
-            var config = new NameValueCollection
-            {
-                {"physicalMemoryLimitPercentage", "10"},
-                {"cacheMemoryLimitMegabytes", "2000"}
-            };
-            Cache = new MemoryCache(nameof(BulkModification), config);
-
-        }
-
-        /// <summary>
-        /// Bulk id - BulkModificationFilterResult
-        /// </summary>
-        private static readonly MemoryCache Cache;
-
         private readonly BulkModificationService _service;
         private readonly ResourceService _resourceService;
 
@@ -88,48 +72,15 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "GetBulkModificationFilteredResources")]
         public async Task<ListResponse<ResourceDto>> Filter(int id)
         {
-            var cacheKey = id.ToString();
-
-            var bulkModification = await _service.GetDto(id);
-            var rootFilter = bulkModification.Filter;
-
-            if (Cache.Get(cacheKey) is BulkModificationFilterResult cache)
-            {
-                if (cache.FilterKey == rootFilter?.ToString())
-                {
-                    return new ListResponse<ResourceDto>(cache.Resources);
-                }
-
-                Cache.Remove(cacheKey);
-            }
-
-            if (rootFilter != null)
-            {
-                var allResources = await _resourceService.GetAll(ResourceAdditionalItem.All);
-                var exp = rootFilter.BuildExpression();
-                var filteredResources = allResources.Where(exp.Compile()).ToList();
-                Cache.Add(cacheKey,
-                    new BulkModificationFilterResult
-                        {CreatedAt = DateTime.Now, FilterKey = rootFilter.ToString(), Resources = filteredResources},
-                    new CacheItemPolicy {SlidingExpiration = TimeSpan.FromMinutes(20)});
-                return new ListResponse<ResourceDto>(filteredResources);
-            }
-
-            return new ListResponse<ResourceDto>();
+            return new ListResponse<ResourceDto>(await _service.Filter(id));
         }
 
-        [HttpPost("{id}/diff")]
-        [SwaggerOperation(OperationId = "CreateBulkModificationDiffs")]
-        public async Task<BaseResponse> CreateDiffs(int id)
-        {
-            var data = await _service.GetDto(id);
-
-            var resources = await Filter(id);
-
-            foreach (var process in data.Modifications)
-            {
-                
-            }
-        }
+        // todo: 
+        // [HttpPost("{id}/diff")]
+        // [SwaggerOperation(OperationId = "CreateBulkModificationDiffs")]
+        // public async Task<BaseResponse> CreateDiffs(int id)
+        // {
+        //    
+        // }
     }
 }

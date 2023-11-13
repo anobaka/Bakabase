@@ -6,7 +6,7 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
-    public class TagDto
+    public record TagDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = null!;

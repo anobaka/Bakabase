@@ -33,14 +33,15 @@ namespace Bakabase.InsideWorld.Models.Extensions
         public static List<ResourceDiff>? Compare(this List<TagDto>? a, List<TagDto>? b)
         {
             var pairs = a.Pair(b, TagDto.BizComparer, null, 0);
-            return ResourceDiff.Build(ResourceProperty.Tag, pairs, TagDto.BizComparer, null, Compare);
+            return ResourceDiff.Build(ResourceDiffProperty.Tag, pairs, TagDto.BizComparer, null, Compare);
         }
 
         public static List<ResourceDiff>? Compare(this TagDto a, TagDto b)
         {
-            var groupNameDiff = ResourceDiff.Build(ResourceProperty.Tag, a.GroupName, b.GroupName,
+            var groupNameDiff = ResourceDiff.Build(ResourceDiffProperty.Tag, a.GroupName, b.GroupName,
                 StringComparer.OrdinalIgnoreCase, nameof(TagDto.GroupName), null);
-            var nameDiff = ResourceDiff.Build(ResourceProperty.Tag, a.Name, b.Name, StringComparer.OrdinalIgnoreCase,
+            var nameDiff = ResourceDiff.Build(ResourceDiffProperty.Tag, a.Name, b.Name,
+                StringComparer.OrdinalIgnoreCase,
                 nameof(TagDto.Name), null);
             if (groupNameDiff != null || nameDiff != null)
             {
@@ -59,6 +60,39 @@ namespace Bakabase.InsideWorld.Models.Extensions
             }
 
             return null;
+        }
+
+        public static List<TagDto> Merge(this List<TagDto> tagsA, List<TagDto> tagsB)
+        {
+            var list = new List<TagDto>();
+
+            var nameMapA = tagsA.GroupBy(a => a.Name).ToDictionary(a => a.Key, a => a.First());
+            var nameMapB = tagsB.GroupBy(a => a.Name).ToDictionary(a => a.Key, a => a.First());
+
+            foreach (var (name, a) in nameMapA)
+            {
+                if (nameMapB.TryGetValue(name, out var b))
+                {
+                    var copy = a with
+                    {
+                        Name = b.Name,
+                        GroupName = b.GroupName
+                    };
+
+                    list.Add(copy);
+                }
+                else
+                {
+                    list.Add(a with { });
+                }
+            }
+
+            foreach (var (name, b) in nameMapB.Where(b => !nameMapA.ContainsKey(b.Key)))
+            {
+                list.Add(b with { });
+            }
+
+            return list;
         }
     }
 

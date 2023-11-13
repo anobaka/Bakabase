@@ -54,16 +54,21 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
         public static List<ResourceDiff>? Compare(this List<OriginalDto>? a, List<OriginalDto>? b)
         {
-            return ResourceDiff.Build(ResourceProperty.Original, a.PairByString(b, o => o.Name),
+            return ResourceDiff.Build(ResourceDiffProperty.Original, a.PairByString(b, o => o.Name),
                 OriginalDto.BizComparer, nameof(ResourceDto.Originals), Compare);
         }
 
         public static List<ResourceDiff>? Compare(this OriginalDto a, OriginalDto b)
         {
-            var nameDiff = ResourceDiff.Build(ResourceProperty.Publisher, a.Name, b.Name,
+            var nameDiff = ResourceDiff.Build(ResourceDiffProperty.Original, a.Name, b.Name,
                 StringComparer.OrdinalIgnoreCase, nameof(PublisherDto.Name), null);
 
             return nameDiff != null ? new List<ResourceDiff> {nameDiff} : null;
+        }
+
+        public static List<OriginalDto> Merge(this List<OriginalDto> originalsA, List<OriginalDto> originalsB)
+        {
+            return originalsA.Concat(originalsB).GroupBy(a => a.Name).Select(a => a.First() with { }).ToList();
         }
     }
 }

@@ -8,9 +8,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public enum BulkModificationProcessOperation
     {
-        Standardize = 1,
         Add,
-        Replace,
+        Modify,
         Remove,
     }
 }

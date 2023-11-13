@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.BulkModification.Processors;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
@@ -37,6 +41,30 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }
+
+        private static readonly IBulkModificationProcessor StringPropertyProcessor =
+            new BulkModificationProcessor<string>();
+
+        private static readonly IBulkModificationProcessor IntPropertyProcessor = new BulkModificationProcessor<int>();
+
+        private static ConcurrentDictionary<ResourceDiffProperty, IBulkModificationProcessor> _processors = new(
+            new Dictionary<ResourceDiffProperty, IBulkModificationProcessor>
+            {
+                {ResourceDiffProperty.Category, IntPropertyProcessor},
+                {ResourceDiffProperty.MediaLibrary, IntPropertyProcessor},
+                {ResourceDiffProperty.ReleaseDt, new BulkModificationProcessor<DateTime>()},
+                {ResourceDiffProperty.Publisher, new PublishersPropertyProcessor()},
+                {ResourceDiffProperty.Name, StringPropertyProcessor},
+                {ResourceDiffProperty.Language, new BulkModificationProcessor<ResourceLanguage>()},
+                {ResourceDiffProperty.Volume, new BulkModificationProcessor<VolumeDto>()},
+                {ResourceDiffProperty.Original, new OriginalsPropertyProcessor()},
+                {ResourceDiffProperty.Series, new BulkModificationProcessor<SeriesDto>()},
+                {ResourceDiffProperty.Tag, new TagsPropertyProcessor()},
+                {ResourceDiffProperty.Introduction, StringPropertyProcessor},
+                {ResourceDiffProperty.Rate, new BulkModificationProcessor<decimal>()},
+                {ResourceDiffProperty.CustomProperty, new CustomPropertiesPropertyProcessor()},
+            });
+
 
         public static Expression<Func<ResourceDto, bool>> BuildExpression(this BulkModificationFilter filter)
         {
@@ -82,27 +110,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             };
         }
 
-        public static Dictionary<ResourceDto, List<BulkModificationDiff>> Process(this BulkModificationProcess process,
-            List<ResourceDto> resources)
+        public static ResourceDiff? Preview(this BulkModificationProcess process, ResourceDto r)
         {
-            var diffs = new Dictionary<ResourceDto, List<BulkModificationDiff>>();
-
-            foreach (var r in resources)
-            {
-                switch (process.Operation)
-                {
-                    case BulkModificationProcessOperation.Standardize:
-                        break;
-                    case BulkModificationProcessOperation.Add:
-                        break;
-                    case BulkModificationProcessOperation.Replace:
-                        break;
-                    case BulkModificationProcessOperation.Remove:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
+            var processor = _processors[process.Property];
+            return processor.Preview(process, r);
         }
     }
 }

@@ -8,7 +8,7 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
-    public class CustomResourceProperty
+    public record CustomResourceProperty
     {
         public int Id { get; set; }
         public int ResourceId { get; set; }

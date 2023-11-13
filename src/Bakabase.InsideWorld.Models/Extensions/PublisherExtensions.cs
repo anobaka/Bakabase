@@ -339,13 +339,13 @@ namespace Bakabase.InsideWorld.Models.Extensions
         /// <returns></returns>
         public static List<ResourceDiff>? Compare(this List<PublisherDto>? a, List<PublisherDto>? b)
         {
-            return ResourceDiff.Build(ResourceProperty.Publisher, a.PairByString(b, x => x.Name),
+            return ResourceDiff.Build(ResourceDiffProperty.Publisher, a.PairByString(b, x => x.Name),
                 PublisherDto.NameComparer, nameof(ResourceDto.Publishers), Compare);
         }
 
         public static List<ResourceDiff>? Compare(this PublisherDto a, PublisherDto b)
         {
-            var nameDiff = ResourceDiff.Build(ResourceProperty.Publisher, a.Name, b.Name,
+            var nameDiff = ResourceDiff.Build(ResourceDiffProperty.Publisher, a.Name, b.Name,
                 StringComparer.OrdinalIgnoreCase, nameof(PublisherDto.Name), null);
             var subPublisherDiff = a?.SubPublishers.Compare(b?.SubPublishers);
 
@@ -366,6 +366,38 @@ namespace Bakabase.InsideWorld.Models.Extensions
             }
 
             return null;
+        }
+
+        public static List<PublisherDto> Merge(this List<PublisherDto> publishersA, List<PublisherDto> publishersB)
+        {
+            var list = new List<PublisherDto>();
+
+            var nameMapA = publishersA.GroupBy(a => a.Name).ToDictionary(a => a.Key, a => a.First());
+            var nameMapB = publishersB.GroupBy(a => a.Name).ToDictionary(a => a.Key, a => a.First());
+
+            foreach (var (name, a) in nameMapA)
+            {
+                if (nameMapB.TryGetValue(name, out var b))
+                {
+                    var copy = a with
+                    {
+                        SubPublishers = new List<PublisherDto>().Merge(a.SubPublishers).Merge(b.SubPublishers)
+                    };
+
+                    list.Add(copy);
+                }
+                else
+                {
+                    list.Add(a with { });
+                }
+            }
+
+            foreach (var (name, b) in nameMapB.Where(b => !nameMapA.ContainsKey(b.Key)))
+            {
+                list.Add(b with { });
+            }
+
+            return list;
         }
     }
 }

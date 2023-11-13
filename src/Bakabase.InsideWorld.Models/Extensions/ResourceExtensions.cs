@@ -25,26 +25,68 @@ namespace Bakabase.InsideWorld.Models.Extensions
     {
         #region Helpers
 
-        public static ConcurrentDictionary<ResourceProperty, Func<ResourceDto, object?>> ResourcePropertyGetters =
-            new(new Dictionary<ResourceProperty, Func<ResourceDto, object?>>
+        public static ConcurrentDictionary<ResourceDiffProperty, Action<ResourceDto, object?>> ResourcePropertySetters =
+            new(new Dictionary<ResourceDiffProperty, Action<ResourceDto, object?>>
             {
-                {ResourceProperty.ReleaseDt, r => r.ReleaseDt},
-                {ResourceProperty.Publisher, r => r.Publishers},
-                {ResourceProperty.Name, r => r.Name},
-                {ResourceProperty.Language, r => r.Language},
-                {ResourceProperty.Volume, r => r.Volume},
-                {ResourceProperty.Original, r => r.Originals},
-                {ResourceProperty.Series, r => r.Series},
-                {ResourceProperty.Tag, r => r.Tags},
-                {ResourceProperty.Introduction, r => r.Introduction},
-                {ResourceProperty.Rate, r => r.Rate},
-                {ResourceProperty.CustomProperty, r => r.CustomProperties}
+                {ResourceDiffProperty.ReleaseDt, (r, v) => r.ReleaseDt = (DateTime?)v},
+                {ResourceDiffProperty.Publisher, (r, v) => r.Publishers = (List<PublisherDto>?)v ?? new List<PublisherDto>()},
+                // {ResourceDiffProperty.Name, r => r.Name},
+                // {ResourceDiffProperty.Language, r => r.Language},
+                // {ResourceDiffProperty.Volume, r => r.Volume},
+                // {ResourceDiffProperty.Original, r => r.Originals},
+                // {ResourceDiffProperty.Series, r => r.Series},
+                // {ResourceDiffProperty.Tag, r => r.Tags},
+                // {ResourceDiffProperty.Introduction, r => r.Introduction},
+                // {ResourceDiffProperty.Rate, r => r.Rate},
+                // {ResourceDiffProperty.CustomProperty, r => r.CustomProperties}
             });
 
-        public static Func<ResourceDto, object?> GetGetter(this ResourceProperty property) =>
+        public static Action<ResourceDto, object?> GetSetter(this ResourceDiffProperty property) =>
+            ResourcePropertySetters.TryGetValue(property, out var setter)
+                ? setter
+                : throw new InvalidOperationException($"Can\'t get setter of property [{(int)property}:{property}]");
+
+        public static ConcurrentDictionary<ResourceDiffProperty, Func<ResourceDto, object?>> ResourcePropertyGetters =
+            new(new Dictionary<ResourceDiffProperty, Func<ResourceDto, object?>>
+            {
+                {ResourceDiffProperty.ReleaseDt, r => r.ReleaseDt},
+                {ResourceDiffProperty.Publisher, r => r.Publishers},
+                {ResourceDiffProperty.Name, r => r.Name},
+                {ResourceDiffProperty.Language, r => r.Language},
+                {ResourceDiffProperty.Volume, r => r.Volume},
+                {ResourceDiffProperty.Original, r => r.Originals},
+                {ResourceDiffProperty.Series, r => r.Series},
+                {ResourceDiffProperty.Tag, r => r.Tags},
+                {ResourceDiffProperty.Introduction, r => r.Introduction},
+                {ResourceDiffProperty.Rate, r => r.Rate},
+                {ResourceDiffProperty.CustomProperty, r => r.CustomProperties}
+            });
+
+        public static Func<ResourceDto, object?> GetGetter(this ResourceDiffProperty property) =>
             ResourcePropertyGetters.TryGetValue(property, out var getter)
                 ? getter
                 : throw new InvalidOperationException($"Can\'t get getter of property [{(int) property}:{property}]");
+
+        public static bool IsListProperty(this ResourceDiffProperty property)
+        {
+            return property switch
+            {
+                ResourceDiffProperty.Publisher => true,
+                ResourceDiffProperty.Tag => true,
+                ResourceDiffProperty.Original => true,
+                ResourceDiffProperty.CustomProperty => true,
+                ResourceDiffProperty.Name => false,
+                ResourceDiffProperty.Language => false,
+                ResourceDiffProperty.Volume => false,
+                ResourceDiffProperty.Series => false,
+                ResourceDiffProperty.Introduction => false,
+                ResourceDiffProperty.Category => false,
+                ResourceDiffProperty.MediaLibrary => false,
+                ResourceDiffProperty.ReleaseDt => false,
+                ResourceDiffProperty.Rate => false,
+                _ => false
+            };
+        }
 
         #endregion
 
@@ -303,7 +345,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
             }
         }
 
-        private static ResourceDiff? BuildDiff<T>(ResourceProperty property, IEqualityComparer<T> comparer,
+        private static ResourceDiff? BuildDiff<T>(ResourceDiffProperty property, IEqualityComparer<T> comparer,
             object? oldValue, object? newValue) where T : class
         {
             if (!comparer.Equals(oldValue as T, newValue as T))
@@ -319,69 +361,64 @@ namespace Bakabase.InsideWorld.Models.Extensions
             return null;
         }
 
+        public static ResourceDiff? Compare(this ResourceDiffProperty property, object? a, object? b)
+        {
+            switch (property)
+            {
+                case ResourceDiffProperty.ReleaseDt:
+                case ResourceDiffProperty.Name:
+                case ResourceDiffProperty.Language:
+                case ResourceDiffProperty.Introduction:
+                case ResourceDiffProperty.Rate:
+                {
+                    return ResourceDiff.Build(property, a, b, EqualityComparer<object>.Default,
+                        property.GetPropertyName(), null);
+                }
+                case ResourceDiffProperty.Volume:
+                {
+                    return ResourceDiff.Build(property, a as VolumeDto, b as VolumeDto, VolumeDto.BizComparer,
+                        property.GetPropertyName(), VolumeExtensions.Compare);
+                }
+                case ResourceDiffProperty.Series:
+                {
+                    return (ResourceDiff.Build(property, a as SeriesDto, b as SeriesDto, SeriesDto.BizComparer,
+                        property.GetPropertyName(), SeriesExtensions.Compare));
+                }
+                case ResourceDiffProperty.Publisher:
+                {
+                    return (ResourceDiff.Build(property, a as List<PublisherDto>, b as List<PublisherDto>,
+                        EqualityComparer<List<PublisherDto>>.Default,
+                        property.GetPropertyName(), PublisherExtensions.Compare));
+                }
+                case ResourceDiffProperty.Tag:
+                {
+                    return (ResourceDiff.Build(property, a as List<TagDto>, b as List<TagDto>,
+                        EqualityComparer<List<TagDto>>.Default, property.GetPropertyName(), TagExtensions.Compare));
+                }
+                case ResourceDiffProperty.Original:
+                {
+                    return (ResourceDiff.Build(property, a as List<OriginalDto>, b as List<OriginalDto>,
+                        EqualityComparer<List<OriginalDto>>.Default, property.GetPropertyName(),
+                        OriginalExtensions.Compare));
+                }
+                case ResourceDiffProperty.CustomProperty:
+                    return (BuildDiff(property, VolumeDto.BizComparer, a, b));
+                case ResourceDiffProperty.Category:
+                case ResourceDiffProperty.MediaLibrary:
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
         public static List<ResourceDiff> Compare(this ResourceDto a, ResourceDto b)
         {
             var diffs = new List<ResourceDiff?>();
-            foreach (var property in SpecificEnumUtils<ResourceProperty>.Values)
+            foreach (var property in SpecificEnumUtils<ResourceDiffProperty>.Values)
             {
                 var getter = property.GetGetter();
                 var va = getter(a);
                 var vb = getter(b);
-                switch (property)
-                {
-                    case ResourceProperty.ReleaseDt:
-                    case ResourceProperty.Name:
-                    case ResourceProperty.Language:
-                    case ResourceProperty.Introduction:
-                    case ResourceProperty.Rate:
-                    {
-                        diffs.Add(ResourceDiff.Build(property, va, vb, EqualityComparer<object>.Default,
-                            property.GetPropertyName(), null));
-                        break;
-                    }
-                    case ResourceProperty.Volume:
-                    {
-                        diffs.Add(ResourceDiff.Build(property, va as VolumeDto, vb as VolumeDto, VolumeDto.BizComparer,
-                            property.GetPropertyName(), VolumeExtensions.Compare));
-                        break;
-                    }
-                    case ResourceProperty.Series:
-                    {
-                        diffs.Add(ResourceDiff.Build(property, va as SeriesDto, vb as SeriesDto, SeriesDto.BizComparer,
-                            property.GetPropertyName(), SeriesExtensions.Compare));
-                        break;
-                    }
-                    case ResourceProperty.Publisher:
-                    {
-                        diffs.Add(ResourceDiff.Build(property, va as List<PublisherDto>, vb as List<PublisherDto>,
-                            EqualityComparer<List<PublisherDto>>.Default,
-                            property.GetPropertyName(), PublisherExtensions.Compare));
-                        break;
-                    }
-                    case ResourceProperty.Tag:
-                    {
-                        diffs.Add(ResourceDiff.Build(property, va as List<TagDto>, vb as List<TagDto>,
-                            EqualityComparer<List<TagDto>>.Default, property.GetPropertyName(), TagExtensions.Compare));
-                        break;
-                    }
-                    case ResourceProperty.Original:
-                    {
-                        diffs.Add(ResourceDiff.Build(property, va as List<OriginalDto>, vb as List<OriginalDto>,
-                            EqualityComparer<List<OriginalDto>>.Default, property.GetPropertyName(),
-                            OriginalExtensions.Compare));
-                        break;
-                    }
-                    case ResourceProperty.CustomProperty:
-                        diffs.Add(BuildDiff(property, VolumeDto.BizComparer, va, vb));
-                        break;
-                    case ResourceProperty.RootPath:
-                    case ResourceProperty.ParentResource:
-                    case ResourceProperty.Resource:
-                        // ignore
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                diffs.Add(property.Compare(va, vb));
             }
 
             return diffs.Where(d => d != null).ToList()!;
@@ -451,22 +488,23 @@ namespace Bakabase.InsideWorld.Models.Extensions
             return str;
         }
 
-        public static string GetPropertyName(this ResourceProperty property)
+        public static string GetPropertyName(this ResourceDiffProperty property)
         {
             return property switch
             {
-                ResourceProperty.ReleaseDt => nameof(ResourceDto.ReleaseDt),
-                ResourceProperty.Name => nameof(ResourceDto.Name),
-                ResourceProperty.Language => nameof(ResourceDto.Language),
-                ResourceProperty.Introduction => nameof(ResourceDto.Introduction),
-                ResourceProperty.Rate => nameof(ResourceDto.Rate),
-                ResourceProperty.Volume => nameof(ResourceDto.Volume),
-                ResourceProperty.Original => nameof(ResourceDto.Originals),
-                ResourceProperty.Series => nameof(ResourceDto.Series),
-                ResourceProperty.Publisher => nameof(ResourceDto.Publishers),
-                ResourceProperty.Tag => nameof(ResourceDto.Tags),
-                ResourceProperty.CustomProperty => nameof(ResourceDto.CustomProperties),
-                ResourceProperty.ParentResource => nameof(ResourceDto.Parent),
+                ResourceDiffProperty.ReleaseDt => nameof(ResourceDto.ReleaseDt),
+                ResourceDiffProperty.Name => nameof(ResourceDto.Name),
+                ResourceDiffProperty.Language => nameof(ResourceDto.Language),
+                ResourceDiffProperty.Introduction => nameof(ResourceDto.Introduction),
+                ResourceDiffProperty.Rate => nameof(ResourceDto.Rate),
+                ResourceDiffProperty.Volume => nameof(ResourceDto.Volume),
+                ResourceDiffProperty.Original => nameof(ResourceDto.Originals),
+                ResourceDiffProperty.Series => nameof(ResourceDto.Series),
+                ResourceDiffProperty.Publisher => nameof(ResourceDto.Publishers),
+                ResourceDiffProperty.Tag => nameof(ResourceDto.Tags),
+                ResourceDiffProperty.CustomProperty => nameof(ResourceDto.CustomProperties),
+                ResourceDiffProperty.Category => nameof(ResourceDto.CategoryId),
+                ResourceDiffProperty.MediaLibrary => nameof(ResourceDto.MediaLibraryId),
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }
