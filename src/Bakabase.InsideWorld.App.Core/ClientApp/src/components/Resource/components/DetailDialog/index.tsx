@@ -118,7 +118,7 @@ const ResourceDetailDialog = (props: IProps) => {
     BApi.file.getChildrenIwFsInfo({
       root: previewingPath,
     })
-      .invoke((a) => {
+      .then((a) => {
         setFilesystemEntries(a.data.entries);
       })
       .finally(() => {

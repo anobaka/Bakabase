@@ -577,7 +577,7 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
 
   return (
     <div
-      className={'entry'}
+      className={'tree-entry'}
       tabIndex={0}
       style={propsStyle}
       ref={domCallback}

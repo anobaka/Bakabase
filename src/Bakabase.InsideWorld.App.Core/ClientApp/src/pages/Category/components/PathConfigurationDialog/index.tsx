@@ -19,6 +19,7 @@ import ClickableIcon from '@/components/ClickableIcon';
 import { MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
+import BusinessConstants from '@/components/BusinessConstants';
 
 const log = buildLogger('PathConfigurationDialog');
 
@@ -262,8 +263,13 @@ export default (props: Props) => {
                     text
                     type={'primary'}
                     onClick={() => {
+                      let startPath: string | undefined;
+                      if (value.path) {
+                        const segments = splitPathIntoSegments(value.path);
+                        startPath = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
+                      }
                       FileSystemSelectorDialog.show({
-                        startPath: value.path,
+                        startPath: startPath,
                         targetType: 'folder',
                         onSelected: e => {
                           const newPc = {
@@ -273,6 +279,7 @@ export default (props: Props) => {
                           setValue(newPc);
                           checkPathRelations(newPc);
                         },
+                        defaultSelectedPath: value.path,
                       });
                     }}
                   >{value?.path}
