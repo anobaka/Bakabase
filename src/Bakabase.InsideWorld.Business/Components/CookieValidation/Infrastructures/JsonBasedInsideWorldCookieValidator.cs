@@ -16,7 +16,7 @@ namespace Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructu
         {
         }
 
-        protected override async Task<(bool Success, string Message, string Content)> Validate(HttpResponseMessage rsp)
+        protected override async Task<(bool Success, string? Message, string? Content)> Validate(HttpResponseMessage rsp)
         {
             var body = await rsp.Content.ReadAsStringAsync();
             var data = JsonConvert.DeserializeObject<TBody>(body);
@@ -24,6 +24,6 @@ namespace Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructu
             return (success, message, body);
         }
 
-        protected abstract (bool Success, string Message) Validate(TBody body);
+        protected abstract (bool Success, string? Message) Validate(TBody body);
     }
 }

@@ -19,7 +19,6 @@ namespace Bakabase.InsideWorld.Business.Components.CookieValidation
         }
 
         public override CookieValidatorTarget Target => CookieValidatorTarget.ExHentai;
-        protected override string HttpClientName => BusinessConstants.HttpClientNames.ExHentai;
         protected override string Url => ExHentaiClient.Domain;
     }
 }

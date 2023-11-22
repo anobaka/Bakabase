@@ -31,15 +31,20 @@ namespace Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructu
         {
             var client = _httpClientFactory.CreateClient(HttpClientName);
             var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, Url)
-            { Headers = { { "Cookie", cookie } } });
+                {Headers = {{"Cookie", cookie}}});
             var (success, message, content) = await Validate(response);
             return success
                 ? BaseResponseBuilder.Ok
                 : BaseResponseBuilder.BuildBadRequest(_localizer.CookieValidation_Fail(Url, message, content));
         }
 
-        protected abstract string HttpClientName { get; }
+
+        /// <summary>
+        /// The new cookie is not set while validating the cookie, so we should use a clean <see cref="HttpClient"/> to handle this request to avoid the cookie being set with previous cookie.
+        /// </summary>
+        protected virtual string HttpClientName { get; } = BusinessConstants.HttpClientNames.Default;
+
         protected abstract string Url { get; }
-        protected abstract Task<(bool Success, string Message, string Content)> Validate(HttpResponseMessage rsp);
+        protected abstract Task<(bool Success, string? Message, string? Content)> Validate(HttpResponseMessage rsp);
     }
 }

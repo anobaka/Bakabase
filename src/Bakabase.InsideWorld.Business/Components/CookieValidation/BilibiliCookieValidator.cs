@@ -20,12 +20,12 @@ namespace Bakabase.InsideWorld.Business.Components.CookieValidation
         }
 
         public override CookieValidatorTarget Target => CookieValidatorTarget.BiliBili;
-        protected override string HttpClientName => BusinessConstants.HttpClientNames.Bilibili;
+
         protected override string Url => BiliBiliApiConstants.Session;
 
-        protected override (bool Success, string Message) Validate(DataWrapper<UserCredential> body)
+        protected override (bool Success, string? Message) Validate(DataWrapper<UserCredential> body)
         {
-            var mid = body?.Data?.UserInfo?.Mid;
+            var mid = body?.Data?.Profile?.Mid;
             return (mid.HasValue, body?.Message);
         }
     }

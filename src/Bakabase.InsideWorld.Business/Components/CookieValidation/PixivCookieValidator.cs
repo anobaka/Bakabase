@@ -20,7 +20,6 @@ namespace Bakabase.InsideWorld.Business.Components.CookieValidation
         }
 
         public override CookieValidatorTarget Target => CookieValidatorTarget.Pixiv;
-        protected override string HttpClientName => BusinessConstants.HttpClientNames.Pixiv;
         protected override string Url => PixivClient.LoginStateCheckUrl;
 
         protected override (bool Success, string Message) Validate(PixivBaseResponse body) =>

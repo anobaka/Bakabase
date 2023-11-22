@@ -230,6 +230,7 @@ export default () => {
         </div>
       </div>
       <Table
+        size={'small'}
         dataSource={ds}
         cellProps={(rowIndex, colIndex, dataIndex, record) => {
           if (record.rowSpan && (colIndex == 0 || colIndex == 1)) {
