@@ -1,8 +1,8 @@
 @font-face {
   font-family: "iconfont"; /* Project id 2282961 */
-  src: url('iconfont.woff2?t=1688025089670') format('woff2'),
-       url('iconfont.woff?t=1688025089670') format('woff'),
-       url('iconfont.ttf?t=1688025089670') format('truetype');
+  src: url('iconfont.woff2?t=1699934857807') format('woff2'),
+       url('iconfont.woff?t=1699934857807') format('woff'),
+       url('iconfont.ttf?t=1699934857807') format('truetype');
 }
 
 .iconfont {
@@ -11,6 +11,18 @@
   font-style: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-modify:before {
+  content: "\ebae";
+}
+
+.icon-treasure-chest:before {
+  content: "\e8f8";
+}
+
+.icon-Network-Add:before {
+  content: "\e86d";
 }
 
 .icon-FileSystem:before {

@@ -6,6 +6,27 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "27850252",
+      "name": "modify",
+      "font_class": "modify",
+      "unicode": "ebae",
+      "unicode_decimal": 60334
+    },
+    {
+      "icon_id": "1445477",
+      "name": "treasure-chest",
+      "font_class": "treasure-chest",
+      "unicode": "e8f8",
+      "unicode_decimal": 59640
+    },
+    {
+      "icon_id": "6804177",
+      "name": "Network-Add",
+      "font_class": "Network-Add",
+      "unicode": "e86d",
+      "unicode_decimal": 59501
+    },
+    {
       "icon_id": "6457772",
       "name": "FileSystem",
       "font_class": "FileSystem",

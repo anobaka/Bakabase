@@ -38,6 +38,7 @@ export default defineConfig(() => ({
         route('/file-processor', 'FileProcessor/index.tsx');
         route('/favorites', 'Favorites/index.tsx');
         route('/downloader', 'Downloader/index.tsx');
+        route('/bulk-modification', 'BulkModification/index.tsx');
       });
       route('/welcome', '../layouts/BlankLayout/index.tsx', () => {
         route('/welcome', 'Welcome/index.tsx');

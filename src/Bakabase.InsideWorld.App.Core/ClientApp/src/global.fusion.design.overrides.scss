@@ -213,4 +213,18 @@ body {
   --message-help-color-content-addon: var(--theme-text-subtle);
 
   --progress-line-font-color: var(--theme-text);
+
+  --collapse-title-bg-color: var(--theme-block-background);
+  --collapse-title-hover-bg-color: var(--theme-block-background-accent);
+  --collapse-title-font-color: var(--theme-text);
+  --collapse-title-hover-font-color: var(--theme-text);
+  --collapse-icon-color: var(--theme-text);
+  --collapse-icon-hover-color: var(--theme-text);
+  --collapse-border-color: var(--theme-border-color);
+  --collapse-panel-border-color: var(--theme-border-color);
+  --collapse-content-bg-color: var(--theme-body-background);
+  --collapse-content-color: var(--theme-text);
+  --collapse-title-disabled-bg-color: var(--theme-block-background);
+  --collapse-title-font-disabled-color: var(--theme-text-subtle);
+  --collapse-disabled-border-color: var(--theme-border-color);
 }

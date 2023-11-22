@@ -41,6 +41,11 @@ const asideMenuConfig = [
   //   icon: 'wifi',
   // },
   {
+    name: 'Bulk modification',
+    path: '/bulk-modification',
+    icon: 'modify',
+  },
+  {
     name: 'File Processor',
     path: '/file-processor',
     icon: 'work',
