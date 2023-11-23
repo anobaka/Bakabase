@@ -32,8 +32,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             Logger = loggerFactory.CreateLogger(GetType());
 
             DirectoryName = directoryName;
-            DefaultLocation = Path.Combine(appService.AppDataDirectory, BusinessConstants.ComponentsDirectoryName,
-                DirectoryName);
+            DefaultLocation = Path.Combine(appService.ComponentsPath, DirectoryName);
             TempDirectory = Path.Combine(DefaultLocation, BusinessConstants.TempDirectoryName);
         }
 
