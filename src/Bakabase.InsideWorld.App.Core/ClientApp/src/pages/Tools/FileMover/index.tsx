@@ -155,7 +155,7 @@ export default () => {
 
   const ds = targets.reduce((s: any[], t: any) => {
     const sources = (t.sources || []).slice();
-    sources.push(null);
+    // sources.push(null);
     const newArr = sources.map((x, i) => (
       {
         target: t.path,
@@ -263,6 +263,7 @@ export default () => {
                 size={'small'}
                 placeholder={t('One path per line')}
                 width={'100%'}
+                autoHeight={{ minRows: 2, maxRows: 100 }}
                 value={s?.join('\n')}
                 onChange={v => {
                   quickEditModeData![i].sources = v.split('\n');
@@ -302,6 +303,7 @@ export default () => {
                     trigger={
                       <div>
                         <FileSelector
+                          defaultLabel={t('Add target path')}
                           multiple={false}
                           type={'folder'}
                           value={target ?? null}
@@ -339,6 +341,27 @@ export default () => {
                 </div>
                 {target && (
                   <div className={'right'}>
+                    <Balloon.Tooltip
+                      trigger={(
+                        <ClickableIcon
+                          type={'plus-circle'}
+                          colorType={'normal'}
+                          onClick={() => {
+                            BApi.gui.openFolderSelector()
+                              .then(a => {
+                                if (a.data) {
+                                  addSource(target, a.data);
+                                }
+                              });
+                          }}
+                        />
+                      )}
+                      triggerType={'hover'}
+                      align={'t'}
+                      v2
+                    >
+                      {t('Add source path')}
+                    </Balloon.Tooltip>
                     {renderCommonOperations(target)}
                     <ClickableIcon
                       colorType={'danger'}
@@ -523,7 +546,7 @@ export default () => {
                   setQuickEditModeData(undefined);
                   loadOptions();
                 });
-            }}
+              }}
             >
               {t('Save')}
             </Button>

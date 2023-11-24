@@ -63,6 +63,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             }
             catch (Exception e)
             {
+                Status = DependentComponentStatus.NotInstalled;
                 await UpdateContext(d => { d.Error = e.Message; });
                 Logger.LogError(e, $"An error occurred during installing {DisplayName}: {e.Message}");
                 throw;

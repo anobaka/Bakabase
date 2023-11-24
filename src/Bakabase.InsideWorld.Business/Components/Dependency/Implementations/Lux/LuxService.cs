@@ -183,7 +183,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
                 .WithArguments(arguments!, true)
                 .WithEnvironmentVariables(new Dictionary<string, string?>
                 {
-                    {"PATH", FfMpegService.FfMpegExecutable}
+                    {"PATH", FfMpegService.Context.Location}
                 })
                 .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb, Encoding.UTF8))
                 .WithStandardErrorPipe(new CustomCliWrapPipeTarget(async str =>

@@ -13,6 +13,7 @@ interface Props {
   value?: string | string[];
   multiple: boolean;
   onChange?: (value: string | string[]) => any;
+  defaultLabel?: string;
 }
 
 const log = buildLogger('FileSelector');
@@ -24,6 +25,7 @@ export default ({
                   size = 'medium',
                   onChange: propsOnChange = (paths) => {
                   },
+                  defaultLabel,
                 }: Props) => {
   const { t } = useTranslation();
   const [innerValue, setInnerValue] = useState(propsValue ?? propsDefaultValue);
@@ -77,7 +79,7 @@ export default ({
             break;
         }
       }}
-    >{value ?? t('Select a path')}
+    >{value ?? defaultLabel ?? t('Select a path')}
     </Button>
   );
 };

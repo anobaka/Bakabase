@@ -935,5 +935,9 @@
   "Quick edit mode": "快速编辑模式",
   "Back to normal edit mode": "返回普通编辑模式",
   "One path per line": "每行一个路径",
-  "Target path": "目标路径"
+  "Target path": "目标路径",
+  "Add source path": "添加源路径",
+  "Add target path": "添加目标路径",
+  "Failed to get information of new version": "获取新版本信息失败",
+  "Checking new version": "正在检查新版本"
 }

@@ -1,22 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Icon } from '@alifd/next';
+import { Button, Dialog, Icon } from '@alifd/next';
 import { usePrevious } from 'react-use';
 import BApi from '@/sdk/BApi';
 import SimpleLabel from '@/components/SimpleLabel';
 import CustomIcon from '@/components/CustomIcon';
 import store from '@/store';
 import { DependentComponentStatus } from '@/sdk/constants';
+import ClickableIcon from '@/components/ClickableIcon';
 
 export default ({ id }: { id: string }) => {
   const { t } = useTranslation();
   const context = store.useModelState('dependentComponentContexts').find(a => a.id == id);
-  const [latestVersion, setLatestVersion] = useState<{version: string; canUpdate: boolean}>();
+  const [latestVersion, setLatestVersion] = useState<{ version?: string; canUpdate: boolean; error?: string | null }>();
   // const prevInstallationProgress = usePrevious(context);
   const [discovering, setDiscovering] = useState(true);
 
-  useEffect(() => {
+  const prevStatus = usePrevious(context?.status);
 
+  useEffect(() => {
+    if (context?.status == DependentComponentStatus.Installed && prevStatus == DependentComponentStatus.Installing) {
+      init();
+    }
   }, [context]);
 
   const init = useCallback(async () => {
@@ -26,71 +31,119 @@ export default ({ id }: { id: string }) => {
       setDiscovering(false);
     }
 
-    const latestVersionRsp = await BApi.component.getDependentComponentLatestVersion({ id });
-    // @ts-ignore
-    setLatestVersion(latestVersionRsp.data);
+    try {
+      const latestVersionRsp = await BApi.component.getDependentComponentLatestVersion({ id });
+      if (!latestVersionRsp.code) {
+        // @ts-ignore
+        setLatestVersion(latestVersionRsp.data);
+      } else {
+        setLatestVersion({
+          canUpdate: false,
+          error: latestVersionRsp.message,
+        });
+      }
+    } catch (e) {
+      setLatestVersion({
+        canUpdate: false,
+        error: e.toString(),
+      });
+    }
   }, []);
 
   useEffect(() => {
     init();
   }, []);
 
+  console.log(context?.name, latestVersion, discovering, context);
+
   const renderNewVersionInner = useCallback(() => {
-    if (!latestVersion) {
-      return (
-        <Icon type={'loading'} size={'small'} />
-      );
-    } else {
-      if (!latestVersion.canUpdate) {
-        return (
-          <CustomIcon style={{ color: 'green' }} type={'check-circle'} />
+    const elements: any[] = [];
+
+    // new version
+    if (latestVersion) {
+      if (latestVersion.error) {
+        elements.push(
+          <ClickableIcon
+            type={'error'}
+            colorType={'danger'}
+            useInBuildIcon
+            onClick={() => {
+              Dialog.error({
+                title: t('Failed to get information of new version'),
+                content: latestVersion.error,
+                v2: true,
+                width: 'auto',
+                closeMode: ['close', 'esc', 'mask'],
+              });
+            }}
+          />,
         );
       } else {
-        if (context && context.status == DependentComponentStatus.Installing) {
-          return (
-            <>
-              {t('Updating')}: {context.installationProgress}%
-              <Icon type={'loading'} size={'small'} />
-            </>
-          );
-        } else {
-          return (
-            <>
-              {latestVersion.canUpdate && (
-                <Button
-                  text
-                  type={'primary'}
-                  size={'small'}
-                  onClick={() => {
-                    setLatestVersion(undefined);
-                    BApi.component.installDependentComponent({ id });
-                  }}
-                >
-                  {t('Click to update to version')}: {latestVersion.version}
-                </Button>
-              )}
-              {context?.error && (
-                <span style={{
-                  color: 'red',
-                  marginLeft: 5,
+        if (latestVersion.canUpdate) {
+          if (context?.status != DependentComponentStatus.Installing) {
+            elements.push(
+              <Button
+                text
+                type={'primary'}
+                size={'small'}
+                onClick={() => {
+                  BApi.component.installDependentComponent({ id });
                 }}
-                >{context.error}</span>
-              )}
-            </>
+              >
+                {t('Click to update to version')}: {latestVersion.version}
+              </Button>,
+            );
+          }
+        } else {
+          elements.push(
+            <CustomIcon style={{ color: 'green' }} type={'check-circle'} />,
           );
         }
       }
+    } else {
+      elements.push(
+        <Icon type={'loading'} size={'small'} title={t('Checking new version')} />,
+      );
     }
+
+    // current status
+    if (context && context.status == DependentComponentStatus.Installing) {
+      elements.push(
+        <>
+          {t('Updating')}: {context.installationProgress}%
+          <Icon type={'loading'} size={'small'} />
+        </>,
+      );
+    }
+    if (context?.error) {
+      elements.push(
+        <ClickableIcon
+          type={'error'}
+          colorType={'danger'}
+          useInBuildIcon
+          onClick={() => {
+            Dialog.error({
+              title: t('Error'),
+              content: context.error,
+              v2: true,
+              width: 'auto',
+              closeMode: ['close', 'esc', 'mask'],
+            });
+          }}
+        />,
+      );
+    }
+    return elements;
   }, [latestVersion, context, discovering]);
 
   return (
     <div
       className={'third-party-component'}
       style={{
-      display: 'flex',
-      gap: 10,
-      alignItems: 'center',
-    }}
+        display: 'flex',
+        gap: 10,
+        alignItems: 'center',
+      }}
     >
       <div className={'installed'}>
         {

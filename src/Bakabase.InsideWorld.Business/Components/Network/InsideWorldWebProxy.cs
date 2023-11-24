@@ -20,7 +20,7 @@ namespace Bakabase.InsideWorld.Business.Components.Network
         }
 
         public Uri? GetProxy(Uri destination) =>
-            _options.Value.Proxy?.Address != null ? new Uri(_options.Value.Proxy.Address) : null;
+            !string.IsNullOrEmpty(_options.Value.Proxy?.Address) ? new Uri(_options.Value.Proxy.Address) : null;
 
         public bool IsBypassed(Uri host) => false;
 

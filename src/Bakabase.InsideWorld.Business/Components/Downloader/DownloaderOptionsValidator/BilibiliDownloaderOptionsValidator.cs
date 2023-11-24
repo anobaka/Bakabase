@@ -1,6 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili.Models;
@@ -20,13 +23,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsV
         private readonly IStringLocalizer<SharedResource> _localizer;
         private readonly IWebHostEnvironment _env;
         private readonly InsideWorldOptionsManagerPool _optionsManager;
+        private readonly FfMpegService _ffMpegService;
+        private readonly LuxService _luxService;
 
         public BilibiliDownloaderOptionsValidator(IStringLocalizer<SharedResource> localizer, IWebHostEnvironment env,
-            InsideWorldOptionsManagerPool optionsManager)
+            InsideWorldOptionsManagerPool optionsManager, FfMpegService ffMpegService, LuxService luxService)
         {
             _localizer = localizer;
             _env = env;
             _optionsManager = optionsManager;
+            _ffMpegService = ffMpegService;
+            _luxService = luxService;
         }
 
         public ThirdPartyId ThirdPartyId => ThirdPartyId.Bilibili;
@@ -34,21 +41,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsV
         public async Task<BaseResponse> Validate()
         {
             var options = (_optionsManager.Bilibili).Value;
-            if (options.Cookie.IsNullOrEmpty())
+
+            if (_ffMpegService.Status != DependentComponentStatus.Installed)
             {
-                return BaseResponseBuilder.BuildBadRequest("Cookie is empty");
+                throw new Exception("ffmpeg is not ready, please check it in Configuration");
             }
 
-            const string ffmpegExecutable = "ffmpeg.exe";
-            if (FileUtils.GetFullname(ffmpegExecutable) == null)
+            if (_luxService.Status != DependentComponentStatus.Installed)
             {
-                throw new Exception("ffmpeg.exe is not found in environment variables.");
-            }
-
-            var luxPath = BilibiliDownloader.BuildLuxBinPath(_env);
-            if (!File.Exists(luxPath))
-            {
-                throw new Exception("lux.exe is not found");
+                throw new Exception("lux is not ready, please check it in Configuration");
             }
 
             if (options.Cookie.IsNullOrEmpty())
