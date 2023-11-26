@@ -60,12 +60,13 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
                     var allFilePaths = new List<string>();
                     singleFileDownloader.OnProgress += async (progress) =>
                     {
-                        if (progress != Context.InstallationProgress)
+                        var newProgress = (int) (perFileProgress * allFilePaths.Count +
+                                                 progress * perFileProgress / 100);
+                        if (newProgress != Context.InstallationProgress)
                         {
                             await UpdateContext(d =>
                             {
-                                d.InstallationProgress = (int) (perFileProgress * allFilePaths.Count +
-                                                                progress * perFileProgress / 100);
+                                d.InstallationProgress = newProgress;
                             });
                         }
                     };

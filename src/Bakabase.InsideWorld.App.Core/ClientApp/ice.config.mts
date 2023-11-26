@@ -12,6 +12,7 @@ export default defineConfig(() => ({
     store(),
     cssAssetsLocal(),
   ],
+  sourceMap: true,
   routes: {
     // 忽略所有约定式规则
     // ignoreFiles: ['**/components/**'],
