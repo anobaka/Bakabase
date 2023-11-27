@@ -451,6 +451,7 @@ export default React.memo((props: IProps) => {
                     break;
                   case FilterType.Select:
                     label = f.multiple ? value.map((k) => f.dataSource!.find((x) => x.value == k))
+                      .filter(x => x != undefined)
                       .map((x) => x.label)
                       .join(', ') : f.dataSource!.find((x) => x.value == value)!.label;
                     break;
