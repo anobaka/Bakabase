@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -9,6 +10,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Storage;
+using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 using Semver;
 
@@ -33,8 +35,20 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
             var latestVersion = await GetLatestVersion(ct);
             Logger.LogInformation($"Try to install latest version: {latestVersion.Version}");
 
-            if (Context.Version == null || SemVersion.Parse(latestVersion.Version, SemVersionStyles.Any)
-                    .ComparePrecedenceTo(SemVersion.Parse(Context.Version, SemVersionStyles.Any)) > 0)
+            SemVersion? currentVer = null;
+            if (Context.Version.IsNotEmpty())
+            {
+                try
+                {
+                    currentVer = SemVersion.Parse(Context.Version, SemVersionStyles.Any);
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError(e, $"An error occurred during parsing current version [{Context.Version}]: {e.Message}");
+                }
+            }
+
+            if (currentVer == null || SemVersion.Parse(latestVersion.Version, SemVersionStyles.Any).ComparePrecedenceTo(currentVer) > 0)
             {
                 var urlAndFileNames = await GetDownloadUrls(latestVersion, ct);
                 if (urlAndFileNames.Any())
@@ -46,12 +60,13 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
                     var allFilePaths = new List<string>();
                     singleFileDownloader.OnProgress += async (progress) =>
                     {
-                        if (progress != Context.InstallationProgress)
+                        var newProgress = (int) (perFileProgress * allFilePaths.Count +
+                                                 progress * perFileProgress / 100);
+                        if (newProgress != Context.InstallationProgress)
                         {
                             await UpdateContext(d =>
                             {
-                                d.InstallationProgress = (int) (perFileProgress * allFilePaths.Count +
-                                                                progress * perFileProgress / 100);
+                                d.InstallationProgress = newProgress;
                             });
                         }
                     };

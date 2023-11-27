@@ -2,9 +2,9 @@ import { Button, Input, Message } from '@alifd/next';
 import React, { useEffect, useState } from 'react';
 import i18n from 'i18next';
 import { ValidateCookie } from '@/sdk/apis';
-import { CookieValidatorTarget } from '@/sdk/constants';
+import type { CookieValidatorTarget } from '@/sdk/constants';
 
-export default ({ cookie, target, onChange = (v) => {} }: {cookie: string|undefined; target: CookieValidatorTarget; onChange: any}) => {
+export default ({ cookie, target, onChange = (v) => {} }: {cookie: string | undefined; target: CookieValidatorTarget; onChange: any}) => {
   return (
     <div className={'cookie-validator'}>
       <Input.TextArea
@@ -40,7 +40,7 @@ export default ({ cookie, target, onChange = (v) => {} }: {cookie: string|undefi
                 });
               } else {
                 Message.error({
-                  title: i18n.t(a.message),
+                  title: a.message,
                   align: 'cc cc',
                   closeable: true,
                   duration: 0,

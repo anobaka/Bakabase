@@ -21,6 +21,7 @@ export interface IFileSystemSelectorProps {
   onSelected?: (entry: Entry) => any;
   onCancel?: () => any;
   filter?: (entry: Entry) => boolean;
+  defaultSelectedPath?: string;
 }
 
 export default (props: IFileSystemSelectorProps) => {
@@ -35,23 +36,24 @@ export default (props: IFileSystemSelectorProps) => {
     onCancel = () => {
     },
     filter: propsFilter = e => true,
+    defaultSelectedPath,
   } = props;
 
   const [entries, setEntries] = useState<Entry[]>();
   const selectedEntryRef = useRef<Entry>();
   const inputPathRef = useRef<string | undefined>(startPath);
   const inputBlurHandlerRef = useRef<any>();
-  const highlightNameRef = useRef<string>();
-  const startPathRef = useRef(startPath);
+  const highlightEntryNameRef = useRef<string>();
 
   /**
    * todo: Optimize Entry to use TreeEntry immediately instead of handling first layer manually.
    * @param root
    */
   const initializeRoot = async (root?: string) => {
-    startPathRef.current = root;
+    inputPathRef.current = root;
     BApi.file.getChildrenIwFsInfo({ root }).then(r => {
-      const rootEntry = new RootEntry();
+      const rootEntry = new RootEntry(root);
+      rootEntry.type = IwFsType.Directory;
       let types: IwFsType[] | undefined;
       if (targetType) {
         switch (targetType) {
@@ -84,20 +86,31 @@ export default (props: IFileSystemSelectorProps) => {
 
       setEntries(newEntries);
 
-      const selectedEntry = newEntries.find(a => a.name == highlightNameRef.current);
+      const selectedEntry = newEntries.find(a => a.name == highlightEntryNameRef.current);
       if (selectedEntry) {
         selectedEntryRef.current = selectedEntry;
         selectedEntry.select(true);
+      } else {
+        // Select if start path is selected on initialization
+        if (entries == undefined && defaultSelectedPath == root) {
+          selectedEntryRef.current = rootEntry;
+        }
       }
 
       inputBlurHandlerRef.current = undefined;
-      highlightNameRef.current = undefined;
+      highlightEntryNameRef.current = undefined;
 
-      console.log(root);
+      forceUpdate();
+
+      console.log('12345', root, selectedEntryRef.current);
     });
   };
 
   useEffect(() => {
+    if (defaultSelectedPath) {
+      highlightEntryNameRef.current = splitPathIntoSegments(defaultSelectedPath).pop();
+    }
+
     initializeRoot(startPath);
   }, []);
 
@@ -133,11 +146,11 @@ export default (props: IFileSystemSelectorProps) => {
           type={'arrowup'}
           colorType={'normal'}
           onClick={() => {
-            const path = startPathRef.current || '';
+            const path = inputPathRef.current || '';
             const segments = splitPathIntoSegments(path);
             const isUncPath = path.startsWith(BusinessConstants.uncPathPrefix);
             console.log(path, segments, isUncPath);
-            if (segments.length > 1 && !isUncPath) {
+            if (segments.length > 0 && !isUncPath) {
               const newRoot = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
               initializeRoot(newRoot);
             }
@@ -146,7 +159,7 @@ export default (props: IFileSystemSelectorProps) => {
         <Input
           // size={'small'}
           placeholder={t('You can type a path here')}
-          defaultValue={startPath}
+          value={inputPathRef.current}
           onChange={v => {
             clearInterval(inputBlurHandlerRef.current);
             const path = standardizePath(v)!;
@@ -155,7 +168,7 @@ export default (props: IFileSystemSelectorProps) => {
             const isUncPath = path.startsWith(BusinessConstants.uncPathPrefix);
             let newRootSegmentLength = segments.length == 1 ? 1 : (segments.length == 2 && isUncPath) ? 2 : segments.length - 1;
             const newRoot = segments.slice(0, newRootSegmentLength).join(BusinessConstants.pathSeparator);
-            highlightNameRef.current = segments[newRootSegmentLength];
+            highlightEntryNameRef.current = segments[newRootSegmentLength];
             // console.log(segments, newRoot, highlightNameRef.current);
             inputBlurHandlerRef.current = setTimeout(() => {
               initializeRoot(newRoot);

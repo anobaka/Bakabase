@@ -61,7 +61,7 @@
 
       .resource-locator {
         .not-set {
-          color: red;
+          color: var(--theme-text-error);
         }
         .items {
           &>* {

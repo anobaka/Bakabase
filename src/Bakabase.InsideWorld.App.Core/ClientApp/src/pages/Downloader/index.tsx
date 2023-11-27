@@ -32,6 +32,7 @@ import Configurations from '@/pages/Downloader/components/Configurations';
 import store from '@/store';
 import BApi from '@/sdk/BApi';
 import { buildLogger, equalsOrIsChildOf, useTraceUpdate } from '@/components/utils';
+import SimpleLabel from '@/components/SimpleLabel';
 
 const testTasks = [
   {
@@ -639,9 +640,9 @@ export default () => {
               });
             return (
               <div className={'third-party'}>
-                <IceLabel inverse={false} status={'info'}>
+                <SimpleLabel status={'info'}>
                   {ThirdPartyId[rs.id]}
-                </IceLabel>
+                </SimpleLabel>
                 <div className={'statistics'}>
                   <Balloon.Tooltip
                     trigger={(
@@ -711,8 +712,7 @@ export default () => {
                     </div>
                     <div className="info">
                       <div className="left">
-                        <IceLabel
-                          inverse={false}
+                        <SimpleLabel
                           status={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
                           className={hasErrorMessage ? 'has-error-message' : ''}
                         >
@@ -732,7 +732,7 @@ export default () => {
                           >
                             {t(DownloadTaskDtoStatus[task.status])}
                           </span>
-                        </IceLabel>
+                        </SimpleLabel>
                         {(task.status == DownloadTaskDtoStatus.Downloading || task.status == DownloadTaskDtoStatus.Starting || task.status == DownloadTaskDtoStatus.Stopping) && (
                           <Icon type={'loading'} size={'small'} />
                         )}
@@ -740,18 +740,16 @@ export default () => {
                       </div>
                       <div className="right">
                         {task.failureTimes > 0 && (
-                          <IceLabel
-                            inverse={false}
+                          <SimpleLabel
                             status={'danger'}
                             className={'failure-times'}
                           >
                             {t('Failure times')}:
                             <span>{task.failureTimes}</span>
-                          </IceLabel>
+                          </SimpleLabel>
                         )}
                         {task.nextStartDt && (
-                          <IceLabel
-                            inverse={false}
+                          <SimpleLabel
                             status={'info'}
                             className={'next-start-dt'}
                           >
@@ -760,7 +758,7 @@ export default () => {
                               {moment(task.nextStartDt)
                                 .format('YYYY-MM-DD HH:mm:ss')}
                             </span>
-                          </IceLabel>
+                          </SimpleLabel>
                         )}
                       </div>
                     </div>

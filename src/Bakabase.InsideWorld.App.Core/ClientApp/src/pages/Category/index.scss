@@ -357,7 +357,7 @@
         border-color: #08c29e;
 
         &.not-set {
-          color: rgb(51, 51, 51);
+          color: var(--theme-text-error);
         }
       }
 
@@ -377,7 +377,7 @@
       gap: 2px;
 
       &.unset {
-        color: red;
+        color: var(--theme-text-error);
       }
     }
   }

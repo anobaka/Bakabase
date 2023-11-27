@@ -65,6 +65,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 
                 if (fs.Length < fileSize)
                 {
+                    fs.Seek(0, SeekOrigin.End);
                     var downloadedBytesCount = fs.Length;
                     for (var blockStart = downloadedBytesCount;
                          blockStart < fileSize;

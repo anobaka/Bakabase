@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { IFileSystemSelectorProps } from '@/components/FileSystemSelector';
 import FileSystemSelector from '@/components/FileSystemSelector';
 import { createPortalOfComponent } from '@/components/utils';
+import CustomIcon from '@/components/CustomIcon';
+import './index.scss';
 
 interface IProps extends IFileSystemSelectorProps {
   afterClose?: () => any;
@@ -39,13 +41,19 @@ const FileSystemSelectorDialog = (props: IProps) => {
       v2
       width={700}
       closeMode={['close', 'esc', 'mask']}
-      title={t(title)}
+      title={(
+        <>
+          <CustomIcon type={'search'} />
+          {t(title)}
+        </>
+      )}
       visible={visible}
       footer={false}
       closeIcon={false}
       afterClose={afterClose}
       onCancel={close}
       onClose={close}
+      className={'file-system-selector-dialog'}
     >
       <FileSystemSelector
         {...fsProps}

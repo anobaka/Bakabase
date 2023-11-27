@@ -931,5 +931,13 @@
   "Click to update to version": "点击更新至版本",
   "Dependent components": "依赖组件",
   "Default location": "默认位置",
-  "This function is not working because lux or ffmpeg is not found, check them in system configurations": "该功能无法使用，因为未找到lux或ffmpeg，您可以在系统配置界面确认它们的状态"
+  "This function is not working because lux or ffmpeg is not found, check them in system configurations": "该功能无法使用，因为未找到lux或ffmpeg，您可以在系统配置界面确认它们的状态",
+  "Quick edit mode": "快速编辑模式",
+  "Back to normal edit mode": "返回普通编辑模式",
+  "One path per line": "每行一个路径",
+  "Target path": "目标路径",
+  "Add source path": "添加源路径",
+  "Add target path": "添加目标路径",
+  "Failed to get information of new version": "获取新版本信息失败",
+  "Checking new version": "正在检查新版本"
 }

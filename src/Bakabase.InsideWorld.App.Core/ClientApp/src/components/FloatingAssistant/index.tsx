@@ -285,25 +285,17 @@ export default () => {
             </div>
             <div className="opts-container">
               <div className="opts">
-                <Balloon.Tooltip
-                  trigger={(
-                    <Button
-                      className="opt"
-                      type={'secondary'}
-                      size={'small'}
-                      disabled={syncDisabled}
-                      onClick={() => {
-                          SyncMediaLibrary().invoke();
-                        }}
-                    >
-                      {t('Sync media libraries')}
-                    </Button>
-                    )}
-                  triggerType={'hover'}
-                  align={'t'}
+                <Button
+                  className="opt"
+                  type={'secondary'}
+                  size={'small'}
+                  disabled={syncDisabled}
+                  onClick={() => {
+                    SyncMediaLibrary().invoke();
+                  }}
                 >
-                  {t('{{job}} will be started once an hour automatically, but you can trigger it manually by clicking there.', { job: t('Synchronization of media libraries') })}
-                </Balloon.Tooltip>
+                  {t('Sync media libraries')}
+                </Button>
                 <Balloon.Tooltip
                   trigger={(
                     <Button

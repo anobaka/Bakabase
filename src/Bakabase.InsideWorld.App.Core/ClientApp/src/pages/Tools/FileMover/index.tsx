@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Balloon, Dialog, Dropdown, Icon, Menu, Message, Switch, Table, TimePicker2 } from '@alifd/next';
+import { Balloon, Button, Dialog, Dropdown, Icon, Input, Menu, Message, Switch, Table, TimePicker2 } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
+import { applyPatches } from 'immer';
 import { OpenFileOrDirectory } from '@/sdk/apis';
 import FileSelector from '@/components/FileSelector';
 import './index.scss';
@@ -32,6 +33,11 @@ export default () => {
   const [preferredSource, setPreferredSource] = useState();
 
   const [value, setValue] = useState<IValue>(new Value());
+
+  const [quickEditModeData, setQuickEditModeData] = useState<{
+    path?: string;
+    sources?: string[];
+  }[]>();
 
   const progresses = store.useModelState('fileMovingProgresses');
 
@@ -149,7 +155,7 @@ export default () => {
 
   const ds = targets.reduce((s: any[], t: any) => {
     const sources = (t.sources || []).slice();
-    sources.push(null);
+    // sources.push(null);
     const newArr = sources.map((x, i) => (
       {
         target: t.path,
@@ -190,46 +196,91 @@ export default () => {
     );
   };
 
-  return (
-    <div className={'file-mover'}>
-      <div className="opt">
-        <div className="enable">
-          <div className="label">
-            {t(enabled ? 'Enabled' : 'Disabled')}
-          </div>
-          <Switch
-            checked={enabled}
-            onChange={(c) => {
-              save({
-                enabled: c,
-              });
-            }}
-          />
-        </div>
-        <div className="delay">
-          <Balloon.Tooltip
-            trigger={(
-              <div className={'label'}>
-                {t('Delay')}
-                <CustomIcon type={'question-circle'} />
-              </div>
-            )}
-            triggerType={'hover'}
-            align={'t'}
-          >
-            {t('Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.')}
-          </Balloon.Tooltip>
-          <TimePicker2
-            value={value?.delay}
-            onChange={(c) => {
-              save({
-                delay: c?.format('HH:mm:ss') ?? '00:05:00',
-              });
-            }}
-          />
-        </div>
-      </div>
+  const renderQuickEditMode = () => {
+    return (
       <Table
+        size={'small'}
+        dataSource={quickEditModeData}
+        className={'quick-edit-mode-table'}
+      >
+        <Table.Column
+          title={t('Target')}
+          dataIndex={'path'}
+          cell={(path, i, r) => {
+            if (i == quickEditModeData!.length - 1) {
+              return (
+                <Button
+                  type={'primary'}
+                  onClick={() => {
+                    quickEditModeData?.splice(i, 0, {});
+                    setQuickEditModeData([...quickEditModeData!]);
+                  }}
+                  size={'small'}
+                >{t('Add')}</Button>
+              );
+            }
+            return (
+              <div className={'target'}>
+                <Input
+                  placeholder={t('Target path')}
+                  value={path}
+                  onChange={v => {
+                    quickEditModeData![i].path = v;
+                    setQuickEditModeData([...quickEditModeData!]);
+                  }}
+                />
+                <ClickableIcon
+                  type={'delete'}
+                  colorType={'danger'}
+                  onClick={() => {
+                    quickEditModeData!.splice(i, 1);
+                    setQuickEditModeData([...quickEditModeData!]);
+                  }}
+                />
+              </div>
+            );
+          }}
+        />
+        <Table.Column
+          width={90}
+          align={'center'}
+          title={t('Moving direction')}
+          cell={() => {
+            return (
+              <AnimatedArrow direction={'left'} />
+            );
+          }}
+        />
+        <Table.Column
+          title={t('Source')}
+          dataIndex={'sources'}
+          cell={(s, i, r) => {
+            if (i == quickEditModeData!.length - 1) {
+              return;
+            }
+            return (
+              <Input.TextArea
+                size={'small'}
+                placeholder={t('One path per line')}
+                width={'100%'}
+                autoHeight={{ minRows: 2, maxRows: 100 }}
+                value={s?.join('\n')}
+                onChange={v => {
+                  quickEditModeData![i].sources = v.split('\n');
+                  setQuickEditModeData([...quickEditModeData!]);
+                }}
+              />
+            );
+          }}
+        />
+      </Table>
+    );
+  };
+
+  const renderNormalEditMode = () => {
+    return (
+      <Table
+        size={'small'}
         dataSource={ds}
         cellProps={(rowIndex, colIndex, dataIndex, record) => {
           if (record.rowSpan && (colIndex == 0 || colIndex == 1)) {
@@ -252,6 +303,7 @@ export default () => {
                     trigger={
                       <div>
                         <FileSelector
+                          defaultLabel={t('Add target path')}
                           multiple={false}
                           type={'folder'}
                           value={target ?? null}
@@ -289,6 +341,27 @@ export default () => {
                 </div>
                 {target && (
                   <div className={'right'}>
+                    <Balloon.Tooltip
+                      trigger={(
+                        <ClickableIcon
+                          type={'plus-circle'}
+                          colorType={'normal'}
+                          onClick={() => {
+                            BApi.gui.openFolderSelector()
+                              .then(a => {
+                                if (a.data) {
+                                  addSource(target, a.data);
+                                }
+                              });
+                          }}
+                        />
+                      )}
+                      triggerType={'hover'}
+                      align={'t'}
+                      v2
+                    >
+                      {t('Add source path')}
+                    </Balloon.Tooltip>
                     {renderCommonOperations(target)}
                     <ClickableIcon
                       colorType={'danger'}
@@ -413,6 +486,88 @@ export default () => {
           }}
         />
       </Table>
+    );
+  };
+
+  return (
+    <div className={'file-mover'}>
+      <div className="opt">
+        <div className="left">
+          <div className="enable">
+            <div className="label">
+              {t(enabled ? 'Enabled' : 'Disabled')}
+            </div>
+            <Switch
+              checked={enabled}
+              onChange={(c) => {
+                save({
+                  enabled: c,
+                });
+              }}
+            />
+          </div>
+          <div className="delay">
+            <Balloon.Tooltip
+              trigger={(
+                <div className={'label'}>
+                  {t('Delay')}
+                  <CustomIcon type={'question-circle'} />
+                </div>
+              )}
+              triggerType={'hover'}
+              align={'t'}
+            >
+              {t('Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.')}
+            </Balloon.Tooltip>
+            <TimePicker2
+              value={value?.delay}
+              onChange={(c) => {
+                save({
+                  delay: c?.format('HH:mm:ss') ?? '00:05:00',
+                });
+              }}
+            />
+          </div>
+        </div>
+        <div className="right">
+          {quickEditModeData && (
+            <Button
+              type={'primary'}
+              onClick={() => {
+                const newTargets = quickEditModeData?.filter(d => !!d.path);
+                for (const nt of newTargets) {
+                  if (nt.sources) {
+                    nt.sources = nt.sources.filter(s => !!s);
+                  }
+                }
+                save({
+                  targets: newTargets,
+                }, () => {
+                  setQuickEditModeData(undefined);
+                  loadOptions();
+                });
+              }}
+            >
+              {t('Save')}
+            </Button>
+          )}
+          <Button
+            type={'normal'}
+            onClick={() => {
+              if (quickEditModeData) {
+                setQuickEditModeData(undefined);
+              } else {
+                const newData = JSON.parse(JSON.stringify(targets));
+                newData.push({});
+                setQuickEditModeData(newData);
+              }
+            }}
+          >
+            {quickEditModeData ? t('Back to normal edit mode') : t('Quick edit mode')}
+          </Button>
+        </div>
+      </div>
+      {quickEditModeData ? renderQuickEditMode() : renderNormalEditMode()}
     </div>
   );
 };

@@ -32,8 +32,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             Logger = loggerFactory.CreateLogger(GetType());
 
             DirectoryName = directoryName;
-            DefaultLocation = Path.Combine(appService.AppDataDirectory, BusinessConstants.ComponentsDirectoryName,
-                DirectoryName);
+            DefaultLocation = Path.Combine(appService.ComponentsPath, DirectoryName);
             TempDirectory = Path.Combine(DefaultLocation, BusinessConstants.TempDirectoryName);
         }
 
@@ -64,6 +63,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             }
             catch (Exception e)
             {
+                Status = DependentComponentStatus.NotInstalled;
                 await UpdateContext(d => { d.Error = e.Message; });
                 Logger.LogError(e, $"An error occurred during installing {DisplayName}: {e.Message}");
                 throw;

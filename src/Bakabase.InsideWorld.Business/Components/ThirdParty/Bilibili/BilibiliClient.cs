@@ -31,8 +31,8 @@ namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili
         public async Task<List<Favorites>> GetFavorites()
         {
             var userCredentialRsp = await HttpClient.GetStringAsync(BiliBiliApiConstants.Session);
-            var userCredential = JsonConvert.DeserializeObject<DataWrapper<UserCredential>>(userCredentialRsp).Data;
-            var mid = userCredential?.UserInfo?.Mid;
+            var userCredential = JsonConvert.DeserializeObject<DataWrapper<UserCredential>>(userCredentialRsp)?.Data;
+            var mid = userCredential?.Profile.Mid;
             if (!mid.HasValue)
             {
                 throw new Exception(Localizer[SharedResource.Downloader_BilibiliCookieIsInvalid]);

@@ -25,7 +25,7 @@ namespace Bakabase.InsideWorld.Business.Resources
 
         public LocalizedString this[string name] => _localizer[name];
 
-        public LocalizedString this[string name, params object[] arguments] => _localizer[name, arguments];
+        public LocalizedString this[string name, params object?[] arguments] => _localizer[name, arguments];
 
         public string Component_NotDeletableWhenUsingByCategories(IEnumerable<string> categoryNames) =>
             this[nameof(Component_NotDeletableWhenUsingByCategories), string.Join(',', categoryNames)];
@@ -33,7 +33,7 @@ namespace Bakabase.InsideWorld.Business.Resources
         public string Category_Invalid((string Name, string Error)[] nameAndErrors) => this[nameof(Category_Invalid),
             string.Join(Environment.NewLine, nameAndErrors.Select(a => $"{a.Name}:{a.Error}"))];
 
-        public string CookieValidation_Fail(string url, string message, string content)
+        public string CookieValidation_Fail(string url, string? message, string? content)
         {
             const int maxContentLength = 1000;
             var shortContent = content.Length > maxContentLength ? content[..maxContentLength] : content;
