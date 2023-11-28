@@ -104,7 +104,7 @@ export class Entry {
       if (!(lowerCasedKeyword == undefined || c.name.toLowerCase().includes(lowerCasedKeyword))) {
         return false;
       }
-      if (!types?.includes(c.type) && c.type != IwFsType.Directory) {
+      if (types && !types.includes(c.type) && c.type != IwFsType.Directory) {
         return false;
       }
       if (custom != undefined) {

@@ -139,7 +139,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         var relativePath = e![rootPath.Length..];
 
                         // ignore sub contents
-                        if (list.Any(l => e.StartsWith(l)))
+                        if (list.Any(l => e.StartsWith(l + BusinessConstants.DirSeparator)))
                         {
                             continue;
                         }
