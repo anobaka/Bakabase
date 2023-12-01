@@ -28,6 +28,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return new(await _service.GetAll(additionalItems));
         }
 
+        [HttpGet("ids")]
+        [SwaggerOperation(OperationId = "GetTagByIds")]
+        public async Task<ListResponse<TagDto>> GetByIds([FromQuery] int[] ids, TagAdditionalItem additionalItems)
+        {
+            return new(await _service.GetByKeys(ids, additionalItems));
+        }
+
         [HttpPost]
         [SwaggerOperation(OperationId = "AddTags")]
         public async Task<BaseResponse> Add([FromBody] Dictionary<int, string[]> model)

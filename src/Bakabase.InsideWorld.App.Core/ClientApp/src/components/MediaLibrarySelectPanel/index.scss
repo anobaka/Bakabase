@@ -1,0 +1,24 @@
+.media-library-select-panel {
+  display: grid;
+
+  grid-template-columns: auto auto;
+
+  row-gap: 0px;
+  column-gap: 20px;
+  align-items: center;
+
+  .category {
+    max-width: 150px;
+    word-break: break-all;
+  }
+
+  .libraries {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: flex-start;
+    .library {
+
+    }
+  }
+}

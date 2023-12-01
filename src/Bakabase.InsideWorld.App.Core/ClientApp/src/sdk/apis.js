@@ -871,6 +871,190 @@ export const GetBiliBiliFavoritesURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: CreateBulkModification
+ * url: CreateBulkModificationURL
+ * method: CreateBulkModification_TYPE
+ * raw_url: CreateBulkModification_RAW_URL
+ * @param model - 
+ */
+export const CreateBulkModification = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const CreateBulkModification_RAW_URL = function() {
+  return '/bulk-modification'
+}
+export const CreateBulkModification_TYPE = function() {
+  return 'post'
+}
+export const CreateBulkModificationURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PutBulkModification
+ * url: PutBulkModificationURL
+ * method: PutBulkModification_TYPE
+ * raw_url: PutBulkModification_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const PutBulkModification = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PutBulkModification_RAW_URL = function() {
+  return '/bulk-modification'
+}
+export const PutBulkModification_TYPE = function() {
+  return 'put'
+}
+export const PutBulkModificationURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification'
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: RemoveBulkModification
+ * url: RemoveBulkModificationURL
+ * method: RemoveBulkModification_TYPE
+ * raw_url: RemoveBulkModification_RAW_URL
+ * @param id - 
+ */
+export const RemoveBulkModification = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const RemoveBulkModification_RAW_URL = function() {
+  return '/bulk-modification'
+}
+export const RemoveBulkModification_TYPE = function() {
+  return 'delete'
+}
+export const RemoveBulkModificationURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification'
+  if (parameters['id'] !== undefined) {
+    queryParameters['id'] = parameters['id']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetBulkModificationFilteredResources
+ * url: GetBulkModificationFilteredResourcesURL
+ * method: GetBulkModificationFilteredResources_TYPE
+ * raw_url: GetBulkModificationFilteredResources_RAW_URL
+ * @param id - 
+ */
+export const GetBulkModificationFilteredResources = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification/{id}/filtered-resources'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetBulkModificationFilteredResources_RAW_URL = function() {
+  return '/bulk-modification/{id}/filtered-resources'
+}
+export const GetBulkModificationFilteredResources_TYPE = function() {
+  return 'get'
+}
+export const GetBulkModificationFilteredResourcesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification/{id}/filtered-resources'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetComponentDescriptors
  * url: GetComponentDescriptorsURL
  * method: GetComponentDescriptors_TYPE
@@ -6356,6 +6540,45 @@ export const GetResourcePlayableFilesURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetAllCustomPropertyKeys
+ * url: GetAllCustomPropertyKeysURL
+ * method: GetAllCustomPropertyKeys_TYPE
+ * raw_url: GetAllCustomPropertyKeys_RAW_URL
+ */
+export const GetAllCustomPropertyKeys = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/custom-property-keys'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllCustomPropertyKeys_RAW_URL = function() {
+  return '/resource/custom-property-keys'
+}
+export const GetAllCustomPropertyKeys_TYPE = function() {
+  return 'get'
+}
+export const GetAllCustomPropertyKeysURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/custom-property-keys'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllCustomPropertiesAndCandidates
  * url: GetAllCustomPropertiesAndCandidatesURL
  * method: GetAllCustomPropertiesAndCandidates_TYPE
@@ -7371,6 +7594,59 @@ export const AddTagsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetTagByIds
+ * url: GetTagByIdsURL
+ * method: GetTagByIds_TYPE
+ * raw_url: GetTagByIds_RAW_URL
+ * @param ids - 
+ * @param additionalItems - 
+ */
+export const GetTagByIds = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/tag/ids'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['ids'] !== undefined) {
+    queryParameters['ids'] = parameters['ids']
+  }
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetTagByIds_RAW_URL = function() {
+  return '/tag/ids'
+}
+export const GetTagByIds_TYPE = function() {
+  return 'get'
+}
+export const GetTagByIdsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/tag/ids'
+  if (parameters['ids'] !== undefined) {
+    queryParameters['ids'] = parameters['ids']
+  }
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: UpdateTagName
  * url: UpdateTagNameURL
  * method: UpdateTagName_TYPE
@@ -8327,84 +8603,6 @@ export const ValidateCookieURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetUpdaterUpdaterState
- * url: GetUpdaterUpdaterStateURL
- * method: GetUpdaterUpdaterState_TYPE
- * raw_url: GetUpdaterUpdaterState_RAW_URL
- */
-export const GetUpdaterUpdaterState = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/updater/updater/state'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetUpdaterUpdaterState_RAW_URL = function() {
-  return '/updater/updater/state'
-}
-export const GetUpdaterUpdaterState_TYPE = function() {
-  return 'get'
-}
-export const GetUpdaterUpdaterStateURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/updater/updater/state'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: StartUpdatingUpdater
- * url: StartUpdatingUpdaterURL
- * method: StartUpdatingUpdater_TYPE
- * raw_url: StartUpdatingUpdater_RAW_URL
- */
-export const StartUpdatingUpdater = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/updater/updater/update'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const StartUpdatingUpdater_RAW_URL = function() {
-  return '/updater/updater/update'
-}
-export const StartUpdatingUpdater_TYPE = function() {
-  return 'get'
-}
-export const StartUpdatingUpdaterURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/updater/updater/update'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: GetNewAppVersion
  * url: GetNewAppVersionURL
  * method: GetNewAppVersion_TYPE
@@ -8434,45 +8632,6 @@ export const GetNewAppVersionURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/updater/app/new-version'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAppUpdaterState
- * url: GetAppUpdaterStateURL
- * method: GetAppUpdaterState_TYPE
- * raw_url: GetAppUpdaterState_RAW_URL
- */
-export const GetAppUpdaterState = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/updater/app/state'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAppUpdaterState_RAW_URL = function() {
-  return '/updater/app/state'
-}
-export const GetAppUpdaterState_TYPE = function() {
-  return 'get'
-}
-export const GetAppUpdaterStateURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/updater/app/state'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

@@ -8,12 +8,14 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public enum BulkModificationFilterOperation
     {
-        Equals,
+        Equals = 1,
         NotEquals,
         Contains,
         NotContains,
         StartsWith,
+        NotStartsWith,
         EndsWith,
+        NotEndsWith,
         GreaterThan,
         LessThan,
         GreaterThanOrEquals,
@@ -21,6 +23,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         IsNull,
         IsNotNull,
         In,
-        NotIn
+        NotIn,
+        Matches,
+        NotMatches
     }
 }

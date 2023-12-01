@@ -218,6 +218,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                             new string[] { });
         }
 
+        [HttpGet("custom-property-keys")]
+        [SwaggerOperation(OperationId = "GetAllCustomPropertyKeys")]
+        public async Task<ListResponse<string>> GetAllCustomPropertyKeys()
+        {
+            var data = await _customResourcePropertyService.GetAllKeys();
+            return new(data);
+        }
+
         [HttpGet("custom-properties-and-candidates")]
         [SwaggerOperation(OperationId = "GetAllCustomPropertiesAndCandidates")]
         public async Task<SingletonResponse<Dictionary<string, string[]>>> GetAllCustomPropertiesAndCandidates()

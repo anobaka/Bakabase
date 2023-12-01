@@ -36,7 +36,7 @@
       font-size: 14px;
 
       .selected-tag-count {
-        color: rgba(16, 13, 177, 1);
+        color: var(--theme-text-primary);
         margin-left: 5px;
       }
     }

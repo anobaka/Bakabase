@@ -28,5 +28,11 @@ namespace Bakabase.InsideWorld.Business.Services
             var data = await base.GetAll(t => t.Value.Contains(everything));
             return data.Select(t => t.ResourceId).Distinct().ToArray();
         }
+
+        public async Task<string[]> GetAllKeys()
+        {
+            var data = await base.GetAll(null, false);
+            return data.Select(t => t.Key).Distinct().ToArray();
+        }
     }
 }

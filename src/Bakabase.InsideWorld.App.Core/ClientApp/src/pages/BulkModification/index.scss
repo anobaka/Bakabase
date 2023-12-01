@@ -1,12 +1,12 @@
 .bulk-modification-page {
 
-  &>.header {
+  & > .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
 
-    &>.title {
+    & > .title {
       font-size: 16px;
     }
   }
@@ -26,6 +26,7 @@
           .name {
             font-size: 16px;
           }
+
           .resource-count {
             color: var(--theme-text-subtle);
           }
@@ -42,27 +43,31 @@
           }
         }
       }
+
       .next-collapse-panel-content {
         display: flex;
         flex-direction: column;
         gap: 10px;
-        &>* {
+
+        & > * {
           display: flex;
           align-items: flex-start;
           gap: 10px;
-          &>.title {
+
+          & > .title {
             width: 100px;
             font-size: 16px;
           }
         }
 
         .filters-panel {
-          &>.content {
-            &>.filters {
+          & > .content {
+            & > .filters {
               display: flex;
               flex-wrap: wrap;
               gap: 5px;
               align-items: center;
+
               .group {
                 padding: 2px;
                 border-radius: 4px;
@@ -71,13 +76,28 @@
                 flex-wrap: wrap;
                 gap: 5px;
                 align-items: center;
+
                 &:hover {
                   border-color: var(--theme-border-color-accent);
+                }
+
+                .filter {
+                  .property {
+                    color: var(--theme-text-primary);
+                    margin-right: 5px;
+                  }
+                  .operation {
+                    color: var(--theme-text-subtle);
+                  }
+                  .target {
+                    margin-left: 5px;
+                    color: var(--theme-color-success);
+                  }
                 }
               }
             }
 
-            &>.opts {
+            & > .opts {
               margin-top: 5px;
               display: flex;
               gap: 10px;
@@ -88,16 +108,18 @@
               }
             }
           }
+
           padding-bottom: 10px;
           border-bottom: 1px solid var(--theme-border-color);
         }
 
         .processes-panel {
-          &>.content {
-            &>.processes {
+          & > .content {
+            & > .processes {
               display: flex;
               flex-direction: column;
               gap: 5px;
+
               .process {
                 display: flex;
                 align-items: center;
@@ -105,36 +127,114 @@
 
                 .operation {
                   &.merge {
-                    color: var(--theme-text-primary);
+                    color: var(--theme-color-success);
                   }
+
                   &.replace {
                     color: var(--theme-text-error);
                   }
                 }
               }
             }
-            &>.opts {
+
+            & > .opts {
               margin-top: 10px;
               display: flex;
               gap: 10px;
               align-items: center;
             }
           }
-          padding-bottom: 10px;            padding-bottom: 10px;
+
+          padding-bottom: 10px;
+          padding-bottom: 10px;
           border-bottom: 1px solid var(--theme-border-color);
         }
 
         .result-panel {
-          &>.content {
-            &>.opts {
+          & > .content {
+            flex: 1;
+
+            & > .opts {
               display: flex;
               gap: 10px;
               align-items: center;
+            }
+
+            & > .preview {
+              color: var(--theme-text-subtle);
+              display: flex;
+              flex-direction: column;
+              gap: 5px;
+
+              & > .item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                border-bottom: 1px solid var(--theme-border-color);
+
+                .path {
+
+                }
+
+                .changes {
+                  flex: 1;
+
+                  .change {
+                    padding: 0 10px;
+
+                    &:hover {
+                      background-color: var(--theme-block-background-accent);
+                    }
+
+                    &:last-child {
+                      border: none;
+                    }
+
+                    border-bottom: 1px solid var(--theme-border-color);
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+
+                    .property {
+                      margin-right: 10px;
+                    }
+
+                    .current {
+
+                    }
+
+                    .new {
+
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
     }
   }
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

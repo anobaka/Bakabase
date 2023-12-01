@@ -8,7 +8,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public enum BulkModificationProcessOperation
     {
-        Add,
+        Add = 1,
         Modify,
         Remove,
     }

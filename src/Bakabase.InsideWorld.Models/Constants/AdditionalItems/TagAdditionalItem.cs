@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
 {
+    [Flags]
     public enum TagAdditionalItem
     {
         None = 0,

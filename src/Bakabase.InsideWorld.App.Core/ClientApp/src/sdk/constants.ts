@@ -24,12 +24,28 @@ export enum DownloaderStatus {JustCreated = 0, Starting = 100, Downloading = 200
 export const downloaderStatuses = Object.keys(DownloaderStatus).filter(k => typeof DownloaderStatus[k] === 'number').map(t => ({label: t, value: DownloaderStatus[t]}));
 export enum DependentComponentStatus {NotInstalled = 1, Installed = 2, Installing = 3}
 export const dependentComponentStatuses = Object.keys(DependentComponentStatus).filter(k => typeof DependentComponentStatus[k] === 'number').map(t => ({label: t, value: DependentComponentStatus[t]}));
+export enum BulkModificationDiffOperation {None = 0, Ignore = 1, Replace = 2, Merge = 3}
+export const bulkModificationDiffOperations = Object.keys(BulkModificationDiffOperation).filter(k => typeof BulkModificationDiffOperation[k] === 'number').map(t => ({label: t, value: BulkModificationDiffOperation[t]}));
+export enum BulkModificationDiffType {New = 1, Removed = 2, Changed = 3}
+export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
+export enum BulkModificationFilterGroupOperation {And = 1, Or = 2}
+export const bulkModificationFilterGroupOperations = Object.keys(BulkModificationFilterGroupOperation).filter(k => typeof BulkModificationFilterGroupOperation[k] === 'number').map(t => ({label: t, value: BulkModificationFilterGroupOperation[t]}));
+export enum BulkModificationFilterOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
+export const bulkModificationFilterOperations = Object.keys(BulkModificationFilterOperation).filter(k => typeof BulkModificationFilterOperation[k] === 'number').map(t => ({label: t, value: BulkModificationFilterOperation[t]}));
+export enum BulkModificationProcessOperation {Add = 1, Modify = 2, Remove = 3}
+export const bulkModificationProcessOperations = Object.keys(BulkModificationProcessOperation).filter(k => typeof BulkModificationProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationProcessOperation[t]}));
+export enum BulkModificationProperty {Category = 1, MediaLibrary = 2, Name = 3, FileName = 4, DirectoryPath = 5, ReleaseDt = 6, CreateDt = 7, FileCreateDt = 8, FileModifyDt = 9, Publisher = 10, Language = 11, Volume = 12, Original = 13, Series = 14, Tag = 15, Introduction = 16, Rate = 17, CustomProperty = 18}
+export const bulkModificationProperties = Object.keys(BulkModificationProperty).filter(k => typeof BulkModificationProperty[k] === 'number').map(t => ({label: t, value: BulkModificationProperty[t]}));
+export enum BulkModificationStatus {Initial = 1, Filtered = 2, Complete = 3, Failed = 4, Cancelled = 5}
+export const bulkModificationStatuses = Object.keys(BulkModificationStatus).filter(k => typeof BulkModificationStatus[k] === 'number').map(t => ({label: t, value: BulkModificationStatus[t]}));
 export enum CloseBehavior {Prompt = 0, Exit = 1, Minimize = 2, Cancel = 1000}
 export const closeBehaviors = Object.keys(CloseBehavior).filter(k => typeof CloseBehavior[k] === 'number').map(t => ({label: t, value: CloseBehavior[t]}));
 export enum UiTheme {FollowSystem = 0, Light = 1, Dark = 2}
 export const uiThemes = Object.keys(UiTheme).filter(k => typeof UiTheme[k] === 'number').map(t => ({label: t, value: UiTheme[t]}));
 export enum UpdaterStatus {Idle = 1, Running = 2, PendingRestart = 3, UpToDate = 4, Failed = 5}
 export const updaterStatuses = Object.keys(UpdaterStatus).filter(k => typeof UpdaterStatus[k] === 'number').map(t => ({label: t, value: UpdaterStatus[t]}));
+export enum AppDistributionType {WindowsApp = 0, MacOsApp = 1, LinuxApp = 2, Android = 3, Ios = 4, WindowsServer = 5, LinuxServer = 6}
+export const appDistributionTypes = Object.keys(AppDistributionType).filter(k => typeof AppDistributionType[k] === 'number').map(t => ({label: t, value: AppDistributionType[t]}));
 export enum MigrationTiming {BeforeDbMigration = 1, AfterDbMigration = 2}
 export const migrationTimings = Object.keys(MigrationTiming).filter(k => typeof MigrationTiming[k] === 'number').map(t => ({label: t, value: MigrationTiming[t]}));
 export enum OsPlatform {Unknown = 0, Windows = 1, Osx = 2, Linux = 3, FreeBsd = 4}
@@ -108,6 +124,10 @@ export enum ReservedResourceFileType {Cover = 1}
 export const reservedResourceFileTypes = Object.keys(ReservedResourceFileType).filter(k => typeof ReservedResourceFileType[k] === 'number').map(t => ({label: t, value: ReservedResourceFileType[t]}));
 export enum ReservedResourceProperty {ReleaseDt = 1, Publisher = 2, Name = 3, Language = 4, Volume = 5, Original = 6, Series = 7, Tag = 8, Introduction = 9, Rate = 10}
 export const reservedResourceProperties = Object.keys(ReservedResourceProperty).filter(k => typeof ReservedResourceProperty[k] === 'number').map(t => ({label: t, value: ReservedResourceProperty[t]}));
+export enum ResourceDiffProperty {Category = 0, MediaLibrary = 1, ReleaseDt = 2, Publisher = 3, Name = 4, Language = 5, Volume = 6, Original = 7, Series = 8, Tag = 9, Introduction = 10, Rate = 11, CustomProperty = 12}
+export const resourceDiffProperties = Object.keys(ResourceDiffProperty).filter(k => typeof ResourceDiffProperty[k] === 'number').map(t => ({label: t, value: ResourceDiffProperty[t]}));
+export enum ResourceDiffType {Added = 1, Removed = 2, Modified = 3}
+export const resourceDiffTypes = Object.keys(ResourceDiffType).filter(k => typeof ResourceDiffType[k] === 'number').map(t => ({label: t, value: ResourceDiffType[t]}));
 export enum ResourceLanguage {NotSet = 0, Chinese = 1, English = 2, Japanese = 3, Korean = 4, French = 5, German = 6, Spanish = 7, Russian = 8}
 export const resourceLanguages = Object.keys(ResourceLanguage).filter(k => typeof ResourceLanguage[k] === 'number').map(t => ({label: t, value: ResourceLanguage[t]}));
 export enum ResourceMatcherValueType {Layer = 1, Regex = 2, FixedText = 3}

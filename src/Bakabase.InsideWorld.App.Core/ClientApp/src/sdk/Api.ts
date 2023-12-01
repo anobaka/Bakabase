@@ -29,7 +29,6 @@ export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo
   coreVersion?: string | null;
   logPath?: string | null;
   backupPath?: string | null;
-  updaterPath?: string | null;
   tempFilesPath?: string | null;
   notAcceptTerms?: boolean;
   needRestart?: boolean;
@@ -49,30 +48,6 @@ export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersi
   /** @format int64 */
   size?: number;
 }
-
-export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState {
-  /** @format int32 */
-  failedFileCount?: number;
-  /** @format int32 */
-  skippedFileCount?: number;
-  /** @format int32 */
-  downloadedFileCount?: number;
-  /** @format int32 */
-  totalFileCount?: number;
-  /** @format int32 */
-  percentage?: number;
-  /** @format date-time */
-  startDt?: string;
-  error?: string | null;
-  /** [1: Idle, 2: Running, 3: PendingRestart, 4: UpToDate, 5: Failed] */
-  status?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterStatus;
-}
-
-/**
- * [1: Idle, 2: Running, 3: PendingRestart, 4: UpToDate, 5: Failed]
- * @format int32
- */
-export type BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterStatus = 1 | 2 | 3 | 4 | 5;
 
 export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   language?: string | null;
@@ -99,6 +74,110 @@ export type BakabaseInfrastructuresComponentsGuiCloseBehavior = 0 | 1 | 2 | 1000
  * @format int32
  */
 export type BakabaseInfrastructuresComponentsGuiUiTheme = 0 | 1 | 2;
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDto {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  /** [1: Initial, 2: Filtered, 3: Complete, 4: Failed, 5: Cancelled] */
+  status?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationStatus;
+  /** @format date-time */
+  createdAt?: string;
+  filter?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup;
+  modifications?:
+    | BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[]
+    | null;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilter {
+  /** [1: Category, 2: MediaLibrary, 3: Name, 4: FileName, 5: DirectoryPath, 6: ReleaseDt, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 10: Publisher, 11: Language, 12: Volume, 13: Original, 14: Series, 15: Tag, 16: Introduction, 17: Rate, 18: CustomProperty] */
+  property?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationProperty;
+  propertyKey?: string | null;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterOperation;
+  target?: string | null;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup {
+  /** [1: And, 2: Or] */
+  operation?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterGroupOperation;
+  filters?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilter[] | null;
+  groups?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup[] | null;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess {
+  /** [0: Category, 1: MediaLibrary, 2: ReleaseDt, 3: Publisher, 4: Name, 5: Language, 6: Volume, 7: Original, 8: Series, 9: Tag, 10: Introduction, 11: Rate, 12: CustomProperty] */
+  property?: BakabaseInsideWorldModelsConstantsResourceDiffProperty;
+  /** [0: None, 1: Ignore, 2: Replace, 3: Merge] */
+  operation?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffOperation;
+  regexEnabled?: boolean;
+  oldValue?: string | null;
+  newValue?: string | null;
+}
+
+/**
+ * [0: None, 1: Ignore, 2: Replace, 3: Merge]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffOperation =
+  0 | 1 | 2 | 3;
+
+/**
+ * [1: And, 2: Or]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterGroupOperation =
+  1 | 2;
+
+/**
+ * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterOperation =
+  1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
+
+/**
+ * [1: Category, 2: MediaLibrary, 3: Name, 4: FileName, 5: DirectoryPath, 6: ReleaseDt, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 10: Publisher, 11: Language, 12: Volume, 13: Original, 14: Series, 15: Tag, 16: Introduction, 17: Rate, 18: CustomProperty]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationProperty =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18;
+
+/**
+ * [1: Initial, 2: Filtered, 3: Complete, 4: Failed, 5: Cancelled]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationStatus =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5;
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel {
+  name?: string | null;
+  filter?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup;
+  modification?:
+    | BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[]
+    | null;
+}
 
 export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   path?: string | null;
@@ -473,6 +552,25 @@ export type BakabaseInsideWorldModelsConstantsMediaType = 1 | 2 | 3 | 4 | 1000;
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsPlaylistItemType = 1 | 2 | 3 | 4;
+
+/**
+ * [0: Category, 1: MediaLibrary, 2: ReleaseDt, 3: Publisher, 4: Name, 5: Language, 6: Volume, 7: Original, 8: Series, 9: Tag, 10: Introduction, 11: Rate, 12: CustomProperty]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsResourceDiffProperty =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12;
 
 /**
  * [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian]
@@ -1662,18 +1760,18 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastr
   data?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   /** @format int32 */
   code?: number;
   message?: string | null;
   data?: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
@@ -3173,6 +3271,92 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  bulkModification = {
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name CreateBulkModification
+     * @request POST:/bulk-modification
+     */
+    createBulkModification: (
+      data: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDto,
+        any
+      >({
+        path: `/bulk-modification`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name PutBulkModification
+     * @request PUT:/bulk-modification
+     */
+    putBulkModification: (
+      data: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel,
+      query?: {
+        /** @format int32 */
+        id?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/bulk-modification`,
+        method: "PUT",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name RemoveBulkModification
+     * @request DELETE:/bulk-modification
+     */
+    removeBulkModification: (
+      query?: {
+        /** @format int32 */
+        id?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/bulk-modification`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name GetBulkModificationFilteredResources
+     * @request GET:/bulk-modification/{id}/filtered-resources
+     */
+    getBulkModificationFilteredResources: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosResourceDto, any>({
+        path: `/bulk-modification/${id}/filtered-resources`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
   component = {
     /**
      * No description
@@ -3811,6 +3995,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcePlayableFiles: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/resource/${id}/playable-files`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetAllCustomPropertyKeys
+     * @request GET:/resource/custom-property-keys
+     */
+    getAllCustomPropertyKeys: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/resource/custom-property-keys`,
         method: "GET",
         format: "json",
         ...params,
@@ -5945,6 +6144,29 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Tag
+     * @name GetTagByIds
+     * @request GET:/tag/ids
+     */
+    getTagByIds: (
+      query?: {
+        ids?: number[];
+        /** [0: None, 1: GroupName, 2: PreferredAlias] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsTagAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagDto, any>({
+        path: `/tag/ids`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Tag
      * @name UpdateTagName
      * @request PUT:/tag/{id}/name
      */
@@ -6352,39 +6574,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Updater
-     * @name GetUpdaterUpdaterState
-     * @request GET:/updater/updater/state
-     */
-    getUpdaterUpdaterState: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState,
-        any
-      >({
-        path: `/updater/updater/state`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Updater
-     * @name StartUpdatingUpdater
-     * @request GET:/updater/updater/update
-     */
-    startUpdatingUpdater: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/updater/updater/update`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Updater
      * @name GetNewAppVersion
      * @request GET:/updater/app/new-version
      */
@@ -6394,24 +6583,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/updater/app/new-version`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Updater
-     * @name GetAppUpdaterState
-     * @request GET:/updater/app/state
-     */
-    getAppUpdaterState: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState,
-        any
-      >({
-        path: `/updater/app/state`,
         method: "GET",
         format: "json",
         ...params,

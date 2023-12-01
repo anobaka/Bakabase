@@ -116,6 +116,7 @@ body {
   --tag-checkable-normal-text-color-hover: var(--btn-pure-normal-color);
   --tag-checkable-normal-border-color: var(--btn-pure-normal-border-color);
   --tag-checkable-normal-bg-selected-disabled: var(--theme-button-normal-color-disabled);
+  --tag-checkable-normal-border-selected-disabled: var(--theme-border-color-muted);
   --tag-bordered-border-color: var(--theme-border-color);
   --tag-bordered-text-color-hover: var(--theme-text);
   --tag-bordered-text-color: var(--theme-text-subtle);
@@ -227,4 +228,7 @@ body {
   --collapse-title-disabled-bg-color: var(--theme-block-background);
   --collapse-title-font-disabled-color: var(--theme-text-subtle);
   --collapse-disabled-border-color: var(--theme-border-color);
+
+  --color-text1-1: var(--theme-text-subtle);
+  --color-text1-3: var(--theme-text);
 }

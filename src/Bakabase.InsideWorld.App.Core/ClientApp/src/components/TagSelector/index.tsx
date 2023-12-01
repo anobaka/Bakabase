@@ -23,6 +23,7 @@ interface IProps {
   defaultValue?: IValue;
   value?: IValue;
   externalIds?: any[];
+  multiple?: boolean;
 }
 
 const TagSelector = (props: IProps) => {
@@ -33,6 +34,7 @@ const TagSelector = (props: IProps) => {
     onChange = (value, tags) => {
     },
     externalIds,
+    multiple = true,
     ...otherProps
   } = props;
   const { t } = useTranslation();
@@ -253,8 +255,8 @@ const TagSelector = (props: IProps) => {
                             key={tag.id}
                             checked={checked}
                             onChange={(c) => {
-                              const newIds = checked
-                                ? finalValue.tagIds.filter((a) => a != tag.id) : finalValue.tagIds.concat(tag.id);
+                              const newIds = multiple ? checked
+                                ? finalValue.tagIds.filter((a) => a != tag.id) : finalValue.tagIds.concat(tag.id) : [tag.id];
                               setInternalValue({
                                 ...finalValue,
                                 tagIds: newIds,
