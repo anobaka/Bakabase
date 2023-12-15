@@ -170,5 +170,13 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await _orm.Update(p);
         }
+
+        public async Task<List<PublisherDto>> GetAllDtoList(Expression<Func<Publisher, bool>>? selector = null,
+            bool returnCopy = true)
+        {
+            var data = await _orm.GetAll(selector, returnCopy);
+            var list = data.Select(d => d.ToDto()!).ToList();
+            return list;
+        }
     }
 }

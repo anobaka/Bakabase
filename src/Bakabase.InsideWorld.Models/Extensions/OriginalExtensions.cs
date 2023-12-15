@@ -38,7 +38,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
             return originals?.Any() == true ? originals.Count.ToString() : null;
         }
 
-        public static OriginalDto ToDto(this Original original)
+        public static OriginalDto? ToDto(this Original? original)
         {
             if (original == null)
             {

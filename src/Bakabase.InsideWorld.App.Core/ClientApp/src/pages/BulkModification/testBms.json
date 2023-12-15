@@ -1,0 +1,229 @@
+[
+  {
+    "id": 5,
+    "status": 1,
+    "createdAt": "2023-12-12 00:00:05",
+    "name": "批量修改作者",
+    "variables": [
+      {
+        "source": 1,
+        "name": "父级最后2个字符",
+        "key": "d1",
+        "find": ".*(..)",
+        "value": "$1"
+      },
+      {
+        "source": 4,
+        "name": "父级的父级文件夹名",
+        "key": "d2",
+        "find": ".*/([^/]+)/[^/]+/[^/]+",
+        "value": "$1"
+      }
+    ],
+    "filter": {
+      "operation": 2,
+      "groups": [
+        {
+          "operation": 1,
+          "filters": [
+            {
+              "property": 11,
+              "operation": 1,
+              "target": "0"
+            },
+            {
+              "property": 15,
+              "operation": 15,
+              "target": "[420,421,422]"
+            }
+          ]
+        },
+        {
+          "operation": 1,
+          "filters": [
+            {
+              "property": 1,
+              "operation": 1,
+              "target": "10"
+            },
+            {
+              "property": 3,
+              "operation": 3,
+              "target": "\"mignon\""
+            }
+          ]
+        }
+      ]
+    },
+    "processes": [
+      {
+        "property": 10,
+        "value": {
+          "operation": 1,
+          "value": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 2,
+          "filterBy": 1
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 2,
+          "filterBy": 2,
+          "find": "xxx"
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 2,
+          "filterBy": 3,
+          "find": "\\d+"
+        }
+      }
+    ],
+    "processes1": [
+      {
+        "property": 3,
+        "value": {
+          "operation": 1,
+          "value": "xxxx"
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 2,
+          "value": "ttttt"
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 3,
+          "reverse": false,
+          "position": 2,
+          "value": "bbbbb"
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 3,
+          "reverse": true,
+          "position": 4,
+          "value": "xxxxx"
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 4,
+          "count": 5
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 5,
+          "count": 4
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 6,
+          "reverse": false,
+          "position": 5,
+          "removeBefore": true,
+          "count": 10
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 6,
+          "reverse": true,
+          "position": 5,
+          "removeBefore": true,
+          "count": 2
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 7,
+          "find": "xxx",
+          "replace": "yyy"
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 8,
+          "find": "yyy",
+          "replace": "xxx"
+        }
+      },
+      {
+        "property": 3,
+        "value": {
+          "operation": 9,
+          "find": "x",
+          "replace": "y"
+        }
+      },
+      {
+        "property": 4,
+        "value": {
+          "operation": 10,
+          "find": "\\d+",
+          "replace": "2023"
+        }
+      },
+      {
+        "property": 6,
+        "value": {
+          "operation": 1,
+          "value": "2023-12-12 00:00:00"
+        }
+      },
+      {
+        "property": 11,
+        "value": {
+          "operation": 1,
+          "value": 1
+        }
+      },
+      {
+        "property": 6,
+        "value": {
+          "operation": 3
+        }
+      },
+      {
+        "property": 6,
+        "value": {
+          "operation": 1,
+          "value": "2023-12-14 00:00:00"
+        }
+      },
+      {
+        "property": 6,
+        "value": {
+          "operation": 2,
+          "value": "{d2}-{d1}-{d1}"
+        }
+      }
+    ]
+  }
+]

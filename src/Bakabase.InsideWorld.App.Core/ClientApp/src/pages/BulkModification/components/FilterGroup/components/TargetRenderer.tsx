@@ -20,7 +20,8 @@ export default ({
 
   useEffect(() => {
     const typedTarget = target == undefined ? [] : JSON.parse(target);
-    const values: any[] = Array.isArray(typedTarget) ? typedTarget : typedTarget && [typedTarget];
+    const values: any[] = Array.isArray(typedTarget) ? typedTarget : typedTarget == undefined ? [] : [typedTarget];
+    console.log(target, property, values, t(ResourceLanguage[ResourceLanguage.NotSet]));
 
     switch (property) {
       case BulkModificationProperty.Category: {
@@ -47,16 +48,12 @@ export default ({
         break;
       }
       case BulkModificationProperty.Language: {
-        setLabels(values.map(d => ({
-          ...d,
-          label: t(ResourceLanguage[d]),
-        })));
+        setLabels(values.map(d => t(ResourceLanguage[d])));
         break;
       }
       case BulkModificationProperty.CustomProperty:
       case BulkModificationProperty.Name:
-      case BulkModificationProperty.RawName:
-      case BulkModificationProperty.RawFullname:
+      case BulkModificationProperty.FileName:
       case BulkModificationProperty.ReleaseDt:
       case BulkModificationProperty.CreateDt:
       case BulkModificationProperty.FileCreateDt:

@@ -1,5 +1,10 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -24,6 +29,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             await _service.Update(id, model);
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("all")]
+        [SwaggerOperation(OperationId = "GetAllPublishers")]
+        public async Task<ListResponse<PublisherDto>> GetAll()
+        {
+            var data = await _service.GetAllDtoList(null, false);
+            return new ListResponse<PublisherDto>(data);
         }
     }
 }

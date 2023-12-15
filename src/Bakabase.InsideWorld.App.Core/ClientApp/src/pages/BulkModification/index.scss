@@ -8,6 +8,9 @@
 
     & > .title {
       font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
   }
 
@@ -56,6 +59,7 @@
 
           & > .title {
             width: 100px;
+            min-width: 100px;
             font-size: 16px;
           }
         }
@@ -86,9 +90,11 @@
                     color: var(--theme-text-primary);
                     margin-right: 5px;
                   }
+
                   .operation {
                     color: var(--theme-text-subtle);
                   }
+
                   .target {
                     margin-left: 5px;
                     color: var(--theme-color-success);
@@ -113,6 +119,10 @@
           border-bottom: 1px solid var(--theme-border-color);
         }
 
+        .variables-panel {
+          border-bottom: 1px solid var(--theme-border-color);
+        }
+
         .processes-panel {
           & > .content {
             & > .processes {
@@ -120,19 +130,24 @@
               flex-direction: column;
               gap: 5px;
 
-              .process {
+              & > .process-demonstrator {
                 display: flex;
                 align-items: center;
                 gap: 10px;
+                padding-right: 5px;
 
-                .operation {
-                  &.merge {
-                    color: var(--theme-color-success);
-                  }
+                &:hover {
+                  cursor: pointer;
+                  background: var(--theme-block-background-accent);
+                  border-radius: 4px;
+                }
 
-                  &.replace {
-                    color: var(--theme-text-error);
-                  }
+                .primary {
+                  color: var(--theme-text-primary);
+                }
+
+                .secondary {
+                  color: var(--theme-text-secondary);
                 }
               }
             }
@@ -145,7 +160,6 @@
             }
           }
 
-          padding-bottom: 10px;
           padding-bottom: 10px;
           border-bottom: 1px solid var(--theme-border-color);
         }

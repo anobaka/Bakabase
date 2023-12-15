@@ -24,5 +24,8 @@
   "BulkModificationFilterOperation.In": "In",
   "BulkModificationFilterOperation.NotIn": "Not In",
   "BulkModificationFilterOperation.Matches": "Matches",
-  "BulkModificationFilterOperation.NotMatches": "Not Matches"
+  "BulkModificationFilterOperation.NotMatches": "Not Matches",
+  "BulkModification.Processor.Demonstrator.Operation.SetWithFixedValue": "<0> Replace </0> with fixed value",
+  "BulkModification.Processor.Demonstrator.Operation.SetWithDynamicValue": "<0> Replace </0> with dynamic value",
+  "BulkModification.Processor.Demonstrator.Operation.Replace": "Find <0>{{find}}</0> then replace with <1>{{replace}}</1>"
 }

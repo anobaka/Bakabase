@@ -36,7 +36,7 @@ namespace Bakabase.InsideWorld.App.Core
         }
 
         protected override Assembly[] AssembliesForGlobalConfigurationRegistrationsScanning =>
-            new[] {Assembly.GetAssembly(SpecificTypeUtils<ResourceOptions>.Type)};
+            new[] {Assembly.GetAssembly(SpecificTypeUtils<ResourceOptions>.Type)!};
 
         protected override void Initialize()
         {

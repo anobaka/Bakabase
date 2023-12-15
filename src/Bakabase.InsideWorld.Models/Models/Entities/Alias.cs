@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
         [Key]
         public int Id { get; set; }
 
-        [Required, MaxLength(256)] public string Name { set; get; }
+        [Required, MaxLength(256)] public string Name { set; get; } = null!;
         public int GroupId { set; get; }
         public bool IsPreferred { set; get; } = false;
     }

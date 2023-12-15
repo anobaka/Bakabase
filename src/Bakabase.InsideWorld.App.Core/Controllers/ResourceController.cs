@@ -65,7 +65,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly FfMpegService _ffMpegService;
         private readonly TempFileManager _tempFileManager;
         private readonly IBOptions<ResourceOptions> _resourceOptions;
-        private readonly Business.Components.Dependency.Implementations.FfMpeg.FfMpegService _ffMpegInstaller;
+        private readonly FfMpegService _ffMpegInstaller;
+        private readonly OriginalService _originalService;
 
         private static readonly MemoryCache CoverCache;
 
@@ -91,7 +92,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager,
             FavoritesResourceMappingService favoritesResourceMappingService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions, Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller)
+            FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions,
+            Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
+            OriginalService originalService)
         {
             _service = service;
             _resourceTagMappingService = resourceTagMappingService;
@@ -109,6 +112,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _tempFileManager = tempFileManager;
             _resourceOptions = resourceOptions;
             _ffMpegInstaller = ffMpegInstaller;
+            _originalService = originalService;
         }
 
         [HttpPost("search")]
@@ -440,6 +444,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             }
 
             return new ListResponse<PreviewerItem>(items);
+        }
+
+        [HttpGet("original/all")]
+        [SwaggerOperation(OperationId = "GetAllOriginals")]
+        public async Task<ListResponse<OriginalDto>> GetAllOriginals()
+        {
+            return new ListResponse<OriginalDto>(await _originalService.GetAllDtoList(null, false));
         }
     }
 }

@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import './index.scss';
-import { Link, history, useLocation, Outlet } from 'ice';
-import { Button, Dialog, Message } from '@alifd/next';
+import { history, Outlet, useLocation } from 'ice';
+import { Dialog } from '@alifd/next';
 import i18n from 'i18next';
-import { useNavigate } from '@ice/runtime/router';
+import { TourProvider } from '@reactour/tour';
 import PageNav from './components/PageNav';
 import { CheckAppInitialized } from '@/sdk/apis';
-import { InitializationContentType, UiTheme } from '@/sdk/constants';
+import { InitializationContentType } from '@/sdk/constants';
 import FloatingAssistant from '@/components/FloatingAssistant';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
@@ -41,14 +41,16 @@ export default function BasicLayout({
 
 
   return (
-    <ErrorBoundary>
-      <div className={'inside-world'}>
-        <FloatingAssistant />
-        <PageNav />
-        <div className={'main'}>
-          <Outlet />
+    <TourProvider steps={[]}>
+      <ErrorBoundary>
+        <div className={'inside-world'}>
+          <FloatingAssistant />
+          <PageNav />
+          <div className={'main'}>
+            <Outlet />
+          </div>
         </div>
-      </div>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </TourProvider>
   );
 }

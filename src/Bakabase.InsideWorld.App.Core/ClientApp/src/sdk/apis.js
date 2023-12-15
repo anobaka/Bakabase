@@ -6035,6 +6035,45 @@ export const UpdatePublisherURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetAllPublishers
+ * url: GetAllPublishersURL
+ * method: GetAllPublishers_TYPE
+ * raw_url: GetAllPublishers_RAW_URL
+ */
+export const GetAllPublishers = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/publisher/all'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllPublishers_RAW_URL = function() {
+  return '/publisher/all'
+}
+export const GetAllPublishers_TYPE = function() {
+  return 'get'
+}
+export const GetAllPublishersURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/publisher/all'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: SearchResources
  * url: SearchResourcesURL
  * method: SearchResources_TYPE
@@ -6916,6 +6955,45 @@ export const GetResourceDataForPreviewerURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/{id}/previewer'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetAllOriginals
+ * url: GetAllOriginalsURL
+ * method: GetAllOriginals_TYPE
+ * raw_url: GetAllOriginals_RAW_URL
+ */
+export const GetAllOriginals = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/original/all'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllOriginals_RAW_URL = function() {
+  return '/resource/original/all'
+}
+export const GetAllOriginals_TYPE = function() {
+  return 'get'
+}
+export const GetAllOriginalsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/original/all'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

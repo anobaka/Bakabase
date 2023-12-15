@@ -146,7 +146,7 @@ const FilterDialog = (props: IProps) => {
 
         const component = filterTargetComponents[filter.property]?.[filter.operation];
 
-        console.log('Rendering component', component);
+        // console.log('Rendering component', component);
 
         if (component) {
           let targetComponent: any;

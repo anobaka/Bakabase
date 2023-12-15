@@ -3,16 +3,23 @@ import SimpleLabel from '@/components/SimpleLabel';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import { useTranslation } from 'react-i18next';
-import type {
-  BulkModificationFilterOperation,
-  BulkModificationProcessOperation,
-  BulkModificationProperty,
-} from '@/sdk/constants';
-import { BulkModificationFilterGroupOperation, BulkModificationStatus } from '@/sdk/constants';
-import { useState } from 'react';
+import type { BulkModificationFilterOperation } from '@/sdk/constants';
+import { BulkModificationFilterGroupOperation, BulkModificationStatus, BulkModificationProperty } from '@/sdk/constants';
+import { useEffect, useState } from 'react';
 import FilterGroup from '@/pages/BulkModification/components/FilterGroup';
 import BApi from '@/sdk/BApi';
 import ProcessDialog from '@/pages/BulkModification/components/ProcessDialog';
+import type { IVariable } from '@/pages/BulkModification/components/Variables';
+import Variables from '@/pages/BulkModification/components/Variables';
+import ProcessDemonstrator from '@/pages/BulkModification/components/ProcessDemonstrator';
+import { useTour } from '@reactour/tour';
+import ClickableIcon from '@/components/ClickableIcon';
+import testBmsJson from './testBms.json';
+import { useUpdateEffect } from 'react-use';
+import type {
+  IMultiValueProcessorValue,
+} from './components/ProcessDialog/Processors/MultiValueProcessor';
+
 
 const { Panel } = Collapse;
 
@@ -34,10 +41,7 @@ export interface IBulkModificationFilterGroup {
 export interface IBulkModificationProcess {
   property?: BulkModificationProperty;
   propertyKey?: string;
-  operation?: BulkModificationProcessOperation;
-  regexEnabled?: boolean;
-  find?: string;
-  replace?: string;
+  value?: any;
 }
 
 interface IBulkModification {
@@ -45,31 +49,102 @@ interface IBulkModification {
   name: string;
   status: BulkModificationStatus;
   createdAt: string;
+  variables?: IVariable[];
   filter?: IBulkModificationFilterGroup;
-  modifications?: IBulkModificationProcess[];
+  processes?: IBulkModificationProcess[];
 }
 
 export default () => {
   const { t } = useTranslation();
   const [processing, setProcessing] = useState(false);
 
-  const [bulkModifications, setBulkModifications] = useState<IBulkModification[]>([{
-    id: 5,
-    status: BulkModificationStatus.Initial,
-    createdAt: '2023-12-12 00:00:05',
-    name: '批量修改作者',
-  }]);
+  const [bulkModifications, setBulkModifications] = useState<IBulkModification[]>(testBmsJson);
+
+  const [demonstratorDataSources, setDemonstratorDataSources] = useState<{[property in BulkModificationProperty]?: Record<any, any>}>({});
+
+  console.log('[BulkModifications]', bulkModifications, demonstratorDataSources);
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>(['5']);
+  const {
+    isOpen,
+    currentStep,
+    steps,
+    setIsOpen,
+    setCurrentStep,
+    setSteps,
+  } = useTour();
+
+  useEffect(() => {
+    BApi.publisher.getAllPublishers().then(r => {
+      const publishers = r.data || [];
+      setDemonstratorDataSources(s => ({
+        ...s,
+        [BulkModificationProperty.Publisher]: publishers.reduce<Record<any, any>>((s, t) => {
+          s[t.id!] = t.name!;
+          return s;
+        }, {}),
+      }));
+      console.log('set demonstrator data sources');
+    });
+  }, []);
+
+  // useUpdateEffect(() => {
+  // //   publishers
+  //   const publisherIds = bulkModifications.reduce<number[]>((s, t) => {
+  //     if (t.processes) {
+  //       for (const p of t.processes) {
+  //         if (p.property == BulkModificationProperty.Publisher) {
+  //           const v: IMultiValueProcessorValue = p.value;
+  //           if (v?.value) {
+  //             v.value.forEach((id: number) => s.push(id));
+  //           }
+  //         }
+  //       }
+  //     }
+  //     return s;
+  //   }, []);
+  //   BApi.publisher.getAllPublishers();
+  // }, [bulkModifications]);
 
   return (
     <div className={'bulk-modification-page'}>
       <div className="header">
-        <div className="title">Bulk Modification</div>
-        <Button type={'primary'} size={'small'}>{t('Create a bulk modification')}</Button>
+        <div className="title">
+          Bulk Modification
+          <ClickableIcon
+            type={'question-circle'}
+            colorType={'normal'}
+            onClick={() => {
+            setSteps!([
+              {
+                selector: '.filters-panel',
+                content: t('You can set any combination of criteria to filter the resources that you need to modify in bulk'),
+              },
+              {
+                selector: '.variables-panel',
+                content: t('You can set some variables and use them in processes'),
+              },
+              {
+                selector: '.processes-panel',
+                content: t('To modify the properties of filtered resources, you should set at least one process'),
+              },
+              {
+                selector: '.result-panel',
+                content: t('You can preview the result then apply all changes'),
+              },
+            ]);
+            setCurrentStep(0);
+            setIsOpen(o => true);
+          }}
+          />
+        </div>
+        <Button
+          type={'primary'}
+          size={'small'}
+        >{t('Create a bulk modification')}</Button>
       </div>
       <Collapse className={'bulk-modifications'} expandedKeys={expandedKeys} onExpand={keys => setExpandedKeys(keys)}>
-        {bulkModifications.map(bm => {
+        {bulkModifications.map((bm, i) => {
           return (
             <Panel
               key={bm.id}
@@ -86,7 +161,7 @@ export default () => {
                         {t(BulkModificationStatus[bm.status])}
                       </SimpleLabel>
                     </div>
-                    <Button type={'normal'} size={'small'}>{t('Create from this')}</Button>
+                    <Button type={'normal'} size={'small'}>{t('Duplicate')}</Button>
                     {processing && (
                       <Icon type={'loading'} size={'small'} />
                     )}
@@ -102,7 +177,7 @@ export default () => {
             >
               <div className="filters-panel">
                 <div className="title">
-                  Filters
+                  {t('Filters')}
                 </div>
                 <div className="content">
                   <div className="filters">
@@ -129,64 +204,61 @@ export default () => {
                   </div>
                 </div>
               </div>
+              <div className="variables-panel">
+                <div className="title">
+                  {t('Variables')}
+                </div>
+                <Variables variables={bm.variables} />
+              </div>
               <div className="processes-panel">
                 <div className="title">
-                  Processes
+                  {t('Processes')}
                 </div>
                 <div className="content">
                   <div className="processes">
-                    <div className="process">
-                      <div className="no">
-                        {/* 1 */}
-                        <SimpleLabel status={'default'}>1</SimpleLabel>
-                      </div>
-                      <div className="property">
-                        <CustomIcon type={'segment'} size={'small'} />
-                        名称
-                      </div>
-                      <div className="operation replace">
-                        <CustomIcon type={'edit-square'} size={'small'} />
-                        修改
-                      </div>
-                      <div className="value">
-                        xxxxxxxxx
-                      </div>
-                    </div>
-                    <div className="process">
-                      <div className="no">
-                        {/* 2 */}
-                        <SimpleLabel status={'default'}>2</SimpleLabel>
-                      </div>
-                      <div className="property">
-                        {/* <SimpleLabel status={'default'}>名称</SimpleLabel> */}
-                        <CustomIcon type={'segment'} size={'small'} />
-                        名称
-                      </div>
-                      <div className="operation merge">
-                        <CustomIcon type={'git-merge-line'} size={'small'} />
-                        合并
-                      </div>
-                      <div className="value">
-                        xxxxxxxxx
-                      </div>
-                    </div>
+                    {bm.processes?.map((p, j) => {
+                      return (
+                        <ProcessDemonstrator
+                          dataSources={demonstratorDataSources[p.property!]}
+                          process={p}
+                          index={j}
+                          variables={bm.variables}
+                          onChange={p => {
+                            bulkModifications[i].processes![j] = p;
+                            setBulkModifications([
+                              ...bulkModifications,
+                            ]);
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                   <div className="opts">
                     <Button
                       type={'normal'}
                       size={'small'}
                       onClick={() => {
-                      ProcessDialog.show({
-
-                      });
-                    }}
+                        ProcessDialog.show({
+                          variables: bm.variables,
+                          onSubmit: pv => {
+                            console.log(pv, 1111);
+                            bulkModifications[i].processes = [
+                              ...(bm.processes || []),
+                              pv,
+                            ];
+                            setBulkModifications([
+                              ...bulkModifications,
+                            ]);
+                          },
+                        });
+                      }}
                     >添加修改步骤</Button>
                   </div>
                 </div>
               </div>
               <div className="result-panel">
                 <div className="title">
-                  Result
+                  {t('Result')}
                 </div>
                 <div className="content">
                   <div className="opts">

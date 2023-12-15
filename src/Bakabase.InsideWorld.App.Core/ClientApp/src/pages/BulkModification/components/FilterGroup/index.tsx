@@ -24,6 +24,8 @@ const FilterGroup = (props: IProps) => {
   const { t } = useTranslation();
   const { group, isRoot = false, onRemove } = props;
 
+  // console.log(group);
+
   const renderConditions = () => {
     if (!group.filters && !group.groups) {
       return;

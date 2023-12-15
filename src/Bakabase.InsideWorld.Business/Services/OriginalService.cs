@@ -47,6 +47,14 @@ namespace Bakabase.InsideWorld.Business.Services
             return originalDtoList;
         }
 
+        public async Task<List<OriginalDto>> GetAllDtoList(Expression<Func<Original, bool>>? selector = null,
+            bool returnCopy = true)
+        {
+            var data = await _orm.GetAll(selector, returnCopy);
+            var list = data.Select(d => d.ToDto()!).ToList();
+            return list;
+        }
+
         public async Task<SimpleRangeAddResult<OriginalDto>> AddRange(List<string> names)
         {
             names = names.Distinct().ToList();

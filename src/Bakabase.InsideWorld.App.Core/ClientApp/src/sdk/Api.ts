@@ -1618,11 +1618,25 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   data?: BakabaseInsideWorldModelsModelsDtosMediaLibraryDto[] | null;
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosOriginalDto[] | null;
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
   /** @format int32 */
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPublisherDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosPublisherDto[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosResourceCategoryDto {
@@ -4151,6 +4165,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetAllOriginals
+     * @request GET:/resource/original/all
+     */
+    getAllOriginals: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto, any>({
+        path: `/resource/original/all`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
   };
   mediaLibrary = {
     /**
@@ -5842,6 +5871,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Publisher
+     * @name GetAllPublishers
+     * @request GET:/publisher/all
+     */
+    getAllPublishers: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPublisherDto, any>({
+        path: `/publisher/all`,
+        method: "GET",
         format: "json",
         ...params,
       }),

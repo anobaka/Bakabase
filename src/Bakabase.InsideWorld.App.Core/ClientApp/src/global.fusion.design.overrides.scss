@@ -91,10 +91,12 @@ body {
   --input-border-color: var(--theme-border-color);
   --input-hover-border-color: var(--theme-border-color);
   --input-text-color: var(--theme-text);
+  --input-feedback-error-color: var(--theme-text);
   --input-addon-bg-color: var(--theme-button-normal-background);
   --input-addon-text-color: var(--theme-text-subtle);
   --input-label-color: var(--theme-text-subtle);
   --input-placeholder-color: var(--theme-text-placeholder);
+  --input-feedback-error-bg-color: var(--theme-input-background);
 
   --select-color: var(--theme-text);
 
@@ -112,6 +114,7 @@ body {
   --tag-closable-primary-fill-text-color: var(--theme-text-subtle);
   --tag-closable-primary-fill-text-color-hover: var(--theme-text);
   --tag-fill-tail-color-hover: var(--theme-text);
+  --tag-fill-tail-color: var(--theme-text-subtle);
   --tag-checkable-normal-text-color: var(--btn-pure-normal-color);
   --tag-checkable-normal-text-color-hover: var(--btn-pure-normal-color);
   --tag-checkable-normal-border-color: var(--btn-pure-normal-border-color);
