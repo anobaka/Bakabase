@@ -39,7 +39,9 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
 
         private readonly SpecialTextService _specialTextService;
 
-        public JavLibraryEnhancer(InsideWorldLocalizer localizer, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, SpecialTextService specialTextService) : base(localizer, httpClientFactory, loggerFactory)
+        public JavLibraryEnhancer(InsideWorldLocalizer localizer, IHttpClientFactory httpClientFactory,
+            ILoggerFactory loggerFactory, SpecialTextService specialTextService) : base(localizer, httpClientFactory,
+            loggerFactory)
         {
             _specialTextService = specialTextService;
         }
@@ -74,67 +76,85 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
                     }
                 };
                 var rsp = await client.GetAsync(searchUrl);
+                string? detailUrl = null;
                 if (rsp.StatusCode == HttpStatusCode.OK)
                 {
-                    // Found multiple results, skip.
-                    return enhancements.ToArray();
+                    var html = await rsp.Content.ReadAsStringAsync();
+                    var listCq = new CQ(html);
+                    var videos = listCq[".video"];
+                    var targetVideo = videos.FirstOrDefault(a =>
+                        a.Cq().Find(".id").FirstOrDefault()?.InnerText
+                            ?.Equals(code, StringComparison.OrdinalIgnoreCase) == true)?.Cq();
+                    if (targetVideo != null)
+                    {
+                        var targetUrl = targetVideo.Children("a").FirstOrDefault()?.Cq().Attr<string>("href");
+                        detailUrl = new Uri(new Uri(SearchTemplate), targetUrl).ToString();
+                    }
+                }
+                else
+                {
+                    if (rsp.StatusCode == HttpStatusCode.Redirect)
+                    {
+                        detailUrl = new Uri(new Uri(searchUrl), rsp.Headers.Location!).ToString();
+                    }
                 }
 
-                if (rsp.StatusCode == HttpStatusCode.Redirect)
+                if (string.IsNullOrEmpty(detailUrl))
                 {
-                    var detailUrl = new Uri(new Uri(searchUrl), rsp.Headers.Location);
-                    var detailHtml = await client.GetStringAsync(detailUrl);
-                    var cq = new CQ(detailHtml);
-                    // releaseDt
-                    var releaseDtStr = cq["#video_date"]?.Find(".text")?.Text();
-                    var releaseDt = await _specialTextService.TryToParseDateTime(releaseDtStr);
-                    if (releaseDt.HasValue)
+                    return Array.Empty<Enhancement>();
+                }
+
+                var detailHtml = await client.GetStringAsync(detailUrl);
+                var cq = new CQ(detailHtml);
+                // releaseDt
+                var releaseDtStr = cq["#video_date"]?.Find(".text")?.Text();
+                var releaseDt = await _specialTextService.TryToParseDateTime(releaseDtStr);
+                if (releaseDt.HasValue)
+                {
+                    enhancements.Add(Enhancement.BuildReleaseDt(releaseDt.Value));
+                }
+
+                // rate
+                var rateStr = cq["#video_review .score"]?.Text().Trim('(', ')');
+                if (decimal.TryParse(rateStr, out var rate))
+                {
+                    enhancements.Add(Enhancement.BuildRate(rate));
+                }
+
+                // name
+                var name = cq["#video_title"]?.Find("h3")?.Text();
+                if (name.IsNotEmpty())
+                {
+                    enhancements.Add(Enhancement.BuildName(name));
+                }
+
+                // tag
+                var tags = cq["#video_genres .genre"]?.Select(a => a.InnerText)?.ToArray();
+                if (tags?.Length > 0)
+                {
+                    enhancements.Add(Enhancement.BuildTag(tags.Select(a => new TagDto {Name = a})));
+                }
+
+                // cast
+                var casts = cq["#video_cast .cast"]?.Select(a => a.InnerText)?.ToArray();
+                if (casts?.Length > 0)
+                {
+                    enhancements.Add(Enhancement.BuildPublisher(casts.Select(a => new PublisherDto {Name = a})));
+                }
+
+                // cover 
+                var coverUrl = cq["#video_jacket_img"]?.Attr("src");
+                if (coverUrl.IsNotEmpty())
+                {
+                    if (coverUrl.StartsWith("//"))
                     {
-                        enhancements.Add(Enhancement.BuildReleaseDt(releaseDt.Value));
+                        coverUrl = $"https://{coverUrl.TrimStart('/')}";
                     }
 
-                    // rate
-                    var rateStr = cq["#video_review .score"]?.Text().Trim('(', ')');
-                    if (decimal.TryParse(rateStr, out var rate))
-                    {
-                        enhancements.Add(Enhancement.BuildRate(rate));
-                    }
-
-                    // name
-                    var name = cq["#video_title"]?.Find("h3")?.Text();
-                    if (name.IsNotEmpty())
-                    {
-                        enhancements.Add(Enhancement.BuildName(name));
-                    }
-
-                    // tag
-                    var tags = cq["#video_genres .genre"]?.Select(a => a.InnerText)?.ToArray();
-                    if (tags?.Length > 0)
-                    {
-                        enhancements.Add(Enhancement.BuildTag(tags.Select(a => new TagDto {Name = a})));
-                    }
-
-                    // cast
-                    var casts = cq["#video_cast .cast"]?.Select(a => a.InnerText)?.ToArray();
-                    if (casts?.Length > 0)
-                    {
-                        enhancements.Add(Enhancement.BuildPublisher(casts.Select(a => new PublisherDto {Name = a})));
-                    }
-
-                    // cover 
-                    var coverUrl = cq["#video_jacket_img"]?.Attr("src");
-                    if (coverUrl.IsNotEmpty())
-                    {
-                        if (coverUrl.StartsWith("//"))
-                        {
-                            coverUrl = $"https://{coverUrl.TrimStart('/')}";
-                        }
-
-                        var bytes = await client.GetByteArrayAsync(coverUrl);
-                        var extension = Path.GetExtension(coverUrl);
-                        enhancements.Add(Enhancement.BuildReservedFile(ReservedResourceFileType.Cover,
-                            new EnhancementFile[] {new() {Data = bytes, RelativePath = $"cover{extension}"}}));
-                    }
+                    var bytes = await client.GetByteArrayAsync(coverUrl);
+                    var extension = Path.GetExtension(coverUrl);
+                    enhancements.Add(Enhancement.BuildReservedFile(ReservedResourceFileType.Cover,
+                        new EnhancementFile[] {new() {Data = bytes, RelativePath = $"cover{extension}"}}));
                 }
             }
 
