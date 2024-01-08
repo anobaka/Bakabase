@@ -8327,84 +8327,6 @@ export const ValidateCookieURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetUpdaterUpdaterState
- * url: GetUpdaterUpdaterStateURL
- * method: GetUpdaterUpdaterState_TYPE
- * raw_url: GetUpdaterUpdaterState_RAW_URL
- */
-export const GetUpdaterUpdaterState = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/updater/updater/state'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetUpdaterUpdaterState_RAW_URL = function() {
-  return '/updater/updater/state'
-}
-export const GetUpdaterUpdaterState_TYPE = function() {
-  return 'get'
-}
-export const GetUpdaterUpdaterStateURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/updater/updater/state'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: StartUpdatingUpdater
- * url: StartUpdatingUpdaterURL
- * method: StartUpdatingUpdater_TYPE
- * raw_url: StartUpdatingUpdater_RAW_URL
- */
-export const StartUpdatingUpdater = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/updater/updater/update'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const StartUpdatingUpdater_RAW_URL = function() {
-  return '/updater/updater/update'
-}
-export const StartUpdatingUpdater_TYPE = function() {
-  return 'get'
-}
-export const StartUpdatingUpdaterURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/updater/updater/update'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: GetNewAppVersion
  * url: GetNewAppVersionURL
  * method: GetNewAppVersion_TYPE
@@ -8434,45 +8356,6 @@ export const GetNewAppVersionURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/updater/app/new-version'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAppUpdaterState
- * url: GetAppUpdaterStateURL
- * method: GetAppUpdaterState_TYPE
- * raw_url: GetAppUpdaterState_RAW_URL
- */
-export const GetAppUpdaterState = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/updater/app/state'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAppUpdaterState_RAW_URL = function() {
-  return '/updater/app/state'
-}
-export const GetAppUpdaterState_TYPE = function() {
-  return 'get'
-}
-export const GetAppUpdaterStateURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/updater/app/state'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

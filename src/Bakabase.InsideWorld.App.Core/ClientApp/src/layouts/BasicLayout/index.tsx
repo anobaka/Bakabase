@@ -39,6 +39,8 @@ export default function BasicLayout({
       });
   }, []);
 
+  console.log('444444444444444444444444444');
+
 
   return (
     <ErrorBoundary>

@@ -29,7 +29,6 @@ export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo
   coreVersion?: string | null;
   logPath?: string | null;
   backupPath?: string | null;
-  updaterPath?: string | null;
   tempFilesPath?: string | null;
   notAcceptTerms?: boolean;
   needRestart?: boolean;
@@ -49,30 +48,6 @@ export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersi
   /** @format int64 */
   size?: number;
 }
-
-export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState {
-  /** @format int32 */
-  failedFileCount?: number;
-  /** @format int32 */
-  skippedFileCount?: number;
-  /** @format int32 */
-  downloadedFileCount?: number;
-  /** @format int32 */
-  totalFileCount?: number;
-  /** @format int32 */
-  percentage?: number;
-  /** @format date-time */
-  startDt?: string;
-  error?: string | null;
-  /** [1: Idle, 2: Running, 3: PendingRestart, 4: UpToDate, 5: Failed] */
-  status?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterStatus;
-}
-
-/**
- * [1: Idle, 2: Running, 3: PendingRestart, 4: UpToDate, 5: Failed]
- * @format int32
- */
-export type BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterStatus = 1 | 2 | 3 | 4 | 5;
 
 export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   language?: string | null;
@@ -340,6 +315,8 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   /** @format int32 */
   colCount?: number;
   showBiggerCoverWhileHover?: boolean;
+  disableMediaPreviewer?: boolean;
+  disableCache?: boolean;
 }
 
 /**
@@ -1660,13 +1637,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastr
   code?: number;
   message?: string | null;
   data?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
@@ -6352,39 +6322,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Updater
-     * @name GetUpdaterUpdaterState
-     * @request GET:/updater/updater/state
-     */
-    getUpdaterUpdaterState: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState,
-        any
-      >({
-        path: `/updater/updater/state`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Updater
-     * @name StartUpdatingUpdater
-     * @request GET:/updater/updater/update
-     */
-    startUpdatingUpdater: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/updater/updater/update`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Updater
      * @name GetNewAppVersion
      * @request GET:/updater/app/new-version
      */
@@ -6394,24 +6331,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/updater/app/new-version`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Updater
-     * @name GetAppUpdaterState
-     * @request GET:/updater/app/state
-     */
-    getAppUpdaterState: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppUpgradeAbstractionsUpdaterState,
-        any
-      >({
-        path: `/updater/app/state`,
         method: "GET",
         format: "json",
         ...params,

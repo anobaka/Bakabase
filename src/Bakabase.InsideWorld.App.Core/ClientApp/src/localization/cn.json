@@ -939,5 +939,8 @@
   "Add source path": "添加源路径",
   "Add target path": "添加目标路径",
   "Failed to get information of new version": "获取新版本信息失败",
-  "Checking new version": "正在检查新版本"
+  "Checking new version": "正在检查新版本",
+  "Select file system entries": "选择文件或文件夹",
+  "Disable cache": "禁用缓存",
+  "Disable media previewer on mouse hover": "禁用鼠标悬浮快速预览"
 }

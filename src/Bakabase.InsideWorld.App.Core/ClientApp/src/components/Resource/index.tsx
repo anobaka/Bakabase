@@ -1,4 +1,4 @@
-import { Balloon, Button, Dialog, Dropdown, Menu, Message, Overlay, Rating, Tag } from '@alifd/next';
+import { Balloon, Button, Dialog, Dropdown, Menu, Message, Rating, Tag } from '@alifd/next';
 import React, { useCallback, useEffect, useImperativeHandle, useReducer, useRef, useState } from 'react';
 import { diff } from 'deep-diff';
 import type Queue from 'queue';
@@ -13,10 +13,9 @@ import {
   PlayResourceFile,
   RemoveResource,
 } from '@/sdk/apis';
-import { buildLogger, splitPathIntoSegments, useTraceUpdate, uuidv4 } from '@/components/utils';
+import { buildLogger, splitPathIntoSegments, useTraceUpdate } from '@/components/utils';
 import './index.scss';
-import type {
-  CoverSaveTarget } from '@/sdk/constants';
+import type { CoverSaveTarget } from '@/sdk/constants';
 import {
   PlaylistItemType,
   ResourceLanguage,
@@ -38,6 +37,7 @@ import ResourceEnhancementsDialog from '@/components/Resource/components/Resourc
 import type SimpleSearchEngine from '@/core/models/SimpleSearchEngine';
 import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
 import TagSelector from '@/components/TagSelector';
+import type { RequestParams } from '@/sdk/Api';
 
 const languageIconMapping = {
   [ResourceLanguage.Chinese]: 'china',
@@ -58,6 +58,8 @@ interface Props {
   searchEngines?: SimpleSearchEngine[] | null;
   ct: AbortSignal;
   onTagSearch?: (tagId: number, append: boolean) => any;
+  disableCache?: boolean;
+  disableMediaPreviewer?: boolean;
 }
 
 const displayModes = ['limited', 'full'];
@@ -73,6 +75,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
     },
     queue,
     ct = new AbortController().signal,
+    disableCache = false,
+    disableMediaPreviewer = false,
   } = props;
 
   const { t } = useTranslation();
@@ -80,6 +84,12 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const [playableFiles, setPlayableFiles] = useState<string[]>([]);
+
+  const disableCacheRef = useRef(disableCache);
+
+  useEffect(() => {
+    disableCacheRef.current = disableCache;
+  }, [disableCache]);
 
   const resourceOptions = store.useModelState('resourceOptions');
 
@@ -97,9 +107,14 @@ const Resource = React.forwardRef((props: Props, ref) => {
   log('Rendering');
 
   const loadPlayableFiles = useCallback(async (ct: AbortSignal) => {
-    const pRsp = await BApi.resource.getResourcePlayableFiles(resource.id, { signal: ct });
+    const rp: RequestParams = { signal: ct };
+    if (disableCacheRef.current) {
+      rp.cache = 'no-cache';
+    }
+    const pRsp = await BApi.resource.getResourcePlayableFiles(resource.id, rp);
     setPlayableFiles(pRsp.data || []);
-  }, []);
+    // setPlayableFiles([]);
+  }, [disableCache]);
 
   const initialize = useCallback(async (ct: AbortSignal) => {
     if (coverRef.current) {
@@ -265,6 +280,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
       >
         <div className="absolute-rectangle">
           <ResourceCover
+            disableCache={disableCache}
+            disableMediaPreviewer={disableMediaPreviewer}
             onClick={() => {
               ResourceDetailDialog.show({
                 onTagSearch,
@@ -517,20 +534,20 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 />
               </div>
 
-              <div
-                className="opt"
-                title={t('Remove cover cache')}
-                onClick={async () => {
-                  await BApi.resource.removeCoverCache(resource.id);
-                  await coverRef.current?.reload(new AbortController().signal);
-                }}
-              >
-                <ClickableIcon
-                  colorType={'normal'}
-                  type={'image-redo'}
-                  size={'small'}
-                />
-              </div>
+              {/* <div */}
+              {/*   className="opt" */}
+              {/*   title={t('Remove cover cache')} */}
+              {/*   onClick={async () => { */}
+              {/*     await BApi.resource.removeCoverCache(resource.id); */}
+              {/*     await coverRef.current?.reload(new AbortController().signal); */}
+              {/*   }} */}
+              {/* > */}
+              {/*   <ClickableIcon */}
+              {/*     colorType={'normal'} */}
+              {/*     type={'image-redo'} */}
+              {/*     size={'small'} */}
+              {/*   /> */}
+              {/* </div> */}
             </>
           ) : (
             <div className="opt" title={t('Open folder')}>

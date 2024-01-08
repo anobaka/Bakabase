@@ -71,18 +71,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         static ResourceController()
         {
-            var config = new NameValueCollection
-            {
-                {"physicalMemoryLimitPercentage", "10"},
-                {"cacheMemoryLimitMegabytes", "2000"}
-            };
-            CoverCache = new MemoryCache("ResourceCover", config);
+            // var config = new NameValueCollection
+            // {
+            //     {"physicalMemoryLimitPercentage", "10"},
+            //     {"cacheMemoryLimitMegabytes", "2000"}
+            // };
+            // CoverCache = new MemoryCache("ResourceCover", config);
         }
 
-        private static readonly CacheItemPolicy CoverCacheItemPolicy = new CacheItemPolicy
-        {
-            SlidingExpiration = TimeSpan.FromMinutes(15)
-        };
+        // private static readonly CacheItemPolicy CoverCacheItemPolicy = new CacheItemPolicy
+        // {
+        //     SlidingExpiration = TimeSpan.FromMinutes(15)
+        // };
 
         public ResourceController(ResourceService service,
             ResourceTagMappingService resourceTagMappingService,
@@ -175,13 +175,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("{id}/cover")]
         [SwaggerOperation(OperationId = "GetResourceCover")]
+        [ResponseCache(Duration = 20 * 60)]
         public async Task<IActionResult> GetCover(int id)
         {
-            var cacheItem = CoverCache.Get(id.ToString());
-            if (cacheItem is byte[] byteData)
-            {
-                return File(byteData, MimeTypes.GetMimeType(".png"));
-            }
+            // var cacheItem = CoverCache.Get(id.ToString());
+            // if (cacheItem is byte[] byteData)
+            // {
+            //     return File(byteData, MimeTypes.GetMimeType(".png"));
+            // }
 
             var r = await _service.DiscoverAndPopulateCoverStream(id, HttpContext.RequestAborted);
             if (r.HasValue)
@@ -195,23 +196,24 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 }
 
                 var data = ms.ToArray();
-                CoverCache.Set(id.ToString(), data, CoverCacheItemPolicy);
+                // CoverCache.Set(id.ToString(), data, CoverCacheItemPolicy);
                 return File(data, MimeTypes.GetMimeType(ext));
             }
 
             return NotFound();
         }
 
-        [HttpDelete("{id}/cover/cache")]
-        [SwaggerOperation(OperationId = "RemoveCoverCache")]
-        public Task<BaseResponse> RemoveCoverCache(int id)
-        {
-            CoverCache.Remove(id.ToString());
-            return Task.FromResult(BaseResponseBuilder.Ok);
-        }
+        // [HttpDelete("{id}/cover/cache")]
+        // [SwaggerOperation(OperationId = "RemoveCoverCache")]
+        // public Task<BaseResponse> RemoveCoverCache(int id)
+        // {
+        //     CoverCache.Remove(id.ToString());
+        //     return Task.FromResult(BaseResponseBuilder.Ok);
+        // }
 
         [HttpGet("{id}/playable-files")]
         [SwaggerOperation(OperationId = "GetResourcePlayableFiles")]
+        [ResponseCache(Duration = 20 * 60)]
         public async Task<ListResponse<string>> GetPlayableFiles(int id)
         {
             return new ListResponse<string>(await _service.GetPlayableFiles(id, HttpContext.RequestAborted) ??
@@ -338,10 +340,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 var bytes = Convert.FromBase64String(data);
                 return bytes;
             }, HttpContext.RequestAborted);
-            if (rsp.Code == (int) ResponseCode.Success)
-            {
-                CoverCache.Set(id.ToString(), rsp.Data.Data, CoverCacheItemPolicy);
-            }
+            // if (rsp.Code == (int) ResponseCode.Success)
+            // {
+            //     CoverCache.Set(id.ToString(), rsp.Data.Data, CoverCacheItemPolicy);
+            // }
 
             return rsp;
         }

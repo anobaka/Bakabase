@@ -19,6 +19,8 @@ namespace Bakabase.InsideWorld.Models.Configs
         {
             public int ColCount { get; set; }
             public bool ShowBiggerCoverWhileHover { get; set; }
+            public bool DisableMediaPreviewer { get; set; }
+            public bool DisableCache { get; set; }
         }
     }
 }

@@ -30,6 +30,8 @@ export enum UiTheme {FollowSystem = 0, Light = 1, Dark = 2}
 export const uiThemes = Object.keys(UiTheme).filter(k => typeof UiTheme[k] === 'number').map(t => ({label: t, value: UiTheme[t]}));
 export enum UpdaterStatus {Idle = 1, Running = 2, PendingRestart = 3, UpToDate = 4, Failed = 5}
 export const updaterStatuses = Object.keys(UpdaterStatus).filter(k => typeof UpdaterStatus[k] === 'number').map(t => ({label: t, value: UpdaterStatus[t]}));
+export enum AppDistributionType {WindowsApp = 0, MacOsApp = 1, LinuxApp = 2, Android = 3, Ios = 4, WindowsServer = 5, LinuxServer = 6}
+export const appDistributionTypes = Object.keys(AppDistributionType).filter(k => typeof AppDistributionType[k] === 'number').map(t => ({label: t, value: AppDistributionType[t]}));
 export enum MigrationTiming {BeforeDbMigration = 1, AfterDbMigration = 2}
 export const migrationTimings = Object.keys(MigrationTiming).filter(k => typeof MigrationTiming[k] === 'number').map(t => ({label: t, value: MigrationTiming[t]}));
 export enum OsPlatform {Unknown = 0, Windows = 1, Osx = 2, Linux = 3, FreeBsd = 4}

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link, useLocation, history } from 'ice';
-import { Badge, Balloon, Nav } from '@alifd/next';
+import { Badge, Balloon, Loading, Nav } from '@alifd/next';
 import i18next from 'i18next';
 import i18n from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -82,8 +82,10 @@ function getSubMenuOrItem(item: IMenuItem, index?: number | string, auth?: any) 
 
 const Navigation = () => {
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
   const location = useLocation();
   const { pathname } = location;
+  const prevPathRef = useRef<string>(pathname);
 
   const { t } = useTranslation();
 
@@ -121,6 +123,12 @@ const Navigation = () => {
   });
 
   useEffect(() => {
+    console.log('444444444', pathname, prevPathRef.current);
+    if (pathname != prevPathRef.current) {
+      setLoading(false);
+      prevPathRef.current = pathname;
+    }
+
     CheckAppInitialized().invoke((a) => {
       switch (a.data) {
         case InitializationContentType.AppDataDirectory:
@@ -144,8 +152,11 @@ const Navigation = () => {
     }
   }, [pathname]);
 
+  // console.log('5555555555555555555555555555', pathname);
+
   return (
     <div className={`nav-container ${isCollapsed ? 'collapsed' : ''}`}>
+      <Loading fullScreen visible={loading} />
       <div className="nav">
         <Link to={'/'} className="top">{isCollapsed ? 'IW' : 'Inside World'}</Link>
         <div className="menu">
@@ -163,6 +174,8 @@ const Navigation = () => {
               setOpenKeys(keys);
             }}
             onItemClick={(key, object, event) => {
+              setLoading(true);
+              console.log('6666666666666666666666666666666');
               history.push(key);
             }}
           >

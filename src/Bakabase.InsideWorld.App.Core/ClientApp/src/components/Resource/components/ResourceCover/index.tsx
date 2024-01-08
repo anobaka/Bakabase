@@ -20,6 +20,8 @@ interface Props {
   onClick?: () => any;
   showBiggerOnHover?: boolean;
   loadImmediately?: boolean;
+  disableCache?: boolean;
+  disableMediaPreviewer?: boolean;
 }
 
 export interface IResourceCoverRef {
@@ -33,6 +35,8 @@ const Index = React.forwardRef((props: Props, ref) => {
     onClick: propsOnClick,
     showBiggerOnHover = true,
     loadImmediately = false,
+    disableCache = false,
+    disableMediaPreviewer = false,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -44,6 +48,12 @@ const Index = React.forwardRef((props: Props, ref) => {
 
   const [previewerVisible, setPreviewerVisible] = useState(false);
   const previewerHoverTimerRef = useRef<any>();
+
+  const disableCacheRef = useRef(disableCache);
+
+  useEffect(() => {
+    disableCacheRef.current = disableCache;
+  }, [disableCache]);
 
   useEffect(() => {
     if (loadImmediately) {
@@ -116,7 +126,10 @@ const Index = React.forwardRef((props: Props, ref) => {
   useTraceUpdate(props, '[ResourceCover]');
 
   const loadCover = useCallback((ct: AbortSignal) => {
-    const url = `${serverConfig.apiEndpoint}${GetResourceCoverURL({ id: resourceId })}?t=`;
+    let url = `${serverConfig.apiEndpoint}${GetResourceCoverURL({ id: resourceId })}`;
+    if (disableCacheRef.current) {
+      url += `?t=${uuidv4()}`;
+    }
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       ct.addEventListener('abort', () => {
@@ -204,10 +217,12 @@ const Index = React.forwardRef((props: Props, ref) => {
         className="resource-cover-container"
         onMouseOver={(e) => {
           console.log('mouse over');
-          if (!previewerHoverTimerRef.current) {
-            previewerHoverTimerRef.current = setTimeout(() => {
-              setPreviewerVisible(true);
-            }, 1000);
+          if (!disableMediaPreviewer) {
+            if (!previewerHoverTimerRef.current) {
+              previewerHoverTimerRef.current = setTimeout(() => {
+                setPreviewerVisible(true);
+              }, 1000);
+            }
           }
 
           const hw = window.innerWidth / 2;
