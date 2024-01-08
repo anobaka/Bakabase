@@ -41,6 +41,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Internal;
 using Org.BouncyCastle.Utilities;
 using SharpCompress.IO;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
 using Image = SixLabors.ImageSharp.Image;
@@ -195,9 +198,24 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                     ms.Seek(0, SeekOrigin.Begin);
                 }
 
-                var data = ms.ToArray();
+                byte[] data;
+                string mimeType;
+                var image = await Image.LoadAsync<Rgb24>(ms, HttpContext.RequestAborted);
+                if (image.Width >= 800 || image.Height >= 800)
+                {
+                    var scale = Math.Min(800m / image.Width, 800m / image.Height);
+                    image.Mutate(t => t.Resize((int) (image.Width * scale), (int) (image.Height * scale)));
+                    data = await image.SaveAsync(JpegFormat.Instance);
+                    mimeType = MimeTypes.GetMimeType(".jpg");
+                }
+                else
+                {
+                    data = ms.ToArray();
+                    mimeType = MimeTypes.GetMimeType(ext);
+                }
+
                 // CoverCache.Set(id.ToString(), data, CoverCacheItemPolicy);
-                return File(data, MimeTypes.GetMimeType(ext));
+                return File(data, mimeType);
             }
 
             return NotFound();
