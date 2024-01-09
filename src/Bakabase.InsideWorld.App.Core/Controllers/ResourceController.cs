@@ -80,7 +80,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager,
             FavoritesResourceMappingService favoritesResourceMappingService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions, Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller)
+            FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions, Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller, ILogger<ResourceController> logger)
         {
             _service = service;
             _resourceTagMappingService = resourceTagMappingService;
@@ -98,6 +98,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _tempFileManager = tempFileManager;
             _resourceOptions = resourceOptions;
             _ffMpegInstaller = ffMpegInstaller;
+            _logger = logger;
         }
 
         [HttpPost("search")]

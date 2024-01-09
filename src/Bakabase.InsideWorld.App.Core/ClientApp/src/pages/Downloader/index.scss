@@ -25,6 +25,10 @@
         gap: 5px;
         flex-wrap: wrap;
 
+        .count {
+          color: var(--theme-text-primary)
+        }
+
         &.sources {
 
           .source {

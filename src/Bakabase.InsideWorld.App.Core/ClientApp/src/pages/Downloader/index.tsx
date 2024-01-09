@@ -524,9 +524,10 @@ export default () => {
             </div>
             <div className="sources value">
               {thirdPartyIds.map((s) => {
-                const count = filteredTasks.filter((t) => t.thirdPartyId == s.id).length;
+                const count = filteredTasks.filter((t) => t.thirdPartyId == s.value).length;
                 return (
                   <Tag.Selectable
+                    disabled={count == 0}
                     key={s.value}
                     className={'source'}
                     onChange={(checked) => {
@@ -547,7 +548,7 @@ export default () => {
                     checked={form.thirdPartyIds?.some((a) => a == s.value)}
                   >
                     <img src={NameIcon[s.value]} alt="" />
-                    <span>{s.label}{count > 0 && `(${count})`}</span>
+                    <span>{s.label}{count > 0 && <span className={'count'}>({count})</span>}</span>
                   </Tag.Selectable>
                 );
               })}
@@ -560,6 +561,7 @@ export default () => {
                 const count = filteredTasks.filter((t) => t.status == s.value).length;
                 return (
                   <Tag.Selectable
+                    disabled={count == 0}
                     key={s.value}
                     className={'status'}
                     onChange={(checked) => {
@@ -579,7 +581,7 @@ export default () => {
                     size={'small'}
                     checked={form.statuses?.some((a) => a == s.value)}
                   >
-                    {t(s.label)}{count > 0 && `(${count})`}
+                    {t(s.label)}{count > 0 && <span className={'count'}>({count})</span>}
                   </Tag.Selectable>
                 );
               }))}
@@ -642,6 +644,58 @@ export default () => {
               <CustomIcon type={'timeout'} size={'small'} />
               {t('Stop all')}
             </Button>
+
+            {tasks?.length > 0 && (
+              <div
+                className="request-overview"
+                onClick={() => {
+                  setRequestStatisticsChartVisible(true);
+                }}
+              >
+                <div className={'title'}>{t('Requests overview')}</div>
+                {requestStatistics?.map((rs) => {
+                  let successCount = 0;
+                  let failureCount = 0;
+                  Object.keys(rs.counts || {})
+                    .forEach((r) => {
+                      switch (parseInt(r)) {
+                        case ThirdPartyRequestResultType.Succeed:
+                          successCount += rs.counts[r];
+                          break;
+                        default:
+                          failureCount += rs.counts[r];
+                          break;
+                      }
+                    });
+                  return (
+                    <div className={'third-party'}>
+                      <SimpleLabel status={'info'}>
+                        {ThirdPartyId[rs.id]}
+                      </SimpleLabel>
+                      <div className={'statistics'}>
+                        <Balloon.Tooltip
+                          trigger={(
+                            <span className={'success-count'}>{successCount}</span>
+                          )}
+                          align={'t'}
+                        >
+                          {t('Success')}
+                        </Balloon.Tooltip>
+                        /
+                        <Balloon.Tooltip
+                          trigger={(
+                            <span className={'failure-count'}>{failureCount}</span>
+                          )}
+                          align={'t'}
+                        >
+                          {t('failure')}
+                        </Balloon.Tooltip>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div className="right">
             <Button
@@ -656,57 +710,6 @@ export default () => {
           </div>
         </div>
       </div>
-      {tasks?.length > 0 && (
-        <div
-          className="request-overview"
-          onClick={() => {
-            setRequestStatisticsChartVisible(true);
-          }}
-        >
-          <div className={'title'}>{t('Requests overview')}</div>
-          {requestStatistics?.map((rs) => {
-            let successCount = 0;
-            let failureCount = 0;
-            Object.keys(rs.counts || {})
-              .forEach((r) => {
-                switch (parseInt(r)) {
-                  case ThirdPartyRequestResultType.Succeed:
-                    successCount += rs.counts[r];
-                    break;
-                  default:
-                    failureCount += rs.counts[r];
-                    break;
-                }
-              });
-            return (
-              <div className={'third-party'}>
-                <SimpleLabel status={'info'}>
-                  {ThirdPartyId[rs.id]}
-                </SimpleLabel>
-                <div className={'statistics'}>
-                  <Balloon.Tooltip
-                    trigger={(
-                      <span className={'success-count'}>{successCount}</span>
-                    )}
-                    align={'t'}
-                  >
-                    {t('Success')}
-                  </Balloon.Tooltip>
-                  /
-                  <Balloon.Tooltip
-                    trigger={(
-                      <span className={'failure-count'}>{failureCount}</span>
-                    )}
-                    align={'t'}
-                  >
-                    {t('failure')}
-                  </Balloon.Tooltip>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
       {tasks?.length > 0 ? (
         <div
           className={'tasks'}
