@@ -9,6 +9,7 @@ import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
 import { parseJson } from 'ajv/dist/runtime/parseJson';
+import { AutoSizer, List } from 'react-virtualized';
 import CustomIcon from '@/components/CustomIcon';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
@@ -668,195 +669,410 @@ export default () => {
         </div>
       )}
       {tasks?.length > 0 ? (
-        <ul ref={tasksDomRef} tabIndex={0}>
-          {filteredTasks.map((task) => {
-            const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
-            const selected = selectedTaskIds.indexOf(task.id) > -1;
-            return (
-              <li
-                onContextMenu={e => {
-                  console.log(`Opening context menu from ${task.id}:${task.name}`);
-                  e.preventDefault();
-                  if (!selectedTaskIdsRef.current.includes(task.id)) {
-                    setSelectedTaskIds([task.id]);
-                  }
-                  contextMenuAnchorPointRef.current = {
-                    x: e.clientX,
-                    y: e.clientY,
-                  };
-                  toggleMenu(true);
-                  forceUpdate();
-                }}
-                key={task.id}
-              >
-                <div className={`download-item ${selected ? 'selected' : ''}`} onClick={() => onTaskClick(task.id)}>
-                  <div className="icon">
-                    <img src={NameIcon[task.thirdPartyId]} />
-                  </div>
-                  <div className="content">
-                    <div className="name">
-                      <Balloon.Tooltip
-                        trigger={(
-                          <span onClick={() => {
-                            setTaskId(task.id);
-                          }}
-                          >
-                            {renderTaskName(task)}
-                          </span>
-                        )}
-                        triggerType={'hover'}
-                        align={'t'}
-                      >
-                        {task.key}
-                      </Balloon.Tooltip>
-                    </div>
-                    <div className="info">
-                      <div className="left">
-                        <SimpleLabel
-                          status={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
-                          className={hasErrorMessage ? 'has-error-message' : ''}
-                        >
-                          <span
-                            onClick={() => {
-                              if (hasErrorMessage) {
-                                Dialog.error({
-                                  v2: true,
-                                  width: 1000,
-                                  title: t('Error'),
-                                  content: (
-                                    <pre>{task.message}</pre>
-                                  ),
-                                });
-                              }
-                            }}
-                          >
-                            {t(DownloadTaskDtoStatus[task.status])}
-                          </span>
-                        </SimpleLabel>
-                        {(task.status == DownloadTaskDtoStatus.Downloading || task.status == DownloadTaskDtoStatus.Starting || task.status == DownloadTaskDtoStatus.Stopping) && (
-                          <Icon type={'loading'} size={'small'} />
-                        )}
-                        <span>{task.current}</span>
-                      </div>
-                      <div className="right">
-                        {task.failureTimes > 0 && (
-                          <SimpleLabel
-                            status={'danger'}
-                            className={'failure-times'}
-                          >
-                            {t('Failure times')}:
-                            <span>{task.failureTimes}</span>
-                          </SimpleLabel>
-                        )}
-                        {task.nextStartDt && (
-                          <SimpleLabel
-                            status={'info'}
-                            className={'next-start-dt'}
-                          >
-                            {t('Next start time')}:
-                            <span>
-                              {moment(task.nextStartDt)
-                                .format('YYYY-MM-DD HH:mm:ss')}
-                            </span>
-                          </SimpleLabel>
-                        )}
-                      </div>
-                    </div>
-                    <div className="progress">
-                      <Progress
-                        // state={t.status == DownloadTaskStatus.Failed ? 'error' : 'normal'}
-                        className={'bar'}
-                        percent={task.progress}
-                        color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
-                        size={'small'}
-                        textRender={() => `${task.progress.toFixed(2)}%`}
-                        // progressive={t.status != DownloadTaskStatus.Failed}
-                      />
-                    </div>
-                  </div>
-                  <div className="opt">
-                    {task.availableActions?.map((a, i) => {
-                      const action = parseInt(a);
-                      switch (action) {
-                        case DownloadTaskAction.StartManually:
-                        case DownloadTaskAction.Restart:
-                          return (
-                            <CustomIcon
-                              key={i}
-                              type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'}
-                              title={t('Start now')}
-                              onClick={() => {
-                                BApi.downloadTask.startDownloadTasks([task.id]);
-                              }}
-                            />
-                          );
-                        case DownloadTaskAction.Disable:
-                          return (
-                            <CustomIcon
-                              key={i}
-                              type={'stop'}
-                              title={t('Disable')}
-                              onClick={() => {
-                                BApi.downloadTask.stopDownloadTasks([task.id]);
-                              }}
-                            />
-                          );
-                      }
-                      return;
-                    })}
-                    <CustomIcon
-                      type={'folder-open'}
-                      title={t('Open folder')}
-                      onClick={() => {
-                        OpenFileOrDirectory({
-                          path: task.downloadPath,
-                        })
-                          .invoke();
+        <div className={'tasks'}>
+          <AutoSizer>
+            {({ height, width }) => (
+              <List
+                height={height}
+                rowCount={filteredTasks.length}
+                rowHeight={75}
+                rowRenderer={({
+                                index,
+                                style,
+                                isVisible,
+                                isScrolling,
+                              }) => {
+                  const task = filteredTasks[index];
+                  const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
+                  const selected = selectedTaskIds.indexOf(task.id) > -1;
+                  return (
+                    <div
+                      onContextMenu={e => {
+                        console.log(`Opening context menu from ${task.id}:${task.name}`);
+                        e.preventDefault();
+                        if (!selectedTaskIdsRef.current.includes(task.id)) {
+                          setSelectedTaskIds([task.id]);
+                        }
+                        contextMenuAnchorPointRef.current = {
+                          x: e.clientX,
+                          y: e.clientY,
+                        };
+                        toggleMenu(true);
+                        forceUpdate();
                       }}
-                    />
-                    <Dropdown
-                      className={'task-operations-dropdown'}
-                      trigger={
-                        <CustomIcon
-                          type={'ellipsis'}
-                        />
-                      }
-                      triggerType={['click']}
+                      className={`download-item ${selected ? 'selected' : ''}`}
+                      style={style}
+                      onClick={() => onTaskClick(task.id)}
                     >
-                      <Menu>
-                        {/* <Menu.Item title={t(t.status == DownloadTaskStatus.Paused ? 'Click to enable' : 'Click to disable')}> */}
-                        {/*   <div className={t.status == DownloadTaskStatus.Paused ? 'disabled' : 'enabled'}> */}
-                        {/*     <CustomIcon */}
-                        {/*       type={t.status == DownloadTaskStatus.Paused ? 'close-circle' : 'check-circle'} */}
-                        {/*       onClick={() => { */}
-
-                        {/*       }} */}
-                        {/*     /> */}
-                        {/*     {t(t.status == DownloadTaskStatus.Paused ? 'Disabled' : 'Enabled')} */}
-                        {/*   </div> */}
-                        {/* </Menu.Item> */}
-                        <Menu.Item>
-                          <div
-                            className={'remove'}
-                            onClick={() => {
-                              Dialog.confirm({
-                                title: t('Are you sure to delete it?'),
-                                onOk: () => BApi.downloadTask.removeDownloadTasksByIds([task.id]),
-                              });
-                            }}
+                      <div className="icon">
+                        <img src={NameIcon[task.thirdPartyId]} />
+                      </div>
+                      <div className="content">
+                        <div className="name">
+                          <Balloon.Tooltip
+                            trigger={(
+                              <span onClick={() => {
+                                setTaskId(task.id);
+                              }}
+                              >
+                                {renderTaskName(task)}
+                              </span>
+                            )}
+                            triggerType={'hover'}
+                            align={'t'}
                           >
-                            <CustomIcon type={'delete'} />
-                            {t('Remove')}
+                            {task.key}
+                          </Balloon.Tooltip>
+                        </div>
+                        <div className="info">
+                          <div className="left">
+                            <SimpleLabel
+                              status={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
+                              className={hasErrorMessage ? 'has-error-message' : ''}
+                            >
+                              <span
+                                onClick={() => {
+                                if (hasErrorMessage) {
+                                  Dialog.error({
+                                    v2: true,
+                                    width: 1000,
+                                    title: t('Error'),
+                                    content: (
+                                      <pre>{task.message}</pre>
+                                    ),
+                                  });
+                                }
+                              }}
+                              >
+                                {t(DownloadTaskDtoStatus[task.status])}
+                              </span>
+                            </SimpleLabel>
+                            {(task.status == DownloadTaskDtoStatus.Downloading || task.status == DownloadTaskDtoStatus.Starting || task.status == DownloadTaskDtoStatus.Stopping) && (
+                              <Icon type={'loading'} size={'small'} />
+                            )}
+                            <span>{task.current}</span>
                           </div>
-                        </Menu.Item>
-                      </Menu>
-                    </Dropdown>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                          <div className="right">
+                            {task.failureTimes > 0 && (
+                              <SimpleLabel
+                                status={'danger'}
+                                className={'failure-times'}
+                              >
+                                {t('Failure times')}:
+                                <span>{task.failureTimes}</span>
+                              </SimpleLabel>
+                            )}
+                            {task.nextStartDt && (
+                              <SimpleLabel
+                                status={'info'}
+                                className={'next-start-dt'}
+                              >
+                                {t('Next start time')}:
+                                <span>
+                                  {moment(task.nextStartDt)
+                                  .format('YYYY-MM-DD HH:mm:ss')}
+                                </span>
+                              </SimpleLabel>
+                            )}
+                          </div>
+                        </div>
+                        <div className="progress">
+                          <Progress
+                            // state={t.status == DownloadTaskStatus.Failed ? 'error' : 'normal'}
+                            className={'bar'}
+                            percent={task.progress}
+                            color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
+                            size={'small'}
+                            textRender={() => `${task.progress.toFixed(2)}%`}
+                            // progressive={t.status != DownloadTaskStatus.Failed}
+                          />
+                        </div>
+                      </div>
+                      <div className="opt">
+                        {task.availableActions?.map((a, i) => {
+                          const action = parseInt(a);
+                          switch (action) {
+                            case DownloadTaskAction.StartManually:
+                            case DownloadTaskAction.Restart:
+                              return (
+                                <CustomIcon
+                                  key={i}
+                                  type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'}
+                                  title={t('Start now')}
+                                  onClick={() => {
+                                    BApi.downloadTask.startDownloadTasks([task.id]);
+                                  }}
+                                />
+                              );
+                            case DownloadTaskAction.Disable:
+                              return (
+                                <CustomIcon
+                                  key={i}
+                                  type={'stop'}
+                                  title={t('Disable')}
+                                  onClick={() => {
+                                    BApi.downloadTask.stopDownloadTasks([task.id]);
+                                  }}
+                                />
+                              );
+                          }
+                          return;
+                        })}
+                        <CustomIcon
+                          type={'folder-open'}
+                          title={t('Open folder')}
+                          onClick={() => {
+                            OpenFileOrDirectory({
+                              path: task.downloadPath,
+                            })
+                              .invoke();
+                          }}
+                        />
+                        <Dropdown
+                          className={'task-operations-dropdown'}
+                          trigger={
+                            <CustomIcon
+                              type={'ellipsis'}
+                            />
+                          }
+                          triggerType={['click']}
+                        >
+                          <Menu>
+                            {/* <Menu.Item title={t(t.status == DownloadTaskStatus.Paused ? 'Click to enable' : 'Click to disable')}> */}
+                            {/*   <div className={t.status == DownloadTaskStatus.Paused ? 'disabled' : 'enabled'}> */}
+                            {/*     <CustomIcon */}
+                            {/*       type={t.status == DownloadTaskStatus.Paused ? 'close-circle' : 'check-circle'} */}
+                            {/*       onClick={() => { */}
+
+                            {/*       }} */}
+                            {/*     /> */}
+                            {/*     {t(t.status == DownloadTaskStatus.Paused ? 'Disabled' : 'Enabled')} */}
+                            {/*   </div> */}
+                            {/* </Menu.Item> */}
+                            <Menu.Item>
+                              <div
+                                className={'remove'}
+                                onClick={() => {
+                                  Dialog.confirm({
+                                    title: t('Are you sure to delete it?'),
+                                    onOk: () => BApi.downloadTask.removeDownloadTasksByIds([task.id]),
+                                  });
+                                }}
+                              >
+                                <CustomIcon type={'delete'} />
+                                {t('Remove')}
+                              </div>
+                            </Menu.Item>
+                          </Menu>
+                        </Dropdown>
+                      </div>
+                    </div>
+                  );
+                }}
+                width={width}
+              />
+            )}
+          </AutoSizer>
+          {/* <List */}
+          {/*   // ref={virtualListRef} */}
+          {/*   rowHeight={virtualListRowHeightCallback} */}
+          {/*   width={entry.childrenWidth} */}
+          {/*   height={entry.childrenHeight} */}
+          {/*   rowCount={entryRef.current.filteredChildren.length} */}
+          {/*   rowRenderer={virtualListRowRendererCallback} */}
+          {/*   renderHash={hashRef.current} */}
+          {/*   overscanRowCount={5} */}
+          {/* /> */}
+          {/* <ul ref={tasksDomRef} tabIndex={0}> */}
+          {/*   {filteredTasks.map((task) => { */}
+          {/*     const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message; */}
+          {/*     const selected = selectedTaskIds.indexOf(task.id) > -1; */}
+          {/*     return ( */}
+          {/*       <li */}
+          {/*         onContextMenu={e => { */}
+          {/*           console.log(`Opening context menu from ${task.id}:${task.name}`); */}
+          {/*           e.preventDefault(); */}
+          {/*           if (!selectedTaskIdsRef.current.includes(task.id)) { */}
+          {/*             setSelectedTaskIds([task.id]); */}
+          {/*           } */}
+          {/*           contextMenuAnchorPointRef.current = { */}
+          {/*             x: e.clientX, */}
+          {/*             y: e.clientY, */}
+          {/*           }; */}
+          {/*           toggleMenu(true); */}
+          {/*           forceUpdate(); */}
+          {/*         }} */}
+          {/*         key={task.id} */}
+          {/*       > */}
+          {/*         <div className={`download-item ${selected ? 'selected' : ''}`} onClick={() => onTaskClick(task.id)}> */}
+          {/*           <div className="icon"> */}
+          {/*             <img src={NameIcon[task.thirdPartyId]} /> */}
+          {/*           </div> */}
+          {/*           <div className="content"> */}
+          {/*             <div className="name"> */}
+          {/*               <Balloon.Tooltip */}
+          {/*                 trigger={( */}
+          {/*                   <span onClick={() => { */}
+          {/*                     setTaskId(task.id); */}
+          {/*                   }} */}
+          {/*                   > */}
+          {/*                     {renderTaskName(task)} */}
+          {/*                   </span> */}
+          {/*                 )} */}
+          {/*                 triggerType={'hover'} */}
+          {/*                 align={'t'} */}
+          {/*               > */}
+          {/*                 {task.key} */}
+          {/*               </Balloon.Tooltip> */}
+          {/*             </div> */}
+          {/*             <div className="info"> */}
+          {/*               <div className="left"> */}
+          {/*                 <SimpleLabel */}
+          {/*                   status={DownloadTaskDtoStatusIceLabelStatusMap[task.status]} */}
+          {/*                   className={hasErrorMessage ? 'has-error-message' : ''} */}
+          {/*                 > */}
+          {/*                   <span */}
+          {/*                     onClick={() => { */}
+          {/*                       if (hasErrorMessage) { */}
+          {/*                         Dialog.error({ */}
+          {/*                           v2: true, */}
+          {/*                           width: 1000, */}
+          {/*                           title: t('Error'), */}
+          {/*                           content: ( */}
+          {/*                             <pre>{task.message}</pre> */}
+          {/*                           ), */}
+          {/*                         }); */}
+          {/*                       } */}
+          {/*                     }} */}
+          {/*                   > */}
+          {/*                     {t(DownloadTaskDtoStatus[task.status])} */}
+          {/*                   </span> */}
+          {/*                 </SimpleLabel> */}
+          {/*                 {(task.status == DownloadTaskDtoStatus.Downloading || task.status == DownloadTaskDtoStatus.Starting || task.status == DownloadTaskDtoStatus.Stopping) && ( */}
+          {/*                   <Icon type={'loading'} size={'small'} /> */}
+          {/*                 )} */}
+          {/*                 <span>{task.current}</span> */}
+          {/*               </div> */}
+          {/*               <div className="right"> */}
+          {/*                 {task.failureTimes > 0 && ( */}
+          {/*                   <SimpleLabel */}
+          {/*                     status={'danger'} */}
+          {/*                     className={'failure-times'} */}
+          {/*                   > */}
+          {/*                     {t('Failure times')}: */}
+          {/*                     <span>{task.failureTimes}</span> */}
+          {/*                   </SimpleLabel> */}
+          {/*                 )} */}
+          {/*                 {task.nextStartDt && ( */}
+          {/*                   <SimpleLabel */}
+          {/*                     status={'info'} */}
+          {/*                     className={'next-start-dt'} */}
+          {/*                   > */}
+          {/*                     {t('Next start time')}: */}
+          {/*                     <span> */}
+          {/*                       {moment(task.nextStartDt) */}
+          {/*                         .format('YYYY-MM-DD HH:mm:ss')} */}
+          {/*                     </span> */}
+          {/*                   </SimpleLabel> */}
+          {/*                 )} */}
+          {/*               </div> */}
+          {/*             </div> */}
+          {/*             <div className="progress"> */}
+          {/*               <Progress */}
+          {/*                 // state={t.status == DownloadTaskStatus.Failed ? 'error' : 'normal'} */}
+          {/*                 className={'bar'} */}
+          {/*                 percent={task.progress} */}
+          {/*                 color={DownloadTaskDtoStatusProgressBarColorMap[task.status]} */}
+          {/*                 size={'small'} */}
+          {/*                 textRender={() => `${task.progress.toFixed(2)}%`} */}
+          {/*                 // progressive={t.status != DownloadTaskStatus.Failed} */}
+          {/*               /> */}
+          {/*             </div> */}
+          {/*           </div> */}
+          {/*           <div className="opt"> */}
+          {/*             {task.availableActions?.map((a, i) => { */}
+          {/*               const action = parseInt(a); */}
+          {/*               switch (action) { */}
+          {/*                 case DownloadTaskAction.StartManually: */}
+          {/*                 case DownloadTaskAction.Restart: */}
+          {/*                   return ( */}
+          {/*                     <CustomIcon */}
+          {/*                       key={i} */}
+          {/*                       type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'} */}
+          {/*                       title={t('Start now')} */}
+          {/*                       onClick={() => { */}
+          {/*                         BApi.downloadTask.startDownloadTasks([task.id]); */}
+          {/*                       }} */}
+          {/*                     /> */}
+          {/*                   ); */}
+          {/*                 case DownloadTaskAction.Disable: */}
+          {/*                   return ( */}
+          {/*                     <CustomIcon */}
+          {/*                       key={i} */}
+          {/*                       type={'stop'} */}
+          {/*                       title={t('Disable')} */}
+          {/*                       onClick={() => { */}
+          {/*                         BApi.downloadTask.stopDownloadTasks([task.id]); */}
+          {/*                       }} */}
+          {/*                     /> */}
+          {/*                   ); */}
+          {/*               } */}
+          {/*               return; */}
+          {/*             })} */}
+          {/*             <CustomIcon */}
+          {/*               type={'folder-open'} */}
+          {/*               title={t('Open folder')} */}
+          {/*               onClick={() => { */}
+          {/*                 OpenFileOrDirectory({ */}
+          {/*                   path: task.downloadPath, */}
+          {/*                 }) */}
+          {/*                   .invoke(); */}
+          {/*               }} */}
+          {/*             /> */}
+          {/*             <Dropdown */}
+          {/*               className={'task-operations-dropdown'} */}
+          {/*               trigger={ */}
+          {/*                 <CustomIcon */}
+          {/*                   type={'ellipsis'} */}
+          {/*                 /> */}
+          {/*               } */}
+          {/*               triggerType={['click']} */}
+          {/*             > */}
+          {/*               <Menu> */}
+          {/*                 /!* <Menu.Item title={t(t.status == DownloadTaskStatus.Paused ? 'Click to enable' : 'Click to disable')}> *!/ */}
+          {/*                 /!*   <div className={t.status == DownloadTaskStatus.Paused ? 'disabled' : 'enabled'}> *!/ */}
+          {/*                 /!*     <CustomIcon *!/ */}
+          {/*                 /!*       type={t.status == DownloadTaskStatus.Paused ? 'close-circle' : 'check-circle'} *!/ */}
+          {/*                 /!*       onClick={() => { *!/ */}
+
+          {/*                 /!*       }} *!/ */}
+          {/*                 /!*     /> *!/ */}
+          {/*                 /!*     {t(t.status == DownloadTaskStatus.Paused ? 'Disabled' : 'Enabled')} *!/ */}
+          {/*                 /!*   </div> *!/ */}
+          {/*                 /!* </Menu.Item> *!/ */}
+          {/*                 <Menu.Item> */}
+          {/*                   <div */}
+          {/*                     className={'remove'} */}
+          {/*                     onClick={() => { */}
+          {/*                       Dialog.confirm({ */}
+          {/*                         title: t('Are you sure to delete it?'), */}
+          {/*                         onOk: () => BApi.downloadTask.removeDownloadTasksByIds([task.id]), */}
+          {/*                       }); */}
+          {/*                     }} */}
+          {/*                   > */}
+          {/*                     <CustomIcon type={'delete'} /> */}
+          {/*                     {t('Remove')} */}
+          {/*                   </div> */}
+          {/*                 </Menu.Item> */}
+          {/*               </Menu> */}
+          {/*             </Dropdown> */}
+          {/*           </div> */}
+          {/*         </div> */}
+          {/*       </li> */}
+          {/*     ); */}
+          {/*   })} */}
+          {/* </ul> */}
+        </div>
       ) : (
         <div className={'no-task-yet'}>
           <Button

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Dialog, Message } from '@alifd/next';
+import { Dialog, Message, Tab } from '@alifd/next';
 import i18n from 'i18next';
 import './index.scss';
+import { useTranslation } from 'react-i18next';
 import DownloaderOptions from './DownloaderOptions';
 import {
   GetAllDownloaderNamingDefinitions,
@@ -12,7 +13,7 @@ import {
   PatchExHentaiOptions,
   PatchPixivOptions,
 } from '@/sdk/apis';
-import { ThirdPartyId } from '@/sdk/constants';
+import { ThirdPartyId, thirdPartyIds } from '@/sdk/constants';
 
 const StaticDownloaderOptions = [
   {
@@ -41,6 +42,7 @@ export default ({
   onClose = () => {
   },
 }) => {
+  const { t } = useTranslation();
   const [thirdPartyIdOptionsMap, setThirdPartyIdOptionsMap] = useState({});
 
   const [allNamingDefinitions, setAllNamingDefinitions] = useState({});
@@ -73,7 +75,8 @@ export default ({
       closeable
       onClose={onClose}
       onCancel={onClose}
-      title={i18n.t('Configurations')}
+      title={t('Configurations')}
+      className={'downloader-configurations-dialog'}
       onOk={() => {
         const allOptionsTasks = StaticDownloaderOptions.map((a) => ({
           options: thirdPartyIdOptionsMap[a.thirdPartyId],
@@ -88,7 +91,7 @@ export default ({
           .then((responses) => {
             if (responses.every((r) => !r.code)) {
               Message.success({
-                title: i18n.t('Success'),
+                title: t('Success'),
                 align: 'cc cc',
               });
               onSaved();
@@ -98,11 +101,15 @@ export default ({
     >
       <div className={'downloader-configurations'}>
         <div className="forms">
-          {downloaderOptions.map((d) => {
-            return (
-              <DownloaderOptions {...d} />
-            );
-          })}
+          <Tab>
+            {downloaderOptions.map((d, i) => {
+              return (
+                <Tab.Item key={i} title={thirdPartyIds.find(id => id.value == d.thirdPartyId)?.label}>
+                  <DownloaderOptions {...d} />
+                </Tab.Item>
+              );
+            })}
+          </Tab>
         </div>
       </div>
     </Dialog>

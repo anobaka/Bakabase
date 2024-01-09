@@ -279,10 +279,10 @@ export default ({
 
   return (
     <div className={'downloader-options'}>
-      <div className="title">
-        <div className="placeholder" />
-        {i18n.t(ThirdPartyId[thirdPartyId])}
-      </div>
+      {/* <div className="title"> */}
+      {/*   <div className="placeholder" /> */}
+      {/*   {i18n.t(ThirdPartyId[thirdPartyId])} */}
+      {/* </div> */}
       {renderOptions()}
     </div>
   );
