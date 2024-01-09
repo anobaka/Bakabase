@@ -4,6 +4,7 @@
   max-height: 100%;
   display: flex;
   flex-direction: column;
+
   .panel-and-form {
     display: flex;
     flex-direction: column;
@@ -90,7 +91,8 @@
   }
 
   .tasks {
-    flex: 1;
+    flex: 1 1 auto;
+    //overflow: auto;
     .download-item {
       display: flex;
       justify-content: space-between;
