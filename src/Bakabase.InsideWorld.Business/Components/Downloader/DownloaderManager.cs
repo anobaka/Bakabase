@@ -102,7 +102,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
             }
         }
 
-        private async Task<BaseResponse> _tryStart(DownloadTask task)
+        private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts)
         {
             if (!_validators.TryGetValue(task.ThirdPartyId, out var optionsValidator))
             {
@@ -121,14 +121,25 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
             var activeConflictDownloaders = _downloaders.Where(a => a.Key != task.Id)
                 .Where(a => a.Value.ThirdPartyId == task.ThirdPartyId && a.Value.IsOccupyingDownloadTaskSource())
                 .ToDictionary(a => a.Key, a => a.Value);
-            if (activeConflictDownloaders.Count >= 1)
+
+            if (activeConflictDownloaders.Any())
             {
-                await using var scope = _serviceProvider.CreateAsyncScope();
-                var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
-                var occupiedTasks = await service.GetByKeys(activeConflictDownloaders.Keys);
-                var message = _localizer[SharedResource.Downloader_DownloaderCountExceeded, task.ThirdPartyId,
-                    $"{Environment.NewLine}{string.Join(Environment.NewLine, occupiedTasks.Select(a => a.DisplayName))}"];
-                return BaseResponseBuilder.Build(ResponseCode.Conflict, message);
+                if (stopConflicts)
+                {
+                    foreach (var (key, dd) in activeConflictDownloaders)
+                    {
+                        await dd.Stop();
+                    }
+                }
+                else
+                {
+                    await using var scope = _serviceProvider.CreateAsyncScope();
+                    var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
+                    var occupiedTasks = await service.GetByKeys(activeConflictDownloaders.Keys);
+                    var message = _localizer[SharedResource.Downloader_DownloaderCountExceeded, task.ThirdPartyId,
+                        $"{Environment.NewLine}{string.Join(Environment.NewLine, occupiedTasks.Select(a => a.DisplayName))}"];
+                    return BaseResponseBuilder.Build(ResponseCode.Conflict, message);
+                }
             }
 
             if (!_downloaders.TryGetValue(task.Id, out var downloader))
@@ -165,9 +176,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> Start(DownloadTask task)
+        public async Task<BaseResponse> Start(DownloadTask task, bool stopConflicts)
         {
-            return await _tryStart(task);
+            return await _tryStart(task, stopConflicts);
         }
     }
 }

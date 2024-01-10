@@ -1185,6 +1185,11 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequest
   downloadPath: string;
 }
 
+export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel {
+  ids?: number[] | null;
+  stopConflicts?: boolean;
+}
+
 export interface BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel {
   /** @format int32 */
   id?: number;
@@ -2088,12 +2093,12 @@ export type SystemReflectionGenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 |
 export type SystemReflectionICustomAttributeProvider = object;
 
 export interface SystemReflectionMemberInfo {
+  module?: SystemReflectionModule;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
   declaringType?: SystemType;
   reflectedType?: SystemType;
   name?: string | null;
-  module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
   /** @format int32 */
@@ -3508,7 +3513,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name StartDownloadTasks
      * @request POST:/download-task/download
      */
-    startDownloadTasks: (data: number[], params: RequestParams = {}) =>
+    startDownloadTasks: (
+      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/download`,
         method: "POST",
@@ -3752,21 +3760,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name RemoveCoverCache
-     * @request DELETE:/resource/{id}/cover/cache
-     */
-    removeCoverCache: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/cover/cache`,
-        method: "DELETE",
         format: "json",
         ...params,
       }),

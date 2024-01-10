@@ -78,7 +78,7 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task Start(Expression<Func<DownloadTask, bool>>? exp = null)
+        public async Task<BaseResponse> Start(Expression<Func<DownloadTask, bool>>? exp = null, bool stopConflicts = false)
         {
             var tasks = await GetAll(exp);
             var badStatusTasks = tasks.Where(a => a.Status == DownloadTaskStatus.Disabled).ToArray();
@@ -88,8 +88,11 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             await UpdateRange(badStatusTasks);
-            await TryStartAllTasks(true, tasks.Select(a => a.Id).ToArray());
+            var rsp = await TryStartAllTasks(stopConflicts, tasks.Select(a => a.Id).ToArray());
+
             PushAllDataToUi();
+
+            return rsp;
         }
 
         public async Task Stop(Expression<Func<DownloadTask, bool>>? exp = null)
@@ -163,7 +166,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 ToDto(new[] {task}).FirstOrDefault());
         }
 
-        public async Task TryStartAllTasks(bool forceStart, int[]? ids = null)
+        public async Task<BaseResponse> TryStartAllTasks(bool forceStart, int[]? ids = null)
         {
             var tasks = (await (ids == null ? GetAll() : GetByKeys(ids))).ToDictionary(a => a.ToDto(DownloaderManager),
                 a => a);
@@ -176,7 +179,11 @@ namespace Bakabase.InsideWorld.Business.Services
 
             foreach (var tt in filteredTasks)
             {
-                var rsp = await DownloaderManager.Start(tasks[tt]);
+                var rsp = await DownloaderManager.Start(tasks[tt], forceStart);
+                if (rsp.Code != (int) ResponseCode.Success)
+                {
+                    return rsp;
+                }
             }
 
             // set other tasks status
@@ -185,6 +192,8 @@ namespace Bakabase.InsideWorld.Business.Services
             {
                 DownloaderManager[ot.Id]?.ResetStatus();
             }
+
+            return BaseResponseBuilder.Ok;
         }
 
         public async Task OnNameAcquired(int taskId, string name) =>

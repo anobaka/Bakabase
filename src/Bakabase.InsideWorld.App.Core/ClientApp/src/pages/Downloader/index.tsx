@@ -164,7 +164,7 @@ export default () => {
         }}
       >
         <MenuItem onClick={() => {
-          BApi.downloadTask.startDownloadTasks(selectedTaskIdsRef.current);
+          BApi.downloadTask.startDownloadTasks({ ids: selectedTaskIdsRef.current, stopConflicts: false });
         }}
         >
           <div>
@@ -628,7 +628,7 @@ export default () => {
               type={'normal'}
               size={'small'}
               onClick={() => {
-                BApi.downloadTask.startDownloadTasks([]);
+                BApi.downloadTask.startDownloadTasks({ ids: [], stopConflicts: false });
               }}
             >
               <CustomIcon type={'play-circle'} size={'small'} />
@@ -852,7 +852,7 @@ export default () => {
                                   type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'}
                                   title={t('Start now')}
                                   onClick={() => {
-                                    BApi.downloadTask.startDownloadTasks([task.id]);
+                                    BApi.downloadTask.startDownloadTasks({ ids: [task.id], stopConflicts: false });
                                   }}
                                 />
                               );
