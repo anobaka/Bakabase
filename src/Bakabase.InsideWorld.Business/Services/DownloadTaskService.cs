@@ -68,7 +68,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     //     $"Use new value: {value} to update download task to: {JsonConvert.SerializeObject(task)}");
                     await Update(task);
                     await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
-                        ToDto(new[] {task}).FirstOrDefault());
+                        ToDto(new[] {task}).FirstOrDefault()!);
                 }
             }
             catch (Exception ex)
@@ -78,17 +78,17 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<BaseResponse> Start(Expression<Func<DownloadTask, bool>>? exp = null, bool stopConflicts = false)
+        public async Task<BaseResponse> Start(Expression<Func<DownloadTask, bool>>? exp = null, DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.Ignore)
         {
             var tasks = await GetAll(exp);
-            var badStatusTasks = tasks.Where(a => a.Status == DownloadTaskStatus.Disabled).ToArray();
+            var badStatusTasks = tasks.Where(a => a.Status is DownloadTaskStatus.Disabled or DownloadTaskStatus.Failed).ToArray();
             foreach (var badStatusTask in badStatusTasks)
             {
                 badStatusTask.Status = DownloadTaskStatus.InProgress;
             }
 
             await UpdateRange(badStatusTasks);
-            var rsp = await TryStartAllTasks(stopConflicts, tasks.Select(a => a.Id).ToArray());
+            var rsp = await TryStartAllTasks(DownloadTaskStartMode.ManualStart, tasks.Select(a => a.Id).ToArray(), actionOnConflict);
 
             PushAllDataToUi();
 
@@ -110,13 +110,21 @@ namespace Bakabase.InsideWorld.Business.Services
                 .ToList();
             foreach (var a in activeIds)
             {
-                await DownloaderManager.Stop(a);
+                await DownloaderManager.Stop(a, DownloaderStopBy.ManuallyStop);
             }
 
             PushAllDataToUi();
         }
 
-        public async Task OnStatusChanged(int taskId, IDownloader downloader)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="taskId"></param>
+        /// <param name="downloader"></param>
+        /// <param name="extraData">todo: strong-typed</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public async Task OnStatusChanged(int taskId, IDownloader downloader, object? extraData)
         {
             DownloadTaskStatus? newStatus = null;
             switch (downloader.Status)
@@ -127,8 +135,20 @@ namespace Bakabase.InsideWorld.Business.Services
                 case DownloaderStatus.Stopping:
                     break;
                 case DownloaderStatus.Stopped:
-                    newStatus = DownloadTaskStatus.Disabled;
+                {
+                    switch (downloader.StoppedBy!.Value)
+                    {
+                        case DownloaderStopBy.ManuallyStop:
+                            newStatus = DownloadTaskStatus.Disabled;
+                            break;
+                        case DownloaderStopBy.AppendToTheQueue:
+                            newStatus = DownloadTaskStatus.InProgress;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                     break;
+                }
                 case DownloaderStatus.Complete:
                     newStatus = DownloadTaskStatus.Complete;
                     break;
@@ -158,39 +178,60 @@ namespace Bakabase.InsideWorld.Business.Services
                 if (newStatus is DownloadTaskStatus.Complete or DownloadTaskStatus.Failed
                     or DownloadTaskStatus.Disabled)
                 {
-                    await TryStartAllTasks(false);
+                    await TryStartAllTasks(DownloadTaskStartMode.AutoStart, null, DownloadTaskActionOnConflict.Ignore);
                 }
             }
 
             await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
-                ToDto(new[] {task}).FirstOrDefault());
+                ToDto(new[] {task}).FirstOrDefault()!);
         }
 
-        public async Task<BaseResponse> TryStartAllTasks(bool forceStart, int[]? ids = null)
+        public async Task<BaseResponse> TryStartAllTasks(DownloadTaskStartMode mode, int[]? ids, DownloadTaskActionOnConflict actionOnConflict)
         {
             var tasks = (await (ids == null ? GetAll() : GetByKeys(ids))).ToDictionary(a => a.ToDto(DownloaderManager),
                 a => a);
             var targetTasks = tasks.Keys
-                .Where(a => forceStart
-                    ? a.CanStart
-                    : a.AvailableActions.Contains(DownloadTaskAction.StartAutomatically)).ToArray();
+                .Where(a =>
+                {
+                    return mode switch
+                    {
+                        DownloadTaskStartMode.AutoStart => a.AvailableActions.Contains(DownloadTaskAction
+                            .StartAutomatically),
+                        DownloadTaskStartMode.ManualStart => a.CanStart,
+                        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+                    };
+                }).ToArray();
 
             var filteredTasks = targetTasks.GroupBy(a => a.ThirdPartyId).Select(a => a.FirstOrDefault()!).ToArray();
+            var startedTasks = new List<DownloadTaskDto>();
 
             foreach (var tt in filteredTasks)
             {
-                var rsp = await DownloaderManager.Start(tasks[tt], forceStart);
+                var rsp = await DownloaderManager.Start(tasks[tt],
+                    actionOnConflict == DownloadTaskActionOnConflict.StopOthers);
+
                 if (rsp.Code != (int) ResponseCode.Success)
                 {
+                    if (rsp.Code == (int)ResponseCode.Conflict)
+                    {
+                        if (actionOnConflict == DownloadTaskActionOnConflict.Ignore)
+                        {
+                            continue;
+                        }
+                    }
+
                     return rsp;
                 }
+
+                startedTasks.Add(tt);
             }
 
             // set other tasks status
-            var otherTasks = targetTasks.Except(filteredTasks).ToList();
-            foreach (var ot in otherTasks)
+            var pendingTasks = targetTasks.Except(startedTasks).ToList();
+            foreach (var ot in pendingTasks)
             {
-                DownloaderManager[ot.Id]?.ResetStatus();
+                var dd = DownloaderManager[ot.Id];
+                dd?.ResetStatus();
             }
 
             return BaseResponseBuilder.Ok;
@@ -266,7 +307,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<SingletonResponse<DownloadTask>> StopAndUpdateByKey(int id, Action<DownloadTask> modify)
         {
-            await DownloaderManager.Stop(id);
+            await DownloaderManager.Stop(id, DownloaderStopBy.ManuallyStop);
             var rsp = await base.UpdateByKey(id, modify);
             PushAllDataToUi();
             return rsp;

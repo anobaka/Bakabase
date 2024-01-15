@@ -831,7 +831,7 @@ export default ({ categoryId }: { categoryId?: number }) => {
                   const cds = (category.componentsData ?? []).filter(a => a.componentType != ComponentType.Enhancer);
                   let newCds = cds;
                   if (v.enhancerKeys?.length > 0) {
-                    const eCds = v.enhancerKeys?.map(k => (
+                    const eCds = v.enhancerKeys?.filter(k => k != undefined && k.length > 0).map(k => (
                       {
                         componentKey: k,
                         componentType: ComponentType.Enhancer,

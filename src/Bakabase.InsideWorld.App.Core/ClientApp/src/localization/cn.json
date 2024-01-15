@@ -942,5 +942,8 @@
   "Checking new version": "正在检查新版本",
   "Select file system entries": "选择文件或文件夹",
   "Disable cache": "禁用缓存",
-  "Disable media previewer on mouse hover": "禁用鼠标悬浮快速预览"
+  "Disable media previewer on mouse hover": "禁用鼠标悬浮快速预览",
+  "Found some conflicted tasks": "发现一些任务冲突",
+  "Download selected tasks firstly": "优先下载所选任务",
+  "Add selected tasks to the queue": "将所选任务加入队列"
 }

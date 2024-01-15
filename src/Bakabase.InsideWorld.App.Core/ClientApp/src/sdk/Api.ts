@@ -416,6 +416,12 @@ export type BakabaseInsideWorldModelsConstantsCustomDataType = 1 | 2 | 3 | 4;
 export type BakabaseInsideWorldModelsConstantsDownloadTaskAction = 1 | 2 | 3 | 4;
 
 /**
+ * [0: NotSet, 1: StopOthers, 2: Ignore]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict = 0 | 1 | 2;
+
+/**
  * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
  * @format int32
  */
@@ -1187,7 +1193,8 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequest
 
 export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel {
   ids?: number[] | null;
-  stopConflicts?: boolean;
+  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+  actionOnConflict?: BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel {
@@ -2093,12 +2100,12 @@ export type SystemReflectionGenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 |
 export type SystemReflectionICustomAttributeProvider = object;
 
 export interface SystemReflectionMemberInfo {
-  module?: SystemReflectionModule;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
   declaringType?: SystemType;
   reflectedType?: SystemType;
   name?: string | null;
+  module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
   /** @format int32 */
@@ -3517,14 +3524,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/download-task/download`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
+    {
+      return this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+                                                                            path: `/download-task/download`,
+  method: "POST",
+  body: data,
+  type: ContentType.Json,
+  format: "json",
+...params,
+})
+},
 
     /**
      * No description

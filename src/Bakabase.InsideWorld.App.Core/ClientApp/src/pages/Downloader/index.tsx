@@ -2,14 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import './index.scss';
 import { Balloon, Button, Dialog, Dropdown, Icon, Input, Menu, Progress, Tag } from '@alifd/next';
-import IceLabel from '@icedesign/label';
 import moment from 'moment';
 import { Axis, Chart, Interval, Legend, Tooltip } from 'bizcharts';
 import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
-import { parseJson } from 'ajv/dist/runtime/parseJson';
-import { AutoSizer, List, WindowScroller } from 'react-virtualized';
+import { AutoSizer, List } from 'react-virtualized';
 import CustomIcon from '@/components/CustomIcon';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
@@ -20,11 +18,13 @@ import { GetAllThirdPartyRequestStatistics, OpenFileOrDirectory } from '@/sdk/ap
 import {
   bilibiliDownloadTaskTypes,
   DownloadTaskAction,
+  DownloadTaskActionOnConflict,
   DownloadTaskDtoStatus,
   downloadTaskDtoStatuses,
   ExHentaiDownloadTaskType,
   exHentaiDownloadTaskTypes,
   pixivDownloadTaskTypes,
+  ResponseCode,
   ThirdPartyId,
   thirdPartyIds,
   ThirdPartyRequestResultType,
@@ -135,6 +135,31 @@ export default () => {
 
   log('Rendering');
 
+  const startTasksManually = async (ids?: number[], actionOnConflict = DownloadTaskActionOnConflict.NotSet) => {
+    const rsp = await BApi.downloadTask.startDownloadTasks({ ids, actionOnConflict }, {
+      ignoreError: rsp => rsp.code == ResponseCode.Conflict,
+    });
+    if (rsp.code == ResponseCode.Conflict) {
+      Dialog.show({
+        title: t('Found some conflicted tasks'),
+        content: rsp.message,
+        v2: true,
+        width: 'auto',
+        closeMode: ['mask', 'esc', 'close'],
+        okProps: {
+          children: t('Download selected tasks firstly'),
+        },
+        cancelProps: {
+          children: t('Add selected tasks to the queue'),
+        },
+        onOk: async () => {
+          return await BApi.downloadTask.startDownloadTasks({ ids, actionOnConflict: DownloadTaskActionOnConflict.StopOthers });
+        },
+        onCancel: async () => await BApi.downloadTask.startDownloadTasks({ ids, actionOnConflict: DownloadTaskActionOnConflict.Ignore }),
+      });
+    }
+  };
+
   useUpdateEffect(() => {
     requestStatisticsRef.current = requestStatistics;
   }, [requestStatistics]);
@@ -164,7 +189,7 @@ export default () => {
         }}
       >
         <MenuItem onClick={() => {
-          BApi.downloadTask.startDownloadTasks({ ids: selectedTaskIdsRef.current, stopConflicts: false });
+          startTasksManually(selectedTaskIdsRef.current);
         }}
         >
           <div>
@@ -628,7 +653,7 @@ export default () => {
               type={'normal'}
               size={'small'}
               onClick={() => {
-                BApi.downloadTask.startDownloadTasks({ ids: [], stopConflicts: false });
+                startTasksManually(undefined, DownloadTaskActionOnConflict.Ignore);
               }}
             >
               <CustomIcon type={'play-circle'} size={'small'} />
@@ -852,7 +877,7 @@ export default () => {
                                   type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'}
                                   title={t('Start now')}
                                   onClick={() => {
-                                    BApi.downloadTask.startDownloadTasks({ ids: [task.id], stopConflicts: false });
+                                    startTasksManually([task.id]);
                                   }}
                                 />
                               );

@@ -153,7 +153,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "StartDownloadTasks")]
         public async Task<BaseResponse> StartAll([FromBody] DownloadTaskStartRequestModel model)
         {
-            return await _service.Start(model.Ids.Any() ? t => model.Ids.Contains(t.Id) : null, model.StopConflicts);
+            return await _service.Start(model.Ids.Any() ? t => model.Ids.Contains(t.Id) : null, model.ActionOnConflict);
         }
 
         [HttpDelete("download")]
