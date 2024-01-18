@@ -87,5 +87,8 @@ namespace Bakabase.InsideWorld.Business.Resources
         public string ValueIsNotSet(string name) => this[nameof(ValueIsNotSet), name];
 
         public string NewFolderName() => this[nameof(NewFolderName)];
+
+        public string Downloader_FailedToStart(string taskName, string message) =>
+            this[nameof(Downloader_FailedToStart), taskName, message];
     }
 }

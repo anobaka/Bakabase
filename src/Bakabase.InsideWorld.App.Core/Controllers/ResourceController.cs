@@ -34,13 +34,18 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using ElectronNET.API.Entities;
+using Google.Apis.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Internal;
+using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Utilities;
 using SharpCompress.IO;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
 using Image = SixLabors.ImageSharp.Image;
@@ -84,6 +89,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             SlidingExpiration = TimeSpan.FromMinutes(15)
         };
+        private readonly Business.Components.Dependency.Implementations.FfMpeg.FfMpegService _ffMpegInstaller;
+        private readonly ILogger<ResourceController> _logger;
 
         public ResourceController(ResourceService service,
             ResourceTagMappingService resourceTagMappingService,
@@ -92,6 +99,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager,
             FavoritesResourceMappingService favoritesResourceMappingService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
+            FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions, Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller, ILogger<ResourceController> logger)
             FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions,
             Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
             OriginalService originalService)
@@ -112,6 +120,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _tempFileManager = tempFileManager;
             _resourceOptions = resourceOptions;
             _ffMpegInstaller = ffMpegInstaller;
+            _logger = logger;
             _originalService = originalService;
         }
 
@@ -179,14 +188,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("{id}/cover")]
         [SwaggerOperation(OperationId = "GetResourceCover")]
+        [ResponseCache(Duration = 20 * 60)]
         public async Task<IActionResult> GetCover(int id)
         {
-            var cacheItem = CoverCache.Get(id.ToString());
-            if (cacheItem is byte[] byteData)
-            {
-                return File(byteData, MimeTypes.GetMimeType(".png"));
-            }
-
             var r = await _service.DiscoverAndPopulateCoverStream(id, HttpContext.RequestAborted);
             if (r.HasValue)
             {
@@ -198,24 +202,36 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                     ms.Seek(0, SeekOrigin.Begin);
                 }
 
-                var data = ms.ToArray();
-                CoverCache.Set(id.ToString(), data, CoverCacheItemPolicy);
-                return File(data, MimeTypes.GetMimeType(ext));
+                byte[]? data = null;
+                string? mimeType = null;
+                try
+                {
+                    var image = await Image.LoadAsync<Rgb24>(ms, HttpContext.RequestAborted);
+                    if (image.Width >= 800 || image.Height >= 800)
+                    {
+                        var scale = Math.Min(800m / image.Width, 800m / image.Height);
+                        image.Mutate(t => t.Resize((int) (image.Width * scale), (int) (image.Height * scale)));
+                        data = await image.SaveAsync(JpegFormat.Instance);
+                        mimeType = MimeTypes.GetMimeType(".jpg");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"An error occurred during loading cover: {ex.Message}");
+                }
+
+                data ??= ms.ToArray();
+                mimeType ??= MimeTypes.GetMimeType(ext);
+
+                return File(data, mimeType);
             }
 
             return NotFound();
         }
 
-        [HttpDelete("{id}/cover/cache")]
-        [SwaggerOperation(OperationId = "RemoveCoverCache")]
-        public Task<BaseResponse> RemoveCoverCache(int id)
-        {
-            CoverCache.Remove(id.ToString());
-            return Task.FromResult(BaseResponseBuilder.Ok);
-        }
-
         [HttpGet("{id}/playable-files")]
         [SwaggerOperation(OperationId = "GetResourcePlayableFiles")]
+        [ResponseCache(Duration = 20 * 60)]
         public async Task<ListResponse<string>> GetPlayableFiles(int id)
         {
             return new ListResponse<string>(await _service.GetPlayableFiles(id, HttpContext.RequestAborted) ??
@@ -350,10 +366,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 var bytes = Convert.FromBase64String(data);
                 return bytes;
             }, HttpContext.RequestAborted);
-            if (rsp.Code == (int) ResponseCode.Success)
-            {
-                CoverCache.Set(id.ToString(), rsp.Data.Data, CoverCacheItemPolicy);
-            }
+            // if (rsp.Code == (int) ResponseCode.Success)
+            // {
+            //     CoverCache.Set(id.ToString(), rsp.Data.Data, CoverCacheItemPolicy);
+            // }
 
             return rsp;
         }

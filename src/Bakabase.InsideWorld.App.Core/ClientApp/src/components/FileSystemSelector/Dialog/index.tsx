@@ -24,7 +24,7 @@ const FileSystemSelectorDialog = (props: IProps) => {
     setVisible(false);
   };
 
-  let title = 'Select file system entry';
+  let title = 'Select file system entries';
   if (props.targetType != undefined) {
     switch (props.targetType) {
       case 'file':

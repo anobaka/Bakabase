@@ -16,7 +16,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions
         ThirdPartyId ThirdPartyId { get; }
         DownloaderStatus Status { get; }
         string Current { get; }
-        Task Stop();
+        Task Stop(DownloaderStopBy stopBy);
+        DownloaderStopBy? StoppedBy { get; set; }
         Task Start(DownloadTask task);
         string Message { get; }
         int FailureTimes { get; }

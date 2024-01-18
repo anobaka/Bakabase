@@ -19,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
 
         public override async Task Execute(AsyncServiceScope scope)
         {
-            await DownloadTaskService.TryStartAllTasks(false);
+            await DownloadTaskService.TryStartAllTasks(DownloadTaskStartMode.AutoStart, null, DownloadTaskActionOnConflict.Ignore);
         }
     }
 }

@@ -419,6 +419,8 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   /** @format int32 */
   colCount?: number;
   showBiggerCoverWhileHover?: boolean;
+  disableMediaPreviewer?: boolean;
+  disableCache?: boolean;
 }
 
 /**
@@ -516,6 +518,12 @@ export type BakabaseInsideWorldModelsConstantsCustomDataType = 1 | 2 | 3 | 4;
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsDownloadTaskAction = 1 | 2 | 3 | 4;
+
+/**
+ * [0: NotSet, 1: StopOthers, 2: Ignore]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict = 0 | 1 | 2;
 
 /**
  * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
@@ -1304,6 +1312,12 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequest
   forceCreating?: boolean;
   /** @minLength 1 */
   downloadPath: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel {
+  ids?: number[] | null;
+  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+  actionOnConflict?: BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel {
@@ -3736,15 +3750,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name StartDownloadTasks
      * @request POST:/download-task/download
      */
-    startDownloadTasks: (data: number[], params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/download-task/download`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
+    startDownloadTasks: (
+      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel,
+      params: RequestParams = {},
+    ) =>
+    {
+      return this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+                                                                            path: `/download-task/download`,
+  method: "POST",
+  body: data,
+  type: ContentType.Json,
+  format: "json",
+...params,
+})
+},
 
     /**
      * No description
@@ -3980,21 +3999,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name RemoveCoverCache
-     * @request DELETE:/resource/{id}/cover/cache
-     */
-    removeCoverCache: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/cover/cache`,
-        method: "DELETE",
         format: "json",
         ...params,
       }),

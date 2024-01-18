@@ -20,6 +20,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsValidator;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
+using Bakabase.InsideWorld.Business.Resources;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -30,6 +31,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<int, IDownloader> _downloaders = new();
         private readonly IStringLocalizer<SharedResource> _localizer;
+        private readonly InsideWorldLocalizer _insideWorldLocalizer;
 
         private readonly Dictionary<ThirdPartyId, IDownloaderOptionsValidator> _validators;
 
@@ -64,15 +66,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
         public IDictionary<int, IDownloader> Downloaders => new Dictionary<int, IDownloader>(_downloaders);
 
         public DownloaderManager(IServiceProvider serviceProvider, IStringLocalizer<SharedResource> localizer,
-            IEnumerable<IDownloaderOptionsValidator> validators, ILogger<DownloaderManager> logger)
+            IEnumerable<IDownloaderOptionsValidator> validators, ILogger<DownloaderManager> logger, InsideWorldLocalizer insideWorldLocalizer)
         {
             _serviceProvider = serviceProvider;
             _localizer = localizer;
             _logger = logger;
+            _insideWorldLocalizer = insideWorldLocalizer;
             _validators = validators.ToDictionary(a => a.ThirdPartyId, a => a);
 
             OnStatusChanged += (taskId, downloader) =>
-                GetNewScopeRequiredService<DownloadTaskService>().OnStatusChanged(taskId, downloader);
+                GetNewScopeRequiredService<DownloadTaskService>().OnStatusChanged(taskId, downloader, null);
             OnNameAcquired += (taskId, name) =>
                 GetNewScopeRequiredService<DownloadTaskService>().OnNameAcquired(taskId, name);
             OnProgress += (taskId, progress) =>
@@ -91,18 +94,18 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
 
         public IDownloader? this[int taskId] => _downloaders.GetValueOrDefault(taskId);
 
-        public async Task Stop(int taskId)
+        public async Task Stop(int taskId, DownloaderStopBy stopBy)
         {
             var downloader = this[taskId];
             if (downloader is {Status: DownloaderStatus.Downloading})
             {
                 _logger.LogInformation($"[TaskId:{taskId}]Trying to stop...");
-                await downloader.Stop();
+                await downloader.Stop(stopBy);
                 _logger.LogInformation($"[TaskId:{taskId}]Downloader has been stopped.");
             }
         }
 
-        private async Task<BaseResponse> _tryStart(DownloadTask task)
+        private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts)
         {
             if (!_validators.TryGetValue(task.ThirdPartyId, out var optionsValidator))
             {
@@ -121,19 +124,31 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
             var activeConflictDownloaders = _downloaders.Where(a => a.Key != task.Id)
                 .Where(a => a.Value.ThirdPartyId == task.ThirdPartyId && a.Value.IsOccupyingDownloadTaskSource())
                 .ToDictionary(a => a.Key, a => a.Value);
-            if (activeConflictDownloaders.Count >= 1)
+
+            if (activeConflictDownloaders.Any())
             {
-                await using var scope = _serviceProvider.CreateAsyncScope();
-                var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
-                var occupiedTasks = await service.GetByKeys(activeConflictDownloaders.Keys);
-                var message = _localizer[SharedResource.Downloader_DownloaderCountExceeded, task.ThirdPartyId,
-                    $"{Environment.NewLine}{string.Join(Environment.NewLine, occupiedTasks.Select(a => a.DisplayName))}"];
-                return BaseResponseBuilder.Build(ResponseCode.Conflict, message);
+                if (stopConflicts)
+                {
+                    foreach (var (key, dd) in activeConflictDownloaders)
+                    {
+                        await dd.Stop(DownloaderStopBy.AppendToTheQueue);
+                    }
+                }
+                else
+                {
+                    await using var scope = _serviceProvider.CreateAsyncScope();
+                    var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
+                    var occupiedTasks = await service.GetByKeys(activeConflictDownloaders.Keys);
+                    var message = _localizer[SharedResource.Downloader_DownloaderCountExceeded, task.ThirdPartyId,
+                        $"{Environment.NewLine}{string.Join(Environment.NewLine, occupiedTasks.Select(a => a.DisplayName))}"];
+                    var fullMessage = _insideWorldLocalizer.Downloader_FailedToStart(task.DisplayName, message);
+                    return BaseResponseBuilder.Build(ResponseCode.Conflict, fullMessage);
+                }
             }
 
             if (!_downloaders.TryGetValue(task.Id, out var downloader))
             {
-                Type type = null;
+                Type? type = null;
                 if (_downloaderTypes.TryGetValue(task.ThirdPartyId, out var types))
                 {
                     types.TryGetValue(task.Type, out type);
@@ -165,9 +180,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> Start(DownloadTask task)
+        public async Task<BaseResponse> Start(DownloadTask task, bool stopConflicts)
         {
-            return await _tryStart(task);
+            return await _tryStart(task, stopConflicts);
         }
     }
 }
