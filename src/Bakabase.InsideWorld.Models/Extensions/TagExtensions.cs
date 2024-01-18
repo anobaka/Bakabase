@@ -59,11 +59,11 @@ namespace Bakabase.InsideWorld.Models.Extensions
             if (x.GetType() != y.GetType()) return false;
             if (!string.IsNullOrEmpty(x.GroupName) && !string.IsNullOrEmpty(y.GroupName))
             {
-                return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) &&
+                return string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase) &&
                        x.GroupName.Equals(y.GroupName, StringComparison.OrdinalIgnoreCase);
             }
 
-            return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) && x.GroupName.IsNullOrEmpty() &&
+            return string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase) && x.GroupName.IsNullOrEmpty() &&
                    y.GroupName.IsNullOrEmpty();
         }
 
