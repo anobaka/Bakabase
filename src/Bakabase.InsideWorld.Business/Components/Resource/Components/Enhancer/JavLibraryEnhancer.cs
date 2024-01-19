@@ -33,7 +33,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
     }, Version = "1.0.1")]
     public class JavLibraryEnhancer : InsideWorldHttpClient, IEnhancer
     {
-        private static readonly Regex CodeRegex = new(@"(?<prefix>[a-zA-Z]+)-?(?<no>\d+)");
+        private static readonly Regex CodeRegex = new(@"(?<prefix>[a-zA-Z]+\d*)-?(?<no>\d+)");
         private const string SearchTemplate = "https://www.javlibrary.com/cn/vl_searchbyid.php?keyword={0}";
         protected override string HttpClientName => BusinessConstants.HttpClientNames.JavLibrary;
 
@@ -118,7 +118,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
                 var rateStr = cq["#video_review .score"]?.Text().Trim('(', ')');
                 if (decimal.TryParse(rateStr, out var rate))
                 {
-                    enhancements.Add(Enhancement.BuildRate(rate));
+                    enhancements.Add(Enhancement.BuildRate(rate / 2));
                 }
 
                 // name
