@@ -11,14 +11,12 @@ class BApi extends Api<any> {
     });
     const originalRequest = this.request;
     this.request = async <T = any, E = any>(params: FullRequestParams): Promise<T> => {
-      console.log(444444444, params);
       try {
         const rsp = await originalRequest<T, E>(params);
         switch (rsp.code) {
           case 0:
             break;
           default:
-            console.log(456709, params.ignoreError, rsp);
             if (params.ignoreError) {
               if (params.ignoreError(rsp)) {
                 return rsp;

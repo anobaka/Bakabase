@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Checkbox, DatePicker2, Input, NumberPicker, Select } from '@alifd/next';
+import { Checkbox, Select } from '@alifd/next';
+import { useUpdateEffect } from 'react-use';
 import type { IVariable } from '../../Variables';
-import TextProcessor from '@/pages/BulkModification/components/ProcessDialog/Processors/TextProcessor';
+import TextProcessor, {
+  type ITextProcessorValue,
+} from '@/pages/BulkModification/components/ProcessDialog/Processors/TextProcessor';
 
 interface IProps {
   variables: IVariable[];
+  onChange?: (value: IValue) => any;
+  value?: IValue;
 }
 
 enum Operation {
@@ -20,42 +25,74 @@ enum VolumeProperty {
 
 interface IValue {
   operation?: Operation;
-  properties?: VolumeProperty[];
   value?: string;
+  propertyModifications?: Record<VolumeProperty, ITextProcessorValue>;
 }
 
-export default ({ variables: propsVariables }: IProps) => {
+const Editor = ({
+                  variables: propsVariables,
+                  value: propsValue,
+                  onChange,
+                }: IProps) => {
   const { t } = useTranslation();
   const [variables, setVariables] = useState<IVariable[]>(propsVariables || []);
-  const [value, setValue] = useState<IValue>({});
+  const [value, setValue] = useState<IValue>(propsValue ?? {});
 
   const operationDataSource = Object.keys(Operation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
     label: t(x),
     value: Operation[x],
   }));
 
+  const selectedProperties = Object.keys(value.propertyModifications || {}).map(k => parseInt(k, 10) as VolumeProperty);
+
+  const changeValue = (patches: Record<any, any>) => {
+    setValue({
+      ...value,
+      ...patches,
+    });
+  };
+
+  useUpdateEffect(() => {
+    if (onChange) {
+      onChange(value);
+    }
+  }, [value]);
   const renderValueComp = () => {
     const components: { label: string; comp: any }[] = [];
     switch (value.operation) {
       case Operation.Modify:
         components.push({
-          label: 'Target properties',
+          label: t('Target properties'),
           comp: (
             <Checkbox.Group
-              onChange={v => setValue({
-                ...value,
-                properties: v.map(x => parseInt(x, 10) as VolumeProperty),
-              })}
+              onChange={v => {
+                const newProperties = v.map(p => parseInt(p, 10) as VolumeProperty);
+                const properties = value.propertyModifications || {};
+                newProperties.forEach(p => {
+                  if (!properties[p]) {
+                    properties[p] = undefined;
+                  }
+                });
+                selectedProperties.forEach(p => {
+                  if (!newProperties.includes(p)) {
+                    delete properties[p];
+                  }
+                });
+                changeValue({
+                  propertyModifications: properties,
+                });
+              }}
               dataSource={[
-              {
-                label: t('Name'),
-                value: VolumeProperty.Name,
-              },
-              {
-                label: t('Title'),
-                value: VolumeProperty.Title,
-              },
-            ]}
+                {
+                  label: t('Name'),
+                  value: VolumeProperty.Name,
+                },
+                {
+                  label: t('Title'),
+                  value: VolumeProperty.Title,
+                },
+              ]}
+              value={Object.keys(value.propertyModifications || {}).map(p => parseInt(p, 10) as VolumeProperty)}
             />
           ),
         });
@@ -63,9 +100,9 @@ export default ({ variables: propsVariables }: IProps) => {
       case Operation.Remove:
         break;
     }
-    return components.map(c => {
+    return components.map((c, i) => {
       return (
-        <div className="block">
+        <div className="block" key={i}>
           <div className="label">{c.label}</div>
           <div className="value">{c.comp}</div>
         </div>
@@ -74,16 +111,19 @@ export default ({ variables: propsVariables }: IProps) => {
   };
 
   const renderPropertyProcessors = () => {
-    const properties = value.properties || [];
-    const processors = properties.map(p => {
+    const properties = Object.keys(value.propertyModifications ?? {}).map(k => parseInt(k, 10) as VolumeProperty);
+    return properties.map(p => {
       return (
-        <div className={'container'}>
+        <div className={'container'} key={p}>
           <div className={'title'}>{t(VolumeProperty[p])}</div>
-          <TextProcessor variables={variables} />
+          <TextProcessor.Editor
+            variables={variables}
+            value={value.propertyModifications?.[p]}
+            onChange={v => changeValue({ propertyModifications: { ...value.propertyModifications, [p]: v } })}
+          />
         </div>
       );
     });
-    return processors;
   };
 
   return (
@@ -108,3 +148,47 @@ export default ({ variables: propsVariables }: IProps) => {
     </>
   );
 };
+
+const Demonstrator = ({
+                        value,
+                      }: { value: IValue }) => {
+  const { t } = useTranslation();
+  const [valueTexts, setValueTexts] = useState<string[]>([]);
+
+  switch (value?.operation) {
+    case Operation.Remove:
+      return (
+        <>
+          <div className="primary">{t('Remove')}</div>
+        </>
+      );
+    case Operation.Modify:
+      return (
+        <div className={'multiple'}>
+          {Object.keys(value.propertyModifications || {}).map(k => parseInt(k, 10) as VolumeProperty).map(p => {
+            const textProcessorValue = value.propertyModifications?.[p];
+            return (
+              <div key={p} className={'line'}>
+                {t('Modify')}
+                <div className={'primary'}>{t(VolumeProperty[p])}</div>
+                {textProcessorValue ? (
+                  <TextProcessor.Demonstrator value={textProcessorValue} />
+                ) : t('Not set')}
+              </div>
+            );
+          })}
+        </div>
+      );
+    default:
+      return (
+        <>
+          {t('Unsupported value')}
+        </>
+      );
+  }
+};
+
+export default class VolumeProcessor {
+  static Editor = Editor;
+  static Demonstrator = Demonstrator;
+}

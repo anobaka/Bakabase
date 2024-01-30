@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import './index.scss';
-import { Balloon, Button, Dialog, Dropdown, Icon, Input, Menu, Progress, Tag } from '@alifd/next';
+import { Balloon, Button, Dialog, Dropdown, Icon, Menu, Progress, Tag } from '@alifd/next';
+import IceLabel from '@icedesign/label';
 import moment from 'moment';
 import { Axis, Chart, Interval, Legend, Tooltip } from 'bizcharts';
 import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
-import { AutoSizer, List } from 'react-virtualized';
+import { parseJson } from 'ajv/dist/runtime/parseJson';
 import CustomIcon from '@/components/CustomIcon';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
@@ -18,13 +19,11 @@ import { GetAllThirdPartyRequestStatistics, OpenFileOrDirectory } from '@/sdk/ap
 import {
   bilibiliDownloadTaskTypes,
   DownloadTaskAction,
-  DownloadTaskActionOnConflict,
   DownloadTaskDtoStatus,
   downloadTaskDtoStatuses,
   ExHentaiDownloadTaskType,
   exHentaiDownloadTaskTypes,
   pixivDownloadTaskTypes,
-  ResponseCode,
   ThirdPartyId,
   thirdPartyIds,
   ThirdPartyRequestResultType,
@@ -86,19 +85,13 @@ enum SelectionMode {
   Shift,
 }
 
-interface ISearchForm {
-  statuses?: DownloadTaskDtoStatus[];
-  keyword?: string;
-  thirdPartyIds?: ThirdPartyId[];
-}
-
 const log = buildLogger('DownloadPage');
 
 export default () => {
   const { t } = useTranslation();
   const [taskId, setTaskId] = useState<number | undefined>(undefined);
   const forceUpdate = useUpdate();
-  const [form, setForm] = useState<ISearchForm>({});
+  const [form, setForm] = useState({});
   const [configurationsVisible, setConfigurationsVisible] = useState(false);
 
   const gettingRequestStatistics = useRef(false);
@@ -120,8 +113,6 @@ export default () => {
 
   const tasksDomRef = useRef<HTMLUListElement>(null);
 
-  const tasksElementRef = useRef<any>();
-
   useTraceUpdate({
     taskId,
     form,
@@ -134,31 +125,6 @@ export default () => {
   }, 'DownloaderPage');
 
   log('Rendering');
-
-  const startTasksManually = async (ids?: number[], actionOnConflict = DownloadTaskActionOnConflict.NotSet) => {
-    const rsp = await BApi.downloadTask.startDownloadTasks({ ids, actionOnConflict }, {
-      ignoreError: rsp => rsp.code == ResponseCode.Conflict,
-    });
-    if (rsp.code == ResponseCode.Conflict) {
-      Dialog.show({
-        title: t('Found some conflicted tasks'),
-        content: rsp.message,
-        v2: true,
-        width: 'auto',
-        closeMode: ['mask', 'esc', 'close'],
-        okProps: {
-          children: t('Download selected tasks firstly'),
-        },
-        cancelProps: {
-          children: t('Add selected tasks to the queue'),
-        },
-        onOk: async () => {
-          return await BApi.downloadTask.startDownloadTasks({ ids, actionOnConflict: DownloadTaskActionOnConflict.StopOthers });
-        },
-        onCancel: async () => await BApi.downloadTask.startDownloadTasks({ ids, actionOnConflict: DownloadTaskActionOnConflict.Ignore }),
-      });
-    }
-  };
 
   useUpdateEffect(() => {
     requestStatisticsRef.current = requestStatistics;
@@ -189,7 +155,7 @@ export default () => {
         }}
       >
         <MenuItem onClick={() => {
-          startTasksManually(selectedTaskIdsRef.current);
+          BApi.downloadTask.startDownloadTasks(selectedTaskIdsRef.current);
         }}
         >
           <div>
@@ -383,20 +349,8 @@ export default () => {
     }
   };
 
-  const taskFilters: ((task: any) => boolean)[] = [];
-  if (form.thirdPartyIds && form.thirdPartyIds.length > 0) {
-    taskFilters.push(t => form.thirdPartyIds!.includes(t.thirdPartyId));
-  }
-  if (form.statuses && form.statuses.length > 0) {
-    taskFilters.push(t => form.statuses!.includes(t.status));
-  }
-
-  if (form.keyword != undefined && form.keyword.length > 0) {
-    const lowerCaseKeyword = form.keyword.toLowerCase();
-    taskFilters.push(t => t.name?.toLowerCase().includes(lowerCaseKeyword) || t.key.toLowerCase().includes(lowerCaseKeyword));
-  }
-
-  const filteredTasks = tasks.filter((a) => taskFilters.every(f => f(a)));
+  const filteredTasks = tasks.filter((a) => (!(form.thirdPartyIds?.length > 0) || form.thirdPartyIds.some((b) => b == a.thirdPartyId)) &&
+    (!(form.statuses?.length > 0) || form.statuses.some((b) => b == a.status)));
 
   const renderRequestStatisticsChart = () => {
     if (requestStatisticsChartVisible) {
@@ -514,7 +468,7 @@ export default () => {
   // console.log(selectedTaskIds);
 
   return (
-    <div className={'downloader-page'} ref={r => tasksElementRef.current = r}>
+    <div className={'downloader-page'}>
       {renderRequestStatisticsChart()}
       {renderContextMenu()}
       {configurationsVisible && (
@@ -549,10 +503,9 @@ export default () => {
             </div>
             <div className="sources value">
               {thirdPartyIds.map((s) => {
-                const count = filteredTasks.filter((t) => t.thirdPartyId == s.value).length;
+                const count = filteredTasks.filter((t) => t.thirdPartyId == s.id).length;
                 return (
                   <Tag.Selectable
-                    disabled={count == 0}
                     key={s.value}
                     className={'source'}
                     onChange={(checked) => {
@@ -573,7 +526,7 @@ export default () => {
                     checked={form.thirdPartyIds?.some((a) => a == s.value)}
                   >
                     <img src={NameIcon[s.value]} alt="" />
-                    <span>{s.label}{count > 0 && <span className={'count'}>({count})</span>}</span>
+                    <span>{s.label}{count > 0 && `(${count})`}</span>
                   </Tag.Selectable>
                 );
               })}
@@ -586,7 +539,6 @@ export default () => {
                 const count = filteredTasks.filter((t) => t.status == s.value).length;
                 return (
                   <Tag.Selectable
-                    disabled={count == 0}
                     key={s.value}
                     className={'status'}
                     onChange={(checked) => {
@@ -606,29 +558,10 @@ export default () => {
                     size={'small'}
                     checked={form.statuses?.some((a) => a == s.value)}
                   >
-                    {t(s.label)}{count > 0 && <span className={'count'}>({count})</span>}
+                    {t(s.label)}{count > 0 && `(${count})`}
                   </Tag.Selectable>
                 );
               }))}
-            </div>
-            <div className="label">
-              {t('Keyword')}
-            </div>
-            <div className="value keyword">
-              <Input
-                innerAfter={
-                  <Icon
-                    type="search"
-                    size="xs"
-                    style={{ margin: 4 }}
-                  />
-                }
-                size={'small'}
-                onChange={keyword => setForm({
-                ...form,
-                keyword,
-              })}
-              />
             </div>
           </div>
         )}
@@ -653,7 +586,7 @@ export default () => {
               type={'normal'}
               size={'small'}
               onClick={() => {
-                startTasksManually(undefined, DownloadTaskActionOnConflict.Ignore);
+                BApi.downloadTask.startDownloadTasks([]);
               }}
             >
               <CustomIcon type={'play-circle'} size={'small'} />
@@ -669,58 +602,6 @@ export default () => {
               <CustomIcon type={'timeout'} size={'small'} />
               {t('Stop all')}
             </Button>
-
-            {tasks?.length > 0 && (
-              <div
-                className="request-overview"
-                onClick={() => {
-                  setRequestStatisticsChartVisible(true);
-                }}
-              >
-                <div className={'title'}>{t('Requests overview')}</div>
-                {requestStatistics?.map((rs) => {
-                  let successCount = 0;
-                  let failureCount = 0;
-                  Object.keys(rs.counts || {})
-                    .forEach((r) => {
-                      switch (parseInt(r)) {
-                        case ThirdPartyRequestResultType.Succeed:
-                          successCount += rs.counts[r];
-                          break;
-                        default:
-                          failureCount += rs.counts[r];
-                          break;
-                      }
-                    });
-                  return (
-                    <div className={'third-party'}>
-                      <SimpleLabel status={'info'}>
-                        {ThirdPartyId[rs.id]}
-                      </SimpleLabel>
-                      <div className={'statistics'}>
-                        <Balloon.Tooltip
-                          trigger={(
-                            <span className={'success-count'}>{successCount}</span>
-                          )}
-                          align={'t'}
-                        >
-                          {t('Success')}
-                        </Balloon.Tooltip>
-                        /
-                        <Balloon.Tooltip
-                          trigger={(
-                            <span className={'failure-count'}>{failureCount}</span>
-                          )}
-                          align={'t'}
-                        >
-                          {t('failure')}
-                        </Balloon.Tooltip>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
           <div className="right">
             <Button
@@ -735,224 +616,247 @@ export default () => {
           </div>
         </div>
       </div>
-      {tasks?.length > 0 ? (
+      {tasks?.length > 0 && (
         <div
-          className={'tasks'}
+          className="request-overview"
+          onClick={() => {
+            setRequestStatisticsChartVisible(true);
+          }}
         >
-          <AutoSizer>
-            {({ width, height }) => (
-              <List
-                // onScroll={onChildScroll}
-                // isScrolling={isScrolling}
-                // scrollTop={scrollTop}
-                overscanRowCount={2}
-                // scrollToIndex={scrollToIndex}
-                width={width}
-                height={height}
-                // autoHeight
-                rowCount={filteredTasks.length}
-                rowHeight={75}
-                rowRenderer={({
-                                index,
-                                style,
-                                isVisible,
-                                isScrolling,
-                              }) => {
-                  const task = filteredTasks[index];
-                  const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
-                  const selected = selectedTaskIds.indexOf(task.id) > -1;
-                  return (
-                    <div
-                      key={task.id}
-                      onContextMenu={e => {
-                        console.log(`Opening context menu from ${task.id}:${task.name}`);
-                        e.preventDefault();
-                        if (!selectedTaskIdsRef.current.includes(task.id)) {
-                          setSelectedTaskIds([task.id]);
-                        }
-                        contextMenuAnchorPointRef.current = {
-                          x: e.clientX,
-                          y: e.clientY,
-                        };
-                        toggleMenu(true);
-                        forceUpdate();
-                      }}
-                      className={`download-item ${selected ? 'selected' : ''}`}
-                      style={style}
-                      onClick={() => onTaskClick(task.id)}
-                    >
-                      <div className="icon">
-                        <img src={NameIcon[task.thirdPartyId]} />
-                      </div>
-                      <div className="content">
-                        <div className="name">
-                          <Balloon.Tooltip
-                            trigger={(
-                              <span onClick={() => {
-                                setTaskId(task.id);
-                              }}
-                              >
-                                {renderTaskName(task)}
-                              </span>
-                            )}
-                            triggerType={'hover'}
-                            align={'t'}
-                          >
-                            {task.key}
-                          </Balloon.Tooltip>
-                        </div>
-                        <div className="info">
-                          <div className="left">
-                            <SimpleLabel
-                              status={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
-                              className={hasErrorMessage ? 'has-error-message' : ''}
-                            >
-                              <span
-                                onClick={() => {
-                                      if (hasErrorMessage) {
-                                        Dialog.error({
-                                          v2: true,
-                                          width: 1000,
-                                          title: t('Error'),
-                                          content: (
-                                            <pre>{task.message}</pre>
-                                          ),
-                                        });
-                                      }
-                                    }}
-                              >
-                                {t(DownloadTaskDtoStatus[task.status])}
-                              </span>
-                            </SimpleLabel>
-                            {(task.status == DownloadTaskDtoStatus.Downloading || task.status == DownloadTaskDtoStatus.Starting || task.status == DownloadTaskDtoStatus.Stopping) && (
-                              <Icon type={'loading'} size={'small'} />
-                            )}
-                            <span>{task.current}</span>
-                          </div>
-                          <div className="right">
-                            {task.failureTimes > 0 && (
-                              <SimpleLabel
-                                status={'danger'}
-                                className={'failure-times'}
-                              >
-                                {t('Failure times')}:
-                                <span>{task.failureTimes}</span>
-                              </SimpleLabel>
-                            )}
-                            {task.nextStartDt && (
-                              <SimpleLabel
-                                status={'info'}
-                                className={'next-start-dt'}
-                              >
-                                {t('Next start time')}:
-                                <span>
-                                  {moment(task.nextStartDt)
-                                        .format('YYYY-MM-DD HH:mm:ss')}
-                                </span>
-                              </SimpleLabel>
-                            )}
-                          </div>
-                        </div>
-                        <div className="progress">
-                          <Progress
-                            // state={t.status == DownloadTaskStatus.Failed ? 'error' : 'normal'}
-                            className={'bar'}
-                            percent={task.progress}
-                            color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
-                            size={'small'}
-                            textRender={() => `${task.progress.toFixed(2)}%`}
-                            // progressive={t.status != DownloadTaskStatus.Failed}
-                          />
-                        </div>
-                      </div>
-                      <div className="opt">
-                        {task.availableActions?.map((a, i) => {
-                          const action = parseInt(a);
-                          switch (action) {
-                            case DownloadTaskAction.StartManually:
-                            case DownloadTaskAction.Restart:
-                              return (
-                                <CustomIcon
-                                  key={i}
-                                  type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'}
-                                  title={t('Start now')}
-                                  onClick={() => {
-                                    startTasksManually([task.id]);
-                                  }}
-                                />
-                              );
-                            case DownloadTaskAction.Disable:
-                              return (
-                                <CustomIcon
-                                  key={i}
-                                  type={'stop'}
-                                  title={t('Disable')}
-                                  onClick={() => {
-                                    BApi.downloadTask.stopDownloadTasks([task.id]);
-                                  }}
-                                />
-                              );
-                          }
-                          return;
-                        })}
-                        <CustomIcon
-                          type={'folder-open'}
-                          title={t('Open folder')}
-                          onClick={() => {
-                            OpenFileOrDirectory({
-                              path: task.downloadPath,
-                            })
-                              .invoke();
+          <div className={'title'}>{t('Requests overview')}</div>
+          {requestStatistics?.map((rs) => {
+            let successCount = 0;
+            let failureCount = 0;
+            Object.keys(rs.counts || {})
+              .forEach((r) => {
+                switch (parseInt(r)) {
+                  case ThirdPartyRequestResultType.Succeed:
+                    successCount += rs.counts[r];
+                    break;
+                  default:
+                    failureCount += rs.counts[r];
+                    break;
+                }
+              });
+            return (
+              <div className={'third-party'}>
+                <SimpleLabel status={'info'}>
+                  {ThirdPartyId[rs.id]}
+                </SimpleLabel>
+                <div className={'statistics'}>
+                  <Balloon.Tooltip
+                    trigger={(
+                      <span className={'success-count'}>{successCount}</span>
+                    )}
+                    align={'t'}
+                  >
+                    {t('Success')}
+                  </Balloon.Tooltip>
+                  /
+                  <Balloon.Tooltip
+                    trigger={(
+                      <span className={'failure-count'}>{failureCount}</span>
+                    )}
+                    align={'t'}
+                  >
+                    {t('failure')}
+                  </Balloon.Tooltip>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {tasks?.length > 0 ? (
+        <ul ref={tasksDomRef} tabIndex={0}>
+          {filteredTasks.map((task) => {
+            const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
+            const selected = selectedTaskIds.indexOf(task.id) > -1;
+            return (
+              <li
+                onContextMenu={e => {
+                  console.log(`Opening context menu from ${task.id}:${task.name}`);
+                  e.preventDefault();
+                  if (!selectedTaskIdsRef.current.includes(task.id)) {
+                    setSelectedTaskIds([task.id]);
+                  }
+                  contextMenuAnchorPointRef.current = {
+                    x: e.clientX,
+                    y: e.clientY,
+                  };
+                  toggleMenu(true);
+                  forceUpdate();
+                }}
+                key={task.id}
+              >
+                <div className={`download-item ${selected ? 'selected' : ''}`} onClick={() => onTaskClick(task.id)}>
+                  <div className="icon">
+                    <img src={NameIcon[task.thirdPartyId]} />
+                  </div>
+                  <div className="content">
+                    <div className="name">
+                      <Balloon.Tooltip
+                        trigger={(
+                          <span onClick={() => {
+                            setTaskId(task.id);
                           }}
-                        />
-                        <Dropdown
-                          className={'task-operations-dropdown'}
-                          trigger={
-                            <CustomIcon
-                              type={'ellipsis'}
-                            />
-                          }
-                          triggerType={['click']}
+                          >
+                            {renderTaskName(task)}
+                          </span>
+                        )}
+                        triggerType={'hover'}
+                        align={'t'}
+                      >
+                        {task.key}
+                      </Balloon.Tooltip>
+                    </div>
+                    <div className="info">
+                      <div className="left">
+                        <SimpleLabel
+                          status={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
+                          className={hasErrorMessage ? 'has-error-message' : ''}
                         >
-                          <Menu>
-                            {/* <Menu.Item title={t(t.status == DownloadTaskStatus.Paused ? 'Click to enable' : 'Click to disable')}> */}
-                            {/*   <div className={t.status == DownloadTaskStatus.Paused ? 'disabled' : 'enabled'}> */}
-                            {/*     <CustomIcon */}
-                            {/*       type={t.status == DownloadTaskStatus.Paused ? 'close-circle' : 'check-circle'} */}
-                            {/*       onClick={() => { */}
-
-                            {/*       }} */}
-                            {/*     /> */}
-                            {/*     {t(t.status == DownloadTaskStatus.Paused ? 'Disabled' : 'Enabled')} */}
-                            {/*   </div> */}
-                            {/* </Menu.Item> */}
-                            <Menu.Item>
-                              <div
-                                className={'remove'}
-                                onClick={() => {
-                                  Dialog.confirm({
-                                    title: t('Are you sure to delete it?'),
-                                    onOk: () => BApi.downloadTask.removeDownloadTasksByIds([task.id]),
-                                  });
-                                }}
-                              >
-                                <CustomIcon type={'delete'} />
-                                {t('Remove')}
-                              </div>
-                            </Menu.Item>
-                          </Menu>
-                        </Dropdown>
+                          <span
+                            onClick={() => {
+                              if (hasErrorMessage) {
+                                Dialog.error({
+                                  v2: true,
+                                  width: 1000,
+                                  title: t('Error'),
+                                  content: (
+                                    <pre>{task.message}</pre>
+                                  ),
+                                });
+                              }
+                            }}
+                          >
+                            {t(DownloadTaskDtoStatus[task.status])}
+                          </span>
+                        </SimpleLabel>
+                        {(task.status == DownloadTaskDtoStatus.Downloading || task.status == DownloadTaskDtoStatus.Starting || task.status == DownloadTaskDtoStatus.Stopping) && (
+                          <Icon type={'loading'} size={'small'} />
+                        )}
+                        <span>{task.current}</span>
+                      </div>
+                      <div className="right">
+                        {task.failureTimes > 0 && (
+                          <SimpleLabel
+                            status={'danger'}
+                            className={'failure-times'}
+                          >
+                            {t('Failure times')}:
+                            <span>{task.failureTimes}</span>
+                          </SimpleLabel>
+                        )}
+                        {task.nextStartDt && (
+                          <SimpleLabel
+                            status={'info'}
+                            className={'next-start-dt'}
+                          >
+                            {t('Next start time')}:
+                            <span>
+                              {moment(task.nextStartDt)
+                                .format('YYYY-MM-DD HH:mm:ss')}
+                            </span>
+                          </SimpleLabel>
+                        )}
                       </div>
                     </div>
-                  );
-                }}
-              />
-            )}
-          </AutoSizer>
-          {/* )} */}
-          {/* </WindowScroller> */}
-        </div>
+                    <div className="progress">
+                      <Progress
+                        // state={t.status == DownloadTaskStatus.Failed ? 'error' : 'normal'}
+                        className={'bar'}
+                        percent={task.progress}
+                        color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
+                        size={'small'}
+                        textRender={() => `${task.progress.toFixed(2)}%`}
+                        // progressive={t.status != DownloadTaskStatus.Failed}
+                      />
+                    </div>
+                  </div>
+                  <div className="opt">
+                    {task.availableActions?.map((a, i) => {
+                      const action = parseInt(a);
+                      switch (action) {
+                        case DownloadTaskAction.StartManually:
+                        case DownloadTaskAction.Restart:
+                          return (
+                            <CustomIcon
+                              key={i}
+                              type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'}
+                              title={t('Start now')}
+                              onClick={() => {
+                                BApi.downloadTask.startDownloadTasks([task.id]);
+                              }}
+                            />
+                          );
+                        case DownloadTaskAction.Disable:
+                          return (
+                            <CustomIcon
+                              key={i}
+                              type={'stop'}
+                              title={t('Disable')}
+                              onClick={() => {
+                                BApi.downloadTask.stopDownloadTasks([task.id]);
+                              }}
+                            />
+                          );
+                      }
+                      return;
+                    })}
+                    <CustomIcon
+                      type={'folder-open'}
+                      title={t('Open folder')}
+                      onClick={() => {
+                        OpenFileOrDirectory({
+                          path: task.downloadPath,
+                        })
+                          .invoke();
+                      }}
+                    />
+                    <Dropdown
+                      className={'task-operations-dropdown'}
+                      trigger={
+                        <CustomIcon
+                          type={'ellipsis'}
+                        />
+                      }
+                      triggerType={['click']}
+                    >
+                      <Menu>
+                        {/* <Menu.Item title={t(t.status == DownloadTaskStatus.Paused ? 'Click to enable' : 'Click to disable')}> */}
+                        {/*   <div className={t.status == DownloadTaskStatus.Paused ? 'disabled' : 'enabled'}> */}
+                        {/*     <CustomIcon */}
+                        {/*       type={t.status == DownloadTaskStatus.Paused ? 'close-circle' : 'check-circle'} */}
+                        {/*       onClick={() => { */}
 
+                        {/*       }} */}
+                        {/*     /> */}
+                        {/*     {t(t.status == DownloadTaskStatus.Paused ? 'Disabled' : 'Enabled')} */}
+                        {/*   </div> */}
+                        {/* </Menu.Item> */}
+                        <Menu.Item>
+                          <div
+                            className={'remove'}
+                            onClick={() => {
+                              Dialog.confirm({
+                                title: t('Are you sure to delete it?'),
+                                onOk: () => BApi.downloadTask.removeDownloadTasksByIds([task.id]),
+                              });
+                            }}
+                          >
+                            <CustomIcon type={'delete'} />
+                            {t('Remove')}
+                          </div>
+                        </Menu.Item>
+                      </Menu>
+                    </Dropdown>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
         <div className={'no-task-yet'}>
           <Button

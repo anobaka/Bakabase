@@ -68,15 +68,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                         DownloaderStatus.Stopped => DownloadTaskDtoStatus.Disabled,
                         _ => throw new ArgumentOutOfRangeException()
                     };
-                    // Same as JustCreated
-                    if (downloader is {Status: DownloaderStatus.Stopped, StoppedBy: DownloaderStopBy.AppendToTheQueue})
-                    {
-                        status = allDownloaders.Any(a =>
-                            a.Key != task.Id && a.Value.ThirdPartyId == task.ThirdPartyId &&
-                            a.Value.IsOccupyingDownloadTaskSource())
-                            ? DownloadTaskDtoStatus.InQueue
-                            : DownloadTaskDtoStatus.Idle;
-                    }
                 }
             }
 

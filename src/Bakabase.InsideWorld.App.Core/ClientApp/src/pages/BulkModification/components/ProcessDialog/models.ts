@@ -6,7 +6,7 @@ export const availablePropertiesForProcessing: BulkModificationProperty[] = [
   // P.Category,
   // P.MediaLibrary,
   P.Name,
-  P.FileName,
+  // P.FileName,
   // P.DirectoryPath,
   P.ReleaseDt,
   // P.CreateDt,
@@ -47,3 +47,9 @@ export const PropertyProcessorTypeMap = {
   [P.Tag]: ProcessorType.Tag,
   [P.Publisher]: ProcessorType.Publisher,
 };
+
+export const removableProperties = [
+  P.Introduction, P.CustomProperty, P.Tag, P.Series, P.ReleaseDt, P.Rate, P.Language, P.Original, P.Volume, P.Publisher,
+];
+
+export const longTextProperties = [P.Introduction];

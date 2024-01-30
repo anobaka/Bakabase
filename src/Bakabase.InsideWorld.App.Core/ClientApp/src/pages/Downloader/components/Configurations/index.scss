@@ -1,21 +1,13 @@
-.downloader-configurations-dialog {
+.downloader-configurations {
+  min-width: 800px;
 
-  &>.next-dialog-body {
-    padding-top: 0;
-    padding-bottom: 0;
-  }
+  display: flex;
+  gap: 5px;
 
-  .downloader-configurations {
-    min-width: 800px;
-
+  .forms {
     display: flex;
-    gap: 5px;
-
-    .forms {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      flex: 1;
-    }
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
   }
 }

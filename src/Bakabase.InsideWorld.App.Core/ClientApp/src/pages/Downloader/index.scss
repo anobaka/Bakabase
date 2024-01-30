@@ -1,10 +1,5 @@
 .downloader-page {
   user-select: none;
-  height: 100%;
-  max-height: 100%;
-  display: flex;
-  flex-direction: column;
-
   .panel-and-form {
     display: flex;
     flex-direction: column;
@@ -24,10 +19,6 @@
         display: flex;
         gap: 5px;
         flex-wrap: wrap;
-
-        .count {
-          color: var(--theme-text-primary)
-        }
 
         &.sources {
 
@@ -94,106 +85,102 @@
     }
   }
 
-  .tasks {
-    flex: 1 1 auto;
-    //overflow: auto;
-    .download-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 5px;
-      gap: 10px;
+  .download-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 5px;
+    gap: 10px;
 
-      &:hover, &.selected {
-        background: var(--theme-block-background-accent);
+    &:hover, &.selected {
+      background: #eee;
+    }
+
+    .icon {
+      width: 48px;
+      height: 48px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .content {
+      flex: 1;
+
+      .name {
+        font-size: 16px;
+        margin-bottom: 5px;
+
+        user-select: text;
+
+        span {
+          cursor: pointer;
+        }
       }
 
-      .icon {
-        width: 48px;
-        height: 48px;
-
+      &>.info {
+        margin-bottom: 5px;
         display: flex;
         align-items: center;
-        justify-content: center;
-      }
+        justify-content: space-between;
 
-      .content {
-        flex: 1;
-
-        .name {
-          font-size: 16px;
-          margin-bottom: 5px;
-
-          user-select: text;
-
-          span {
-            cursor: pointer;
-          }
-        }
-
-        &>.info {
-          margin-bottom: 5px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-
-          .left, .right {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-          }
-
-          .left {
-            font-size: 12px;
-
-            .status {
-              border: 1px solid #ccc;
-              border-radius: 4px;
-              padding: 2px 5px;
-            }
-
-            .has-error-message {
-              cursor: pointer;
-            }
-
-            .current {
-              color: #777;
-            }
-          }
-
-          .right {
-            .ice-label {
-              span {
-                font-weight: 500;
-              }
-            }
-          }
-        }
-
-        .progress {
+        .left, .right {
           display: flex;
           gap: 5px;
           align-items: center;
+        }
 
-          .bar {
-            flex: 1;
-            line-height: 4px;
+        .left {
+          font-size: 12px;
+
+          .status {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px 5px;
+          }
+
+          .has-error-message {
+            cursor: pointer;
+          }
+
+          .current {
+            color: #777;
+          }
+        }
+
+        .right {
+          .ice-label {
+            span {
+              font-weight: 500;
+            }
           }
         }
       }
 
-      .opt {
+      .progress {
         display: flex;
-        gap: 10px;
-        padding: 0 10px;
+        gap: 5px;
+        align-items: center;
 
-        .iconfont {
-          cursor: pointer;
-          color: #999;
+        .bar {
+          flex: 1;
+          line-height: 4px;
+        }
+      }
+    }
 
-          &:hover {
-            color: #111;
-          }
+    .opt {
+      display: flex;
+      gap: 10px;
+      padding: 0 10px;
+
+      .iconfont {
+        cursor: pointer;
+        color: #999;
+
+        &:hover {
+          color: #111;
         }
       }
     }

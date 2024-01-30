@@ -6,6 +6,69 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "2087981",
+      "name": "users",
+      "font_class": "users",
+      "unicode": "e651",
+      "unicode_decimal": 58961
+    },
+    {
+      "icon_id": "490254",
+      "name": "language",
+      "font_class": "language",
+      "unicode": "ebdf",
+      "unicode_decimal": 60383
+    },
+    {
+      "icon_id": "695589",
+      "name": "日期",
+      "font_class": "date",
+      "unicode": "e637",
+      "unicode_decimal": 58935
+    },
+    {
+      "icon_id": "1906320",
+      "name": "STATISTICS",
+      "font_class": "STATISTICS",
+      "unicode": "e6fe",
+      "unicode_decimal": 59134
+    },
+    {
+      "icon_id": "5799947",
+      "name": "customization",
+      "font_class": "customization",
+      "unicode": "e887",
+      "unicode_decimal": 59527
+    },
+    {
+      "icon_id": "16453765",
+      "name": "Series",
+      "font_class": "Series",
+      "unicode": "e619",
+      "unicode_decimal": 58905
+    },
+    {
+      "icon_id": "18991652",
+      "name": "introduction",
+      "font_class": "introduction",
+      "unicode": "e85b",
+      "unicode_decimal": 59483
+    },
+    {
+      "icon_id": "25817340",
+      "name": "name",
+      "font_class": "name",
+      "unicode": "e661",
+      "unicode_decimal": 58977
+    },
+    {
+      "icon_id": "35419274",
+      "name": "file name",
+      "font_class": "a-filename",
+      "unicode": "e629",
+      "unicode_decimal": 58921
+    },
+    {
       "icon_id": "27850252",
       "name": "modify",
       "font_class": "modify",

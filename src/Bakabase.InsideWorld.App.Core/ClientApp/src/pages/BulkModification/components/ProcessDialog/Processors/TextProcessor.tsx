@@ -6,11 +6,16 @@ import type { IVariable } from '../../Variables';
 
 interface IProps {
   variables: IVariable[];
-  onChange?: (value: IValue) => any;
+  onChange?: (value: ITextProcessorValue) => any;
+  value?: ITextProcessorValue;
+  removable?: boolean;
+  longText?: boolean;
 }
 
 enum Operation {
-  AddToStart = 1,
+  Remove = 1,
+  SetWithFixedValue,
+  AddToStart,
   AddToEnd,
   AddToAnyPosition,
   RemoveFromStart,
@@ -22,7 +27,7 @@ enum Operation {
   ReplaceWithRegex,
 }
 
-interface IValue {
+export interface ITextProcessorValue {
   operation?: Operation;
   find?: string;
   replace?: string;
@@ -38,12 +43,18 @@ interface IValue {
 const Editor = ({
                   variables: propsVariables,
                   onChange,
+                  value: propsValue,
+                  removable = true,
+                  longText = false,
                 }: IProps) => {
   const { t } = useTranslation();
   const [variables, setVariables] = useState<IVariable[]>(propsVariables || []);
-  const [value, setValue] = useState<IValue>({});
+  const [value, setValue] = useState<ITextProcessorValue>(propsValue ?? {});
 
-  const operationDataSource = Object.keys(Operation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
+  const operationDataSource = Object.keys(Operation).filter(label => {
+    const textValue = parseInt(label, 10);
+    return Number.isNaN(textValue) && (removable || Operation[label] != Operation.Remove);
+  }).map(x => ({
     label: t(x),
     value: Operation[x],
   }));
@@ -78,11 +89,33 @@ const Editor = ({
 
   const renderValueComp = () => {
     const components: { label: string; comp: any }[] = [];
+    if (longText) {
+      console.log('longlonglong', value.operation);
+    }
     switch (value.operation) {
+      case Operation.SetWithFixedValue:
+        components.push({
+          label: t('Value'),
+          comp: longText ? (
+            <Input.TextArea
+              value={value.value}
+              onChange={value => changeValue({ value })}
+              autoHeight={{ minRows: 2, maxRows: 10 }}
+            />
+          ) : (
+            <Input
+              value={value.value}
+              onChange={value => changeValue({ value })}
+            />
+          ),
+        });
+        break;
+      case Operation.Remove:
+        break;
       case Operation.AddToStart:
       case Operation.AddToEnd:
         components.push({
-          label: 'Value',
+          label: t('Value'),
           comp: (
             <Input
               value={value.value}
@@ -93,7 +126,7 @@ const Editor = ({
         break;
       case Operation.AddToAnyPosition:
         components.push({
-          label: 'Value',
+          label: t('Value'),
           comp: (
             <Input.Group>
               <Trans
@@ -116,6 +149,7 @@ const Editor = ({
                   style={{ width: 100 }}
                   placeholder={t('Starts from 0')}
                   onChange={position => changeValue({ position })}
+                  value={value.position}
                 />
                 {/* 4 */}
                 (th)&nbsp;character from&nbsp;
@@ -124,6 +158,7 @@ const Editor = ({
                   dataSource={positionFromDataSource}
                   style={{ width: 150 }}
                   onChange={reverse => changeValue({ reverse })}
+                  value={value.reverse}
                 />
 
               </Trans>
@@ -134,11 +169,12 @@ const Editor = ({
       case Operation.RemoveFromStart:
       case Operation.RemoveFromEnd:
         components.push({
-          label: 'Count',
+          label: t('Count'),
           comp: (
             <NumberPicker
               style={{ width: 200 }}
               onChange={count => changeValue({ count })}
+              value={value.count}
             />
           ),
         });
@@ -146,7 +182,7 @@ const Editor = ({
       case Operation.RemoveFromAnyPosition:
         // delete 6 characters forward from the fifth character from the end
         components.push({
-          label: 'Value',
+          label: t('Value'),
           comp: (
             <Input.Group>
               <Trans
@@ -161,6 +197,7 @@ const Editor = ({
                 <NumberPicker
                   style={{ width: 200 }}
                   onChange={count => changeValue({ count })}
+                  value={value.count}
                 />
                 {/* 2 */}
                 &nbsp;characters&nbsp;
@@ -169,6 +206,7 @@ const Editor = ({
                   dataSource={directionDataSource}
                   style={{ width: 150 }}
                   onChange={removeBefore => changeValue({ removeBefore })}
+                  value={value.removeBefore}
                 />
                 {/* 4 */}
                 from the &nbsp;
@@ -177,6 +215,7 @@ const Editor = ({
                   style={{ width: 100 }}
                   placeholder={t('Starts from 0')}
                   onChange={position => changeValue({ position })}
+                  value={value.position}
                 />
                 {/* 6 */}
                 (th)&nbsp;charater from&nbsp;
@@ -185,6 +224,7 @@ const Editor = ({
                   dataSource={positionFromDataSource}
                   style={{ width: 150 }}
                   onChange={reverse => changeValue({ reverse })}
+                  value={value.reverse}
                 />
               </Trans>
             </Input.Group>
@@ -196,7 +236,7 @@ const Editor = ({
       case Operation.ReplaceFromAnyPosition:
       case Operation.ReplaceWithRegex:
         components.push({
-          label: 'Value',
+          label: t('Value'),
           comp: (
             <Input.Group>
               <Trans
@@ -207,12 +247,14 @@ const Editor = ({
                 {/* 1 */}
                 <Input
                   onChange={find => changeValue({ find })}
+                  value={value.find}
                 />
                 {/* 2 */}
                 &nbsp;with&nbsp;
                 {/* 3 */}
                 <Input
                   onChange={replace => changeValue({ replace })}
+                  value={value.replace}
                 />
               </Trans>
             </Input.Group>
@@ -220,9 +262,9 @@ const Editor = ({
         });
         break;
     }
-    return components.map(c => {
+    return components.map((c, i) => {
       return (
-        <div className="block">
+        <div className="block" key={i}>
           <div className="label">{c.label}</div>
           <div className="value">{c.comp}</div>
         </div>
@@ -253,11 +295,24 @@ const Editor = ({
 };
 
 
-const Demonstrator = ({ value }: { value: IValue }) => {
+const Demonstrator = ({ value }: { value: ITextProcessorValue }) => {
   const { t } = useTranslation();
 
 
-  switch (value.operation) {
+  switch (value.operation!) {
+    case Operation.SetWithFixedValue: {
+      return (
+        <>
+          <Trans
+            i18nKey={'BulkModification.Processor.Demonstrator.Operation.SetWithFixedValue'}
+          >
+            <div className="primary" />
+            with fixed value
+          </Trans>
+          <div className="secondary pre">{value.value}</div>
+        </>
+      );
+    }
     case Operation.AddToStart:
     case Operation.AddToEnd:
       return (
@@ -287,7 +342,7 @@ const Demonstrator = ({ value }: { value: IValue }) => {
           Add
           <div className="secondary">{value.value}</div>
           to the
-          <div className="primary">{value.position}</div>
+          <div className="secondary">{value.position}</div>
           position from the
           <div className="primary">end</div>
         </Trans>
@@ -325,11 +380,11 @@ const Demonstrator = ({ value }: { value: IValue }) => {
           >
             {/* delete 6 characters forward from the fifth character from the end */}
             Delete
-            <span className="primary">{texts.count}</span>
+            <span className="secondary">{texts.count}</span>
             characters
             <span className="primary">{texts.removeDirection}</span>
             the
-            <span className={'primary'}>{texts.position}</span>
+            <span className={'secondary'}>{texts.position}</span>
             character from the
             <span className="primary">{texts.direction}</span>
           </Trans>
@@ -353,11 +408,11 @@ const Demonstrator = ({ value }: { value: IValue }) => {
             {/* 0 */}
             <div className="primary">Replace</div>
             {/* 1 */}
-            <div className="primary">{texts.find}</div>
+            <div className="secondary">{texts.find}</div>
             {/* 2 */}
             with
             {/* 3 */}
-            <div className={'primary'}>{texts.replace}</div>
+            <div className={'secondary'}>{texts.replace}</div>
             {/* 4 */}
             from
             {/* 5 */}
@@ -381,11 +436,11 @@ const Demonstrator = ({ value }: { value: IValue }) => {
           {/* 0 */}
           <div className="primary">Replace</div>
           {/* 1 */}
-          <div className="primary">{texts.find}</div>
+          <div className="secondary">{texts.find}</div>
           {/* 2 */}
           with
           {/* 3 */}
-          <div className={'primary'}>{texts.replace}</div>
+          <div className={'secondary'}>{texts.replace}</div>
         </Trans>
       );
     }
@@ -409,12 +464,19 @@ const Demonstrator = ({ value }: { value: IValue }) => {
           {/* 3 */}
           <div className="primary">replace</div>
           {/* 4 */}
-          <div className="primary">{texts.find}</div>
+          <div className="secondary">{texts.find}</div>
           {/* 5 */}
           with
           {/* 6 */}
-          <div className={'primary'}>{texts.replace}</div>
+          <div className={'secondary'}>{texts.replace}</div>
         </Trans>
+      );
+    }
+    case Operation.Remove: {
+      return (
+        <div className={'primary'}>
+          {t('Remove')}
+        </div>
       );
     }
     default:

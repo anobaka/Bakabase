@@ -7,6 +7,7 @@ import type { IVariable } from '../../Variables';
 interface IProps {
   variables: IVariable[];
   onChange?: (value: IValue) => any;
+  value?: IValue;
 }
 
 enum Operation {
@@ -20,10 +21,10 @@ interface IValue {
   value?: string;
 }
 
-const Editor = ({ variables: propsVariables, onChange }: IProps) => {
+const Editor = ({ variables: propsVariables, onChange, value: propsValue }: IProps) => {
   const { t } = useTranslation();
   const [variables, setVariables] = useState<IVariable[]>(propsVariables || []);
-  const [value, setValue] = useState<IValue>({});
+  const [value, setValue] = useState<IValue>(propsValue ?? {});
 
   const operationDataSource = Object.keys(Operation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
     label: t(x),
@@ -109,7 +110,7 @@ const Editor = ({ variables: propsVariables, onChange }: IProps) => {
 const Demonstrator = ({ value }: {value: IValue}) => {
   const { t } = useTranslation();
 
-  console.log(value, 2222);
+  // console.log(value, 2222);
 
   switch (value.operation) {
     case Operation.Remove:

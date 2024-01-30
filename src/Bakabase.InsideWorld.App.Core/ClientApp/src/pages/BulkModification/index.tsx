@@ -4,7 +4,14 @@ import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import { useTranslation } from 'react-i18next';
 import type { BulkModificationFilterOperation } from '@/sdk/constants';
-import { BulkModificationFilterGroupOperation, BulkModificationStatus, BulkModificationProperty } from '@/sdk/constants';
+import {
+  BulkModificationDiffType,
+  BulkModificationFilterGroupOperation,
+  BulkModificationProperty,
+  BulkModificationStatus,
+  ResourceLanguage,
+  TagAdditionalItem,
+} from '@/sdk/constants';
 import { useEffect, useState } from 'react';
 import FilterGroup from '@/pages/BulkModification/components/FilterGroup';
 import BApi from '@/sdk/BApi';
@@ -15,10 +22,10 @@ import ProcessDemonstrator from '@/pages/BulkModification/components/ProcessDemo
 import { useTour } from '@reactour/tour';
 import ClickableIcon from '@/components/ClickableIcon';
 import testBmsJson from './testBms.json';
-import { useUpdateEffect } from 'react-use';
-import type {
-  IMultiValueProcessorValue,
-} from './components/ProcessDialog/Processors/MultiValueProcessor';
+import type { IResourceDiff } from '@/pages/BulkModification/components/ResourceDiff';
+import ResourceDiff from './components/ResourceDiff';
+import { Tag as TagDto } from '@/core/models/Tag';
+import { ResourceDiffUtils } from '@/pages/BulkModification/components/ResourceDiff/models';
 
 
 const { Panel } = Collapse;
@@ -54,15 +61,120 @@ interface IBulkModification {
   processes?: IBulkModificationProcess[];
 }
 
+interface IResourceModificationResult {
+  id: number;
+  path: string;
+  diffs: IResourceDiff[];
+}
+
+const resourceModificationResults: IResourceModificationResult[] = [
+  {
+    id: 12345,
+    path: 'D:\\FE Test\\[123132131231】【中文】【作者123]葫芦娃全集',
+    diffs: [
+      ResourceDiffUtils.buildPublisher([
+          {
+            name: 'pub1',
+            children: [
+              {
+                name: 'sub pub 1-1',
+              },
+              {
+                name: 'sub pub 1-2',
+                children: [
+                  {
+                    name: 'sub sub pub 1-2-1',
+                  },
+                  {
+                    name: 'sub sub pub 1-2-2',
+                  },
+                ],
+              },
+              {
+                name: 'sub pub 1-3',
+              },
+            ],
+          },
+          {
+            name: 'pub2',
+          },
+          {
+            name: 'pub3',
+          },
+        ], [
+          {
+            name: 'pub2',
+            children: [
+              {
+                name: 'sub pub 2-1',
+              },
+              {
+                name: 'sub pub 2-2',
+              },
+              {
+                name: 'sub pub 2-3',
+              },
+            ],
+          },
+          {
+            name: 'pub3',
+          },
+        ],
+      )!,
+      ResourceDiffUtils.buildPublisher([
+        {
+          name: 'pub2',
+        },
+        {
+          name: 'pub3',
+        }], null,
+      )!,
+      ResourceDiffUtils.buildPublisher(null, [
+        {
+          name: 'pub2',
+        },
+        {
+          name: 'pub3',
+        }],
+      )!,
+    ],
+  },
+  {
+    id: 12345,
+    path: 'D:\\FE Test\\1234',
+    diffs: [
+      ResourceDiffUtils.buildMediaLibrary(36, 41)!,
+    ],
+  },
+  {
+    id: 12300,
+    path: 'D:\\FE Test\\123400',
+    diffs: [
+      ResourceDiffUtils.buildName('current name', 'new name')!,
+      ResourceDiffUtils.buildName(null, 'new name')!,
+      ResourceDiffUtils.buildName('current name', null)!,
+    ],
+  },
+  {
+    id: 12301,
+    path: 'D:\\FE Test\\12340011',
+    diffs: [
+      ResourceDiffUtils.buildCustomProperty('custom-property-1', 'current name', 'new name')!,
+      ResourceDiffUtils.buildLanguage(ResourceLanguage.Japanese, ResourceLanguage.Chinese)!,
+      ResourceDiffUtils.buildVolume(null, { index: 5, name: '第五话', title: '小岛秀夫刺杀安倍晋三' })!,
+    ],
+  },
+];
+
 export default () => {
   const { t } = useTranslation();
   const [processing, setProcessing] = useState(false);
 
   const [bulkModifications, setBulkModifications] = useState<IBulkModification[]>(testBmsJson);
 
-  const [demonstratorDataSources, setDemonstratorDataSources] = useState<{[property in BulkModificationProperty]?: Record<any, any>}>({});
+  const [displayDataSources, setDisplayDataSources] = useState<{ [property in BulkModificationProperty]?: Record<any, any> }>({});
 
-  console.log('[BulkModifications]', bulkModifications, demonstratorDataSources);
+  console.log('[BulkModifications]', bulkModifications, displayDataSources);
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>(['5']);
   const {
@@ -75,36 +187,46 @@ export default () => {
   } = useTour();
 
   useEffect(() => {
+    console.log(displayDataSources);
+  }, [displayDataSources]);
+
+  useEffect(() => {
     BApi.publisher.getAllPublishers().then(r => {
       const publishers = r.data || [];
-      setDemonstratorDataSources(s => ({
+      setDisplayDataSources(s => ({
         ...s,
         [BulkModificationProperty.Publisher]: publishers.reduce<Record<any, any>>((s, t) => {
           s[t.id!] = t.name!;
           return s;
         }, {}),
       }));
-      console.log('set demonstrator data sources');
+      console.log('set display data sources for publishers');
+    });
+    // @ts-ignore
+    BApi.tag.getAllTags({ additionalItems: TagAdditionalItem.GroupName | TagAdditionalItem.PreferredAlias }).then(r => {
+      const tags = r.data || [];
+      setDisplayDataSources(s => ({
+        ...s,
+        [BulkModificationProperty.Tag]: tags.reduce<Record<any, any>>((s, t) => {
+          // @ts-ignore
+          s[t.id!] = new TagDto(t).displayName;
+          return s;
+        }, {}),
+      }));
+      console.log('set display data sources for tags');
+    });
+    BApi.mediaLibrary.getAllMediaLibraries().then(r => {
+      setDisplayDataSources(s => ({
+          ...s,
+          [BulkModificationProperty.MediaLibrary]: r.data?.reduce<Record<any, any>>((s, t) => {
+            s[t.id!] = `[${t.categoryName}] ${t.name!}`;
+            return s;
+          }, {}),
+        }
+      ));
+      console.log('set display data sources for media libraries');
     });
   }, []);
-
-  // useUpdateEffect(() => {
-  // //   publishers
-  //   const publisherIds = bulkModifications.reduce<number[]>((s, t) => {
-  //     if (t.processes) {
-  //       for (const p of t.processes) {
-  //         if (p.property == BulkModificationProperty.Publisher) {
-  //           const v: IMultiValueProcessorValue = p.value;
-  //           if (v?.value) {
-  //             v.value.forEach((id: number) => s.push(id));
-  //           }
-  //         }
-  //       }
-  //     }
-  //     return s;
-  //   }, []);
-  //   BApi.publisher.getAllPublishers();
-  // }, [bulkModifications]);
 
   return (
     <div className={'bulk-modification-page'}>
@@ -115,27 +237,27 @@ export default () => {
             type={'question-circle'}
             colorType={'normal'}
             onClick={() => {
-            setSteps!([
-              {
-                selector: '.filters-panel',
-                content: t('You can set any combination of criteria to filter the resources that you need to modify in bulk'),
-              },
-              {
-                selector: '.variables-panel',
-                content: t('You can set some variables and use them in processes'),
-              },
-              {
-                selector: '.processes-panel',
-                content: t('To modify the properties of filtered resources, you should set at least one process'),
-              },
-              {
-                selector: '.result-panel',
-                content: t('You can preview the result then apply all changes'),
-              },
-            ]);
-            setCurrentStep(0);
-            setIsOpen(o => true);
-          }}
+              setSteps!([
+                {
+                  selector: '.filters-panel',
+                  content: t('You can set any combination of criteria to filter the resources that you need to modify in bulk'),
+                },
+                {
+                  selector: '.variables-panel',
+                  content: t('You can set some variables and use them in processes'),
+                },
+                {
+                  selector: '.processes-panel',
+                  content: t('To modify the properties of filtered resources, you should set at least one process'),
+                },
+                {
+                  selector: '.result-panel',
+                  content: t('You can preview the result then apply all changes'),
+                },
+              ]);
+              setCurrentStep(0);
+              setIsOpen(o => true);
+            }}
           />
         </div>
         <Button
@@ -219,7 +341,7 @@ export default () => {
                     {bm.processes?.map((p, j) => {
                       return (
                         <ProcessDemonstrator
-                          dataSources={demonstratorDataSources[p.property!]}
+                          dataSources={displayDataSources[p.property!]}
                           process={p}
                           index={j}
                           variables={bm.variables}
@@ -266,111 +388,26 @@ export default () => {
                     <Button type={'primary'} size={'small'}>执行</Button>
                   </div>
                   <div className="preview">
-                    <div className="item">
-                      <SimpleLabel status={'default'}>12323</SimpleLabel>
-                      <Button text type={'primary'} className="path">
-                        D:/123/456/788/adasdassad
-                      </Button>
-                      <div className="changes">
-                        <div className="change">
-                          <div className="property">
-                            <CustomIcon type={'segment'} size={'xs'} />
-                            作者
+                    {resourceModificationResults.map(r => {
+                      return (
+                        <div className="item">
+                          <SimpleLabel status={'default'}>{r.id}</SimpleLabel>
+                          <div className="path">
+                            {r.path}
                           </div>
-                          <SimpleLabel status={'default'} className="current">123</SimpleLabel>
-                          <Icon type="arrow-double-right" size={'small'} />
-                          <SimpleLabel status={'default'} className="new">456</SimpleLabel>
-                        </div>
-                        <div className="change">
-                          <div className="property">
-                            <CustomIcon type={'segment'} size={'xs'} />
-                            作者
+                          <div className="diffs">
+                            {r.diffs.map(d => {
+                              return (
+                                <ResourceDiff
+                                  diff={d}
+                                  displayDataSources={displayDataSources}
+                                />
+                              );
+                            })}
                           </div>
-                          <SimpleLabel status={'default'} className="current">123</SimpleLabel>
-                          <Icon type="arrow-double-right" size={'small'} />
-                          <SimpleLabel status={'default'} className="new">456</SimpleLabel>
                         </div>
-                        <div className="change">
-                          <div className="property">
-                            <CustomIcon type={'segment'} size={'xs'} />
-                            作者
-                          </div>
-                          <SimpleLabel status={'default'} className="current">123</SimpleLabel>
-                          <Icon type="arrow-double-right" size={'small'} />
-                          <SimpleLabel status={'default'} className="new">456</SimpleLabel>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="item">
-                      <SimpleLabel status={'default'}>12323</SimpleLabel>
-                      <Button text type={'primary'} className="path">
-                        D:/123/456/788/adasdassad
-                      </Button>
-                      <div className="changes">
-                        <div className="change">
-                          <div className="property">
-                            <CustomIcon type={'segment'} size={'xs'} />
-                            作者
-                          </div>
-                          <SimpleLabel status={'default'} className="current">123</SimpleLabel>
-                          <Icon type="arrow-double-right" size={'small'} />
-                          <SimpleLabel status={'default'} className="new">456</SimpleLabel>
-                        </div>
-                        <div className="change">
-                          <div className="property">
-                            <CustomIcon type={'segment'} size={'xs'} />
-                            作者
-                          </div>
-                          <SimpleLabel status={'default'} className="current">123</SimpleLabel>
-                          <Icon type="arrow-double-right" size={'small'} />
-                          <SimpleLabel status={'default'} className="new">456</SimpleLabel>
-                        </div>
-                        <div className="change">
-                          <div className="property">
-                            <CustomIcon type={'segment'} size={'xs'} />
-                            作者
-                          </div>
-                          <SimpleLabel status={'default'} className="current">123</SimpleLabel>
-                          <Icon type="arrow-double-right" size={'small'} />
-                          <SimpleLabel status={'default'} className="new">456</SimpleLabel>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="item">
-                      <SimpleLabel status={'default'}>12323</SimpleLabel>
-                      <Button text type={'primary'} className="path">
-                        D:/123/456/788/adasdassad
-                      </Button>
-                      <div className="changes">
-                        <div className="change">
-                          <div className="property">
-                            <CustomIcon type={'segment'} size={'xs'} />
-                            作者
-                          </div>
-                          <SimpleLabel status={'default'} className="current">123</SimpleLabel>
-                          <Icon type="arrow-double-right" size={'small'} />
-                          <SimpleLabel status={'default'} className="new">456</SimpleLabel>
-                        </div>
-                        <div className="change">
-                          <div className="property">
-                            <CustomIcon type={'segment'} size={'xs'} />
-                            作者
-                          </div>
-                          <SimpleLabel status={'default'} className="current">123</SimpleLabel>
-                          <Icon type="arrow-double-right" size={'small'} />
-                          <SimpleLabel status={'default'} className="new">456</SimpleLabel>
-                        </div>
-                        <div className="change">
-                          <div className="property">
-                            <CustomIcon type={'segment'} size={'xs'} />
-                            作者
-                          </div>
-                          <SimpleLabel status={'default'} className="current">123</SimpleLabel>
-                          <Icon type="arrow-double-right" size={'small'} />
-                          <SimpleLabel status={'default'} className="new">456</SimpleLabel>
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

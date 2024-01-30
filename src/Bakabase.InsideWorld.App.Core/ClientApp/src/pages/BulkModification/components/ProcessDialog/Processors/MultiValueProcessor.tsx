@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { Button, Checkbox, DatePicker2, Input, NumberPicker, Radio, Select } from '@alifd/next';
+import { Input, Radio, Select } from '@alifd/next';
 import { useUpdateEffect } from 'react-use';
 import type { IVariable } from '../../Variables';
+import type { ITextProcessorValue } from '@/pages/BulkModification/components/ProcessDialog/Processors/TextProcessor';
 import TextProcessor from '@/pages/BulkModification/components/ProcessDialog/Processors/TextProcessor';
-import BApi from '@/sdk/BApi';
 
 interface IProps {
   variables: IVariable[];
-  getCandidates: () => Promise<{label: string; value: number}[]>;
+  getCandidates: () => Promise<{ label: string; value: number }[]>;
   onChange?: (value: IMultiValueProcessorValue) => any;
+  value?: IMultiValueProcessorValue;
 }
 
 enum Operation {
@@ -30,25 +31,32 @@ export interface IMultiValueProcessorValue {
   value?: any[];
   filterBy?: FilterBy;
   find?: string;
-  replace?: string;
+  textProcessorValue?: ITextProcessorValue;
 }
 
-const Editor = ({ variables: propsVariables, getCandidates, onChange }: IProps) => {
+const Editor = ({
+                  variables: propsVariables,
+                  getCandidates,
+                  onChange,
+                  value: propsValue,
+                }: IProps) => {
   const { t } = useTranslation();
   const [variables, setVariables] = useState<IVariable[]>(propsVariables || []);
-  const [value, setValue] = useState<IMultiValueProcessorValue>({});
+  const [value, setValue] = useState<IMultiValueProcessorValue>(propsValue || {});
 
-  const [candidates, setCandidates] = useState<{label: string; value: number}[]>([]);
+  const [candidates, setCandidates] = useState<{ label: string; value: number }[]>([]);
 
   const operationDataSource = Object.keys(Operation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
     label: t(x),
     value: Operation[x],
   }));
 
-  const removeByDataSource = Object.keys(FilterBy).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
+  const filterByDataSource = Object.keys(FilterBy).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
     label: t(x),
     value: FilterBy[x],
   }));
+
+  console.log(propsValue);
 
   useEffect(() => {
     getCandidates().then(r => setCandidates(r));
@@ -81,6 +89,7 @@ const Editor = ({ variables: propsVariables, getCandidates, onChange }: IProps) 
               autoWidth
               style={{ width: '90%' }}
               onChange={value => changeValue({ value })}
+              value={value.value}
             />
           ),
         });
@@ -91,8 +100,15 @@ const Editor = ({ variables: propsVariables, getCandidates, onChange }: IProps) 
           label: t('Filter'),
           comp: (
             <Radio.Group
-              dataSource={removeByDataSource}
-              onChange={filterBy => changeValue({ filterBy })}
+              value={value.filterBy}
+              dataSource={filterByDataSource}
+              onChange={filterBy => {
+                const changes: any = { filterBy };
+                if (filterBy == FilterBy.All) {
+                  changes.find = undefined;
+                }
+                changeValue(changes);
+              }}
             />
           ),
         });
@@ -101,6 +117,7 @@ const Editor = ({ variables: propsVariables, getCandidates, onChange }: IProps) 
             label: t('Value'),
             comp: (
               <Input
+                value={value.find}
                 onChange={find => changeValue({ find })}
               />
             ),
@@ -108,9 +125,9 @@ const Editor = ({ variables: propsVariables, getCandidates, onChange }: IProps) 
         }
         break;
     }
-    const components = componentsData.map(c => {
+    const components = componentsData.map((c, i) => {
       return (
-        <div className="block">
+        <div className="block" key={i}>
           <div className="label">{c.label}</div>
           <div className="value">{c.comp}</div>
         </div>
@@ -119,7 +136,12 @@ const Editor = ({ variables: propsVariables, getCandidates, onChange }: IProps) 
 
     if (value.operation == Operation.Modify) {
       components.push(
-        <TextProcessor.Editor variables={variables} />,
+        <TextProcessor.Editor
+          value={value.textProcessorValue}
+          variables={variables}
+          key={componentsData.length}
+          onChange={textProcessorValue => changeValue({ textProcessorValue })}
+        />,
       );
     }
     return components;
@@ -147,19 +169,37 @@ const Editor = ({ variables: propsVariables, getCandidates, onChange }: IProps) 
   );
 };
 
-const Demonstrator = ({ value, getDataSource }: {value: IMultiValueProcessorValue; getDataSource: (keys: any[]) => Promise<string[]>}) => {
+const Demonstrator = ({
+                        value,
+                        getDataSource,
+                      }: { value: IMultiValueProcessorValue; getDataSource: (keys: any[]) => Promise<string[]> }) => {
   const { t } = useTranslation();
   const [valueTexts, setValueTexts] = useState<string[]>([]);
 
   useEffect(() => {
-    getDataSource(value.value!).then(r => setValueTexts(r));
-  }, [getDataSource]);
+    getDataSource(value.value!).then(r => {
+      console.log(r, value.value);
+      setValueTexts(r);
+    });
+  }, [getDataSource, value]);
 
   switch (value.operation) {
     case Operation.Remove:
       return (
         <>
           <div className="primary">{t('Remove')}</div>
+          <Trans
+            i18nKey={'BulkModification.Processor.Demonstrator.Operation.Filter.FilteredData'}
+            values={{
+              find: value.find,
+            }}
+          >
+            {/* Data filtered by xxx */}
+            {t(FilterBy[value.filterBy!])}
+            {value.find != undefined && (
+              <div className="secondary">{value.find}</div>
+            )}
+          </Trans>
         </>
       );
     case Operation.Add:
@@ -185,22 +225,35 @@ const Demonstrator = ({ value, getDataSource }: {value: IMultiValueProcessorValu
             <div className="primary" />
             with fixed value
           </Trans>
-          <div className="secondary">{valueText}</div>
+          {valueTexts.map((t, i) => {
+            return (
+              <React.Fragment key={i}>
+                <div className="secondary">{t}</div>
+                {i < valueTexts.length - 1 && ','}
+              </React.Fragment>
+            );
+          })}
         </>
       );
     case Operation.Modify:
       return (
         <>
-          {/* <Trans */}
-          {/*   i18nKey={'BulkModification.Processor.Demonstrator.Operation.Replace'} */}
-          {/*   values={{ */}
-          {/*     find: value.find, */}
-          {/*     replace: value.replace, */}
-          {/*   }} */}
-          {/* > */}
-          {/*   <div className="primary" /> */}
-          {/*   <div className={'secondary'} /> */}
-          {/* </Trans> */}
+          <Trans
+            i18nKey={'BulkModification.Processor.Demonstrator.Operation.FilterThenModifyWithTextProcessor'}
+            values={{
+              filterBy: t(FilterBy[value.filterBy!]),
+              find: value.find,
+            }}
+          >
+            <div className="primary">
+              {t(FilterBy[value.filterBy!])}
+            </div>
+            {(value.find == undefined || value.find.length == 0) ? (<></>) : (
+              <div className="secondary">{value.find}</div>
+            )}
+
+            <TextProcessor.Demonstrator value={value.textProcessorValue!} />
+          </Trans>
         </>
       );
     default:

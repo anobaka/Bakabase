@@ -5,6 +5,8 @@ import DateTimeProcessor from '../ProcessDialog/Processors/DateTimeProcessor';
 import EnumProcessor from '../ProcessDialog/Processors/EnumProcessor';
 import TextProcessor from '../ProcessDialog/Processors/TextProcessor';
 import MultiValueProcessor from '../ProcessDialog/Processors/MultiValueProcessor';
+import VolumeProcessor from '../ProcessDialog/Processors/VolumeProcessor';
+import NumberProcessor from '../ProcessDialog/Processors/NumberProcessor';
 import type { IBulkModificationProcess } from '@/pages/BulkModification';
 import { ProcessorType, PropertyProcessorTypeMap } from '@/pages/BulkModification/components/ProcessDialog/models';
 import SimpleLabel from '@/components/SimpleLabel';
@@ -12,7 +14,6 @@ import CustomIcon from '@/components/CustomIcon';
 import { BulkModificationProperty, resourceLanguages } from '@/sdk/constants';
 import ProcessDialog from '@/pages/BulkModification/components/ProcessDialog';
 import type { IVariable } from '@/pages/BulkModification/components/Variables';
-import variables from '@/pages/BulkModification/components/Variables';
 
 interface IProps {
   index: number;
@@ -21,6 +22,21 @@ interface IProps {
   onChange: (data: IBulkModificationProcess) => any;
   dataSources?: Record<any, any>;
 }
+
+const PropertyIconMap: {[key in BulkModificationProperty]?: string} = {
+  [BulkModificationProperty.Name]: 'name',
+  [BulkModificationProperty.Introduction]: 'introduction',
+  [BulkModificationProperty.FileName]: 'a-filename',
+  [BulkModificationProperty.CustomProperty]: 'customization',
+  [BulkModificationProperty.Series]: '',
+  [BulkModificationProperty.ReleaseDt]: 'date',
+  [BulkModificationProperty.Rate]: 'star',
+  [BulkModificationProperty.Language]: 'language',
+  [BulkModificationProperty.Original]: '',
+  [BulkModificationProperty.Volume]: '',
+  [BulkModificationProperty.Tag]: 'tags',
+  [BulkModificationProperty.Publisher]: 'users',
+};
 
 export default ({
                   process,
@@ -55,20 +71,39 @@ export default ({
           <DateTimeProcessor.Demonstrator value={process.value} />
         );
       case ProcessorType.Number:
-        break;
+        return (
+          <NumberProcessor.Demonstrator value={process.value} />
+        );
       case ProcessorType.Language:
         return (
           <EnumProcessor.Demonstrator
             value={process.value}
-            dataSource={resourceLanguages.map(l => ({ ...l, label: t(l.label) }))}
+            dataSource={resourceLanguages.map(l => ({
+              ...l,
+              label: t(l.label),
+            }))}
           />
         );
       case ProcessorType.Originals:
-        break;
+        return (
+          <MultiValueProcessor.Demonstrator
+            getDataSource={getDataSource}
+            value={process.value}
+          />
+        );
       case ProcessorType.Volume:
-        break;
+        return (
+          <VolumeProcessor.Demonstrator
+            value={process.value}
+          />
+        );
       case ProcessorType.Tag:
-        break;
+        return (
+          <MultiValueProcessor.Demonstrator
+            getDataSource={getDataSource}
+            value={process.value}
+          />
+        );
       case ProcessorType.Publisher:
         return (
           <MultiValueProcessor.Demonstrator
@@ -90,21 +125,27 @@ export default ({
       onClick={() => {
         ProcessDialog.show({
           variables: variables,
+          process,
           onSubmit: pv => {
             if (onChange) {
               onChange(pv);
             }
           },
         });
-    }}
+      }}
     >
       <div className="no">
         <SimpleLabel status={'default'}>{index + 1}</SimpleLabel>
       </div>
       <div className="property">
-        <CustomIcon type={'segment'} size={'xs'} />
+        <CustomIcon type={PropertyIconMap[process.property!] || 'segment'} size={'xs'} />
         {t(BulkModificationProperty[process.property!])}
       </div>
+      {process.propertyKey != undefined && (
+        <div className={'property-key'}>
+          {process.propertyKey}
+        </div>
+      )}
       {renderProcessorValue()}
     </div>
   );

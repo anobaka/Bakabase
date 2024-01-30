@@ -205,15 +205,6 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Failed to start [{0}]: {1}.
-        /// </summary>
-        internal static string Downloader_FailedToStart {
-            get {
-                return ResourceManager.GetString("Downloader_FailedToStart", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Key is missing.
         /// </summary>
         internal static string Downloader_KeyIsMissing {

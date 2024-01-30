@@ -6489,6 +6489,51 @@ export const SaveCoverURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: RemoveCoverCache
+ * url: RemoveCoverCacheURL
+ * method: RemoveCoverCache_TYPE
+ * raw_url: RemoveCoverCache_RAW_URL
+ * @param id - 
+ */
+export const RemoveCoverCache = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/{id}/cover/cache'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const RemoveCoverCache_RAW_URL = function() {
+  return '/resource/{id}/cover/cache'
+}
+export const RemoveCoverCache_TYPE = function() {
+  return 'delete'
+}
+export const RemoveCoverCacheURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/{id}/cover/cache'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetResourcePlayableFiles
  * url: GetResourcePlayableFilesURL
  * method: GetResourcePlayableFiles_TYPE

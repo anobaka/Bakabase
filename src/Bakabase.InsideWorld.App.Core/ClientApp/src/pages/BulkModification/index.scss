@@ -149,6 +149,32 @@
                 .secondary {
                   color: var(--theme-text-secondary);
                 }
+
+                pre {
+                  margin: 0;
+                }
+
+                .no {
+                  min-width: 24px;
+                }
+
+                .property, .property-key {
+                  //color: var(--theme-text-primary);
+                }
+
+                .property {
+                  .iconfont {
+                    margin-right: 3px;
+                  }
+                }
+
+                .multiple {
+                  .line {
+                    gap: 5px;
+                    display: flex;
+                    align-items: center;
+                  }
+                }
               }
             }
 
@@ -187,18 +213,19 @@
                 border-bottom: 1px solid var(--theme-border-color);
 
                 .path {
-
+                  white-space: break-spaces;
+                  max-width: 30%;
                 }
 
-                .changes {
+                .diffs {
                   flex: 1;
 
-                  .change {
+                  .diff {
                     padding: 0 10px;
 
-                    &:hover {
-                      background-color: var(--theme-block-background-accent);
-                    }
+                    //&:hover {
+                    //  background-color: var(--theme-block-background-accent);
+                    //}
 
                     &:last-child {
                       border: none;
@@ -219,6 +246,29 @@
 
                     .new {
 
+                    }
+
+                    .type {
+                      min-width: 64px;
+                    }
+
+                    .current, .new {
+                      white-space: break-spaces;
+                      word-break: break-all;
+
+                      .publisher {
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                      }
+
+                      .publishers {
+                        overflow-x: auto;
+                        border-radius: 4px;
+                        background: rgba(255, 255, 255, 0.1);
+                        //border: 1px solid var(--theme-border-color);
+                        padding: 5px;
+                      }
                     }
                   }
                 }

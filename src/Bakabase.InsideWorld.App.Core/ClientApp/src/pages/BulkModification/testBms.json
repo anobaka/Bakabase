@@ -6,17 +6,39 @@
     "name": "批量修改作者",
     "variables": [
       {
-        "source": 1,
+        "source": 5,
         "name": "父级最后2个字符",
         "key": "d1",
         "find": ".*(..)",
-        "value": "$1"
+        "value": "$1",
+        "index": 0
       },
       {
         "source": 4,
         "name": "父级的父级文件夹名",
         "key": "d2",
         "find": ".*/([^/]+)/[^/]+/[^/]+",
+        "value": "$1"
+      },
+      {
+        "source": 2,
+        "name": "发售时间",
+        "key": "date",
+        "find": "(\\d{4}-\\d{2}-\\d{2})",
+        "value": "$1"
+      },
+      {
+        "source": 2,
+        "name": "语言",
+        "key": "language",
+        "find": "(CN|EN|JP)",
+        "value": "$1"
+      },
+      {
+        "source": 2,
+        "name": "评分",
+        "key": "rate",
+        "find": "(\\d+\\.\\d+)",
         "value": "$1"
       }
     ],
@@ -70,8 +92,12 @@
       {
         "property": 10,
         "value": {
-          "operation": 2,
-          "filterBy": 1
+          "operation": 3,
+          "value": [
+            2,
+            3,
+            4
+          ]
         }
       },
       {
@@ -86,8 +112,358 @@
         "property": 10,
         "value": {
           "operation": 2,
+          "filterBy": 1
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 2,
           "filterBy": 3,
           "find": "\\d+"
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 1,
+          "textProcessorValue": {
+            "operation": 1,
+            "value": "xxxx"
+          }
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 2,
+          "find": "xxxx",
+          "textProcessorValue": {
+            "operation": 2,
+            "value": "bbbb"
+          }
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 2,
+          "find": "xxx",
+          "textProcessorValue": {
+            "operation": 3,
+            "value": "xxxx",
+            "position": 5,
+            "reverse": false
+          }
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 2,
+          "find": "yyy",
+          "textProcessorValue": {
+            "operation": 6,
+            "count": 5,
+            "removeBefore": false,
+            "position": 8,
+            "reverse": false
+          }
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 3,
+          "find": "\\d+",
+          "textProcessorValue": {
+            "operation": 4,
+            "count": 5,
+            "value": "xxx"
+          }
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 3,
+          "find": "mignon",
+          "textProcessorValue": {
+            "operation": 5,
+            "count": 10,
+            "value": "xxxx",
+            "position": 5,
+            "reverse": false
+          }
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 3,
+          "find": "ddd",
+          "textProcessorValue": {
+            "operation": 7,
+            "find": "xxx",
+            "replace": "yyy"
+          }
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 1,
+          "textProcessorValue": {
+            "operation": 8,
+            "find": "yyy",
+            "replace": "zzz",
+            "count": 5,
+            "removeBefore": false,
+            "position": 7,
+            "reverse": true
+          }
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 1,
+          "textProcessorValue": {
+            "operation": 9,
+            "find": "aaa",
+            "replace": "bbb"
+          }
+        }
+      },
+      {
+        "property": 10,
+        "value": {
+          "operation": 4,
+          "filterBy": 3,
+          "find": "sss",
+          "textProcessorValue": {
+            "operation": 10,
+            "find": "\\d+",
+            "replace": "10"
+          }
+        }
+      },
+      {
+        "property": 6,
+        "value": {
+          "operation": 1,
+          "value": "2024-01-14 00:00:00"
+        }
+      },
+      {
+        "property": 6,
+        "value": {
+          "operation": 2,
+          "value": "{date}"
+        }
+      },
+      {
+        "property": 6,
+        "value": {
+          "operation": 3
+        }
+      },
+      {
+        "property": 11,
+        "value": {
+          "operation": 1,
+          "value": 3
+        }
+      },
+      {
+        "property": 11,
+        "value": {
+          "operation": 2,
+          "value": "{language}"
+        }
+      },
+      {
+        "property": 11,
+        "value": {
+          "operation": 3
+        }
+      },
+      {
+        "property": 12,
+        "value": {
+          "operation": 2
+        }
+      },
+      {
+        "property": 12,
+        "value": {
+          "operation": 1,
+          "propertyModifications": {
+            "1": {
+              "operation": 2,
+              "value": "xxxx"
+            },
+            "2": {
+              "operation": 6,
+              "reverse": true,
+              "position": 5,
+              "removeBefore": true,
+              "count": 7
+            }
+          }
+        }
+      },
+      {
+        "property": 13,
+        "value": {
+          "operation": 1,
+          "value": [
+            4,
+            6,
+            7,
+            28,
+            27
+          ]
+        }
+      },
+      {
+        "property": 13,
+        "value": {
+          "operation": 2,
+          "filterBy": 2,
+          "find": "xcxx"
+        }
+      },
+      {
+        "property": 13,
+        "value": {
+          "operation": 2,
+          "filterBy": 1
+        }
+      },
+      {
+        "property": 13,
+        "value": {
+          "operation": 2,
+          "filterBy": 3,
+          "find": "\\d+"
+        }
+      },
+      {
+        "property": 13,
+        "value": {
+          "operation": 3,
+          "value": [
+            29,
+            30
+          ]
+        }
+      },
+      {
+        "property": 13,
+        "value": {
+          "operation": 4,
+          "filterBy": 3,
+          "find": "\\d+",
+          "textProcessorValue": {
+            "operation": 6,
+            "reverse": true,
+            "position": 5,
+            "removeBefore": true,
+            "count": 12
+          }
+        }
+      },
+      {
+        "property": 14,
+        "value": {
+          "operation": 1
+        }
+      },
+      {
+        "property": 14,
+        "value": {
+          "operation": 2,
+          "value": "xxxx"
+        }
+      },
+      {
+        "property": 15,
+        "value": {
+          "operation": 3,
+          "value": [
+            31,
+            34,
+            35
+          ]
+        }
+      },
+      {
+        "property": 15,
+        "value": {
+          "operation": 1,
+          "value": [
+            31,
+            34,
+            37
+          ]
+        }
+      },
+      {
+        "property": 16,
+        "value": {
+          "operation": 1
+        }
+      },
+      {
+        "property": 16,
+        "value": {
+          "operation": 2,
+          "value": "asdsdsdsdasdsdasasdasasdasddd\nsadassada\ndsada"
+        }
+      },
+      {
+        "property": 17,
+        "value": {
+          "operation": 1,
+          "value": "5"
+        }
+      },
+      {
+        "property": 17,
+        "value": {
+          "operation": 2,
+          "value": "{rate}"
+        }
+      },
+      {
+        "property": 17,
+        "value": {
+          "operation": 3
+        }
+      },
+      {
+        "property": 18,
+        "propertyKey": "p:游戏类型",
+        "value": {
+          "operation": 1
+        }
+      },
+      {
+        "property": 18,
+        "propertyKey": "p:放送开始",
+        "value": {
+          "operation": 7,
+          "count": 5
         }
       }
     ],

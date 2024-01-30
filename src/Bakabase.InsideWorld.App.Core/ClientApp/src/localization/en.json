@@ -27,5 +27,20 @@
   "BulkModificationFilterOperation.NotMatches": "Not Matches",
   "BulkModification.Processor.Demonstrator.Operation.SetWithFixedValue": "<0> Replace </0> with fixed value",
   "BulkModification.Processor.Demonstrator.Operation.SetWithDynamicValue": "<0> Replace </0> with dynamic value",
-  "BulkModification.Processor.Demonstrator.Operation.Replace": "Find <0>{{find}}</0> then replace with <1>{{replace}}</1>"
+  "BulkModification.Processor.Demonstrator.Operation.Replace": "Find<1>{{find}}</1>then replace with<3>{{replace}}</3>",
+  "BulkModification.Processor.Demonstrator.Operation.RemoveFromStartOrEnd": "Delete <1>{{count}}</1> character(s) from <3>{{direction}}</3>",
+  "BulkModification.Processor.Demonstrator.Operation.AddToStartOrEnd": "Add <1>{{value}}</1> to <3>{{direction}}</3>",
+  "BulkModification.Processor.Editor.Operation.AddToAnyPosition": "Add <1/> to the  <3/> character from <5/> ",
+  "BulkModification.Processor.Demonstrator.Operation.AddToAnyPosition": "Add <1>{{value}}</1> to the <3>{{position}}</3> position from <5>{{direction}}</5>",
+  "BulkModification.Processor.Editor.Operation.RemoveFromAnyPosition": "Delete <1/> character(s) <3/> from the  <5/>  position from  <7/> ",
+  "BulkModification.Processor.Demonstrator.Operation.RemoveFromAnyPosition": "Delete<1>{{count}}</1>character(s) <3>{{removeDirection}}</3> from the <5>{{position}}</5> position from <7>{{direction}}</7>",
+  "BulkModification.Processor.Editor.Operation.Replace": "将 <1/> 替换为 <3/>",
+  "BulkModification.Processor.Demonstrator.Operation.ReplaceFromStartOrEnd": "Replace<1>{{find}}</1>with<3>{{replace}}</3>from<5>{{direction}}</5>",
+  "BulkModification.Processor.Demonstrator.Operation.ReplaceWithRegex": "Use<1>Regex</1>to replace<4>{{find}}</4>with<6>{{replace}}</6>",
+  "BulkModification.Processor.Demonstrator.Operation.FilterThenModifyWithTextProcessor": "For data filtered by <0>{{filterBy}}</0><1>{{find}}</1>: <2>{{textProcessorDemonstrator}}</2>",
+  "Position.Beginning": "the beginning",
+  "Position.End": "the end",
+  "BulkModification.Processor.Demonstrator.Operation.Filter.FilteredData": "Data filtered by <0/> <1>{{find}}</1>",
+  "TextOperation.Backward": "backward",
+  "TextOperation.Forward": "forward"
 }

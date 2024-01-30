@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Balloon, Button, Dialog, Input, Message, Select, Tag } from '@alifd/next';
+import { Balloon, Button, Dialog, Input, Message, Select } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import SimpleLabel from '@/components/SimpleLabel';
 import './index.scss';
@@ -28,6 +28,7 @@ interface IEditingVariable {
   source?: VariableSource;
   find?: string;
   value?: string;
+  index?: number;
 }
 
 interface IProps {
@@ -37,7 +38,10 @@ interface IProps {
 
 const variableSources = Object.keys(VariableSource).filter(a => Number.isNaN(parseInt(a, 10)));
 
-export default ({ variables: propsVariable, onChange }: IProps) => {
+export default ({
+                  variables: propsVariable,
+                  onChange,
+                }: IProps) => {
   const { t } = useTranslation();
 
   const [variables, setVariables] = useState<IVariable[]>(propsVariable || []);
@@ -63,12 +67,18 @@ export default ({ variables: propsVariable, onChange }: IProps) => {
           console.log(editingVariable);
           if (!editingVariable || editingVariable.key == undefined || editingVariable.key.length == 0 ||
             editingVariable.value == undefined || editingVariable.value.length == 0 ||
-            variables.some(v => v.key === editingVariable.key) || variableSources.includes(editingVariable.key) ||
+            variables.some((v, i) => v != editingVariable && v.key === editingVariable?.key && editingVariable.index != i) ||
+            variableSources.includes(editingVariable.key) ||
             editingVariable.source == undefined || !variableSources.includes(VariableSource[editingVariable?.source])
           ) {
             return Message.error(t('Invalid data'));
           }
-          variables.push(editingVariable as IVariable);
+
+          if (editingVariable.index != undefined) {
+            variables[editingVariable.index] = editingVariable as IVariable;
+          } else {
+            variables.push(editingVariable as IVariable);
+          }
           setVariables([...variables]);
           closeDialog();
         }}
@@ -79,14 +89,17 @@ export default ({ variables: propsVariable, onChange }: IProps) => {
           </div>
           <div className="value">
             <Select
-              dataSource={variableSources.map(s => ({ label: t(s), value: VariableSource[s] }))}
+              dataSource={variableSources.map(s => ({
+                label: t(s),
+                value: VariableSource[s],
+              }))}
               value={editingVariable?.source}
               onChange={v => {
                 setEditingVariable({
                   ...editingVariable,
                   source: v,
                 });
-            }}
+              }}
               style={{ width: '100%' }}
             />
           </div>
@@ -105,11 +118,12 @@ export default ({ variables: propsVariable, onChange }: IProps) => {
             />
           </div>
           <div className="label">
-            {t('Key')}
+            {t('Variable name')}
           </div>
           <div className="value">
             <Input
-              state={editingVariable?.key == undefined || variables.some(v => v != editingVariable && v.key === editingVariable?.key) || variableSources.includes(editingVariable?.key) ? 'error' : undefined}
+              state={editingVariable?.key == undefined || variables.some((v, i) => v != editingVariable && v.key === editingVariable?.key && editingVariable.index != i) ||
+              variableSources.includes(editingVariable?.key) ? 'error' : undefined}
               value={editingVariable?.key}
               onChange={v => {
                 setEditingVariable({
@@ -172,7 +186,10 @@ export default ({ variables: propsVariable, onChange }: IProps) => {
                   className={'value custom'}
                   key={i}
                   onClick={() => {
-                    setEditingVariable(v);
+                    setEditingVariable({
+                      ...v,
+                      index: i,
+                    });
                   }}
                 >
                   <SimpleLabel
@@ -206,9 +223,7 @@ export default ({ variables: propsVariable, onChange }: IProps) => {
           size={'small'}
           type={'primary'}
           onClick={() => {
-            setEditingVariable({
-
-            });
+            setEditingVariable({});
           }}
         >
           {t('Add')}

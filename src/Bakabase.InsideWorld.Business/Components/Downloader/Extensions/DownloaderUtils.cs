@@ -22,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                     DownloadTaskAction.StartAutomatically
                 }
             },
-            {DownloadTaskDtoStatus.InQueue, new[] {DownloadTaskAction.Disable, DownloadTaskAction.StartManually}},
+            {DownloadTaskDtoStatus.InQueue, new[] {DownloadTaskAction.Disable}},
             {DownloadTaskDtoStatus.Starting, new DownloadTaskAction[] { }},
             {DownloadTaskDtoStatus.Downloading, new[] {DownloadTaskAction.Disable}},
             {DownloadTaskDtoStatus.Stopping, new DownloadTaskAction[] { }},

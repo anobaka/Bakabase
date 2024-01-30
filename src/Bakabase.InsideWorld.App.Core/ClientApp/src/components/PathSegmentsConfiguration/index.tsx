@@ -94,24 +94,22 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
     log('Changed:', JSON.parse(JSON.stringify(value)));
     onChange(PscValue.fromComponentValue(value));
 
-    if (!isDirectory) {
-      if (matchers.some(a => a.property == ResourceProperty.Resource && !a.readonly)) {
-        const resourceMatcherValue = value[ResourceProperty.Resource]?.[0];
-        if (resourceMatcherValue) {
-          const rootMatch = PathSegmentMatcher.matchFirst(segments, value[ResourceProperty.RootPath]);
-          const rootSegmentIndex = rootMatch?.index ?? -1;
+    if (matchers.some(a => a.property == ResourceProperty.Resource && !a.readonly)) {
+      const resourceMatcherValue = value[ResourceProperty.Resource]?.[0];
+      if (resourceMatcherValue) {
+        const rootMatch = PathSegmentMatcher.matchFirst(segments, value[ResourceProperty.RootPath]);
+        const rootSegmentIndex = rootMatch?.index ?? -1;
 
-          const resourceSegmentIndex = PathSegmentMatcher
-            .match(segments, resourceMatcherValue, rootSegmentIndex, segments.length)?.index ?? -1;
-          if (resourceSegmentIndex > -1) {
-            const resourceMatcherMatchesLastLayer = resourceSegmentIndex == segments.length - 1;
-            if (resourceMatcherMatchesLastLayer != resourceMatcherMatchesLastLayerRef.current) {
-              resourceMatcherMatchesLastLayerRef.current = resourceMatcherMatchesLastLayer;
-              if (resourceMatcherMatchesLastLayer) {
-                setFileResource(segments.join('/'));
-              } else {
-                setFileResource(undefined);
-              }
+        const resourceSegmentIndex = PathSegmentMatcher
+          .match(segments, resourceMatcherValue, rootSegmentIndex, segments.length)?.index ?? -1;
+        if (resourceSegmentIndex > -1) {
+          const resourceMatcherMatchesLastLayer = resourceSegmentIndex == segments.length - 1;
+          if (resourceMatcherMatchesLastLayer != resourceMatcherMatchesLastLayerRef.current) {
+            resourceMatcherMatchesLastLayerRef.current = resourceMatcherMatchesLastLayer;
+            if (resourceMatcherMatchesLastLayer) {
+              setFileResource(segments.join('/'));
+            } else {
+              setFileResource(undefined);
             }
           }
         }

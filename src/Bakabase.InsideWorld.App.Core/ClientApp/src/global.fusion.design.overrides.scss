@@ -123,6 +123,7 @@ body {
   --tag-bordered-border-color: var(--theme-border-color);
   --tag-bordered-text-color-hover: var(--theme-text);
   --tag-bordered-text-color: var(--theme-text-subtle);
+  --tag-closable-primary-fill-border-color: var(--theme-border-color);
 
   //.ice-label {
   //  &.ice-label-default {
@@ -218,8 +219,6 @@ body {
 
   --progress-line-font-color: var(--theme-text);
 
-  --tab-pure-text-color-hover: var(--theme-text);
-  --tab-pure-text-color-normal: var(--theme-text-subtle);
   --collapse-title-bg-color: var(--theme-block-background);
   --collapse-title-hover-bg-color: var(--theme-block-background-accent);
   --collapse-title-font-color: var(--theme-text);

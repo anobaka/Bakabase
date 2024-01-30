@@ -87,16 +87,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions
             }
         }
 
-        public async Task Stop(DownloaderStopBy stopBy)
+        public async Task Stop()
         {
-            StoppedBy = stopBy;
             Status = DownloaderStatus.Stopping;
             Cts?.Cancel();
             await StopCore();
             Status = DownloaderStatus.Stopped;
         }
-
-        public DownloaderStopBy? StoppedBy { get; set; }
 
         protected virtual Task StopCore()
         {
@@ -109,7 +106,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions
         {
             if (Status is DownloaderStatus.Stopped or DownloaderStatus.JustCreated or DownloaderStatus.Failed or DownloaderStatus.Complete)
             {
-                StoppedBy = null;
                 Status = DownloaderStatus.Starting;
                 Cts?.Cancel();
                 Cts = new CancellationTokenSource();

@@ -3,7 +3,12 @@ import { Dialog, Select, Tag } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import type { IVariable } from '../Variables';
 import Variables from '../Variables';
-import { availablePropertiesForProcessing, ProcessorType, PropertyProcessorTypeMap } from '../ProcessDialog/models';
+import {
+  availablePropertiesForProcessing, longTextProperties,
+  ProcessorType,
+  PropertyProcessorTypeMap,
+  removableProperties,
+} from '../ProcessDialog/models';
 import {
   bulkModificationProperties,
   BulkModificationProperty,
@@ -92,7 +97,6 @@ const ProcessDialog = (props: IProps) => {
 
   console.log(process);
 
-
   const renderProcessor = () => {
     const processorType = process.property != undefined && PropertyProcessorTypeMap[process.property];
     if (processorType == undefined) {
@@ -106,57 +110,64 @@ const ProcessDialog = (props: IProps) => {
       });
     };
 
+    let commonProps: any = {
+      variables,
+      onChange: setProcessValue,
+      value: process.value,
+      removable: removableProperties.includes(process.property!),
+      longText: longTextProperties.includes(process.property!),
+    };
+
     switch (processorType) {
       case false:
         break;
       case ProcessorType.Text:
         return (
           <TextProcessor.Editor
-            variables={variables}
-            onChange={setProcessValue}
+            {...commonProps}
           />
         );
       case ProcessorType.DateTime:
         return (
           <DateTimeProcessor.Editor
-            variables={variables}
-            onChange={setProcessValue}
+            {...commonProps}
           />
         );
       case ProcessorType.Number:
         return (
-          <NumberProcessor variables={variables} />
+          <NumberProcessor.Editor
+            {...commonProps}
+          />
         );
       case ProcessorType.Language:
         return (
           <EnumProcessor.Editor
-            dataSource={resourceLanguages}
-            variables={variables}
-            onChange={setProcessValue}
+            dataSource={resourceLanguages.map(l => ({
+              ...l,
+              label: t(l.label),
+            }))}
+            {...commonProps}
           />
         );
       case ProcessorType.Originals:
         return (
           <MultiValueProcessor.Editor
-            variables={variables}
             getCandidates={() => BApi.resource.getAllOriginals().then(r => (r.data || []).map(d => ({
               label: d.name!,
               value: d.id!,
             })))}
-            onChange={setProcessValue}
+            {...commonProps}
           />
         );
       case ProcessorType.Volume:
         return (
-          <VolumeProcessor
-            variables={variables}
-            onChange={setProcessValue}
+          <VolumeProcessor.Editor
+            {...commonProps}
           />
         );
       case ProcessorType.Tag:
         return (
           <MultiValueProcessor.Editor
-            variables={variables}
             getCandidates={() => BApi.tag.getAllTags({ additionalItems: TagAdditionalItem.GroupName })
               .then(r => (r.data || []).map(d => {
                 // @ts-ignore
@@ -166,18 +177,17 @@ const ProcessDialog = (props: IProps) => {
                   value: tag.id,
                 };
               }))}
-            onChange={setProcessValue}
+            {...commonProps}
           />
         );
       case ProcessorType.Publisher:
         return (
           <MultiValueProcessor.Editor
-            variables={variables}
             getCandidates={() => BApi.publisher.getAllPublishers().then(r => (r.data || []).map(d => ({
               label: d.name!,
               value: d.id!,
             })))}
-            onChange={setProcessValue}
+            {...commonProps}
           />
         );
     }

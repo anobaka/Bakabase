@@ -42,7 +42,7 @@ export default (props: Props) => {
   const [value, setValue] = useState(structuredClone(propsValue));
   const [checkingPathRelations, setCheckingPathRelations] = useState(false);
   const [relativeLibraries, setRelativeLibraries] = useState<any[]>([]);
-  const [pscData, setPscData] = useState<{ value: IPscValue; segments: string[]; isDirectory: boolean }>();
+  const [pscData, setPscData] = useState<{ value: IPscValue; segments: string[] }>();
 
 
   useEffect(() => {
@@ -195,7 +195,7 @@ export default (props: Props) => {
         }}
       >
         <PathSegmentsConfiguration
-          isDirectory={pscData?.isDirectory || false}
+          isDirectory={false}
           segments={pscData?.segments!}
           onChange={value => {
             pscData!.value = value;
@@ -320,7 +320,7 @@ export default (props: Props) => {
                           FileSystemSelectorDialog.show({
                             // targetType: 'folder',
                             startPath: value.path,
-                            // targetType: 'file',
+                            targetType: 'file',
                             onSelected: (e) => {
                               const std = standardizePath(e.path)!;
                               const stdPrev = standardizePath(value.path);
@@ -353,7 +353,6 @@ export default (props: Props) => {
                                 setPscData({
                                   segments,
                                   value: pscValue,
-                                  isDirectory: e.isDirectory,
                                 });
                               } else {
                                 Dialog.error({

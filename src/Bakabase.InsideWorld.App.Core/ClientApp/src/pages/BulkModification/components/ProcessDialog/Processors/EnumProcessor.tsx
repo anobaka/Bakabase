@@ -8,6 +8,7 @@ interface IProps {
   variables: IVariable[];
   dataSource: {label: string; value: any}[];
   onChange?: (value: IValue) => any;
+  value?: IValue;
 }
 
 enum Operation {
@@ -21,10 +22,10 @@ interface IValue {
   value?: string;
 }
 
-const Editor = ({ variables: propsVariables, dataSource, onChange }: IProps) => {
+const Editor = ({ variables: propsVariables, dataSource, onChange, value: propsValue }: IProps) => {
   const { t } = useTranslation();
   const [variables, setVariables] = useState<IVariable[]>(propsVariables || []);
-  const [value, setValue] = useState<IValue>({});
+  const [value, setValue] = useState<IValue>(propsValue ?? {});
 
   const operationDataSource = Object.keys(Operation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
     label: t(x),
@@ -107,8 +108,6 @@ const Editor = ({ variables: propsVariables, dataSource, onChange }: IProps) => 
 const Demonstrator = ({ value, dataSource }: { value: IValue; dataSource: IProps['dataSource'] }) => {
   const { t } = useTranslation();
 
-  const label = dataSource.find(d => d.value == value.value)?.label ?? t('Unsupported value');
-
   switch (value.operation) {
     case Operation.Remove:
       return (
@@ -116,7 +115,8 @@ const Demonstrator = ({ value, dataSource }: { value: IValue; dataSource: IProps
           <div className="primary">{t('Remove')}</div>
         </>
       );
-    case Operation.SetWithFixedValue:
+    case Operation.SetWithFixedValue: {
+      const label = dataSource.find(d => d.value == value.value)?.label ?? t('Unsupported value');
       return (
         <>
           <Trans
@@ -128,6 +128,7 @@ const Demonstrator = ({ value, dataSource }: { value: IValue; dataSource: IProps
           <div className="secondary">{label}</div>
         </>
       );
+    }
     case Operation.SetWithDynamicValue:
       return (
         <>
@@ -137,7 +138,7 @@ const Demonstrator = ({ value, dataSource }: { value: IValue; dataSource: IProps
             <div className="primary" />
             with dynamic value
           </Trans>
-          <div className="secondary">{label}</div>
+          <div className="secondary">{value.value}</div>
         </>
       );
     default:
