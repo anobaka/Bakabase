@@ -11,8 +11,17 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
     {
         public BulkModificationProperty Property { get; set; }
         public string? PropertyKey { get; set; }
-        public string? OldValue { get; set; }
+
+        /// <summary>
+        /// Serialized
+        /// </summary>
+        public string? CurrentValue { get; set; }
+
+        /// <summary>
+        /// Serialized
+        /// </summary>
         public string? NewValue { get; set; }
+
         public BulkModificationDiffType Type { get; set; }
         public BulkModificationDiffOperation Operation { get; set; } = BulkModificationDiffOperation.None;
     }

@@ -30,6 +30,11 @@ const TypeSimpleLabelStatusMap: { [key in BulkModificationDiffType]?: 'default' 
   [BulkModificationDiffType.Changed]: 'warning',
   [BulkModificationDiffType.Removed]: 'danger',
 };
+const TypeIconMap: { [key in BulkModificationDiffType]?: string } = {
+  [BulkModificationDiffType.New]: 'plus-circle',
+  [BulkModificationDiffType.Changed]: 'modify',
+  [BulkModificationDiffType.Removed]: 'delete',
+};
 
 export default ({
                   diff,
@@ -64,7 +69,7 @@ export default ({
 
     if (value == undefined) {
       return (
-        <div>{t('Empty value')}</div>
+        <CustomIcon type={'Icon-null'} size={'xs'} />
       );
     }
     return value;
@@ -185,14 +190,13 @@ export default ({
 
   return (
     <div className="diff">
-      <div className="property">
-        <CustomIcon type={'segment'} size={'xs'} />
-        {t(BulkModificationProperty[diff.property])}
-        {diff.propertyKey != undefined ? `:${diff.propertyKey}` : undefined}
-      </div>
-      <SimpleLabel className="type" status={TypeSimpleLabelStatusMap[diff.type]}>
-        {t(BulkModificationDiffType[diff.type])}
+      <SimpleLabel className="property">
+        {diff.propertyKey != undefined ? diff.propertyKey : t(BulkModificationProperty[diff.property])}
       </SimpleLabel>
+      <CustomIcon className={'type'} type={TypeIconMap[diff.type]} size={'small'} />
+      {/* <SimpleLabel className="type" status={TypeSimpleLabelStatusMap[diff.type]}> */}
+      {/*   {t(BulkModificationDiffType[diff.type])} */}
+      {/* </SimpleLabel> */}
       <div className="current">{renderValue(diff.currentValue)}</div>
       <Icon type="arrow-double-right" size={'small'} />
       <div className="new">{renderValue(diff.newValue)}</div>

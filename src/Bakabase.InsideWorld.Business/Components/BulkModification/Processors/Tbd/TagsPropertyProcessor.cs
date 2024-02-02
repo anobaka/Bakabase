@@ -7,16 +7,12 @@ using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
 
-namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors
+namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.Tbd
 {
-    internal class
-        CustomPropertiesPropertyProcessor : BulkModificationProcessor<Dictionary<string, List<CustomResourceProperty>>>
+    internal class TagsPropertyProcessor : BulkModificationProcessor<List<TagDto>>
     {
-        protected override Dictionary<string, List<CustomResourceProperty>> Merge(
-            Dictionary<string, List<CustomResourceProperty>>? current,
-            Dictionary<string, List<CustomResourceProperty>> @new)
+        protected override List<TagDto> Merge(List<TagDto>? current, List<TagDto> @new)
         {
             if (current == null)
             {

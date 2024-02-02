@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
 
 namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models
 {
@@ -10,7 +11,9 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         public string Name { get; set; } = null!;
         public BulkModificationStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
+        public List<BulkModificationVariable> Variables { get; set; } = new();
         public BulkModificationFilterGroup? Filter { get; set; }
-        public List<BulkModificationProcess> Modifications { get; set; } = new();
+        public List<BulkModificationProcess> Processes { get; set; } = new();
+        public List<ResourceDiff> Diffs { get; set; } = new();
     }
 }

@@ -141,7 +141,7 @@ const resourceModificationResults: IResourceModificationResult[] = [
   },
   {
     id: 12345,
-    path: 'D:\\FE Test\\1234',
+    path: 'D:\\FE Test\\1234dsadasassadassdasdsdsad1234dsadasassadassdasdsdsad1234dsadasassadassdasdsdsad1234dsadasassadassdasdsdsad',
     diffs: [
       ResourceDiffUtils.buildMediaLibrary(36, 41)!,
     ],
@@ -391,9 +391,11 @@ export default () => {
                     {resourceModificationResults.map(r => {
                       return (
                         <div className="item">
-                          <SimpleLabel status={'default'}>{r.id}</SimpleLabel>
-                          <div className="path">
-                            {r.path}
+                          <div className="resource">
+                            <SimpleLabel status={'default'} className={'id'}>{r.id}</SimpleLabel>
+                            <div className="path">
+                              {r.path}
+                            </div>
                           </div>
                           <div className="diffs">
                             {r.diffs.map(d => {

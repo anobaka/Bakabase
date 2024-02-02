@@ -4,14 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 
-namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors
+namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.Tbd
 {
-    public class PublishersPropertyProcessor : BulkModificationProcessor<List<PublisherDto>>
+    internal class OriginalsPropertyProcessor : BulkModificationProcessor<List<OriginalDto>>
     {
-        protected override List<PublisherDto> Merge(List<PublisherDto>? current, List<PublisherDto> @new)
+        protected override List<OriginalDto> Merge(List<OriginalDto>? current, List<OriginalDto> @new)
         {
             if (current == null)
             {
