@@ -17,6 +17,90 @@ namespace Bakabase.InsideWorld.Business.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.6");
 
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Filter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Processes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Variables")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BulkModifications");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModificationDiff", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BulkModificationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CurrentValue")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Operation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Property")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PropertyKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResourcePath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BulkModificationDiffs");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModificationTempData", b =>
+                {
+                    b.Property<int>("BulkModificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResourceIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("BulkModificationId");
+
+                    b.ToTable("BulkModificationTempData");
+                });
+
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Alias", b =>
                 {
                     b.Property<int>("Id")

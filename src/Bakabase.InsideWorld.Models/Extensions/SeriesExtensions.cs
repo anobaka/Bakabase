@@ -29,5 +29,10 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 StringComparer.OrdinalIgnoreCase, nameof(SeriesDto.Name), null);
             return nameDiff == null ? null : new List<ResourceDiff> {nameDiff};
         }
+
+        public static SeriesDto Clone(this SeriesDto series)
+        {
+            return series with { };
+        }
     }
 }

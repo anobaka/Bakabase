@@ -8,8 +8,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public enum BulkModificationDiffType
     {
-        New = 1,
+        Added = 1,
         Removed = 2,
-        Changed = 3
+        Modified = 3
     }
 }

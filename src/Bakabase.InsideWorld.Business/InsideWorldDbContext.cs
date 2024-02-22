@@ -1,4 +1,5 @@
 ﻿using System;
+using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -36,8 +37,11 @@ namespace Bakabase.InsideWorld.Business
         [Obsolete] public DbSet<CustomPlayerOptions> CustomPlayerOptionsList { get; set; }
         [Obsolete] public DbSet<CustomPlayableFileSelectorOptions> CustomPlayableFileSelectorOptionsList { get; set; }
 
-
         public DbSet<Password> Passwords { get; set; }
+
+        public DbSet<BulkModification> BulkModifications { get; set; }
+        public DbSet<BulkModificationDiff> BulkModificationDiffs { get; set; }
+        public DbSet<BulkModificationTempData> BulkModificationTempData { get; set; }
 
         public InsideWorldDbContext()
         {

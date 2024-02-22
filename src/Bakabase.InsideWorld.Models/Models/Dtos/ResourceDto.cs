@@ -15,37 +15,37 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
     {
         public int Id { get; set; }
 
-        public string Directory { get; set; }
+        public string Directory { get; set; } = null!;
         public DateTime? ReleaseDt { get; set; }
 
         /// <summary>
         /// Business name of resource, default value is null.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Comic, Anime, Video, etc.
         /// </summary>
-        public VolumeDto Volume { get; set; }
+        public VolumeDto? Volume { get; set; }
 
         public ResourceLanguage Language { get; set; } = ResourceLanguage.NotSet;
 
         /// <summary>
         /// Picture可能没有
         /// </summary>
-        public List<PublisherDto> Publishers { get; set; }
+        public List<PublisherDto>? Publishers { get; set; }
 
         /// <summary>
         /// Comic, Anime, etc.
         /// </summary>
-        public List<OriginalDto> Originals { get; set; }
+        public List<OriginalDto>? Originals { get; set; }
 
         public string DisplayName => this.BuildFullname();
 
         /// <summary>
         /// Raw filename
         /// </summary>
-        public string RawName { get; set; }
+        public string RawName { get; set; } = null!;
 
         public decimal Rate { get; set; }
         public bool IsSingleFile { get; set; }
@@ -64,21 +64,22 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
                     return null;
                 }
 
-                return Path.Combine(new[] {Directory, RawName}.Where(a => a.IsNotEmpty()).ToArray()).StandardizePath();
+                return Path.Combine(new[] {Directory, RawName}.Where(a => !string.IsNullOrEmpty(a)).ToArray())
+                    .StandardizePath()!;
             }
         }
 
         /// <summary>
         /// Comic, etc.
         /// </summary>
-        public SeriesDto Series { get; set; }
+        public SeriesDto? Series { get; set; }
 
         /// <summary>
         /// todo: Picture的Tag会有很多从文件名获取
         /// </summary>
-        public List<TagDto> Tags { get; set; }
+        public List<TagDto>? Tags { get; set; }
 
-        public string Introduction { get; set; }
+        public string? Introduction { get; set; }
         public int MediaLibraryId { get; set; }
         public int CategoryId { get; set; }
         public DateTime CreateDt { get; set; } = DateTime.Now;
@@ -88,7 +89,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         // public string ResolverVersion { get; set; }
         public DateTime FileCreateDt { get; set; }
         public DateTime FileModifyDt { get; set; }
-        public Dictionary<string, List<CustomResourceProperty>> CustomProperties { get; set; }
-        public ResourceDto Parent { get; set; }
+        public Dictionary<string, List<CustomResourceProperty>>? CustomProperties { get; set; }
+        public ResourceDto? Parent { get; set; }
     }
 }

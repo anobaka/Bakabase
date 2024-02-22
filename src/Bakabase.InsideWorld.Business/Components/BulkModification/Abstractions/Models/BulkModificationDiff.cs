@@ -9,6 +9,13 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public record BulkModificationDiff
     {
+        public int Id { get; set; }
+        public int BulkModificationId { get; set; }
+        /// <summary>
+        /// redundancy
+        /// </summary>
+        public string ResourcePath { get; set; } = null!;
+        public int ResourceId { get; set; }
         public BulkModificationProperty Property { get; set; }
         public string? PropertyKey { get; set; }
 

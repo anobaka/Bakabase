@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public record BulkModificationProcess
     {
-        public ResourceDiffProperty Property { get; set; }
+        public BulkModificationProperty Property { get; set; }
         public string? PropertyKey { get; set; }
 
         /// <summary>

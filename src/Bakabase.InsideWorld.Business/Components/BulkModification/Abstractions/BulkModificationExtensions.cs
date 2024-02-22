@@ -5,7 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Processors;
+using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
@@ -42,33 +42,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             };
         }
 
-        private static readonly IBulkModificationProcessor StringPropertyProcessor =
-            new BulkModificationProcessor<string>();
-
-        private static readonly IBulkModificationProcessor IntPropertyProcessor = new BulkModificationProcessor<int>();
-
-        private static ConcurrentDictionary<ResourceDiffProperty, IBulkModificationProcessor> _processors = new(
-            new Dictionary<ResourceDiffProperty, IBulkModificationProcessor>
-            {
-                {ResourceDiffProperty.Category, IntPropertyProcessor},
-                {ResourceDiffProperty.MediaLibrary, IntPropertyProcessor},
-                {ResourceDiffProperty.ReleaseDt, new BulkModificationProcessor<DateTime>()},
-                {ResourceDiffProperty.Publisher, new PublishersPropertyProcessor()},
-                {ResourceDiffProperty.Name, StringPropertyProcessor},
-                {ResourceDiffProperty.Language, new BulkModificationProcessor<ResourceLanguage>()},
-                {ResourceDiffProperty.Volume, new BulkModificationProcessor<VolumeDto>()},
-                {ResourceDiffProperty.Original, new OriginalsPropertyProcessor()},
-                {ResourceDiffProperty.Series, new BulkModificationProcessor<SeriesDto>()},
-                {ResourceDiffProperty.Tag, new TagsPropertyProcessor()},
-                {ResourceDiffProperty.Introduction, StringPropertyProcessor},
-                {ResourceDiffProperty.Rate, new BulkModificationProcessor<decimal>()},
-                {ResourceDiffProperty.CustomProperty, new CustomPropertiesPropertyProcessor()},
-            });
-
-
         public static Expression<Func<ResourceDto, bool>> BuildExpression(this BulkModificationFilter filter)
         {
-            var builder = BulkModificationFilterExpressionBuilders.Builders[filter.Property];
+            var builder = BulkModificationFilterExpressionBuilders.CustomBuilders.GetValueOrDefault(filter.Property) ??
+                          BulkModificationFilterExpressionBuilders.DefaultExpressionBuilder;
             return builder.Build(filter);
         }
 
@@ -95,7 +72,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             };
         }
 
-        public static BulkModificationDto ToDto(this Models.BulkModification bm)
+        public static BulkModificationDto ToDto(this Models.BulkModification bm, BulkModificationTempData? tempData)
         {
             return new BulkModificationDto
             {
@@ -107,13 +84,63 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 Filter = string.IsNullOrEmpty(bm.Filter)
                     ? null
                     : JsonConvert.DeserializeObject<BulkModificationFilterGroup>(bm.Filter),
+                Processes = string.IsNullOrEmpty(bm.Processes)
+                    ? new List<BulkModificationProcess>()
+                    : JsonConvert.DeserializeObject<List<BulkModificationProcess>>(bm.Processes)!,
+                Variables = string.IsNullOrEmpty(bm.Variables)
+                    ? new List<BulkModificationVariable>()
+                    : JsonConvert.DeserializeObject<List<BulkModificationVariable>>(bm.Variables)!,
+
+                FilteredResourceIds = tempData?.GetResourceIds()
             };
         }
 
-        public static ResourceDiff? Preview(this BulkModificationProcess process, ResourceDto r)
+        public static BulkModificationProperty ToBulkModificationProperty(this ResourceDiffProperty rdp)
         {
-            var processor = _processors[process.Property];
-            return processor.Preview(process, r);
+            return rdp switch
+            {
+                ResourceDiffProperty.Category => BulkModificationProperty.Category,
+                ResourceDiffProperty.MediaLibrary => BulkModificationProperty.MediaLibrary,
+                ResourceDiffProperty.ReleaseDt => BulkModificationProperty.ReleaseDt,
+                ResourceDiffProperty.Publisher => BulkModificationProperty.Publisher,
+                ResourceDiffProperty.Name => BulkModificationProperty.Name,
+                ResourceDiffProperty.Language => BulkModificationProperty.Language,
+                ResourceDiffProperty.Volume => BulkModificationProperty.Volume,
+                ResourceDiffProperty.Original => BulkModificationProperty.Original,
+                ResourceDiffProperty.Series => BulkModificationProperty.Series,
+                ResourceDiffProperty.Tag => BulkModificationProperty.Tag,
+                ResourceDiffProperty.Introduction => BulkModificationProperty.Introduction,
+                ResourceDiffProperty.Rate => BulkModificationProperty.Rate,
+                ResourceDiffProperty.CustomProperty => BulkModificationProperty.CustomProperty,
+                _ => throw new ArgumentOutOfRangeException(nameof(rdp), rdp, null)
+            };
+        }
+
+        public static BulkModificationDiffType ToBulkModificationDiffType(this ResourceDiffType rdt)
+        {
+            return rdt switch
+            {
+                ResourceDiffType.Added => BulkModificationDiffType.Added,
+                ResourceDiffType.Removed => BulkModificationDiffType.Removed,
+                ResourceDiffType.Modified => BulkModificationDiffType.Modified,
+                _ => throw new ArgumentOutOfRangeException(nameof(rdt), rdt, null)
+            };
+        }
+
+        public static BulkModificationDiff ToBulkModificationDiff(this ResourceDiff rd, int bmId, int resourceId, string resourcePath)
+        {
+            return new BulkModificationDiff
+            {
+                CurrentValue = rd.CurrentValue == null ? null : JsonConvert.SerializeObject(rd.CurrentValue),
+                NewValue = rd.NewValue == null ? null : JsonConvert.SerializeObject(rd.NewValue),
+                Operation = BulkModificationDiffOperation.None,
+                Property = rd.Property.ToBulkModificationProperty(),
+                PropertyKey = rd.Key,
+                Type = rd.Type.ToBulkModificationDiffType(),
+                BulkModificationId = bmId,
+                ResourceId = resourceId,
+                ResourcePath = resourcePath
+            };
         }
     }
 }

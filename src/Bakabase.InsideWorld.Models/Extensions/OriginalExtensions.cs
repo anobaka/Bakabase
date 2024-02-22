@@ -70,5 +70,10 @@ namespace Bakabase.InsideWorld.Models.Extensions
         {
             return originalsA.Concat(originalsB).GroupBy(a => a.Name).Select(a => a.First() with { }).ToList();
         }
+
+        public static OriginalDto Clone(this OriginalDto original)
+        {
+            return original with { };
+        }
     }
 }

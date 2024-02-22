@@ -39,5 +39,10 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
             return result;
         }
+
+        public static CustomResourceProperty Clone(this CustomResourceProperty customResourceProperty)
+        {
+            return customResourceProperty with { };
+        }
     }
 }

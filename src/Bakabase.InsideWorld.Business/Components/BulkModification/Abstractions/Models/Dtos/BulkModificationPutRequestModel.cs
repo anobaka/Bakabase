@@ -2,5 +2,5 @@
 
 namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos
 {
-    public record BulkModificationPutRequestModel(string Name, BulkModificationFilterGroup? Filter, List<BulkModificationProcess>? Modification);
+    public record BulkModificationPutRequestModel(string Name, BulkModificationFilterGroup? Filter, List<BulkModificationProcess>? Processes, List<BulkModificationVariable>? Variables);
 }

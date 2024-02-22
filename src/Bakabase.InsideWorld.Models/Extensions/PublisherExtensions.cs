@@ -399,5 +399,18 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
             return list;
         }
+
+        public static PublisherDto Clone(this PublisherDto publisher)
+        {
+            return new()
+            {
+                Favorite = publisher.Favorite,
+                Rank = publisher.Rank,
+                Name = publisher.Name,
+                Id = publisher.Id,
+                SubPublishers = publisher.SubPublishers.Select(s => s.Clone()).ToList(),
+                Tags = publisher.Tags.Select(s => s.Clone()).ToList()
+            };
+        }
     }
 }

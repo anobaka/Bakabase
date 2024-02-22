@@ -70,5 +70,10 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
             return null;
         }
+
+        public static VolumeDto Clone(this VolumeDto volume)
+        {
+            return volume with { };
+        }
     }
 }

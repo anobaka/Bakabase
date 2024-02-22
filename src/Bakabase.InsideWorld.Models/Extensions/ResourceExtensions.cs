@@ -28,8 +28,11 @@ namespace Bakabase.InsideWorld.Models.Extensions
         public static ConcurrentDictionary<ResourceDiffProperty, Action<ResourceDto, object?>> ResourcePropertySetters =
             new(new Dictionary<ResourceDiffProperty, Action<ResourceDto, object?>>
             {
-                {ResourceDiffProperty.ReleaseDt, (r, v) => r.ReleaseDt = (DateTime?)v},
-                {ResourceDiffProperty.Publisher, (r, v) => r.Publishers = (List<PublisherDto>?)v ?? new List<PublisherDto>()},
+                {ResourceDiffProperty.ReleaseDt, (r, v) => r.ReleaseDt = (DateTime?) v},
+                {
+                    ResourceDiffProperty.Publisher,
+                    (r, v) => r.Publishers = (List<PublisherDto>?) v ?? new List<PublisherDto>()
+                },
                 // {ResourceDiffProperty.Name, r => r.Name},
                 // {ResourceDiffProperty.Language, r => r.Language},
                 // {ResourceDiffProperty.Volume, r => r.Volume},
@@ -44,7 +47,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
         public static Action<ResourceDto, object?> GetSetter(this ResourceDiffProperty property) =>
             ResourcePropertySetters.TryGetValue(property, out var setter)
                 ? setter
-                : throw new InvalidOperationException($"Can\'t get setter of property [{(int)property}:{property}]");
+                : throw new InvalidOperationException($"Can\'t get setter of property [{(int) property}:{property}]");
 
         public static ConcurrentDictionary<ResourceDiffProperty, Func<ResourceDto, object?>> ResourcePropertyGetters =
             new(new Dictionary<ResourceDiffProperty, Func<ResourceDto, object?>>
@@ -353,7 +356,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 return new ResourceDiff
                 {
                     Property = property,
-                    OldValue = oldValue,
+                    CurrentValue = oldValue,
                     NewValue = newValue
                 };
             }
@@ -696,6 +699,43 @@ namespace Bakabase.InsideWorld.Models.Extensions
             {
                 Name = options.Name,
                 Model = options.Model.ToDto()
+            };
+        }
+
+        /// <summary>
+        /// Be cautious, <see cref="ResourceDto.Parent"/> will be cloned also.
+        /// </summary>
+        /// <param name="resource"></param>
+        /// <returns></returns>
+        public static ResourceDto Clone(this ResourceDto resource)
+        {
+            return new()
+            {
+                Id = resource.Id,
+                Name = resource.Name,
+                Language = resource.Language,
+                Rate = resource.Rate,
+                ReleaseDt = resource.ReleaseDt,
+                RawName = resource.RawName,
+                CategoryId = resource.CategoryId,
+                MediaLibraryId = resource.MediaLibraryId,
+                FileCreateDt = resource.FileCreateDt,
+                FileModifyDt = resource.FileModifyDt,
+                IsSingleFile = resource.IsSingleFile,
+                Introduction = resource.Introduction,
+                HasChildren = resource.HasChildren,
+                ParentId = resource.ParentId,
+                Originals = resource.Originals?.Select(OriginalExtensions.Clone).ToList(),
+                Publishers = resource.Publishers?.Select(PublisherExtensions.Clone).ToList(),
+                Series = resource.Series?.Clone(),
+                Tags = resource.Tags?.Select(TagExtensions.Clone).ToList(),
+                Volume = resource.Volume?.Clone(),
+                CustomProperties = resource.CustomProperties?.ToDictionary(t => t.Key,
+                    t => t.Value.Select(CustomPropertyExtensions.Clone).ToList()),
+                CreateDt = resource.CreateDt,
+                Directory = resource.Directory,
+                Parent = resource.Parent?.Clone(),
+                UpdateDt = resource.UpdateDt
             };
         }
 

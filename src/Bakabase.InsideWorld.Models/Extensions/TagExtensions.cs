@@ -94,6 +94,20 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
             return list;
         }
+
+        public static TagDto Clone(this TagDto tag)
+        {
+            return new()
+            {
+                Id = tag.Id,
+                Name = tag.Name,
+                Color = tag.Color,
+                GroupName = tag.GroupName,
+                GroupId = tag.GroupId,
+                Order = tag.Order,
+                GroupNamePreferredAlias = tag.GroupNamePreferredAlias
+            };
+        }
     }
 
     public static class TagGroupExtensions
@@ -106,6 +120,16 @@ namespace Bakabase.InsideWorld.Models.Extensions
             }
 
             return new TagGroupDto
+            {
+                Id = group.Id,
+                Name = group.Name,
+                Order = group.Order
+            };
+        }
+
+        public static TagGroupDto Clone(this TagGroupDto group)
+        {
+            return new()
             {
                 Id = group.Id,
                 Name = group.Name,

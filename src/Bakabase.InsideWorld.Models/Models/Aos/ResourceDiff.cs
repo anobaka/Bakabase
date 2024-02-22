@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
     public record ResourceDiff
     {
         public ResourceDiffProperty Property { get; set; }
-        public object? OldValue { get; set; }
+        public object? CurrentValue { get; set; }
         public object? NewValue { get; set; }
         public ResourceDiffType Type { get; set; }
         public string? Key { get; set; }
@@ -23,7 +23,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
             {Type = ResourceDiffType.Added, NewValue = newValue, Property = property};
 
         public static ResourceDiff Removed(ResourceDiffProperty property, object? oldValue) => new()
-            {Type = ResourceDiffType.Removed, OldValue = oldValue, Property = property};
+            {Type = ResourceDiffType.Removed, CurrentValue = oldValue, Property = property};
 
 
         public static ResourceDiff? Build<T>(ResourceDiffProperty property, T? a, T? b,
@@ -56,7 +56,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
             return new ResourceDiff
             {
                 Property = property,
-                OldValue = a,
+                CurrentValue = a,
                 NewValue = b,
                 Key = key,
                 SubDiffs = subDiffs,

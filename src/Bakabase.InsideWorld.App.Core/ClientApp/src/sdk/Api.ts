@@ -75,18 +75,23 @@ export type BakabaseInfrastructuresComponentsGuiCloseBehavior = 0 | 1 | 2 | 1000
  */
 export type BakabaseInfrastructuresComponentsGuiUiTheme = 0 | 1 | 2;
 
-export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDto {
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDiff {
   /** @format int32 */
   id?: number;
-  name?: string | null;
-  /** [1: Initial, 2: Filtered, 3: Complete, 4: Failed, 5: Cancelled] */
-  status?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationStatus;
-  /** @format date-time */
-  createdAt?: string;
-  filter?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup;
-  modifications?:
-    | BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[]
-    | null;
+  /** @format int32 */
+  bulkModificationId?: number;
+  resourcePath?: string | null;
+  /** @format int32 */
+  resourceId?: number;
+  /** [1: Category, 2: MediaLibrary, 3: Name, 4: FileName, 5: DirectoryPath, 6: ReleaseDt, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 10: Publisher, 11: Language, 12: Volume, 13: Original, 14: Series, 15: Tag, 16: Introduction, 17: Rate, 18: CustomProperty] */
+  property?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationProperty;
+  propertyKey?: string | null;
+  currentValue?: string | null;
+  newValue?: string | null;
+  /** [1: Added, 2: Removed, 3: Modified] */
+  type?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffType;
+  /** [0: None, 1: Ignore, 2: Replace, 3: Merge] */
+  operation?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffOperation;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilter {
@@ -106,13 +111,19 @@ export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractio
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess {
-  /** [0: Category, 1: MediaLibrary, 2: ReleaseDt, 3: Publisher, 4: Name, 5: Language, 6: Volume, 7: Original, 8: Series, 9: Tag, 10: Introduction, 11: Rate, 12: CustomProperty] */
-  property?: BakabaseInsideWorldModelsConstantsResourceDiffProperty;
-  /** [0: None, 1: Ignore, 2: Replace, 3: Merge] */
-  operation?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffOperation;
-  regexEnabled?: boolean;
-  oldValue?: string | null;
-  newValue?: string | null;
+  /** [1: Category, 2: MediaLibrary, 3: Name, 4: FileName, 5: DirectoryPath, 6: ReleaseDt, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 10: Publisher, 11: Language, 12: Volume, 13: Original, 14: Series, 15: Tag, 16: Introduction, 17: Rate, 18: CustomProperty] */
+  property?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationProperty;
+  propertyKey?: string | null;
+  value?: string | null;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable {
+  key?: string | null;
+  name?: string | null;
+  /** [1: None, 2: FileName, 3: FileNameWithoutExtension, 4: FullPath, 5: DirectoryName, 6: Name] */
+  source?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationVariableSource;
+  find?: string | null;
+  value?: string | null;
 }
 
 /**
@@ -121,6 +132,15 @@ export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractio
  */
 export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffOperation =
   0 | 1 | 2 | 3;
+
+/**
+ * [1: Added, 2: Removed, 3: Modified]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffType =
+  | 1
+  | 2
+  | 3;
 
 /**
  * [1: And, 2: Or]
@@ -171,12 +191,33 @@ export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsMod
   | 4
   | 5;
 
+/**
+ * [1: None, 2: FileName, 3: FileNameWithoutExtension, 4: FullPath, 5: DirectoryName, 6: Name]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationVariableSource =
+  1 | 2 | 3 | 4 | 5 | 6;
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  /** [1: Initial, 2: Filtered, 3: Complete, 4: Failed, 5: Cancelled] */
+  status?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationStatus;
+  /** @format date-time */
+  createdAt?: string;
+  variables?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable[] | null;
+  filter?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup;
+  processes?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[] | null;
+  diffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[] | null;
+  filteredResourceIds?: number[] | null;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel {
   name?: string | null;
   filter?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup;
-  modification?:
-    | BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[]
-    | null;
+  processes?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[] | null;
+  variables?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable[] | null;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
@@ -573,6 +614,12 @@ export type BakabaseInsideWorldModelsConstantsResourceDiffProperty =
   | 12;
 
 /**
+ * [1: Added, 2: Removed, 3: Modified]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsResourceDiffType = 1 | 2 | 3;
+
+/**
  * [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian]
  * @format int32
  */
@@ -694,6 +741,17 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   type?: BakabaseInsideWorldModelsConstantsMediaType;
   /** @format int32 */
   duration?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosResourceDiff {
+  /** [0: Category, 1: MediaLibrary, 2: ReleaseDt, 3: Publisher, 4: Name, 5: Language, 6: Volume, 7: Original, 8: Series, 9: Tag, 10: Introduction, 11: Rate, 12: CustomProperty] */
+  property?: BakabaseInsideWorldModelsConstantsResourceDiffProperty;
+  currentValue?: any;
+  newValue?: any;
+  /** [1: Added, 2: Removed, 3: Modified] */
+  type?: BakabaseInsideWorldModelsConstantsResourceDiffType;
+  key?: string | null;
+  subDiffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosResourceSearchDto {
@@ -1068,7 +1126,7 @@ export interface BakabaseInsideWorldModelsModelsDtosResourceDto {
   fileCreateDt?: string;
   /** @format date-time */
   fileModifyDt?: string;
-  customProperties?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[]>;
+  customProperties?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
   parent?: BakabaseInsideWorldModelsModelsDtosResourceDto;
 }
 
@@ -1555,6 +1613,20 @@ export interface BootstrapModelsResponseModelsBaseResponse {
   message?: string | null;
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDiff {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDiff[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto[] | null;
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   /** @format int32 */
   code?: number;
@@ -1688,6 +1760,13 @@ export interface BootstrapModelsResponseModelsListResponse1SystemCollectionsGene
   data?: string[][] | null;
 }
 
+export interface BootstrapModelsResponseModelsListResponse1SystemInt32 {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: number[] | null;
+}
+
 export interface BootstrapModelsResponseModelsListResponse1SystemString {
   /** @format int32 */
   code?: number;
@@ -1781,11 +1860,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastr
   data?: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDto {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto {
   /** @format int32 */
   code?: number;
   message?: string | null;
-  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDto;
+  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
@@ -3290,6 +3369,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags BulkModification
+     * @name GetAllBulkModifications
+     * @request GET:/bulk-modification
+     */
+    getAllBulkModifications: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto,
+        any
+      >({
+        path: `/bulk-modification`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
      * @name CreateBulkModification
      * @request POST:/bulk-modification
      */
@@ -3298,7 +3395,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDto,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto,
         any
       >({
         path: `/bulk-modification`,
@@ -3314,20 +3411,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      *
      * @tags BulkModification
      * @name PutBulkModification
-     * @request PUT:/bulk-modification
+     * @request PUT:/bulk-modification/{id}
      */
     putBulkModification: (
+      id: number,
       data: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel,
-      query?: {
-        /** @format int32 */
-        id?: number;
-      },
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/bulk-modification`,
+        path: `/bulk-modification/${id}`,
         method: "PUT",
-        query: query,
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -3339,19 +3432,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      *
      * @tags BulkModification
      * @name RemoveBulkModification
-     * @request DELETE:/bulk-modification
+     * @request DELETE:/bulk-modification/{id}
      */
-    removeBulkModification: (
-      query?: {
-        /** @format int32 */
-        id?: number;
-      },
-      params: RequestParams = {},
-    ) =>
+    removeBulkModification: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/bulk-modification`,
+        path: `/bulk-modification/${id}`,
         method: "DELETE",
-        query: query,
         format: "json",
         ...params,
       }),
@@ -3360,12 +3446,30 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags BulkModification
-     * @name GetBulkModificationFilteredResources
-     * @request GET:/bulk-modification/{id}/filtered-resources
+     * @name PerformBulkModificationFiltering
+     * @request PUT:/bulk-modification/{id}/filter
      */
-    getBulkModificationFilteredResources: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosResourceDto, any>({
-        path: `/bulk-modification/${id}/filtered-resources`,
+    performBulkModificationFiltering: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemInt32, any>({
+        path: `/bulk-modification/${id}/filter`,
+        method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name GetBulkModificationDiffs
+     * @request GET:/bulk-modification/{bmId}/diffs
+     */
+    getBulkModificationDiffs: (bmId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDiff,
+        any
+      >({
+        path: `/bulk-modification/${bmId}/diffs`,
         method: "GET",
         format: "json",
         ...params,
