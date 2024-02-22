@@ -16,36 +16,9 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public static class BulkModificationExtensions
     {
-        public static string GetPropertyName(this BulkModificationProperty property)
-        {
-            return property switch
-            {
-                BulkModificationProperty.Category => nameof(ResourceDto.CategoryId),
-                BulkModificationProperty.MediaLibrary => nameof(ResourceDto.MediaLibraryId),
-                BulkModificationProperty.Name => nameof(ResourceDto.Name),
-                BulkModificationProperty.FileName => nameof(ResourceDto.RawName),
-                BulkModificationProperty.DirectoryPath => nameof(ResourceDto.Directory),
-                BulkModificationProperty.ReleaseDt => nameof(ResourceDto.ReleaseDt),
-                BulkModificationProperty.CreateDt => nameof(ResourceDto.CreateDt),
-                BulkModificationProperty.FileCreateDt => nameof(ResourceDto.FileCreateDt),
-                BulkModificationProperty.FileModifyDt => nameof(ResourceDto.FileModifyDt),
-                BulkModificationProperty.Publisher => nameof(ResourceDto.Publishers),
-                BulkModificationProperty.Language => nameof(ResourceDto.Language),
-                BulkModificationProperty.Volume => nameof(ResourceDto.Volume),
-                BulkModificationProperty.Original => nameof(ResourceDto.Originals),
-                BulkModificationProperty.Series => nameof(ResourceDto.Series),
-                BulkModificationProperty.Tag => nameof(ResourceDto.Tags),
-                BulkModificationProperty.Introduction => nameof(ResourceDto.Introduction),
-                BulkModificationProperty.Rate => nameof(ResourceDto.Rate),
-                BulkModificationProperty.CustomProperty => nameof(ResourceDto.CustomProperties),
-                _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
-            };
-        }
-
         public static Expression<Func<ResourceDto, bool>> BuildExpression(this BulkModificationFilter filter)
         {
-            var builder = BulkModificationFilterExpressionBuilders.CustomBuilders.GetValueOrDefault(filter.Property) ??
-                          BulkModificationFilterExpressionBuilders.DefaultExpressionBuilder;
+            var builder = BulkModificationFilterExpressionBuilders.Builders[filter.Property];
             return builder.Build(filter);
         }
 

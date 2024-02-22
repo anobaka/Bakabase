@@ -11,6 +11,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
 {
     public class BmRateFilterExpressionBuilder : BmSingleValuePropertyFilterExpressionBuilder<decimal>
     {
+        public static BmRateFilterExpressionBuilder Instance = new();
+
         protected override BulkModificationProperty Property => BulkModificationProperty.Rate;
         protected override decimal GetValue(ResourceDto resource)
         {

@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Mod
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bootstrap.Extensions;
+using NPOI.OpenXml4Net.Util;
 
 namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBuilders.Infrastructures
 {

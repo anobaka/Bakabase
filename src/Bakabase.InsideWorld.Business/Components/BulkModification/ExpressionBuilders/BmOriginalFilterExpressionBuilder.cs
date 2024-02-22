@@ -12,6 +12,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
 {
     public class BmOriginalFilterExpressionBuilder : BmMultipleValuePropertyFilterExpressionBuilder<string>
     {
+        public static BmOriginalFilterExpressionBuilder Instance = new();
+
         protected override BulkModificationProperty Property => BulkModificationProperty.Original;
 
         protected override HashSet<string>? GetValue(ResourceDto resource, BulkModificationFilter filter)

@@ -12,6 +12,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
 {
     public class BmLanguageFilterExpressionBuilder : BmSingleValuePropertyFilterExpressionBuilder<ResourceLanguage>
     {
+        public static BmLanguageFilterExpressionBuilder Instance = new();
+
         protected override BulkModificationProperty Property => BulkModificationProperty.Language;
         protected override ResourceLanguage GetValue(ResourceDto resource)
         {

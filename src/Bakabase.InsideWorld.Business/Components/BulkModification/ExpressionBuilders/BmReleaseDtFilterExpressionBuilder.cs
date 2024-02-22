@@ -11,6 +11,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
 {
     public class BmReleaseDtFilterExpressionBuilder : BmSingleValuePropertyFilterExpressionBuilder<DateTime?>
     {
+        public static BmReleaseDtFilterExpressionBuilder Instance = new();
+
         protected override BulkModificationProperty Property => BulkModificationProperty.ReleaseDt;
         protected override DateTime? GetValue(ResourceDto resource)
         {

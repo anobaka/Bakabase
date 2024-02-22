@@ -11,6 +11,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
 {
     public class BmDirectoryPathFilterExpressionBuilder : BmSingleValuePropertyFilterExpressionBuilder<string>
     {
+        public static BmDirectoryPathFilterExpressionBuilder Instance = new();
+
         protected override BulkModificationProperty Property => BulkModificationProperty.DirectoryPath;
         protected override string? GetValue(ResourceDto resource)
         {

@@ -11,6 +11,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
 {
     public class BmVolumeFilterExpressionBuilder : BmSingleValuePropertyFilterExpressionBuilder<string>
     {
+        public static BmVolumeFilterExpressionBuilder Instance = new();
+
         protected override BulkModificationProperty Property => BulkModificationProperty.Volume;
 
         protected override string? GetValue(ResourceDto resource)
