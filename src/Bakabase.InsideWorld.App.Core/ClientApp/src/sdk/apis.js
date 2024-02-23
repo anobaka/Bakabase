@@ -6571,51 +6571,6 @@ export const SaveCoverURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveCoverCache
- * url: RemoveCoverCacheURL
- * method: RemoveCoverCache_TYPE
- * raw_url: RemoveCoverCache_RAW_URL
- * @param id - 
- */
-export const RemoveCoverCache = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/{id}/cover/cache'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const RemoveCoverCache_RAW_URL = function() {
-  return '/resource/{id}/cover/cache'
-}
-export const RemoveCoverCache_TYPE = function() {
-  return 'delete'
-}
-export const RemoveCoverCacheURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/cover/cache'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: GetResourcePlayableFiles
  * url: GetResourcePlayableFilesURL
  * method: GetResourcePlayableFiles_TYPE
@@ -6651,45 +6606,6 @@ export const GetResourcePlayableFilesURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/{id}/playable-files'
   path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllCustomPropertyKeys
- * url: GetAllCustomPropertyKeysURL
- * method: GetAllCustomPropertyKeys_TYPE
- * raw_url: GetAllCustomPropertyKeys_RAW_URL
- */
-export const GetAllCustomPropertyKeys = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/custom-property-keys'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllCustomPropertyKeys_RAW_URL = function() {
-  return '/resource/custom-property-keys'
-}
-export const GetAllCustomPropertyKeys_TYPE = function() {
-  return 'get'
-}
-export const GetAllCustomPropertyKeysURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/custom-property-keys'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -7037,45 +6953,6 @@ export const GetResourceDataForPreviewerURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/{id}/previewer'
   path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllOriginals
- * url: GetAllOriginalsURL
- * method: GetAllOriginals_TYPE
- * raw_url: GetAllOriginals_RAW_URL
- */
-export const GetAllOriginals = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/original/all'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllOriginals_RAW_URL = function() {
-  return '/resource/original/all'
-}
-export const GetAllOriginals_TYPE = function() {
-  return 'get'
-}
-export const GetAllOriginalsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/original/all'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

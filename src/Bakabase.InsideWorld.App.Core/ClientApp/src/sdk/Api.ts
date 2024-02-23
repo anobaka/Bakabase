@@ -460,6 +460,8 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   /** @format int32 */
   colCount?: number;
   showBiggerCoverWhileHover?: boolean;
+  disableMediaPreviewer?: boolean;
+  disableCache?: boolean;
 }
 
 /**
@@ -557,6 +559,12 @@ export type BakabaseInsideWorldModelsConstantsCustomDataType = 1 | 2 | 3 | 4;
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsDownloadTaskAction = 1 | 2 | 3 | 4;
+
+/**
+ * [0: NotSet, 1: StopOthers, 2: Ignore]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict = 0 | 1 | 2;
 
 /**
  * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
@@ -1364,6 +1372,12 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequest
   downloadPath: string;
 }
 
+export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel {
+  ids?: number[] | null;
+  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+  actionOnConflict?: BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict;
+}
+
 export interface BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel {
   /** @format int32 */
   id?: number;
@@ -1688,13 +1702,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsDtosMediaLibraryDto[] | null;
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosOriginalDto[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
@@ -3840,7 +3847,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name StartDownloadTasks
      * @request POST:/download-task/download
      */
-    startDownloadTasks: (data: number[], params: RequestParams = {}) =>
+    startDownloadTasks: (
+      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/download`,
         method: "POST",
@@ -4092,42 +4102,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name RemoveCoverCache
-     * @request DELETE:/resource/{id}/cover/cache
-     */
-    removeCoverCache: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/cover/cache`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
      * @name GetResourcePlayableFiles
      * @request GET:/resource/{id}/playable-files
      */
     getResourcePlayableFiles: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/resource/${id}/playable-files`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetAllCustomPropertyKeys
-     * @request GET:/resource/custom-property-keys
-     */
-    getAllCustomPropertyKeys: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
-        path: `/resource/custom-property-keys`,
         method: "GET",
         format: "json",
         ...params,
@@ -4265,21 +4245,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourceDataForPreviewer: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem, any>({
         path: `/resource/${id}/previewer`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetAllOriginals
-     * @request GET:/resource/original/all
-     */
-    getAllOriginals: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto, any>({
-        path: `/resource/original/all`,
         method: "GET",
         format: "json",
         ...params,

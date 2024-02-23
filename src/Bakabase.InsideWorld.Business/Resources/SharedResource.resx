@@ -165,6 +165,9 @@
   <data name="Downloader_DownloaderOptionsValidatorNotRegistered" xml:space="preserve">
     <value>Downloader options validator is registered for third party {0}:{1}</value>
   </data>
+  <data name="Downloader_FailedToStart" xml:space="preserve">
+    <value>Failed to start [{0}]: {1}</value>
+  </data>
   <data name="Downloader_KeyIsMissing" xml:space="preserve">
     <value>Key is missing</value>
   </data>

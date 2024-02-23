@@ -211,6 +211,7 @@ const ResourcePage = (props) => {
       setSearchForm({ ...f });
     }
     resourceLoadCtsRef.current?.abort();
+    setLoading(true);
     BApi.resource.searchResources({
       ...f,
       save: true,
@@ -414,6 +415,56 @@ const ResourcePage = (props) => {
         </Balloon.Tooltip>
       </div>
       <div className="item">
+        <Balloon.Tooltip
+          trigger={(
+            <Checkbox
+              onChange={(c) => {
+                BApi.options.patchUiOptions({
+                  resource: {
+                    ...(uiOptions?.resource || {}),
+                    disableMediaPreviewer: !c,
+                  },
+                }).then(r => {
+                  if (!r.code) {
+                    Notification.success({
+                      title: t('Saved'),
+                    });
+                  }
+                });
+              }}
+              checked={!uiOptions?.resource?.disableMediaPreviewer}
+            >
+              {t('快速预览')}
+            </Checkbox>
+          )}
+          align={'t'}
+          triggerType={'hover'}
+        >
+          {t('Preview files of a resource on mouse hover')}
+        </Balloon.Tooltip>
+      </div>
+      <div className="item">
+        <Checkbox
+          onChange={(c) => {
+            BApi.options.patchUiOptions({
+              resource: {
+                ...(uiOptions?.resource || {}),
+                disableCache: c,
+              },
+            }).then(r => {
+              if (!r.code) {
+                Notification.success({
+                  title: t('Saved'),
+                });
+              }
+            });
+          }}
+          checked={uiOptions?.resource?.disableCache}
+        >
+          {t('Disable cache')}
+        </Checkbox>
+      </div>
+      <div className="item">
         <Select
           label={t('Column count')}
           size={'small'}
@@ -432,7 +483,7 @@ const ResourcePage = (props) => {
         />
       </div>
     </>
-  ), [uiOptions?.resource?.showBiggerCoverWhileHover, colCount]);
+  ), [uiOptions?.resource]);
 
   return (
     <div className="resource-page">
@@ -568,6 +619,8 @@ const ResourcePage = (props) => {
                 <CustomIcon size={'xxxl'} type={selectedResourceIds.indexOf(r.id) > -1 ? 'check-circle' : 'plus-circle'} />
               </div>
               <Resource
+                disableCache={uiOptions.resource?.disableCache ?? false}
+                disableMediaPreviewer={uiOptions.resource?.disableMediaPreviewer ?? false}
                 queue={queueRef.current}
                 showBiggerCoverOnHover={uiOptions?.resource?.showBiggerCoverWhileHover ?? false}
                 ref={setResourceRef}

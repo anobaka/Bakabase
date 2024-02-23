@@ -26,16 +26,16 @@ export enum DownloaderStatus {JustCreated = 0, Starting = 100, Downloading = 200
 export const downloaderStatuses = Object.keys(DownloaderStatus).filter(k => typeof DownloaderStatus[k] === 'number').map(t => ({label: t, value: DownloaderStatus[t]}));
 export enum DependentComponentStatus {NotInstalled = 1, Installed = 2, Installing = 3}
 export const dependentComponentStatuses = Object.keys(DependentComponentStatus).filter(k => typeof DependentComponentStatus[k] === 'number').map(t => ({label: t, value: DependentComponentStatus[t]}));
-export enum VolumePropertyProcessorOperation {Modify = 1, Remove = 2}
-export const volumePropertyProcessorOperations = Object.keys(VolumePropertyProcessorOperation).filter(k => typeof VolumePropertyProcessorOperation[k] === 'number').map(t => ({label: t, value: VolumePropertyProcessorOperation[t]}));
-export enum VolumePropertyProcessorProperty {Name = 1, Title = 2}
-export const volumePropertyProcessorProperties = Object.keys(VolumePropertyProcessorProperty).filter(k => typeof VolumePropertyProcessorProperty[k] === 'number').map(t => ({label: t, value: VolumePropertyProcessorProperty[t]}));
-export enum SimpleValueProcessorOperation {SetWithFixedValue = 1, SetWithDynamicValue = 2, Remove = 3}
-export const simpleValueProcessorOperations = Object.keys(SimpleValueProcessorOperation).filter(k => typeof SimpleValueProcessorOperation[k] === 'number').map(t => ({label: t, value: SimpleValueProcessorOperation[t]}));
-export enum MultipleValueProcessorFilterBy {All = 1, Containing = 2, Matching = 3}
-export const multipleValueProcessorFilterBies = Object.keys(MultipleValueProcessorFilterBy).filter(k => typeof MultipleValueProcessorFilterBy[k] === 'number').map(t => ({label: t, value: MultipleValueProcessorFilterBy[t]}));
-export enum MultipleValueProcessorOperation {SetWithFixedValue = 1, Add = 2, Modify = 3, Remove = 4}
-export const multipleValueProcessorOperations = Object.keys(MultipleValueProcessorOperation).filter(k => typeof MultipleValueProcessorOperation[k] === 'number').map(t => ({label: t, value: MultipleValueProcessorOperation[t]}));
+export enum BmSimpleValueProcessorOperation {SetWithFixedValue = 1, SetWithDynamicValue = 2, Remove = 3}
+export const bmSimpleValueProcessorOperations = Object.keys(BmSimpleValueProcessorOperation).filter(k => typeof BmSimpleValueProcessorOperation[k] === 'number').map(t => ({label: t, value: BmSimpleValueProcessorOperation[t]}));
+export enum BmMultipleValueProcessorFilterBy {All = 1, Containing = 2, Matching = 3}
+export const bmMultipleValueProcessorFilterBies = Object.keys(BmMultipleValueProcessorFilterBy).filter(k => typeof BmMultipleValueProcessorFilterBy[k] === 'number').map(t => ({label: t, value: BmMultipleValueProcessorFilterBy[t]}));
+export enum BmMultipleValueProcessorOperation {SetWithFixedValue = 1, Add = 2, Modify = 3, Remove = 4}
+export const bmMultipleValueProcessorOperations = Object.keys(BmMultipleValueProcessorOperation).filter(k => typeof BmMultipleValueProcessorOperation[k] === 'number').map(t => ({label: t, value: BmMultipleValueProcessorOperation[t]}));
+export enum BmVolumeProcessorOperation {Modify = 1, Remove = 2}
+export const bmVolumeProcessorOperations = Object.keys(BmVolumeProcessorOperation).filter(k => typeof BmVolumeProcessorOperation[k] === 'number').map(t => ({label: t, value: BmVolumeProcessorOperation[t]}));
+export enum BmVolumeProcessorProperty {Name = 1, Title = 2}
+export const bmVolumeProcessorProperties = Object.keys(BmVolumeProcessorProperty).filter(k => typeof BmVolumeProcessorProperty[k] === 'number').map(t => ({label: t, value: BmVolumeProcessorProperty[t]}));
 export enum BulkModificationDiffOperation {None = 0, Ignore = 1, Replace = 2, Merge = 3}
 export const bulkModificationDiffOperations = Object.keys(BulkModificationDiffOperation).filter(k => typeof BulkModificationDiffOperation[k] === 'number').map(t => ({label: t, value: BulkModificationDiffOperation[t]}));
 export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
@@ -112,10 +112,16 @@ export enum CoverSelectOrder {FilenameAscending = 1, FileModifyDtDescending = 2}
 export const coverSelectOrders = Object.keys(CoverSelectOrder).filter(k => typeof CoverSelectOrder[k] === 'number').map(t => ({label: t, value: CoverSelectOrder[t]}));
 export enum CustomDataType {String = 1, DateTime = 2, Number = 3, Enum = 4}
 export const customDataTypes = Object.keys(CustomDataType).filter(k => typeof CustomDataType[k] === 'number').map(t => ({label: t, value: CustomDataType[t]}));
+export enum DownloaderStopBy {ManuallyStop = 1, AppendToTheQueue = 2}
+export const downloaderStopBies = Object.keys(DownloaderStopBy).filter(k => typeof DownloaderStopBy[k] === 'number').map(t => ({label: t, value: DownloaderStopBy[t]}));
 export enum DownloadTaskAction {StartManually = 1, Restart = 2, Disable = 3, StartAutomatically = 4}
 export const downloadTaskActions = Object.keys(DownloadTaskAction).filter(k => typeof DownloadTaskAction[k] === 'number').map(t => ({label: t, value: DownloadTaskAction[t]}));
+export enum DownloadTaskActionOnConflict {NotSet = 0, StopOthers = 1, Ignore = 2}
+export const downloadTaskActionOnConflicts = Object.keys(DownloadTaskActionOnConflict).filter(k => typeof DownloadTaskActionOnConflict[k] === 'number').map(t => ({label: t, value: DownloadTaskActionOnConflict[t]}));
 export enum DownloadTaskDtoStatus {Idle = 100, InQueue = 200, Starting = 300, Downloading = 400, Stopping = 500, Complete = 600, Failed = 700, Disabled = 800}
 export const downloadTaskDtoStatuses = Object.keys(DownloadTaskDtoStatus).filter(k => typeof DownloadTaskDtoStatus[k] === 'number').map(t => ({label: t, value: DownloadTaskDtoStatus[t]}));
+export enum DownloadTaskStartMode {AutoStart = 1, ManualStart = 2}
+export const downloadTaskStartModes = Object.keys(DownloadTaskStartMode).filter(k => typeof DownloadTaskStartMode[k] === 'number').map(t => ({label: t, value: DownloadTaskStartMode[t]}));
 export enum DownloadTaskStatus {InProgress = 100, Disabled = 200, Complete = 300, Failed = 400}
 export const downloadTaskStatuses = Object.keys(DownloadTaskStatus).filter(k => typeof DownloadTaskStatus[k] === 'number').map(t => ({label: t, value: DownloadTaskStatus[t]}));
 export enum ExHentaiDownloadTaskType {SingleWork = 1, Watched = 2, List = 3}

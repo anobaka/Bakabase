@@ -17,6 +17,7 @@ import EnhancerSelector from '@/components/EnhancerSelector';
 import CustomIcon from '@/components/CustomIcon';
 import type { IPscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
 import BusinessConstants from '@/components/BusinessConstants';
+import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 
 enum Step {
   CategoryName = 1,
@@ -295,6 +296,7 @@ export default ({ categoryId }: { categoryId?: number }) => {
   const [mediaLibrary, setMediaLibrary] = useState();
 
   const [pscSamplePath, setPscSamplePath] = useState<string>();
+  const pscSamplePathIsDirectoryRef = useRef(false);
   const [pathConfiguration, setPathConfiguration] = useState<any>();
 
   const [pscValue, setPscValue] = useState<IPscValue>();
@@ -537,13 +539,19 @@ export default ({ categoryId }: { categoryId?: number }) => {
                 <Button
                   type={hasPathConfigurations ? 'normal' : 'primary'}
                   onClick={() => {
-                    OpenFileSelector()
-                      .invoke((a) => {
-                        if (a.data) {
-                          setPscSamplePath(a.data);
-                          goToNextStep();
-                        }
-                      });
+                    FileSystemSelectorDialog.show({
+                      onSelected: e => {
+                        pscSamplePathIsDirectoryRef.current = e.isDirectory;
+                        setPscSamplePath(e.path);
+                        goToNextStep();
+                      },
+                    });
+                    // OpenFileSelector()
+                    //   .invoke((a) => {
+                    //     if (a.data) {
+                    //
+                    //     }
+                    //   });
                   }}
                 >
                   <CustomIcon type={'plus-circle'} />
@@ -604,7 +612,7 @@ export default ({ categoryId }: { categoryId?: number }) => {
                   </Message>
                   <PathSegmentsConfiguration
                     segments={segments}
-                    isDirectory={false}
+                    isDirectory={pscSamplePathIsDirectoryRef.current}
                     defaultValue={defaultValue}
                     matchers={[
                       new PathSegmentConfigurationPropsMatcherOptions({
@@ -744,7 +752,7 @@ export default ({ categoryId }: { categoryId?: number }) => {
                   <>
                     <PathSegmentsConfiguration
                       segments={segments}
-                      isDirectory={false}
+                      isDirectory={pscSamplePathIsDirectoryRef.current}
                       defaultValue={pscValue}
                       matchers={matchers}
                       onChange={(value) => {
@@ -823,7 +831,7 @@ export default ({ categoryId }: { categoryId?: number }) => {
                   const cds = (category.componentsData ?? []).filter(a => a.componentType != ComponentType.Enhancer);
                   let newCds = cds;
                   if (v.enhancerKeys?.length > 0) {
-                    const eCds = v.enhancerKeys?.map(k => (
+                    const eCds = v.enhancerKeys?.filter(k => k != undefined && k.length > 0).map(k => (
                       {
                         componentKey: k,
                         componentType: ComponentType.Enhancer,
