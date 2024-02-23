@@ -14,6 +14,6 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 
         private const char Separator = ',';
         public void SetResourceIds(IEnumerable<int> ids) => ResourceIds = string.Join(Separator, ids);
-        public List<int> GetResourceIds() => ResourceIds.Split(Separator).Select(int.Parse).ToList();
+        public List<int> GetResourceIds() => ResourceIds.Split(Separator, StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
     }
 }

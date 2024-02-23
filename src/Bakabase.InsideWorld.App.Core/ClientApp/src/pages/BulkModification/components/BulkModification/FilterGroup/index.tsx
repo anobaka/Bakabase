@@ -11,6 +11,11 @@ import {
   BulkModificationFilterOperation,
   BulkModificationProperty,
 } from '@/sdk/constants';
+import { uuidv4 } from '@/components/utils';
+import {
+  buildFilterGroupReactKey,
+  buildFilterReactKey,
+} from '@/pages/BulkModification/components/BulkModification/FilterGroup/helpers';
 
 interface IProps {
   group: IBulkModificationFilterGroup;
@@ -38,9 +43,16 @@ const FilterGroup = (props: IProps) => {
 
     const filters: any[] = (group.filters || []).map((filter, i) => (
       <Tag.Closeable
-        key={`f-${i}`}
+        key={buildFilterReactKey(filter)}
+        // key={`f-${i}`}
         size={'small'}
         className={'filter'}
+        onClose={() => {
+          group.filters!.splice(i, 1);
+          forceUpdate();
+          onChange();
+          return true;
+        }}
         onClick={() => {
           FilterDialog.show(
             {
@@ -71,7 +83,7 @@ const FilterGroup = (props: IProps) => {
 
     const groups: any[] = (group.groups || []).map((g, i) => (
       <FilterGroup
-        key={`g-${i}`}
+        key={buildFilterGroupReactKey(g)}
         group={g}
         onRemove={() => {
           group.groups!.splice(i, 1);
@@ -84,6 +96,8 @@ const FilterGroup = (props: IProps) => {
 
     const conditions = filters.concat(groups);
     const elements: any[] = [];
+
+    console.log(group);
 
     for (let i = 0; i < conditions.length; i++) {
       elements.push(conditions[i]);
@@ -109,6 +123,7 @@ const FilterGroup = (props: IProps) => {
                   onClick={() => {
                     group.operation = operation.value;
                     forceUpdate();
+                    onChange();
                   }}
                   disabled={group.operation == operation.value}
                 >

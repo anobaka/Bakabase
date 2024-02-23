@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.Caching;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -39,6 +40,24 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 
         public BulkModificationService(IServiceProvider serviceProvider) : base(serviceProvider)
         {
+        }
+
+        public static BulkModificationConfiguration GetConfiguration()
+        {
+            var bmc = new BulkModificationConfiguration();
+            foreach (BulkModificationProperty property in Enum.GetValues(typeof(BulkModificationProperty)))
+            {
+                var attr = SpecificTypeUtils<BulkModificationProperty>.Type.GetField(property.ToString())!
+                    .GetCustomAttributes<BulkModificationPropertyFilterAttribute>(false).FirstOrDefault()!;
+                var options = new BulkModificationConfiguration.PropertyOptions
+                {
+                    Property = property,
+                    AvailableOperations = new List<BulkModificationFilterOperation>()
+                };
+                bmc.Properties.Add(options);
+            }
+
+            return bmc;
         }
 
         public async Task<List<BulkModificationDto>> GetAllDto()

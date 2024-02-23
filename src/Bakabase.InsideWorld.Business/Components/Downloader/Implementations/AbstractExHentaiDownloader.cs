@@ -187,6 +187,15 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
                 {
                     var dir = Path.GetDirectoryName(fullname)!;
                     Directory.CreateDirectory(dir);
+
+                    const int continuousFailedTaskSampleCount = 10;
+                    var last10Tasks = tasks.TakeLast(continuousFailedTaskSampleCount).ToArray();
+                    if (last10Tasks.Length == continuousFailedTaskSampleCount &&
+                        last10Tasks.All(x => !x.IsCompletedSuccessfully))
+                    {
+                        throw last10Tasks.Last().Exception!;
+                    }
+
                     await sm.WaitAsync(ct);
                     tasks.Add(Task.Run(async () =>
                     {

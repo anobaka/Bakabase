@@ -1,0 +1,17 @@
+.bulk-modification-filtered-resources-dialog {
+  .resources {
+    padding: 10px 0;
+    height: 400px;
+    width: 800px;
+
+    .resource {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      .simple-label {
+        //width: 30px;
+        //min-width: 30px;
+      }
+    }
+  }
+}

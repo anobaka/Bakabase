@@ -352,6 +352,8 @@ export default () => {
   const filteredTasks = tasks.filter((a) => (!(form.thirdPartyIds?.length > 0) || form.thirdPartyIds.some((b) => b == a.thirdPartyId)) &&
     (!(form.statuses?.length > 0) || form.statuses.some((b) => b == a.status)));
 
+  console.log(form);
+
   const renderRequestStatisticsChart = () => {
     if (requestStatisticsChartVisible) {
       const thirdPartyRequestCounts = (requestStatistics || []).reduce<any[]>((s, t) => {
@@ -503,7 +505,7 @@ export default () => {
             </div>
             <div className="sources value">
               {thirdPartyIds.map((s) => {
-                const count = filteredTasks.filter((t) => t.thirdPartyId == s.id).length;
+                const count = tasks.filter((t) => t.thirdPartyId == s.value && (!(form.statuses?.length > 0) || form.statuses.includes(t.status))).length;
                 return (
                   <Tag.Selectable
                     key={s.value}
@@ -536,7 +538,7 @@ export default () => {
             </div>
             <div className="value statuses">
               {downloadTaskDtoStatuses.map(((s) => {
-                const count = filteredTasks.filter((t) => t.status == s.value).length;
+                const count = tasks.filter((t) => t.status == s.value && (!(form.thirdPartyIds?.length > 0) || form.thirdPartyIds.includes(t.thirdPartyId))).length;
                 return (
                   <Tag.Selectable
                     key={s.value}

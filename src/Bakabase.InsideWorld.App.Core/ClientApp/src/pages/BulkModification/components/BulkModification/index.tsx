@@ -1,4 +1,4 @@
-import { Button, Collapse } from '@alifd/next';
+import { Button, Collapse, Dialog, Loading, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import SimpleLabel from '@/components/SimpleLabel';
@@ -12,6 +12,7 @@ import Variables from '@/pages/BulkModification/components/BulkModification/Vari
 import FilterGroup from '@/pages/BulkModification/components/BulkModification/FilterGroup';
 import ProcessDemonstrator from '@/pages/BulkModification/components/BulkModification/ProcessDemonstrator';
 import ProcessDialog from '@/pages/BulkModification/components/BulkModification/ProcessDialog';
+import FilteredResourcesDialog from '@/pages/BulkModification/components/BulkModification/FilteredResourcesDialog';
 
 const { Panel } = Collapse;
 
@@ -113,7 +114,16 @@ export default ({
             <div className={'resource-count'}>
               总计筛选出<span>{bm.filteredResourceIds?.length ?? 0}</span>个资源
             </div>
-            <Button type={'primary'} text size={'small'}>查看完整筛选结果</Button>
+            <Button
+              type={'primary'}
+              text
+              size={'small'}
+              onClick={() => {
+                FilteredResourcesDialog.show({
+                  resourceIds: bm.filteredResourceIds!,
+                });
+              }}
+            >查看完整筛选结果</Button>
           </div>
         </div>
       </div>

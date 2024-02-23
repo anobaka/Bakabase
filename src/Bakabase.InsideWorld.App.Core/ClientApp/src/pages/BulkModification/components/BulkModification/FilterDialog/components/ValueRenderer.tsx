@@ -63,18 +63,18 @@ export default ({
         });
         break;
       }
-      case BulkModificationProperty.Tag: {
-        // @ts-ignore
-        BApi.tag.getTagByIds({ ids: newDs.map(d => d.value), additionalItems: (TagAdditionalItem.GroupName | TagAdditionalItem.PreferredAlias) }).then(r => {
-          const newDataSource = r.data?.map(item => ({
-            // @ts-ignore
-            label: new TagDto(item).displayName,
-            value: item.id!,
-          }));
-          setDataSource(newDataSource || []);
-        });
-        break;
-      }
+      // case BulkModificationProperty.Tag: {
+      //   // @ts-ignore
+      //   BApi.tag.getTagByIds({ ids: newDs.map(d => d.value), additionalItems: (TagAdditionalItem.GroupName | TagAdditionalItem.PreferredAlias) }).then(r => {
+      //     const newDataSource = r.data?.map(item => ({
+      //       // @ts-ignore
+      //       label: new TagDto(item).displayName,
+      //       value: item.id!,
+      //     }));
+      //     setDataSource(newDataSource || []);
+      //   });
+      //   break;
+      // }
       case BulkModificationProperty.Language: {
         setDataSource(newDs.map(d => ({
           ...d,
@@ -96,6 +96,7 @@ export default ({
       case BulkModificationProperty.Series:
       case BulkModificationProperty.Introduction:
       case BulkModificationProperty.Rate:
+      case BulkModificationProperty.Tag:
       default:
         setDataSource(newDs || []);
         break;

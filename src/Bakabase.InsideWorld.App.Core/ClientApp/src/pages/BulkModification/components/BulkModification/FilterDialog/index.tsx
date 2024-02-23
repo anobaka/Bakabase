@@ -1,11 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Balloon, Button, DatePicker2, Dialog, Input, NumberPicker, Radio, Select, Tag } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import {
-  filterTargetComponents,
-  FilterTargetComponentValueType,
-  FindInAliasesProperties,
-} from '../FilterDialog/models';
+import { filterTargetComponents, FilterTargetComponentValueType, FindInAliasesProperties } from '../FilterDialog/models';
 import type { IBulkModificationFilter } from '../../BulkModification';
 import ValueRenderer from './components/ValueRenderer';
 import {
@@ -22,7 +18,7 @@ import { createPortalOfComponent } from '@/components/utils';
 import CustomIcon from '@/components/CustomIcon';
 import ResourceCategorySelector from '@/components/ResourceCategorySelector';
 import MediaLibrarySelectPanel from '@/components/MediaLibrarySelectPanel';
-import TagSelector from '@/components/TagSelector';
+import { Tag as TagDto } from '@/core/models/Tag';
 
 interface IProps {
   filter?: IBulkModificationFilter;
@@ -62,6 +58,7 @@ const FilterDialog = (props: IProps) => {
   const [visible, setVisible] = useState(true);
   const [filter, setFilter] = useState<IBulkModificationFilter>(propsFilter || {});
   const propertyKeyCandidatesRef = useRef<{ label: string; value: string }[]>();
+  const tagsCandidatesRef = useRef<{ label: string; value: string }[]>();
 
   useUpdateEffect(() => {
     if (filter.property == BulkModificationProperty.CustomProperty && !propertyKeyCandidatesRef.current) {
@@ -74,6 +71,23 @@ const FilterDialog = (props: IProps) => {
           label: k,
           value: k,
         }));
+        forceUpdate();
+      });
+    }
+
+    if (filter.property == BulkModificationProperty.Tag && !tagsCandidatesRef.current) {
+      tagsCandidatesRef.current = [];
+      // get all tags
+      BApi.tag.getAllTags().then(r => {
+        const tags = r.data || [];
+        tagsCandidatesRef.current = tags.map(t => {
+          // @ts-ignore
+          const dto = new TagDto(t);
+          return {
+            label: dto.displayName,
+            value: dto.preferredAlias ?? dto.name,
+          };
+        });
         forceUpdate();
       });
     }
@@ -369,38 +383,48 @@ const FilterDialog = (props: IProps) => {
               );
               break;
             }
-            case FilterTargetComponentValueType.Tag:
-            {
+            case FilterTargetComponentValueType.Tag: {
               const compValue = component.multiple ? typedTarget : typedTarget && [typedTarget];
               targetComponent = (
-                <Button
-                  size={'small'}
-                  type={'normal'}
-                  onClick={() => {
-                    let value = compValue;
-                    Dialog.show({
-                      title: t('Select tags'),
-                      v2: true,
-                      width: 'auto',
-                      content: (
-                        <TagSelector
-                          multiple={component.multiple}
-                          defaultValue={{ tagIds: compValue || [] }}
-                          onChange={v => {
-                            value = v.tagIds;
-                          }}
-                        />
-                      ),
-                      closeMode: ['close', 'esc', 'mask'],
-                      onOk: () => {
-                        setFilter({
-                          ...filter,
-                          target: JSON.stringify(component.multiple ? value : value[0]),
-                        });
-                      },
+                // <Button
+                //   size={'small'}
+                //   type={'normal'}
+                //   onClick={() => {
+                //     let value = compValue;
+                //     Dialog.show({
+                //       title: t('Select tags'),
+                //       v2: true,
+                //       width: 'auto',
+                //       content: (
+                //         <TagSelector
+                //           multiple={component.multiple}
+                //           defaultValue={{ tagIds: compValue || [] }}
+                //           onChange={v => {
+                //             value = v.tagIds;
+                //           }}
+                //         />
+                //       ),
+                //       closeMode: ['close', 'esc', 'mask'],
+                //       onOk: () => {
+                //         setFilter({
+                //           ...filter,
+                //           target: JSON.stringify(component.multiple ? value : value[0]),
+                //         });
+                //       },
+                //     });
+                //   }}
+                // >{t('Select tags')}</Button>
+                <Select
+                  showSearch
+                  dataSource={tagsCandidatesRef.current}
+                  mode={component.multiple ? 'tag' : 'single'}
+                  onChange={v => {
+                    setFilter({
+                      ...filter,
+                      target: JSON.stringify(v),
                     });
                   }}
-                >{t('Select tags')}</Button>
+                />
               );
               break;
             }
@@ -443,7 +467,7 @@ const FilterDialog = (props: IProps) => {
     ? Object.keys(filterTargetComponents[filter.property] || []).map(o => parseInt(o, 10))
     : [];
 
-  console.log(filter);
+  // console.log(filter);
 
   return (
     <Dialog
@@ -451,7 +475,7 @@ const FilterDialog = (props: IProps) => {
       v2
       width={'auto'}
       className={'bulk-modification-filter-dialog'}
-      closeMode={['close', 'mask', 'esc']}
+      closeMode={['close', 'esc']}
       onClose={close}
       onCancel={close}
       okProps={{

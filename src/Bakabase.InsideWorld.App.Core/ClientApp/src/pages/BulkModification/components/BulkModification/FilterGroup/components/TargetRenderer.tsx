@@ -38,19 +38,20 @@ export default ({
         });
         break;
       }
-      case BulkModificationProperty.Tag: {
-        // @ts-ignore
-        BApi.tag.getTagByIds({ ids: values, additionalItems: (TagAdditionalItem.GroupName | TagAdditionalItem.PreferredAlias) }).then(r => {
-          // @ts-ignore
-          const newLabels = r.data?.filter(c => values.some(d => d == c.id!.toString())).map(item => new TagDto(item).displayName);
-          setLabels(newLabels || []);
-        });
-        break;
-      }
+      // case BulkModificationProperty.Tag: {
+      //   // @ts-ignore
+      //   BApi.tag.getTagByIds({ ids: values, additionalItems: (TagAdditionalItem.GroupName | TagAdditionalItem.PreferredAlias) }).then(r => {
+      //     // @ts-ignore
+      //     const newLabels = r.data?.filter(c => values.some(d => d == c.id!.toString())).map(item => new TagDto(item).displayName);
+      //     setLabels(newLabels || []);
+      //   });
+      //   break;
+      // }
       case BulkModificationProperty.Language: {
         setLabels(values.map(d => t(ResourceLanguage[d])));
         break;
       }
+      case BulkModificationProperty.Tag:
       case BulkModificationProperty.CustomProperty:
       case BulkModificationProperty.Name:
       case BulkModificationProperty.FileName:

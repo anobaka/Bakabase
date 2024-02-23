@@ -27,7 +27,7 @@ export class FilterTargetComponent {
 const PropertyFilterValueTypeMap = {
   [VT.Category]: [P.Category],
   [VT.MediaLibrary]: [P.MediaLibrary],
-  [VT.Text]: [P.Name, P.Publisher, P.Volume, P.Original, P.Series, P.Introduction, P.CustomProperty, P.DirectoryPath],
+  [VT.Text]: [P.Name, P.Publisher, P.Volume, P.Original, P.Series, P.Introduction, P.CustomProperty, P.DirectoryPath, P.FileName],
   [VT.Datetime]: [P.ReleaseDt, P.CreateDt, P.FileCreateDt, P.FileModifyDt],
   [VT.Number]: [P.Rate],
   [VT.Tag]: [P.Tag],
@@ -47,7 +47,7 @@ const FilterValueTypeOperationMap = {
   [VT.Text]: [FO.In, FO.NotIn, FO.Equals, FO.NotEquals, FO.Contains, FO.NotContains, FO.StartsWith, FO.NotStartsWith, FO.EndsWith, FO.NotEndsWith, FO.IsNotNull, FO.IsNull, FO.Matches, FO.NotMatches],
   [VT.Datetime]: [FO.Equals, FO.NotEquals, FO.GreaterThan, FO.LessThan, FO.GreaterThanOrEquals, FO.LessThanOrEquals, FO.IsNotNull, FO.IsNull, FO.In, FO.NotIn],
   [VT.Number]: [FO.In, FO.NotIn, FO.Equals, FO.NotEquals, FO.GreaterThan, FO.LessThan, FO.GreaterThanOrEquals, FO.LessThanOrEquals, FO.IsNotNull, FO.IsNull],
-  [VT.Tag]: [FO.In, FO.NotIn, FO.Equals, FO.NotEquals, FO.Contains, FO.NotContains, FO.IsNotNull, FO.IsNull],
+  [VT.Tag]: [FO.In, FO.NotIn, FO.Contains, FO.NotContains, FO.IsNotNull, FO.IsNull],
   [VT.Language]: [FO.In, FO.NotIn, FO.Equals, FO.NotEquals, FO.IsNotNull, FO.IsNull],
 };
 
