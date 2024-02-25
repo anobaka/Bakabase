@@ -16,6 +16,7 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Humanizer.Localisation;
@@ -31,20 +32,23 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly BulkModificationService _service;
         private readonly ResourceService _resourceService;
         private readonly BulkModificationDiffService _diffService;
+        private readonly BulkModificationTempDataService _tempDataService;
 
         public BulkModificationController(BulkModificationService service, ResourceService resourceService,
-            BulkModificationDiffService diffService)
+            BulkModificationDiffService diffService, BulkModificationTempDataService tempDataService)
         {
             _service = service;
             _resourceService = resourceService;
             _diffService = diffService;
+            _tempDataService = tempDataService;
         }
 
         [HttpGet]
         [SwaggerOperation(OperationId = "GetAllBulkModifications")]
         public async Task<ListResponse<BulkModificationDto>> GetAll()
         {
-            return new ListResponse<BulkModificationDto>(await _service.GetAllDto());
+            return new ListResponse<BulkModificationDto>(
+                (await _service.GetAllDto()).OrderByDescending(x => x.CreatedAt));
         }
 
         [HttpPost]
@@ -81,6 +85,20 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return new ListResponse<int>(await _service.PerformFiltering(id));
         }
 
+        [HttpGet("{id:int}/filtered-resources")]
+        [SwaggerOperation(OperationId = "GetBulkModificationFilteredResources")]
+        public async Task<ListResponse<ResourceDto>> GetFilteredResources(int id)
+        {
+            var ids = (await _tempDataService.GetByKey(id))?.GetResourceIds().ToArray();
+            if (ids == null)
+            {
+                return new ListResponse<ResourceDto>(new List<ResourceDto>());
+            }
+
+            var resources = await _resourceService.GetByKeys(ids);
+            return new ListResponse<ResourceDto>(resources);
+        }
+
         [HttpDelete("{id:int}")]
         [SwaggerOperation(OperationId = "RemoveBulkModification")]
         public async Task<BaseResponse> Remove(int id)
@@ -89,10 +107,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         }
 
         [HttpGet("{bmId:int}/diffs")]
-        [SwaggerOperation(OperationId = "GetBulkModificationDiffs")]
+        [SwaggerOperation(OperationId = "GetBulkModificationResourceDiffs")]
         public async Task<ListResponse<BulkModificationDiff>> GetDiffs(int bmId)
         {
             return new ListResponse<BulkModificationDiff>(await _diffService.GetByBmId(bmId));
+        }
+
+        [HttpPost("{id:int}/diffs")]
+        [SwaggerOperation(OperationId = "CalculateBulkModificationResourceDiffs")]
+        public async Task<BaseResponse> Preview(int id)
+        {
+            var data = await _service.Preview(id);
+            return BaseResponseBuilder.Ok;
         }
     }
 }

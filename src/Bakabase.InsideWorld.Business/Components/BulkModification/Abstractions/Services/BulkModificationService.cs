@@ -25,6 +25,7 @@ using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
 using MathNet.Numerics;
+using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Services
 {
@@ -161,7 +162,16 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 foreach (var process in bm.Processes)
                 {
                     var processor = processors[process.Property];
-                    await processor.Process(process, copy, variables);
+                    try
+                    {
+                        await processor.Process(process, copy, variables);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new Exception(
+                            $"An error occurred during applying processor [{processor.GetType()}] on process {process}: {e.Message}",
+                            e);
+                    }
                 }
 
                 var diffs = resource.Compare(copy)

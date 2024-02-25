@@ -5,6 +5,7 @@ import { useUpdateEffect } from 'react-use';
 import type { IVariable } from '../../Variables';
 import type { ITextProcessorValue } from '../Processors/TextProcessor';
 import TextProcessor from '../Processors/TextProcessor';
+import { BmMultipleValueProcessorFilterBy, BmMultipleValueProcessorOperation } from '@/sdk/constants';
 
 interface IProps {
   variables: IVariable[];
@@ -13,24 +14,24 @@ interface IProps {
   value?: IMultiValueProcessorValue;
 }
 
-enum Operation {
-  Add = 1,
-  Remove,
-  SetWithFixedValue,
-  Modify,
-}
+// enum Operation {
+//   Add = 1,
+//   Remove,
+//   SetWithFixedValue,
+//   Modify,
+// }
 
-enum FilterBy {
-  All = 1,
-  Containing = 2,
-  Matching,
-}
+// enum FilterBy {
+//   All = 1,
+//   Containing = 2,
+//   Matching,
+// }
 
 export interface IMultiValueProcessorValue {
-  operation?: Operation;
+  operation?: BmMultipleValueProcessorOperation;
   selectedKeys?: number[];
   newData?: string[];
-  filterBy?: FilterBy;
+  filterBy?: BmMultipleValueProcessorFilterBy;
   find?: string;
   textProcessorValue?: ITextProcessorValue;
 }
@@ -48,14 +49,14 @@ const Editor = ({
   const [candidates, setCandidates] = useState<{ label: string; value: number }[]>([]);
   const [newData, setNewData] = useState<string[]>([]);
 
-  const operationDataSource = Object.keys(Operation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
+  const operationDataSource = Object.keys(BmMultipleValueProcessorOperation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
     label: t(x),
-    value: Operation[x],
+    value: BmMultipleValueProcessorOperation[x],
   }));
 
-  const filterByDataSource = Object.keys(FilterBy).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
+  const filterByDataSource = Object.keys(BmMultipleValueProcessorFilterBy).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
     label: t(x),
-    value: FilterBy[x],
+    value: BmMultipleValueProcessorFilterBy[x],
   }));
 
   // console.log(propsValue);
@@ -80,8 +81,8 @@ const Editor = ({
   const renderValueComp = () => {
     const componentsData: { label: string; comp: any }[] = [];
     switch (value.operation) {
-      case Operation.Add:
-      case Operation.SetWithFixedValue:
+      case BmMultipleValueProcessorOperation.Add:
+      case BmMultipleValueProcessorOperation.SetWithFixedValue:
         componentsData.push({
           label: t('Candidate(s)'),
           comp: (
@@ -110,8 +111,8 @@ const Editor = ({
           ),
         });
         break;
-      case Operation.Remove:
-      case Operation.Modify:
+      case BmMultipleValueProcessorOperation.Remove:
+      case BmMultipleValueProcessorOperation.Modify:
         componentsData.push({
           label: t('Filter'),
           comp: (
@@ -120,7 +121,7 @@ const Editor = ({
               dataSource={filterByDataSource}
               onChange={filterBy => {
                 const changes: any = { filterBy };
-                if (filterBy == FilterBy.All) {
+                if (filterBy == BmMultipleValueProcessorFilterBy.All) {
                   changes.find = undefined;
                 }
                 changeValue(changes);
@@ -128,7 +129,7 @@ const Editor = ({
             />
           ),
         });
-        if (value.filterBy == FilterBy.Matching || value.filterBy == FilterBy.Containing) {
+        if (value.filterBy == BmMultipleValueProcessorFilterBy.Matching || value.filterBy == BmMultipleValueProcessorFilterBy.Containing) {
           componentsData.push({
             label: t('Value'),
             comp: (
@@ -150,7 +151,7 @@ const Editor = ({
       );
     });
 
-    if (value.operation == Operation.Modify) {
+    if (value.operation == BmMultipleValueProcessorOperation.Modify) {
       components.push(
         <TextProcessor.Editor
           value={value.textProcessorValue}
@@ -200,7 +201,7 @@ const Demonstrator = ({
   }, [getDataSource, value]);
 
   switch (value.operation) {
-    case Operation.Remove:
+    case BmMultipleValueProcessorOperation.Remove:
       return (
         <>
           <div className="primary">{t('Remove')}</div>
@@ -211,14 +212,14 @@ const Demonstrator = ({
             }}
           >
             {/* Data filtered by xxx */}
-            {t(FilterBy[value.filterBy!])}
+            {t(BmMultipleValueProcessorFilterBy[value.filterBy!])}
             {value.find != undefined && (
               <div className="secondary">{value.find}</div>
             )}
           </Trans>
         </>
       );
-    case Operation.Add:
+    case BmMultipleValueProcessorOperation.Add:
       return (
         <>
           <div className="primary">{t('Add')}</div>
@@ -232,7 +233,7 @@ const Demonstrator = ({
           })}
         </>
       );
-    case Operation.SetWithFixedValue:
+    case BmMultipleValueProcessorOperation.SetWithFixedValue:
       return (
         <>
           <Trans
@@ -251,18 +252,18 @@ const Demonstrator = ({
           })}
         </>
       );
-    case Operation.Modify:
+    case BmMultipleValueProcessorOperation.Modify:
       return (
         <>
           <Trans
             i18nKey={'BulkModification.Processor.Demonstrator.Operation.FilterThenModifyWithTextProcessor'}
             values={{
-              filterBy: t(FilterBy[value.filterBy!]),
+              filterBy: t(BmMultipleValueProcessorFilterBy[value.filterBy!]),
               find: value.find,
             }}
           >
             <div className="primary">
-              {t(FilterBy[value.filterBy!])}
+              {t(BmMultipleValueProcessorFilterBy[value.filterBy!])}
             </div>
             {(value.find == undefined || value.find.length == 0) ? (<></>) : (
               <div className="secondary">{value.find}</div>

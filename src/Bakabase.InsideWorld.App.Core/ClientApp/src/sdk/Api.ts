@@ -1704,6 +1704,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   data?: BakabaseInsideWorldModelsModelsDtosMediaLibraryDto[] | null;
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosOriginalDto[] | null;
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
   /** @format int32 */
   code?: number;
@@ -3468,16 +3475,46 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags BulkModification
-     * @name GetBulkModificationDiffs
+     * @name GetBulkModificationFilteredResources
+     * @request GET:/bulk-modification/{id}/filtered-resources
+     */
+    getBulkModificationFilteredResources: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosResourceDto, any>({
+        path: `/bulk-modification/${id}/filtered-resources`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name GetBulkModificationResourceDiffs
      * @request GET:/bulk-modification/{bmId}/diffs
      */
-    getBulkModificationDiffs: (bmId: number, params: RequestParams = {}) =>
+    getBulkModificationResourceDiffs: (bmId: number, params: RequestParams = {}) =>
       this.request<
         BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationDiff,
         any
       >({
         path: `/bulk-modification/${bmId}/diffs`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name CalculateBulkModificationResourceDiffs
+     * @request POST:/bulk-modification/{id}/diffs
+     */
+    calculateBulkModificationResourceDiffs: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/bulk-modification/${id}/diffs`,
+        method: "POST",
         format: "json",
         ...params,
       }),
@@ -4117,6 +4154,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name GetAllCustomPropertyKeys
+     * @request GET:/resource/custom-property-keys
+     */
+    getAllCustomPropertyKeys: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/resource/custom-property-keys`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name GetAllCustomPropertiesAndCandidates
      * @request GET:/resource/custom-properties-and-candidates
      */
@@ -4245,6 +4297,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourceDataForPreviewer: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem, any>({
         path: `/resource/${id}/previewer`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetAllOriginals
+     * @request GET:/resource/original/all
+     */
+    getAllOriginals: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto, any>({
+        path: `/resource/original/all`,
         method: "GET",
         format: "json",
         ...params,

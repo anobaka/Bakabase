@@ -72,6 +72,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly IBOptions<ResourceOptions> _resourceOptions;
         private readonly Business.Components.Dependency.Implementations.FfMpeg.FfMpegService _ffMpegInstaller;
         private readonly ILogger<ResourceController> _logger;
+        private readonly OriginalService _originalService;
 
         public ResourceController(ResourceService service,
             ResourceTagMappingService resourceTagMappingService,
@@ -80,7 +81,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager,
             FavoritesResourceMappingService favoritesResourceMappingService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions, Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller, ILogger<ResourceController> logger)
+            FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions, Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller, ILogger<ResourceController> logger, OriginalService originalService)
         {
             _service = service;
             _resourceTagMappingService = resourceTagMappingService;
@@ -99,6 +100,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _resourceOptions = resourceOptions;
             _ffMpegInstaller = ffMpegInstaller;
             _logger = logger;
+            _originalService = originalService;
         }
 
         [HttpPost("search")]
@@ -213,6 +215,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             return new ListResponse<string>(await _service.GetPlayableFiles(id, HttpContext.RequestAborted) ??
                                             new string[] { });
+        }
+
+        [HttpGet("custom-property-keys")]
+        [SwaggerOperation(OperationId = "GetAllCustomPropertyKeys")]
+        public async Task<ListResponse<string>> GetAllCustomPropertyKeys()
+        {
+            var data = await _customResourcePropertyService.GetAllKeys();
+            return new(data);
         }
 
         [HttpGet("custom-properties-and-candidates")]
@@ -429,6 +439,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             }
 
             return new ListResponse<PreviewerItem>(items);
+        }
+
+        [HttpGet("original/all")]
+        [SwaggerOperation(OperationId = "GetAllOriginals")]
+        public async Task<ListResponse<OriginalDto>> GetAllOriginals()
+        {
+            return new ListResponse<OriginalDto>(await _originalService.GetAllDtoList(null, false));
         }
     }
 }

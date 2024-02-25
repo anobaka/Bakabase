@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback } from 'react';
 import { useUpdateEffect } from 'react-use';
+import { ErrorBoundary } from 'react-error-boundary';
 import DateTimeProcessor from '../ProcessDialog/Processors/DateTimeProcessor';
 import EnumProcessor from '../ProcessDialog/Processors/EnumProcessor';
 import TextProcessor from '../ProcessDialog/Processors/TextProcessor';
@@ -99,6 +100,7 @@ export default ({
           />
         );
       case ProcessorType.Tag:
+        console.log(process.value);
         return (
           <MultiValueProcessor.Demonstrator
             getDataSource={getDataSource}
@@ -112,12 +114,10 @@ export default ({
             value={process.value}
           />
         );
+      default:
+        console.error(process);
+        throw new Error('Unsupported processor type');
     }
-    return (
-      <div>
-        {t('Unsupported processor type')}
-      </div>
-    );
   };
 
   return (
@@ -147,7 +147,9 @@ export default ({
           {process.propertyKey}
         </div>
       )}
-      {renderProcessorValue()}
+      <ErrorBoundary fallback={<span>{t('Unsupported processor type')}</span>}>
+        {renderProcessorValue()}
+      </ErrorBoundary>
       <ClickableIcon type={'delete'} colorType={'danger'} size={'small'} />
     </div>
   );

@@ -6,6 +6,7 @@ import type { IVariable } from '../../Variables';
 import TextProcessor, {
   type ITextProcessorValue,
 } from '../Processors/TextProcessor';
+import { BmVolumeProcessorOperation } from '@/sdk/constants';
 
 interface IProps {
   variables: IVariable[];
@@ -24,7 +25,7 @@ enum VolumeProperty {
 }
 
 interface IValue {
-  operation?: Operation;
+  operation?: BmVolumeProcessorOperation;
   propertyModifications?: Record<VolumeProperty, ITextProcessorValue>;
 }
 
@@ -37,9 +38,9 @@ const Editor = ({
   const [variables, setVariables] = useState<IVariable[]>(propsVariables || []);
   const [value, setValue] = useState<IValue>(propsValue ?? {});
 
-  const operationDataSource = Object.keys(Operation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
+  const operationDataSource = Object.keys(BmVolumeProcessorOperation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
     label: t(x),
-    value: Operation[x],
+    value: BmVolumeProcessorOperation[x],
   }));
 
   const selectedProperties = Object.keys(value.propertyModifications || {}).map(k => parseInt(k, 10) as VolumeProperty);
@@ -59,7 +60,7 @@ const Editor = ({
   const renderValueComp = () => {
     const components: { label: string; comp: any }[] = [];
     switch (value.operation) {
-      case Operation.Modify:
+      case BmVolumeProcessorOperation.Modify:
         components.push({
           label: t('Target properties'),
           comp: (
@@ -96,7 +97,7 @@ const Editor = ({
           ),
         });
         break;
-      case Operation.Remove:
+      case BmVolumeProcessorOperation.Remove:
         break;
     }
     return components.map((c, i) => {
@@ -155,13 +156,13 @@ const Demonstrator = ({
   const [valueTexts, setValueTexts] = useState<string[]>([]);
 
   switch (value?.operation) {
-    case Operation.Remove:
+    case BmVolumeProcessorOperation.Remove:
       return (
         <>
           <div className="primary">{t('Remove')}</div>
         </>
       );
-    case Operation.Modify:
+    case BmVolumeProcessorOperation.Modify:
       return (
         <div className={'multiple'}>
           {Object.keys(value.propertyModifications || {}).map(k => parseInt(k, 10) as VolumeProperty).map(p => {

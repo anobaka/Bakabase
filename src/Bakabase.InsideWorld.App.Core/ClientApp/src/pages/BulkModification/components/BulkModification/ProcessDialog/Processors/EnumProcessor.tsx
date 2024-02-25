@@ -3,6 +3,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { DatePicker2, Input, NumberPicker, Select } from '@alifd/next';
 import { useUpdateEffect } from 'react-use';
 import type { IVariable } from '../../Variables';
+import { BmSimpleValueProcessorOperation } from '@/sdk/constants';
 
 interface IProps {
   variables: IVariable[];
@@ -11,14 +12,14 @@ interface IProps {
   value?: IValue;
 }
 
-enum Operation {
-  SetWithFixedValue = 1,
-  SetWithDynamicValue,
-  Remove,
-}
+// enum Operation {
+//   SetWithFixedValue = 1,
+//   SetWithDynamicValue,
+//   Remove,
+// }
 
 interface IValue {
-  operation?: Operation;
+  operation?: BmSimpleValueProcessorOperation;
   value?: string;
 }
 
@@ -27,9 +28,9 @@ const Editor = ({ variables: propsVariables, dataSource, onChange, value: propsV
   const [variables, setVariables] = useState<IVariable[]>(propsVariables || []);
   const [value, setValue] = useState<IValue>(propsValue ?? {});
 
-  const operationDataSource = Object.keys(Operation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
+  const operationDataSource = Object.keys(BmSimpleValueProcessorOperation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
     label: t(x),
-    value: Operation[x],
+    value: BmSimpleValueProcessorOperation[x],
   }));
 
   useUpdateEffect(() => {
@@ -41,7 +42,7 @@ const Editor = ({ variables: propsVariables, dataSource, onChange, value: propsV
   const renderValueComp = () => {
     const components: { label: string; comp: any }[] = [];
     switch (value.operation) {
-      case Operation.SetWithFixedValue:
+      case BmSimpleValueProcessorOperation.SetWithFixedValue:
         components.push({
           label: 'Value',
           comp: (
@@ -56,7 +57,7 @@ const Editor = ({ variables: propsVariables, dataSource, onChange, value: propsV
           ),
         });
         break;
-      case Operation.SetWithDynamicValue:
+      case BmSimpleValueProcessorOperation.SetWithDynamicValue:
         components.push({
           label: 'Value',
           comp: (
@@ -70,7 +71,7 @@ const Editor = ({ variables: propsVariables, dataSource, onChange, value: propsV
           ),
         });
         break;
-      case Operation.Remove:
+      case BmSimpleValueProcessorOperation.Remove:
         break;
     }
     return components.map(c => {
@@ -109,13 +110,13 @@ const Demonstrator = ({ value, dataSource }: { value: IValue; dataSource: IProps
   const { t } = useTranslation();
 
   switch (value.operation) {
-    case Operation.Remove:
+    case BmSimpleValueProcessorOperation.Remove:
       return (
         <>
           <div className="primary">{t('Remove')}</div>
         </>
       );
-    case Operation.SetWithFixedValue: {
+    case BmSimpleValueProcessorOperation.SetWithFixedValue: {
       const label = dataSource.find(d => d.value == value.value)?.label ?? t('Unsupported value');
       return (
         <>
@@ -129,7 +130,7 @@ const Demonstrator = ({ value, dataSource }: { value: IValue; dataSource: IProps
         </>
       );
     }
-    case Operation.SetWithDynamicValue:
+    case BmSimpleValueProcessorOperation.SetWithDynamicValue:
       return (
         <>
           <Trans

@@ -1024,5 +1024,15 @@
   "Title": "标题",
   "Backward": "向前",
   "Forward": "向后",
-  "Empty value": "空值"
+  "Empty value": "空值",
+  "Find in aliases": "在别名中查找",
+  "Some properties have applied aliases, you can enable this feature to check your target both in raw values and aliases.": "有些属性已经应用了别名功能，您可以同时在原属性值和别名中进行查找。",
+  "Creating a bulk modification": "正在创建批量修改批次",
+  "Please input a name": "请输入名称",
+  "Name is required": "名称不能为空",
+  "How does this work?": "如何使用？",
+  "You can set any combination of criteria to filter the resources that you need to modify in bulk": "您可以设置任意组合的条件来筛选需要批量修改的资源",
+  "You can set some variables and use them in processes": "您可以设置一些变量并在处理器中使用它们",
+  "To modify the properties of filtered resources, you should set at least one process": "要修改筛选出的资源的属性，您至少需要设置一个处理器",
+  "You can preview the result then apply all changes": "您可以预览结果然后应用所有修改"
 }

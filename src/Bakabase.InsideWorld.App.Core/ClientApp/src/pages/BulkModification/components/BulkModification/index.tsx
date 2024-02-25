@@ -1,6 +1,7 @@
 import { Button, Collapse, Dialog, Loading, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
+import { useTour } from '@reactour/tour';
 import SimpleLabel from '@/components/SimpleLabel';
 import type { BulkModificationProperty, BulkModificationStatus } from '@/sdk/constants';
 import { BulkModificationFilterGroupOperation, type BulkModificationFilterOperation } from '@/sdk/constants';
@@ -13,6 +14,8 @@ import FilterGroup from '@/pages/BulkModification/components/BulkModification/Fi
 import ProcessDemonstrator from '@/pages/BulkModification/components/BulkModification/ProcessDemonstrator';
 import ProcessDialog from '@/pages/BulkModification/components/BulkModification/ProcessDialog';
 import FilteredResourcesDialog from '@/pages/BulkModification/components/BulkModification/FilteredResourcesDialog';
+import ClickableIcon from '@/components/ClickableIcon';
+
 
 const { Panel } = Collapse;
 
@@ -68,6 +71,7 @@ export default ({
   const { t } = useTranslation();
   const [processing, setProcessing] = useState(false);
   const [results, setResults] = useState<IResourceModificationResult[]>();
+  const [loadingDiffs, setLoadingDiffs] = useState(false);
   const [bm, setBm] = useState(propsBm);
 
   const saveChanges = (changes: Partial<IBulkModification>, save: boolean) => {
@@ -75,6 +79,37 @@ export default ({
     onChange(newBm, save).then(r => {
       if (!r.code) {
         setBm(newBm);
+      }
+    });
+  };
+
+  const {
+    isOpen,
+    currentStep,
+    steps,
+    setIsOpen,
+    setCurrentStep,
+    setSteps,
+  } = useTour();
+
+  const loadPrevDiffs = async () => {
+    BApi.bulkModification.getBulkModificationResourceDiffs(bm.id).then(r => {
+      if (!r.code) {
+        const diffs = r.data || [];
+        const resultMap: Record<number, IResourceModificationResult> = [];
+        for (const d of diffs) {
+          let r = resultMap[d.resourceId!];
+          if (!r) {
+            r = resultMap[d.resourceId!] = {
+              id: d.resourceId!,
+              path: d.resourcePath!,
+              diffs: [],
+            };
+          }
+          // @ts-ignore
+          r.diffs.push(d);
+        }
+        setResults(Object.values(resultMap));
       }
     });
   };
@@ -120,7 +155,7 @@ export default ({
               size={'small'}
               onClick={() => {
                 FilteredResourcesDialog.show({
-                  resourceIds: bm.filteredResourceIds!,
+                  bmId: bm.id!,
                 });
               }}
             >查看完整筛选结果</Button>
@@ -188,8 +223,63 @@ export default ({
         </div>
         <div className="content">
           <div className="opts">
-            <Button type={'normal'} size={'small'}>预览修改结果</Button>
-            <Button type={'primary'} size={'small'}>执行</Button>
+            <Button
+              type={'secondary'}
+              size={'small'}
+              loading={loadingDiffs}
+              onClick={() => {
+                const dialog = Dialog.show({
+                  title: t('Processing'),
+                  // content: t('Processing'),
+                  closeable: false,
+                  footer: false,
+                });
+                BApi.bulkModification.calculateBulkModificationResourceDiffs(bm.id).then(r => {
+                  if (!r.code) {
+                    loadPrevDiffs();
+                  }
+                }).finally(() => {
+                  dialog.hide();
+                });
+              }}
+            >{t('Calculate resource diffs')}</Button>
+            <Button
+              type={'normal'}
+              size={'small'}
+              onClick={() => {
+                loadPrevDiffs();
+              }}
+            >{t('Check previous result')}</Button>
+            <Button
+              type={'primary'}
+              size={'small'}
+              onClick={() => {
+                Dialog.confirm({
+                  title: t('Apply bulk modification'),
+                  content: t('All changes will be applied to resources, and there is no way back. Are you sure to apply the bulk modification?'),
+                  onOk: () => {
+                    const dialog = Dialog.show({
+                      title: t('Processing'),
+                      // content: t('Processing'),
+                      closeable: false,
+                      footer: false,
+                    });
+                    setTimeout(() => {
+                      dialog.hide();
+                    }, 3000);
+                    // BApi.bulkModification(bm.id).then(r => {
+                    //   if (!r.code) {
+                    //     Message.success(t('Bulk modification applied successfully'));
+                    //   } else {
+                    //     Message.error(r.message);
+                    //   }
+                    // }).finally(() => {
+                    //   setProcessing(false);
+                    // });
+                  },
+                });
+              }}
+            >{t('Apply')}</Button>
           </div>
           <div className="preview">
             {results?.map(r => {

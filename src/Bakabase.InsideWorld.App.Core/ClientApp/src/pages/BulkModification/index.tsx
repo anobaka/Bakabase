@@ -1,4 +1,4 @@
-import { Button, Collapse, Icon } from '@alifd/next';
+import { Button, Collapse, Dialog, Icon, Input, Message } from '@alifd/next';
 import SimpleLabel from '@/components/SimpleLabel';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
@@ -175,14 +175,16 @@ export default () => {
       ));
       console.log('set display data sources for media libraries');
     });
-
-    BApi.bulkModification.getAllBulkModifications().then(r => {
-      const dtos = r.data || [];
-      const bms = dtos.map(d => convertFromApiModel(d));
-      // @ts-ignore
-      setBulkModifications(bms);
-    });
+    loadAllBulkModifications();
   }, []);
+
+  const loadAllBulkModifications = async () => {
+    const r = await BApi.bulkModification.getAllBulkModifications();
+    const dtos = r.data || [];
+    const bms = dtos.map(d => convertFromApiModel(d));
+    // @ts-ignore
+    setBulkModifications(bms);
+  };
 
   const onChange = async (bm: IBulkModification, save: boolean): Promise<{
     code: number;
@@ -205,37 +207,37 @@ export default () => {
       <div className="header">
         <div className="title">
           Bulk Modification
-          <ClickableIcon
-            type={'question-circle'}
-            colorType={'normal'}
-            onClick={() => {
-              setSteps!([
-                {
-                  selector: '.filters-panel',
-                  content: t('You can set any combination of criteria to filter the resources that you need to modify in bulk'),
-                },
-                {
-                  selector: '.variables-panel',
-                  content: t('You can set some variables and use them in processes'),
-                },
-                {
-                  selector: '.processes-panel',
-                  content: t('To modify the properties of filtered resources, you should set at least one process'),
-                },
-                {
-                  selector: '.result-panel',
-                  content: t('You can preview the result then apply all changes'),
-                },
-              ]);
-              setCurrentStep(0);
-              setIsOpen(o => true);
-            }}
-          />
         </div>
         <Button
           type={'primary'}
           size={'small'}
-        >{t('Create a bulk modification')}</Button>
+          onClick={() => {
+            let name: string;
+            Dialog.show({
+              title: t('Creating a bulk modification'),
+              content: (
+                <Input
+                  placeholder={t('Please input a name')}
+                  style={{ width: 500 }}
+                  trim
+                  onChange={v => name = v}
+                />
+              ),
+              v2: true,
+              width: 'auto',
+              closeMode: ['close', 'mask', 'esc'],
+              onOk: async () => {
+                if (name == undefined || name.length == 0) {
+                  return Message.error(t('Name is required'));
+                }
+                const r = await BApi.bulkModification.createBulkModification({ name });
+                if (!r.code) {
+                  await loadAllBulkModifications();
+                }
+              },
+            });
+          }}
+        >{t('Create')}</Button>
       </div>
       <Collapse
         key={bulkModifications?.length}
@@ -246,10 +248,11 @@ export default () => {
         }}
       >
         {bulkModifications?.map((bm, i) => {
+          const expanded = expandedKeys.includes(bm.id.toString());
           return (
             <Panel
               key={bm.id}
-              className={'bulk-modification'}
+              className={`bulk-modification-${bm.id} bulk-modification`}
               title={(
                 <div className={'title-bar'}>
                   <div className="left">
@@ -262,9 +265,47 @@ export default () => {
                         {t(BulkModificationStatus[bm.status])}
                       </SimpleLabel>
                     </div>
-                    <Button type={'normal'} size={'small'}>{t('Duplicate')}</Button>
+                    <Button
+                      type={'normal'}
+                      size={'small'}
+                      onClick={e => {
+                      e.stopPropagation();
+                    }}
+                    >{t('Duplicate')}</Button>
                     {processing && (
                       <Icon type={'loading'} size={'small'} />
+                    )}
+                    {expanded && (
+                      <Button
+                        type={'primary'}
+                        text
+                        size={'small'}
+                        onClick={e => {
+                          e.stopPropagation();
+                          setSteps!([
+                            {
+                              selector: `.bulk-modification-${bm.id} .filters-panel`,
+                              content: t('You can set any combination of criteria to filter the resources that you need to modify in bulk'),
+                            },
+                            {
+                              selector: `.bulk-modification-${bm.id} .variables-panel`,
+                              content: t('You can set some variables and use them in processes'),
+                            },
+                            {
+                              selector: `.bulk-modification-${bm.id} .processes-panel`,
+                              content: t('To modify the properties of filtered resources, you should set at least one process'),
+                            },
+                            {
+                              selector: `.bulk-modification-${bm.id} .result-panel`,
+                              content: t('You can preview the result then apply all changes'),
+                            },
+                          ]);
+                          setCurrentStep(0);
+                          setIsOpen(o => true);
+                        }}
+                      >
+                        {t('How does this work?')}
+                      </Button>
                     )}
                   </div>
                   <div className="right">

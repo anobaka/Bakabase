@@ -17,5 +17,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         /// Serialized
         /// </summary>
         public string? Value { get; set; }
+
+        public override string ToString()
+        {
+            return $"[{Property}{(string.IsNullOrEmpty(PropertyKey) ? null : $":{PropertyKey}")}]{Value}";
+        }
     }
 }

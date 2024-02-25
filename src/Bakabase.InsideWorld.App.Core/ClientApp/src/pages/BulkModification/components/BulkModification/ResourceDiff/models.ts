@@ -1,6 +1,6 @@
+import type { IResourceDiff } from './index';
 import type { ResourceLanguage } from '@/sdk/constants';
 import { BulkModificationDiffType, BulkModificationProperty } from '@/sdk/constants';
-import type { IResourceDiff } from '@/pages/BulkModification/components/ResourceDiff/index';
 
 export interface IVolumeDiffValue {
   title?: string;
@@ -209,11 +209,11 @@ export class ResourceDiffUtils {
 
     let type: BulkModificationDiffType;
     if (currentValue == undefined) {
-      type = BulkModificationDiffType.New;
+      type = BulkModificationDiffType.Added;
     } else if (newValue == undefined) {
       type = BulkModificationDiffType.Removed;
     } else {
-      type = BulkModificationDiffType.Changed;
+      type = BulkModificationDiffType.Modified;
     }
 
     return ({

@@ -148,10 +148,12 @@ const FilterDialog = (props: IProps) => {
                 dataSource={[{
                   label: t('Enable'),
                   value: 1,
-                }, {
-                  label: t('Disable'),
-                  value: 0,
-                }]}
+                },
+                  // , {
+                  //   label: t('Disable'),
+                  //   value: 0,
+                  // }
+                ]}
                 defaultValue={1}
               />
             </div>

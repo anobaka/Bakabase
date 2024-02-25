@@ -1092,13 +1092,58 @@ export const PerformBulkModificationFilteringURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetBulkModificationDiffs
- * url: GetBulkModificationDiffsURL
- * method: GetBulkModificationDiffs_TYPE
- * raw_url: GetBulkModificationDiffs_RAW_URL
+ * request: GetBulkModificationFilteredResources
+ * url: GetBulkModificationFilteredResourcesURL
+ * method: GetBulkModificationFilteredResources_TYPE
+ * raw_url: GetBulkModificationFilteredResources_RAW_URL
+ * @param id - 
+ */
+export const GetBulkModificationFilteredResources = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification/{id}/filtered-resources'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetBulkModificationFilteredResources_RAW_URL = function() {
+  return '/bulk-modification/{id}/filtered-resources'
+}
+export const GetBulkModificationFilteredResources_TYPE = function() {
+  return 'get'
+}
+export const GetBulkModificationFilteredResourcesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification/{id}/filtered-resources'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetBulkModificationResourceDiffs
+ * url: GetBulkModificationResourceDiffsURL
+ * method: GetBulkModificationResourceDiffs_TYPE
+ * raw_url: GetBulkModificationResourceDiffs_RAW_URL
  * @param bmId - 
  */
-export const GetBulkModificationDiffs = function(parameters = {}) {
+export const GetBulkModificationResourceDiffs = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/bulk-modification/{bmId}/diffs'
@@ -1116,17 +1161,62 @@ export const GetBulkModificationDiffs = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetBulkModificationDiffs_RAW_URL = function() {
+export const GetBulkModificationResourceDiffs_RAW_URL = function() {
   return '/bulk-modification/{bmId}/diffs'
 }
-export const GetBulkModificationDiffs_TYPE = function() {
+export const GetBulkModificationResourceDiffs_TYPE = function() {
   return 'get'
 }
-export const GetBulkModificationDiffsURL = function(parameters = {}) {
+export const GetBulkModificationResourceDiffsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/bulk-modification/{bmId}/diffs'
   path = path.replace('{bmId}', `${parameters['bmId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: CalculateBulkModificationResourceDiffs
+ * url: CalculateBulkModificationResourceDiffsURL
+ * method: CalculateBulkModificationResourceDiffs_TYPE
+ * raw_url: CalculateBulkModificationResourceDiffs_RAW_URL
+ * @param id - 
+ */
+export const CalculateBulkModificationResourceDiffs = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification/{id}/diffs'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const CalculateBulkModificationResourceDiffs_RAW_URL = function() {
+  return '/bulk-modification/{id}/diffs'
+}
+export const CalculateBulkModificationResourceDiffs_TYPE = function() {
+  return 'post'
+}
+export const CalculateBulkModificationResourceDiffsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification/{id}/diffs'
+  path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -6616,6 +6706,45 @@ export const GetResourcePlayableFilesURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetAllCustomPropertyKeys
+ * url: GetAllCustomPropertyKeysURL
+ * method: GetAllCustomPropertyKeys_TYPE
+ * raw_url: GetAllCustomPropertyKeys_RAW_URL
+ */
+export const GetAllCustomPropertyKeys = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/custom-property-keys'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllCustomPropertyKeys_RAW_URL = function() {
+  return '/resource/custom-property-keys'
+}
+export const GetAllCustomPropertyKeys_TYPE = function() {
+  return 'get'
+}
+export const GetAllCustomPropertyKeysURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/custom-property-keys'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllCustomPropertiesAndCandidates
  * url: GetAllCustomPropertiesAndCandidatesURL
  * method: GetAllCustomPropertiesAndCandidates_TYPE
@@ -6953,6 +7082,45 @@ export const GetResourceDataForPreviewerURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/{id}/previewer'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetAllOriginals
+ * url: GetAllOriginalsURL
+ * method: GetAllOriginals_TYPE
+ * raw_url: GetAllOriginals_RAW_URL
+ */
+export const GetAllOriginals = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/original/all'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllOriginals_RAW_URL = function() {
+  return '/resource/original/all'
+}
+export const GetAllOriginals_TYPE = function() {
+  return 'get'
+}
+export const GetAllOriginalsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/original/all'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
