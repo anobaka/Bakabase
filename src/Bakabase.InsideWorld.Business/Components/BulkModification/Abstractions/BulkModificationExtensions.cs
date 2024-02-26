@@ -53,6 +53,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 Id = bm.Id,
                 Name = bm.Name,
                 Status = bm.Status,
+                CalculatedAt = bm.CalculatedAt,
 
                 Filter = string.IsNullOrEmpty(bm.Filter)
                     ? null

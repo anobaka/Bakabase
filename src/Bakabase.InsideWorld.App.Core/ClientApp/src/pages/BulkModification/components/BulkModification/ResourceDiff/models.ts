@@ -1,6 +1,12 @@
 import type { IResourceDiff } from './index';
-import type { ResourceLanguage } from '@/sdk/constants';
-import { BulkModificationDiffType, BulkModificationProperty } from '@/sdk/constants';
+import type {
+  ResourceLanguage,
+} from '@/sdk/constants';
+import {
+  BulkModificationDiffOperation,
+  BulkModificationDiffType,
+  BulkModificationProperty,
+} from '@/sdk/constants';
 
 export interface IVolumeDiffValue {
   title?: string;
@@ -136,32 +142,32 @@ export class ResourceDiffUtils {
 
   // Original
 
-  static buildOriginal(currentOriginal?: string[] | null, newOriginal?: string[] | null): IResourceDiff | undefined {
+  static buildOriginal(currentOriginal?: {id: number; name: string}[] | null, newOriginal?: {name: string}[] | null): IResourceDiff | undefined {
     return ResourceDiffUtils.build(BulkModificationProperty.Original, currentOriginal, newOriginal);
   }
 
-  static parseOriginal(rawDiffValue?: string): string[] | undefined {
-    return ResourceDiffUtils.deserializeRawDiffValue(rawDiffValue) as string[];
+  static parseOriginal(rawDiffValue?: string): {id: number; name: string}[] | undefined {
+    return ResourceDiffUtils.deserializeRawDiffValue(rawDiffValue) as {id: number; name: string}[];
   }
 
   // Series
 
-  static buildSeries(currentSeries?: string | null, newSeries?: string | null): IResourceDiff | undefined {
+  static buildSeries(currentSeries?: {name: string} | null, newSeries?: {name: string} | null): IResourceDiff | undefined {
     return ResourceDiffUtils.build(BulkModificationProperty.Series, currentSeries, newSeries);
   }
 
-  static parseSeries(rawDiffValue?: string): string | undefined {
-    return ResourceDiffUtils.deserializeRawDiffValue(rawDiffValue) as string;
+  static parseSeries(rawDiffValue?: string): {name: string} | undefined {
+    return ResourceDiffUtils.deserializeRawDiffValue(rawDiffValue) as {name: string};
   }
 
   // Tag
 
-  static buildTag(currentTagIds?: number[] | null, newTagIds?: number[] | null): IResourceDiff | undefined {
-    return ResourceDiffUtils.build(BulkModificationProperty.Tag, currentTagIds, newTagIds);
+  static buildTag(currentValue?: {name: string; id: number}[] | null, newValue?: {name: string; id: number}[] | null): IResourceDiff | undefined {
+    return ResourceDiffUtils.build(BulkModificationProperty.Tag, currentValue, newValue);
   }
 
-  static parseTag(rawDiffValue?: string): number[] | undefined {
-    return ResourceDiffUtils.deserializeRawDiffValue(rawDiffValue) as number[];
+  static parseTag(rawDiffValue?: string): {name: string; id: number}[] | undefined {
+    return ResourceDiffUtils.deserializeRawDiffValue(rawDiffValue) as {name: string; id: number}[];
   }
 
   // Introduction
@@ -222,6 +228,7 @@ export class ResourceDiffUtils {
       type,
       currentValue: currentValue == undefined ? undefined : JSON.stringify(currentValue),
       newValue: newValue == undefined ? undefined : JSON.stringify(newValue),
+      operation: BulkModificationDiffOperation.None,
     });
   }
 }

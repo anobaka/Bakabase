@@ -16,7 +16,7 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors
 {
     /// <summary>
-    /// todo: For now, this processor will ignore processing if there are multiple custom properties with the same key.
+    /// todo: For now, this processor will skip processing if there are multiple custom properties with the same key.
     /// </summary>
     public class BmCustomPropertiesProcessor : BmTextProcessor
     {

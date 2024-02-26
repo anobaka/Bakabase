@@ -15,10 +15,11 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
         protected abstract void SetValues(ResourceDto resource, List<TProperty>? values);
         protected abstract int GetValueKey(TProperty value);
         protected abstract TProperty CreateNewValue(int id);
-        protected abstract string GetValueBizKey(TProperty value);
+        protected abstract string? GetValueBizKey(TProperty value);
         protected abstract TProperty CreateNewValue(string value);
 
-        protected override async Task ProcessInternal(BmMultipleValueProcessorValue<int, string, TextProcessValue> value,
+        protected override async Task ProcessInternal(
+            BmMultipleValueProcessorValue<int, string, TextProcessValue> value,
             ResourceDto resource, Dictionary<string, string?> variables,
             string? propertyKey)
         {
@@ -86,12 +87,17 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
                             }
                             case BmMultipleValueProcessorFilterBy.Containing:
                             {
-                                targetData = targetData.Where(o => GetValueBizKey(o).Contains(value.Find!)).ToList();
+                                targetData = targetData.Where(o => GetValueBizKey(o)?.Contains(value.Find!) == true)
+                                    .ToList();
                                 break;
                             }
                             case BmMultipleValueProcessorFilterBy.Matching:
                             {
-                                targetData = targetData.Where(o => Regex.IsMatch(GetValueBizKey(o), value.Find!))
+                                targetData = targetData.Where(o =>
+                                    {
+                                        var bizKey = GetValueBizKey(o);
+                                        return !string.IsNullOrEmpty(bizKey) && Regex.IsMatch(bizKey, value.Find!);
+                                    })
                                     .ToList();
                                 break;
                             }

@@ -41,7 +41,8 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     Filter = table.Column<string>(type: "TEXT", nullable: true),
                     Processes = table.Column<string>(type: "TEXT", nullable: true),
                     Variables = table.Column<string>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CalculatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {

@@ -237,7 +237,7 @@ const ProcessDialog = (props: IProps) => {
             </Tag.Group>
           </div>
         </div>
-        {renderCustomPropertyKeySelector()}
+        {/* {renderCustomPropertyKeySelector()} */}
         <div className="block">
           <div className="label">
             {t('Variables')}

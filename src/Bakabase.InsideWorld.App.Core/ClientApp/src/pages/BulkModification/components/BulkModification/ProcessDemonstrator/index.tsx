@@ -23,9 +23,10 @@ interface IProps {
   variables?: IVariable[];
   onChange: (data: IBulkModificationProcess) => any;
   dataSources?: Record<any, any>;
+  onRemove?: () => any;
 }
 
-const PropertyIconMap: {[key in BulkModificationProperty]?: string} = {
+const PropertyIconMap: { [key in BulkModificationProperty]?: string } = {
   [BulkModificationProperty.Name]: 'name',
   [BulkModificationProperty.Introduction]: 'introduction',
   [BulkModificationProperty.FileName]: 'a-filename',
@@ -46,6 +47,7 @@ export default ({
                   onChange,
                   variables,
                   dataSources,
+                  onRemove,
                 }: IProps) => {
   const { t } = useTranslation();
   const processorType = PropertyProcessorTypeMap[process.property!];
@@ -150,7 +152,15 @@ export default ({
       <ErrorBoundary fallback={<span>{t('Unsupported processor type')}</span>}>
         {renderProcessorValue()}
       </ErrorBoundary>
-      <ClickableIcon type={'delete'} colorType={'danger'} size={'small'} />
+      <ClickableIcon
+        type={'delete'}
+        colorType={'danger'}
+        size={'small'}
+        onClick={e => {
+          e.stopPropagation();
+          onRemove?.();
+        }}
+      />
     </div>
   );
 };

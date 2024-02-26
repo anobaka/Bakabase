@@ -17,7 +17,7 @@ export interface IResourceDiff {
   type: BulkModificationDiffType;
   currentValue?: any;
   newValue?: any;
-  operation?: BulkModificationDiffOperation;
+  operation: BulkModificationDiffOperation;
 }
 
 interface IProps {
@@ -66,6 +66,8 @@ export default ({
 
   const renderValue = (jsonStr: string): any => {
     const value = buildValue(jsonStr);
+
+    // console.log(value, 5555, diff);
 
     if (value == undefined) {
       return (
@@ -155,25 +157,23 @@ export default ({
               </div>
             </div>
           );
-        } else {
-          return t('Invalid data');
         }
+        break;
       }
       case BulkModificationProperty.Original:
       {
-        return ResourceDiffUtils.parseOriginal(rawDiffValue)?.join(', ');
+        return ResourceDiffUtils.parseOriginal(rawDiffValue)?.map(o => displayDataSources?.[BulkModificationProperty.Original]?.[o.id]).join(', ');
       }
       case BulkModificationProperty.Series: {
-        return ResourceDiffUtils.parseSeries(rawDiffValue);
+        return ResourceDiffUtils.parseSeries(rawDiffValue)?.name;
       }
       case BulkModificationProperty.Tag: {
-        const tagIds = ResourceDiffUtils.parseTag(rawDiffValue);
-        const names = tagIds?.map(id => displayDataSources?.[BulkModificationProperty.Tag]?.[id]);
+        const tagValues = ResourceDiffUtils.parseTag(rawDiffValue);
+        const names = tagValues?.map(tag => displayDataSources?.[BulkModificationProperty.Tag]?.[tag.id] ?? tag.name).filter(n => n != undefined && n.length > 0);
         if (names && names.length > 0) {
           return names.join(', ');
-        } else {
-          return t('Invalid data');
         }
+        break;
       }
       case BulkModificationProperty.Introduction: {
         return ResourceDiffUtils.parseIntroduction(rawDiffValue);
@@ -193,12 +193,12 @@ export default ({
       <SimpleLabel className="property">
         {diff.propertyKey != undefined ? diff.propertyKey : t(BulkModificationProperty[diff.property])}
       </SimpleLabel>
-      <CustomIcon className={'type'} type={TypeIconMap[diff.type]} size={'small'} />
       {/* <SimpleLabel className="type" status={TypeSimpleLabelStatusMap[diff.type]}> */}
       {/*   {t(BulkModificationDiffType[diff.type])} */}
       {/* </SimpleLabel> */}
       <div className="current">{renderValue(diff.currentValue)}</div>
-      <Icon type="arrow-double-right" size={'small'} />
+      <CustomIcon className={'type'} type={TypeIconMap[diff.type]} size={'small'} />
+      {/* <Icon type="arrow-double-right" size={'small'} /> */}
       <div className="new">{renderValue(diff.newValue)}</div>
     </div>
   );

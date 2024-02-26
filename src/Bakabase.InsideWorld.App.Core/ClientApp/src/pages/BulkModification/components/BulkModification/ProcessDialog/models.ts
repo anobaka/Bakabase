@@ -20,7 +20,7 @@ export const availablePropertiesForProcessing: BulkModificationProperty[] = [
   P.Tag,
   P.Introduction,
   P.Rate,
-  P.CustomProperty,
+  // P.CustomProperty,
 ];
 
 export enum ProcessorType {

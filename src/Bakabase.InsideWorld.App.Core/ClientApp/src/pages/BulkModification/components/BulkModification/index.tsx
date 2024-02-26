@@ -1,6 +1,6 @@
-import { Button, Collapse, Dialog, Loading, Message } from '@alifd/next';
+import { Balloon, Button, Collapse, Dialog, Icon } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTour } from '@reactour/tour';
 import SimpleLabel from '@/components/SimpleLabel';
 import type { BulkModificationProperty, BulkModificationStatus } from '@/sdk/constants';
@@ -14,7 +14,9 @@ import FilterGroup from '@/pages/BulkModification/components/BulkModification/Fi
 import ProcessDemonstrator from '@/pages/BulkModification/components/BulkModification/ProcessDemonstrator';
 import ProcessDialog from '@/pages/BulkModification/components/BulkModification/ProcessDialog';
 import FilteredResourcesDialog from '@/pages/BulkModification/components/BulkModification/FilteredResourcesDialog';
-import ClickableIcon from '@/components/ClickableIcon';
+import ResourceDiffsResultsDialog
+  from '@/pages/BulkModification/components/BulkModification/ResourceDiffsResultsDialog';
+import { convertFromApiModel } from '@/pages/BulkModification/helpers';
 
 
 const { Panel } = Collapse;
@@ -45,18 +47,12 @@ export interface IBulkModification {
   name: string;
   status: BulkModificationStatus;
   createdAt: string;
+  calculatedAt?: string;
   variables?: IVariable[];
   filter?: IBulkModificationFilterGroup;
   processes?: IBulkModificationProcess[];
   filteredResourceIds?: number[];
 }
-
-interface IResourceModificationResult {
-  id: number;
-  path: string;
-  diffs: IResourceDiff[];
-}
-
 interface IProps {
   bm: IBulkModification;
   displayDataSources: { [property in BulkModificationProperty]?: Record<any, any> };
@@ -70,8 +66,6 @@ export default ({
                 }: IProps) => {
   const { t } = useTranslation();
   const [processing, setProcessing] = useState(false);
-  const [results, setResults] = useState<IResourceModificationResult[]>();
-  const [loadingDiffs, setLoadingDiffs] = useState(false);
   const [bm, setBm] = useState(propsBm);
 
   const saveChanges = (changes: Partial<IBulkModification>, save: boolean) => {
@@ -83,36 +77,9 @@ export default ({
     });
   };
 
-  const {
-    isOpen,
-    currentStep,
-    steps,
-    setIsOpen,
-    setCurrentStep,
-    setSteps,
-  } = useTour();
+  useEffect(() => {
 
-  const loadPrevDiffs = async () => {
-    BApi.bulkModification.getBulkModificationResourceDiffs(bm.id).then(r => {
-      if (!r.code) {
-        const diffs = r.data || [];
-        const resultMap: Record<number, IResourceModificationResult> = [];
-        for (const d of diffs) {
-          let r = resultMap[d.resourceId!];
-          if (!r) {
-            r = resultMap[d.resourceId!] = {
-              id: d.resourceId!,
-              path: d.resourcePath!,
-              diffs: [],
-            };
-          }
-          // @ts-ignore
-          r.diffs.push(d);
-        }
-        setResults(Object.values(resultMap));
-      }
-    });
-  };
+  }, []);
 
   return (
     <>
@@ -192,6 +159,11 @@ export default ({
                     newProcesses[j] = p;
                     saveChanges({ processes: newProcesses }, true);
                   }}
+                  onRemove={() => {
+                    const newProcesses = [...bm.processes!];
+                    newProcesses.splice(j, 1);
+                    saveChanges({ processes: newProcesses }, true);
+                  }}
                 />
               );
             })}
@@ -226,30 +198,64 @@ export default ({
             <Button
               type={'secondary'}
               size={'small'}
-              loading={loadingDiffs}
               onClick={() => {
+                const ac = new AbortController();
+                const ct = ac.signal;
                 const dialog = Dialog.show({
-                  title: t('Processing'),
-                  // content: t('Processing'),
-                  closeable: false,
-                  footer: false,
+                  title: (
+                    <div>
+                      {t('Processing')}
+                      &nbsp;
+                      <Icon type={'loading'} />
+                    </div>
+                  ),
+                  v2: true,
+                  width: 300,
+                  closeMode: [],
+                  footerActions: ['cancel'],
+                  cancelProps: {
+                    children: t('Abort'),
+                    warning: true,
+                    type: 'primary',
+                  },
+                  onCancel: () => {
+                    ac.abort();
+                  },
                 });
-                BApi.bulkModification.calculateBulkModificationResourceDiffs(bm.id).then(r => {
+                BApi.bulkModification.calculateBulkModificationResourceDiffs(bm.id, { signal: ct }).then(r => {
                   if (!r.code) {
-                    loadPrevDiffs();
+                    BApi.bulkModification.getBulkModificationById(bm.id).then(r => {
+                      setBm(convertFromApiModel(r.data!));
+                    });
+                    ResourceDiffsResultsDialog.show({
+                      bmId: bm.id,
+                      displayDataSources,
+                    });
                   }
                 }).finally(() => {
                   dialog.hide();
                 });
               }}
             >{t('Calculate resource diffs')}</Button>
-            <Button
-              type={'normal'}
-              size={'small'}
-              onClick={() => {
-                loadPrevDiffs();
-              }}
-            >{t('Check previous result')}</Button>
+            <Balloon.Tooltip
+              trigger={(
+                <Button
+                  disabled={!bm.calculatedAt}
+                  type={'normal'}
+                  size={'small'}
+                  onClick={() => {
+                    ResourceDiffsResultsDialog.show({
+                      bmId: bm.id,
+                      displayDataSources,
+                    });
+                  }}
+                >{t('Check previous result')}</Button>
+              )}
+              align={'t'}
+              v2
+            >
+              {bm.calculatedAt ? t('Calculated at {{calculatedAt}}', { calculatedAt: bm.calculatedAt.substring(0, 19) }) : t('Calculate resource diffs first please')}
+            </Balloon.Tooltip>
             <Button
               type={'primary'}
               size={'small'}
@@ -280,30 +286,6 @@ export default ({
                 });
               }}
             >{t('Apply')}</Button>
-          </div>
-          <div className="preview">
-            {results?.map(r => {
-              return (
-                <div className="item">
-                  <div className="resource">
-                    <SimpleLabel status={'default'} className={'id'}>{r.id}</SimpleLabel>
-                    <div className="path">
-                      {r.path}
-                    </div>
-                  </div>
-                  <div className="diffs">
-                    {r.diffs.map(d => {
-                      return (
-                        <ResourceDiff
-                          diff={d}
-                          displayDataSources={displayDataSources}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
       </div>

@@ -43,6 +43,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _tempDataService = tempDataService;
         }
 
+        [HttpGet("{id:int}")]
+        [SwaggerOperation(OperationId = "GetBulkModificationById")]
+        public async Task<SingletonResponse<BulkModificationDto>> Get(int id)
+        {
+            return new SingletonResponse<BulkModificationDto>(await _service.GetDto(id));
+        }
+
         [HttpGet]
         [SwaggerOperation(OperationId = "GetAllBulkModifications")]
         public async Task<ListResponse<BulkModificationDto>> GetAll()
@@ -108,16 +115,31 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("{bmId:int}/diffs")]
         [SwaggerOperation(OperationId = "GetBulkModificationResourceDiffs")]
-        public async Task<ListResponse<BulkModificationDiff>> GetDiffs(int bmId)
+        public async Task<ListResponse<BulkModificationResourceDiffs>> GetDiffs(int bmId)
         {
-            return new ListResponse<BulkModificationDiff>(await _diffService.GetByBmId(bmId));
+            var diffs = await _diffService.GetByBmId(bmId);
+            return new ListResponse<BulkModificationResourceDiffs>(diffs.GroupBy(a => a.ResourceId).Select(x =>
+                new BulkModificationResourceDiffs
+                {
+                    Id = x.Key,
+                    Path = x.First().ResourcePath,
+                    Diffs = x.Select(b => new BulkModificationResourceDiffs.Diff
+                    {
+                        Property = b.Property,
+                        PropertyKey = b.PropertyKey,
+                        CurrentValue = b.CurrentValue,
+                        NewValue = b.NewValue,
+                        Operation = b.Operation,
+                        Type = b.Type
+                    }).ToList()
+                }));
         }
 
         [HttpPost("{id:int}/diffs")]
         [SwaggerOperation(OperationId = "CalculateBulkModificationResourceDiffs")]
         public async Task<BaseResponse> Preview(int id)
         {
-            var data = await _service.Preview(id);
+            var data = await _service.Preview(id, HttpContext.RequestAborted);
             return BaseResponseBuilder.Ok;
         }
     }

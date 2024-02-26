@@ -12,5 +12,6 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         public string? Processes { get; set; }
         public string? Variables { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime? CalculatedAt { get; set; }
     }
 }

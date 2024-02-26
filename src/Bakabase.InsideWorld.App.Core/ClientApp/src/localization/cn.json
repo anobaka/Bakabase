@@ -1034,5 +1034,13 @@
   "You can set any combination of criteria to filter the resources that you need to modify in bulk": "您可以设置任意组合的条件来筛选需要批量修改的资源",
   "You can set some variables and use them in processes": "您可以设置一些变量并在处理器中使用它们",
   "To modify the properties of filtered resources, you should set at least one process": "要修改筛选出的资源的属性，您至少需要设置一个处理器",
-  "You can preview the result then apply all changes": "您可以预览结果然后应用所有修改"
+  "You can preview the result then apply all changes": "您可以预览结果然后应用所有修改",
+  "Calculate resource diffs": "计算资源变化",
+  "Check previous result": "查看之前的结果",
+  "Apply": "应用",
+  "Processing": "处理中",
+  "Abort": "终止",
+  "Calculated at {{calculatedAt}}": "于{{calculatedAt}}计算",
+  "Calculate resource diffs first please": "请先计算资源变化",
+  "Index": "索引"
 }

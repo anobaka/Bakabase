@@ -871,18 +871,23 @@ export const GetBiliBiliFavoritesURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetAllBulkModifications
- * url: GetAllBulkModificationsURL
- * method: GetAllBulkModifications_TYPE
- * raw_url: GetAllBulkModifications_RAW_URL
+ * request: GetBulkModificationById
+ * url: GetBulkModificationByIdURL
+ * method: GetBulkModificationById_TYPE
+ * raw_url: GetBulkModificationById_RAW_URL
+ * @param id - 
  */
-export const GetAllBulkModifications = function(parameters = {}) {
+export const GetBulkModificationById = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/bulk-modification'
+  let path = '/bulk-modification/{id}'
   let body
   let queryParameters = {}
   let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -890,59 +895,17 @@ export const GetAllBulkModifications = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetAllBulkModifications_RAW_URL = function() {
-  return '/bulk-modification'
+export const GetBulkModificationById_RAW_URL = function() {
+  return '/bulk-modification/{id}'
 }
-export const GetAllBulkModifications_TYPE = function() {
+export const GetBulkModificationById_TYPE = function() {
   return 'get'
 }
-export const GetAllBulkModificationsURL = function(parameters = {}) {
+export const GetBulkModificationByIdURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/bulk-modification'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: CreateBulkModification
- * url: CreateBulkModificationURL
- * method: CreateBulkModification_TYPE
- * raw_url: CreateBulkModification_RAW_URL
- * @param model - 
- */
-export const CreateBulkModification = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/bulk-modification'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const CreateBulkModification_RAW_URL = function() {
-  return '/bulk-modification'
-}
-export const CreateBulkModification_TYPE = function() {
-  return 'post'
-}
-export const CreateBulkModificationURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/bulk-modification'
+  let path = '/bulk-modification/{id}'
+  path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -1037,6 +1000,88 @@ export const RemoveBulkModificationURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/bulk-modification/{id}'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetAllBulkModifications
+ * url: GetAllBulkModificationsURL
+ * method: GetAllBulkModifications_TYPE
+ * raw_url: GetAllBulkModifications_RAW_URL
+ */
+export const GetAllBulkModifications = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllBulkModifications_RAW_URL = function() {
+  return '/bulk-modification'
+}
+export const GetAllBulkModifications_TYPE = function() {
+  return 'get'
+}
+export const GetAllBulkModificationsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: CreateBulkModification
+ * url: CreateBulkModificationURL
+ * method: CreateBulkModification_TYPE
+ * raw_url: CreateBulkModification_RAW_URL
+ * @param model - 
+ */
+export const CreateBulkModification = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const CreateBulkModification_RAW_URL = function() {
+  return '/bulk-modification'
+}
+export const CreateBulkModification_TYPE = function() {
+  return 'post'
+}
+export const CreateBulkModificationURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

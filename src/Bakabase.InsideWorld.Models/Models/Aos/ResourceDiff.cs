@@ -25,8 +25,25 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
         public static ResourceDiff Removed(ResourceDiffProperty property, object? oldValue) => new()
             {Type = ResourceDiffType.Removed, CurrentValue = oldValue, Property = property};
 
+        public static ResourceDiff? BuildRootDiffForArrayProperty<T>(ResourceDiffProperty property, List<T>? a, List<T>? b,
+            IEqualityComparer<List<T>> equalityComparer,
+            string? key,
+            Func<List<T>, List<T>, List<ResourceDiff>?>? buildSubDiffs)
+        {
+            if (a?.Count == 0)
+            {
+                a = null;
+            }
 
-        public static ResourceDiff? Build<T>(ResourceDiffProperty property, T? a, T? b,
+            if (b?.Count == 0)
+            {
+                b = null;
+            }
+
+            return BuildRootDiff(property, a, b, equalityComparer, key, buildSubDiffs);
+        }
+
+        public static ResourceDiff? BuildRootDiff<T>(ResourceDiffProperty property, T? a, T? b,
             IEqualityComparer<T> equalityComparer,
             string? key,
             Func<T, T, List<ResourceDiff>?>? buildSubDiffs)
@@ -64,13 +81,13 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
             };
         }
 
-        public static List<ResourceDiff>? Build<T>(ResourceDiffProperty property,
+        public static List<ResourceDiff>? BuildRootDiffs<T>(ResourceDiffProperty property,
             List<(T? A, T? B)>? pairs,
             IEqualityComparer<T> equalityComparer,
             string? key,
             Func<T, T, List<ResourceDiff>?>? buildSubDiffs) where T : class
         {
-            if (pairs == null)
+            if (pairs == null || !pairs.Any())
             {
                 return null;
             }
@@ -78,7 +95,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
             List<ResourceDiff>? diffs = null;
             foreach (var (ap, bp) in pairs)
             {
-                var diff = Build(property, ap, bp, equalityComparer, key, buildSubDiffs);
+                var diff = BuildRootDiff(property, ap, bp, equalityComparer, key, buildSubDiffs);
                 if (diff != null)
                 {
                     diffs ??= new List<ResourceDiff>();

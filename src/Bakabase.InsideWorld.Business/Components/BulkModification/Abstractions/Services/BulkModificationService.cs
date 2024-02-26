@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.Caching;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
@@ -114,7 +115,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         }
 
         public async Task<List<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>>
-            Preview(int id)
+            Preview(int id, CancellationToken ct)
         {
             var bm = await GetDto(id);
             var tempData = await BulkModificationTempDataService.GetByKey(id);
@@ -126,6 +127,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 
             foreach (var resource in resources)
             {
+                ct.ThrowIfCancellationRequested();
                 var variables = new Dictionary<string, string?>();
                 foreach (var variable in bm.Variables)
                 {
@@ -180,16 +182,25 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             }
 
             var allDiffs = data.SelectMany(d => d.Diffs).ToList();
+
+            await using var tran = await DbContext.Database.BeginTransactionAsync(ct);
+
             await BulkModificationDiffService.UpdateAll(id, allDiffs);
+            await UpdateByKey(id, d =>
+            {
+                d.CalculatedAt = DateTime.Now;
+            });
+
+            await tran.CommitAsync();
 
             return data;
         }
 
-        public async Task Apply(int id)
-        {
-            var data = await Preview(id);
-            var resources = data.Select(d => d.New).ToList();
-            await ResourceService.AddOrUpdateRange(resources);
-        }
+        // public async Task Apply(int id)
+        // {
+        //     var data = await Preview(id);
+        //     var resources = data.Select(d => d.New).ToList();
+        //     await ResourceService.AddOrUpdateRange(resources);
+        // }
     }
 }

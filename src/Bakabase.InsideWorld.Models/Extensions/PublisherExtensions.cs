@@ -339,13 +339,13 @@ namespace Bakabase.InsideWorld.Models.Extensions
         /// <returns></returns>
         public static List<ResourceDiff>? Compare(this List<PublisherDto>? a, List<PublisherDto>? b)
         {
-            return ResourceDiff.Build(ResourceDiffProperty.Publisher, a.PairByString(b, x => x.Name),
+            return ResourceDiff.BuildRootDiffs(ResourceDiffProperty.Publisher, a.PairByString(b, x => x.Name, 1),
                 PublisherDto.NameComparer, nameof(ResourceDto.Publishers), Compare);
         }
 
         public static List<ResourceDiff>? Compare(this PublisherDto a, PublisherDto b)
         {
-            var nameDiff = ResourceDiff.Build(ResourceDiffProperty.Publisher, a.Name, b.Name,
+            var nameDiff = ResourceDiff.BuildRootDiff(ResourceDiffProperty.Publisher, a.Name, b.Name,
                 StringComparer.OrdinalIgnoreCase, nameof(PublisherDto.Name), null);
             var subPublisherDiff = a?.SubPublishers.Compare(b?.SubPublishers);
 

@@ -11,13 +11,13 @@ namespace Bakabase.InsideWorld.Models.Extensions
     public static class CollectionExtensions
     {
         public static List<(T? A, T? B)> PairByString<T>(this IEnumerable<T>? aList, IEnumerable<T>? bList,
-            Func<T, string> getKey) where T : class => aList.Pair(bList, EqualityComparer<T>.Default, (arg1, arg2) =>
+            Func<T, string> getKey, decimal? minSimilarity = 0.6m) where T : class => aList.Pair(bList, EqualityComparer<T>.Default, (arg1, arg2) =>
         {
             var str1 = getKey(arg1);
             var str2 = getKey(arg2);
             var r = 1 - (decimal) str1.GetLevenshteinDistance(str2) / Math.Max(str1.Length, str2.Length);
             return r;
-        }, 0.6m);
+        }, minSimilarity);
 
         public static List<(T? A, T? B)> Pair<T>(this IEnumerable<T>? aList, IEnumerable<T>? bList,
             IEqualityComparer<T>? equalityComparer, Func<T, T, decimal>? getSimilarity, decimal? minSimilarity)

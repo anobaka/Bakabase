@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Policy;
 using System.Threading;
 using System.Threading.Channels;
+using Bakabase.InsideWorld.Models.Components;
 using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
@@ -52,6 +53,8 @@ namespace Bakabase.InsideWorld.Models.Extensions
         public static ConcurrentDictionary<ResourceDiffProperty, Func<ResourceDto, object?>> ResourcePropertyGetters =
             new(new Dictionary<ResourceDiffProperty, Func<ResourceDto, object?>>
             {
+                {ResourceDiffProperty.Category, r => r.CategoryId},
+                {ResourceDiffProperty.MediaLibrary, r => r.MediaLibraryId},
                 {ResourceDiffProperty.ReleaseDt, r => r.ReleaseDt},
                 {ResourceDiffProperty.Publisher, r => r.Publishers},
                 {ResourceDiffProperty.Name, r => r.Name},
@@ -374,40 +377,41 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 case ResourceDiffProperty.Introduction:
                 case ResourceDiffProperty.Rate:
                 {
-                    return ResourceDiff.Build(property, a, b, EqualityComparer<object>.Default,
+                    return ResourceDiff.BuildRootDiff(property, a, b, EqualityComparer<object>.Default,
                         property.GetPropertyName(), null);
                 }
                 case ResourceDiffProperty.Volume:
                 {
-                    return ResourceDiff.Build(property, a as VolumeDto, b as VolumeDto, VolumeDto.BizComparer,
+                    return ResourceDiff.BuildRootDiff(property, a as VolumeDto, b as VolumeDto, VolumeDto.BizComparer,
                         property.GetPropertyName(), VolumeExtensions.Compare);
                 }
                 case ResourceDiffProperty.Series:
                 {
-                    return (ResourceDiff.Build(property, a as SeriesDto, b as SeriesDto, SeriesDto.BizComparer,
-                        property.GetPropertyName(), SeriesExtensions.Compare));
+                    return ResourceDiff.BuildRootDiff(property, a as SeriesDto, b as SeriesDto, SeriesDto.BizComparer,
+                        property.GetPropertyName(), SeriesExtensions.Compare);
                 }
                 case ResourceDiffProperty.Publisher:
                 {
-                    return (ResourceDiff.Build(property, a as List<PublisherDto>, b as List<PublisherDto>,
+                    return ResourceDiff.BuildRootDiffForArrayProperty(property, a as List<PublisherDto>, b as List<PublisherDto>,
                         EqualityComparer<List<PublisherDto>>.Default,
-                        property.GetPropertyName(), PublisherExtensions.Compare));
+                        property.GetPropertyName(), PublisherExtensions.Compare);
                 }
                 case ResourceDiffProperty.Tag:
                 {
-                    return (ResourceDiff.Build(property, a as List<TagDto>, b as List<TagDto>,
-                        EqualityComparer<List<TagDto>>.Default, property.GetPropertyName(), TagExtensions.Compare));
+                    return ResourceDiff.BuildRootDiffForArrayProperty(property, a as List<TagDto>, b as List<TagDto>,
+                        EqualityComparer<List<TagDto>>.Default, property.GetPropertyName(), TagExtensions.Compare);
                 }
                 case ResourceDiffProperty.Original:
                 {
-                    return (ResourceDiff.Build(property, a as List<OriginalDto>, b as List<OriginalDto>,
+                    return ResourceDiff.BuildRootDiffForArrayProperty(property, a as List<OriginalDto>, b as List<OriginalDto>,
                         EqualityComparer<List<OriginalDto>>.Default, property.GetPropertyName(),
-                        OriginalExtensions.Compare));
+                        OriginalExtensions.Compare);
                 }
                 case ResourceDiffProperty.CustomProperty:
-                    return (BuildDiff(property, VolumeDto.BizComparer, a, b));
+                    return (a as List<CustomResourceProperty>).Compare(b as List<CustomResourceProperty>);
                 case ResourceDiffProperty.Category:
                 case ResourceDiffProperty.MediaLibrary:
+                    return ResourceDiff.BuildRootDiff(property, (int) a!, (int) b!, IntEqualityComparer.Default, null, null);
                 default:
                     throw new ArgumentOutOfRangeException();
             }

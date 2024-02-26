@@ -164,6 +164,15 @@ export default () => {
       }));
       console.log('set display data sources for tags');
     });
+    BApi.resource.getAllOriginals().then(r => {
+      const originals = r.data || [];
+      setDisplayDataSources(s => ({
+        ...s,
+        [BulkModificationProperty.Original]: originals.reduce<Record<any, any>>((s, t) => {
+          s[t.id!] = t.name!;
+          return s;
+        }, {}) }));
+    });
     BApi.mediaLibrary.getAllMediaLibraries().then(r => {
       setDisplayDataSources(s => ({
           ...s,
