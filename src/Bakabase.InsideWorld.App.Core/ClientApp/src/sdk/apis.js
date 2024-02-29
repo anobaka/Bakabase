@@ -1272,6 +1272,96 @@ export const CalculateBulkModificationResourceDiffsURL = function(parameters = {
 }
 /**
  * 
+ * request: ApplyBulkModification
+ * url: ApplyBulkModificationURL
+ * method: ApplyBulkModification_TYPE
+ * raw_url: ApplyBulkModification_RAW_URL
+ * @param id - 
+ */
+export const ApplyBulkModification = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification/{id}/apply'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const ApplyBulkModification_RAW_URL = function() {
+  return '/bulk-modification/{id}/apply'
+}
+export const ApplyBulkModification_TYPE = function() {
+  return 'post'
+}
+export const ApplyBulkModificationURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification/{id}/apply'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: RevertBulkModification
+ * url: RevertBulkModificationURL
+ * method: RevertBulkModification_TYPE
+ * raw_url: RevertBulkModification_RAW_URL
+ * @param id - 
+ */
+export const RevertBulkModification = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification/{id}/revert'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const RevertBulkModification_RAW_URL = function() {
+  return '/bulk-modification/{id}/revert'
+}
+export const RevertBulkModification_TYPE = function() {
+  return 'post'
+}
+export const RevertBulkModificationURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification/{id}/revert'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetComponentDescriptors
  * url: GetComponentDescriptorsURL
  * method: GetComponentDescriptors_TYPE

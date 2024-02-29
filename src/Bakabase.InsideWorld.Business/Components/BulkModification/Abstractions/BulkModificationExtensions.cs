@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos;
+using Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
@@ -54,6 +55,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 Name = bm.Name,
                 Status = bm.Status,
                 CalculatedAt = bm.CalculatedAt,
+                FilteredAt = bm.FilteredAt,
+                AppliedAt = bm.AppliedAt,
+                RevertedAt = bm.RevertedAt,
+
 
                 Filter = string.IsNullOrEmpty(bm.Filter)
                     ? null
@@ -101,7 +106,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             };
         }
 
-        public static BulkModificationDiff ToBulkModificationDiff(this ResourceDiff rd, int bmId, int resourceId, string resourcePath)
+        public static BulkModificationDiff ToBulkModificationDiff(this ResourceDiff rd, int bmId, int resourceId,
+            string resourcePath)
         {
             return new BulkModificationDiff
             {
@@ -115,6 +121,33 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 ResourceId = resourceId,
                 ResourcePath = resourcePath
             };
+        }
+
+        public static ConcurrentDictionary<BulkModificationProperty, IBulkModificationDiffHandler> DiffHandlers = new()
+        {
+            [BulkModificationProperty.Category] = new BmCategoryDiffHandler(),
+            [BulkModificationProperty.MediaLibrary] = new BmMediaLibraryDiffHandler(),
+            [BulkModificationProperty.ReleaseDt] = new BmReleaseDtDiffHandler(),
+            [BulkModificationProperty.Publisher] = new BmPublisherDiffHandler(),
+            [BulkModificationProperty.Name] = new BmNameDiffHandler(),
+            [BulkModificationProperty.Language] = new BmLanguageDiffHandler(),
+            [BulkModificationProperty.Volume] = new BmVolumeDiffHandler(),
+            [BulkModificationProperty.Original] = new BmOriginalDiffHandler(),
+            [BulkModificationProperty.Series] = new BmSeriesDiffHandler(),
+            [BulkModificationProperty.Tag] = new BmTagDiffHandler(),
+            [BulkModificationProperty.Introduction] = new BmIntroductionDiffHandler(),
+            [BulkModificationProperty.Rate] = new BmRateDiffHandler(),
+            [BulkModificationProperty.CustomProperty] = new BmCustomPropertyDiffHandler()
+        };
+
+        public static void Apply(this BulkModificationDiff diff, ResourceDto resource)
+        {
+            DiffHandlers.GetValueOrDefault(diff.Property)?.Apply(resource, diff);
+        }
+
+        public static void Revert(this BulkModificationDiff diff, ResourceDto resource)
+        {
+            DiffHandlers.GetValueOrDefault(diff.Property)?.Revert(resource, diff);
         }
     }
 }

@@ -142,5 +142,19 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             var data = await _service.Preview(id, HttpContext.RequestAborted);
             return BaseResponseBuilder.Ok;
         }
+
+        [HttpPost("{id:int}/apply")]
+        [SwaggerOperation(OperationId = "ApplyBulkModification")]
+        public async Task<BaseResponse> Apply(int id)
+        {
+            return await _service.Apply(id);
+        }
+
+        [HttpPost("{id:int}/revert")]
+        [SwaggerOperation(OperationId = "RevertBulkModification")]
+        public async Task<BaseResponse> Revert(int id)
+        {
+            return await _service.Apply(id);
+        }
     }
 }

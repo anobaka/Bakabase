@@ -1,4 +1,4 @@
-import { Button, Dialog, Input, Loading, Pagination } from '@alifd/next';
+import { Button, Dialog, Input, Loading, Pagination, Select } from '@alifd/next';
 import type { DialogProps } from '@alifd/next/types/dialog';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import CustomIcon from '@/components/CustomIcon';
 import './index.scss';
 import SimpleLabel from '@/components/SimpleLabel';
 import type { BulkModificationProperty } from '@/sdk/constants';
+import { bulkModificationProperties } from '@/sdk/constants';
 
 interface IProps extends DialogProps {
   bmId: number;
@@ -33,8 +34,8 @@ const ResourceDiffsResultsDialog = ({
   const [loading, setLoading] = useState(true);
 
   const [results, setResults] = useState<IResourceModificationResult[]>([]);
-  const [form, setForm] = useState<{ path?: string; pageIndex: number }>({
-    path: undefined,
+  const [form, setForm] = useState<{ path?: string; pageIndex: number; property?: BulkModificationProperty;
+  }>({
     pageIndex: 0,
   });
   const [filteredResults, setFilteredResults] = useState<IResourceModificationResult[]>([]);
@@ -59,7 +60,10 @@ const ResourceDiffsResultsDialog = ({
   useUpdateEffect(() => {
     clearTimeout(updateFilteredResultsTimeoutRef.current);
     updateFilteredResultsTimeoutRef.current = setTimeout(() => {
-      const frs = results.filter(r => form.path == undefined || form.path.length == 0 || r.path.includes(form.path));
+      const frs = results.filter(r =>
+        (form.path == undefined || form.path.length == 0 || r.path.includes(form.path)) &&
+        (form.property == undefined || r.diffs?.some(d => d.property == form.property)),
+      );
       const cprs = frs.slice(form.pageIndex * PageSize, (form.pageIndex + 1) * PageSize);
       setFilteredResults(frs);
       setCurrentPageResults(cprs);
@@ -89,7 +93,8 @@ const ResourceDiffsResultsDialog = ({
               path: v,
               pageIndex: 0,
             })}
-            addonTextBefore={t('Search')}
+            hasClear
+            addonTextBefore={t('Keyword')}
             innerAfter={
               <CustomIcon
                 type="search"
@@ -98,7 +103,30 @@ const ResourceDiffsResultsDialog = ({
               />
             }
           />
-          {/* <Button type={'primary'} size={'small'}>{t('Search')}</Button> */}
+          <Select
+            hasClear
+            size={'small'}
+            onChange={v => setForm({
+              ...form,
+              property: v,
+              pageIndex: 0,
+            })}
+            label={t('Changed property')}
+            dataSource={bulkModificationProperties.map(p => ({
+              label: t(p.label),
+              value: p.value,
+            }))}
+            innerAfter={
+              <CustomIcon
+                type="search"
+                size="small"
+                style={{ margin: 4 }}
+              />
+            }
+          />
+          <span>
+            {t('Filtered')}:{filteredResults.length} / {t('Total')}:{results.length}
+          </span>
         </div>
         <div className="right">
           <Pagination

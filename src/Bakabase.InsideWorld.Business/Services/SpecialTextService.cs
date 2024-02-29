@@ -190,6 +190,14 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         list.Add((i, dt));
                     }
+                    else
+                    {
+                        // fallback
+                        if (DateTime.TryParse(strings[i], out var dt1))
+                        {
+                            list.Add((i, dt));
+                        }
+                    }
                 }
 
                 return list.ToArray();

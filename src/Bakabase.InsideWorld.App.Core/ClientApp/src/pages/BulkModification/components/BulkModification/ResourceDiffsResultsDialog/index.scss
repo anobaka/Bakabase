@@ -20,6 +20,12 @@
       gap: 5px;
       align-items: center;
     }
+
+    .left {
+      &>* {
+        width: 240px;
+      }
+    }
   }
 
   .next-loading {

@@ -683,10 +683,7 @@ namespace Bakabase.InsideWorld.Business.Services
             foreach (var s in tmpResources)
             {
                 s.Clean();
-                if (!simpleResourceMap.ContainsKey(s.RawFullname))
-                {
-                    simpleResourceMap[s.RawFullname] = s;
-                }
+                simpleResourceMap.TryAdd(s.RawFullname, s);
             }
 
             var parents = tmpResources.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a.RawFullname)

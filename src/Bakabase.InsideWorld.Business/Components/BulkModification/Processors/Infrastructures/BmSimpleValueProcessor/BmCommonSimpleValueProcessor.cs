@@ -42,7 +42,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
                         {
                             foreach (var variable in variables)
                             {
-                                str = value.Value.Replace(
+                                str = str.Replace(
                                     $"{BulkModificationConstants.VariableStart}{variable.Key}{BulkModificationConstants.VariableEnd}",
                                     variable.Value);
                             }

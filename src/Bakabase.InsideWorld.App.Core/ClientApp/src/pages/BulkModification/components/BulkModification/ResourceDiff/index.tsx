@@ -1,4 +1,3 @@
-import { Icon } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import type { IPublisherDiffValue } from '../ResourceDiff/models';
 import { ResourceDiffUtils } from '../ResourceDiff/models';
@@ -191,7 +190,7 @@ export default ({
   return (
     <div className="diff">
       <SimpleLabel className="property">
-        {diff.propertyKey != undefined ? diff.propertyKey : t(BulkModificationProperty[diff.property])}
+        {diff.property == BulkModificationProperty.CustomProperty ? diff.propertyKey : t(BulkModificationProperty[diff.property])}
       </SimpleLabel>
       {/* <SimpleLabel className="type" status={TypeSimpleLabelStatusMap[diff.type]}> */}
       {/*   {t(BulkModificationDiffType[diff.type])} */}

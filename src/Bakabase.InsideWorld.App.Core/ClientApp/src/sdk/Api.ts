@@ -162,15 +162,12 @@ export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsMod
   | 18;
 
 /**
- * [1: Initial, 2: Filtered, 3: Complete, 4: Failed, 5: Cancelled]
+ * [1: Processing, 2: Closed]
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationStatus =
   | 1
-  | 2
-  | 3
-  | 4
-  | 5;
+  | 2;
 
 /**
  * [1: None, 2: FileName, 3: FileNameWithoutExtension, 4: FullPath, 5: DirectoryName, 6: Name]
@@ -183,7 +180,7 @@ export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractio
   /** @format int32 */
   id?: number;
   name?: string | null;
-  /** [1: Initial, 2: Filtered, 3: Complete, 4: Failed, 5: Cancelled] */
+  /** [1: Processing, 2: Closed] */
   status?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationStatus;
   /** @format date-time */
   createdAt?: string;
@@ -3538,6 +3535,36 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     calculateBulkModificationResourceDiffs: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}/diffs`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name ApplyBulkModification
+     * @request POST:/bulk-modification/{id}/apply
+     */
+    applyBulkModification: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/bulk-modification/${id}/apply`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name RevertBulkModification
+     * @request POST:/bulk-modification/{id}/revert
+     */
+    revertBulkModification: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/bulk-modification/${id}/revert`,
         method: "POST",
         format: "json",
         ...params,

@@ -1,13 +1,11 @@
-import { Balloon, Button, Collapse, Dialog, Icon } from '@alifd/next';
+import { Button, Collapse, Dialog, Icon, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import { useTour } from '@reactour/tour';
-import SimpleLabel from '@/components/SimpleLabel';
+import moment from 'moment';
+import { useUpdateEffect } from 'react-use';
 import type { BulkModificationProperty, BulkModificationStatus } from '@/sdk/constants';
 import { BulkModificationFilterGroupOperation, type BulkModificationFilterOperation } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
-import type { IResourceDiff } from '@/pages/BulkModification/components/BulkModification/ResourceDiff';
-import ResourceDiff from '@/pages/BulkModification/components/BulkModification/ResourceDiff';
 import type { IVariable } from '@/pages/BulkModification/components/BulkModification/Variables';
 import Variables from '@/pages/BulkModification/components/BulkModification/Variables';
 import FilterGroup from '@/pages/BulkModification/components/BulkModification/FilterGroup';
@@ -16,7 +14,7 @@ import ProcessDialog from '@/pages/BulkModification/components/BulkModification/
 import FilteredResourcesDialog from '@/pages/BulkModification/components/BulkModification/FilteredResourcesDialog';
 import ResourceDiffsResultsDialog
   from '@/pages/BulkModification/components/BulkModification/ResourceDiffsResultsDialog';
-import { convertFromApiModel } from '@/pages/BulkModification/helpers';
+import { convertFromApiModel, convertToApiModel } from '@/pages/BulkModification/helpers';
 
 
 const { Panel } = Collapse;
@@ -48,15 +46,19 @@ export interface IBulkModification {
   status: BulkModificationStatus;
   createdAt: string;
   calculatedAt?: string;
+  filteredAt?: string;
+  appliedAt?: string;
+  revertedAt?: string;
   variables?: IVariable[];
   filter?: IBulkModificationFilterGroup;
   processes?: IBulkModificationProcess[];
   filteredResourceIds?: number[];
 }
+
 interface IProps {
   bm: IBulkModification;
   displayDataSources: { [property in BulkModificationProperty]?: Record<any, any> };
-  onChange: (bm: IBulkModification, save: boolean) => Promise<{ code: number; message?: string }>;
+  onChange: (bm: IBulkModification) => any;
 }
 
 export default ({
@@ -68,18 +70,112 @@ export default ({
   const [processing, setProcessing] = useState(false);
   const [bm, setBm] = useState(propsBm);
 
-  const saveChanges = (changes: Partial<IBulkModification>, save: boolean) => {
-    const newBm = { ...bm, ...changes };
-    onChange(newBm, save).then(r => {
-      if (!r.code) {
-        setBm(newBm);
-      }
-    });
+  useUpdateEffect(() => {
+    onChange(bm);
+  }, [bm]);
+
+  const refresh = async () => {
+    const rsp = await BApi.bulkModification.getBulkModificationById(bm.id);
+    if (rsp.data) {
+      setBm(convertFromApiModel(rsp.data));
+    }
+  };
+
+  const saveChanges = async (changes: Partial<IBulkModification>) => {
+    await BApi.bulkModification.putBulkModification(bm.id, convertToApiModel({ ...bm, ...changes }));
+    await refresh();
   };
 
   useEffect(() => {
 
   }, []);
+
+  const renderResultInfo = () => {
+    const data: any[] = [];
+    if (bm.calculatedAt) {
+      data.push(t('Calculated at {{datetime}}', { datetime: bm.calculatedAt }));
+    }
+    if (bm.appliedAt) {
+      data.push(t('Applied at {{datetime}}', { datetime: bm.appliedAt }));
+    }
+    if (bm.revertedAt) {
+      data.push(t('Reverted at {{datetime}}', { datetime: bm.revertedAt }));
+    }
+    if (data.length > 0) {
+      return (
+        <div className={'info'}>
+          {data.map((d, i) => {
+            return (
+              <div
+                key={i}
+              >{d}</div>
+            );
+          })}
+        </div>
+      );
+    }
+    return;
+  };
+
+  const calculateResourceDiffs = async () => {
+    const ac = new AbortController();
+    const ct = ac.signal;
+    const dialog = Dialog.show({
+      title: (
+        <div>
+          {t('Processing')}
+          &nbsp;
+          <Icon type={'loading'} />
+        </div>
+      ),
+      v2: true,
+      width: 300,
+      closeMode: [],
+      footerActions: ['cancel'],
+      cancelProps: {
+        children: t('Abort'),
+        warning: true,
+        type: 'primary',
+      },
+      onCancel: () => {
+        ac.abort();
+      },
+    });
+    try {
+      const r = await BApi.bulkModification.calculateBulkModificationResourceDiffs(bm.id, { signal: ct });
+      if (!r.code) {
+        await refresh();
+        ResourceDiffsResultsDialog.show({
+          bmId: bm.id,
+          displayDataSources,
+        });
+      }
+    } finally {
+      dialog.hide();
+    }
+  };
+
+  const alertIfRevertingWillBeDisabled = (callback?: any) => {
+    if (bm.appliedAt) {
+      const appliedAt = moment(bm.appliedAt!);
+      const datetimes = [bm.filteredAt!, bm.calculatedAt!].map(d => moment(d));
+      const revertingWillBeDisabled = datetimes.every(d => d.isBefore(appliedAt));
+      if (revertingWillBeDisabled) {
+        Dialog.confirm({
+          title: t('Reverting will be disabled'),
+          content: t('Continuing will result in the inability to revert the applied changes. Do you want to proceed?'),
+          v2: true,
+          width: 'auto',
+          closeable: false,
+          onOk: () => {
+            callback && callback();
+          },
+        });
+        return;
+      }
+    }
+    callback && callback();
+  };
 
   return (
     <>
@@ -90,8 +186,8 @@ export default ({
         <div className="content">
           <div className="filters">
             <FilterGroup
-              onChange={v => {
-                saveChanges({ filter: v }, true);
+              onChange={async v => {
+                await saveChanges({ filter: v });
               }}
               group={bm.filter || { operation: BulkModificationFilterGroupOperation.And }}
               isRoot
@@ -102,30 +198,34 @@ export default ({
               type={'primary'}
               size={'small'}
               loading={processing}
-              onClick={() => {
+              onClick={async () => {
                 setProcessing(true);
-                BApi.bulkModification.performBulkModificationFiltering(bm.id).then(r => {
-                  saveChanges({
-                    filteredResourceIds: r.data!,
-                  }, false);
-                }).finally(() => {
+                try {
+                  await BApi.bulkModification.performBulkModificationFiltering(bm.id);
+                  await refresh();
+                } finally {
                   setProcessing(false);
-                });
+                }
               }}
-            >筛选</Button>
+            >{t('Filter(Verb)')}</Button>
             <div className={'resource-count'}>
-              总计筛选出<span>{bm.filteredResourceIds?.length ?? 0}</span>个资源
+              {t('{{count}} resources have been filtered out', { count: bm.filteredResourceIds?.length || 0 })}
             </div>
-            <Button
-              type={'primary'}
-              text
-              size={'small'}
-              onClick={() => {
-                FilteredResourcesDialog.show({
-                  bmId: bm.id!,
-                });
-              }}
-            >查看完整筛选结果</Button>
+            {bm.filteredAt && (
+              <div className={'filtered-at'}>{t('Filtered at {{datetime}}', { datetime: bm.filteredAt })}</div>
+            )}
+            {bm.filteredResourceIds && bm.filteredResourceIds.length > 0 && (
+              <Button
+                type={'primary'}
+                text
+                size={'small'}
+                onClick={() => {
+                  FilteredResourcesDialog.show({
+                    bmId: bm.id!,
+                  });
+                }}
+              >{t('Check all the resources that have been filtered out')}</Button>
+            )}
           </div>
         </div>
       </div>
@@ -135,8 +235,8 @@ export default ({
         </div>
         <Variables
           variables={bm.variables}
-          onChange={v => {
-            saveChanges({ variables: v }, true);
+          onChange={async v => {
+            await saveChanges({ variables: v });
           }}
         />
       </div>
@@ -154,15 +254,15 @@ export default ({
                   process={p}
                   index={j}
                   variables={bm.variables}
-                  onChange={p => {
+                  onChange={async p => {
                     const newProcesses = [...bm.processes!];
                     newProcesses[j] = p;
-                    saveChanges({ processes: newProcesses }, true);
+                    await saveChanges({ processes: newProcesses });
                   }}
-                  onRemove={() => {
+                  onRemove={async () => {
                     const newProcesses = [...bm.processes!];
                     newProcesses.splice(j, 1);
-                    saveChanges({ processes: newProcesses }, true);
+                    await saveChanges({ processes: newProcesses });
                   }}
                 />
               );
@@ -175,13 +275,13 @@ export default ({
               onClick={() => {
                 ProcessDialog.show({
                   variables: bm.variables,
-                  onSubmit: pv => {
-                    saveChanges({
+                  onSubmit: async pv => {
+                    await saveChanges({
                       processes: [
                         ...(bm.processes || []),
                         pv,
                       ],
-                    }, true);
+                    });
                   },
                 });
               }}
@@ -194,98 +294,95 @@ export default ({
           {t('Result')}
         </div>
         <div className="content">
+          {renderResultInfo()}
           <div className="opts">
-            <Button
-              type={'secondary'}
-              size={'small'}
-              onClick={() => {
-                const ac = new AbortController();
-                const ct = ac.signal;
-                const dialog = Dialog.show({
-                  title: (
-                    <div>
-                      {t('Processing')}
-                      &nbsp;
-                      <Icon type={'loading'} />
-                    </div>
-                  ),
-                  v2: true,
-                  width: 300,
-                  closeMode: [],
-                  footerActions: ['cancel'],
-                  cancelProps: {
-                    children: t('Abort'),
-                    warning: true,
-                    type: 'primary',
-                  },
-                  onCancel: () => {
-                    ac.abort();
-                  },
-                });
-                BApi.bulkModification.calculateBulkModificationResourceDiffs(bm.id, { signal: ct }).then(r => {
-                  if (!r.code) {
-                    BApi.bulkModification.getBulkModificationById(bm.id).then(r => {
-                      setBm(convertFromApiModel(r.data!));
-                    });
-                    ResourceDiffsResultsDialog.show({
-                      bmId: bm.id,
-                      displayDataSources,
-                    });
-                  }
-                }).finally(() => {
-                  dialog.hide();
-                });
-              }}
-            >{t('Calculate resource diffs')}</Button>
-            <Balloon.Tooltip
-              trigger={(
-                <Button
-                  disabled={!bm.calculatedAt}
-                  type={'normal'}
-                  size={'small'}
-                  onClick={() => {
-                    ResourceDiffsResultsDialog.show({
-                      bmId: bm.id,
-                      displayDataSources,
-                    });
-                  }}
-                >{t('Check previous result')}</Button>
-              )}
-              align={'t'}
-              v2
-            >
-              {bm.calculatedAt ? t('Calculated at {{calculatedAt}}', { calculatedAt: bm.calculatedAt.substring(0, 19) }) : t('Calculate resource diffs first please')}
-            </Balloon.Tooltip>
-            <Button
-              type={'primary'}
-              size={'small'}
-              onClick={() => {
-                Dialog.confirm({
-                  title: t('Apply bulk modification'),
-                  content: t('All changes will be applied to resources, and there is no way back. Are you sure to apply the bulk modification?'),
-                  onOk: () => {
-                    const dialog = Dialog.show({
-                      title: t('Processing'),
-                      // content: t('Processing'),
-                      closeable: false,
-                      footer: false,
-                    });
-                    setTimeout(() => {
-                      dialog.hide();
-                    }, 3000);
-                    // BApi.bulkModification(bm.id).then(r => {
-                    //   if (!r.code) {
-                    //     Message.success(t('Bulk modification applied successfully'));
-                    //   } else {
-                    //     Message.error(r.message);
-                    //   }
-                    // }).finally(() => {
-                    //   setProcessing(false);
-                    // });
-                  },
-                });
-              }}
-            >{t('Apply')}</Button>
+            {bm.filteredAt && (
+              <Button
+                type={'secondary'}
+                size={'small'}
+                onClick={() => {
+                  alertIfRevertingWillBeDisabled(async () => {
+                    await calculateResourceDiffs();
+                  });
+                }}
+              >{t(bm.calculatedAt ? 'Recalculate resource diffs' : 'Calculate resource diffs')}</Button>
+            )}
+            {bm.calculatedAt && (
+              <Button
+                disabled={!bm.calculatedAt}
+                type={'normal'}
+                size={'small'}
+                onClick={() => {
+                  ResourceDiffsResultsDialog.show({
+                    bmId: bm.id,
+                    displayDataSources,
+                  });
+                }}
+              >{t('Check previous result')}</Button>
+            )}
+            {bm.calculatedAt && (
+              <Button
+                type={'primary'}
+                size={'small'}
+                onClick={() => {
+                  Dialog.confirm({
+                    title: t('Apply bulk modification'),
+                    content: (
+                      <div>
+                        {t('All changes will be applied to resources, and there is no way back. Are you sure to apply the bulk modification?')}
+                      </div>
+                    ),
+                    onOk: () => {
+                      const dialog = Dialog.show({
+                        title: t('Processing'),
+                        closeable: false,
+                        footer: false,
+                        v2: true,
+                        width: 'auto',
+                      });
+                      BApi.bulkModification.applyBulkModification(bm.id).then(r => {
+                        if (!r.code) {
+                          Message.success(t('Bulk modification has been applied successfully'));
+                          refresh();
+                        }
+                      }).finally(() => {
+                        dialog.hide();
+                      });
+                    },
+                  });
+                }}
+              >{t('Apply')}</Button>
+            )}
+            {bm.appliedAt && (
+              <Button
+                type={'normal'}
+                warning
+                size={'small'}
+                onClick={() => {
+                  Dialog.confirm({
+                    title: t('Revert bulk modification'),
+                    content: t('All changes will be reverted, and there is no way back. Are you sure to revert current bulk modification?'),
+                    onOk: () => {
+                      const dialog = Dialog.show({
+                        title: t('Processing'),
+                        closeable: false,
+                        footer: false,
+                        v2: true,
+                        width: 'auto',
+                      });
+                      BApi.bulkModification.revertBulkModification(bm.id).then(r => {
+                        if (!r.code) {
+                          Message.success(t('Bulk modification has been reverted successfully'));
+                          refresh();
+                        }
+                      }).finally(() => {
+                        dialog.hide();
+                      });
+                    },
+                  });
+                }}
+              >{t('Revert')}</Button>
+            )}
           </div>
         </div>
       </div>

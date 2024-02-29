@@ -42,7 +42,10 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     Processes = table.Column<string>(type: "TEXT", nullable: true),
                     Variables = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CalculatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    CalculatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    AppliedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    FilteredAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    RevertedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
                 },
                 constraints: table =>
                 {

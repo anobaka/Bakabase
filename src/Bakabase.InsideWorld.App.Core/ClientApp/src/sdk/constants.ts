@@ -48,7 +48,7 @@ export enum BulkModificationProcessOperation {Add = 1, Modify = 2, Remove = 3}
 export const bulkModificationProcessOperations = Object.keys(BulkModificationProcessOperation).filter(k => typeof BulkModificationProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationProcessOperation[t]}));
 export enum BulkModificationProperty {Category = 1, MediaLibrary = 2, Name = 3, FileName = 4, DirectoryPath = 5, ReleaseDt = 6, CreateDt = 7, FileCreateDt = 8, FileModifyDt = 9, Publisher = 10, Language = 11, Volume = 12, Original = 13, Series = 14, Tag = 15, Introduction = 16, Rate = 17, CustomProperty = 18}
 export const bulkModificationProperties = Object.keys(BulkModificationProperty).filter(k => typeof BulkModificationProperty[k] === 'number').map(t => ({label: t, value: BulkModificationProperty[t]}));
-export enum BulkModificationStatus {Initial = 1, Filtered = 2, Complete = 3, Failed = 4, Cancelled = 5}
+export enum BulkModificationStatus {Processing = 1, Closed = 2}
 export const bulkModificationStatuses = Object.keys(BulkModificationStatus).filter(k => typeof BulkModificationStatus[k] === 'number').map(t => ({label: t, value: BulkModificationStatus[t]}));
 export enum BulkModificationVariableSource {None = 1, FileName = 2, FileNameWithoutExtension = 3, FullPath = 4, DirectoryName = 5, Name = 6}
 export const bulkModificationVariableSources = Object.keys(BulkModificationVariableSource).filter(k => typeof BulkModificationVariableSource[k] === 'number').map(t => ({label: t, value: BulkModificationVariableSource[t]}));

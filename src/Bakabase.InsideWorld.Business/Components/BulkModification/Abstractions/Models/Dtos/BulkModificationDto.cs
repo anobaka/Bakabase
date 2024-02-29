@@ -16,6 +16,9 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         public List<BulkModificationProcess> Processes { get; set; } = new();
         public List<ResourceDiff> Diffs { get; set; } = new();
         public List<int>? FilteredResourceIds { get; set; }
+        public DateTime? FilteredAt { get; set; }
         public DateTime? CalculatedAt { get; set; }
+        public DateTime? AppliedAt { get; set; }
+        public DateTime? RevertedAt { get; set; }
     }
 }

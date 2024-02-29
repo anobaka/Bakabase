@@ -13,6 +13,6 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         public string? Name { get; set; }
         public BulkModificationVariableSource Source { get; set; }
         public string? Find { get; set; }
-        public string Value { get; set; } = null!;
+        public string? Value { get; set; }
     }
 }
