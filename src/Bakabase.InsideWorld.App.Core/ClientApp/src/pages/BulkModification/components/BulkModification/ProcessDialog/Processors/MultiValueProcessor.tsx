@@ -80,6 +80,7 @@ const Editor = ({
 
   const renderValueComp = () => {
     const componentsData: { label: string; comp: any }[] = [];
+    console.log(value, 5555);
     switch (value.operation) {
       case BmMultipleValueProcessorOperation.Add:
       case BmMultipleValueProcessorOperation.SetWithFixedValue:
@@ -92,7 +93,7 @@ const Editor = ({
               showSearch
               autoWidth
               style={{ width: '90%' }}
-              onChange={value => changeValue({ value })}
+              onChange={selectedKeys => changeValue({ selectedKeys })}
               value={value.selectedKeys}
             />
           ),

@@ -717,12 +717,12 @@ namespace Bakabase.InsideWorld.Business.Services
                 // Changed items will be replaced instead of being updated. 
                 var resourcesWithPublishers = tmpResources.Where(a => a.Publishers != null).ToList();
                 var publisherRangeAddResult =
-                    await _publisherService.AddAll(resourcesWithPublishers.SelectMany(a => a.Publishers).ToList());
+                    await _publisherService.AddAll(resourcesWithPublishers.SelectMany(a => a.Publishers!).ToList());
                 var publisherIds = publisherRangeAddResult.Data.ToDictionary(a => a.Key, a => a.Value.Id);
                 var publisherMappings = resourcesWithPublishers.SelectMany(s =>
                 {
-                    s.Publishers.PopulateId(publisherIds);
-                    return s.Publishers.BuildMappings(s.Id);
+                    s.Publishers!.PopulateId(publisherIds);
+                    return s.Publishers!.BuildMappings(s.Id);
                 }).ToList();
                 await _publisherMappingService.AddRange(publisherMappings);
 

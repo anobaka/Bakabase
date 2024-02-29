@@ -15,6 +15,7 @@ export interface IVolumeDiffValue {
 }
 
 export interface IPublisherDiffValue {
+  id: number;
   name: string;
   children?: IPublisherDiffValue[];
 }

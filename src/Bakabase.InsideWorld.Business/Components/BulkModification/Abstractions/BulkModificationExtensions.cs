@@ -64,10 +64,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                     ? null
                     : JsonConvert.DeserializeObject<BulkModificationFilterGroup>(bm.Filter),
                 Processes = string.IsNullOrEmpty(bm.Processes)
-                    ? new List<BulkModificationProcess>()
+                    ? null
                     : JsonConvert.DeserializeObject<List<BulkModificationProcess>>(bm.Processes)!,
                 Variables = string.IsNullOrEmpty(bm.Variables)
-                    ? new List<BulkModificationVariable>()
+                    ? null
                     : JsonConvert.DeserializeObject<List<BulkModificationVariable>>(bm.Variables)!,
 
                 FilteredResourceIds = tempData?.GetResourceIds()

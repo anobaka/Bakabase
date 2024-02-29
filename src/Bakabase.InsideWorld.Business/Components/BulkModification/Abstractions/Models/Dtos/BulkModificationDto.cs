@@ -11,10 +11,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         public string Name { get; set; } = null!;
         public BulkModificationStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
-        public List<BulkModificationVariable> Variables { get; set; } = new();
+        public List<BulkModificationVariable>? Variables { get; set; }
         public BulkModificationFilterGroup? Filter { get; set; }
-        public List<BulkModificationProcess> Processes { get; set; } = new();
-        public List<ResourceDiff> Diffs { get; set; } = new();
+        public List<BulkModificationProcess>? Processes { get; set; }
+        public List<ResourceDiff>? Diffs { get; set; }
         public List<int>? FilteredResourceIds { get; set; }
         public DateTime? FilteredAt { get; set; }
         public DateTime? CalculatedAt { get; set; }

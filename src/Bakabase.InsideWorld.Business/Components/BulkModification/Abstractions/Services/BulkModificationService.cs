@@ -57,7 +57,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 var options = new BulkModificationConfiguration.PropertyOptions
                 {
                     Property = property,
-                    AvailableOperations = new List<BulkModificationFilterOperation>()
+                    AvailableOperations = attr.AvailableOperations
                 };
                 bmc.Properties.Add(options);
             }
@@ -131,66 +131,73 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             var processors = PrepareProcessors();
             var data = new List<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>();
 
-            foreach (var resource in resources)
+            if (bm.Processes?.Any() == true)
             {
-                ct.ThrowIfCancellationRequested();
-                var variables = new Dictionary<string, string?>();
-                foreach (var variable in bm.Variables)
+                foreach (var resource in resources)
                 {
-                    var sourceValue =
-                        variable.Source switch
-                        {
-                            BulkModificationVariableSource.Name => resource.Name,
-                            BulkModificationVariableSource.None => null,
-                            BulkModificationVariableSource.FileName => resource.RawName,
-                            BulkModificationVariableSource.FileNameWithoutExtension => Path.GetFileNameWithoutExtension(
-                                resource.RawName),
-                            BulkModificationVariableSource.FullPath => resource.RawFullname,
-                            BulkModificationVariableSource.DirectoryName => resource.Directory,
-                            _ => throw new ArgumentOutOfRangeException()
-                        };
-
-                    string? value = null;
-                    if (!string.IsNullOrEmpty(variable.Find) && !string.IsNullOrEmpty(sourceValue))
+                    ct.ThrowIfCancellationRequested();
+                    var variables = new Dictionary<string, string?>();
+                    if (bm.Variables != null)
                     {
-                        var match = Regex.Match(sourceValue, variable.Find);
-                        if (match.Success)
+                        foreach (var variable in bm.Variables)
                         {
-                            value = string.IsNullOrEmpty(variable.Value)
-                                ? match.Value
-                                : Regex.Replace(match.Value, variable.Find, variable.Value);
+                            var sourceValue =
+                                variable.Source switch
+                                {
+                                    BulkModificationVariableSource.Name => resource.Name,
+                                    BulkModificationVariableSource.None => null,
+                                    BulkModificationVariableSource.FileName => resource.RawName,
+                                    BulkModificationVariableSource.FileNameWithoutExtension => Path
+                                        .GetFileNameWithoutExtension(
+                                            resource.RawName),
+                                    BulkModificationVariableSource.FullPath => resource.RawFullname,
+                                    BulkModificationVariableSource.DirectoryName => resource.Directory,
+                                    _ => throw new ArgumentOutOfRangeException()
+                                };
+
+                            string? value = null;
+                            if (!string.IsNullOrEmpty(variable.Find) && !string.IsNullOrEmpty(sourceValue))
+                            {
+                                var match = Regex.Match(sourceValue, variable.Find);
+                                if (match.Success)
+                                {
+                                    value = string.IsNullOrEmpty(variable.Value)
+                                        ? match.Value
+                                        : Regex.Replace(match.Value, variable.Find, variable.Value);
+                                }
+                            }
+                            else
+                            {
+                                value = variable.Value;
+                            }
+
+                            if (!string.IsNullOrEmpty(value))
+                            {
+                                variables[variable.Key] = value;
+                            }
                         }
                     }
-                    else
+
+                    var copy = resource.Clone();
+                    foreach (var process in bm.Processes)
                     {
-                        value = variable.Value;
+                        var processor = processors[process.Property];
+                        try
+                        {
+                            await processor.Process(process, copy, variables);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new Exception(
+                                $"An error occurred during applying processor [{processor.GetType()}] on process {process}: {e.Message}",
+                                e);
+                        }
                     }
 
-                    if (!string.IsNullOrEmpty(value))
-                    {
-                        variables[variable.Key] = value;
-                    }
+                    var diffs = resource.Compare(copy)
+                        .Select(d => d.ToBulkModificationDiff(id, resource.Id, resource.RawFullname)).ToList();
+                    data.Add((resource, copy, diffs));
                 }
-
-                var copy = resource.Clone();
-                foreach (var process in bm.Processes)
-                {
-                    var processor = processors[process.Property];
-                    try
-                    {
-                        await processor.Process(process, copy, variables);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new Exception(
-                            $"An error occurred during applying processor [{processor.GetType()}] on process {process}: {e.Message}",
-                            e);
-                    }
-                }
-
-                var diffs = resource.Compare(copy)
-                    .Select(d => d.ToBulkModificationDiff(id, resource.Id, resource.RawFullname)).ToList();
-                data.Add((resource, copy, diffs));
             }
 
             var allDiffs = data.SelectMany(d => d.Diffs).ToList();
@@ -200,7 +207,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             await BulkModificationDiffService.UpdateAll(id, allDiffs);
             await UpdateByKey(id, d => { d.CalculatedAt = DateTime.Now; });
 
-            await tran.CommitAsync();
+            await tran.CommitAsync(ct);
 
             return data;
         }

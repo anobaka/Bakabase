@@ -168,9 +168,13 @@ namespace Bakabase.InsideWorld.Business.Services
             return new Regex($"{left}{lPadding}{word}{rPadding}{right}");
         }
 
-        public async Task<DateTime?> TryToParseDateTime(string str)
+        public async Task<DateTime?> TryToParseDateTime(string? str)
         {
-            var r = await TryToParseDateTime(new[] {str});
+            if (string.IsNullOrEmpty(str))
+            {
+                return null;
+            }
+            var r = await TryToParseDateTime([str]);
             return r.Any() ? r[0].DateTime : null;
         }
 
@@ -193,9 +197,9 @@ namespace Bakabase.InsideWorld.Business.Services
                     else
                     {
                         // fallback
-                        if (DateTime.TryParse(strings[i], out var dt1))
+                        if (DateTime.TryParse(strings[i], out var fallbackDt))
                         {
-                            list.Add((i, dt));
+                            list.Add((i, fallbackDt));
                         }
                     }
                 }

@@ -1037,7 +1037,7 @@
   "You can preview the result then apply all changes": "您可以预览结果然后应用所有修改",
   "Calculate resource diffs": "计算资源变化",
   "Recalculate resource diffs": "重新计算资源变化",
-  "Check previous result": "查看之前的结果",
+  "Check previous calculation result": "查看最后一次计算的结果",
   "Apply": "应用",
   "Processing": "处理中",
   "Abort": "终止",
@@ -1061,5 +1061,9 @@
   "Check all the resources that have been filtered out": "查看所有被筛选出的资源",
   "Continuing will result in the inability to revert the applied changes. Do you want to proceed?": "继续将导致无法还原之前已经应用的修改。您确定要继续吗？",
   "Revert": "还原",
-  "Filter(Verb)": "筛选"
+  "Filter(Verb)": "筛选",
+  "Candidate(s)": "候选项",
+  "New data": "新数据",
+  "Resource diffs": "资源变化",
+  "This process may take a long time, please be patient": "该过程可能会使用很长时间，请耐心等待"
 }

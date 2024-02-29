@@ -44,12 +44,16 @@ export default ({
   const renderPublishers = (publishers: IPublisherDiffValue[]): any => {
     return publishers.map((publisher, i) => {
       const {
+        id,
         name,
         children,
       } = publisher;
+
+      const displayName = displayDataSources?.[BulkModificationProperty.Publisher]?.[id] ?? name;
+
       return (
         <div className={'publisher'} key={i}>
-          <div className="name">{name}</div>
+          <div className="name">{displayName}</div>
           {children && children.length > 0 && (
             <>
               <CustomIcon size={'xs'} type={'expand'} />
@@ -161,7 +165,11 @@ export default ({
       }
       case BulkModificationProperty.Original:
       {
-        return ResourceDiffUtils.parseOriginal(rawDiffValue)?.map(o => displayDataSources?.[BulkModificationProperty.Original]?.[o.id]).join(', ');
+        return ResourceDiffUtils.parseOriginal(rawDiffValue)?.map(o => (
+          <SimpleLabel status={'default'}>
+            {displayDataSources?.[BulkModificationProperty.Original]?.[o.id] ?? o.name}
+          </SimpleLabel>
+        ));
       }
       case BulkModificationProperty.Series: {
         return ResourceDiffUtils.parseSeries(rawDiffValue)?.name;
@@ -170,7 +178,9 @@ export default ({
         const tagValues = ResourceDiffUtils.parseTag(rawDiffValue);
         const names = tagValues?.map(tag => displayDataSources?.[BulkModificationProperty.Tag]?.[tag.id] ?? tag.name).filter(n => n != undefined && n.length > 0);
         if (names && names.length > 0) {
-          return names.join(', ');
+          return names.map(n => (
+            <SimpleLabel status={'default'}>{n}</SimpleLabel>
+          ));
         }
         break;
       }
@@ -189,9 +199,9 @@ export default ({
 
   return (
     <div className="diff">
-      <SimpleLabel className="property">
+      <div className="property">
         {diff.property == BulkModificationProperty.CustomProperty ? diff.propertyKey : t(BulkModificationProperty[diff.property])}
-      </SimpleLabel>
+      </div>
       {/* <SimpleLabel className="type" status={TypeSimpleLabelStatusMap[diff.type]}> */}
       {/*   {t(BulkModificationDiffType[diff.type])} */}
       {/* </SimpleLabel> */}

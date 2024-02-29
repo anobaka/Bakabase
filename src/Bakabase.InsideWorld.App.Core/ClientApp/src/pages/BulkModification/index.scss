@@ -147,6 +147,7 @@
           .processes-panel {
             & > .content {
               & > .processes {
+                margin-bottom: 10px;
                 display: flex;
                 flex-direction: column;
                 gap: 5px;
@@ -212,7 +213,6 @@
               }
 
               & > .opts {
-                margin-top: 10px;
                 display: flex;
                 gap: 10px;
                 align-items: center;

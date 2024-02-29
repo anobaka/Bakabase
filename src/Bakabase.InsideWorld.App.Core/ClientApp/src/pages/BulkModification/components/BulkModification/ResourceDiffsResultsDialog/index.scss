@@ -66,7 +66,7 @@
         flex: 1;
 
         .diff {
-          padding: 0 10px;
+          padding: 1px 10px;
 
           //&:hover {
           //  background-color: var(--theme-block-background-accent);
@@ -88,6 +88,7 @@
             min-width: 60px;
             max-width: 60px;
             width: 60px;
+            color: var(--theme-text-primary);
           }
 
           .current {
@@ -120,6 +121,10 @@
           .current, .new {
             white-space: break-spaces;
             word-break: break-all;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
 
             .publisher {
               display: flex;

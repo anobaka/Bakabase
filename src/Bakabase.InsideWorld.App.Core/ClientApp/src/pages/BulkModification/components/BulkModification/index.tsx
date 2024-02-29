@@ -1,4 +1,4 @@
-import { Button, Collapse, Dialog, Icon, Message } from '@alifd/next';
+import { Balloon, Button, Collapse, Dialog, Icon, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import moment from 'moment';
@@ -245,29 +245,31 @@ export default ({
           {t('Processes')}
         </div>
         <div className="content">
-          <div className="processes">
-            {bm.processes?.map((p, j) => {
-              return (
-                <ProcessDemonstrator
-                  key={j}
-                  dataSources={displayDataSources[p.property!]}
-                  process={p}
-                  index={j}
-                  variables={bm.variables}
-                  onChange={async p => {
-                    const newProcesses = [...bm.processes!];
-                    newProcesses[j] = p;
-                    await saveChanges({ processes: newProcesses });
-                  }}
-                  onRemove={async () => {
-                    const newProcesses = [...bm.processes!];
-                    newProcesses.splice(j, 1);
-                    await saveChanges({ processes: newProcesses });
-                  }}
-                />
-              );
-            })}
-          </div>
+          {bm.processes && bm.processes.length > 0 && (
+            <div className="processes">
+              {bm.processes.map((p, j) => {
+                return (
+                  <ProcessDemonstrator
+                    key={j}
+                    dataSources={displayDataSources[p.property!]}
+                    process={p}
+                    index={j}
+                    variables={bm.variables}
+                    onChange={async p => {
+                      const newProcesses = [...bm.processes!];
+                      newProcesses[j] = p;
+                      await saveChanges({ processes: newProcesses });
+                    }}
+                    onRemove={async () => {
+                      const newProcesses = [...bm.processes!];
+                      newProcesses.splice(j, 1);
+                      await saveChanges({ processes: newProcesses });
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
           <div className="opts">
             <Button
               type={'normal'}
@@ -297,15 +299,23 @@ export default ({
           {renderResultInfo()}
           <div className="opts">
             {bm.filteredAt && (
-              <Button
-                type={'secondary'}
-                size={'small'}
-                onClick={() => {
-                  alertIfRevertingWillBeDisabled(async () => {
-                    await calculateResourceDiffs();
-                  });
-                }}
-              >{t(bm.calculatedAt ? 'Recalculate resource diffs' : 'Calculate resource diffs')}</Button>
+              <Balloon.Tooltip
+                trigger={(
+                  <Button
+                    type={'secondary'}
+                    size={'small'}
+                    onClick={() => {
+                      alertIfRevertingWillBeDisabled(async () => {
+                        await calculateResourceDiffs();
+                      });
+                    }}
+                  >{t(bm.calculatedAt ? 'Recalculate resource diffs' : 'Calculate resource diffs')}</Button>
+                )}
+                v2
+                align={'t'}
+              >
+                {t('This process may take a long time, please be patient')}
+              </Balloon.Tooltip>
             )}
             {bm.calculatedAt && (
               <Button
@@ -318,7 +328,7 @@ export default ({
                     displayDataSources,
                   });
                 }}
-              >{t('Check previous result')}</Button>
+              >{t('Check previous calculation result')}</Button>
             )}
             {bm.calculatedAt && (
               <Button
