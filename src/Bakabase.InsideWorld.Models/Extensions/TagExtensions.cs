@@ -30,14 +30,13 @@ namespace Bakabase.InsideWorld.Models.Extensions
             };
         }
 
-        public static List<ResourceDiff>? Compare(this List<TagDto>? a, List<TagDto>? b)
-        {
-            var pairs = a.Pair(b, TagDto.BizComparer, null, 0.6m);
-            return ResourceDiff.BuildRootDiffs(ResourceDiffProperty.Tag, pairs, TagDto.BizComparer, null, Compare);
-        }
-
         public static List<ResourceDiff>? Compare(this TagDto a, TagDto b)
         {
+            if (a.Id > 0 && a.Id == b.Id)
+            {
+                return null;
+            }
+
             var groupNameDiff = ResourceDiff.BuildRootDiff(ResourceDiffProperty.Tag, a.GroupName, b.GroupName,
                 StringComparer.OrdinalIgnoreCase, nameof(TagDto.GroupName), null);
             var nameDiff = ResourceDiff.BuildRootDiff(ResourceDiffProperty.Tag, a.Name, b.Name,

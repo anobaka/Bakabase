@@ -393,13 +393,13 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 case ResourceDiffProperty.Publisher:
                 {
                     return ResourceDiff.BuildRootDiffForArrayProperty(property, a as List<PublisherDto>, b as List<PublisherDto>,
-                        EqualityComparer<List<PublisherDto>>.Default,
+                        PublisherDto.BizComparer,
                         property.GetPropertyName(), PublisherExtensions.Compare);
                 }
                 case ResourceDiffProperty.Tag:
                 {
                     return ResourceDiff.BuildRootDiffForArrayProperty(property, a as List<TagDto>, b as List<TagDto>,
-                        EqualityComparer<List<TagDto>>.Default, property.GetPropertyName(), TagExtensions.Compare);
+                        TagDto.BizComparer, property.GetPropertyName(), TagExtensions.Compare);
                 }
                 case ResourceDiffProperty.Original:
                 {

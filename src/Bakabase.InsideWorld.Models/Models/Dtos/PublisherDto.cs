@@ -14,7 +14,10 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         public bool Favorite { get; set; }
         public List<TagDto> Tags { get; set; } = new();
 
-        private sealed class NameEqualityComparer : IEqualityComparer<PublisherDto>
+        /// <summary>
+        /// Returns true if they have same id or their names and sub-publishers are same.
+        /// </summary>
+        private sealed class BizEqualityComparer : IEqualityComparer<PublisherDto>
         {
             public bool Equals(PublisherDto? x, PublisherDto? y)
             {
@@ -22,6 +25,14 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
                 if (ReferenceEquals(x, null)) return false;
                 if (ReferenceEquals(y, null)) return false;
                 if (x.GetType() != y.GetType()) return false;
+
+                if (x.Id != 0 && y.Id != 0)
+                {
+                    if (x.Id == y.Id)
+                    {
+                        return true;
+                    }
+                }
 
                 if (!string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase))
                 {
@@ -45,6 +56,9 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
             }
         }
 
-        public static IEqualityComparer<PublisherDto> NameComparer { get; } = new NameEqualityComparer();
+        /// <summary>
+        /// <inheritdoc cref="BizEqualityComparer"/>
+        /// </summary>
+        public static IEqualityComparer<PublisherDto> BizComparer { get; } = new BizEqualityComparer();
     }
 }

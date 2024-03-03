@@ -65,6 +65,11 @@ namespace Bakabase.InsideWorld.Models.Extensions
                     diffs.Add(nameDiff);
                 }
 
+                if (titleDiff != null)
+                {
+                    diffs.Add(titleDiff);
+                }
+
                 return diffs;
             }
 

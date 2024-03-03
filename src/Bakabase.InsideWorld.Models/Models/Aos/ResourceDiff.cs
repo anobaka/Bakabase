@@ -25,22 +25,73 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
         public static ResourceDiff Removed(ResourceDiffProperty property, object? oldValue) => new()
             {Type = ResourceDiffType.Removed, CurrentValue = oldValue, Property = property};
 
-        public static ResourceDiff? BuildRootDiffForArrayProperty<T>(ResourceDiffProperty property, List<T>? a, List<T>? b,
-            IEqualityComparer<List<T>> equalityComparer,
+        public static ResourceDiff? BuildRootDiffForArrayProperty<T>(ResourceDiffProperty property, List<T>? a,
+            List<T>? b,
+            IEqualityComparer<T> equalityComparer,
             string? key,
-            Func<List<T>, List<T>, List<ResourceDiff>?>? buildSubDiffs)
+            Func<T, T, List<ResourceDiff>?>? buildDiffForSingleItem) where T : class
         {
-            if (a?.Count == 0)
+            if (a?.Any() != true && b?.Any() != true)
             {
-                a = null;
+                return null;
             }
 
-            if (b?.Count == 0)
+            if (a?.Any() != true)
             {
-                b = null;
+                return Added(property, b);
             }
 
-            return BuildRootDiff(property, a, b, equalityComparer, key, buildSubDiffs);
+            if (b?.Any() != true)
+            {
+                return Removed(property, a);
+            }
+
+            var pairs = a.Pair(b, equalityComparer, null, null);
+
+            List<ResourceDiff>? listDiffs = null;
+            foreach (var (ap, bp) in pairs)
+            {
+                if (ap == null && bp != null)
+                {
+                    (listDiffs ??= []).Add(Added(property, bp));
+                    continue;
+                }
+
+                if (ap != null && bp == null)
+                {
+                    (listDiffs ??= []).Add(Removed(property, ap));
+                    continue;
+                }
+
+                var subDiffs = buildDiffForSingleItem?.Invoke(ap!, bp!);
+                if (subDiffs?.Any() == true)
+                {
+                    (listDiffs ??= []).Add(new ResourceDiff
+                    {
+                        Property = property,
+                        CurrentValue = ap,
+                        NewValue = bp,
+                        Key = a.IndexOf(ap!).ToString(),
+                        SubDiffs = subDiffs,
+                        Type = ResourceDiffType.Modified
+                    });
+                }
+            }
+
+            if (listDiffs == null)
+            {
+                return null;
+            }
+
+            return new ResourceDiff
+            {
+                Property = property,
+                CurrentValue = a,
+                NewValue = b,
+                Key = key,
+                SubDiffs = listDiffs,
+                Type = ResourceDiffType.Modified
+            };
         }
 
         public static ResourceDiff? BuildRootDiff<T>(ResourceDiffProperty property, T? a, T? b,

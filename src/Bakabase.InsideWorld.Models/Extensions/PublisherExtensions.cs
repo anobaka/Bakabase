@@ -158,7 +158,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
         /// <param name="publishers"></param>
         /// <param name="filter"></param>
         /// <returns></returns>
-        public static List<string> GetNames(this List<PublisherDto> publishers, Func<PublisherDto, bool> filter = null)
+        public static List<string> GetNames(this List<PublisherDto>? publishers, Func<PublisherDto, bool>? filter = null)
         {
             var names = new List<string>();
             if (publishers != null)
@@ -331,25 +331,21 @@ namespace Bakabase.InsideWorld.Models.Extensions
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="a"></param>
-        /// <param name="b"></param>
-        /// <returns></returns>
-        public static List<ResourceDiff>? Compare(this List<PublisherDto>? a, List<PublisherDto>? b)
-        {
-            return ResourceDiff.BuildRootDiffs(ResourceDiffProperty.Publisher, a.PairByString(b, x => x.Name, 1),
-                PublisherDto.NameComparer, nameof(ResourceDto.Publishers), Compare);
-        }
 
         public static List<ResourceDiff>? Compare(this PublisherDto a, PublisherDto b)
         {
+            if (a.Id == b.Id)
+            {
+                return null;
+            }
+
             var nameDiff = ResourceDiff.BuildRootDiff(ResourceDiffProperty.Publisher, a.Name, b.Name,
                 StringComparer.OrdinalIgnoreCase, nameof(PublisherDto.Name), null);
-            var subPublisherDiff = a?.SubPublishers.Compare(b?.SubPublishers);
+            var subPublisherDiff = ResourceDiff.BuildRootDiffForArrayProperty(ResourceDiffProperty.Publisher,
+                a.SubPublishers, b.SubPublishers, PublisherDto.BizComparer, nameof(PublisherDto.SubPublishers),
+                Compare);
 
-            if (nameDiff != null || subPublisherDiff?.Any() == true)
+            if (nameDiff != null || subPublisherDiff != null)
             {
                 var diffs = new List<ResourceDiff>();
                 if (nameDiff != null)
@@ -357,9 +353,9 @@ namespace Bakabase.InsideWorld.Models.Extensions
                     diffs.Add(nameDiff);
                 }
 
-                if (subPublisherDiff?.Any() == true)
+                if (subPublisherDiff != null)
                 {
-                    diffs.AddRange(subPublisherDiff);
+                    diffs.Add(subPublisherDiff);
                 }
 
                 return diffs;

@@ -697,13 +697,13 @@ namespace Bakabase.InsideWorld.Business.Services
             try
             {
                 // Aliases
-                var names = tmpResources.Select(a => a.Name).Where(a => a.IsNotEmpty()).ToHashSet();
-                var publisherNames = tmpResources.SelectMany(a => a.Publishers.GetNames()).Distinct().ToList();
+                var names = tmpResources.Select(a => a.Name).Where(a => !string.IsNullOrEmpty(a)).ToHashSet();
+                var publisherNames = tmpResources.SelectMany(a => a.Publishers.GetNames()).Distinct().Where(x => !string.IsNullOrEmpty(x)).ToList();
                 var originalNames = tmpResources.Where(a => a.Originals != null)
-                    .SelectMany(a => a.Originals.Select(b => b.Name))
-                    .Distinct().ToList();
+                    .SelectMany(a => a.Originals!.Select(b => b.Name))
+                    .Distinct().Where(x => !string.IsNullOrEmpty(x)).ToList();
                 var allNames = names.Concat(publisherNames).Concat(originalNames).ToList();
-                var aliasAddResult = await _aliasService.AddRange(allNames);
+                var aliasAddResult = await _aliasService.AddRange(allNames!);
 
                 // Resources
                 var resources = tmpResources.Select(a => a.ToEntity()).ToList();
@@ -729,7 +729,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 // Series
                 // Changed items will be replaced instead of being updated.
                 var allSeries = tmpResources.Select(a => a.Series).Where(a => a != null).ToArray();
-                var seriesNames = allSeries.Select(t => t.Name).Where(t => t.IsNotEmpty()).ToList();
+                var seriesNames = allSeries.Select(t => t!.Name).Where(t => t.IsNotEmpty()).ToList();
                 if (seriesNames.Any())
                 {
                     var seriesRangeAddResult = await _serialService.AddRange(seriesNames);
@@ -761,21 +761,21 @@ namespace Bakabase.InsideWorld.Business.Services
                 // Originals
                 var originalRangeAddResult = await _originalService.AddRange(originalNames);
                 var originalMappings = tmpResources.Where(a => a.Originals != null).SelectMany(a =>
-                    a.Originals.Select(b =>
+                    a.Originals!.Select(b =>
                         new OriginalResourceMapping
                         {
-                            OriginalId = originalRangeAddResult.Data[b.Name].Id,
+                            OriginalId = b.Id == 0 ? originalRangeAddResult.Data[b.Name].Id : b.Id,
                             ResourceId = a.Id
                         })).ToList();
                 await _originalMappingService.AddRange(originalMappings);
 
                 // Tags
                 // Cares name and group name only
-                var tags = tmpResources.Where(a => a.Tags != null).SelectMany(a => a.Tags).Where(a => a.Id == 0)
+                var tags = tmpResources.Where(a => a.Tags != null).SelectMany(a => a.Tags!).Where(a => a.Id == 0)
                     .Distinct(TagDto.BizComparer).ToArray();
                 var savedTags = await _tagService.AddRangeByNameAndGroupName(tags, false);
                 var resourceTagsMap = tmpResources.Where(a => a.Tags != null).ToDictionary(a => a.Id,
-                    a => a.Tags.Select(b =>
+                    a => a.Tags!.Select(b =>
                     {
                         if (b.Id > 0)
                         {
@@ -794,7 +794,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
 
                         return tag?.Id;
-                    }).Where(b => b.HasValue).Select(b => b.Value).ToArray());
+                    }).Where(b => b.HasValue).Select(b => b!.Value).ToArray());
                 await _resourceTagMappingService.UpdateRange(resourceTagsMap);
 
                 // Custom Properties

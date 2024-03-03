@@ -1065,5 +1065,6 @@
   "Candidate(s)": "候选项",
   "New data": "新数据",
   "Resource diffs": "资源变化",
-  "This process may take a long time, please be patient": "该过程可能会使用很长时间，请耐心等待"
+  "This process may take a long time, please be patient": "该过程可能会使用很长时间，请耐心等待",
+  "Reverting will be disabled": "还原功能即将被禁用"
 }

@@ -8,6 +8,9 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         public int Id { get; set; }
         public string Name { get; set; } = null!;
 
+        /// <summary>
+        /// Returns true when they have same positive id or same name.
+        /// </summary>
         private sealed class BizEqualityComparer : IEqualityComparer<OriginalDto>
         {
             public bool Equals(OriginalDto? x, OriginalDto? y)
@@ -25,6 +28,9 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
             }
         }
 
+        /// <summary>
+        /// <inheritdoc cref="BizEqualityComparer"/>
+        /// </summary>
         public static IEqualityComparer<OriginalDto> BizComparer { get; } = new BizEqualityComparer();
     }
 }

@@ -15,6 +15,7 @@ import FilteredResourcesDialog from '@/pages/BulkModification/components/BulkMod
 import ResourceDiffsResultsDialog
   from '@/pages/BulkModification/components/BulkModification/ResourceDiffsResultsDialog';
 import { convertFromApiModel, convertToApiModel } from '@/pages/BulkModification/helpers';
+import app from '@/app';
 
 
 const { Panel } = Collapse;
@@ -160,6 +161,7 @@ export default ({
       const appliedAt = moment(bm.appliedAt!);
       const datetimes = [bm.filteredAt!, bm.calculatedAt!].map(d => moment(d));
       const revertingWillBeDisabled = datetimes.every(d => d.isBefore(appliedAt));
+      console.log(bm.appliedAt, datetimes, revertingWillBeDisabled, appliedAt.isBefore(datetimes[0]));
       if (revertingWillBeDisabled) {
         Dialog.confirm({
           title: t('Reverting will be disabled'),
@@ -199,13 +201,15 @@ export default ({
               size={'small'}
               loading={processing}
               onClick={async () => {
-                setProcessing(true);
-                try {
-                  await BApi.bulkModification.performBulkModificationFiltering(bm.id);
-                  await refresh();
-                } finally {
-                  setProcessing(false);
-                }
+                alertIfRevertingWillBeDisabled(async () => {
+                  setProcessing(true);
+                  try {
+                    await BApi.bulkModification.performBulkModificationFiltering(bm.id);
+                    await refresh();
+                  } finally {
+                    setProcessing(false);
+                  }
+                });
               }}
             >{t('Filter(Verb)')}</Button>
             <div className={'resource-count'}>

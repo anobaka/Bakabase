@@ -25,6 +25,11 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
         public static List<ResourceDiff>? Compare(this SeriesDto? a, SeriesDto? b)
         {
+            if (a?.Id > 0 && a.Id == b?.Id)
+            {
+                return null;
+            }
+
             var nameDiff = ResourceDiff.BuildRootDiff(ResourceDiffProperty.Series, a?.Name, b?.Name,
                 StringComparer.OrdinalIgnoreCase, nameof(SeriesDto.Name), null);
             return nameDiff == null ? null : new List<ResourceDiff> {nameDiff};

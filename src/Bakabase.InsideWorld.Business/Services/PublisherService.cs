@@ -92,7 +92,8 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<SimpleRangeAddResult<PublisherDto>> AddAll(List<PublisherDto> publishers)
         {
             var allPublishers = publishers.Extract();
-            var publisherNames = allPublishers.Select(a => a.Name).Distinct().ToList();
+            var publisherNames = allPublishers.Select(a => a.Name).Where(x => !string.IsNullOrEmpty(x)).Distinct()
+                .ToList();
             var existPublishers = await _orm.GetAll(a => publisherNames.Contains(a.Name));
             var existNames = existPublishers.Select(a => a.Name).ToList();
             var toBeAddedPublishers =

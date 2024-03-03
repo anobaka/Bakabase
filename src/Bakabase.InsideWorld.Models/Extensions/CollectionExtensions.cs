@@ -11,13 +11,14 @@ namespace Bakabase.InsideWorld.Models.Extensions
     public static class CollectionExtensions
     {
         public static List<(T? A, T? B)> PairByString<T>(this IEnumerable<T>? aList, IEnumerable<T>? bList,
-            Func<T, string> getKey, decimal? minSimilarity = 0.6m) where T : class => aList.Pair(bList, EqualityComparer<T>.Default, (arg1, arg2) =>
-        {
-            var str1 = getKey(arg1);
-            var str2 = getKey(arg2);
-            var r = 1 - (decimal) str1.GetLevenshteinDistance(str2) / Math.Max(str1.Length, str2.Length);
-            return r;
-        }, minSimilarity);
+            Func<T, string> getKey, decimal? minSimilarity = 0.6m) where T : class => aList.Pair(bList,
+            EqualityComparer<T>.Default, (arg1, arg2) =>
+            {
+                var str1 = getKey(arg1);
+                var str2 = getKey(arg2);
+                var r = 1 - (decimal) str1.GetLevenshteinDistance(str2) / Math.Max(str1.Length, str2.Length);
+                return r;
+            }, minSimilarity);
 
         public static List<(T? A, T? B)> Pair<T>(this IEnumerable<T>? aList, IEnumerable<T>? bList,
             IEqualityComparer<T>? equalityComparer, Func<T, T, decimal>? getSimilarity, decimal? minSimilarity)
@@ -30,22 +31,26 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
             if (equalityComparer != null)
             {
-                foreach (var aData in tmpA)
+                for (var index = 0; index < tmpA.Count; index++)
                 {
-                    var sameB = tmpB.FirstOrDefault(x => equalityComparer.Equals(x, aData));
-                    if (sameB != null)
+                    var aData = tmpA[index];
+                    var sameBIndex = tmpB.FindIndex(x => equalityComparer.Equals(x, aData));
+                    if (sameBIndex > -1)
                     {
+                        var sameB = tmpB[sameBIndex];
                         pairs.Add((aData, sameB));
-                        tmpA.Remove(aData);
-                        tmpB.Remove(sameB);
+                        tmpA.RemoveAt(index);
+                        tmpB.RemoveAt(sameBIndex);
+                        index--;
                     }
                 }
             }
 
             if (getSimilarity != null)
             {
-                foreach (var aData in tmpA)
+                for (var index = 0; index < tmpA.Count; index++)
                 {
+                    var aData = tmpA[index];
                     var similarB = tmpB.Select((x, i) => (R: getSimilarity(aData, x), B: x))
                         .Where(a => a.R >= minSimilarity).OrderByDescending(x => x.R)
                         .FirstOrDefault().B;
@@ -53,8 +58,9 @@ namespace Bakabase.InsideWorld.Models.Extensions
                     if (similarB != null)
                     {
                         pairs.Add((aData, similarB));
-                        tmpA.Remove(aData);
+                        tmpA.RemoveAt(index);
                         tmpB.Remove(similarB);
+                        index--;
                     }
                 }
             }
