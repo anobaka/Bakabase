@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Bakabase.InsideWorld.Models.Models.Entities.Implicit;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
@@ -13,7 +14,7 @@ namespace Bakabase.InsideWorld.Models.RequestModels
         [Required]public string Name { get; set; } = string.Empty;
         [Required] [BindRequired] public int CategoryId { get; set; }
 
-        public MediaLibrary.PathConfiguration[] PathConfigurations { get; set; } = Array.Empty<MediaLibrary.PathConfiguration>();
+        public List<PathConfigurationDto>? PathConfigurations { get; set; }
 
     }
 }

@@ -41,6 +41,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return await _service.Add(model);
         }
 
+        [HttpPost("{id:int}/duplication")]
+        [SwaggerOperation(OperationId = "DuplicateResourceCategory")]
+        public async Task<BaseResponse> Duplicate(int id, [FromBody] ResourceCategoryDuplicateRequestModel model)
+        {
+            return await _service.Duplicate(id, model);
+        }
+
         [HttpPut("{id}")]
         [SwaggerOperation(OperationId = "UpdateResourceCategory")]
         public async Task<BaseResponse> Update(int id, [FromBody] ResourceCategoryUpdateRequestModel model)
@@ -57,10 +64,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         }
 
         [HttpDelete("{id}")]
-        [SwaggerOperation(OperationId = "RemoveResourceCategory")]
-        public async Task<BaseResponse> Remove(int id)
+        [SwaggerOperation(OperationId = "DeleteResourceCategoryAndClearAllRelatedData")]
+        public async Task<BaseResponse> Delete(int id)
         {
-            return await _service.RemoveByKey(id);
+            return await _service.DeleteAndClearAllRelatedData(id);
         }
 
         [HttpPut("orders")]

@@ -404,7 +404,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 case ResourceDiffProperty.Original:
                 {
                     return ResourceDiff.BuildRootDiffForArrayProperty(property, a as List<OriginalDto>, b as List<OriginalDto>,
-                        EqualityComparer<List<OriginalDto>>.Default, property.GetPropertyName(),
+                        OriginalDto.BizComparer, property.GetPropertyName(),
                         OriginalExtensions.Compare);
                 }
                 case ResourceDiffProperty.CustomProperty:

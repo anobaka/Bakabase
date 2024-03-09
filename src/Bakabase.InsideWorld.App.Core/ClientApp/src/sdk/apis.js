@@ -965,13 +965,13 @@ export const PutBulkModificationURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveBulkModification
- * url: RemoveBulkModificationURL
- * method: RemoveBulkModification_TYPE
- * raw_url: RemoveBulkModification_RAW_URL
+ * request: DeleteBulkModification
+ * url: DeleteBulkModificationURL
+ * method: DeleteBulkModification_TYPE
+ * raw_url: DeleteBulkModification_RAW_URL
  * @param id - 
  */
-export const RemoveBulkModification = function(parameters = {}) {
+export const DeleteBulkModification = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/bulk-modification/{id}'
@@ -989,13 +989,13 @@ export const RemoveBulkModification = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const RemoveBulkModification_RAW_URL = function() {
+export const DeleteBulkModification_RAW_URL = function() {
   return '/bulk-modification/{id}'
 }
-export const RemoveBulkModification_TYPE = function() {
+export const DeleteBulkModification_TYPE = function() {
   return 'delete'
 }
-export const RemoveBulkModificationURL = function(parameters = {}) {
+export const DeleteBulkModificationURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/bulk-modification/{id}'
@@ -1082,6 +1082,96 @@ export const CreateBulkModificationURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/bulk-modification'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DuplicateBulkModification
+ * url: DuplicateBulkModificationURL
+ * method: DuplicateBulkModification_TYPE
+ * raw_url: DuplicateBulkModification_RAW_URL
+ * @param id - 
+ */
+export const DuplicateBulkModification = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification/{id}/duplication'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const DuplicateBulkModification_RAW_URL = function() {
+  return '/bulk-modification/{id}/duplication'
+}
+export const DuplicateBulkModification_TYPE = function() {
+  return 'post'
+}
+export const DuplicateBulkModificationURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification/{id}/duplication'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: CloseBulkModification
+ * url: CloseBulkModificationURL
+ * method: CloseBulkModification_TYPE
+ * raw_url: CloseBulkModification_RAW_URL
+ * @param id - 
+ */
+export const CloseBulkModification = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification/{id}/close'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const CloseBulkModification_RAW_URL = function() {
+  return '/bulk-modification/{id}/close'
+}
+export const CloseBulkModification_TYPE = function() {
+  return 'put'
+}
+export const CloseBulkModificationURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification/{id}/close'
+  path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -4529,6 +4619,7 @@ export const ReadAllLogURL = function(parameters = {}) {
  * url: GetAllMediaLibrariesURL
  * method: GetAllMediaLibraries_TYPE
  * raw_url: GetAllMediaLibraries_RAW_URL
+ * @param additionalItems - 
  */
 export const GetAllMediaLibraries = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -4537,6 +4628,9 @@ export const GetAllMediaLibraries = function(parameters = {}) {
   let body
   let queryParameters = {}
   let form = {}
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -4554,6 +4648,9 @@ export const GetAllMediaLibrariesURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library'
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -4992,6 +5089,104 @@ export const RemoveMediaLibraryPathConfigurationURL = function(parameters = {}) 
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library/{id}/path-configuration'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: AddMediaLibrariesInBulk
+ * url: AddMediaLibrariesInBulkURL
+ * method: AddMediaLibrariesInBulk_TYPE
+ * raw_url: AddMediaLibrariesInBulk_RAW_URL
+ * @param cId - 
+ * @param model - 
+ */
+export const AddMediaLibrariesInBulk = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library/bulk-add/{cId}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{cId}', `${parameters['cId']}`)
+  if (parameters['cId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: cId'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const AddMediaLibrariesInBulk_RAW_URL = function() {
+  return '/media-library/bulk-add/{cId}'
+}
+export const AddMediaLibrariesInBulk_TYPE = function() {
+  return 'post'
+}
+export const AddMediaLibrariesInBulkURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library/bulk-add/{cId}'
+  path = path.replace('{cId}', `${parameters['cId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: AddMediaLibraryRootPathsInBulk
+ * url: AddMediaLibraryRootPathsInBulkURL
+ * method: AddMediaLibraryRootPathsInBulk_TYPE
+ * raw_url: AddMediaLibraryRootPathsInBulk_RAW_URL
+ * @param mlId - 
+ * @param model - 
+ */
+export const AddMediaLibraryRootPathsInBulk = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library/{mlId}/path-configuration/root-paths'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{mlId}', `${parameters['mlId']}`)
+  if (parameters['mlId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: mlId'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const AddMediaLibraryRootPathsInBulk_RAW_URL = function() {
+  return '/media-library/{mlId}/path-configuration/root-paths'
+}
+export const AddMediaLibraryRootPathsInBulk_TYPE = function() {
+  return 'post'
+}
+export const AddMediaLibraryRootPathsInBulkURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library/{mlId}/path-configuration/root-paths'
+  path = path.replace('{mlId}', `${parameters['mlId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -7266,6 +7461,84 @@ export const GetAllOriginalsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetAllSeries
+ * url: GetAllSeriesURL
+ * method: GetAllSeries_TYPE
+ * raw_url: GetAllSeries_RAW_URL
+ */
+export const GetAllSeries = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/series/all'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllSeries_RAW_URL = function() {
+  return '/resource/series/all'
+}
+export const GetAllSeries_TYPE = function() {
+  return 'get'
+}
+export const GetAllSeriesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/series/all'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetAllCustomProperties
+ * url: GetAllCustomPropertiesURL
+ * method: GetAllCustomProperties_TYPE
+ * raw_url: GetAllCustomProperties_RAW_URL
+ */
+export const GetAllCustomProperties = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/custom-property/all'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllCustomProperties_RAW_URL = function() {
+  return '/resource/custom-property/all'
+}
+export const GetAllCustomProperties_TYPE = function() {
+  return 'get'
+}
+export const GetAllCustomPropertiesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/custom-property/all'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllResourceCategories
  * url: GetAllResourceCategoriesURL
  * method: GetAllResourceCategories_TYPE
@@ -7355,6 +7628,55 @@ export const AddResourceCategoryURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: DuplicateResourceCategory
+ * url: DuplicateResourceCategoryURL
+ * method: DuplicateResourceCategory_TYPE
+ * raw_url: DuplicateResourceCategory_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const DuplicateResourceCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource-category/{id}/duplication'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const DuplicateResourceCategory_RAW_URL = function() {
+  return '/resource-category/{id}/duplication'
+}
+export const DuplicateResourceCategory_TYPE = function() {
+  return 'post'
+}
+export const DuplicateResourceCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource-category/{id}/duplication'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: UpdateResourceCategory
  * url: UpdateResourceCategoryURL
  * method: UpdateResourceCategory_TYPE
@@ -7404,13 +7726,13 @@ export const UpdateResourceCategoryURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveResourceCategory
- * url: RemoveResourceCategoryURL
- * method: RemoveResourceCategory_TYPE
- * raw_url: RemoveResourceCategory_RAW_URL
+ * request: DeleteResourceCategoryAndClearAllRelatedData
+ * url: DeleteResourceCategoryAndClearAllRelatedDataURL
+ * method: DeleteResourceCategoryAndClearAllRelatedData_TYPE
+ * raw_url: DeleteResourceCategoryAndClearAllRelatedData_RAW_URL
  * @param id - 
  */
-export const RemoveResourceCategory = function(parameters = {}) {
+export const DeleteResourceCategoryAndClearAllRelatedData = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/resource-category/{id}'
@@ -7428,13 +7750,13 @@ export const RemoveResourceCategory = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const RemoveResourceCategory_RAW_URL = function() {
+export const DeleteResourceCategoryAndClearAllRelatedData_RAW_URL = function() {
   return '/resource-category/{id}'
 }
-export const RemoveResourceCategory_TYPE = function() {
+export const DeleteResourceCategoryAndClearAllRelatedData_TYPE = function() {
   return 'delete'
 }
-export const RemoveResourceCategoryURL = function(parameters = {}) {
+export const DeleteResourceCategoryAndClearAllRelatedDataURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource-category/{id}'

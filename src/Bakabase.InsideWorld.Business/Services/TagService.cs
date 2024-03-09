@@ -145,7 +145,7 @@ namespace Bakabase.InsideWorld.Business.Services
         /// <param name="model"></param>
         /// <param name="autoMatchGroupForTagsWithoutGroup"></param>
         /// <returns></returns>
-        public async Task<List<TagDto>> AddRangeByNameAndGroupName(TagDto[] model,
+        public async Task<List<TagDto>> GetOrAddRangeByNameAndGroupName(TagDto[] model,
             bool autoMatchGroupForTagsWithoutGroup)
         {
             var dict = model.Where(a => a.Name.IsNotEmpty()).Distinct(TagDto.BizComparer)

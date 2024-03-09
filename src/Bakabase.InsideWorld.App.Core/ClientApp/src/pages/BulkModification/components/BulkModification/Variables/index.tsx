@@ -34,6 +34,7 @@ interface IEditingVariable {
 interface IProps {
   variables?: IVariable[];
   onChange?: (variables: IVariable[]) => void;
+  editable: boolean;
 }
 
 const variableSources = Object.keys(VariableSource).filter(a => Number.isNaN(parseInt(a, 10)));
@@ -41,6 +42,7 @@ const variableSources = Object.keys(VariableSource).filter(a => Number.isNaN(par
 export default ({
                   variables: propsVariable,
                   onChange,
+                  editable,
                 }: IProps) => {
   const { t } = useTranslation();
 
@@ -187,10 +189,12 @@ export default ({
                   className={'value custom'}
                   key={i}
                   onClick={() => {
-                    setEditingVariable({
-                      ...v,
-                      index: i,
-                    });
+                    if (editable) {
+                      setEditingVariable({
+                        ...v,
+                        index: i,
+                      });
+                    }
                   }}
                 >
                   <SimpleLabel
@@ -200,17 +204,19 @@ export default ({
                     {v.key}
                   </SimpleLabel>
                   {v.name}
-                  <ClickableIcon
-                    size={'small'}
-                    colorType={'danger'}
-                    type={'delete'}
-                    onClick={e => {
-                      e.stopPropagation();
-                      variables.splice(i, 1);
-                      setVariables([...variables]);
-                      onChange?.(variables);
-                    }}
-                  />
+                  {editable && (
+                    <ClickableIcon
+                      size={'small'}
+                      colorType={'danger'}
+                      type={'delete'}
+                      onClick={e => {
+                        e.stopPropagation();
+                        variables.splice(i, 1);
+                        setVariables([...variables]);
+                        onChange?.(variables);
+                      }}
+                    />
+                  )}
                 </div>
               )}
               triggerType={'hover'}
@@ -222,15 +228,17 @@ export default ({
           );
         })}
       </div>
-      <Button
-        size={'small'}
-        type={'primary'}
-        onClick={() => {
-          setEditingVariable({});
-        }}
-      >
-        {t('Add')}
-      </Button>
+      {editable && (
+        <Button
+          size={'small'}
+          type={'primary'}
+          onClick={() => {
+            setEditingVariable({});
+          }}
+        >
+          {t('Add')}
+        </Button>
+      )}
     </div>
   );
 };

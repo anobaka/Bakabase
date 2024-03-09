@@ -65,6 +65,26 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             return bmc;
         }
 
+        public async Task<BulkModificationDto> Duplicate(int id)
+        {
+            var bm = (await GetByKey(id))!;
+            var newBm = (await Add(bm.Duplicate())).Data;
+            return await GetDto(newBm.Id);
+        }
+
+        public override async Task<BaseResponse> RemoveByKey(int id)
+        {
+            await BulkModificationDiffService.RemoveAll(x => x.BulkModificationId == id);
+            await BulkModificationTempDataService.RemoveByKey(id);
+            await base.RemoveByKey(id);
+            return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<BaseResponse> Close(int id)
+        {
+            return await UpdateByKey(id, bm => bm.Status = BulkModificationStatus.Closed);
+        }
+
         public async Task<List<BulkModificationDto>> GetAllDto()
         {
             var data = await GetAll();
@@ -101,11 +121,15 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 });
         }
 
-        public async Task<List<int>> PerformFiltering(int id)
+        public async Task<ListResponse<int>> PerformFiltering(int id)
         {
-            List<int>? ids = null;
-
             var bulkModification = await GetDto(id);
+            if (bulkModification.Status == BulkModificationStatus.Closed)
+            {
+                return ListResponseBuilder<int>.BuildBadRequest("Can't operate on a closed bulk modification.");
+            }
+
+            List<int>? ids = null;
             var rootFilter = bulkModification.Filter;
             if (rootFilter != null)
             {
@@ -117,13 +141,20 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             }
 
             await UpdateByKey(id, a => a.FilteredAt = DateTime.Now);
-            return ids ?? new List<int>();
+            return new ListResponse<int>(ids ?? new List<int>());
         }
 
-        public async Task<List<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>>
+        public async Task<ListResponse<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>>
             Preview(int id, CancellationToken ct)
         {
             var bm = await GetDto(id);
+
+            if (bm.Status == BulkModificationStatus.Closed)
+            {
+                return ListResponseBuilder<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>
+                    .BuildBadRequest("Can't operate on a closed bulk modification.");
+            }
+
             var tempData = await BulkModificationTempDataService.GetByKey(id);
             var resourceIds = tempData.GetResourceIds();
             var resources = await ResourceService.GetByKeys(resourceIds.ToArray());
@@ -209,7 +240,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 
             await tran.CommitAsync(ct);
 
-            return data;
+            return new ListResponse<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>(data);
         }
 
         public async Task<BaseResponse> Apply(int id)
@@ -231,6 +262,11 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         public async Task<BaseResponse> ApplyOrRevert(int id, bool apply)
         {
             var bm = (await GetByKey(id))!;
+            if (bm.Status == BulkModificationStatus.Closed)
+            {
+                return BaseResponseBuilder.BuildBadRequest("Can't operate on a closed bulk modification.");
+            }
+
             if (!apply && !bm.AppliedAt.HasValue)
             {
                 return BaseResponseBuilder.BuildBadRequest("Can't revert a bulk modification that hasn't applied yet.");
@@ -258,7 +294,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 }
             }
 
-            await ResourceService.AddOrUpdateRange(resources);
+            await ResourceService.AddOrPutRange(resources);
             var now = DateTime.Now;
             if (apply)
             {

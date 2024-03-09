@@ -20,6 +20,8 @@ import BApi from '@/sdk/BApi';
 import PathConfigurationDialog from '@/pages/Category/components/PathConfigurationDialog';
 import ClickableIcon from '@/components/ClickableIcon';
 import SimpleLabel from '@/components/SimpleLabel';
+import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
+import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsInBulkDialog';
 
 export default (({
                    library,
@@ -176,28 +178,44 @@ export default (({
             >
               {t('Count of resources')}
             </Balloon.Tooltip>
-            <ClickableIcon
-              colorType={'normal'}
-              type={'plus-circle'}
-              onClick={() => {
-                OpenFolderSelector()
-                  .invoke((a) => {
-                    if (a.data) {
-                      AddMediaLibraryPathConfiguration({
-                        id: library.id,
-                        model: {
-                          path: a.data,
-                        },
-                      })
-                        .invoke((b) => {
-                          if (!b.code) {
-                            loadAllMediaLibraries();
-                          }
-                        });
-                    }
-                  });
-              }}
-            />
+            <Dropdown
+              trigger={(
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'plus-circle'}
+                  onClick={() => {
+                    FileSystemSelectorDialog.show({
+                      targetType: 'folder',
+                      onSelected: e => {
+                        AddMediaLibraryPathConfiguration({
+                          id: library.id,
+                          model: {
+                            path: e.path,
+                          },
+                        })
+                          .invoke((b) => {
+                            if (!b.code) {
+                              loadAllMediaLibraries();
+                            }
+                          });
+                      },
+                    });
+                  }}
+                />
+              )}
+              triggerType={['hover']}
+            >
+              <Menu>
+                <Menu.Item
+                  onClick={() => {
+                    AddRootPathsInBulkDialog.show({ libraryId: library.id, onSubmitted: () => loadAllMediaLibraries() });
+                  }}
+                >
+                  <CustomIcon type="playlist_add" />
+                  {t('Add root paths in bulk')}
+                </Menu.Item>
+              </Menu>
+            </Dropdown>
             <Dropdown
               trigger={(
                 <ClickableIcon
@@ -274,7 +292,7 @@ export default (({
                   {p.path}
                 </span>
                 <SimpleLabel status={'default'}>
-                  {library.rootPathInformation[p.path]?.freeSpaceInGb}GB
+                  {library.fileSystemInformation?.[p.path]?.freeSpaceInGb}GB
                 </SimpleLabel>
                 <ClickableIcon
                   type="delete"

@@ -51,6 +51,11 @@ const asideMenuConfig = [
     icon: 'work',
   },
   {
+    name: 'Resource property',
+    path: '/resource-property',
+    icon: 'database',
+  },
+  {
     name: 'Downloader',
     path: '/downloader',
     icon: 'download',

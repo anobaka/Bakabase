@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Bakabase.InsideWorld.Models.Constants;
@@ -9,34 +11,32 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
-    public class MediaLibraryDto : MediaLibrary
-    {
-        public class SingleMediaLibraryRootPathInformation
-        {
-            public long TotalSize { get; set; }
-            public long FreeSpace { get; set; }
-            public double UsedPercentage => 100 - FreePercentage;
+	public record MediaLibraryDto
+	{
+		public int Id { get; set; }
+		public string Name { get; set; } = string.Empty;
+		public int CategoryId { get; set; }
+		public int Order { get; set; }
+		public int ResourceCount { get; set; }
+		public Dictionary<string, MediaLibraryFileSystemInformation>? FileSystemInformation { get; set; }
+		public ResourceCategoryDto? Category { get; set; }
+		public List<PathConfigurationDto>? PathConfigurations { get; set; }
 
-            public double FreePercentage =>
-                TotalSize == 0 ? 0 : double.Parse((FreeSpace / (double) TotalSize * 100).ToString("F2"));
+		public override string ToString()
+		{
+			return $"[{Id}]{Name}";
+		}
 
-            public double FreeSpaceInGb => double.Parse((FreeSpace / 1024 / 1024 / 1024).ToString("F2"));
-            public MediaLibraryError Error { get; set; }
-        }
-
-        public Dictionary<string, SingleMediaLibraryRootPathInformation> RootPathInformation { get; set; } = new();
-        public string? CategoryName { get; set; }
-
-        public PathConfigurationDto[] PathConfigurations { get; set; } = { };
-
-        public class PathConfigurationDto : PathConfiguration
-        {
-            public List<TagDto> FixedTags { get; set; } = new();
-        }
-
-        public override string ToString()
-        {
-            return $"[{Id}]{Name}";
-        }
-    }
+		public static MediaLibraryDto CreateDefault(string name, int categoryId, params string[]? rootPaths)
+		{
+			return new MediaLibraryDto
+			{
+				Name = name,
+				CategoryId = categoryId,
+				Order = 0,
+				ResourceCount = 0,
+				PathConfigurations = rootPaths?.Select(PathConfigurationDto.CreateDefault).ToList()
+			};
+		}
+	}
 }

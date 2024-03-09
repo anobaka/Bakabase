@@ -89,7 +89,12 @@ namespace Bakabase.InsideWorld.Business.Services
             return childrenPublishers;
         }
 
-        public async Task<SimpleRangeAddResult<PublisherDto>> AddAll(List<PublisherDto> publishers)
+        /// <summary>
+        /// If a record with the same name does not exist in the database, a new data entry will be created, regardless of whether it has an id.
+        /// </summary>
+        /// <param name="publishers"></param>
+        /// <returns></returns>
+        public async Task<SimpleRangeAddResult<PublisherDto>> GetOrAddRangeByNames(List<PublisherDto> publishers)
         {
             var allPublishers = publishers.Extract();
             var publisherNames = allPublishers.Select(a => a.Name).Where(x => !string.IsNullOrEmpty(x)).Distinct()

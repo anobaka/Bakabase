@@ -23,7 +23,7 @@ namespace Bakabase.InsideWorld.Business.Services
         /// </summary>
         /// <param name="resourceTagMappings"></param>
         /// <returns></returns>
-        public async Task<BaseResponse> UpdateRange(Dictionary<int, int[]> resourceTagMappings)
+        public async Task<BaseResponse> PutRange(Dictionary<int, int[]?> resourceTagMappings)
         {
             var resourceIds = resourceTagMappings.Keys.Distinct().ToArray();
             var exists = (await GetAll(a => resourceIds.Contains(a.ResourceId))).ToList();

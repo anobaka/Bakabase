@@ -9,7 +9,7 @@ import BApi from '@/sdk/BApi';
 import { useTour } from '@reactour/tour';
 import ClickableIcon from '@/components/ClickableIcon';
 import { Tag as TagDto } from '@/core/models/Tag';
-import { convertFromApiModel, convertToApiModel } from '@/pages/BulkModification/helpers';
+import { convertFromApiModel } from '@/pages/BulkModification/helpers';
 import type { IBulkModification } from '@/pages/BulkModification/components/BulkModification';
 import BulkModification from '@/pages/BulkModification/components/BulkModification';
 
@@ -140,11 +140,11 @@ export default () => {
           className={'bulk-modifications'}
           expandedKeys={expandedKeys}
           onExpand={keys => {
-              setExpandedKeys(keys);
-            }}
+            setExpandedKeys(keys);
+          }}
         >
           {bulkModifications?.map((bm, i) => {
-              const expanded = expandedKeys.includes(bm.id.toString());
+            const expanded = expandedKeys.includes(bm.id.toString());
             return (
               <Panel
                 key={bm.id}
@@ -166,53 +166,100 @@ export default () => {
                         type={'normal'}
                         size={'small'}
                         onClick={e => {
-                            e.stopPropagation();
-                          }}
+                          e.stopPropagation();
+                          Dialog.confirm({
+                            title: t('Duplicating a bulk modification'),
+                            content: t('A new bulk modification will be created from current selection'),
+                            v2: true,
+                            width: 'auto',
+                            onOk: async () => {
+                              await BApi.bulkModification.duplicateBulkModification(bm.id);
+                              await loadAllBulkModifications();
+                            },
+                          });
+                        }}
                       >{t('Duplicate')}</Button>
-                      {processing && (
-                      <Icon type={'loading'} size={'small'} />
-                        )}
+                      {bm.status != BulkModificationStatus.Closed && (
+                        <Button
+                          type={'normal'}
+                          warning
+                          size={'small'}
+                          onClick={e => {
+                            e.stopPropagation();
+                            Dialog.confirm({
+                              title: t('Close a bulk modification'),
+                              content: t('You will not be able to operate on a closed bulk modification'),
+                              v2: true,
+                              width: 'auto',
+                              onOk: async () => {
+                                await BApi.bulkModification.closeBulkModification(bm.id);
+                                await loadAllBulkModifications();
+                              },
+                            });
+                          }}
+                        >{t('Close')}</Button>
+                      )}
                       {expanded && (
-                      <Button
-                        type={'primary'}
-                        text
-                        size={'small'}
-                        onClick={e => {
-                              e.stopPropagation();
-                              setSteps!([
-                                {
-                                  selector: `.bulk-modification-${bm.id} .filters-panel`,
-                                  content: t('You can set any combination of criteria to filter the resources that you need to modify in bulk'),
-                                },
-                                {
-                                  selector: `.bulk-modification-${bm.id} .variables-panel`,
-                                  content: t('You can set some variables and use them in processes'),
-                                },
-                                {
-                                  selector: `.bulk-modification-${bm.id} .processes-panel`,
-                                  content: t('To modify the properties of filtered resources, you should set at least one process'),
-                                },
-                                {
-                                  selector: `.bulk-modification-${bm.id} .result-panel`,
-                                  content: t('You can preview the result then apply all changes'),
-                                },
-                              ]);
-                              setCurrentStep(0);
-                              setIsOpen(o => true);
-                            }}
-                      >
-                        {t('How does this work?')}
-                      </Button>
-                        )}
+                        <Button
+                          type={'primary'}
+                          text
+                          size={'small'}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSteps!([
+                              {
+                                selector: `.bulk-modification-${bm.id} .filters-panel`,
+                                content: t('You can set any combination of criteria to filter the resources that you need to modify in bulk'),
+                              },
+                              {
+                                selector: `.bulk-modification-${bm.id} .variables-panel`,
+                                content: t('You can set some variables and use them in processes'),
+                              },
+                              {
+                                selector: `.bulk-modification-${bm.id} .processes-panel`,
+                                content: t('To modify the properties of filtered resources, you should set at least one process'),
+                              },
+                              {
+                                selector: `.bulk-modification-${bm.id} .result-panel`,
+                                content: t('You can preview the result then apply all changes'),
+                              },
+                            ]);
+                            setCurrentStep(0);
+                            setIsOpen(o => true);
+                          }}
+                        >
+                          {t('How does this work?')}
+                        </Button>
+                      )}
+                      {processing && (
+                        <Icon type={'loading'} size={'small'} />
+                      )}
                     </div>
                     <div className="right">
                       <div className="dt" title={t('Last modified at')}>
                         <CustomIcon type={'time'} size={'small'} />
                         {bm.createdAt}
                       </div>
+                      <ClickableIcon
+                        colorType={'danger'}
+                        type={'delete'}
+                        onClick={e => {
+                          e.stopPropagation();
+                          Dialog.confirm({
+                            title: t('Deleting this bulk modification'),
+                            content: t('Are you sure to delete this bulk modification?'),
+                            v2: true,
+                            width: 'auto',
+                            onOk: async () => {
+                              await BApi.bulkModification.deleteBulkModification(bm.id);
+                              await loadAllBulkModifications();
+                            },
+                          });
+                        }}
+                      />
                     </div>
                   </div>
-                  )}
+                )}
               >
                 <BulkModification
                   bm={bm}
@@ -220,8 +267,8 @@ export default () => {
                   displayDataSources={displayDataSources}
                 />
               </Panel>
-              );
-            })}
+            );
+          })}
         </Collapse>
       </Loading>
       {/* </div> */}

@@ -130,8 +130,8 @@ export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
 export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
 export enum MatchResultType {Layer = 1, Regex = 2}
 export const matchResultTypes = Object.keys(MatchResultType).filter(k => typeof MatchResultType[k] === 'number').map(t => ({label: t, value: MatchResultType[t]}));
-export enum MediaLibraryError {InvalidVolume = 1, FreeSpaceNotEnough = 2, Occupied = 3}
-export const mediaLibraryErrors = Object.keys(MediaLibraryError).filter(k => typeof MediaLibraryError[k] === 'number').map(t => ({label: t, value: MediaLibraryError[t]}));
+export enum MediaLibraryFileSystemError {InvalidVolume = 1, FreeSpaceNotEnough = 2, Occupied = 3}
+export const mediaLibraryFileSystemErrors = Object.keys(MediaLibraryFileSystemError).filter(k => typeof MediaLibraryFileSystemError[k] === 'number').map(t => ({label: t, value: MediaLibraryFileSystemError[t]}));
 export enum MediaLibrarySyncStep {Filtering = 0, AcquireFileSystemInfo = 1, CleanResources = 2, CompareResources = 3, SaveResources = 4}
 export const mediaLibrarySyncSteps = Object.keys(MediaLibrarySyncStep).filter(k => typeof MediaLibrarySyncStep[k] === 'number').map(t => ({label: t, value: MediaLibrarySyncStep[t]}));
 export enum MediaType {Image = 1, Audio = 2, Video = 3, Text = 4, Unknown = 1000}
@@ -172,6 +172,8 @@ export enum AliasAdditionalItem {Candidates = 1}
 export const aliasAdditionalItems = Object.keys(AliasAdditionalItem).filter(k => typeof AliasAdditionalItem[k] === 'number').map(t => ({label: t, value: AliasAdditionalItem[t]}));
 export enum ComponentDescriptorAdditionalItem {None = 0, AssociatedCategories = 1}
 export const componentDescriptorAdditionalItems = Object.keys(ComponentDescriptorAdditionalItem).filter(k => typeof ComponentDescriptorAdditionalItem[k] === 'number').map(t => ({label: t, value: ComponentDescriptorAdditionalItem[t]}));
+export enum MediaLibraryAdditionalItem {None = 0, Category = 1, FileSystemInfo = 2, FixedTags = 4}
+export const mediaLibraryAdditionalItems = Object.keys(MediaLibraryAdditionalItem).filter(k => typeof MediaLibraryAdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryAdditionalItem[t]}));
 export enum ResourceAdditionalItem {None = 0, Publishers = 1, Volume = 2, Serial = 6, Originals = 8, Tags = 16, CustomProperties = 32, Alias = 64, All = 127}
 export const resourceAdditionalItems = Object.keys(ResourceAdditionalItem).filter(k => typeof ResourceAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceAdditionalItem[t]}));
 export enum ResourceCategoryAdditionalItem {None = 0, Components = 1, Validation = 3}

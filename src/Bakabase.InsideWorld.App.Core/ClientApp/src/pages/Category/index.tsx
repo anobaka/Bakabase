@@ -1,20 +1,15 @@
 import React, { useEffect, useReducer, useRef, useState } from 'react';
-import { Button, Loading } from '@alifd/next';
+import { Button, Dropdown, Loading, Menu } from '@alifd/next';
 import './index.scss';
 import { history } from 'ice';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import {
-  GetAllMediaLibraries,
-  GetAllResourceCategories,
-  GetComponentDescriptors,
-} from '@/sdk/apis';
+import { GetComponentDescriptors } from '@/sdk/apis';
 import SortableCategoryList from '@/pages/Category/components/SortableCategoryList';
 import MediaLibrarySynchronization from '@/pages/Category/components/MediaLibrarySynchronization';
 import store from '@/store';
 import BApi from '@/sdk/BApi';
-import { ResourceCategoryAdditionalItem } from '@/sdk/constants';
-import ConfirmationButton from '@/components/ConfirmationButton';
+import { MediaLibraryAdditionalItem, ResourceCategoryAdditionalItem } from '@/sdk/constants';
 import SimpleOneStepDialog from '@/components/SimpleOneStepDialog';
 
 export default () => {
@@ -33,7 +28,8 @@ export default () => {
     history!.push(`/category/setup-wizard?noCategory=${noCategory ? 1 : 0}`);
   };
 
-  const loadAllCategories = (cb: () => void = () => {}): Promise<any> => {
+  const loadAllCategories = (cb: () => void = () => {
+  }): Promise<any> => {
     return BApi.resourceCategory.getAllResourceCategories({ additionalItems: ResourceCategoryAdditionalItem.Validation }).then((rsp) => {
       categoriesLoadedRef.current = true;
       rsp.data?.sort((a, b) => a.order! - b.order!);
@@ -42,26 +38,28 @@ export default () => {
     });
   };
 
-  const loadAllMediaLibraries = (cb: () => void = () => {}): Promise<any> => {
-    return GetAllMediaLibraries().invoke((x) => {
+  const loadAllMediaLibraries = (cb: () => void = () => {
+  }): Promise<any> => {
+    return BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category | MediaLibraryAdditionalItem.FileSystemInfo | MediaLibraryAdditionalItem.FixedTags }).then((x) => {
       x.data.sort((a, b) => a.order - b.order);
       setLibraries(x.data);
     });
   };
 
-  useEffect(() => {
-    async function init() {
-      try {
-        await loadAllCategories();
-        await loadAllMediaLibraries();
-        await GetComponentDescriptors().invoke(a => {
-          setAllComponents(a.data || []);
-        });
-      } finally {
-        setLoading(false);
-      }
+  async function init() {
+    setLoading(true);
+    try {
+      await loadAllCategories();
+      await loadAllMediaLibraries();
+      await GetComponentDescriptors().invoke(a => {
+        setAllComponents(a.data || []);
+      });
+    } finally {
+      setLoading(false);
     }
+  }
 
+  useEffect(() => {
     init();
   }, []);
 
@@ -75,16 +73,39 @@ export default () => {
   }, [categories]);
 
   return (
-    <div className={'category-page'} >
+    <div className={'category-page'}>
       <div className="header">
         <div className="left">
           <Button
-            type={'secondary'}
+            type={'primary'}
             size={'small'}
             onClick={() => gotoNewCategoryPage(false)}
           >
             {t('Add')}
           </Button>
+          {categories.length > 1 && (
+            <Dropdown
+              trigger={(
+                <Button size={'small'} className={'elevator'}>
+                  {t('QuickJump')}
+                </Button>
+              )}
+              triggerType={'click'}
+            >
+              <Menu>
+                {categories?.map((c) => (
+                  <Menu.Item
+                    key={c.id}
+                    onClick={() => {
+                      document.getElementById(`category-${c.id}`)?.scrollIntoView();
+                    }}
+                  >
+                    {c.name}
+                  </Menu.Item>
+                ))}
+              </Menu>
+            </Dropdown>
+          )}
         </div>
         <div className="right">
           <Button
@@ -122,25 +143,6 @@ export default () => {
         categories={categories}
         libraries={libraries}
       />
-      {categories.length > 1 && (
-        <div id="elevator">
-          <div className="title">
-            {t('QuickJump')}
-          </div>
-          <ul>
-            {categories?.map((c) => (
-              <li
-                key={c.id}
-                onClick={() => {
-                document.getElementById(`category-${c.id}`)?.scrollIntoView();
-                }}
-              >
-                {c.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 };

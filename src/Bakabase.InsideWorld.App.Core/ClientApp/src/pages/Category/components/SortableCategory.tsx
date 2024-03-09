@@ -1,19 +1,13 @@
-import React, { useReducer, useRef, useState } from 'react';
-import { Badge, Balloon, Checkbox, Dialog, Dropdown, Icon, Input, Menu, Message } from '@alifd/next';
-import i18n from 'i18next';
-import IceLabel from '@icedesign/label';
+import React, { useState } from 'react';
+import { Badge, Balloon, Button, Checkbox, Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
 import { SketchPicker } from 'react-color';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-  AddMediaLibrary, ConfigureResourceCategoryComponents,
-  RemoveCategoryEnhancementRecords,
-  RemoveResourceCategory,
-  SortMediaLibrariesInCategory,
-  UpdateResourceCategory,
-} from '@/sdk/apis';
+import { useTranslation } from 'react-i18next';
+import AddMediaLibraryInBulkDialog from './AddMediaLibraryInBulkDialog';
+import { AddMediaLibrary, RemoveCategoryEnhancementRecords, UpdateResourceCategory } from '@/sdk/apis';
 import CustomIcon from '@/components/CustomIcon';
-import { CoverSelectOrder, coverSelectOrders, ComponentType, componentTypes } from '@/sdk/constants';
+import { ComponentType, componentTypes, CoverSelectOrder, coverSelectOrders } from '@/sdk/constants';
 import SortableMediaLibraryList from '@/pages/Category/components/SortableMediaLibraryList';
 import DragHandle from '@/components/DragHandle';
 import BasicCategoryComponentSelector from '@/components/BasicCategoryComponentSelector';
@@ -48,6 +42,7 @@ export default (({
     transform,
     transition,
   } = useSortable({ id: category.id });
+  const { t } = useTranslation();
 
   const style = {
     transform: CSS.Translate.toString({
@@ -82,7 +77,7 @@ export default (({
         v2: true,
         style: { minWidth: 1000 },
         closeMode: ['esc', 'close', 'mask'],
-        title: i18n.t(ComponentType[componentType]),
+        title: t(ComponentType[componentType]),
         content: (
           <BasicCategoryComponentSelector
             onChange={(componentKeys) => {
@@ -123,7 +118,7 @@ export default (({
       v2: true,
       style: { minWidth: 1000 },
       closeMode: ['esc', 'close', 'mask'],
-      title: i18n.t('Enhancers'),
+      title: t('Enhancers'),
       width: 'auto',
       // height: 'auto',
       content: (
@@ -160,192 +155,218 @@ export default (({
       style={style}
     >
       <div className="title-line">
-        <DragHandle {...listeners} {...attributes} />
-        <div className={'name'}>
-          {(editMode == EditMode.NameAndColor) ? (
-            <div className={'editing'}>
-              <Input value={name} onChange={(v) => setName(v)} />
-              &nbsp;
-              <div style={{
-                position: 'relative',
-                width: 26,
-                height: 26,
-              }}
-              >
-                <div
-                  style={{
-                    padding: '5px',
-                    background: '#fff',
-                    borderRadius: '1px',
-                    boxShadow: '0 0 0 1px rgba(0,0,0,.1)',
-                    display: 'inline-block',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setColorPickerVisible(true)}
+        <div className="left">
+          <DragHandle {...listeners} {...attributes} />
+          <div className={'name'}>
+            {(editMode == EditMode.NameAndColor) ? (
+              <div className={'editing'}>
+                <Input value={name} onChange={(v) => setName(v)} />
+                &nbsp;
+                <div style={{
+                  position: 'relative',
+                  width: 26,
+                  height: 26,
+                }}
                 >
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '2px',
-                    background: categoryColor?.hex,
-                  }}
-                  />
-                </div>
-                {colorPickerVisible ? (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-80px',
-                    left: '60px',
-                    zIndex: '20',
-                  }}
+                  <div
+                    style={{
+                      padding: '5px',
+                      background: '#fff',
+                      borderRadius: '1px',
+                      boxShadow: '0 0 0 1px rgba(0,0,0,.1)',
+                      display: 'inline-block',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setColorPickerVisible(true)}
                   >
-                    <div
-                      style={{
-                        position: 'fixed',
-                        top: '0px',
-                        right: '0px',
-                        bottom: '0px',
-                        left: '0px',
-                      }}
-                      onClick={() => setColorPickerVisible(false)}
-                    />
-                    <SketchPicker
-                      color={categoryColor}
-                      onChange={(v) => {
-                        setCategoryColor(v);
-                      }}
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '2px',
+                      background: categoryColor?.hex,
+                    }}
                     />
                   </div>
-                ) : null}
+                  {colorPickerVisible ? (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-80px',
+                      left: '60px',
+                      zIndex: '20',
+                    }}
+                    >
+                      <div
+                        style={{
+                          position: 'fixed',
+                          top: '0px',
+                          right: '0px',
+                          bottom: '0px',
+                          left: '0px',
+                        }}
+                        onClick={() => setColorPickerVisible(false)}
+                      />
+                      <SketchPicker
+                        color={categoryColor}
+                        onChange={(v) => {
+                          setCategoryColor(v);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+                <ClickableIcon
+                  className={'submit'}
+                  colorType={'normal'}
+                  size={'large'}
+                  type="select"
+                  useInBuildIcon
+                  onClick={() => {
+                    UpdateResourceCategory({
+                      id: category.id,
+                      model: {
+                        name,
+                        color: categoryColor.hex,
+                      },
+                    })
+                      .invoke((t) => {
+                        if (!t.code) {
+                          category.name = name;
+                          category.color = categoryColor.hex;
+                          clearEditMode();
+                        }
+                      });
+                  }}
+                />
+                <ClickableIcon
+                  useInBuildIcon
+                  colorType={'normal'}
+                  className={'cancel'}
+                  size={'large'}
+                  type="close"
+                  onClick={clearEditMode}
+                />
               </div>
-              <ClickableIcon
-                className={'submit'}
-                colorType={'normal'}
-                size={'large'}
-                type="select"
-                useInBuildIcon
+            ) : (
+              <span
+                className="editable"
                 onClick={() => {
-                  UpdateResourceCategory({
-                    id: category.id,
-                    model: {
-                      name,
-                      color: categoryColor.hex,
-                    },
-                  })
-                    .invoke((t) => {
-                      if (!t.code) {
-                        category.name = name;
-                        category.color = categoryColor.hex;
-                        clearEditMode();
-                      }
-                    });
+                  setName(category.name);
+                  setCategoryColor({
+                    hex: category.color,
+                  });
+                  // console.log(category.color);
+                  setEditMode(EditMode.NameAndColor);
                 }}
-              />
-              <ClickableIcon
-                useInBuildIcon
-                colorType={'normal'}
-                className={'cancel'}
-                size={'large'}
-                type="close"
-                onClick={clearEditMode}
-              />
-            </div>
-          ) : (
-            <span
-              className="editable"
-              onClick={() => {
-                setName(category.name);
-                setCategoryColor({
-                  hex: category.color,
-                });
-                // console.log(category.color);
-                setEditMode(EditMode.NameAndColor);
-              }}
-            >
-              <span className="hover-area">
-                <span
-                  style={{ color: category.color }}
-                  title={category.id}
-                >{category.name}
+              >
+                <span className="hover-area">
+                  <span
+                    style={{ color: category.color }}
+                    title={category.id}
+                  >{category.name}
+                  </span>
+                  &nbsp;
+                  <ClickableIcon type={'edit-square'} colorType={'normal'} />
                 </span>
-                &nbsp;
-                <ClickableIcon type={'edit-square'} colorType={'normal'} />
               </span>
-            </span>
-          )}
-        </div>
-        <Balloon.Tooltip
-          trigger={(
-            <Badge
-              className={'count'}
-              count={libraries.reduce((s, t) => s + t.resourceCount, 0)}
-              overflowCount={9999999}
-            />
-          )}
-          triggerType={'hover'}
-          align={'t'}
-        >
-          {i18n.t('Count of resources')}
-        </Balloon.Tooltip>
-        <Dropdown
-          trigger={(
-            <ClickableIcon type={'ellipsis-circle'} colorType={'normal'} />
-          )}
-          className={'category-page-category-more-operations-popup'}
-          triggerType={['click']}
-        >
-          <Menu>
-            <Menu.Item
-              className={'warning'}
-              onClick={() => {
-                Dialog.confirm({
-                  title: `${i18n.t('Removing all enhancement records of resources under this category')}`,
-                  closeable: true,
-                  onOk: () => new Promise(((resolve, reject) => {
-                    RemoveCategoryEnhancementRecords({
-                      id: category.id,
-                    })
-                      .invoke((a) => {
-                        if (!a.code || a.code == 304) {
-                          resolve();
-                        }
-                      });
-                  })),
-                });
-              }}
-            >
-              <CustomIcon type="flashlight" />
-              {i18n.t('Remove all enhancement records')}
-            </Menu.Item>
-            <Menu.Item
-              className={'warning'}
-              onClick={() => {
-                Dialog.confirm({
-                  title: `${i18n.t('Deleting')} ${category.name}`,
-                  closeable: true,
-                  onOk: () => new Promise(((resolve, reject) => {
-                    RemoveResourceCategory({
-                      id: category.id,
-                    })
-                      .invoke((a) => {
-                        if (!a.code || a.code == 304) {
-                          loadAllCategories();
-                          resolve();
-                        } else {
-                          reject();
-                        }
-                      });
-                  })),
-                });
-              }}
-            >
-              <CustomIcon
-                type="delete"
+            )}
+          </div>
+          <Balloon.Tooltip
+            trigger={(
+              <Badge
+                className={'count'}
+                count={libraries.reduce((s, t) => s + t.resourceCount, 0)}
+                overflowCount={9999999}
               />
-              {i18n.t('Remove')}
-            </Menu.Item>
-          </Menu>
-        </Dropdown>
+            )}
+            triggerType={'hover'}
+            align={'t'}
+          >
+            {t('Count of resources')}
+          </Balloon.Tooltip>
+          <Dropdown
+            trigger={(
+              <ClickableIcon type={'ellipsis-circle'} colorType={'normal'} />
+            )}
+            className={'category-page-category-more-operations-popup'}
+            triggerType={['click']}
+          >
+            <Menu>
+              <Menu.Item
+                className={'warning'}
+                onClick={() => {
+                  Dialog.confirm({
+                    title: `${t('Removing all enhancement records of resources under this category')}`,
+                    closeable: true,
+                    onOk: () => new Promise(((resolve, reject) => {
+                      RemoveCategoryEnhancementRecords({
+                        id: category.id,
+                      })
+                        .invoke((a) => {
+                          if (!a.code || a.code == 304) {
+                            resolve();
+                          }
+                        });
+                    })),
+                  });
+                }}
+              >
+                <CustomIcon type="flashlight" />
+                {t('Remove all enhancement records')}
+              </Menu.Item>
+              <Menu.Item
+                className={'warning'}
+                onClick={() => {
+                  Dialog.confirm({
+                    title: `${t('Deleting')} ${category.name}`,
+                    content: t('All related data will be deleted too, are you sure?'),
+                    closeable: true,
+                    onOk: async () => {
+                      const rsp = await BApi.resourceCategory.deleteResourceCategoryAndClearAllRelatedData(category.id);
+                      if (!rsp.code) {
+                        loadAllCategories();
+                      }
+                    },
+                  });
+                }}
+              >
+                <CustomIcon
+                  type="delete"
+                />
+                {t('Remove')}
+              </Menu.Item>
+            </Menu>
+          </Dropdown>
+        </div>
+        <div className="right">
+          <Button
+            type={'normal'}
+            size={'small'}
+            onClick={() => {
+              let name;
+              Dialog.show({
+                title: t('Duplicating a category'),
+                content: (
+                  <Input
+                    size={'large'}
+                    style={{ width: 400 }}
+                    placeholder={t('Please input a new name for the duplicated category')}
+                    onChange={v => name = v}
+                  />
+                ),
+                v2: true,
+                width: 'auto',
+                closeMode: ['close', 'mask', 'esc'],
+                onOk: async () => {
+                  const rsp = await BApi.resourceCategory.duplicateResourceCategory(category.id, { name });
+                  if (!rsp.code) {
+                    loadAllCategories();
+                    loadAllMediaLibraries();
+                  }
+                },
+              });
+            }}
+          >{t('Duplicate')}</Button>
+        </div>
       </div>
       <div className="configuration-line block">
         {componentTypes.filter((t) => t.value != ComponentType.Enhancer)
@@ -354,19 +375,19 @@ export default (({
             // console.log(components, comp);
             return (
               <div className={'component setting'} key={type.value}>
-                <SimpleLabel
-                  status={'default'}
-                >{i18n.t(type.label)}
-                  <Balloon.Tooltip
-                    triggerType={'hover'}
-                    align={'t'}
-                    trigger={(
-                      <CustomIcon type={'question-circle'} size={'xs'} />
-                    )}
-                  >
-                    {i18n.t(ComponentTips[type.value])}
-                  </Balloon.Tooltip>
-                </SimpleLabel>
+                <Balloon.Tooltip
+                  triggerType={'hover'}
+                  align={'t'}
+                  trigger={(
+                    <SimpleLabel
+                      status={'default'}
+                    >{t(type.label)}
+                    </SimpleLabel>
+                  )}
+                >
+                  {t(ComponentTips[type.value])}
+                </Balloon.Tooltip>
+
                 &emsp;
                 {comp ? (
                   <span
@@ -376,7 +397,7 @@ export default (({
                     }}
                   >
                     <span className="hover-area">
-                      {i18n.t(comp.descriptor?.name)}
+                      {t(comp.descriptor?.name)}
                       &nbsp;
                       <CustomIcon type="edit-square" size={'small'} />
                     </span>
@@ -394,7 +415,7 @@ export default (({
             );
           })}
         <div className={'setting'}>
-          <SimpleLabel status={'default'}>{i18n.t('Priority on cover selection')}</SimpleLabel>
+          <SimpleLabel status={'default'}>{t('Priority on cover selection')}</SimpleLabel>
           &emsp;
           <span className="editable">
             <span
@@ -415,21 +436,23 @@ export default (({
                   });
               }}
             >
-              <span>{i18n.t(CoverSelectOrder[category.coverSelectionOrder] ?? CoverSelectOrder[CoverSelectOrder.FilenameAscending])}</span>
+              <span>{t(CoverSelectOrder[category.coverSelectionOrder] ?? CoverSelectOrder[CoverSelectOrder.FilenameAscending])}</span>
               &nbsp;
               <CustomIcon type="sorting" size={'small'} />
             </span>
           </span>
         </div>
         <div className={'setting'}>
-          <SimpleLabel status={'default'}>
-            {i18n.t('Generate nfo')}
-            <Balloon.Tooltip
-              trigger={<CustomIcon type={'question-circle'} size={'xs'} />}
-              align={'t'}
-            >{i18n.t('You can share tags and rate of same physical filesystem item from different app instances by enabling this option, but it may cause poor performance of tag-related operations.')}
-            </Balloon.Tooltip>
-          </SimpleLabel>
+          <Balloon.Tooltip
+            trigger={(
+              <SimpleLabel status={'default'}>
+                {t('Generate nfo')}
+
+              </SimpleLabel>
+            )}
+            align={'t'}
+          >{t('You can share tags and rate of same physical filesystem item from different app instances by enabling this option, but it may cause poor performance of tag-related operations.')}
+          </Balloon.Tooltip>
           &emsp;
           <Checkbox
             checked={category.generateNfo}
@@ -449,54 +472,40 @@ export default (({
             }}
           />
         </div>
-      </div>
-      <div className="enhancers-line block">
-        <div
-          className="title-line e"
-        >
-          {i18n.t('Enhancers')}
+        <div className={'setting enhancers'}>
           <Balloon.Tooltip
             trigger={(
-              <CustomIcon
-                type="question-circle"
-              />
+              <SimpleLabel status={'default'}>
+                {t('Enhancers')}
+              </SimpleLabel>
             )}
             triggerType={'hover'}
             align={'t'}
           >
-            {i18n.t(ComponentTips[ComponentType.Enhancer])}
+            {t(ComponentTips[ComponentType.Enhancer])}
           </Balloon.Tooltip>
-          <ClickableIcon
-            colorType={'normal'}
-            type="edit-square"
-            onClick={() => {
-              renderEnhancersSelector();
-            }}
-          />
-        </div>
-        <div
-          className="enhancers"
-          onClick={() => {
-            renderEnhancersSelector();
-          }}
-        >
-          {enhancers.map((e, i) => (
-            <div className={'enhancer'} key={e.id}>
-              <SimpleLabel
-                key={i}
-                style={{ margin: '0 5px 2px 0' }}
-                status={'default'}
-              >{i18n.t(e.descriptor?.name)}
-              </SimpleLabel>
-            </div>
-          ))}
+          <div
+            className="items"
+          >
+            {enhancers.map((e, i) => (
+              <div
+                className={'item'}
+                key={e.id}
+                onClick={() => {
+                  renderEnhancersSelector();
+                }}
+              >
+                {t(e.descriptor?.name)}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       <div className="libraries-line block">
         <div className="libraries-header">
           <div className="title-line ls">
             <div className="title">
-              {i18n.t('Media libraries')}
+              {t('Media libraries')}
             </div>
             <Balloon.Tooltip
               trigger={(
@@ -505,62 +514,81 @@ export default (({
               triggerType={'hover'}
               align={'t'}
             >
-              {i18n.t('Resources will not loaded automatically after modifying media libraries, ' +
-                'you can click "sync button" at top-right of current page to load your resources immediately, ' +
-                'or set a sync interval to load them periodically.')}
+              {t('Resources will not loaded automatically after modifying media libraries, ' +
+                'you can click "sync button" at top-right of current page to load your resources immediately.')}
             </Balloon.Tooltip>
-            <ClickableIcon
-              colorType={'normal'}
-              type={'plus-circle'}
-              onClick={() => {
-                let n;
-                Dialog.show({
-                  title: i18n.t('Add media library'),
-                  content: (
-                    <Input
-                      size={'large'}
-                      placeholder={i18n.t('Name of media library')}
-                      style={{ width: 600 }}
-                      defaultValue={n}
-                      onChange={(v) => {
-                        n = v;
-                      }}
-                    />
-                  ),
-                  closeable: true,
-                  onOk: () => new Promise(((resolve, reject) => {
-                    if (n?.length > 0) {
-                      AddMediaLibrary({
-                        model: {
-                          categoryId: category.id,
-                          name: n,
-                        },
-                      })
-                        .invoke((t) => {
-                          if (!t.code) {
-                            loadAllMediaLibraries();
-                            resolve();
-                          } else {
-                            reject();
-                          }
-                        })
-                        .catch(() => {
+            <Dropdown
+              trigger={(
+                <ClickableIcon
+                  colorType={'normal'}
+                  type={'plus-circle'}
+                  onClick={() => {
+                    let n;
+                    Dialog.show({
+                      title: t('Add media library'),
+                      content: (
+                        <Input
+                          size={'large'}
+                          placeholder={t('Name of media library')}
+                          style={{ width: 600 }}
+                          defaultValue={n}
+                          onChange={(v) => {
+                            n = v;
+                          }}
+                        />
+                      ),
+                      closeable: true,
+                      onOk: () => new Promise(((resolve, reject) => {
+                        if (n?.length > 0) {
+                          AddMediaLibrary({
+                            model: {
+                              categoryId: category.id,
+                              name: n,
+                            },
+                          })
+                            .invoke((t) => {
+                              if (!t.code) {
+                                loadAllMediaLibraries();
+                                resolve();
+                              } else {
+                                reject();
+                              }
+                            })
+                            .catch(() => {
+                              reject();
+                            });
+                        } else {
                           reject();
-                        });
-                    } else {
-                      reject();
-                      Message.error(i18n.t('Invalid data'));
-                    }
-                  })),
-                });
-              }}
-            />
+                          Message.error(t('Invalid data'));
+                        }
+                      })),
+                    });
+                  }}
+                />
+              )}
+              triggerType={['hover']}
+            >
+              <Menu>
+                <Menu.Item
+                  className={'warning'}
+                  onClick={() => {
+                    AddMediaLibraryInBulkDialog.show({
+                      categoryId: category.id,
+                      onSubmitted: loadAllMediaLibraries,
+                    });
+                  }}
+                >
+                  <CustomIcon type="playlist_add" />
+                  {t('Add in bulk')}
+                </Menu.Item>
+              </Menu>
+            </Dropdown>
           </div>
           <div className="path-configuration header">
-            <div className="path">{i18n.t('Root path')}</div>
-            <div className="filter">{i18n.t('Resource discovery')}</div>
-            <div className="tags">{i18n.t('Fixed tags')}</div>
-            <div className="tags">{i18n.t('Additional properties')}</div>
+            <div className="path">{t('Root path')}</div>
+            <div className="filter">{t('Resource discovery')}</div>
+            <div className="tags">{t('Fixed tags')}</div>
+            <div className="tags">{t('Additional properties')}</div>
           </div>
         </div>
         <div className="libraries">

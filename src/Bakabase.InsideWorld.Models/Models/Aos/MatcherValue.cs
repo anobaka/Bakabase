@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Models.Aos
 {
-    public class MatcherValue
+    public record MatcherValue
     {
         public string? FixedText { get; set; }
         public int? Layer { get; set; }
@@ -25,5 +25,13 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
                                    ResourceMatcherValueType.FixedText => false,
                                    _ => throw new ArgumentOutOfRangeException()
                                };
+
+        public static MatcherValue BuildResourceAtFirstLayerAfterRootPath() =>
+			new()
+			{
+				Layer = 1,
+				ValueType = ResourceMatcherValueType.Layer,
+				Property = ResourceProperty.Resource,
+			};
     }
 }

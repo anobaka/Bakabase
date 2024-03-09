@@ -149,5 +149,19 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         {
             DiffHandlers.GetValueOrDefault(diff.Property)?.Revert(resource, diff);
         }
+
+        public static Models.BulkModification Duplicate(this Models.BulkModification bm)
+        {
+            return bm with
+            {
+                Id = 0,
+                FilteredAt = null,
+                CreatedAt = DateTime.Now,
+                AppliedAt = null,
+                CalculatedAt = null,
+                RevertedAt = null,
+                Status = BulkModificationStatus.Processing
+            };
+        }
     }
 }

@@ -11,10 +11,23 @@ public record CategoryComponent
     public int Id { get; set; }
     [BindRequired] [Required] public int CategoryId { get; set; }
 
-    [Required] public string ComponentKey { get; set; }
+    [Required] public string ComponentKey { get; set; } = null!;
 
     // public string ComponentAssemblyQualifiedTypeName { get; set; }
     // public int? OptionsId { get; set; }
     [Required] [BindRequired] public ComponentType ComponentType { get; set; }
-    [NotMapped] public ComponentDescriptor Descriptor { get; set; }
+
+    /// <summary>
+    /// todo: move to dto
+    /// </summary>
+    [NotMapped] public ComponentDescriptor Descriptor { get; set; } = null!;
+
+    public CategoryComponent Duplicate(int toCategoryId)
+    {
+        return this with
+        {
+            Id = 0,
+            CategoryId = toCategoryId
+        };
+    }
 }

@@ -3,8 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import moment from 'moment';
 import { useUpdateEffect } from 'react-use';
-import type { BulkModificationProperty, BulkModificationStatus } from '@/sdk/constants';
-import { BulkModificationFilterGroupOperation, type BulkModificationFilterOperation } from '@/sdk/constants';
+import type {
+  BulkModificationProperty } from '@/sdk/constants';
+import {
+  BulkModificationFilterGroupOperation,
+  type BulkModificationFilterOperation,
+  BulkModificationStatus,
+} from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import type { IVariable } from '@/pages/BulkModification/components/BulkModification/Variables';
 import Variables from '@/pages/BulkModification/components/BulkModification/Variables';
@@ -15,7 +20,6 @@ import FilteredResourcesDialog from '@/pages/BulkModification/components/BulkMod
 import ResourceDiffsResultsDialog
   from '@/pages/BulkModification/components/BulkModification/ResourceDiffsResultsDialog';
 import { convertFromApiModel, convertToApiModel } from '@/pages/BulkModification/helpers';
-import app from '@/app';
 
 
 const { Panel } = Collapse;
@@ -74,6 +78,12 @@ export default ({
   useUpdateEffect(() => {
     onChange(bm);
   }, [bm]);
+
+  useUpdateEffect(() => {
+    if (propsBm != bm) {
+      setBm(propsBm);
+    }
+  }, [propsBm]);
 
   const refresh = async () => {
     const rsp = await BApi.bulkModification.getBulkModificationById(bm.id);
@@ -179,6 +189,8 @@ export default ({
     callback && callback();
   };
 
+  const editable = bm.status != BulkModificationStatus.Closed;
+
   return (
     <>
       <div className="filters-panel">
@@ -193,25 +205,28 @@ export default ({
               }}
               group={bm.filter || { operation: BulkModificationFilterGroupOperation.And }}
               isRoot
+              editable={editable}
             />
           </div>
           <div className="opts">
-            <Button
-              type={'primary'}
-              size={'small'}
-              loading={processing}
-              onClick={async () => {
-                alertIfRevertingWillBeDisabled(async () => {
-                  setProcessing(true);
-                  try {
-                    await BApi.bulkModification.performBulkModificationFiltering(bm.id);
-                    await refresh();
-                  } finally {
-                    setProcessing(false);
-                  }
-                });
-              }}
-            >{t('Filter(Verb)')}</Button>
+            {editable && (
+              <Button
+                type={'primary'}
+                size={'small'}
+                loading={processing}
+                onClick={async () => {
+                  alertIfRevertingWillBeDisabled(async () => {
+                    setProcessing(true);
+                    try {
+                      await BApi.bulkModification.performBulkModificationFiltering(bm.id);
+                      await refresh();
+                    } finally {
+                      setProcessing(false);
+                    }
+                  });
+                }}
+              >{t('Filter(Verb)')}</Button>
+            )}
             <div className={'resource-count'}>
               {t('{{count}} resources have been filtered out', { count: bm.filteredResourceIds?.length || 0 })}
             </div>
@@ -242,6 +257,7 @@ export default ({
           onChange={async v => {
             await saveChanges({ variables: v });
           }}
+          editable={editable}
         />
       </div>
       <div className="processes-panel">
@@ -254,6 +270,7 @@ export default ({
               {bm.processes.map((p, j) => {
                 return (
                   <ProcessDemonstrator
+                    editable={editable}
                     key={j}
                     dataSources={displayDataSources[p.property!]}
                     process={p}
@@ -274,25 +291,27 @@ export default ({
               })}
             </div>
           )}
-          <div className="opts">
-            <Button
-              type={'normal'}
-              size={'small'}
-              onClick={() => {
-                ProcessDialog.show({
-                  variables: bm.variables,
-                  onSubmit: async pv => {
-                    await saveChanges({
-                      processes: [
-                        ...(bm.processes || []),
-                        pv,
-                      ],
-                    });
-                  },
-                });
-              }}
-            >添加修改步骤</Button>
-          </div>
+          {editable && (
+            <div className="opts">
+              <Button
+                type={'normal'}
+                size={'small'}
+                onClick={() => {
+                  ProcessDialog.show({
+                    variables: bm.variables,
+                    onSubmit: async pv => {
+                      await saveChanges({
+                        processes: [
+                          ...(bm.processes || []),
+                          pv,
+                        ],
+                      });
+                    },
+                  });
+                }}
+              >添加修改步骤</Button>
+            </div>
+          )}
         </div>
       </div>
       <div className="result-panel">
@@ -302,7 +321,7 @@ export default ({
         <div className="content">
           {renderResultInfo()}
           <div className="opts">
-            {bm.filteredAt && (
+            {bm.filteredAt && editable && (
               <Balloon.Tooltip
                 trigger={(
                   <Button
@@ -334,7 +353,7 @@ export default ({
                 }}
               >{t('Check previous calculation result')}</Button>
             )}
-            {bm.calculatedAt && (
+            {bm.calculatedAt && editable && (
               <Button
                 type={'primary'}
                 size={'small'}
@@ -367,7 +386,7 @@ export default ({
                 }}
               >{t('Apply')}</Button>
             )}
-            {bm.appliedAt && (
+            {bm.appliedAt && editable && (
               <Button
                 type={'normal'}
                 warning

@@ -9,7 +9,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 {
     public static class SeriesExtensions
     {
-        public static SeriesDto ToDto(this Series s)
+        public static SeriesDto? ToDto(this Series? s)
         {
             if (s == null)
             {

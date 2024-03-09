@@ -64,5 +64,16 @@ namespace Bakabase.InsideWorld.Business.Services
 
             return BaseResponseBuilder.Ok;
         }
+
+        public async Task<BaseResponse> Duplicate(int fromCategoryId, int toCategoryId)
+        {
+            var data = await GetAll(x => x.CategoryId == fromCategoryId);
+            if (data != null)
+            {
+                await AddRange(data.Select(d => d.Duplicate(toCategoryId)));
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
     }
 }

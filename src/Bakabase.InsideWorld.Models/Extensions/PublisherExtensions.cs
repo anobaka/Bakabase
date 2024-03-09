@@ -295,11 +295,11 @@ namespace Bakabase.InsideWorld.Models.Extensions
             }
         }
 
-        public static List<PublisherResourceMapping> BuildMappings(this IEnumerable<PublisherDto> publishers,
+        public static List<PublisherResourceMapping>? BuildMappings(this IEnumerable<PublisherDto>? publishers,
             int resourceId,
             int? parentId = null)
         {
-            return publishers.SelectMany(a =>
+            return publishers?.SelectMany(a =>
             {
                 var mappings = new List<PublisherResourceMapping>
                 {
@@ -310,9 +310,10 @@ namespace Bakabase.InsideWorld.Models.Extensions
                         ResourceId = resourceId
                     }
                 };
-                if (a.SubPublishers != null)
+                var subMappings = a.SubPublishers.BuildMappings(resourceId, a.Id);
+                if (subMappings != null)
                 {
-                    mappings.AddRange(a.SubPublishers.BuildMappings(resourceId, a.Id));
+                    mappings.AddRange(subMappings);
                 }
 
                 return mappings;
@@ -334,7 +335,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
         public static List<ResourceDiff>? Compare(this PublisherDto a, PublisherDto b)
         {
-            if (a.Id == b.Id)
+            if (a.Id > 0 && a.Id == b.Id)
             {
                 return null;
             }

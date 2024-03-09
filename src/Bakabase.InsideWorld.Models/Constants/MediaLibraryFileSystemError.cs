@@ -1,6 +1,6 @@
 ﻿namespace Bakabase.InsideWorld.Models.Constants
 {
-    public enum MediaLibraryError
+    public enum MediaLibraryFileSystemError
     {
         InvalidVolume = 1,
         FreeSpaceNotEnough = 2,

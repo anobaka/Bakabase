@@ -24,6 +24,7 @@ interface IProps {
   onChange: (data: IBulkModificationProcess) => any;
   dataSources?: Record<any, any>;
   onRemove?: () => any;
+  editable: boolean;
 }
 
 const PropertyIconMap: { [key in BulkModificationProperty]?: string } = {
@@ -48,6 +49,7 @@ export default ({
                   variables,
                   dataSources,
                   onRemove,
+  editable,
                 }: IProps) => {
   const { t } = useTranslation();
   const processorType = PropertyProcessorTypeMap[process.property!];
@@ -126,15 +128,17 @@ export default ({
     <div
       className="process-demonstrator"
       onClick={() => {
-        ProcessDialog.show({
-          variables: variables,
-          process,
-          onSubmit: pv => {
-            if (onChange) {
-              onChange(pv);
-            }
-          },
-        });
+        if (editable) {
+          ProcessDialog.show({
+            variables: variables,
+            process,
+            onSubmit: pv => {
+              if (onChange) {
+                onChange(pv);
+              }
+            },
+          });
+        }
       }}
     >
       <div className="no">
@@ -152,15 +156,17 @@ export default ({
       <ErrorBoundary fallback={<span>{t('Unsupported processor type')}</span>}>
         {renderProcessorValue()}
       </ErrorBoundary>
-      <ClickableIcon
-        type={'delete'}
-        colorType={'danger'}
-        size={'small'}
-        onClick={e => {
-          e.stopPropagation();
-          onRemove?.();
-        }}
-      />
+      {editable && (
+        <ClickableIcon
+          type={'delete'}
+          colorType={'danger'}
+          size={'small'}
+          onClick={e => {
+            e.stopPropagation();
+            onRemove?.();
+          }}
+        />
+      )}
     </div>
   );
 };

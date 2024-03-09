@@ -153,21 +153,20 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (model.Series != null)
             {
-                var volume = (await _volumeService.GetByResourceKeys(new List<int> {id})).Values.FirstOrDefault();
+                var volume = (await _volumeService.GetByResourceKeys([id])).Values.FirstOrDefault();
                 if (model.Series.IsNotEmpty())
                 {
                     var series =
-                        (await _serialService.AddRange(new List<string> {model.Series})).Data.Values.FirstOrDefault();
+                        (await _serialService.GetOrAddRangeByNames([model.Series])).Data.Values.FirstOrDefault()!;
                     if (volume == null)
                     {
-                        await _volumeService.AddRange(new List<Volume>
-                        {
+                        await _volumeService.AddRange([
                             new Volume
                             {
                                 ResourceId = id,
                                 SerialId = series.Id
                             }
-                        });
+                        ]);
                     }
                     else
                     {
@@ -198,8 +197,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (model.Tags != null)
             {
-                var tags = await _tagService.AddRangeByNameAndGroupName(model.Tags, false);
-                await _resourceTagMappingService.UpdateRange(new Dictionary<int, int[]>
+                var tags = await _tagService.GetOrAddRangeByNameAndGroupName(model.Tags, false);
+                await _resourceTagMappingService.PutRange(new Dictionary<int, int[]?>
                     {{id, tags.Select(t => t.Id).ToArray()}});
             }
 
@@ -273,6 +272,11 @@ namespace Bakabase.InsideWorld.Business.Services
                     DirectoryUtils.Delete(resource.RawFullname, true, true);
                 }
             }
+        }
+
+        public async Task LogicallyRemoveByCategoryId(int categoryId)
+        {
+            await _orm.RemoveAll(x => x.CategoryId == categoryId);
         }
 
         public async Task<List<ResourceDto>> GetAll(
@@ -535,7 +539,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<ResourceDto> ToDto(Resource resource,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
-            return (await ToDto(new[] {resource}, ResourceAdditionalItem.All)).FirstOrDefault();
+            return (await ToDto([resource], additionalItems)).FirstOrDefault()!;
         }
 
         public async Task<List<ResourceDto>> ToDto(Resource[] resources,
@@ -655,28 +659,16 @@ namespace Bakabase.InsideWorld.Business.Services
             return await _orm.GetAll(selector, returnCopy);
         }
 
-        // /// <summary>
-        // /// Save core data only. Properties will not be saved.
-        // /// </summary>
-        // /// <param name="resources"></param>
-        // /// <returns></returns>
-        // public async Task SaveOnSynchronization(IEnumerable<Resource> resources)
-        // {
-        //     var array = resources.ToArray();
-        //     var updates = array.Where(t => t.Id > 0).ToArray();
-        //     var @new = array.Except(updates).ToList();
-        //     await _orm.UpdateRange(updates);
-        //     await _orm.AddRange(@new);
-        // }
-
         /// <summary>
         /// <para>Save all resources and properties at once.</para>
         /// <para>If resource exists, its core properties will be updated, and other properties will be kept or replaced by their identity information such as Name.</para>
         /// <para>We do not update other properties by their id and name, because it's hard to ensure all occurrences of a property have been modified identically.</para>
+        /// <para>Null values will be ignored.</para>
         /// </summary>
         /// <param name="srs"></param>
         /// <returns></returns>
-        public async Task<ResourceRangeAddOrUpdateResult> AddOrUpdateRange(List<ResourceDto> srs)
+        [Obsolete($"Use {nameof(AddOrPutRange)} instead, or wait a new {nameof(AddOrPatchRange)} method.")]
+        public async Task<ResourceRangeAddOrUpdateResult> AddOrPatchRange(List<ResourceDto> srs)
         {
             var tmpResources = srs?.ToList() ?? new List<ResourceDto>();
             var simpleResourceMap = new Dictionary<string, ResourceDto>();
@@ -690,7 +682,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 .Select(a => a.FirstOrDefault()).ToList();
             if (parents.Any())
             {
-                await AddOrUpdateRange(parents);
+                await AddOrPatchRange(parents);
             }
 
             await _addOrUpdateLock.WaitAsync();
@@ -717,7 +709,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 // Changed items will be replaced instead of being updated. 
                 var resourcesWithPublishers = tmpResources.Where(a => a.Publishers != null).ToList();
                 var publisherRangeAddResult =
-                    await _publisherService.AddAll(resourcesWithPublishers.SelectMany(a => a.Publishers!).ToList());
+                    await _publisherService.GetOrAddRangeByNames(resourcesWithPublishers.SelectMany(a => a.Publishers!).ToList());
                 var publisherIds = publisherRangeAddResult.Data.ToDictionary(a => a.Key, a => a.Value.Id);
                 var publisherMappings = resourcesWithPublishers.SelectMany(s =>
                 {
@@ -732,7 +724,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 var seriesNames = allSeries.Select(t => t!.Name).Where(t => t.IsNotEmpty()).ToList();
                 if (seriesNames.Any())
                 {
-                    var seriesRangeAddResult = await _serialService.AddRange(seriesNames);
+                    var seriesRangeAddResult = await _serialService.GetOrAddRangeByNames(seriesNames);
                     foreach (var s in allSeries)
                     {
                         s.Id = seriesRangeAddResult.Data[s.Name].Id;
@@ -752,14 +744,14 @@ namespace Bakabase.InsideWorld.Business.Services
                             r.Volume.SerialId = r.Series.Id;
                         }
 
-                        allVolumes.Add(r.Volume.ToResource());
+                        allVolumes.Add(r.Volume.ToEntity());
                     }
                 }
 
                 var volumeRangeAddResult = await _volumeService.AddRange(allVolumes);
 
                 // Originals
-                var originalRangeAddResult = await _originalService.AddRange(originalNames);
+                var originalRangeAddResult = await _originalService.GetOrAddRangeByNames(originalNames);
                 var originalMappings = tmpResources.Where(a => a.Originals != null).SelectMany(a =>
                     a.Originals!.Select(b =>
                         new OriginalResourceMapping
@@ -773,7 +765,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 // Cares name and group name only
                 var tags = tmpResources.Where(a => a.Tags != null).SelectMany(a => a.Tags!).Where(a => a.Id == 0)
                     .Distinct(TagDto.BizComparer).ToArray();
-                var savedTags = await _tagService.AddRangeByNameAndGroupName(tags, false);
+                var savedTags = await _tagService.GetOrAddRangeByNameAndGroupName(tags, false);
                 var resourceTagsMap = tmpResources.Where(a => a.Tags != null).ToDictionary(a => a.Id,
                     a => a.Tags!.Select(b =>
                     {
@@ -795,7 +787,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                         return tag?.Id;
                     }).Where(b => b.HasValue).Select(b => b!.Value).ToArray());
-                await _resourceTagMappingService.UpdateRange(resourceTagsMap);
+                await _resourceTagMappingService.PutRange(resourceTagsMap);
 
                 // Custom Properties
                 var resourceIds = tmpResources.Select(t => t.Id).ToList();
@@ -861,6 +853,253 @@ namespace Bakabase.InsideWorld.Business.Services
                 await _customResourcePropertyService.RemoveRange(invalidProperties);
                 await _customResourcePropertyService.AddRange(newProperties);
                 await _customResourcePropertyService.UpdateRange(changedProperties);
+
+                return new ResourceRangeAddOrUpdateResult
+                {
+                    AliasCount = aliasAddResult.Count,
+                    NewAliasCount = aliasAddResult.AddedCount,
+
+                    ResourceCount = resources.Count,
+                    NewResourceCount = newResources.Count,
+
+                    PublisherCount = publisherRangeAddResult.Count,
+                    NewPublisherCount = publisherRangeAddResult.AddedCount,
+
+                    VolumeCount = volumeRangeAddResult.Count,
+                    NewVolumeCount = volumeRangeAddResult.AddedCount,
+
+                    OriginalCount = originalRangeAddResult.Count,
+                    NewOriginalCount = originalRangeAddResult.AddedCount,
+                };
+            }
+            finally
+            {
+                _addOrUpdateLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// <para>All properties of resources will be saved, including null values.</para>
+        /// <para>Parents will be saved too, so be sure the properties of parent are fulfilled.</para>
+        /// </summary>
+        /// <param name="resourceDtoList"></param>
+        /// <returns></returns>
+        public async Task<ResourceRangeAddOrUpdateResult> AddOrPutRange(List<ResourceDto> resourceDtoList)
+        {
+            var resourceDtoMap = new Dictionary<string, ResourceDto>();
+            foreach (var s in resourceDtoList)
+            {
+                s.Clean();
+                resourceDtoMap.TryAdd(s.RawFullname, s);
+            }
+
+            var parents = resourceDtoList.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a!.RawFullname)
+                .Select(a => a.FirstOrDefault()).ToList();
+            if (parents.Any())
+            {
+                await AddOrPutRange(parents!);
+            }
+
+            await _addOrUpdateLock.WaitAsync();
+            try
+            {
+                #region Aliases
+
+                var names = resourceDtoList.Select(a => a.Name).Where(a => !string.IsNullOrEmpty(a)).ToHashSet();
+                var publisherNames = resourceDtoList.SelectMany(a => a.Publishers.GetNames()).Distinct()
+                    .Where(x => !string.IsNullOrEmpty(x)).ToList();
+                var originalNames = resourceDtoList.Where(a => a.Originals != null)
+                    .SelectMany(a => a.Originals!.Select(b => b.Name))
+                    .Distinct().Where(x => !string.IsNullOrEmpty(x)).ToList();
+                var allNames = names.Concat(publisherNames).Concat(originalNames).ToList();
+                var aliasAddResult = await _aliasService.AddRange(allNames!);
+
+                #endregion
+
+                #region Resources
+
+                var resources = resourceDtoList.Select(a => a.ToEntity()).ToList();
+                var existedResources = resources.Where(a => a.Id > 0).ToList();
+                var newResources = resources.Except(existedResources).ToList();
+                await _orm.UpdateRange(existedResources);
+                resources = (await _orm.AddRange(newResources)).Data.Concat(existedResources).ToList();
+                resources.ForEach(a => { resourceDtoMap[a.RawFullname].Id = a.Id; });
+
+                #endregion
+
+                #region Publishers
+
+                var resourcesWithPublishers = resourceDtoList.Where(a => a.Publishers != null).ToList();
+                var publisherRangeAddResult =
+                    await _publisherService.GetOrAddRangeByNames(resourcesWithPublishers.SelectMany(a => a.Publishers!)
+                        .ToList());
+                var publisherIds = publisherRangeAddResult.Data.ToDictionary(a => a.Key, a => a.Value.Id);
+                foreach (var r in resourcesWithPublishers)
+                {
+                    r.Publishers!.PopulateId(publisherIds);
+                }
+
+                await _publisherMappingService.PutRange(resourceDtoList.ToDictionary(x => x.Id, x => x.Publishers));
+
+                #endregion
+
+                #region Series
+
+                var allSeries = resourceDtoList.Select(a => a.Series).Where(a => a != null).ToArray();
+                var seriesNames = allSeries.Select(t => t!.Name).Where(t => t.IsNotEmpty()).ToList();
+                if (seriesNames.Any())
+                {
+                    var seriesRangeAddResult = await _serialService.GetOrAddRangeByNames(seriesNames);
+                    foreach (var s in allSeries)
+                    {
+                        s!.Id = seriesRangeAddResult.Data[s.Name].Id;
+                    }
+                }
+
+                #endregion
+
+                #region Volumes
+
+                var allVolumes = new Dictionary<int, Volume?>();
+                foreach (var r in resourceDtoList)
+                {
+                    if (r.Volume != null || r.Series != null)
+                    {
+                        r.Volume ??= new VolumeDto();
+                        r.Volume.ResourceId = r.Id;
+                        if (r.Series != null)
+                        {
+                            r.Volume.SerialId = r.Series.Id;
+                        }
+
+
+                    }
+
+                    allVolumes[r.Id] = r.Volume.ToEntity();
+                }
+
+                var volumeRangeAddResult = await _volumeService.PutRange(allVolumes);
+
+                #endregion
+
+                #region Originals
+
+                var originalRangeAddResult = await _originalService.GetOrAddRangeByNames(originalNames);
+                foreach (var r in resourceDtoList)
+                {
+                    if (r.Originals?.Any() == true)
+                    {
+                        foreach (var o in r.Originals)
+                        {
+                            if (o.Id == 0)
+                            {
+                                o.Id = originalRangeAddResult.Data.GetValueOrDefault(o.Name)?.Id ?? default;
+                            }
+                        }
+                    }
+                }
+
+                await _originalMappingService.PutRange(resourceDtoList.ToDictionary(x => x.Id, x => x.Originals));
+
+                #endregion
+
+                #region Tags
+
+                var tags = resourceDtoList.Where(a => a.Tags != null).SelectMany(a => a.Tags!).Where(a => a.Id == 0)
+                    .Distinct(TagDto.BizComparer).ToArray();
+                var savedTags = await _tagService.GetOrAddRangeByNameAndGroupName(tags, false);
+                var resourceTagsMap = resourceDtoList.ToDictionary(a => a.Id,
+                    a => a.Tags?.Select(b =>
+                    {
+                        if (b.Id > 0)
+                        {
+                            return b.Id;
+                        }
+
+                        var tag = savedTags.FirstOrDefault(t =>
+                            TagDto.BizComparer.Equals(b, t));
+                        if (tag == null)
+                        {
+#if DEBUG
+                            Debugger.Break();
+#endif
+                            _logger.LogWarning(
+                                $"Tag [{b.GroupName}:{b.Name}] is not found in saved tags: {string.Join(',', savedTags.Select(t => $"{t.GroupName}:{t.Name}"))}");
+                        }
+
+                        return tag?.Id;
+                    }).Where(b => b.HasValue).Select(b => b!.Value).ToArray());
+                await _resourceTagMappingService.PutRange(resourceTagsMap);
+
+                #endregion
+
+                #region Custom Properties
+
+                var resourceIds = resourceDtoList.Select(t => t.Id).ToList();
+                var existedCustomProperties =
+                    (await _customResourcePropertyService.GetAll(t => resourceIds.Contains(t.ResourceId)))
+                    .GroupBy(t => t.ResourceId).ToDictionary(t => t.Key,
+                        t => t.GroupBy(a => a.Key).ToDictionary(a => a.Key, a => a.ToList()));
+                var invalidProperties = new List<CustomResourceProperty>();
+                var newProperties = new List<CustomResourceProperty>();
+                var changedProperties = new List<CustomResourceProperty>();
+                foreach (var r in resourceDtoList)
+                {
+                    r.CustomProperties ??= new Dictionary<string, List<CustomResourceProperty>>();
+                    if (!existedCustomProperties.TryGetValue(r.Id, out var existedProperties))
+                    {
+                        existedProperties = new();
+                    }
+
+                    // Invalid
+                    var invalidKeys = new HashSet<string>();
+                    foreach (var (key, list) in existedProperties)
+                    {
+                        if (!r.CustomProperties.ContainsKey(key))
+                        {
+                            invalidProperties.AddRange(list);
+                            invalidKeys.Add(key);
+                        }
+                    }
+
+                    foreach (var (key, list) in r.CustomProperties)
+                    {
+                        if (!invalidKeys.Contains(key))
+                        {
+                            if (existedProperties.TryGetValue(key, out var exists))
+                            {
+                                var sortedList = list.OrderBy(t => t.Index).ToList();
+                                var sortedExists = exists.OrderBy(t => t.Index).ToList();
+                                for (var i = 0; i < sortedList.Count; i++)
+                                {
+                                    if (sortedExists.Count > i)
+                                    {
+                                        // Update
+                                        sortedList[i].Id = sortedExists[i].Id;
+                                        changedProperties.Add(sortedList[i]);
+                                    }
+                                    else
+                                    {
+                                        // New
+                                        sortedList[i].ResourceId = r.Id;
+                                        newProperties.Add(sortedList[i]);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                list.ForEach(l => l.ResourceId = r.Id);
+                                newProperties.AddRange(list);
+                            }
+                        }
+                    }
+                }
+
+                await _customResourcePropertyService.RemoveRange(invalidProperties);
+                await _customResourcePropertyService.AddRange(newProperties);
+                await _customResourcePropertyService.UpdateRange(changedProperties);
+
+                #endregion
 
                 return new ResourceRangeAddOrUpdateResult
                 {
@@ -1319,7 +1558,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task BatchUpdateTags(ResourceTagUpdateRequestModel model)
         {
-            await _resourceTagMappingService.UpdateRange(model.ResourceTagIds);
+            await _resourceTagMappingService.PutRange(model.ResourceTagIds);
             await RunBatchSaveNfoBackgroundTask(model.ResourceTagIds.Keys.ToArray(),
                 $"{nameof(ResourceService)}:BatchUpdateTags", true);
         }

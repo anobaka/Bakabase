@@ -4,7 +4,7 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
-    public class ResourceCategory
+    public record ResourceCategory
     {
         public int Id { get; set; }
         [Required]
@@ -19,5 +19,15 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
         public bool TryCompressedFilesOnCoverSelection { get; set; }
         public string? EnhancementOptionsJson { get; set; }
         public bool GenerateNfo { get; set; }
+
+        public ResourceCategory Duplicate(string name)
+        {
+            return this with
+            {
+                Name = name,
+                Id = 0,
+                CreateDt = DateTime.Now
+            };
+        }
     }
 }

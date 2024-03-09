@@ -55,7 +55,12 @@ namespace Bakabase.InsideWorld.Business.Services
             return list;
         }
 
-        public async Task<SimpleRangeAddResult<OriginalDto>> AddRange(List<string> names)
+        /// <summary>
+        /// If a record with the same name does not exist in the database, a new data entry will be created, regardless of whether it has an id.
+        /// </summary>
+        /// <param name="names"></param>
+        /// <returns></returns>
+        public async Task<SimpleRangeAddResult<OriginalDto>> GetOrAddRangeByNames(List<string> names)
         {
             names = names.Distinct().ToList();
             var existOriginals = (await _orm.GetAll(a => names.Contains(a.Name))).ToList();
@@ -66,7 +71,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 .ToDictionary(a => a.Name, a => a.ToDto());
             return new SimpleRangeAddResult<OriginalDto>
             {
-                Data = result,
+                Data = result!,
                 AddedCount = newOriginals.Count,
                 ExistingCount = existOriginals.Count
             };

@@ -520,7 +520,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                 }
 
-                await ResourceService.AddOrUpdateRange(new List<ResourceDto> {resource});
+                await ResourceService.AddOrPatchRange(new List<ResourceDto> {resource});
                 await AddRange(records);
 
                 doneCount++;

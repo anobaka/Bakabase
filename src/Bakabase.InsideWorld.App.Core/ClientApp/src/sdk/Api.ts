@@ -190,7 +190,13 @@ export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractio
   diffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[] | null;
   filteredResourceIds?: number[] | null;
   /** @format date-time */
+  filteredAt?: string | null;
+  /** @format date-time */
   calculatedAt?: string | null;
+  /** @format date-time */
+  appliedAt?: string | null;
+  /** @format date-time */
+  revertedAt?: string | null;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel {
@@ -484,6 +490,12 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsAliasAdditionalItem
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem = 0 | 1;
 
 /**
+ * [0: None, 1: Category, 2: FileSystemInfo, 4: FixedTags]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
+
+/**
  * [0: None, 1: Components, 3: Validation]
  * @format int32
  */
@@ -589,7 +601,7 @@ export type BakabaseInsideWorldModelsConstantsInitializationContentType = 1 | 2;
  * [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsMediaLibraryError = 1 | 2 | 3;
+export type BakabaseInsideWorldModelsConstantsMediaLibraryFileSystemError = 1 | 2 | 3;
 
 /**
  * [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown]
@@ -706,6 +718,21 @@ export interface BakabaseInsideWorldModelsModelsAosMatcherValue {
   valueType?: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
   key?: string | null;
   isValid?: boolean;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation {
+  /** @format int64 */
+  totalSize?: number;
+  /** @format int64 */
+  freeSpace?: number;
+  /** @format double */
+  usedPercentage?: number;
+  /** @format double */
+  freePercentage?: number;
+  /** @format double */
+  freeSpaceInGb?: number;
+  /** [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied] */
+  error?: BakabaseInsideWorldModelsConstantsMediaLibraryFileSystemError;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult {
@@ -995,53 +1022,29 @@ export interface BakabaseInsideWorldModelsModelsDtosFavoritesDto {
 export interface BakabaseInsideWorldModelsModelsDtosMediaLibraryDto {
   /** @format int32 */
   id?: number;
-  /** @minLength 1 */
-  name: string;
+  name?: string | null;
   /** @format int32 */
-  categoryId: number;
-  pathConfigurationsJson?: string | null;
+  categoryId?: number;
   /** @format int32 */
   order?: number;
   /** @format int32 */
   resourceCount?: number;
-  rootPathInformation?: Record<
-    string,
-    BakabaseInsideWorldModelsModelsDtosMediaLibraryDtoSingleMediaLibraryRootPathInformation
-  >;
-  categoryName?: string | null;
-  pathConfigurations?: BakabaseInsideWorldModelsModelsDtosMediaLibraryDtoPathConfigurationDto[] | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosMediaLibraryDtoPathConfigurationDto {
-  path?: string | null;
-  /** @deprecated */
-  regex?: string | null;
-  fixedTagIds?: number[] | null;
-  /** @deprecated */
-  segments?: BakabaseInsideWorldModelsModelsEntitiesMediaLibraryPathConfigurationSegmentMatcher[] | null;
-  rpmValues?: BakabaseInsideWorldModelsModelsAosMatcherValue[] | null;
-  fixedTags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosMediaLibraryDtoSingleMediaLibraryRootPathInformation {
-  /** @format int64 */
-  totalSize?: number;
-  /** @format int64 */
-  freeSpace?: number;
-  /** @format double */
-  usedPercentage?: number;
-  /** @format double */
-  freePercentage?: number;
-  /** @format double */
-  freeSpaceInGb?: number;
-  /** [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied] */
-  error?: BakabaseInsideWorldModelsConstantsMediaLibraryError;
+  fileSystemInformation?: Record<string, BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation>;
+  category?: BakabaseInsideWorldModelsModelsDtosResourceCategoryDto;
+  pathConfigurations?: BakabaseInsideWorldModelsModelsDtosPathConfigurationDto[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosOriginalDto {
   /** @format int32 */
   id?: number;
   name?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosPathConfigurationDto {
+  path?: string | null;
+  fixedTagIds?: number[] | null;
+  rpmValues?: BakabaseInsideWorldModelsModelsAosMatcherValue[] | null;
+  fixedTags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosPlaylistDto {
@@ -1264,33 +1267,6 @@ export interface BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
   displayName?: string | null;
 }
 
-export interface BakabaseInsideWorldModelsModelsEntitiesMediaLibraryPathConfiguration {
-  path?: string | null;
-  /** @deprecated */
-  regex?: string | null;
-  fixedTagIds?: number[] | null;
-  /** @deprecated */
-  segments?: BakabaseInsideWorldModelsModelsEntitiesMediaLibraryPathConfigurationSegmentMatcher[] | null;
-  rpmValues?: BakabaseInsideWorldModelsModelsAosMatcherValue[] | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsEntitiesMediaLibraryPathConfigurationSegmentMatcher {
-  fixedText?: string | null;
-  /** @format int32 */
-  layer?: number | null;
-  regex?: string | null;
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty] */
-  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
-  /** [1: Layer, 2: Regex, 3: FixedText] */
-  valueType?: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
-  key?: string | null;
-  isValid?: boolean;
-  /** @deprecated */
-  isReverse?: boolean;
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty] */
-  type?: BakabaseInsideWorldModelsConstantsResourceProperty;
-}
-
 export interface BakabaseInsideWorldModelsModelsEntitiesPassword {
   /** @maxLength 64 */
   text?: string | null;
@@ -1417,19 +1393,32 @@ export interface BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel {
   ids?: number[] | null;
 }
 
+export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryAddInBulkRequestModel {
+  nameAndPaths: Record<string, string[] | null>;
+}
+
 export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryCreateRequestModel {
   /** @minLength 1 */
   name: string;
   /** @format int32 */
   categoryId: number;
-  pathConfigurations?: BakabaseInsideWorldModelsModelsEntitiesMediaLibraryPathConfiguration[] | null;
+  pathConfigurations?: BakabaseInsideWorldModelsModelsDtosPathConfigurationDto[] | null;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryUpdateRequestModel {
+export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryPatchRequestModel {
   name?: string | null;
-  pathConfigurations?: BakabaseInsideWorldModelsModelsEntitiesMediaLibraryPathConfiguration[] | null;
+  pathConfigurations?: BakabaseInsideWorldModelsModelsDtosPathConfigurationDto[] | null;
   /** @format int32 */
   order?: number | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryPathConfigurationCreateRequestModel {
+  /** @minLength 1 */
+  path: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryRootPathsAddInBulkRequestModel {
+  rootPaths?: string[] | null;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsOptionsResourceOptionsPatchRequestModel {
@@ -1489,6 +1478,10 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryComponent
   type: BakabaseInsideWorldModelsConstantsComponentType;
   componentKeys: string[];
   enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryDuplicateRequestModel {
+  name?: string | null;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateRequestModel {
@@ -1740,6 +1733,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsDtosResourceDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosSeriesDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosSeriesDto[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagDto {
@@ -2100,6 +2100,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   code?: number;
   message?: string | null;
   data?: Record<string, BakabaseInsideWorldModelsConstantsMediaType>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemInt32 {
@@ -3425,10 +3432,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags BulkModification
-     * @name RemoveBulkModification
+     * @name DeleteBulkModification
      * @request DELETE:/bulk-modification/{id}
      */
-    removeBulkModification: (id: number, params: RequestParams = {}) =>
+    deleteBulkModification: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}`,
         method: "DELETE",
@@ -3473,6 +3480,39 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name DuplicateBulkModification
+     * @request POST:/bulk-modification/{id}/duplication
+     */
+    duplicateBulkModification: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto,
+        any
+      >({
+        path: `/bulk-modification/${id}/duplication`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name CloseBulkModification
+     * @request PUT:/bulk-modification/{id}/close
+     */
+    closeBulkModification: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/bulk-modification/${id}/close`,
+        method: "PUT",
         format: "json",
         ...params,
       }),
@@ -4367,6 +4407,39 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetAllSeries
+     * @request GET:/resource/series/all
+     */
+    getAllSeries: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosSeriesDto, any>({
+        path: `/resource/series/all`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetAllCustomProperties
+     * @request GET:/resource/custom-property/all
+     */
+    getAllCustomProperties: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty,
+        any
+      >({
+        path: `/resource/custom-property/all`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
   };
   mediaLibrary = {
     /**
@@ -4391,10 +4464,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetAllMediaLibraries
      * @request GET:/media-library
      */
-    getAllMediaLibraries: (params: RequestParams = {}) =>
+    getAllMediaLibraries: (
+      query?: {
+        /** [0: None, 1: Category, 2: FileSystemInfo, 4: FixedTags] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosMediaLibraryDto, any>({
         path: `/media-library`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -4443,7 +4523,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     patchMediaLibrary: (
       id: number,
-      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryUpdateRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryPatchRequestModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -4511,7 +4591,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/media-library/path-configuration-validation
      */
     validatePathConfiguration: (
-      data: BakabaseInsideWorldModelsModelsEntitiesMediaLibraryPathConfiguration,
+      data: BakabaseInsideWorldModelsModelsDtosPathConfigurationDto,
       params: RequestParams = {},
     ) =>
       this.request<
@@ -4555,7 +4635,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     addMediaLibraryPathConfiguration: (
       id: number,
-      data: BakabaseInsideWorldModelsModelsEntitiesMediaLibraryPathConfiguration,
+      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryPathConfigurationCreateRequestModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -4582,6 +4662,48 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${id}/path-configuration`,
         method: "DELETE",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibrary
+     * @name AddMediaLibrariesInBulk
+     * @request POST:/media-library/bulk-add/{cId}
+     */
+    addMediaLibrariesInBulk: (
+      cId: number,
+      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryAddInBulkRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library/bulk-add/${cId}`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibrary
+     * @name AddMediaLibraryRootPathsInBulk
+     * @request POST:/media-library/{mlId}/path-configuration/root-paths
+     */
+    addMediaLibraryRootPathsInBulk: (
+      mlId: number,
+      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryRootPathsAddInBulkRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library/${mlId}/path-configuration/root-paths`,
+        method: "POST",
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -6127,6 +6249,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags ResourceCategory
+     * @name DuplicateResourceCategory
+     * @request POST:/resource-category/{id}/duplication
+     */
+    duplicateResourceCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryDuplicateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}/duplication`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
      * @name UpdateResourceCategory
      * @request PUT:/resource-category/{id}
      */
@@ -6148,10 +6291,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags ResourceCategory
-     * @name RemoveResourceCategory
+     * @name DeleteResourceCategoryAndClearAllRelatedData
      * @request DELETE:/resource-category/{id}
      */
-    removeResourceCategory: (id: number, params: RequestParams = {}) =>
+    deleteResourceCategoryAndClearAllRelatedData: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category/${id}`,
         method: "DELETE",

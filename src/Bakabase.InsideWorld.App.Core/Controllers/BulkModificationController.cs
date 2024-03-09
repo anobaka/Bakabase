@@ -18,6 +18,7 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
+using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using Humanizer.Localisation;
 using Microsoft.AspNetCore.Mvc;
@@ -72,6 +73,20 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return new SingletonResponse<BulkModificationDto>(data.Data.ToDto(null));
         }
 
+        [HttpPost("{id:int}/duplication")]
+        [SwaggerOperation(OperationId = "DuplicateBulkModification")]
+        public async Task<SingletonResponse<BulkModificationDto>> Duplicate(int id)
+        {
+            return new SingletonResponse<BulkModificationDto>(await _service.Duplicate(id));
+        }
+
+        [HttpPut("{id:int}/close")]
+        [SwaggerOperation(OperationId = "CloseBulkModification")]
+        public async Task<BaseResponse> Close(int id)
+        {
+            return await _service.Close(id);
+        }
+
         [HttpPut("{id:int}")]
         [SwaggerOperation(OperationId = "PutBulkModification")]
         public async Task<BaseResponse> Put(int id, [FromBody] BulkModificationPutRequestModel model)
@@ -89,7 +104,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "PerformBulkModificationFiltering")]
         public async Task<ListResponse<int>> PerformFiltering(int id)
         {
-            return new ListResponse<int>(await _service.PerformFiltering(id));
+            return await _service.PerformFiltering(id);
         }
 
         [HttpGet("{id:int}/filtered-resources")]
@@ -107,8 +122,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [SwaggerOperation(OperationId = "RemoveBulkModification")]
-        public async Task<BaseResponse> Remove(int id)
+        [SwaggerOperation(OperationId = "DeleteBulkModification")]
+        public async Task<BaseResponse> Delete(int id)
         {
             return await _service.RemoveByKey(id);
         }
@@ -140,7 +155,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         public async Task<BaseResponse> Preview(int id)
         {
             var data = await _service.Preview(id, HttpContext.RequestAborted);
-            return BaseResponseBuilder.Ok;
+            return new BaseResponse(data.Code, data.Message);
         }
 
         [HttpPost("{id:int}/apply")]
@@ -154,7 +169,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "RevertBulkModification")]
         public async Task<BaseResponse> Revert(int id)
         {
-            return await _service.Apply(id);
+            return await _service.Revert(id);
         }
     }
 }

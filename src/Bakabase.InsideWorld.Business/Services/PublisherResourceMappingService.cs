@@ -19,6 +19,7 @@ namespace Bakabase.InsideWorld.Business.Services
         {
         }
 
+        [Obsolete($"Use {nameof(PutRange)} instead")]
         public override async Task<ListResponse<PublisherResourceMapping>> AddRange(
             List<PublisherResourceMapping> resources)
         {
@@ -29,9 +30,10 @@ namespace Bakabase.InsideWorld.Business.Services
             return new(exists.Concat(@new));
         }
 
+        [Obsolete($"Use {nameof(PutRange)} instead")]
         public async Task UpdateResourcePublishers(int resourceId, PublisherDto[] newPublishers)
         {
-            var publishers = (await PublisherService.AddAll(newPublishers.ToList())).Data;
+            var publishers = (await PublisherService.GetOrAddRangeByNames(newPublishers.ToList())).Data;
             newPublishers.PopulateId(publishers.ToDictionary(t => t.Key, t => t.Value.Id));
             var mappings = newPublishers.BuildMappings(resourceId);
 
@@ -40,6 +42,50 @@ namespace Bakabase.InsideWorld.Business.Services
             var toBeAdded = mappings.Except(currentMappings);
             await RemoveRange(toBeRemoved);
             var @new = await AddRange(toBeAdded.ToList());
+        }
+
+        public async Task PutRange(Dictionary<int, List<PublisherDto>?>? map)
+        {
+            if (map == null)
+            {
+                return;
+            }
+
+            var resourceIds = map.Keys.ToArray();
+            var existedMappingsMap = (await GetAll(x => resourceIds.Contains(x.ResourceId))).GroupBy(x => x.ResourceId)
+                .ToDictionary(x => x.Key, x => x.ToList());
+
+            var toBeDeleted = new List<PublisherResourceMapping>();
+            var toBeAdded = new List<PublisherResourceMapping>();
+            foreach (var (rId, publishers) in map)
+            {
+                var mappings = publishers.BuildMappings(rId);
+                if (mappings?.Any() == true)
+                {
+                    var existedMappings = existedMappingsMap.GetValueOrDefault(rId);
+                    if (existedMappings != null)
+                    {
+                        var @new = mappings.Except(existedMappings).ToList();
+                        var bad = existedMappings.Except(mappings);
+                        toBeAdded.AddRange(@new);
+                        toBeDeleted.AddRange(bad);
+                    }
+                    else
+                    {
+                        toBeAdded.AddRange(mappings);
+                    }
+                }
+                else
+                {
+                    if (existedMappingsMap.TryGetValue(rId, out var existedMappings))
+                    {
+                        toBeDeleted.AddRange(existedMappings);
+                    }
+                }
+            }
+
+            await RemoveRange(toBeDeleted);
+            await AddRange(toBeAdded);
         }
     }
 }

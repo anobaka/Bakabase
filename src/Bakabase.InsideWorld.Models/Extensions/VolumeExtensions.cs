@@ -26,7 +26,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
             };
         }
 
-        public static Volume? ToResource(this VolumeDto? v)
+        public static Volume? ToEntity(this VolumeDto? v)
         {
             if (v == null)
             {

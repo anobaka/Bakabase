@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
         public int? ParentPublisherId { get; set; }
         public int ResourceId { get; set; }
 
-        public bool Equals(PublisherResourceMapping m)
+        public bool Equals(PublisherResourceMapping? m)
         {
             return m != null && m.ParentPublisherId == ParentPublisherId && m.PublisherId == PublisherId &&
                    m.ResourceId == ResourceId;

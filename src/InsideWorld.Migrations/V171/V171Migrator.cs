@@ -14,8 +14,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Threading.Channels;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using static Bakabase.InsideWorld.Models.Models.Entities.MediaLibrary.PathConfiguration;
+using Bakabase.InsideWorld.Models.Models.Entities.Implicit;
+using InsideWorld.Migrations.V171.Legacy.Models;
 
 namespace InsideWorld.Migrations.V171
 {
@@ -29,75 +31,88 @@ namespace InsideWorld.Migrations.V171
 
         protected override async Task MigrateAfterDbMigrationInternal(object context)
         {
-            var mlService = GetRequiredService<MediaLibraryService>();
-            var mls = await mlService.GetAll();
-            foreach (var ml in mls)
-            {
-                var changed = false;
-                if (ml.PathConfigurations != null)
-                {
-                    foreach (var pc in ml.PathConfigurations)
-                    {
-                        if (pc is {Segments: not null, RpmValues: null})
-                        {
-                            pc.RpmValues = pc.Segments.Select(s => new MatcherValue
-                            {
-                                Key = s.Key,
-                                Layer = s.IsReverse ? -s.Layer : s.Layer,
-                                Regex = s.Regex,
-                                Property = s.Type,
-                                // Previous matchers are always matching by layer.
-                                ValueType = ResourceMatcherValueType.Layer
-                            }).ToList();
-                            pc.Segments = null;
-                            changed = true;
-                        }
+	        try
+	        {
+		        var mlService = GetRequiredService<MediaLibraryService>();
+		        var mls = await mlService.GetAll();
+		        foreach (var ml in mls)
+		        {
+			        var changed = false;
+			        if (!string.IsNullOrEmpty(ml.PathConfigurationsJson))
+			        {
+				        var pcs =
+					        JsonConvert.DeserializeObject<CompatiblePathConfiguration[]>(ml.PathConfigurationsJson)!;
+				        foreach (var pc in pcs)
+				        {
+					        if (pc is {Segments: not null, RpmValues: null})
+					        {
+						        pc.RpmValues = pc.Segments.Select(s => new MatcherValue
+						        {
+							        Key = s.Key,
+							        Layer = s.IsReverse ? -s.Layer : s.Layer,
+							        Regex = s.Regex,
+							        Property = s.Type,
+							        // Previous matchers are always matching by layer.
+							        ValueType = ResourceMatcherValueType.Layer
+						        }).ToList();
+						        pc.Segments = null;
+						        changed = true;
+					        }
 
-                        pc.RpmValues ??= new List<MatcherValue>();
+					        pc.RpmValues ??= new List<MatcherValue>();
 
-                        if (pc.Regex.IsNotEmpty())
-                        {
-                            if (pc.RpmValues.All(m => m.Property != ResourceProperty.Resource))
-                            {
-                                var matcher = new SegmentMatcher
-                                {
-                                    Property = ResourceProperty.Resource,
-                                };
-                                if (pc.Regex.TryGetLayer(out var layer))
-                                {
-                                    matcher.Layer = layer;
-                                    matcher.ValueType = ResourceMatcherValueType.Layer;
-                                }
-                                else
-                                {
-                                    matcher.Regex = pc.Regex;
-                                    matcher.ValueType = ResourceMatcherValueType.Regex;
-                                }
+					        if (pc.Regex.IsNotEmpty())
+					        {
+						        if (pc.RpmValues.All(m => m.Property != ResourceProperty.Resource))
+						        {
+							        var matcher = new MatcherValue()
+							        {
+								        Property = ResourceProperty.Resource,
+							        };
+							        if (pc.Regex?.TryGetLayer(out var layer) == true)
+							        {
+								        matcher.Layer = layer;
+								        matcher.ValueType = ResourceMatcherValueType.Layer;
+							        }
+							        else
+							        {
+								        matcher.Regex = pc.Regex;
+								        matcher.ValueType = ResourceMatcherValueType.Regex;
+							        }
 
-                                pc.RpmValues.Insert(0, matcher);
-                            }
+							        pc.RpmValues.Insert(0, matcher);
+						        }
 
-                            pc.Regex = null;
-                            changed = true;
-                        }
-                    }
-                }
+						        pc.Regex = null;
+						        changed = true;
+					        }
+				        }
+				        if (changed)
+				        {
+					        await mlService.Patch(ml.Id, new MediaLibraryPatchRequestModel
+					        {
+						        PathConfigurations = pcs.Select(p => new PathConfigurationDto
+						        {
+                                    FixedTagIds = p.FixedTagIds,
+                                    Path = p.Path,
+                                    RpmValues = p.RpmValues
+						        }).ToList()
+					        });
+					        Logger.LogInformation($"Media library {ml} has been migrated successfully.");
+				        }
+				        else
+				        {
+					        Logger.LogInformation($"Media library {ml} is clean and no need to be migrated.");
+				        }
+					}
+		        }
+	        }
+	        catch (Exception e)
+	        {
+		        Logger.LogError(e, $"An error occurred during migrating media libraries: {e.Message}");
+	        }
 
-                if (changed)
-                {
-                    await mlService.Patch(ml.Id, new MediaLibraryUpdateRequestModel
-                    {
-                        PathConfigurations = ml.PathConfigurations
-                    });
-                    Logger.LogInformation($"Media library {ml} has been migrated successfully.");
-                }
-                else
-                {
-                    Logger.LogInformation($"Media library {ml} is clean and no need to be migrated.");
-                }
-            }
-
-            var categoryService = GetRequiredService<ResourceCategoryService>();
+	        var categoryService = GetRequiredService<ResourceCategoryService>();
             var categories = await categoryService.GetAll();
             var changedCategories = new List<ResourceCategory>();
 

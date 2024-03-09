@@ -26,10 +26,9 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
         // public string Fullname { get; set; }
         public int MediaLibraryId { get; set; }
         public int CategoryId { get; set; }
+        [Required] public string RawName { get; set; } = null!;
         [Required]
-        public string RawName { get; set; }
-        [Required]
-        public string Directory { get; set; }
+        public string Directory { get; set; } = null!;
         public int? ParentId { get; set; }
         public bool HasChildren { get; set; }
 

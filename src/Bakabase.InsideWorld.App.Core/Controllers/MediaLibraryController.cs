@@ -12,168 +12,203 @@ using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.InsideWorld.Models.Models.Entities.Implicit;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
 {
-    [Route("~/media-library")]
-    public class MediaLibraryController : Controller
-    {
-        private readonly MediaLibraryService _service;
-        private readonly TagService _tagService;
-        private readonly TagGroupService _tagGroupService;
+	[Route("~/media-library")]
+	public class MediaLibraryController : Controller
+	{
+		private readonly MediaLibraryService _service;
+		private readonly TagService _tagService;
+		private readonly TagGroupService _tagGroupService;
 
-        public MediaLibraryController(MediaLibraryService service, TagService tagService,
-            TagGroupService tagGroupService)
-        {
-            _service = service;
-            _tagService = tagService;
-            _tagGroupService = tagGroupService;
-        }
+		public MediaLibraryController(MediaLibraryService service, TagService tagService,
+			TagGroupService tagGroupService)
+		{
+			_service = service;
+			_tagService = tagService;
+			_tagGroupService = tagGroupService;
+		}
 
-        [HttpGet]
-        [SwaggerOperation(OperationId = "GetAllMediaLibraries")]
-        public async Task<ListResponse<MediaLibraryDto>> Get()
-        {
-            return new(await _service.GetAll());
-        }
+		[HttpGet]
+		[SwaggerOperation(OperationId = "GetAllMediaLibraries")]
+		public async Task<ListResponse<MediaLibraryDto>> Get(MediaLibraryAdditionalItem additionalItems)
+		{
+			return new(await _service.GetAllDto(null, additionalItems));
+		}
 
-        [HttpPost]
-        [SwaggerOperation(OperationId = "AddMediaLibrary")]
-        public async Task<BaseResponse> Add([FromBody] MediaLibraryCreateRequestModel model)
-        {
-            return await _service.Add(model);
-        }
+		[HttpPost]
+		[SwaggerOperation(OperationId = "AddMediaLibrary")]
+		public async Task<BaseResponse> Add([FromBody] MediaLibraryCreateRequestModel model)
+		{
+			return await _service.Add(model);
+		}
 
-        [HttpDelete("{id}")]
-        [SwaggerOperation(OperationId = "RemoveMediaLibrary")]
-        public async Task<BaseResponse> Remove(int id)
-        {
-            return await _service.RemoveByKey(id);
-        }
+		[HttpDelete("{id}")]
+		[SwaggerOperation(OperationId = "RemoveMediaLibrary")]
+		public async Task<BaseResponse> Remove(int id)
+		{
+			return await _service.RemoveByKey(id);
+		}
 
-        [HttpPut("{id}")]
-        [SwaggerOperation(OperationId = "PatchMediaLibrary")]
-        public async Task<BaseResponse> Patch(int id, [FromBody] MediaLibraryUpdateRequestModel model)
-        {
-            return await _service.Patch(id, model);
-        }
+		[HttpPut("{id}")]
+		[SwaggerOperation(OperationId = "PatchMediaLibrary")]
+		public async Task<BaseResponse> Patch(int id, [FromBody] MediaLibraryPatchRequestModel model)
+		{
+			return await _service.Patch(id, model);
+		}
 
-        [HttpGet("sync/status")]
-        [SwaggerOperation(OperationId = "GetMediaLibrarySyncStatus")]
-        public async Task<SingletonResponse<BackgroundTaskDto>> GetSyncStatus()
-        {
-            return new SingletonResponse<BackgroundTaskDto>(_service.SyncTaskInformation);
-        }
+		[HttpGet("sync/status")]
+		[SwaggerOperation(OperationId = "GetMediaLibrarySyncStatus")]
+		public async Task<SingletonResponse<BackgroundTaskDto>> GetSyncStatus()
+		{
+			return new SingletonResponse<BackgroundTaskDto>(_service.SyncTaskInformation);
+		}
 
-        [HttpPut("sync")]
-        [SwaggerOperation(OperationId = "SyncMediaLibrary")]
-        public async Task<BaseResponse> Sync()
-        {
-            _service.SyncInBackgroundTask();
-            return BaseResponseBuilder.Ok;
-        }
+		[HttpPut("sync")]
+		[SwaggerOperation(OperationId = "SyncMediaLibrary")]
+		public async Task<BaseResponse> Sync()
+		{
+			_service.SyncInBackgroundTask();
+			return BaseResponseBuilder.Ok;
+		}
 
-        [HttpDelete("sync")]
-        [SwaggerOperation(OperationId = "StopSyncMediaLibrary")]
-        public async Task<BaseResponse> StopSync()
-        {
-            await _service.StopSync();
-            return BaseResponseBuilder.Ok;
-        }
+		[HttpDelete("sync")]
+		[SwaggerOperation(OperationId = "StopSyncMediaLibrary")]
+		public async Task<BaseResponse> StopSync()
+		{
+			await _service.StopSync();
+			return BaseResponseBuilder.Ok;
+		}
 
-        [HttpPost("path-configuration-validation")]
-        [SwaggerOperation(OperationId = "ValidatePathConfiguration")]
-        public async Task<SingletonResponse<PathConfigurationValidateResult>> ValidatePathConfiguration(
-            [FromBody] MediaLibrary.PathConfiguration pathConfiguration)
-        {
-            return await _service.Test(pathConfiguration, 100);
-        }
+		[HttpPost("path-configuration-validation")]
+		[SwaggerOperation(OperationId = "ValidatePathConfiguration")]
+		public async Task<SingletonResponse<PathConfigurationValidateResult>> ValidatePathConfiguration(
+			[FromBody] PathConfigurationDto pathConfiguration)
+		{
+			return await _service.Test(pathConfiguration, 100);
+		}
 
-        [HttpPut("orders-in-category")]
-        [SwaggerOperation(OperationId = "SortMediaLibrariesInCategory")]
-        public async Task<BaseResponse> Sort([FromBody] IdBasedSortRequestModel model)
-        {
-            return await _service.Sort(model.Ids);
-        }
+		[HttpPut("orders-in-category")]
+		[SwaggerOperation(OperationId = "SortMediaLibrariesInCategory")]
+		public async Task<BaseResponse> Sort([FromBody] IdBasedSortRequestModel model)
+		{
+			return await _service.Sort(model.Ids);
+		}
 
-        [HttpPost("{id}/path-configuration")]
-        [SwaggerOperation(OperationId = "AddMediaLibraryPathConfiguration")]
-        public async Task<BaseResponse> AddPathConfiguration(int id,
-            [FromBody] MediaLibrary.PathConfiguration configuration)
-        {
-            if (!Directory.Exists(configuration?.Path))
-            {
-                return BaseResponseBuilder.BuildBadRequest($"{configuration?.Path} does not exist");
-            }
+		[HttpPost("{id}/path-configuration")]
+		[SwaggerOperation(OperationId = "AddMediaLibraryPathConfiguration")]
+		public async Task<BaseResponse> AddPathConfiguration(int id,
+			[FromBody] MediaLibraryPathConfigurationCreateRequestModel model)
+		{
+			if (string.IsNullOrEmpty(model.Path))
+			{
+				return BaseResponseBuilder.BuildBadRequest($"{nameof(model.Path)} can not be empty");
+			}
 
-            var library = await _service.GetByKey(id);
-            var dto = library.ToDto();
-            var pc = dto.PathConfigurations.Concat(new[] {configuration}).ToArray();
-            return await _service.Patch(id, new MediaLibraryUpdateRequestModel
-            {
-                PathConfigurations = pc
-            });
-        }
+			var newPc = PathConfigurationDto.CreateDefault(model.Path);
+			var library = await _service.GetDto(id, MediaLibraryAdditionalItem.None);
+			(library!.PathConfigurations ??= []).Add(newPc);
+			return await _service.Put(library);
+		}
 
-        [HttpDelete("{id}/path-configuration")]
-        [SwaggerOperation(OperationId = "RemoveMediaLibraryPathConfiguration")]
-        public async Task<BaseResponse> RemovePathConfiguration(int id,
-            [FromBody] PathConfigurationRemoveRequestModel model)
-        {
-            if (model.Index < 0)
-            {
-                return BaseResponseBuilder.BadRequestOrOperation;
-            }
+		[HttpPost("bulk-add/{cId:int}")]
+		[SwaggerOperation(OperationId = "AddMediaLibrariesInBulk")]
+		public async Task<BaseResponse> AddInBulk(int cId,
+			[FromBody] MediaLibraryAddInBulkRequestModel model)
+		{
+			model.TrimSelf();
+			if (!model.NameAndPaths.Any())
+			{
+				return BaseResponseBuilder.BuildBadRequest($"{nameof(model.NameAndPaths)} are required");
+			}
 
-            var library = await _service.GetByKey(id);
-            var dto = library.ToDto();
-            if (dto.PathConfigurations != null)
-            {
-                dto.PathConfigurations = dto.PathConfigurations.Where((t, i) => i != model.Index).ToArray();
-            }
+			var libraries = model.NameAndPaths.Select(l =>
+			{
+				var (name, paths) = l;
+				return MediaLibraryDto.CreateDefault(name, cId, paths);
+			}).ToArray();
 
-            return await _service.Patch(id, new MediaLibraryUpdateRequestModel
-            {
-                PathConfigurations = dto.PathConfigurations?.Cast<MediaLibrary.PathConfiguration>().ToArray()
-            });
-        }
+			await _service.AddRange(libraries);
+			return BaseResponseBuilder.Ok;
+		}
 
-        [HttpGet("path-related-libraries")]
-        [SwaggerOperation(OperationId = "GetPathRelatedLibraries")]
-        public async Task<ListResponse<MediaLibraryDto>> GetPathRelativeLibraries(int libraryId, string currentPath,
-            string newPath)
-        {
-            var libraries = await _service.GetAll();
-            var currentUri = currentPath.IsNotEmpty()
-                ? MediaLibraryService.StandardizeForPathComparing(currentPath)
-                : null;
-            var conflictLibraries = libraries.Where(a =>
-            {
-                var allPcs = new List<MediaLibraryDto.PathConfigurationDto>(a.PathConfigurations);
-                if (libraryId == a.Id)
-                {
-                    var removed = a.PathConfigurations?.FirstOrDefault(b =>
-                        MediaLibraryService.StandardizeForPathComparing(b.Path).Equals(currentUri));
-                    if (removed != null)
-                    {
-                        allPcs.Remove(removed);
-                    }
-                }
+		[HttpPost("{mlId:int}/path-configuration/root-paths")]
+		[SwaggerOperation(OperationId = "AddMediaLibraryRootPathsInBulk")]
+		public async Task<BaseResponse> AddPathConfigurationRootPathsInBulk(int mlId,
+			[FromBody] MediaLibraryRootPathsAddInBulkRequestModel model)
+		{
+			model.TrimSelf();
 
-                if (MediaLibraryService.CheckPathContaining(allPcs.Select(b => b.Path).ToArray(), newPath))
-                {
-                    return true;
-                }
+			if (!model.RootPaths.Any())
+			{
+				return BaseResponseBuilder.BuildBadRequest($"{nameof(model.RootPaths)} are required");
+			}
 
-                return false;
-            }).ToArray();
-            return new ListResponse<MediaLibraryDto>(conflictLibraries);
-        }
-    }
+			var library = (await _service.GetDto(mlId, MediaLibraryAdditionalItem.None))!;
+			(library.PathConfigurations ??= []).AddRange(model.RootPaths.Select(PathConfigurationDto.CreateDefault)
+				.ToArray());
+
+			return await _service.Put(library);
+		}
+
+		[HttpDelete("{id}/path-configuration")]
+		[SwaggerOperation(OperationId = "RemoveMediaLibraryPathConfiguration")]
+		public async Task<BaseResponse> RemovePathConfiguration(int id,
+			[FromBody] PathConfigurationRemoveRequestModel model)
+		{
+			if (model.Index < 0)
+			{
+				return BaseResponseBuilder.BadRequestOrOperation;
+			}
+
+			var library = (await _service.GetDto(id, MediaLibraryAdditionalItem.None))!;
+			library.PathConfigurations = library.PathConfigurations?.Where((t, i) => i != model.Index).ToList();
+
+			return await _service.Put(library);
+		}
+
+		[HttpGet("path-related-libraries")]
+		[SwaggerOperation(OperationId = "GetPathRelatedLibraries")]
+		public async Task<ListResponse<MediaLibraryDto>> GetPathRelativeLibraries(int libraryId, string currentPath,
+			string newPath)
+		{
+			var libraries = await _service.GetAllDto(null, MediaLibraryAdditionalItem.None);
+			var stdPath = currentPath.StandardizePath()!;
+			var conflictLibraries = libraries.Where(a =>
+			{
+				var allPcs = a.PathConfigurations;
+				if (allPcs == null)
+				{
+					return false;
+				}
+
+				if (libraryId == a.Id)
+				{
+					var removed = a.PathConfigurations?.FirstOrDefault(b =>
+						b.Path.StandardizePath()?.Equals(stdPath) == true);
+					if (removed != null)
+					{
+						allPcs.Remove(removed);
+					}
+				}
+
+				if (MediaLibraryService.CheckPathContaining(allPcs.Select(b => b.Path).ToArray(), newPath))
+				{
+					return true;
+				}
+
+				return false;
+			}).ToArray();
+			return new ListResponse<MediaLibraryDto>(conflictLibraries);
+		}
+	}
 }
