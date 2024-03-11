@@ -3,6 +3,7 @@ import { Tag } from '@alifd/next';
 import React from 'react';
 import BApi from '@/sdk/BApi';
 import './index.scss';
+import { MediaLibraryAdditionalItem } from '@/sdk/constants';
 
 interface IProps {
   multiple?: boolean;
@@ -27,14 +28,14 @@ export default ({
   const [value, setValue] = useState<number[]>(propsValue || defaultValue || []);
 
   useEffect(() => {
-      BApi.mediaLibrary.getAllMediaLibraries().then(r => {
+      BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category }).then(r => {
         const cl = (r.data || []).reduce<{
           [cid: number]: {
             name: string;
             id: number;
           }[];
         }>((s, t) => {
-          const arr = (s[t.categoryName!] ??= []);
+          const arr = (s[t.category!.name!] ??= []);
           arr.push({
             name: t.name,
             id: t.id!,

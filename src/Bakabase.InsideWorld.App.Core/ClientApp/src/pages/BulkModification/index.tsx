@@ -3,7 +3,12 @@ import SimpleLabel from '@/components/SimpleLabel';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import { useTranslation } from 'react-i18next';
-import { BulkModificationProperty, BulkModificationStatus, TagAdditionalItem } from '@/sdk/constants';
+import {
+  BulkModificationProperty,
+  BulkModificationStatus,
+  MediaLibraryAdditionalItem,
+  TagAdditionalItem,
+} from '@/sdk/constants';
 import { useEffect, useState } from 'react';
 import BApi from '@/sdk/BApi';
 import { useTour } from '@reactour/tour';
@@ -56,7 +61,7 @@ export default () => {
       // @ts-ignore
       const tags = (await BApi.tag.getAllTags({ additionalItems: TagAdditionalItem.GroupName | TagAdditionalItem.PreferredAlias })).data ?? [];
       const originals = (await BApi.resource.getAllOriginals()).data ?? [];
-      const mediaLibraries = (await BApi.mediaLibrary.getAllMediaLibraries()).data ?? [];
+      const mediaLibraries = (await BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category })).data ?? [];
       setDisplayDataSources({
         [BulkModificationProperty.Publisher]: publishers.reduce<Record<any, any>>((s, t) => {
           s[t.id!] = t.name!;
@@ -72,7 +77,7 @@ export default () => {
           return s;
         }, {}),
         [BulkModificationProperty.MediaLibrary]: mediaLibraries.reduce<Record<any, any>>((s, t) => {
-          s[t.id!] = `[${t.categoryName}] ${t.name!}`;
+          s[t.id!] = `[${t.category?.name}] ${t.name!}`;
           return s;
         }, {}),
       });

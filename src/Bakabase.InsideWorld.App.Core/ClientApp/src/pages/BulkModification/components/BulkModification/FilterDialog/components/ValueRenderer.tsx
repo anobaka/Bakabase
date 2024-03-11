@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Tag } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import { BulkModificationProperty, ResourceLanguage, TagAdditionalItem } from '@/sdk/constants';
+import {
+  BulkModificationProperty,
+  MediaLibraryAdditionalItem,
+  ResourceLanguage,
+  TagAdditionalItem,
+} from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import { Tag as TagDto } from '@/core/models/Tag';
 
@@ -54,9 +59,9 @@ export default ({
         break;
       }
       case BulkModificationProperty.MediaLibrary: {
-        BApi.mediaLibrary.getAllMediaLibraries().then(r => {
+        BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category }).then(r => {
           const newDataSource = r.data?.filter(c => newDs.some(d => d.value == c.id!.toString())).map(item => ({
-            label: `${item.categoryName}:${item.name}`,
+            label: `${item.category?.name}:${item.name}`,
             value: item.id!,
           }));
           setDataSource(newDataSource || []);

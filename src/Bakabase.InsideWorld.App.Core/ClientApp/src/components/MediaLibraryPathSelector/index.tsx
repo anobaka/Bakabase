@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { createPortalOfComponent, standardizePath } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
+import { MediaLibraryAdditionalItem } from '@/sdk/constants';
 
 interface Props {
   onSelect: (path: string) => (Promise<any> | any);
@@ -33,14 +34,14 @@ const MediaLibraryPathSelector = React.forwardRef((props: Props, ref) => {
   }));
 
   useEffect(() => {
-    BApi.mediaLibrary.getAllMediaLibraries()
+    BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category })
       .then((a) => {
         const temp = {};
         const categoryNames = {};
         for (const ml of (a.data || [])) {
           if (!(ml.categoryId in temp)) {
             temp[ml.categoryId] = [];
-            categoryNames[ml.categoryId] = ml.categoryName;
+            categoryNames[ml.categoryId] = ml.category?.name;
           }
           if (ml.pathConfigurations != undefined && ml.pathConfigurations?.length > 0) {
             temp[ml.categoryId].push(ml);
