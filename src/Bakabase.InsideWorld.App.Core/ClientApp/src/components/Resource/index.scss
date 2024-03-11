@@ -146,36 +146,21 @@
     }
 
     .limited-content {
-      position: relative;
-      .limited {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        word-break: break-all;
-        display: -webkit-box;
-        -webkit-line-clamp: 2; /* number of lines to show */
-        line-clamp: 2;
-        -webkit-box-orient: vertical;
-      }
-      .full {
-        position: absolute;
-        left: 0;
-        top: 0;
-        background: var(--theme-body-background);
-        display: none;
-        width: 100%;
-        word-break: break-all;
-        z-index: 1;
-        //border-bottom: 1px solid #ccc;
-        box-sizing: border-box;
-      }
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-all;
+      display: -webkit-box;
+      -webkit-line-clamp: 2; /* number of lines to show */
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
       &:hover {
-        .limited {
-          //display: none;
-          visibility: hidden;
-        }
-        .full {
-          display: block;
-        }
+        overflow: unset;
+        text-overflow: unset;
+        -webkit-line-clamp: unset; /* number of lines to show */
+        line-clamp: unset;
+        -webkit-box-orient: unset;
+
+        word-break: break-all;
       }
     }
 
@@ -185,13 +170,6 @@
     }
 
     .tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 2px;
-      //font-size: 11px;
-      //.tag {
-      //  margin-right: 5px;
-      //}
     }
   }
 }

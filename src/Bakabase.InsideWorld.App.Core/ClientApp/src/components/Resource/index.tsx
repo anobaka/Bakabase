@@ -87,6 +87,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const disableCacheRef = useRef(disableCache);
 
+  const [displayFullName, setDisplayFullName] = useState<boolean>(false);
+
   useEffect(() => {
     disableCacheRef.current = disableCache;
   }, [disableCache]);
@@ -670,33 +672,23 @@ const Resource = React.forwardRef((props: Props, ref) => {
           {/* >点击搜索 Fate Zero */}
           {/* </Balloon.Tooltip> */}
           {/* )[CN] */}
-          {
-            displayModes.map((c) => (
-              <div className={c} key={c}>
-                {resource.displayName}
-              </div>
-            ))
-          }
+          {resource.displayName}
         </div>
         <div className="tags limited-content">
-          {displayModes.map((c) => (
-            <div className={c} key={c}>
-              {(resource.tags || []).map((t) => {
-                const tag = new TagDto({ ...t });
-                return (
-                  <Button
-                    key={t.id}
-                    // className={'tag'}
-                    text
-                    style={{ color: t.color }}
-                    size={'small'}
-                    onClick={() => onTagSearch(t.id, true)}
-                  >#{tag.displayName}&nbsp;
-                  </Button>
-                );
-              })}
-            </div>
-          ))}
+          {(resource.tags || []).map((t) => {
+            const tag = new TagDto({ ...t });
+            return (
+              <Button
+                key={t.id}
+                // className={'tag'}
+                text
+                style={{ color: t.color }}
+                size={'small'}
+                onClick={() => onTagSearch(t.id, true)}
+              >#{tag.displayName}&nbsp;
+              </Button>
+            );
+          })}
         </div>
       </div>
     </div>

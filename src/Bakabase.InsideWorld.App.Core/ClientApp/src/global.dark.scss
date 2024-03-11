@@ -2,6 +2,7 @@
 
   --color-brand1-1: rgb(35, 134, 54);
 
+  --theme-color-primary: rgb(35, 134, 54);
   --theme-color-success: rgb(35, 134, 54);
   --theme-color-warning: #cd7600;
 
@@ -14,6 +15,17 @@
   --theme-table-row-background: transparent;
   --theme-table-header-background: rgb(22, 27, 34);
   --theme-table-background-hover: rgb(22, 27, 34);
+
+  --tab-wrapped-bg-color: var(--theme-block-background);
+  --tab-wrapped-border-line-color: var(--theme-border-color);
+  --tab-wrapped-text-color: var(--theme-text-subtle);
+  --tab-wrapped-bg-color-hover: var(--theme-block-background-accent);
+  --tab-wrapped-border-line-color-hover: var(--theme-border-color-accent);
+  --tab-wrapped-text-color-hover: var(--theme-text);
+  --tab-wrapped-bg-color-selected: var(--theme-block-background-accent);
+  --tab-wrapped-text-color-selected: var(--theme-color-primary);
+  --tab-wrapped-ink-bar-color: var(--theme-color-primary);
+
 
   --theme-button-normal-background: rgb(33, 38, 45);
   --theme-button-normal-background-hover: rgb(48, 54, 61);
