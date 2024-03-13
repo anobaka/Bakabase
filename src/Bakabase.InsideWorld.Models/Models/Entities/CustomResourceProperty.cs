@@ -8,6 +8,7 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
+    [Obsolete($"Use {nameof(CustomProperty)} instead")]
     public record CustomResourceProperty
     {
         public int Id { get; set; }

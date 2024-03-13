@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Models.Extensions
 {
@@ -182,5 +184,37 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 }
                 : null;
         }
-    }
+
+        public static CustomProperty? ToEntity<T>(this CustomPropertyDto<T>? dto)
+        {
+	        if (dto == null)
+	        {
+		        return null;
+	        }
+
+	        return new CustomProperty
+	        {
+		        CreatedAt = dto.CreatedAt,
+		        DisplayName = dto.DisplayName,
+		        Id = dto.Id,
+		        Key = dto.Key,
+		        Type = dto.Type,
+		        Configuration = dto.Configuration == null ? null : JsonConvert.SerializeObject(dto.Configuration)
+	        };
+        }
+
+        public static CustomPropertyValueDto? ToDto(this CustomPropertyValue? entity)
+        {
+	        if (entity == null)
+	        {
+		        return null;
+	        }
+
+	        return new CustomPropertyValueDto
+	        {
+		        Id = entity.Id,
+		        PropertyId = entity.PropertyId
+	        };
+        }
+	}
 }

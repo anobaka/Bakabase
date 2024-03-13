@@ -81,6 +81,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly TempFileManager _tempFileManager;
         private readonly FfMpegService _ffMpegService;
         private readonly InsideWorldLocalizer _localizer;
+        private readonly CustomPropertyService _customPropertyService;
 
         public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
             PublisherService publisherService, AliasService aliasService,
@@ -93,7 +94,7 @@ namespace Bakabase.InsideWorld.Business.Services
             BackgroundTaskHelper backgroundTaskHelper, FavoritesResourceMappingService favoritesResourceMappingService,
             TagGroupService tagGroupService, IBOptionsManager<ResourceOptions> optionsManager,
             IBOptions<ThirdPartyOptions> thirdPartyOptions, TempFileManager tempFileManager,
-            FfMpegService ffMpegService, InsideWorldLocalizer localizer)
+            FfMpegService ffMpegService, InsideWorldLocalizer localizer, CustomPropertyService customPropertyService)
         {
             _specialTextService = specialTextService;
             _publisherService = publisherService;
@@ -118,6 +119,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _tempFileManager = tempFileManager;
             _ffMpegService = ffMpegService;
             _localizer = localizer;
+            _customPropertyService = customPropertyService;
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>(serviceProvider);
         }
 
@@ -473,6 +475,15 @@ namespace Bakabase.InsideWorld.Business.Services
                 var exp1 = exp;
                 exp = a => exp1(a) && resourceIds.Contains(a.Id);
             }
+
+            var customPropertyV2SearchModels = model.CustomPropertiesV2?.CustomPropertyValueSearchModels;
+
+            if (customPropertyV2SearchModels?.Any() == true)
+            {
+	            var allPropertyIds = customPropertyV2SearchModels.Select(p => p.PropertyId).ToHashSet();
+
+
+			}
 
             var orders = new List<(Func<Resource, object> SelectKey, bool Asc, IComparer<object>? Comparer)>();
             if (model.Orders != null)
