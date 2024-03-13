@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Extensions;
 
@@ -91,5 +92,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         public DateTime FileModifyDt { get; set; }
         public Dictionary<string, List<CustomResourceProperty>>? CustomProperties { get; set; }
         public ResourceDto? Parent { get; set; }
+
+        public List<CustomPropertyValueDto>? CustomPropertiesV2 { get; set; }
     }
 }

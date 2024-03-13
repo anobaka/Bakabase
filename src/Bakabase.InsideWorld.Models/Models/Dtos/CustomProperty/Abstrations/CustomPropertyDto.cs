@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations
 {
-    public abstract record CustomPropertyDto
+    public record CustomPropertyDto
     {
         public int Id { get; set; }
         public string Key { get; set; } = null!;
@@ -16,8 +16,8 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations
         public DateTime CreatedAt { get; set; }
     }
 
-    public abstract record CustomPropertyDto<T> : CustomPropertyDto
+    public record CustomPropertyDto<T> : CustomPropertyDto
     {
-        public T? Configuration { get; set; }
+        public T? Options { get; set; }
     }
 }

@@ -18,8 +18,6 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
         CustomProperties = 1 << 5,
         Alias = 1 << 6,
 
-
-
         All = Publishers | Volume | Serial | Originals | Tags | CustomProperties | Alias
     }
 }

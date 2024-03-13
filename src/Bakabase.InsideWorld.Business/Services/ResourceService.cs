@@ -44,6 +44,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
 using Bootstrap.Models.Constants;
 using CliWrap;
 using Microsoft.AspNetCore.Http;
@@ -82,6 +83,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly FfMpegService _ffMpegService;
         private readonly InsideWorldLocalizer _localizer;
         private readonly CustomPropertyService _customPropertyService;
+        private readonly CustomPropertyValueService _customPropertyValueService;
 
         public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
             PublisherService publisherService, AliasService aliasService,
@@ -94,7 +96,7 @@ namespace Bakabase.InsideWorld.Business.Services
             BackgroundTaskHelper backgroundTaskHelper, FavoritesResourceMappingService favoritesResourceMappingService,
             TagGroupService tagGroupService, IBOptionsManager<ResourceOptions> optionsManager,
             IBOptions<ThirdPartyOptions> thirdPartyOptions, TempFileManager tempFileManager,
-            FfMpegService ffMpegService, InsideWorldLocalizer localizer, CustomPropertyService customPropertyService)
+            FfMpegService ffMpegService, InsideWorldLocalizer localizer, CustomPropertyService customPropertyService, CustomPropertyValueService customPropertyValueService)
         {
             _specialTextService = specialTextService;
             _publisherService = publisherService;
@@ -120,6 +122,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _ffMpegService = ffMpegService;
             _localizer = localizer;
             _customPropertyService = customPropertyService;
+            _customPropertyValueService = customPropertyValueService;
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>(serviceProvider);
         }
 
@@ -291,238 +294,238 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<SearchResponse<ResourceDto>> Search(ResourceSearchDto model, bool returnCopy)
         {
-            Func<Resource, bool> exp = a =>
-                (!model.ReleaseStartDt.HasValue || model.ReleaseStartDt <= a.ReleaseDt) &&
-                (!model.ReleaseEndDt.HasValue || model.ReleaseEndDt >= a.ReleaseDt) &&
+	        Func<Resource, bool> exp = a =>
+		        (!model.ReleaseStartDt.HasValue || model.ReleaseStartDt <= a.ReleaseDt) &&
+		        (!model.ReleaseEndDt.HasValue || model.ReleaseEndDt >= a.ReleaseDt) &&
 
-                (!model.AddStartDt.HasValue || model.AddStartDt <= a.CreateDt) &&
-                (!model.AddEndDt.HasValue || model.AddEndDt >= a.CreateDt) &&
+		        (!model.AddStartDt.HasValue || model.AddStartDt <= a.CreateDt) &&
+		        (!model.AddEndDt.HasValue || model.AddEndDt >= a.CreateDt) &&
 
-                (!model.FileCreateStartDt.HasValue || model.FileCreateStartDt <= a.FileCreateDt) &&
-                (!model.FileCreateEndDt.HasValue || model.FileCreateEndDt >= a.FileCreateDt) &&
+		        (!model.FileCreateStartDt.HasValue || model.FileCreateStartDt <= a.FileCreateDt) &&
+		        (!model.FileCreateEndDt.HasValue || model.FileCreateEndDt >= a.FileCreateDt) &&
 
-                (!model.FileModifyStartDt.HasValue || model.FileModifyStartDt <= a.FileModifyDt) &&
-                (!model.FileModifyEndDt.HasValue || model.FileModifyEndDt >= a.FileModifyDt) &&
+		        (!model.FileModifyStartDt.HasValue || model.FileModifyStartDt <= a.FileModifyDt) &&
+		        (!model.FileModifyEndDt.HasValue || model.FileModifyEndDt >= a.FileModifyDt) &&
 
-                (!model.MinRate.HasValue || model.MinRate <= a.Rate) &&
+		        (!model.MinRate.HasValue || model.MinRate <= a.Rate) &&
 
-                (!model.ParentId.HasValue || model.ParentId.Value == a.ParentId) &&
+		        (!model.ParentId.HasValue || model.ParentId.Value == a.ParentId) &&
 
-                (!model.HideChildren || !a.ParentId.HasValue);
+		        (!model.HideChildren || !a.ParentId.HasValue);
 
-            if (model.FavoritesIds?.Any() == true)
-            {
-                var resourceIds =
-                    (await _favoritesResourceMappingService.GetAll(t => model.FavoritesIds.Contains(t.FavoritesId)))
-                    .Select(t => t.ResourceId).Distinct().ToArray();
-                var exp1 = exp;
-                exp = a => exp1(a) && resourceIds.Contains(a.Id);
-            }
+	        if (model.FavoritesIds?.Any() == true)
+	        {
+		        var resourceIds =
+			        (await _favoritesResourceMappingService.GetAll(t => model.FavoritesIds.Contains(t.FavoritesId)))
+			        .Select(t => t.ResourceId).Distinct().ToArray();
+		        var exp1 = exp;
+		        exp = a => exp1(a) && resourceIds.Contains(a.Id);
+	        }
 
-            if (model.Languages?.Any() == true)
-            {
-                var exp1 = exp;
-                exp = a => exp1(a) && model.Languages.Contains(a.Language);
-            }
+	        if (model.Languages?.Any() == true)
+	        {
+		        var exp1 = exp;
+		        exp = a => exp1(a) && model.Languages.Contains(a.Language);
+	        }
 
-            if (model.MediaLibraryIds?.Any() == true)
-            {
-                var exp1 = exp;
-                exp = a => exp1(a) && model.MediaLibraryIds.Contains(a.MediaLibraryId);
-            }
+	        if (model.MediaLibraryIds?.Any() == true)
+	        {
+		        var exp1 = exp;
+		        exp = a => exp1(a) && model.MediaLibraryIds.Contains(a.MediaLibraryId);
+	        }
 
-            var everyThingSegments = (model.Everything ?? string.Empty)
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
-            var regexEverythingSegments = everyThingSegments.Where(t => t.StartsWith("reg:")).ToHashSet();
-            var plainEverythingSegments = everyThingSegments.Except(regexEverythingSegments).ToList();
-            var regexs = regexEverythingSegments.Select(t => Regex.Replace(t, @"^reg\:", string.Empty)).ToHashSet();
+	        var everyThingSegments = (model.Everything ?? string.Empty)
+		        .Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+	        var regexEverythingSegments = everyThingSegments.Where(t => t.StartsWith("reg:")).ToHashSet();
+	        var plainEverythingSegments = everyThingSegments.Except(regexEverythingSegments).ToList();
+	        var regexs = regexEverythingSegments.Select(t => Regex.Replace(t, @"^reg\:", string.Empty)).ToHashSet();
 
-            var names = new[] {model.Name, model.Publisher, model.Original, model.Series}
-                .Concat(plainEverythingSegments)
-                .Where(a => a.IsNotEmpty())
-                .ToArray();
+	        var names = new[] {model.Name, model.Publisher, model.Original, model.Series}
+		        .Concat(plainEverythingSegments)
+		        .Where(a => a.IsNotEmpty())
+		        .ToArray();
 
-            if (names.Any() || regexs.Any())
-            {
-                var relatedAliases = await _aliasService.GetByNames(names, true, true);
-                var aliasesMap =
-                    names.ToDictionary(a => a, a => relatedAliases[a].SelectMany(b => b.AllNames).ToHashSet());
-                if (model.Name.IsNotEmpty())
-                {
-                    var exp1 = exp;
-                    var list = aliasesMap[model.Name];
-                    exp = a => exp1(a) && list.Contains(a.Name);
-                }
+	        if (names.Any() || regexs.Any())
+	        {
+		        var relatedAliases = await _aliasService.GetByNames(names, true, true);
+		        var aliasesMap =
+			        names.ToDictionary(a => a, a => relatedAliases[a].SelectMany(b => b.AllNames).ToHashSet());
+		        if (model.Name.IsNotEmpty())
+		        {
+			        var exp1 = exp;
+			        var list = aliasesMap[model.Name];
+			        exp = a => exp1(a) && list.Contains(a.Name);
+		        }
 
-                if (model.Publisher.IsNotEmpty())
-                {
-                    var publisherIds = await _publisherService.GetAllIdsByNames(aliasesMap[model.Publisher], true);
-                    var resourceIds = (await _publisherMappingService.GetAll(a => publisherIds.Contains(a.PublisherId)))
-                        .Select(a => a.ResourceId).Distinct().ToList();
-                    var exp1 = exp;
-                    exp = a => exp1(a) && resourceIds.Contains(a.Id);
-                }
+		        if (model.Publisher.IsNotEmpty())
+		        {
+			        var publisherIds = await _publisherService.GetAllIdsByNames(aliasesMap[model.Publisher], true);
+			        var resourceIds = (await _publisherMappingService.GetAll(a => publisherIds.Contains(a.PublisherId)))
+				        .Select(a => a.ResourceId).Distinct().ToList();
+			        var exp1 = exp;
+			        exp = a => exp1(a) && resourceIds.Contains(a.Id);
+		        }
 
-                if (model.Original.IsNotEmpty())
-                {
-                    var originalIds = await _originalService.GetAllIdsByNames(aliasesMap[model.Original], true);
-                    var resourceIds = (await _originalMappingService.GetAll(a => originalIds.Contains(a.OriginalId)))
-                        .Select(a => a.ResourceId).Distinct().ToList();
-                    var exp1 = exp;
-                    exp = a => exp1(a) && resourceIds.Contains(a.Id);
-                }
+		        if (model.Original.IsNotEmpty())
+		        {
+			        var originalIds = await _originalService.GetAllIdsByNames(aliasesMap[model.Original], true);
+			        var resourceIds = (await _originalMappingService.GetAll(a => originalIds.Contains(a.OriginalId)))
+				        .Select(a => a.ResourceId).Distinct().ToList();
+			        var exp1 = exp;
+			        exp = a => exp1(a) && resourceIds.Contains(a.Id);
+		        }
 
-                if (model.Series.IsNotEmpty())
-                {
-                    var seriesIds = await _serialService.GetAllIdsByNames(aliasesMap[model.Series], true);
-                    var resourceIds = (await _volumeService.GetAll(a => seriesIds.Contains(a.SerialId)))
-                        .Select(a => a.ResourceId).ToHashSet();
+		        if (model.Series.IsNotEmpty())
+		        {
+			        var seriesIds = await _serialService.GetAllIdsByNames(aliasesMap[model.Series], true);
+			        var resourceIds = (await _volumeService.GetAll(a => seriesIds.Contains(a.SerialId)))
+				        .Select(a => a.ResourceId).ToHashSet();
 
-                    var exp1 = exp;
-                    exp = a => exp1(a) && resourceIds.Contains(a.Id);
-                }
+			        var exp1 = exp;
+			        exp = a => exp1(a) && resourceIds.Contains(a.Id);
+		        }
 
-                if (everyThingSegments.Any())
-                {
-                    var aliasNames = plainEverythingSegments.SelectMany(t => aliasesMap[t]).ToHashSet();
-                    var publisherIds = await _publisherService.GetAllIdsByNames(aliasNames, true);
-                    var originalIds = await _originalService.GetAllIdsByNames(aliasNames, true);
+		        if (everyThingSegments.Any())
+		        {
+			        var aliasNames = plainEverythingSegments.SelectMany(t => aliasesMap[t]).ToHashSet();
+			        var publisherIds = await _publisherService.GetAllIdsByNames(aliasNames, true);
+			        var originalIds = await _originalService.GetAllIdsByNames(aliasNames, true);
 
-                    Func<Resource, bool> rawNameExp = null;
-                    foreach (var plainEverything in plainEverythingSegments)
-                    {
-                        if (rawNameExp == null)
-                        {
-                            rawNameExp = a => a.RawName.Contains(plainEverything);
-                        }
-                        else
-                        {
-                            var keywordExp = rawNameExp;
-                            rawNameExp = a =>
-                                keywordExp(a) && a.RawName.Contains(plainEverything);
-                        }
-                    }
+			        Func<Resource, bool> rawNameExp = null;
+			        foreach (var plainEverything in plainEverythingSegments)
+			        {
+				        if (rawNameExp == null)
+				        {
+					        rawNameExp = a => a.RawName.Contains(plainEverything);
+				        }
+				        else
+				        {
+					        var keywordExp = rawNameExp;
+					        rawNameExp = a =>
+						        keywordExp(a) && a.RawName.Contains(plainEverything);
+				        }
+			        }
 
-                    if (regexs.Any())
-                    {
-                        var regexedPublisherIds = await _publisherService.GetAllIdsByRegexs(regexs);
-                        publisherIds = publisherIds.Intersect(regexedPublisherIds).ToList();
+			        if (regexs.Any())
+			        {
+				        var regexedPublisherIds = await _publisherService.GetAllIdsByRegexs(regexs);
+				        publisherIds = publisherIds.Intersect(regexedPublisherIds).ToList();
 
-                        var regexedOriginalIds = await _originalService.GetAllIdsByRegexs(regexs);
-                        originalIds = originalIds.Intersect(regexedOriginalIds).Distinct().ToList();
+				        var regexedOriginalIds = await _originalService.GetAllIdsByRegexs(regexs);
+				        originalIds = originalIds.Intersect(regexedOriginalIds).Distinct().ToList();
 
-                        // todo: Bad design: this will be broken if orm is changed to local db
-                        foreach (var r in regexs)
-                        {
-                            if (rawNameExp == null)
-                            {
-                                rawNameExp = a => Regex.IsMatch(a.RawName, r);
-                            }
-                            else
-                            {
-                                var rawNameExp1 = rawNameExp;
-                                rawNameExp = a => rawNameExp1(a) && Regex.IsMatch(a.RawName, r);
-                            }
-                        }
-                    }
+				        // todo: Bad design: this will be broken if orm is changed to local db
+				        foreach (var r in regexs)
+				        {
+					        if (rawNameExp == null)
+					        {
+						        rawNameExp = a => Regex.IsMatch(a.RawName, r);
+					        }
+					        else
+					        {
+						        var rawNameExp1 = rawNameExp;
+						        rawNameExp = a => rawNameExp1(a) && Regex.IsMatch(a.RawName, r);
+					        }
+				        }
+			        }
 
-                    var publisherRelatedResourceIds =
-                        (await _publisherMappingService.GetAll(a => publisherIds.Contains(a.PublisherId)))
-                        .Select(a => a.ResourceId).Distinct().ToList();
-                    var originalRelatedResourceIds =
-                        (await _originalMappingService.GetAll(a => originalIds.Contains(a.OriginalId)))
-                        .Select(a => a.ResourceId).Distinct().ToList();
-                    var customPropertyRelatedResourceIds =
-                        await _customResourcePropertyService.SearchResourceIdsByEverything(model.Everything);
+			        var publisherRelatedResourceIds =
+				        (await _publisherMappingService.GetAll(a => publisherIds.Contains(a.PublisherId)))
+				        .Select(a => a.ResourceId).Distinct().ToList();
+			        var originalRelatedResourceIds =
+				        (await _originalMappingService.GetAll(a => originalIds.Contains(a.OriginalId)))
+				        .Select(a => a.ResourceId).Distinct().ToList();
+			        var customPropertyRelatedResourceIds =
+				        await _customResourcePropertyService.SearchResourceIdsByEverything(model.Everything);
 
-                    var resourceIds = publisherRelatedResourceIds.Concat(originalRelatedResourceIds)
-                        .Concat(customPropertyRelatedResourceIds).ToHashSet();
-                    var exp1 = exp;
-
-
-                    if (rawNameExp == null)
-                    {
-                        exp = a => exp1(a) && (resourceIds.Contains(a.Id) || aliasNames.Contains(a.Name));
-                    }
-                    else
-                    {
-                        exp = a => exp1(a) && (resourceIds.Contains(a.Id) || aliasNames.Contains(a.Name) ||
-                                               rawNameExp(a));
-                    }
-                }
-            }
-
-            if (model.TagIds?.Any() == true)
-            {
-                var resourceIds = (await _resourceTagMappingService.GetAll(a => model.TagIds.Contains(a.TagId)))
-                    .Select(a => a.ResourceId).Distinct().ToList();
-                var exp1 = exp;
-                exp = a => exp1(a) && resourceIds.Contains(a.Id);
-            }
-
-            if (model.ExcludedTagIds?.Any() == true)
-            {
-                var invalidResourceIds =
-                    (await _resourceTagMappingService.GetAll(a => model.ExcludedTagIds.Contains(a.TagId)))
-                    .Select(a => a.ResourceId).Distinct().ToList();
-                var exp1 = exp;
-                exp = a => exp1(a) && !invalidResourceIds.Contains(a.Id);
-            }
-
-            if (model.CustomProperties?.Any() == true)
-            {
-                var resourceIds = await _customResourcePropertyService.SearchResourceIds(model.CustomProperties);
-                var exp1 = exp;
-                exp = a => exp1(a) && resourceIds.Contains(a.Id);
-            }
-
-            var customPropertyV2SearchModels = model.CustomPropertiesV2?.CustomPropertyValueSearchModels;
-
-            if (customPropertyV2SearchModels?.Any() == true)
-            {
-	            var allPropertyIds = customPropertyV2SearchModels.Select(p => p.PropertyId).ToHashSet();
+			        var resourceIds = publisherRelatedResourceIds.Concat(originalRelatedResourceIds)
+				        .Concat(customPropertyRelatedResourceIds).ToHashSet();
+			        var exp1 = exp;
 
 
-			}
+			        if (rawNameExp == null)
+			        {
+				        exp = a => exp1(a) && (resourceIds.Contains(a.Id) || aliasNames.Contains(a.Name));
+			        }
+			        else
+			        {
+				        exp = a => exp1(a) && (resourceIds.Contains(a.Id) || aliasNames.Contains(a.Name) ||
+				                               rawNameExp(a));
+			        }
+		        }
+	        }
 
-            var orders = new List<(Func<Resource, object> SelectKey, bool Asc, IComparer<object>? Comparer)>();
-            if (model.Orders != null)
-            {
-                orders.AddRange(from om in model.Orders
-                    let o = om.Order
-                    let a = om.Asc
-                    let s = ((Func<Resource, object> SelectKey, IComparer<object>? Comparer)) (o switch
-                    {
-                        ResourceSearchOrder.AddDt => (x => x.CreateDt, null),
-                        ResourceSearchOrder.ReleaseDt => (x => x.ReleaseDt, null),
-                        ResourceSearchOrder.Rate => (x => x.Rate, null),
-                        ResourceSearchOrder.Category => (x => x.CategoryId, null),
-                        ResourceSearchOrder.MediaLibrary => (x => x.MediaLibraryId, null),
-                        ResourceSearchOrder.Name => (x => x.Name,
-                            Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
-                        ResourceSearchOrder.FileCreateDt => (x => x.FileCreateDt, null),
-                        ResourceSearchOrder.FileModifyDt => (x => x.FileModifyDt, null),
-                        ResourceSearchOrder.Filename => (x => x.RawName,
-                            Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
-                        _ => throw new ArgumentOutOfRangeException()
-                    })
-                    select (s.SelectKey, a, s.Comparer));
-            }
+	        if (model.TagIds?.Any() == true)
+	        {
+		        var resourceIds = (await _resourceTagMappingService.GetAll(a => model.TagIds.Contains(a.TagId)))
+			        .Select(a => a.ResourceId).Distinct().ToList();
+		        var exp1 = exp;
+		        exp = a => exp1(a) && resourceIds.Contains(a.Id);
+	        }
 
-            if (!orders.Any())
-            {
-                orders.Add((t => t.Id, false, null));
-            }
+	        if (model.ExcludedTagIds?.Any() == true)
+	        {
+		        var invalidResourceIds =
+			        (await _resourceTagMappingService.GetAll(a => model.ExcludedTagIds.Contains(a.TagId)))
+			        .Select(a => a.ResourceId).Distinct().ToList();
+		        var exp1 = exp;
+		        exp = a => exp1(a) && !invalidResourceIds.Contains(a.Id);
+	        }
 
-            var resources = await _orm.Search(exp, model.PageIndex, model.PageSize, orders.ToArray(), returnCopy);
-            var dtoList = await ToDto(resources.Data.ToArray(), ResourceAdditionalItem.All);
+	        if (model.CustomProperties?.Any() == true)
+	        {
+		        var resourceIds = await _customResourcePropertyService.SearchResourceIds(model.CustomProperties);
+		        var exp1 = exp;
+		        exp = a => exp1(a) && resourceIds.Contains(a.Id);
+	        }
 
-            if (model.Save)
-            {
-                await _optionsManager.SaveAsync(a => a.LastSearch = model.ToOptions());
-            }
+	        var customPropertyV2SearchModels = model.CustomPropertiesV2?.CustomPropertyValueSearchModels;
 
-            return model.BuildResponse(dtoList, resources.TotalCount);
+	        if (customPropertyV2SearchModels?.Any() == true)
+	        {
+		        var resourceIds = await _customPropertyValueService.SearchResourceIds(model.CustomPropertiesV2);
+		        var exp1 = exp;
+		        exp = a => exp1(a) && resourceIds.Contains(a.Id);
+	        }
+
+	        var orders = new List<(Func<Resource, object> SelectKey, bool Asc, IComparer<object>? Comparer)>();
+	        if (model.Orders != null)
+	        {
+		        orders.AddRange(from om in model.Orders
+			        let o = om.Order
+			        let a = om.Asc
+			        let s = ((Func<Resource, object> SelectKey, IComparer<object>? Comparer)) (o switch
+			        {
+				        ResourceSearchOrder.AddDt => (x => x.CreateDt, null),
+				        ResourceSearchOrder.ReleaseDt => (x => x.ReleaseDt, null),
+				        ResourceSearchOrder.Rate => (x => x.Rate, null),
+				        ResourceSearchOrder.Category => (x => x.CategoryId, null),
+				        ResourceSearchOrder.MediaLibrary => (x => x.MediaLibraryId, null),
+				        ResourceSearchOrder.Name => (x => x.Name,
+					        Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
+				        ResourceSearchOrder.FileCreateDt => (x => x.FileCreateDt, null),
+				        ResourceSearchOrder.FileModifyDt => (x => x.FileModifyDt, null),
+				        ResourceSearchOrder.Filename => (x => x.RawName,
+					        Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
+				        _ => throw new ArgumentOutOfRangeException()
+			        })
+			        select (s.SelectKey, a, s.Comparer));
+	        }
+
+	        if (!orders.Any())
+	        {
+		        orders.Add((t => t.Id, false, null));
+	        }
+
+	        var resources = await _orm.Search(exp, model.PageIndex, model.PageSize, orders.ToArray(), returnCopy);
+	        var dtoList = await ToDto(resources.Data.ToArray(), ResourceAdditionalItem.All);
+
+	        if (model.Save)
+	        {
+		        await _optionsManager.SaveAsync(a => a.LastSearch = model.ToOptions());
+	        }
+
+	        return model.BuildResponse(dtoList, resources.TotalCount);
         }
 
         public async Task<List<Resource>> GetAll(Expression<Func<Resource, bool>> selector = null,
@@ -564,6 +567,7 @@ namespace Bakabase.InsideWorld.Business.Services
             Dictionary<int, List<OriginalDto>> originalPool = null;
             Dictionary<int, List<TagDto>> tagPool = null;
             Dictionary<int, List<CustomResourceProperty>> customPropertyPool = null;
+            Dictionary<int, List<CustomPropertyValueDto>>? customPropertiesPoolV2 = null;
 
             foreach (var i in SpecificEnumUtils<ResourceAdditionalItem>.Values)
             {
@@ -599,10 +603,19 @@ namespace Bakabase.InsideWorld.Business.Services
                             tagPool = await _tagService.GetByResourceIds(resourceIds);
                             break;
                         case ResourceAdditionalItem.CustomProperties:
-                            customPropertyPool =
-                                (await _customResourcePropertyService.GetAll(t => resourceIds.Contains(t.ResourceId)))
-                                .GroupBy(t => t.ResourceId).ToDictionary(t => t.Key, t => t.ToList());
-                            break;
+                        {
+	                        customPropertyPool =
+		                        (await _customResourcePropertyService.GetAll(t => resourceIds.Contains(t.ResourceId)))
+		                        .GroupBy(t => t.ResourceId).ToDictionary(t => t.Key, t => t.ToList());
+
+	                        var customPropertiesV2 = await _customPropertyValueService.GetDtoList(
+		                        x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.Property,
+		                        true);
+	                        customPropertiesPoolV2 = customPropertiesV2.GroupBy(x => x.ResourceId)
+		                        .ToDictionary(x => x.Key, x => x.ToList());
+
+							break;
+                        }
                         case ResourceAdditionalItem.Alias:
                             break;
                         case ResourceAdditionalItem.None:
@@ -649,6 +662,11 @@ namespace Bakabase.InsideWorld.Business.Services
                 if (customPropertyPool?.TryGetValue(dto.Id, out var cps) == true)
                 {
                     dto.CustomProperties = cps.GroupBy(t => t.Key).ToDictionary(t => t.Key, t => t.ToList());
+                }
+
+                if (customPropertiesPoolV2?.TryGetValue(dto.Id, out var cps2) == true)
+                {
+	                dto.CustomPropertiesV2 = cps2;
                 }
 
                 dto.HasChildren = parentIds.Contains(dto.Id);

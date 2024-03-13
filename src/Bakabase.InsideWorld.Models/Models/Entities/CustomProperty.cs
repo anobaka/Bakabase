@@ -14,6 +14,6 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
 		public string DisplayName { get; set; } = null!;
 		public CustomPropertyType Type { get; set; }
 		public DateTime CreatedAt { get; set; }
-		public string? Configuration { get; set; }
+		public string? Options { get; set; }
 	}
 }
