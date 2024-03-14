@@ -490,16 +490,22 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsAliasAdditionalItem
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem = 0 | 1;
 
 /**
+ * [0: None, 1: Category]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 1;
+
+/**
  * [0: None, 1: Category, 2: FileSystemInfo, 4: FixedTags]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
- * [0: None, 1: Components, 3: Validation]
+ * [0: None, 1: Components, 3: Validation, 4: CustomProperties]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem = 0 | 1 | 3;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem = 0 | 1 | 3 | 4;
 
 /**
  * [0: None, 1: GroupName, 2: PreferredAlias]
@@ -566,6 +572,18 @@ export type BakabaseInsideWorldModelsConstantsCoverSelectOrder = 1 | 2;
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsCustomDataType = 1 | 2 | 3 | 4;
+
+/**
+ * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: Null, 6: NotNull]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsCustomPropertySearchOperation = 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
+ * [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsCustomPropertyType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 /**
  * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
@@ -671,6 +689,12 @@ export type BakabaseInsideWorldModelsConstantsResourceProperty =
   | 12
   | 13
   | 14;
+
+/**
+ * [1: And, 2: Or]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsResourceSearchByCustomPropertyValuesCombination = 1 | 2;
 
 /**
  * [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime]
@@ -834,6 +858,7 @@ export interface BakabaseInsideWorldModelsModelsAosResourceSearchDto {
   pageSize?: number;
   hideChildren?: boolean;
   save?: boolean;
+  customPropertiesV2?: BakabaseInsideWorldModelsRequestModelsResourceSearchByCustomPropertyValuesRequestModel;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosResourceSearchSlotItemDto {
@@ -897,6 +922,27 @@ export interface BakabaseInsideWorldModelsModelsDtosComponentDescriptorDto {
   id?: string | null;
   isInstanceable?: boolean;
   associatedCategories?: BakabaseInsideWorldModelsModelsDtosResourceCategoryDto[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment] */
+  type?: BakabaseInsideWorldModelsConstantsCustomPropertyType;
+  /** @format date-time */
+  createdAt?: string;
+  categories?: BakabaseInsideWorldModelsModelsDtosResourceCategoryDto[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyValueDto {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  propertyId?: number;
+  /** @format int32 */
+  resourceId?: number;
+  property?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
@@ -1095,6 +1141,7 @@ export interface BakabaseInsideWorldModelsModelsDtosResourceCategoryDto {
   coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
   enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
   generateNfo?: boolean;
+  customProperties?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions {
@@ -1140,6 +1187,7 @@ export interface BakabaseInsideWorldModelsModelsDtosResourceDto {
   fileModifyDt?: string;
   customProperties?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
   parent?: BakabaseInsideWorldModelsModelsDtosResourceDto;
+  customPropertiesV2?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyValueDto[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosSeriesDto {
@@ -1331,6 +1379,21 @@ export interface BakabaseInsideWorldModelsRequestModelsCoverSaveRequestModel {
   saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
 }
 
+export interface BakabaseInsideWorldModelsRequestModelsCustomPropertyAddOrPutRequestModel {
+  displayName?: string | null;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment] */
+  type?: BakabaseInsideWorldModelsConstantsCustomPropertyType;
+  options?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsCustomPropertyValueSearchRequestModel {
+  /** @format int32 */
+  propertyId?: number;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: Null, 6: NotNull] */
+  operation?: BakabaseInsideWorldModelsConstantsCustomPropertySearchOperation;
+  value?: string | null;
+}
+
 export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel {
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
@@ -1509,6 +1572,14 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceRawNameUpdateRequ
   rawName: string;
 }
 
+export interface BakabaseInsideWorldModelsRequestModelsResourceSearchByCustomPropertyValuesRequestModel {
+  /** [1: And, 2: Or] */
+  combination?: BakabaseInsideWorldModelsConstantsResourceSearchByCustomPropertyValuesCombination;
+  customPropertyValueSearchModels?:
+    | BakabaseInsideWorldModelsRequestModelsCustomPropertyValueSearchRequestModel[]
+    | null;
+}
+
 export interface BakabaseInsideWorldModelsRequestModelsResourceTagUpdateRequestModel {
   resourceTagIds: Record<string, number[]>;
 }
@@ -1670,6 +1741,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsDtosComponentDescriptorDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
@@ -2023,6 +2101,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsDtosComponentDescriptorDto;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
@@ -3820,6 +3905,79 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<string, any>({
         path: `/api/constant`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
+  customProperty = {
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name GetAllCustomPropertiesV2
+     * @request GET:/custom-property
+     */
+    getAllCustomPropertiesV2: (
+      query?: {
+        /** [0: None, 1: Category] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto,
+        any
+      >({
+        path: `/custom-property`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name AddCustomProperty
+     * @request POST:/custom-property
+     */
+    addCustomProperty: (
+      data: BakabaseInsideWorldModelsRequestModelsCustomPropertyAddOrPutRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto,
+        any
+      >({
+        path: `/custom-property`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name UpdateCustomProperty
+     * @request PUT:/custom-property/{id}
+     */
+    updateCustomProperty: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsCustomPropertyAddOrPutRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto,
+        any
+      >({
+        path: `/custom-property/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -6209,7 +6367,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllResourceCategories: (
       query?: {
-        /** [0: None, 1: Components, 3: Validation] */
+        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
       },
       params: RequestParams = {},

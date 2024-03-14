@@ -84,7 +84,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		{
 			var propertyIds = values.Select(v => v.PropertyId).ToHashSet();
 			var properties =
-				await CustomPropertyService.GetDtoList(x => propertyIds.Contains(x.Id), returnCopy);
+				await CustomPropertyService.GetDtoList(x => propertyIds.Contains(x.Id), CustomPropertyAdditionalItem.None, returnCopy);
 			var propertyMap = properties.ToDictionary(x => x.Id);
 			var dtoList = values
 				.Select(v => CustomPropertyValueExtensions.Helpers[propertyMap[v.PropertyId].Type].ToDto(v)!).ToList();

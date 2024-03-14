@@ -5,14 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Models.Models.Entities
+namespace Bakabase.InsideWorld.Models.RequestModels
 {
-	public record CustomProperty
+	public record CustomPropertyAddOrPutRequestModel
 	{
-		public int Id { get; set; }
-		public string Name { get; set; } = null!;
+		public string DisplayName { get; init; } = null!;
 		public CustomPropertyType Type { get; set; }
-		public DateTime CreatedAt { get; set; }
 		public string? Options { get; set; }
 	}
 }

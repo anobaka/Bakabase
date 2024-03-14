@@ -196,7 +196,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 	        return new CustomProperty
 	        {
 		        CreatedAt = dto.CreatedAt,
-		        DisplayName = dto.DisplayName,
+		        Name = dto.Name,
 		        Id = dto.Id,
 		        Type = dto.Type,
 		        Options = dto.Options == null ? null : JsonConvert.SerializeObject(dto.Options)

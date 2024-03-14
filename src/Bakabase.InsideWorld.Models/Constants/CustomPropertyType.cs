@@ -8,17 +8,17 @@ namespace Bakabase.InsideWorld.Models.Constants
 {
 	public enum CustomPropertyType
 	{
-		SingleLineText,
+		SingleLineText = 1,
 		MultilineText,
 		SingleChoice,
 		MultipleChoice,
-		Multilevel,
 		Number,
 		Percentage,
 		Rating,
-		Checkbox,
+		Boolean,
 		Link,
 		Attachment,
-		Formula
+		// Formula,
+		// Multilevel,
 	}
 }

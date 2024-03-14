@@ -136,6 +136,11 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddScoped<BmSeriesProcessor>();
             services.AddScoped<BmTagProcessor>();
 
+
+            services.AddScoped<CustomPropertyService>();
+            services.AddScoped<CustomPropertyValueService>();
+            services.AddScoped<CategoryCustomPropertyMappingService>();
+
             return services;
         }
 

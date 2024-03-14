@@ -1911,6 +1911,144 @@ export const getApiConstantURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetAllCustomPropertiesV2
+ * url: GetAllCustomPropertiesV2URL
+ * method: GetAllCustomPropertiesV2_TYPE
+ * raw_url: GetAllCustomPropertiesV2_RAW_URL
+ * @param additionalItems - 
+ */
+export const GetAllCustomPropertiesV2 = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllCustomPropertiesV2_RAW_URL = function() {
+  return '/custom-property'
+}
+export const GetAllCustomPropertiesV2_TYPE = function() {
+  return 'get'
+}
+export const GetAllCustomPropertiesV2URL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property'
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: AddCustomProperty
+ * url: AddCustomPropertyURL
+ * method: AddCustomProperty_TYPE
+ * raw_url: AddCustomProperty_RAW_URL
+ * @param model - 
+ */
+export const AddCustomProperty = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const AddCustomProperty_RAW_URL = function() {
+  return '/custom-property'
+}
+export const AddCustomProperty_TYPE = function() {
+  return 'post'
+}
+export const AddCustomPropertyURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: UpdateCustomProperty
+ * url: UpdateCustomPropertyURL
+ * method: UpdateCustomProperty_TYPE
+ * raw_url: UpdateCustomProperty_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const UpdateCustomProperty = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property/{id}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const UpdateCustomProperty_RAW_URL = function() {
+  return '/custom-property/{id}'
+}
+export const UpdateCustomProperty_TYPE = function() {
+  return 'put'
+}
+export const UpdateCustomPropertyURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property/{id}'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetStatistics
  * url: GetStatisticsURL
  * method: GetStatistics_TYPE

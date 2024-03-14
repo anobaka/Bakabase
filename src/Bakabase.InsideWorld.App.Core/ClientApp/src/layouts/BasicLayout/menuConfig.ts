@@ -56,6 +56,11 @@ const asideMenuConfig = [
     icon: 'database',
   },
   {
+    name: 'Custom property',
+    path: '/custom-property',
+    icon: 'database',
+  },
+  {
     name: 'Downloader',
     path: '/downloader',
     icon: 'download',

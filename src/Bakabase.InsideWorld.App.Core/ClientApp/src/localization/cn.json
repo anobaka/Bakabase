@@ -68,7 +68,7 @@
   "System Property": "系统设置",
   "Tag": "标签",
   "Tags": "标签列表",
-  "Text": "特殊字符",
+  "Text": "文本",
   "This month": "本月",
   "This week": "本周",
   "Today": "今天",
@@ -1086,5 +1086,7 @@
   "This page is a temporarily page, it may be removed in the future": "这是一个临时页面，将来可能会被移除",
   "Resource property": "资源属性",
   "Originals": "系列",
-  "Custom properties": "自定义属性"
+  "Custom properties": "自定义属性",
+  "Option": "选项",
+  "Number": "数字"
 }

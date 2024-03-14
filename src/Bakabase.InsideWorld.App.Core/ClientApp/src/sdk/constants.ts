@@ -112,6 +112,10 @@ export enum CoverSelectOrder {FilenameAscending = 1, FileModifyDtDescending = 2}
 export const coverSelectOrders = Object.keys(CoverSelectOrder).filter(k => typeof CoverSelectOrder[k] === 'number').map(t => ({label: t, value: CoverSelectOrder[t]}));
 export enum CustomDataType {String = 1, DateTime = 2, Number = 3, Enum = 4}
 export const customDataTypes = Object.keys(CustomDataType).filter(k => typeof CustomDataType[k] === 'number').map(t => ({label: t, value: CustomDataType[t]}));
+export enum CustomPropertySearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, Null = 5, NotNull = 6}
+export const customPropertySearchOperations = Object.keys(CustomPropertySearchOperation).filter(k => typeof CustomPropertySearchOperation[k] === 'number').map(t => ({label: t, value: CustomPropertySearchOperation[t]}));
+export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10}
+export const customPropertyTypes = Object.keys(CustomPropertyType).filter(k => typeof CustomPropertyType[k] === 'number').map(t => ({label: t, value: CustomPropertyType[t]}));
 export enum DownloaderStopBy {ManuallyStop = 1, AppendToTheQueue = 2}
 export const downloaderStopBies = Object.keys(DownloaderStopBy).filter(k => typeof DownloaderStopBy[k] === 'number').map(t => ({label: t, value: DownloaderStopBy[t]}));
 export enum DownloadTaskAction {StartManually = 1, Restart = 2, Disable = 3, StartAutomatically = 4}
@@ -154,6 +158,8 @@ export enum ResourceMatcherValueType {Layer = 1, Regex = 2, FixedText = 3}
 export const resourceMatcherValueTypes = Object.keys(ResourceMatcherValueType).filter(k => typeof ResourceMatcherValueType[k] === 'number').map(t => ({label: t, value: ResourceMatcherValueType[t]}));
 export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, ReleaseDt = 4, Publisher = 5, Name = 6, Language = 7, Volume = 8, Original = 9, Series = 10, Tag = 11, Introduction = 12, Rate = 13, CustomProperty = 14}
 export const resourceProperties = Object.keys(ResourceProperty).filter(k => typeof ResourceProperty[k] === 'number').map(t => ({label: t, value: ResourceProperty[t]}));
+export enum ResourceSearchByCustomPropertyValuesCombination {And = 1, Or = 2}
+export const resourceSearchByCustomPropertyValuesCombinations = Object.keys(ResourceSearchByCustomPropertyValuesCombination).filter(k => typeof ResourceSearchByCustomPropertyValuesCombination[k] === 'number').map(t => ({label: t, value: ResourceSearchByCustomPropertyValuesCombination[t]}));
 export enum ResourceTaskType {Moving = 1}
 export const resourceTaskTypes = Object.keys(ResourceTaskType).filter(k => typeof ResourceTaskType[k] === 'number').map(t => ({label: t, value: ResourceTaskType[t]}));
 export enum SpecialTextType {Useless = 1, Language = 2, Wrapper = 3, Standardization = 4, Volume = 6, Trim = 7, DateTime = 8}
@@ -172,11 +178,15 @@ export enum AliasAdditionalItem {Candidates = 1}
 export const aliasAdditionalItems = Object.keys(AliasAdditionalItem).filter(k => typeof AliasAdditionalItem[k] === 'number').map(t => ({label: t, value: AliasAdditionalItem[t]}));
 export enum ComponentDescriptorAdditionalItem {None = 0, AssociatedCategories = 1}
 export const componentDescriptorAdditionalItems = Object.keys(ComponentDescriptorAdditionalItem).filter(k => typeof ComponentDescriptorAdditionalItem[k] === 'number').map(t => ({label: t, value: ComponentDescriptorAdditionalItem[t]}));
+export enum CustomPropertyAdditionalItem {None = 0, Category = 1}
+export const customPropertyAdditionalItems = Object.keys(CustomPropertyAdditionalItem).filter(k => typeof CustomPropertyAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyAdditionalItem[t]}));
+export enum CustomPropertyValueAdditionalItem {None = 0}
+export const customPropertyValueAdditionalItems = Object.keys(CustomPropertyValueAdditionalItem).filter(k => typeof CustomPropertyValueAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyValueAdditionalItem[t]}));
 export enum MediaLibraryAdditionalItem {None = 0, Category = 1, FileSystemInfo = 2, FixedTags = 4}
 export const mediaLibraryAdditionalItems = Object.keys(MediaLibraryAdditionalItem).filter(k => typeof MediaLibraryAdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryAdditionalItem[t]}));
 export enum ResourceAdditionalItem {None = 0, Publishers = 1, Volume = 2, Serial = 6, Originals = 8, Tags = 16, CustomProperties = 32, Alias = 64, All = 127}
 export const resourceAdditionalItems = Object.keys(ResourceAdditionalItem).filter(k => typeof ResourceAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceAdditionalItem[t]}));
-export enum ResourceCategoryAdditionalItem {None = 0, Components = 1, Validation = 3}
+export enum ResourceCategoryAdditionalItem {None = 0, Components = 1, Validation = 3, CustomProperties = 4}
 export const resourceCategoryAdditionalItems = Object.keys(ResourceCategoryAdditionalItem).filter(k => typeof ResourceCategoryAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceCategoryAdditionalItem[t]}));
 export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));

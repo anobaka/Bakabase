@@ -40,6 +40,7 @@ export default defineConfig(() => ({
         route('/downloader', 'Downloader/index.tsx');
         route('/bulk-modification', 'BulkModification/index.tsx');
         route('/resource-property', 'ResourceProperty/index.tsx');
+        route('/custom-property', 'CustomProperty/index.tsx');
       });
       route('/welcome', '../layouts/BlankLayout/index.tsx', () => {
         route('/welcome', 'Welcome/index.tsx');

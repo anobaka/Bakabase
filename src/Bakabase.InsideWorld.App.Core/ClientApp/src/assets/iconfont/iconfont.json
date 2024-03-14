@@ -6,6 +6,83 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "240132",
+      "name": "radio_box",
+      "font_class": "radiobox",
+      "unicode": "e75b",
+      "unicode_decimal": 59227
+    },
+    {
+      "icon_id": "431634",
+      "name": "checkbox-checked",
+      "font_class": "checkboxchecked",
+      "unicode": "e67d",
+      "unicode_decimal": 59005
+    },
+    {
+      "icon_id": "1226862",
+      "name": "attachment",
+      "font_class": "attachment",
+      "unicode": "e6bf",
+      "unicode_decimal": 59071
+    },
+    {
+      "icon_id": "4766967",
+      "name": "percentage",
+      "font_class": "percentage",
+      "unicode": "e7e7",
+      "unicode_decimal": 59367
+    },
+    {
+      "icon_id": "7055001",
+      "name": "multiline-text",
+      "font_class": "multiline-text",
+      "unicode": "e682",
+      "unicode_decimal": 59010
+    },
+    {
+      "icon_id": "7935440",
+      "name": "multiple-select",
+      "font_class": "multiple-select",
+      "unicode": "e62b",
+      "unicode_decimal": 58923
+    },
+    {
+      "icon_id": "14772851",
+      "name": "number",
+      "font_class": "number",
+      "unicode": "e643",
+      "unicode_decimal": 58947
+    },
+    {
+      "icon_id": "15838493",
+      "name": "link",
+      "font_class": "link",
+      "unicode": "e676",
+      "unicode_decimal": 58998
+    },
+    {
+      "icon_id": "22813418",
+      "name": "formula",
+      "font_class": "formula",
+      "unicode": "e638",
+      "unicode_decimal": 58936
+    },
+    {
+      "icon_id": "35523056",
+      "name": "single-line-text",
+      "font_class": "single-line-text",
+      "unicode": "e608",
+      "unicode_decimal": 58888
+    },
+    {
+      "icon_id": "38880167",
+      "name": "multi_level",
+      "font_class": "multi_level",
+      "unicode": "e60b",
+      "unicode_decimal": 58891
+    },
+    {
       "icon_id": "12299570",
       "name": "Icon-null",
       "font_class": "Icon-null",

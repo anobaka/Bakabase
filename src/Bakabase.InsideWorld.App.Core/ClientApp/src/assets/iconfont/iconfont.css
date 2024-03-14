@@ -1,8 +1,8 @@
 @font-face {
   font-family: "iconfont"; /* Project id 2282961 */
-  src: url('iconfont.woff2?t=1708705678342') format('woff2'),
-       url('iconfont.woff?t=1708705678342') format('woff'),
-       url('iconfont.ttf?t=1708705678342') format('truetype');
+  src: url('iconfont.woff2?t=1710411928980') format('woff2'),
+       url('iconfont.woff?t=1710411928980') format('woff'),
+       url('iconfont.ttf?t=1710411928980') format('truetype');
 }
 
 .iconfont {
@@ -11,6 +11,50 @@
   font-style: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-radiobox:before {
+  content: "\e75b";
+}
+
+.icon-checkboxchecked:before {
+  content: "\e67d";
+}
+
+.icon-attachment:before {
+  content: "\e6bf";
+}
+
+.icon-percentage:before {
+  content: "\e7e7";
+}
+
+.icon-multiline-text:before {
+  content: "\e682";
+}
+
+.icon-multiple-select:before {
+  content: "\e62b";
+}
+
+.icon-number:before {
+  content: "\e643";
+}
+
+.icon-link:before {
+  content: "\e676";
+}
+
+.icon-formula:before {
+  content: "\e638";
+}
+
+.icon-single-line-text:before {
+  content: "\e608";
+}
+
+.icon-multi_level:before {
+  content: "\e60b";
 }
 
 .icon-Icon-null:before {

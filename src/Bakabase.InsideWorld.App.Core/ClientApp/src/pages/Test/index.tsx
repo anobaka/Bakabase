@@ -8,6 +8,7 @@ import MediaPreviewer from '@/components/MediaPreviewer';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelector from '@/components/FileSystemSelector';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
+import Sortable from '@/pages/Test/components/Sortable';
 
 const schema: RJSFSchema = {
   type: 'object',
@@ -101,6 +102,7 @@ export default () => {
 
   return (
     <div className={'test-page'}>
+      <Sortable />
       <MyComponent />
       <Button
         type={'normal'}
