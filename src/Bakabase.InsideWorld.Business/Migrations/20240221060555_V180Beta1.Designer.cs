@@ -25,10 +25,19 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CalculatedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Filter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("FilteredAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -36,6 +45,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Processes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RevertedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Status")
