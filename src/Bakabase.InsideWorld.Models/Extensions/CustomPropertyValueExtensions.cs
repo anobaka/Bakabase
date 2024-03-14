@@ -12,15 +12,5 @@ namespace Bakabase.InsideWorld.Models.Extensions
 	public static class CustomPropertyValueExtensions
 	{
 		public static Dictionary<CustomPropertyType, ICustomPropertyValueHelper> Helpers = [];
-
-		public static CustomPropertyValueDto? ToDto(this CustomPropertyValue? entity)
-		{
-			if (entity == null)
-			{
-				return null;
-			}
-
-			return Helpers[entity.Property.Type].ToDto(entity);
-		}
 	}
 }

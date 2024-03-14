@@ -13,15 +13,30 @@ namespace Bakabase.InsideWorld.Business.Services
 {
 	public class CustomPropertyService : FullMemoryCacheResourceService<InsideWorldDbContext, CustomProperty, int>
 	{
+		protected CategoryCustomPropertyMappingService CategoryCustomPropertyMappingService =>
+			GetRequiredService<CategoryCustomPropertyMappingService>();
+
 		public CustomPropertyService(IServiceProvider serviceProvider) : base(serviceProvider)
 		{
 		}
 
-		public async Task<List<CustomPropertyDto>> GetDtoList(Expression<Func<CustomProperty, bool>> selector = null, bool returnCopy = true)
+		public async Task<List<CustomPropertyDto>> GetDtoList(Expression<Func<CustomProperty, bool>> selector = null,
+			bool returnCopy = true)
 		{
 			var data = await GetAll(selector, returnCopy);
 
 			return data.Select(x => x.ToDto()!).ToList();
+		}
+
+		public async Task<Dictionary<int, List<CustomPropertyDto>>> GetByCategoryIds(int[] ids)
+		{
+			var mappings = await CategoryCustomPropertyMappingService.GetAll(x => ids.Contains(x.CategoryId));
+			var propertyIds = mappings.Select(x => x.PropertyId).ToHashSet();
+			var properties = await GetDtoList(x => propertyIds.Contains(x.Id));
+			var propertyMap = properties.ToDictionary(x => x.Id);
+
+			return mappings.GroupBy(x => x.CategoryId).ToDictionary(x => x.Key,
+				x => x.Select(y => propertyMap.GetValueOrDefault(y.PropertyId)).Where(y => y != null).ToList())!;
 		}
 	}
 }

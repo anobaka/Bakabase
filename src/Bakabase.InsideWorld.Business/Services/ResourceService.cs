@@ -609,7 +609,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		                        .GroupBy(t => t.ResourceId).ToDictionary(t => t.Key, t => t.ToList());
 
 	                        var customPropertiesV2 = await _customPropertyValueService.GetDtoList(
-		                        x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.Property,
+		                        x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
 		                        true);
 	                        customPropertiesPoolV2 = customPropertiesV2.GroupBy(x => x.ResourceId)
 		                        .ToDictionary(x => x.Key, x => x.ToList());

@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
 {
+    [Flags]
     public enum ResourceCategoryAdditionalItem
     {
         None = 0,
         Components = 1 << 0,
-        Validation = 1 << 1 | Components
+        Validation = 1 << 1 | Components,
+        CustomProperties = 1 << 2
     }
 }

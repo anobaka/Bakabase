@@ -29,9 +29,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		{
 			if (model.CustomPropertyValueSearchModels?.Any() == true)
 			{
-				var propertyIds = model.CustomPropertyValueSearchModels.Select(x => x.PropertyId).ToHashSet();
-				var allValues = await GetAll(x => propertyIds.Contains(x.PropertyId));
-				var allValueDtoList = allValues.Select(v => v.ToDto()!).ToList();
+				var allValueDtoList = await GetDtoList(null, CustomPropertyValueAdditionalItem.None, false);
 				var resourceValueMap =
 					allValueDtoList.GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
 						x => x.GroupBy(y => y.PropertyId).ToDictionary(y => y.Key, y => y.First()));
@@ -66,6 +64,8 @@ namespace Bakabase.InsideWorld.Business.Services
 						resourceIds.Add(rId);
 					}
 				}
+
+				return resourceIds;
 			}
 
 			return [];
@@ -82,28 +82,16 @@ namespace Bakabase.InsideWorld.Business.Services
 		protected async Task<List<CustomPropertyValueDto>> ToDtoList(List<CustomPropertyValue> values,
 			CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
 		{
-			var dtoList = values.Select(v => v.ToDto()!).ToList();
-			foreach (var ai in SpecificEnumUtils<CustomPropertyValueAdditionalItem>.Values)
-			{
-				if (additionalItems.HasFlag(ai))
-				{
-					switch (ai)
-					{
-						case CustomPropertyValueAdditionalItem.Property:
-						{
-							var propertyIds = values.Select(v => v.PropertyId).ToHashSet();
-							var properties =
-								await CustomPropertyService.GetDtoList(x => propertyIds.Contains(x.Id), returnCopy);
-							var propertyMap = properties.ToDictionary(x => x.Id);
-							foreach (var dto in dtoList)
-							{
-								dto.Property = propertyMap.GetValueOrDefault(dto.PropertyId);
-							}
+			var propertyIds = values.Select(v => v.PropertyId).ToHashSet();
+			var properties =
+				await CustomPropertyService.GetDtoList(x => propertyIds.Contains(x.Id), returnCopy);
+			var propertyMap = properties.ToDictionary(x => x.Id);
+			var dtoList = values
+				.Select(v => CustomPropertyValueExtensions.Helpers[propertyMap[v.PropertyId].Type].ToDto(v)!).ToList();
 
-							break;
-						}
-					}
-				}
+			foreach (var dto in dtoList)
+			{
+				dto.Property = propertyMap[dto.PropertyId];
 			}
 
 			return dtoList;

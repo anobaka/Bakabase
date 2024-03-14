@@ -9,7 +9,7 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
         public int OriginalId { get; set; }
         public int ResourceId { get; set; }
 
-        public bool Equals(OriginalResourceMapping other)
+        public bool Equals(OriginalResourceMapping? other)
         {
             return other != null && OriginalId == other.OriginalId && ResourceId == other.ResourceId;
         }

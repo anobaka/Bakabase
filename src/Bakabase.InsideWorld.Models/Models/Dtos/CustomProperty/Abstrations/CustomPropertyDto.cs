@@ -10,7 +10,6 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations
     public record CustomPropertyDto
     {
         public int Id { get; set; }
-        public string Key { get; set; } = null!;
         public string DisplayName { get; set; } = null!;
         public CustomPropertyType Type { get; set; }
         public DateTime CreatedAt { get; set; }

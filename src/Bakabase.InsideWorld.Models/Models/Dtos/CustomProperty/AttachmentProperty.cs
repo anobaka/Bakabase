@@ -2,4 +2,4 @@
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty;
 
-public record AttachmentProperty(): CustomPropertyDto<string[]>
+public record AttachmentProperty() : CustomPropertyDto<string[]>;

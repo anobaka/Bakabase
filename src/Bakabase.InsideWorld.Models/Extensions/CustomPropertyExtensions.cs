@@ -198,7 +198,6 @@ namespace Bakabase.InsideWorld.Models.Extensions
 		        CreatedAt = dto.CreatedAt,
 		        DisplayName = dto.DisplayName,
 		        Id = dto.Id,
-		        Key = dto.Key,
 		        Type = dto.Type,
 		        Options = dto.Options == null ? null : JsonConvert.SerializeObject(dto.Options)
 	        };

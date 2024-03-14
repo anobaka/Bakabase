@@ -36,6 +36,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		protected ComponentService ComponentService => GetRequiredService<ComponentService>();
 		protected CategoryComponentService CategoryComponentService => GetRequiredService<CategoryComponentService>();
 		protected IStringLocalizer<SharedResource> Localizer => GetRequiredService<IStringLocalizer<SharedResource>>();
+		protected CustomPropertyService CustomPropertyService => GetRequiredService<CustomPropertyService>();
 
 		public ResourceCategoryService(IServiceProvider serviceProvider) : base(serviceProvider)
 		{
@@ -158,6 +159,17 @@ namespace Bakabase.InsideWorld.Business.Services
 										break;
 									}
 								}
+							}
+
+							break;
+						}
+						case ResourceCategoryAdditionalItem.CustomProperties:
+						{
+							var cIds = dtoList.Select(a => a.Id).ToArray();
+							var customPropertiesMap = await CustomPropertyService.GetByCategoryIds(cIds);
+							foreach (var d in dtoList)
+							{
+								d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id);
 							}
 
 							break;

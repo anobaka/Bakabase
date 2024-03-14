@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Extensions;
 
@@ -22,5 +24,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         public CoverSelectOrder CoverSelectionOrder { get; set; }
         public ResourceCategoryEnhancementOptions EnhancementOptions { get; set; }
         public bool GenerateNfo { get; set; }
+
+        public List<CustomPropertyDto>? CustomProperties { get; set; }
     }
 }

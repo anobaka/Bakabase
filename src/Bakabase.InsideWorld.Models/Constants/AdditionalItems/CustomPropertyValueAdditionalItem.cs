@@ -6,5 +6,5 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 public enum CustomPropertyValueAdditionalItem
 {
 	None = 0,
-	Property = 1 << 0
+	// Property = 1 << 0
 }

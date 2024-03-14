@@ -43,6 +43,10 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<BulkModificationDiff> BulkModificationDiffs { get; set; }
         public DbSet<BulkModificationTempData> BulkModificationTempData { get; set; }
 
+        public DbSet<CustomProperty> CustomProperties { get; set; }
+        public DbSet<CustomPropertyValue> CustomPropertyValues { get; set; }
+        public DbSet<CategoryCustomPropertyMapping> CategoryCustomPropertyMappings { get; set; }
+
         public InsideWorldDbContext()
         {
         }
@@ -142,6 +146,22 @@ namespace Bakabase.InsideWorld.Business
             {
                 t.HasIndex(a => a.LastUsedAt);
                 t.HasIndex(a => a.UsedTimes);
+            });
+
+            modelBuilder.Entity<CategoryCustomPropertyMapping>(t =>
+            {
+	            t.HasIndex(x => new {x.CategoryId, x.PropertyId}).IsUnique();
+            });
+
+            modelBuilder.Entity<CustomProperty>(t =>
+            {
+
+            });
+
+            modelBuilder.Entity<CustomPropertyValue>(t =>
+            {
+	            t.HasIndex(x => new {x.ResourceId});
+	            t.HasIndex(x => x.PropertyId);
             });
         }
     }
