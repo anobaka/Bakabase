@@ -30,7 +30,7 @@ export default () => {
 
   const loadAllCategories = (cb: () => void = () => {
   }): Promise<any> => {
-    return BApi.resourceCategory.getAllResourceCategories({ additionalItems: ResourceCategoryAdditionalItem.Validation }).then((rsp) => {
+    return BApi.resourceCategory.getAllResourceCategories({ additionalItems: ResourceCategoryAdditionalItem.Validation | ResourceCategoryAdditionalItem.CustomProperties }).then((rsp) => {
       categoriesLoadedRef.current = true;
       rsp.data?.sort((a, b) => a.order! - b.order!);
       setCategories(rsp.data || []);

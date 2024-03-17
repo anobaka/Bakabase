@@ -36,10 +36,17 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 		}
 
 		[HttpPut("{id:int}")]
-		[SwaggerOperation(OperationId = "UpdateCustomProperty")]
-		public async Task<SingletonResponse<CustomPropertyDto>> Update(int id, [FromBody] CustomPropertyAddOrPutRequestModel model)
+		[SwaggerOperation(OperationId = "PutCustomProperty")]
+		public async Task<SingletonResponse<CustomPropertyDto>> Put(int id, [FromBody] CustomPropertyAddOrPutRequestModel model)
 		{
-			return new(await _service.Update(id, model));
+			return new(await _service.Put(id, model));
+		}
+
+		[HttpDelete("{id:int}")]
+		[SwaggerOperation(OperationId = "RemoveCustomProperty")]
+		public async Task<BaseResponse> Remove(int id)
+		{
+			return await _service.RemoveByKey(id);
 		}
 	}
 }

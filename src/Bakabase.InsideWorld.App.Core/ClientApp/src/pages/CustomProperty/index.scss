@@ -1,4 +1,8 @@
 #custom-property-page {
-
-
+  &>.properties {
+    margin-top: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
 }

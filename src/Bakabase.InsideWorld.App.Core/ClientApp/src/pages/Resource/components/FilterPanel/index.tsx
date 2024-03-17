@@ -38,6 +38,7 @@ import TagSelector from '@/components/TagSelector';
 import BApi from '@/sdk/BApi';
 import type IOption from '@/core/models/Common/IOption';
 import { buildLogger, getValue, setValue, useTraceUpdate } from '@/components/utils';
+import CustomPropertiesSelectorDialog from '@/pages/Resource/components/CustomPropertiesSelectorDialog';
 
 const { Popup } = Overlay;
 
@@ -782,6 +783,25 @@ export default React.memo((props: IProps) => {
                 >
                   <PlaylistCollection className={'resource-page'} />
                 </Dropdown>
+                <div className={'filter'}>
+                  <div
+                    className="hover-area"
+                    onClick={() => {
+                         CustomPropertiesSelectorDialog.show({
+                           selectedPropertyIds: [],
+                            onSelected: (selectedPropertyIds) => {
+                              // patchSearchForm({
+                              //   customPropertyKeys: selectedPropertyIds,
+                              // }, true);
+                            },
+                         });
+                       }}
+                  >
+                    {t('More properties')}
+                    &nbsp;
+                    <CustomIcon type={'caret-down'} size={'xs'} />
+                  </div>
+                </div>
               </>
             )}
           </div>

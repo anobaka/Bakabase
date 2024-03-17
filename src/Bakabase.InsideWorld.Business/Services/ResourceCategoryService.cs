@@ -32,6 +32,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		ResourceCategory, int>
 	{
 		protected MediaLibraryService MediaLibraryService => GetRequiredService<MediaLibraryService>();
+		protected CategoryCustomPropertyMappingService CategoryCustomPropertyMappingService => GetRequiredService<CategoryCustomPropertyMappingService>();
 		protected ResourceService ResourceService => GetRequiredService<ResourceService>();
 		protected ComponentService ComponentService => GetRequiredService<ComponentService>();
 		protected CategoryComponentService CategoryComponentService => GetRequiredService<CategoryComponentService>();
@@ -476,6 +477,13 @@ namespace Bakabase.InsideWorld.Business.Services
 				MediaLibraryService.SyncInBackgroundTask();
 			}
 
+			return BaseResponseBuilder.Ok;
+		}
+
+		public async Task<BaseResponse> BindCustomProperties(int id, ResourceCategoryCustomPropertyBindRequestModel model)
+		{
+			await CategoryCustomPropertyMappingService.BindCustomPropertiesToCategory(id,
+				model.CustomPropertyIds);
 			return BaseResponseBuilder.Ok;
 		}
 	}

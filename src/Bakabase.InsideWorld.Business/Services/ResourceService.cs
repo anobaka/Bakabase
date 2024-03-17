@@ -51,6 +51,7 @@ using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using IComparer = System.Collections.IComparer;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -567,7 +568,7 @@ namespace Bakabase.InsideWorld.Business.Services
             Dictionary<int, List<OriginalDto>> originalPool = null;
             Dictionary<int, List<TagDto>> tagPool = null;
             Dictionary<int, List<CustomResourceProperty>> customPropertyPool = null;
-            Dictionary<int, List<CustomPropertyValueDto>>? customPropertiesPoolV2 = null;
+            Dictionary<int, Dictionary<CustomPropertyDto, CustomPropertyValueDto?>?>? customPropertiesPoolV2 = null;
 
             foreach (var i in SpecificEnumUtils<ResourceAdditionalItem>.Values)
             {
@@ -608,11 +609,19 @@ namespace Bakabase.InsideWorld.Business.Services
 		                        (await _customResourcePropertyService.GetAll(t => resourceIds.Contains(t.ResourceId)))
 		                        .GroupBy(t => t.ResourceId).ToDictionary(t => t.Key, t => t.ToList());
 
-	                        var customPropertiesV2 = await _customPropertyValueService.GetDtoList(
+	                        var categoryIds = resources.Select(r => r.CategoryId).Distinct().ToArray();
+	                        var categoryProperties = await _customPropertyService.GetByCategoryIds(categoryIds);
+	                        var customPropertiesValues = (await _customPropertyValueService.GetDtoList(
 		                        x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
-		                        true);
-	                        customPropertiesPoolV2 = customPropertiesV2.GroupBy(x => x.ResourceId)
-		                        .ToDictionary(x => x.Key, x => x.ToList());
+		                        true)).GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
+		                        x => x.ToDictionary(y => y.PropertyId, y => y));
+	                        customPropertiesPoolV2 = resources.ToDictionary(x => x.Id, x =>
+	                        {
+		                        var currentPropertiesAndValues = customPropertiesValues.GetValueOrDefault(x.Id);
+		                        var allProperties = categoryProperties.GetValueOrDefault(x.CategoryId);
+		                        return allProperties?.ToDictionary(a => a,
+			                        a => currentPropertiesAndValues?.GetValueOrDefault(a.Id));
+	                        });
 
 							break;
                         }
@@ -666,7 +675,11 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 if (customPropertiesPoolV2?.TryGetValue(dto.Id, out var cps2) == true)
                 {
-	                dto.CustomPropertiesV2 = cps2;
+	                if (cps2 != null)
+	                {
+		                dto.CustomPropertiesV2 = cps2.Keys.ToList();
+                        dto.CustomPropertyValues = cps2.Values.ToList();
+	                }
                 }
 
                 dto.HasChildren = parentIds.Contains(dto.Id);

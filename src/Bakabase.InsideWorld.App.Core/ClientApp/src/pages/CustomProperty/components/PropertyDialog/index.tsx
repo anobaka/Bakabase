@@ -1,27 +1,29 @@
-import { Button, Dialog, Input, Overlay, Select, Switch } from '@alifd/next';
+import { Button, Dialog, Input, Overlay, Progress, Select, Switch } from '@alifd/next';
 import type { DialogProps } from '@alifd/next/types/dialog';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  PropertyTypeIconMap,
+} from '../../models';
+import type { IChoice, ICustomProperty,
+  IChoicePropertyOptions,
+  INumberPropertyOptions,
+  IPercentagePropertyOptions, IRatingPropertyOptions } from '../../models';
+import ChoiceList from './components/ChoiceList';
 import { createPortalOfComponent } from '@/components/utils';
 import { CustomPropertyType } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
-import ChoiceList from './components/ChoiceList';
-import type { IChoice } from '@/pages/CustomProperty/models';
+import BApi from '@/sdk/BApi';
 
 const { Popup } = Overlay;
 
 interface IProps extends DialogProps {
   value?: CustomPropertyForm;
+  onSaved?: (property: ICustomProperty) => any;
 }
-
-interface ChoicePropertyOptions {
-  choices: IChoice[];
-  allowAddingNewOptionsWhileChoosing: boolean;
-  defaultValue?: string;
-}
-
 interface CustomPropertyForm {
+  id?: number;
   name?: string;
   type?: CustomPropertyType;
   options?: any;
@@ -34,30 +36,25 @@ const PropertyTypeGroup: Record<string, CustomPropertyType[]> = {
   Other: [CustomPropertyType.Attachment, CustomPropertyType.Boolean],
 };
 
-const PropertyTypeIconMap: Record<CustomPropertyType, string> = {
-  [CustomPropertyType.SingleLineText]: 'single-line-text',
-  [CustomPropertyType.MultilineText]: 'multiline-text',
-  [CustomPropertyType.SingleChoice]: 'radiobox',
-  [CustomPropertyType.MultipleChoice]: 'multiple-select',
-  // [CustomPropertyType.Multilevel]: 'multi_level',
-  [CustomPropertyType.Number]: 'number',
-  [CustomPropertyType.Percentage]: 'percentage',
-  [CustomPropertyType.Rating]: 'star',
-  [CustomPropertyType.Boolean]: 'checkboxchecked',
-  [CustomPropertyType.Link]: 'link',
-  [CustomPropertyType.Attachment]: 'attachment',
-  // [CustomPropertyType.Formula]: 'formula',
-};
+
+const NumberPrecisions = [0, 1, 2, 3, 4].map(x => ({
+  value: x,
+  label: Number(1).toFixed(x),
+}));
+
+const RatingMaxValueDataSource = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(x => ({
+  value: x,
+  label: x,
+}));
 
 const PropertyDialog = ({
                           value,
+                          onSaved,
                           ...dialogProps
                         }: IProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
-  const [property, setProperty] = useState<CustomPropertyForm>(value || {
-    type: CustomPropertyType.SingleChoice,
-  });
+  const [property, setProperty] = useState<CustomPropertyForm>(value || {});
 
   const [typeGroupsVisible, setTypeGroupsVisible] = useState(false);
 
@@ -65,7 +62,7 @@ const PropertyDialog = ({
     setVisible(false);
   };
 
-  console.log(6666, 'render');
+  // console.log(6666, 'render');
 
   const renderOptions = () => {
     if (property.type != undefined) {
@@ -75,13 +72,8 @@ const PropertyDialog = ({
           break;
         case CustomPropertyType.SingleChoice:
         case CustomPropertyType.MultipleChoice: {
-          // list(sortable, color)
-          // order by alphabet
-          // AllowAddingNewOptionsWhileChoosing
-          // default value
-
-          const options = property.options as ChoicePropertyOptions;
-
+          const options = property.options as IChoicePropertyOptions;
+          const multiple = property.type === CustomPropertyType.MultipleChoice;
           return (
             <>
               <div className={'label'}>{t('Options')}</div>
@@ -118,6 +110,7 @@ const PropertyDialog = ({
               <div className="label">{t('Default value')}</div>
               <div className="value">
                 <Select
+                  mode={multiple ? 'multiple' : 'single'}
                   value={options?.defaultValue}
                   autoWidth
                   hasClear
@@ -139,16 +132,115 @@ const PropertyDialog = ({
           );
         }
         case CustomPropertyType.Number: {
-          // precision
-          break;
+          const options = property.options as INumberPropertyOptions;
+          const previewValue = 80;
+          const previewValueStr = Number(previewValue).toFixed(options?.precision || 0);
+          return (
+            <>
+              <div className="label">{t('Precision')}</div>
+              <div className="value">
+                <Select
+                  mode={'single'}
+                  value={options?.precision}
+                  dataSource={NumberPrecisions}
+                  autoWidth
+                  style={{ width: '100%' }}
+                  onChange={c => {
+                    setProperty({
+                      ...property,
+                      options: {
+                        ...options,
+                        precision: c,
+                      },
+                    });
+                  }}
+                />
+              </div>
+              <div className="label">{t('Preview')}</div>
+              <div className="value">
+                {previewValueStr}
+              </div>
+            </>
+          );
         }
         case CustomPropertyType.Percentage: {
-          // precision
-          // show progressbar
-          break;
+          const options = property.options as IPercentagePropertyOptions;
+          const previewValue = 80;
+          const previewValueStr = Number(previewValue).toFixed(options?.precision || 0);
+          return (
+            <>
+              <div className="label">{t('Precision')}</div>
+              <div className="value">
+                <Select
+                  mode={'single'}
+                  value={options?.precision}
+                  dataSource={NumberPrecisions}
+                  autoWidth
+                  style={{ width: '100%' }}
+                  onChange={c => {
+                    setProperty({
+                      ...property,
+                      options: {
+                        ...options,
+                        precision: c,
+                      },
+                    });
+                  }}
+                />
+              </div>
+              <div className="label">{t('Show progressbar')}</div>
+              <div className="value">
+                <Switch
+                  size={'small'}
+                  checked={options?.showProgressbar}
+                  onChange={c => {
+                    setProperty({
+                      ...property,
+                      options: {
+                        ...options,
+                        showProgressbar: c,
+                      },
+                    });
+                  }}
+                />
+              </div>
+              <div className="label">{t('Preview')}</div>
+              <div className="value">
+                {options?.showProgressbar ? (
+                  <Progress
+                    percent={previewValue}
+                    textRender={(p) => `${previewValueStr}%`}
+                  />
+                ) : `${previewValueStr}%`}
+              </div>
+            </>
+          );
         }
         case CustomPropertyType.Rating: {
-          // max value
+          const options = property.options as IRatingPropertyOptions;
+          return (
+            <>
+              <div className="label">{t('Max value')}</div>
+              <div className="value">
+                <Select
+                  mode={'single'}
+                  value={options?.maxValue}
+                  dataSource={RatingMaxValueDataSource}
+                  autoWidth
+                  style={{ width: '100%' }}
+                  onChange={c => {
+                    setProperty({
+                      ...property,
+                      options: {
+                        ...options,
+                        maxValue: c,
+                      },
+                    });
+                  }}
+                />
+              </div>
+            </>
+          );
           break;
         }
         case CustomPropertyType.Boolean: {
@@ -172,10 +264,29 @@ const PropertyDialog = ({
       className={'custom-property-dialog'}
       onClose={close}
       onCancel={close}
-      {...dialogProps}
       v2
+      closeMode={['close', 'esc']}
+      onOk={async () => {
+        const model = {
+          ...property,
+          // todo: this serialization is a hardcode
+          options: JSON.stringify(property.options),
+        };
+        const rsp = (property.id != undefined && property.id > 0) ? await BApi.customProperty.putCustomProperty(property.id, model) : await BApi.customProperty.addCustomProperty(model);
+        if (!rsp.code) {
+          onSaved?.({
+            id: rsp.data!.id!,
+            name: rsp.data!.name!,
+            type: rsp.data!.type!,
+          });
+          close();
+        }
+      }}
+      {...dialogProps}
     >
-      <div className={'custom-property-form'}>
+      <div
+        className={'custom-property-form'}
+      >
         <div className="label">{t('Name')}</div>
         <div className="value">
           <Input

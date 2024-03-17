@@ -31,6 +31,7 @@ import Resource from '@/components/Resource';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
 import { createPortalOfComponent } from '@/components/utils';
 import BApi from '@/sdk/BApi';
+import CustomPropertyValue from '@/components/Resource/components/DetailDialog/CustomPropertyValue';
 
 interface IProps {
   dialogProps?: any;
@@ -131,7 +132,7 @@ const ResourceDetailDialog = (props: IProps) => {
   }, [previewingPath]);
 
   const renderOtherProperties = () => {
-    const propertyComponents = {
+    const reservedPropertyComponentMap = {
       'Release Date': (
         <Property
           requestKey={'releaseDt'}
@@ -240,12 +241,18 @@ const ResourceDetailDialog = (props: IProps) => {
       // ),
     };
 
+    const propertyComponents: {
+      label: string;
+      component: any;
+    }[] = Object.keys(reservedPropertyComponentMap).map(x => ({ label: x, component: reservedPropertyComponentMap[x] }));
+
     if (resource.customProperties) {
       const keys = Object.keys(resource.customProperties);
       if (keys.length > 0) {
         keys.forEach((k) => {
-          if (!(k in propertyComponents)) {
-            propertyComponents[k] = (
+          propertyComponents.push({
+            label: k,
+            component: (
               <Property
                 renderValue={() => JSON.stringify(resource.customProperties[k])}
                 resourceId={resource.id}
@@ -253,12 +260,27 @@ const ResourceDetailDialog = (props: IProps) => {
                 requestKey={k}
                 isCustomProperty
               />
-            );
-          }
+            ),
+          });
         });
       }
     }
 
+    if (resource.customPropertiesV2?.length > 0) {
+      resource.customPropertiesV2.forEach((property, idx) => {
+        propertyComponents.push({
+          label: property.name,
+          component: (
+            <CustomPropertyValue
+              resourceId={resource.id}
+              property={property}
+              value={resource.customPropertyValues?.[idx]?.value}
+              onSaved={reload}
+            />
+          ),
+        });
+      });
+    }
 
     const times = [
       {
@@ -287,12 +309,12 @@ const ResourceDetailDialog = (props: IProps) => {
         />
       );
     });
-    return Object.keys(propertyComponents)
+    return propertyComponents
       .map((a) => (
         <div className={'property'}>
-          <div className={'label'}>{t(a)}</div>
+          <div className={'label'}>{t(a.label)}</div>
           <div className="value-container">
-            {propertyComponents[a]}
+            {a.component}
           </div>
         </div>
       ));

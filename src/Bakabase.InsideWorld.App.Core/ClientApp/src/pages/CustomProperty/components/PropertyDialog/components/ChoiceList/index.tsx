@@ -21,14 +21,9 @@ interface IProps {
   onChange?: (choices: IChoice[]) => void;
 }
 
-interface ISortableChoice extends IChoice {
-  id: UniqueIdentifier;
-}
-
 export default function ChoiceList({ choices: propsChoices, onChange }: IProps) {
   const { t } = useTranslation();
   const [choices, setChoices] = useState<IChoice[]>(propsChoices || []);
-  const [sortableChoices, setSortableChoices] = useState<ISortableChoice[]>([]);
   const [addInBulkPopupVisible, setAddInBulkPopupVisible] = useState(false);
   const [addInBulkText, setAddInBulkText] = useState('');
   const sensors = useSensors(
@@ -39,16 +34,8 @@ export default function ChoiceList({ choices: propsChoices, onChange }: IProps) 
   );
 
   useEffect(() => {
-    setSortableChoices(choices.map((c, index) => ({
-      id: uuidv4(),
-      ...c,
-    })));
     onChange?.(choices);
   }, [choices]);
-
-  useEffect(() => {
-    console.log(6666, sortableChoices);
-  }, [sortableChoices]);
 
   return (
     <div className={'choice-list'}>
@@ -75,10 +62,10 @@ export default function ChoiceList({ choices: propsChoices, onChange }: IProps) 
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={sortableChoices}
+            items={choices}
             strategy={verticalListSortingStrategy}
           >
-            {sortableChoices?.map((sc, index) => (
+            {choices?.map((sc, index) => (
               <SortableChoice
                 key={sc.id}
                 id={sc.id}
@@ -102,7 +89,7 @@ export default function ChoiceList({ choices: propsChoices, onChange }: IProps) 
           size={'small'}
           text
           onClick={() => {
-            setChoices([...choices, {}]);
+            setChoices([...choices, { id: uuidv4() }]);
           }}
         >
           <CustomIcon
@@ -143,7 +130,7 @@ export default function ChoiceList({ choices: propsChoices, onChange }: IProps) 
                 type={'primary'}
                 size={'small'}
                 onClick={() => {
-                  const newChoices = addInBulkText.split('\n').map(c => ({ value: c }));
+                  const newChoices = addInBulkText.split('\n').map(c => ({ value: c, id: uuidv4() }));
                   setChoices([...choices, ...newChoices]);
                   setAddInBulkPopupVisible(false);
                 }}

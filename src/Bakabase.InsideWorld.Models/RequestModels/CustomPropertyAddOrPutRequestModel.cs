@@ -9,7 +9,7 @@ namespace Bakabase.InsideWorld.Models.RequestModels
 {
 	public record CustomPropertyAddOrPutRequestModel
 	{
-		public string DisplayName { get; init; } = null!;
+		public string Name { get; init; } = null!;
 		public CustomPropertyType Type { get; set; }
 		public string? Options { get; set; }
 	}

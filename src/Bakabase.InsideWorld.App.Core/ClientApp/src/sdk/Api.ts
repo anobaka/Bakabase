@@ -1187,7 +1187,8 @@ export interface BakabaseInsideWorldModelsModelsDtosResourceDto {
   fileModifyDt?: string;
   customProperties?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
   parent?: BakabaseInsideWorldModelsModelsDtosResourceDto;
-  customPropertiesV2?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyValueDto[] | null;
+  customPropertiesV2?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto[] | null;
+  customPropertyValues?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyValueDto[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosSeriesDto {
@@ -1380,7 +1381,7 @@ export interface BakabaseInsideWorldModelsRequestModelsCoverSaveRequestModel {
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsCustomPropertyAddOrPutRequestModel {
-  displayName?: string | null;
+  name?: string | null;
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment] */
   type?: BakabaseInsideWorldModelsConstantsCustomPropertyType;
   options?: string | null;
@@ -1543,6 +1544,10 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryComponent
   enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
 }
 
+export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryCustomPropertyBindRequestModel {
+  customPropertyIds?: number[] | null;
+}
+
 export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryDuplicateRequestModel {
   name?: string | null;
 }
@@ -1557,6 +1562,10 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateReq
   /** @format int32 */
   order?: number | null;
   generateNfo?: boolean | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceCustomPropertyValuePutRequestModel {
+  value?: string | null;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel {
@@ -3962,10 +3971,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags CustomProperty
-     * @name UpdateCustomProperty
+     * @name PutCustomProperty
      * @request PUT:/custom-property/{id}
      */
-    updateCustomProperty: (
+    putCustomProperty: (
       id: number,
       data: BakabaseInsideWorldModelsRequestModelsCustomPropertyAddOrPutRequestModel,
       params: RequestParams = {},
@@ -3978,6 +3987,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name RemoveCustomProperty
+     * @request DELETE:/custom-property/{id}
+     */
+    removeCustomProperty: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/custom-property/${id}`,
+        method: "DELETE",
         format: "json",
         ...params,
       }),
@@ -4595,6 +4619,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/resource/custom-property/all`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PutResourceCustomPropertyValue
+     * @request PUT:/resource/{id}/custom-property/{pId}/value
+     */
+    putResourceCustomPropertyValue: (
+      id: number,
+      pId: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCustomPropertyValuePutRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/custom-property/${pId}/value`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -6512,6 +6558,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category/setup-wizard`,
         method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name BindCustomPropertiesToCategory
+     * @request PUT:/resource-category/{id}/custom-properties
+     */
+    bindCustomPropertiesToCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryCustomPropertyBindRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}/custom-properties`,
+        method: "PUT",
         body: data,
         type: ContentType.Json,
         format: "json",

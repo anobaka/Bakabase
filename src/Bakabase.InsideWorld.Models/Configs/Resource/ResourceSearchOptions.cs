@@ -21,7 +21,7 @@ namespace Bakabase.InsideWorld.Models.Configs.Resource
         public DateTime? FileModifyStartDt { get; set; }
         public DateTime? FileModifyEndDt { get; set; }
 
-        public int[] FavoritesIds { get; set; }
+        public int[]? FavoritesIds { get; set; }
         public int? CategoryId { get; set; }
 
         /// <summary>
@@ -55,7 +55,6 @@ namespace Bakabase.InsideWorld.Models.Configs.Resource
         /// Colons can not exist in key of dictionary in Asp.Net Core Configuration, so we store the key using array and locate it by index.
         /// </summary>
         public List<string> CustomPropertyKeys { get; set; } = new();
-
         public List<string> CustomPropertyValues { get; set; } = new();
         public bool HideChildren { get; set; }
     }

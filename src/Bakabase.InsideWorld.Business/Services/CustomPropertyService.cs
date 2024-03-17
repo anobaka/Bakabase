@@ -11,6 +11,7 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
+using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -18,6 +19,8 @@ namespace Bakabase.InsideWorld.Business.Services
 	{
 		protected CategoryCustomPropertyMappingService CategoryCustomPropertyMappingService =>
 			GetRequiredService<CategoryCustomPropertyMappingService>();
+		protected CustomPropertyValueService CustomPropertyValueService =>
+			GetRequiredService<CustomPropertyValueService>();
 
 		protected ResourceCategoryService ResourceCategoryService => GetRequiredService<ResourceCategoryService>();
 
@@ -30,7 +33,8 @@ namespace Bakabase.InsideWorld.Business.Services
 			bool returnCopy = true)
 		{
 			var data = await GetAll(selector, returnCopy);
-			return data.Select(x => x.ToDto()!).ToList();
+			var dtoList = await ToDtoList(data, additionalItems);
+			return dtoList;
 		}
 
 		public async Task<Dictionary<int, List<CustomPropertyDto>>> GetByCategoryIds(int[] ids)
@@ -90,7 +94,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			var data = await Add(new CustomProperty
 			{
 				CreatedAt = DateTime.Now,
-				Name = model.DisplayName,
+				Name = model.Name,
 				Options = model.Options,
 				Type = model.Type
 			});
@@ -98,16 +102,23 @@ namespace Bakabase.InsideWorld.Business.Services
 			return data.Data.ToDto()!;
 		}
 
-		public async Task<CustomPropertyDto> Update(int id, CustomPropertyAddOrPutRequestModel model)
+		public async Task<CustomPropertyDto> Put(int id, CustomPropertyAddOrPutRequestModel model)
 		{
 			var rsp = await UpdateByKey(id, cp =>
 			{
-				cp.Name = model.DisplayName;
+				cp.Name = model.Name;
 				cp.Options = model.Options;
 				cp.Type = model.Type;
 			});
 
 			return rsp.Data.ToDto()!;
+		}
+
+		public override async Task<BaseResponse> RemoveByKey(int id)
+		{
+			await CategoryCustomPropertyMappingService.RemoveAll(x => x.PropertyId == id);
+			await CustomPropertyValueService.RemoveAll(x => x.PropertyId == id);
+			return await base.RemoveByKey(id);
 		}
 	}
 }

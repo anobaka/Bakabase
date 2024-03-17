@@ -2000,14 +2000,14 @@ export const AddCustomPropertyURL = function(parameters = {}) {
 }
 /**
  * 
- * request: UpdateCustomProperty
- * url: UpdateCustomPropertyURL
- * method: UpdateCustomProperty_TYPE
- * raw_url: UpdateCustomProperty_RAW_URL
+ * request: PutCustomProperty
+ * url: PutCustomPropertyURL
+ * method: PutCustomProperty_TYPE
+ * raw_url: PutCustomProperty_RAW_URL
  * @param id - 
  * @param model - 
  */
-export const UpdateCustomProperty = function(parameters = {}) {
+export const PutCustomProperty = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/custom-property/{id}'
@@ -2028,13 +2028,58 @@ export const UpdateCustomProperty = function(parameters = {}) {
   }
   return request('put', domain + path, body, queryParameters, form, config)
 }
-export const UpdateCustomProperty_RAW_URL = function() {
+export const PutCustomProperty_RAW_URL = function() {
   return '/custom-property/{id}'
 }
-export const UpdateCustomProperty_TYPE = function() {
+export const PutCustomProperty_TYPE = function() {
   return 'put'
 }
-export const UpdateCustomPropertyURL = function(parameters = {}) {
+export const PutCustomPropertyURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property/{id}'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: RemoveCustomProperty
+ * url: RemoveCustomPropertyURL
+ * method: RemoveCustomProperty_TYPE
+ * raw_url: RemoveCustomProperty_RAW_URL
+ * @param id - 
+ */
+export const RemoveCustomProperty = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property/{id}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const RemoveCustomProperty_RAW_URL = function() {
+  return '/custom-property/{id}'
+}
+export const RemoveCustomProperty_TYPE = function() {
+  return 'delete'
+}
+export const RemoveCustomPropertyURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/custom-property/{id}'
@@ -7677,6 +7722,61 @@ export const GetAllCustomPropertiesURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: PutResourceCustomPropertyValue
+ * url: PutResourceCustomPropertyValueURL
+ * method: PutResourceCustomPropertyValue_TYPE
+ * raw_url: PutResourceCustomPropertyValue_RAW_URL
+ * @param id - 
+ * @param pId - 
+ * @param model - 
+ */
+export const PutResourceCustomPropertyValue = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/{id}/custom-property/{pId}/value'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  path = path.replace('{pId}', `${parameters['pId']}`)
+  if (parameters['pId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: pId'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PutResourceCustomPropertyValue_RAW_URL = function() {
+  return '/resource/{id}/custom-property/{pId}/value'
+}
+export const PutResourceCustomPropertyValue_TYPE = function() {
+  return 'put'
+}
+export const PutResourceCustomPropertyValueURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/{id}/custom-property/{pId}/value'
+  path = path.replace('{id}', `${parameters['id']}`)
+  path = path.replace('{pId}', `${parameters['pId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllResourceCategories
  * url: GetAllResourceCategoriesURL
  * method: GetAllResourceCategories_TYPE
@@ -8034,6 +8134,55 @@ export const SaveDataFromSetupWizardURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource-category/setup-wizard'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: BindCustomPropertiesToCategory
+ * url: BindCustomPropertiesToCategoryURL
+ * method: BindCustomPropertiesToCategory_TYPE
+ * raw_url: BindCustomPropertiesToCategory_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const BindCustomPropertiesToCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource-category/{id}/custom-properties'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const BindCustomPropertiesToCategory_RAW_URL = function() {
+  return '/resource-category/{id}/custom-properties'
+}
+export const BindCustomPropertiesToCategory_TYPE = function() {
+  return 'put'
+}
+export const BindCustomPropertiesToCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource-category/{id}/custom-properties'
+  path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

@@ -1088,5 +1088,8 @@
   "Originals": "系列",
   "Custom properties": "自定义属性",
   "Option": "选项",
-  "Number": "数字"
+  "Number": "数字",
+  "No category bound": "暂未绑定分类",
+  "Not selected": "未选择",
+  "Binding custom properties to category {{categoryName}}": "绑定自定义属性至分类 {{categoryName}}"
 }

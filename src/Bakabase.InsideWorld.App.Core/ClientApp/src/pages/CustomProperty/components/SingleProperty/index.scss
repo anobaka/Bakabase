@@ -1,0 +1,43 @@
+.standalone-custom-property {
+  padding: 10px;
+  border-radius: 4px;
+  background: var(--theme-block-background);
+  border: 1px solid var(--theme-border-color);
+
+  .line1 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 14px;
+
+    .left {
+      .type {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        color: var(--theme-text-subtle);
+        font-size: 10px;
+      }
+    }
+
+    &>* {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+  }
+
+  .categories {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--theme-border-color);
+    color: var(--theme-text-subtle);
+    font-size: 12px;
+  }
+
+  &:hover {
+    cursor: pointer;
+    background: var(--theme-block-background-accent);
+  }
+}

@@ -75,6 +75,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 		private readonly ILogger<ResourceController> _logger;
 		private readonly OriginalService _originalService;
 		private readonly SeriesService _seriesService;
+		private readonly CustomPropertyValueService _customPropertyValueService;
 
 		public ResourceController(ResourceService service,
 			ResourceTagMappingService resourceTagMappingService,
@@ -85,7 +86,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 			InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
 			FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions,
 			Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
-			ILogger<ResourceController> logger, OriginalService originalService, SeriesService seriesService)
+			ILogger<ResourceController> logger, OriginalService originalService, SeriesService seriesService,
+			CustomPropertyValueService customPropertyValueService)
 		{
 			_service = service;
 			_resourceTagMappingService = resourceTagMappingService;
@@ -106,6 +108,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 			_logger = logger;
 			_originalService = originalService;
 			_seriesService = seriesService;
+			_customPropertyValueService = customPropertyValueService;
 		}
 
 		[HttpPost("search")]
@@ -468,6 +471,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 			var map = cps.GroupBy(x => x.Key).ToDictionary(x => x.Key, x => x.ToList());
 
 			return new(map);
+		}
+
+		[HttpPut("{id:int}/custom-property/{pId:int}/value")]
+		[SwaggerOperation(OperationId = "PutResourceCustomPropertyValue")]
+		public async Task<BaseResponse> PutCustomPropertyValue(int id, int pId,
+			[FromBody] ResourceCustomPropertyValuePutRequestModel model)
+		{
+			return await _customPropertyValueService.SetResourceValue(id, pId, model);
 		}
 	}
 }

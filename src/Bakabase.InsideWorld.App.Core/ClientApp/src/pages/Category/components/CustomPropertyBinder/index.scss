@@ -1,0 +1,30 @@
+.category-custom-property-binder-dialog {
+  .custom-properties {
+    display: flex;
+    gap: 10px;
+    &>* {
+      border: 1px solid var(--theme-border-color);
+      border-radius: 4px;
+      padding: 10px;
+
+      &.selected {
+        //width: 40%;
+      }
+
+      &.not-selected {
+        flex: 1;
+      }
+
+      .title {
+        font-weight: bold;
+      }
+      .list {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-start;
+      }
+    }
+  }
+}

@@ -15,6 +15,7 @@ import EnhancerSelector from '@/components/EnhancerSelector';
 import BApi from '@/sdk/BApi';
 import ClickableIcon from '@/components/ClickableIcon';
 import SimpleLabel from '@/components/SimpleLabel';
+import CategoryCustomPropertyBinderDialog from '@/pages/Category/components/CustomPropertyBinder';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -496,6 +497,31 @@ export default (({
                 }}
               >
                 {t(e.descriptor?.name)}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div
+          className={'setting custom-properties'}
+          onClick={() => {
+            CategoryCustomPropertyBinderDialog.show({
+              category: category,
+              onSaved: loadAllCategories,
+            });
+          }}
+        >
+          <SimpleLabel status={'default'}>
+            {t('Custom properties')}
+          </SimpleLabel>
+          <div
+            className="items"
+          >
+            {category.customProperties?.map((e, i) => (
+              <div
+                className={'item'}
+                key={e.id}
+              >
+                {e.name}
               </div>
             ))}
           </div>

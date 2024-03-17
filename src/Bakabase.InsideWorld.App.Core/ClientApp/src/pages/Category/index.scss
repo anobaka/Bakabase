@@ -193,6 +193,17 @@
           }
         }
       }
+
+      &.custom-properties {
+        cursor: pointer;
+        .items {
+          margin-left: 10px;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: flex-start;
+          gap: 5px;
+        }
+      }
     }
   }
 

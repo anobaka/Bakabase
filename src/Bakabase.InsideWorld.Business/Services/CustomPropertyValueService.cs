@@ -12,6 +12,7 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
+using Bootstrap.Models.ResponseModels;
 using static Bakabase.InsideWorld.Models.Models.Aos.ResourceSearchDto;
 
 namespace Bakabase.InsideWorld.Business.Services
@@ -84,7 +85,8 @@ namespace Bakabase.InsideWorld.Business.Services
 		{
 			var propertyIds = values.Select(v => v.PropertyId).ToHashSet();
 			var properties =
-				await CustomPropertyService.GetDtoList(x => propertyIds.Contains(x.Id), CustomPropertyAdditionalItem.None, returnCopy);
+				await CustomPropertyService.GetDtoList(x => propertyIds.Contains(x.Id),
+					CustomPropertyAdditionalItem.None, returnCopy);
 			var propertyMap = properties.ToDictionary(x => x.Id);
 			var dtoList = values
 				.Select(v => CustomPropertyValueExtensions.Helpers[propertyMap[v.PropertyId].Type].ToDto(v)!).ToList();
@@ -95,6 +97,27 @@ namespace Bakabase.InsideWorld.Business.Services
 			}
 
 			return dtoList;
+		}
+
+		public async Task<BaseResponse> SetResourceValue(int resourceId, int propertyId,
+			ResourceCustomPropertyValuePutRequestModel model)
+		{
+			var value = await GetFirst(x => x.ResourceId == resourceId && x.PropertyId == propertyId);
+			if (value == null)
+			{
+				value = new CustomPropertyValue
+				{
+					ResourceId = resourceId,
+					PropertyId = propertyId,
+					Value = model.Value
+				};
+				return await Add(value);
+			}
+			else
+			{
+				value.Value = model.Value;
+				return await Update(value);
+			}
 		}
 	}
 }

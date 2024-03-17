@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Input } from '@alifd/next';
-import type { UniqueIdentifier } from '@dnd-kit/core';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
 import { toast } from 'react-toastify';
@@ -12,7 +11,7 @@ import ClickableIcon from '@/components/ClickableIcon';
 import onChange = toast.onChange;
 
 interface IProps {
-  id: UniqueIdentifier;
+  id: string;
   choice: IChoice;
   onRemove?: (choice: IChoice) => any;
   onChange?: (choice: IChoice) => any;
