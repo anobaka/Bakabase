@@ -17,7 +17,7 @@
         gap: 5px;
       }
 
-      &.options-value {
+      &>.choice-list {
         .other-opts {
           display: flex;
           align-items: center;
@@ -28,10 +28,20 @@
             gap: 5px;
           }
         }
-        .options {
-          min-height: 10px;
-          .option {
+        .sortable-choices {
+          margin: 10px 0;
+          .sortable-choice {
+            display: flex;
+            gap: 5px;
+            align-items: center;
 
+            &>.next-input {
+              flex: 1;
+            }
+
+            &>.drag-handle {
+              color: var(--theme-text-subtle);
+            }
           }
         }
         .add-opts {
@@ -89,5 +99,28 @@
         }
       }
     }
+  }
+}
+
+.add-choice-in-bulk-popup {
+  padding: 15px;
+  border-radius: 4px;
+  background-color: var(--theme-block-background);
+  border: 1px solid var(--theme-border-color-accent);
+
+  textarea {
+    width: 300px;
+  }
+
+  .title {
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+
+  .opts {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
   }
 }

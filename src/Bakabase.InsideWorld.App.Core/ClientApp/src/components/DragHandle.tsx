@@ -1,13 +1,20 @@
 import i18n from 'i18next';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import CustomIcon from '@/components/CustomIcon';
 
-export default ((props) => (
-  <CustomIcon
-    {...(props || {})}
-    style={{ cursor: 'all-scroll' }}
-    size={'small'}
-    type={'menu'}
-    title={i18n.t('Drag to sort')}
-  />
-));
+
+export default (props) => {
+  const { style = {}, className, ...otherProps } = props || {};
+  const { t } = useTranslation();
+  return (
+    <CustomIcon
+      style={{ cursor: 'all-scroll', ...style }}
+      size={'small'}
+      type={'menu'}
+      title={t('Drag to sort')}
+      className={`drag-handle ${className || ''}`}
+      {...(otherProps || {})}
+    />
+  );
+};

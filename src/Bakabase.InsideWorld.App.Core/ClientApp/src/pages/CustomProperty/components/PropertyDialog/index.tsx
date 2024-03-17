@@ -6,8 +6,8 @@ import { createPortalOfComponent } from '@/components/utils';
 import { CustomPropertyType } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
-import ClickableIcon from '@/components/ClickableIcon';
-import SortableChoices from './components/SortableChoices';
+import ChoiceList from './components/ChoiceList';
+import type { IChoice } from '@/pages/CustomProperty/models';
 
 const { Popup } = Overlay;
 
@@ -16,15 +16,9 @@ interface IProps extends DialogProps {
 }
 
 interface ChoicePropertyOptions {
-  choices: ChoicePropertyOption[];
+  choices: IChoice[];
   allowAddingNewOptionsWhileChoosing: boolean;
   defaultValue?: string;
-}
-
-interface ChoicePropertyOption {
-  value?: string;
-  color: string;
-  hide: boolean;
 }
 
 interface CustomPropertyForm {
@@ -71,6 +65,8 @@ const PropertyDialog = ({
     setVisible(false);
   };
 
+  console.log(6666, 'render');
+
   const renderOptions = () => {
     if (property.type != undefined) {
       switch (property.type) {
@@ -89,67 +85,53 @@ const PropertyDialog = ({
           return (
             <>
               <div className={'label'}>{t('Options')}</div>
-              <div className="value options-value">
-                <div className="other-opts">
-                  <Button
-                    size={'small'}
-                    text
-                    type={'normal'}
-                    className={'sort'}
-                  >
-                    <CustomIcon type={'sorting'} size={'small'} />
-                    {t('Sort by alphabet')}
-                  </Button>
-                </div>
-                <div className="options">
-                  <SortableChoices />
-                  {options?.choices?.map(choice => {
-                    return (
-                      <div className={'option'}>
-                        {/*   dragable */}
-                        <div className="color" style={{ background: choice.color ?? 'transparent' }} />
-                        <Input
-                          value={choice.value}
-                          onChange={value => {
-
-                        }}
-                        />
-                        <CustomIcon className={'hide'} type={'eye'} size={'small'} />
-                        <ClickableIcon
-                          className={'remove'}
-                          colorType={'danger'}
-                          type={'delete'}
-                          size={'small'}
-                          onClick={() => {
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="add-opts">
-                  <Button className="add" size={'small'} text>
-                    <CustomIcon type={'plus-circle'} size={'small'} />
-                    {t('Add option')}
-                  </Button>
-                  <Button className="add-in-bulk" size={'small'} text>
-                    {t('Add in bulk')}
-                  </Button>
-                </div>
+              <div className="value">
+                <ChoiceList
+                  choices={options?.choices}
+                  onChange={choices => {
+                    setProperty({
+                      ...property,
+                      options: {
+                        ...options,
+                        choices,
+                      },
+                    });
+                  }}
+                />
               </div>
               <div className="label">{t('Allow adding new options while choosing')}</div>
               <div className="value">
-                <Switch size={'small'} checked={options?.allowAddingNewOptionsWhileChoosing} />
+                <Switch
+                  size={'small'}
+                  checked={options?.allowAddingNewOptionsWhileChoosing}
+                  onChange={c => {
+                    setProperty({
+                      ...property,
+                      options: {
+                        ...options,
+                        allowAddingNewOptionsWhileChoosing: c,
+                      },
+                    });
+                  }}
+                />
               </div>
               <div className="label">{t('Default value')}</div>
-              <div className="value" >
+              <div className="value">
                 <Select
                   value={options?.defaultValue}
                   autoWidth
+                  hasClear
+                  style={{ width: '100%' }}
                   dataSource={options?.choices?.map(choice => choice.value)}
                   showSearch
-                  onChange={value => {
-
+                  onChange={c => {
+                    setProperty({
+                      ...property,
+                      options: {
+                        ...options,
+                        defaultValue: c,
+                      },
+                    });
                   }}
                 />
               </div>
@@ -199,9 +181,9 @@ const PropertyDialog = ({
           <Input
             value={property.name}
             onChange={name => setProperty({
-            ...property,
-            name,
-          })}
+              ...property,
+              name,
+            })}
           />
         </div>
         <div className="label">{t('Type')}</div>
