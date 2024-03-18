@@ -574,16 +574,34 @@ export type BakabaseInsideWorldModelsConstantsCoverSelectOrder = 1 | 2;
 export type BakabaseInsideWorldModelsConstantsCustomDataType = 1 | 2 | 3 | 4;
 
 /**
- * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: Null, 6: NotNull]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsCustomPropertySearchOperation = 1 | 2 | 3 | 4 | 5 | 6;
-
-/**
  * [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsCustomPropertyType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+
+/**
+ * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsCustomPropertyValueSearchOperation =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18;
 
 /**
  * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
@@ -858,6 +876,7 @@ export interface BakabaseInsideWorldModelsModelsAosResourceSearchDto {
   pageSize?: number;
   hideChildren?: boolean;
   save?: boolean;
+  customPropertyIds?: number[] | null;
   customPropertiesV2?: BakabaseInsideWorldModelsRequestModelsResourceSearchByCustomPropertyValuesRequestModel;
 }
 
@@ -924,7 +943,7 @@ export interface BakabaseInsideWorldModelsModelsDtosComponentDescriptorDto {
   associatedCategories?: BakabaseInsideWorldModelsModelsDtosResourceCategoryDto[] | null;
 }
 
-export interface BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto {
+export interface BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto {
   /** @format int32 */
   id?: number;
   name?: string | null;
@@ -935,14 +954,14 @@ export interface BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCus
   categories?: BakabaseInsideWorldModelsModelsDtosResourceCategoryDto[] | null;
 }
 
-export interface BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyValueDto {
+export interface BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyValueDto {
   /** @format int32 */
   id?: number;
   /** @format int32 */
   propertyId?: number;
   /** @format int32 */
   resourceId?: number;
-  property?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto;
+  property?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
@@ -1141,7 +1160,7 @@ export interface BakabaseInsideWorldModelsModelsDtosResourceCategoryDto {
   coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
   enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
   generateNfo?: boolean;
-  customProperties?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto[] | null;
+  customProperties?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions {
@@ -1187,8 +1206,8 @@ export interface BakabaseInsideWorldModelsModelsDtosResourceDto {
   fileModifyDt?: string;
   customProperties?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
   parent?: BakabaseInsideWorldModelsModelsDtosResourceDto;
-  customPropertiesV2?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto[] | null;
-  customPropertyValues?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyValueDto[] | null;
+  customPropertiesV2?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto[] | null;
+  customPropertyValues?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyValueDto[] | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosSeriesDto {
@@ -1390,8 +1409,8 @@ export interface BakabaseInsideWorldModelsRequestModelsCustomPropertyAddOrPutReq
 export interface BakabaseInsideWorldModelsRequestModelsCustomPropertyValueSearchRequestModel {
   /** @format int32 */
   propertyId?: number;
-  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: Null, 6: NotNull] */
-  operation?: BakabaseInsideWorldModelsConstantsCustomPropertySearchOperation;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation?: BakabaseInsideWorldModelsConstantsCustomPropertyValueSearchOperation;
   value?: string | null;
 }
 
@@ -1752,11 +1771,11 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   data?: BakabaseInsideWorldModelsModelsDtosComponentDescriptorDto[] | null;
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto {
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto {
   /** @format int32 */
   code?: number;
   message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto[] | null;
+  data?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
@@ -2112,11 +2131,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldModelsModelsDtosComponentDescriptorDto;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto {
   /** @format int32 */
   code?: number;
   message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto;
+  data?: BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
@@ -3934,7 +3953,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto,
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto,
         any
       >({
         path: `/custom-property`,
@@ -3956,7 +3975,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto,
         any
       >({
         path: `/custom-property`,
@@ -3980,7 +3999,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstrationsCustomPropertyDto,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosCustomPropertyAbstractionsCustomPropertyDto,
         any
       >({
         path: `/custom-property/${id}`,

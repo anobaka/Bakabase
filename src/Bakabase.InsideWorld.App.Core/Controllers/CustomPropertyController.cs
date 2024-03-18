@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Models.ResponseModels;

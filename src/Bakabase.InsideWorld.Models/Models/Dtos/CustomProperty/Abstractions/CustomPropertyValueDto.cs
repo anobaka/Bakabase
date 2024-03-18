@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Bakabase.InsideWorld.Models.RequestModels;
+﻿using Bakabase.InsideWorld.Models.RequestModels;
 using Newtonsoft.Json;
 
-namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations
+namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions
 {
-	public abstract record CustomPropertyValueDto : ICustomPropertyValue
+	public abstract record CustomPropertyValueDto
 	{
 		public int Id { get; set; }
 		public int PropertyId { get; set; }

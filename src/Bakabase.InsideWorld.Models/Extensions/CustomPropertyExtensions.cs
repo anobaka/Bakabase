@@ -7,8 +7,8 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.PropertyHelpers;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties.SingleChoice;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Newtonsoft.Json;
 
@@ -204,7 +204,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 			};
 		}
 
-		public static Dictionary<CustomPropertyType, ICustomPropertyHelper> Helpers = new()
+		public static Dictionary<CustomPropertyType, ICustomPropertyDescriptor> Descriptors = new()
 		{
 			{
 				CustomPropertyType.SingleChoice, new SingleChoicePropertyHelper()
@@ -218,7 +218,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 				return null;
 			}
 
-			return Helpers[entity.Type]?.ToDto(entity);
+			return Descriptors[entity.Type].BuildPropertyDto(entity);
 		}
 	}
 }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Extensions;
 

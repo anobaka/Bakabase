@@ -6,6 +6,20 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "15766802",
+      "name": "add-filter",
+      "font_class": "add-filter",
+      "unicode": "e609",
+      "unicode_decimal": 58889
+    },
+    {
+      "icon_id": "34452994",
+      "name": "filter-records",
+      "font_class": "filter-records",
+      "unicode": "e839",
+      "unicode_decimal": 59449
+    },
+    {
       "icon_id": "240132",
       "name": "radio_box",
       "font_class": "radiobox",

@@ -112,10 +112,10 @@ export enum CoverSelectOrder {FilenameAscending = 1, FileModifyDtDescending = 2}
 export const coverSelectOrders = Object.keys(CoverSelectOrder).filter(k => typeof CoverSelectOrder[k] === 'number').map(t => ({label: t, value: CoverSelectOrder[t]}));
 export enum CustomDataType {String = 1, DateTime = 2, Number = 3, Enum = 4}
 export const customDataTypes = Object.keys(CustomDataType).filter(k => typeof CustomDataType[k] === 'number').map(t => ({label: t, value: CustomDataType[t]}));
-export enum CustomPropertySearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, Null = 5, NotNull = 6}
-export const customPropertySearchOperations = Object.keys(CustomPropertySearchOperation).filter(k => typeof CustomPropertySearchOperation[k] === 'number').map(t => ({label: t, value: CustomPropertySearchOperation[t]}));
 export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10}
 export const customPropertyTypes = Object.keys(CustomPropertyType).filter(k => typeof CustomPropertyType[k] === 'number').map(t => ({label: t, value: CustomPropertyType[t]}));
+export enum CustomPropertyValueSearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
+export const customPropertyValueSearchOperations = Object.keys(CustomPropertyValueSearchOperation).filter(k => typeof CustomPropertyValueSearchOperation[k] === 'number').map(t => ({label: t, value: CustomPropertyValueSearchOperation[t]}));
 export enum DownloaderStopBy {ManuallyStop = 1, AppendToTheQueue = 2}
 export const downloaderStopBies = Object.keys(DownloaderStopBy).filter(k => typeof DownloaderStopBy[k] === 'number').map(t => ({label: t, value: DownloaderStopBy[t]}));
 export enum DownloadTaskAction {StartManually = 1, Restart = 2, Disable = 3, StartAutomatically = 4}

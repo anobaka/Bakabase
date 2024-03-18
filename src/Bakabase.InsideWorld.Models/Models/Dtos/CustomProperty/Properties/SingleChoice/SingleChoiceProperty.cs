@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 
-namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties;
+namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties.SingleChoice;
 
 public record SingleChoiceProperty() : CustomPropertyDto<SingleChoiceProperty.SingleChoicePropertyOptions>
 {

@@ -44,7 +44,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 using Bootstrap.Models.Constants;
 using CliWrap;
 using Microsoft.AspNetCore.Http;
@@ -481,10 +481,9 @@ namespace Bakabase.InsideWorld.Business.Services
 	        }
 
 	        var customPropertyV2SearchModels = model.CustomPropertiesV2?.CustomPropertyValueSearchModels;
-
 	        if (customPropertyV2SearchModels?.Any() == true)
 	        {
-		        var resourceIds = await _customPropertyValueService.SearchResourceIds(model.CustomPropertiesV2);
+		        var resourceIds = await _customPropertyValueService.SearchResourceIds(model.CustomPropertiesV2!);
 		        var exp1 = exp;
 		        exp = a => exp1(a) && resourceIds.Contains(a.Id);
 	        }

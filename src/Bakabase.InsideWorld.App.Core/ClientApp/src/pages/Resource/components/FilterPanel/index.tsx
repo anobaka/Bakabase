@@ -1,44 +1,24 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Button,
-  Checkbox,
-  DatePicker2,
-  Dropdown,
-  Icon,
-  Input,
-  Menu,
-  Message,
-  Overlay,
-  Rating,
-  Select,
-} from '@alifd/next';
+import { Button, Checkbox, DatePicker2, Dropdown, Icon, Input, Menu, Overlay, Rating, Select } from '@alifd/next';
 import dayjs from 'dayjs';
-import IceLabel from '@icedesign/label';
 import { useTranslation } from 'react-i18next';
-import { usePrevious, useUpdate, useUpdateEffect } from 'react-use';
-import { get } from 'immer/dist/utils/common';
+import { useUpdate, useUpdateEffect } from 'react-use';
 import CustomIcon from '@/components/CustomIcon';
-import type { ResourceLanguage } from '@/sdk/constants';
-import { ResourceCategoryAdditionalItem, resourceLanguages, TagAdditionalItem, TagGroupAdditionalItem } from '@/sdk/constants';
-import {
-  GetAllCustomPropertiesAndCandidates,
-  GetAllFavorites,
-  GetAllMediaLibraries,
-  GetAllReservedPropertiesAndCandidates,
-  GetAllResourceCategories,
-  GetAllTagGroups,
-  GetAllTags,
-} from '@/sdk/apis';
+import type {
+  CustomPropertyValueSearchOperation,
+  ResourceLanguage,
+  ResourceSearchByCustomPropertyValuesCombination,
+} from '@/sdk/constants';
+import { resourceLanguages, TagGroupAdditionalItem } from '@/sdk/constants';
 import { PlaylistCollection } from '@/components/Playlist';
 import './index.scss';
-
-import type { Tag as TagDto } from '@/core/models/Tag';
-import type { TagGroup as TagGroupDto } from '@/core/models/TagGroup';
 import TagSelector from '@/components/TagSelector';
 import BApi from '@/sdk/BApi';
 import type IOption from '@/core/models/Common/IOption';
 import { buildLogger, getValue, setValue, useTraceUpdate } from '@/components/utils';
-import CustomPropertiesSelectorDialog from '@/pages/Resource/components/CustomPropertiesSelectorDialog';
+import CustomPropertySelector from '@/components/CustomPropertySelector';
+import store from '@/store';
+import FilterGroups from '@/pages/Resource/components/FilterPanel/components/FilterGroups';
 
 const { Popup } = Overlay;
 
@@ -105,6 +85,15 @@ interface ISearchForm {
   hideChildren?: boolean;
   save?: boolean;
   pageIndex?: number;
+  customPropertyIds?: number[];
+  CustomPropertiesV2?: {
+    combination: ResourceSearchByCustomPropertyValuesCombination;
+    customPropertyValueSearchModels?: {
+      propertyId: number;
+      operation: CustomPropertyValueSearchOperation;
+      value?: string;
+    }[];
+  };
 }
 
 interface IProps {
@@ -118,7 +107,8 @@ const log = buildLogger('ResourcePageFilterPanel');
 export default React.memo((props: IProps) => {
   const { t } = useTranslation();
   const {
-    search = (f) => {},
+    search = (f) => {
+    },
     searchForm: propSearchForm = {},
     renderAdditionalOptions,
   } = props;
@@ -129,15 +119,19 @@ export default React.memo((props: IProps) => {
   const [searchForm, setSearchForm] = useState<ISearchForm>(JSON.parse(JSON.stringify(propSearchForm)));
   const searchFormRef = useRef<ISearchForm>(searchForm);
 
-  const categoryLibrariesRef = useRef<{id: number; name: string; libraries: {id: number; name: string}[]}[]>([]);
+  const categoryLibrariesRef = useRef<{ id: number; name: string; libraries: { id: number; name: string }[] }[]>([]);
   const tagIdDisplayNameMapRef = useRef<Record<number, string>>({});
   const customPropertiesAndCandidatesRef = useRef<Record<string, IOption<string>[]>>({});
   const favoritesRef = useRef<IOption<number>[]>([]);
   const reservedPropertiesAndCandidatesRef = useRef<Record<string, IOption<string>[]>>({});
 
+  const customPropertiesMapRef = useRef<Record<number, {id: number; name: string}>>({});
+
   const [tmpLibraryIds, setTmpLibraryIds] = useState([...(searchForm.mediaLibraryIds || [])]);
   const [tmpTagIds, setTmpTagIds] = useState([...(searchForm.tagIds || [])]);
   const [tmpExcludedTagIds, setTmpExcludedTagIds] = useState([...(searchForm.excludedTagIds || [])]);
+
+  const resourceOptions = store.useModelState('resourceOptions');
 
   useUpdateEffect(() => {
     searchFormRef.current = searchForm;
@@ -155,12 +149,12 @@ export default React.memo((props: IProps) => {
   }, [propSearchForm]);
 
   useUpdateEffect(() => {
-     log('search causes rendering', search);
+    log('search causes rendering', search);
   }, [search]);
 
   useEffect(() => {
-    let categories: {id: number; name: string}[] = [];
-    let libraries: {id: number; name: string; categoryId: number; order: number}[] = [];
+    let categories: { id: number; name: string }[] = [];
+    let libraries: { id: number; name: string; categoryId: number; order: number }[] = [];
     const tasks: Promise<any>[] = [
       BApi.resourceCategory.getAllResourceCategories()
         .then((t) => {
@@ -218,6 +212,13 @@ export default React.memo((props: IProps) => {
             value: t.id!,
           }));
         }),
+      BApi.customProperty.getAllCustomPropertiesV2().then(t => {
+        customPropertiesMapRef.current = (t.data || []).reduce<Record<number, {id: number; name: string}>>((m, p) => {
+          // @ts-ignore
+          m[p.id!] = p;
+          return m;
+        }, {});
+      }),
     ];
 
     Promise.all(tasks).then(t => {
@@ -383,7 +384,10 @@ export default React.memo((props: IProps) => {
 
   const patchSearchFormByKey = useCallback((key: string, value: any, thenSearch: boolean = false) => {
     setValue(searchForm, key, value);
-    const newForm = { ...searchForm, pageIndex: 1 };
+    const newForm = {
+      ...searchForm,
+      pageIndex: 1,
+    };
     setSearchForm(newForm);
     if (thenSearch) {
       search(newForm);
@@ -494,7 +498,9 @@ export default React.memo((props: IProps) => {
                           {value.map((tagId, x) => {
                             return (
                               <div key={tagId.id}>
-                                <span style={{ color: tagId.color }}>{tagIdDisplayNameMapRef.current[tagId] ?? t('Invalid tag')}</span>
+                                <span
+                                  style={{ color: tagId.color }}
+                                >{tagIdDisplayNameMapRef.current[tagId] ?? t('Invalid tag')}</span>
                                 {x < value.length - 1 && ','}
                               </div>
                             );
@@ -566,8 +572,7 @@ export default React.memo((props: IProps) => {
                     );
                   }
                   break;
-                case FilterType.Select:
-                {
+                case FilterType.Select: {
                   const selectedKeys = getValue(searchForm, f.key) || (f.multiple ? [] : undefined);
                   // ice.Menu.selectedKeys does not recognize number value
                   if (f.multiple) {
@@ -783,30 +788,35 @@ export default React.memo((props: IProps) => {
                 >
                   <PlaylistCollection className={'resource-page'} />
                 </Dropdown>
-                <div className={'filter'}>
-                  <div
-                    className="hover-area"
-                    onClick={() => {
-                         CustomPropertiesSelectorDialog.show({
-                           selectedPropertyIds: [],
-                            onSelected: (selectedPropertyIds) => {
-                              // patchSearchForm({
-                              //   customPropertyKeys: selectedPropertyIds,
-                              // }, true);
-                            },
-                         });
-                       }}
-                  >
-                    {t('More properties')}
-                    &nbsp;
-                    <CustomIcon type={'caret-down'} size={'xs'} />
-                  </div>
-                </div>
+                {/* <div className={'filter'}> */}
+                {/*   <div */}
+                {/*     className="hover-area" */}
+                {/*     onClick={() => { */}
+                {/*       CustomPropertySelector.show({ */}
+                {/*         selectedIds: [], */}
+                {/*         onSubmit: async ids => { */}
+                {/*           await BApi.options.patchResourceOptions({ */}
+                {/*             ...resourceOptions, */}
+                {/*             lastSearch: { */}
+                {/*               ...resourceOptions.lastSearch, */}
+                {/*               customPropertyIds: ids, */}
+                {/*             }, */}
+                {/*           }); */}
+                {/*         }, */}
+                {/*       }); */}
+                {/*     }} */}
+                {/*   > */}
+                {/*     {t('More properties')} */}
+                {/*     &nbsp; */}
+                {/*     <CustomIcon type={'caret-down'} size={'xs'} /> */}
+                {/*   </div> */}
+                {/* </div> */}
               </>
             )}
           </div>
         );
       })}
+      <FilterGroups />
       <div className="group last">
         <div className="left">
           <Button

@@ -1,4 +1,4 @@
-﻿using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
+﻿using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties;
 

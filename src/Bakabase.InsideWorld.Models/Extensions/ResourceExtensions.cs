@@ -594,31 +594,34 @@ namespace Bakabase.InsideWorld.Models.Extensions
 
             return new ResourceSearchOptions
             {
-                AddEndDt = dto.AddEndDt,
-                AddStartDt = dto.AddStartDt,
-                CategoryId = dto.CategoryId,
-                CustomPropertyKeys = dto.CustomPropertyKeys,
-                CustomPropertyValues = dto.CustomPropertyKeys
-                    ?.Select(a => dto.CustomProperties.TryGetValue(a, out var v) ? v : null).ToList(),
-                Everything = dto.Everything,
-                FavoritesIds = dto.FavoritesIds,
-                FileCreateEndDt = dto.FileCreateEndDt,
-                FileCreateStartDt = dto.FileCreateStartDt,
-                FileModifyEndDt = dto.FileModifyEndDt,
-                FileModifyStartDt = dto.FileModifyStartDt,
-                Languages = dto.Languages,
-                MediaLibraryIds = dto.MediaLibraryIds,
-                MinRate = dto.MinRate,
-                Name = dto.Name,
-                Orders = dto.Orders,
-                Original = dto.Original,
-                PageIndex = dto.PageIndex,
-                PageSize = dto.PageSize,
-                Publisher = dto.Publisher,
-                ReleaseEndDt = dto.ReleaseEndDt,
-                ReleaseStartDt = dto.ReleaseStartDt,
-                TagIds = dto.TagIds,
-                HideChildren = dto.HideChildren
+	            AddEndDt = dto.AddEndDt,
+	            AddStartDt = dto.AddStartDt,
+	            CategoryId = dto.CategoryId,
+	            CustomPropertyKeys = dto.CustomPropertyKeys,
+	            CustomPropertyValues = dto.CustomPropertyKeys
+		            ?.Select(a => dto.CustomProperties.TryGetValue(a, out var v) ? v : null).ToList(),
+	            Everything = dto.Everything,
+	            FavoritesIds = dto.FavoritesIds,
+	            FileCreateEndDt = dto.FileCreateEndDt,
+	            FileCreateStartDt = dto.FileCreateStartDt,
+	            FileModifyEndDt = dto.FileModifyEndDt,
+	            FileModifyStartDt = dto.FileModifyStartDt,
+	            Languages = dto.Languages,
+	            MediaLibraryIds = dto.MediaLibraryIds,
+	            MinRate = dto.MinRate,
+	            Name = dto.Name,
+	            Orders = dto.Orders,
+	            Original = dto.Original,
+	            PageIndex = dto.PageIndex,
+	            PageSize = dto.PageSize,
+	            Publisher = dto.Publisher,
+	            ReleaseEndDt = dto.ReleaseEndDt,
+	            ReleaseStartDt = dto.ReleaseStartDt,
+	            TagIds = dto.TagIds,
+	            HideChildren = dto.HideChildren,
+	            ExcludedTagIds = dto.ExcludedTagIds,
+	            CustomPropertyIds = dto.CustomPropertyIds,
+	            CustomProperties = dto.CustomPropertiesV2
             };
         }
 
@@ -653,7 +656,10 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 ReleaseStartDt = options.ReleaseStartDt,
                 TagIds = options.TagIds,
                 CustomPropertyKeys = options.CustomPropertyKeys,
-                HideChildren = options.HideChildren
+                HideChildren = options.HideChildren, 
+                CustomPropertiesV2 = options.CustomProperties, 
+                ExcludedTagIds = options.ExcludedTagIds, 
+                CustomPropertyIds = options.CustomPropertyIds
             };
 
             if (options.CustomPropertyKeys?.Any() == true)

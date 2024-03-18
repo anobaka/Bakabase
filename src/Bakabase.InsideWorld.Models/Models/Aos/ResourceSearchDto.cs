@@ -42,6 +42,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
 
 		public bool HideChildren { get; set; }
 		public bool Save { get; set; }
+		public List<int>? CustomPropertyIds { get; set; }
 		public ResourceSearchByCustomPropertyValuesRequestModel? CustomPropertiesV2 { get; set; }
 	}
 }

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Orm;

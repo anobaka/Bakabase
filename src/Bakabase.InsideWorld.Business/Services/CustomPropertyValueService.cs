@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstrations;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Orm;
@@ -41,12 +41,13 @@ namespace Bakabase.InsideWorld.Business.Services
 					foreach (var m in model.CustomPropertyValueSearchModels)
 					{
 						var value = valueMap.GetValueOrDefault(m.PropertyId);
-						var hit = (value == null && m.Operation == CustomPropertySearchOperation.Null) ||
+						var hit = (value == null && m.Operation == CustomPropertyValueSearchOperation.IsNull) ||
 						          value?.IsMatch(m) == true;
 						if (hit)
 						{
 							if (model.Combination == ResourceSearchByCustomPropertyValuesCombination.Or)
 							{
+								// avoid unnecessary matches
 								break;
 							}
 						}
@@ -54,6 +55,7 @@ namespace Bakabase.InsideWorld.Business.Services
 						{
 							if (model.Combination == ResourceSearchByCustomPropertyValuesCombination.And)
 							{
+								// avoid unnecessary matches
 								match = false;
 								break;
 							}
@@ -89,7 +91,7 @@ namespace Bakabase.InsideWorld.Business.Services
 					CustomPropertyAdditionalItem.None, returnCopy);
 			var propertyMap = properties.ToDictionary(x => x.Id);
 			var dtoList = values
-				.Select(v => CustomPropertyValueExtensions.Helpers[propertyMap[v.PropertyId].Type].ToDto(v)!).ToList();
+				.Select(v => CustomPropertyExtensions.Descriptors[propertyMap[v.PropertyId].Type].BuildValueDto(v)!).ToList();
 
 			foreach (var dto in dtoList)
 			{

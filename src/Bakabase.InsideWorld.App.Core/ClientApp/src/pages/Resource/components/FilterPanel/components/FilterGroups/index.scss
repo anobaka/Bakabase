@@ -1,0 +1,19 @@
+#resource-page-filter-groups {
+  .add-filter-or-group {
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+  }
+}
+
+.add-filter-or-group-dropdown-menu {
+  .next-menu-item {
+    padding: 0;
+
+    .next-menu-item-text {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+  }
+}
