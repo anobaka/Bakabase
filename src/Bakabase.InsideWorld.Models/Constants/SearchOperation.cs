@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Constants
 {
-	public enum CustomPropertyValueSearchOperation
+	public enum SearchOperation
 	{
 		Equals = 1,
 		NotEquals,

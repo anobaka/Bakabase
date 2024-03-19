@@ -1,5 +1,5 @@
 import { CustomPropertyType } from '@/sdk/constants';
-
+import type { IProperty } from '@/components/Property/models';
 export interface ICustomProperty {
   id: number;
   name: string;
@@ -26,7 +26,7 @@ export const PropertyTypeIconMap: Record<CustomPropertyType, string> = {
   [CustomPropertyType.Boolean]: 'checkboxchecked',
   [CustomPropertyType.Link]: 'link',
   [CustomPropertyType.Attachment]: 'attachment',
-  // [CustomPropertyType.Formula]: 'formula',
+  // [CustomPropertyType.Formula]: 'formula'
 };
 
 export interface IChoicePropertyOptions {

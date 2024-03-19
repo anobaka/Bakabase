@@ -9,7 +9,7 @@ namespace Bakabase.InsideWorld.Models.RequestModels
 {
 	public record ResourceSearchByCustomPropertyValuesRequestModel
 	{
-		public ResourceSearchByCustomPropertyValuesCombination Combination { get; set; }
+		public Combinator Combination { get; set; }
 		public List<CustomPropertyValueSearchRequestModel>? CustomPropertyValueSearchModels { get; set; }
 	}
 }

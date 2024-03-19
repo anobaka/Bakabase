@@ -538,6 +538,12 @@ export type BakabaseInsideWorldModelsConstantsAosResourceSearchOrder = 1 | 2 | 3
 export type BakabaseInsideWorldModelsConstantsBackgroundTaskStatus = 1 | 2 | 3;
 
 /**
+ * [1: And, 2: Or]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsCombinator = 1 | 2;
+
+/**
  * [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
  * @format int32
  */
@@ -578,30 +584,6 @@ export type BakabaseInsideWorldModelsConstantsCustomDataType = 1 | 2 | 3 | 4;
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsCustomPropertyType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
-
-/**
- * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsCustomPropertyValueSearchOperation =
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6
-  | 7
-  | 8
-  | 9
-  | 10
-  | 11
-  | 12
-  | 13
-  | 14
-  | 15
-  | 16
-  | 17
-  | 18;
 
 /**
  * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
@@ -689,7 +671,7 @@ export type BakabaseInsideWorldModelsConstantsResourceLanguage = 0 | 1 | 2 | 3 |
 export type BakabaseInsideWorldModelsConstantsResourceMatcherValueType = 1 | 2 | 3;
 
 /**
- * [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty]
+ * [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryName, 17: DirectoryPath, 18: CreatedAt, 19: ModifiedAt, 20: FileCreatedAt, 21: FileModifiedAt]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsResourceProperty =
@@ -706,13 +688,38 @@ export type BakabaseInsideWorldModelsConstantsResourceProperty =
   | 11
   | 12
   | 13
-  | 14;
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18
+  | 19
+  | 20
+  | 21;
 
 /**
- * [1: And, 2: Or]
+ * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsResourceSearchByCustomPropertyValuesCombination = 1 | 2;
+export type BakabaseInsideWorldModelsConstantsSearchOperation =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18;
 
 /**
  * [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime]
@@ -754,7 +761,7 @@ export interface BakabaseInsideWorldModelsModelsAosMatcherValue {
   /** @format int32 */
   layer?: number | null;
   regex?: string | null;
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty] */
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryName, 17: DirectoryPath, 18: CreatedAt, 19: ModifiedAt, 20: FileCreatedAt, 21: FileModifiedAt] */
   property?: BakabaseInsideWorldModelsConstantsResourceProperty;
   /** [1: Layer, 2: Regex, 3: FixedText] */
   valueType?: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
@@ -794,7 +801,7 @@ export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResu
 }
 
 export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntryGlobalMatchedValue {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty] */
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryName, 17: DirectoryPath, 18: CreatedAt, 19: ModifiedAt, 20: FileCreatedAt, 21: FileModifiedAt] */
   property?: BakabaseInsideWorldModelsConstantsResourceProperty;
   key?: string | null;
   values?: string[] | null;
@@ -808,7 +815,7 @@ export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResu
 }
 
 export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResultSegmentPropertyResult {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty] */
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryName, 17: DirectoryPath, 18: CreatedAt, 19: ModifiedAt, 20: FileCreatedAt, 21: FileModifiedAt] */
   property?: BakabaseInsideWorldModelsConstantsResourceProperty;
   keys?: string[] | null;
 }
@@ -992,7 +999,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMover
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty] */
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryName, 17: DirectoryPath, 18: CreatedAt, 19: ModifiedAt, 20: FileCreatedAt, 21: FileModifiedAt] */
   property?: BakabaseInsideWorldModelsConstantsResourceProperty;
   propertyKey?: string | null;
   value?: string | null;
@@ -1410,7 +1417,7 @@ export interface BakabaseInsideWorldModelsRequestModelsCustomPropertyValueSearch
   /** @format int32 */
   propertyId?: number;
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation?: BakabaseInsideWorldModelsConstantsCustomPropertyValueSearchOperation;
+  operation?: BakabaseInsideWorldModelsConstantsSearchOperation;
   value?: string | null;
 }
 
@@ -1602,7 +1609,7 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceRawNameUpdateRequ
 
 export interface BakabaseInsideWorldModelsRequestModelsResourceSearchByCustomPropertyValuesRequestModel {
   /** [1: And, 2: Or] */
-  combination?: BakabaseInsideWorldModelsConstantsResourceSearchByCustomPropertyValuesCombination;
+  combination?: BakabaseInsideWorldModelsConstantsCombinator;
   customPropertyValueSearchModels?:
     | BakabaseInsideWorldModelsRequestModelsCustomPropertyValueSearchRequestModel[]
     | null;

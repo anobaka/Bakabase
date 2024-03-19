@@ -3,13 +3,13 @@ import type { DialogProps } from '@alifd/next/types/dialog';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
+import PropertySelector from '@/components/PropertySelector';
 import { createPortalOfComponent } from '@/components/utils';
 import { CustomPropertyAdditionalItem, CustomPropertyType } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
 import type { ICustomProperty } from '@/pages/CustomProperty/models';
 import SingleProperty from '@/pages/CustomProperty/components/SingleProperty';
-import CustomPropertySelector from '@/components/CustomPropertySelector';
 
 const { Popup } = Overlay;
 
@@ -27,14 +27,16 @@ const CategoryCustomPropertyBinderDialog = ({
   const { t } = useTranslation();
 
   return (
-    <CustomPropertySelector
+    <PropertySelector
+      multiple
+      pool={'custom'}
       selectedIds={category.customProperties?.map(c => c.id)}
       dialogProps={{
         title: t('Binding custom properties to category {{categoryName}}', { categoryName: category.name }),
         ...dialogProps,
       }}
-      onSubmit={async (ids) => {
-        const rsp = await BApi.resourceCategory.bindCustomPropertiesToCategory(category.id, { customPropertyIds: ids });
+      onSubmit={async (properties) => {
+        const rsp = await BApi.resourceCategory.bindCustomPropertiesToCategory(category.id, { customPropertyIds: properties.map(p => p.id) });
         if (!rsp.code) {
           onSaved?.();
         } else {

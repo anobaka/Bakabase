@@ -56,7 +56,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions
 			// simple pre-check
 			if (typedValue == null || typedValue.Value == null)
 			{
-				if (model.Operation == CustomPropertyValueSearchOperation.IsNull)
+				if (model.Operation == SearchOperation.IsNull)
 				{
 					return true;
 				}

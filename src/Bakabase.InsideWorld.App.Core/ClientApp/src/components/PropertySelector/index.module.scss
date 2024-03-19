@@ -1,5 +1,5 @@
-.custom-property-selector-dialog {
-  .custom-properties {
+.propertySelector {
+  .customProperties {
     display: flex;
     gap: 10px;
     &>* {
@@ -8,10 +8,10 @@
       padding: 10px;
 
       &.selected {
-        //width: 40%;
       }
 
-      &.not-selected {
+      &.notSelected {
+        border-style: dashed;
         flex: 1;
       }
 

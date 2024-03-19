@@ -3,6 +3,8 @@ import { Button, Checkbox, DatePicker2, Dropdown, Icon, Input, Menu, Overlay, Ra
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useUpdate, useUpdateEffect } from 'react-use';
+import PropertySelector from 'src/components/PropertySelector';
+import FilterGroupsPanel from './components/FilterGroupsPanel';
 import CustomIcon from '@/components/CustomIcon';
 import type {
   CustomPropertyValueSearchOperation,
@@ -16,9 +18,7 @@ import TagSelector from '@/components/TagSelector';
 import BApi from '@/sdk/BApi';
 import type IOption from '@/core/models/Common/IOption';
 import { buildLogger, getValue, setValue, useTraceUpdate } from '@/components/utils';
-import CustomPropertySelector from '@/components/CustomPropertySelector';
 import store from '@/store';
-import FilterGroups from '@/pages/Resource/components/FilterPanel/components/FilterGroups';
 
 const { Popup } = Overlay;
 
@@ -816,7 +816,7 @@ export default React.memo((props: IProps) => {
           </div>
         );
       })}
-      <FilterGroups />
+      <FilterGroupsPanel />
       <div className="group last">
         <div className="left">
           <Button

@@ -3,6 +3,7 @@ import { Button } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import PropertyDialog from './components/PropertyDialog';
+import CustomProperty from '@/components/Property/CustomProperty';
 import BApi from '@/sdk/BApi';
 import { CustomPropertyAdditionalItem, CustomPropertyType } from '@/sdk/constants';
 import type { ICustomProperty } from '@/pages/CustomProperty/models';
@@ -10,7 +11,6 @@ import { PropertyTypeIconMap } from '@/pages/CustomProperty/models';
 import SimpleLabel from '@/components/SimpleLabel';
 import ClickableIcon from '@/components/ClickableIcon';
 import CustomIcon from '@/components/CustomIcon';
-import SingleProperty from '@/pages/CustomProperty/components/SingleProperty';
 
 export default () => {
   const { t } = useTranslation();
@@ -44,7 +44,7 @@ export default () => {
       <div className="properties">
         {properties.map(p => {
           return (
-            <SingleProperty
+            <CustomProperty
               property={p}
               onSaved={loadProperties}
               key={p.id}

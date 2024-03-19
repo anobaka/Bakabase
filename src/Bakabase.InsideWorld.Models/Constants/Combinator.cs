@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Constants
 {
-	public enum ResourceSearchByCustomPropertyValuesCombination
+	public enum Combinator
 	{
 		And = 1,
 		Or = 2

@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Models.RequestModels
 	public record CustomPropertyValueSearchRequestModel
 	{
 		public int PropertyId { get; set; }
-		public CustomPropertyValueSearchOperation Operation { get; set; }
+		public SearchOperation Operation { get; set; }
 		public string? Value { get; set; }
 	}
 }

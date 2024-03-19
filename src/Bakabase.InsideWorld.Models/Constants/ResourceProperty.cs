@@ -21,6 +21,13 @@ namespace Bakabase.InsideWorld.Models.Constants
         Tag,
         Introduction,
         Rate,
-        CustomProperty
-    }
+        CustomProperty,
+        FileName,
+        DirectoryName,
+        DirectoryPath,
+        CreatedAt,
+        ModifiedAt,
+        FileCreatedAt,
+        FileModifiedAt,
+	}
 }

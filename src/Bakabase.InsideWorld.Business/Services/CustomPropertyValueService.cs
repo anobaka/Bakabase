@@ -41,11 +41,11 @@ namespace Bakabase.InsideWorld.Business.Services
 					foreach (var m in model.CustomPropertyValueSearchModels)
 					{
 						var value = valueMap.GetValueOrDefault(m.PropertyId);
-						var hit = (value == null && m.Operation == CustomPropertyValueSearchOperation.IsNull) ||
+						var hit = (value == null && m.Operation == SearchOperation.IsNull) ||
 						          value?.IsMatch(m) == true;
 						if (hit)
 						{
-							if (model.Combination == ResourceSearchByCustomPropertyValuesCombination.Or)
+							if (model.Combination == Combinator.Or)
 							{
 								// avoid unnecessary matches
 								break;
@@ -53,7 +53,7 @@ namespace Bakabase.InsideWorld.Business.Services
 						}
 						else
 						{
-							if (model.Combination == ResourceSearchByCustomPropertyValuesCombination.And)
+							if (model.Combination == Combinator.And)
 							{
 								// avoid unnecessary matches
 								match = false;
