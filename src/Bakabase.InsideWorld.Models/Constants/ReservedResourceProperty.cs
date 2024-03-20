@@ -10,6 +10,7 @@ namespace Bakabase.InsideWorld.Models.Constants
     /// <summary>
     /// DO NOT CHANGE ORDERS
     /// </summary>
+    [Obsolete]
     public enum ReservedResourceProperty
     {
         /// <summary>

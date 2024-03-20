@@ -10,6 +10,5 @@ export function convertCustomPropertyToProperty(cp: ICustomProperty): IProperty 
     id: cp.id,
     name: cp.name,
     type: cp.type as unknown as StandardValueType,
-    isReserved: false,
   };
 }

@@ -1,4 +1,4 @@
-import type { SearchOperation } from '@/sdk/constants';
+import type { SearchOperation, StandardValueType } from '@/sdk/constants';
 
 export enum GroupCombinator {
   And = 1,
@@ -11,6 +11,8 @@ export interface IFilter {
   isReservedProperty?: boolean;
   group?: IGroup;
   operation?: SearchOperation;
+  valueType?: StandardValueType;
+  value?: any;
 }
 
 export interface IGroup {

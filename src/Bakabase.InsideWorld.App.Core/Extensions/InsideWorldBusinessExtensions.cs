@@ -22,6 +22,7 @@ using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.InsideWorld.Models.Configs.Fixed;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.DependencyInjection;
@@ -140,6 +141,8 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddScoped<CustomPropertyService>();
             services.AddScoped<CustomPropertyValueService>();
             services.AddScoped<CategoryCustomPropertyMappingService>();
+
+            services.AddSingleton<ReservedOptions>();
 
             return services;
         }

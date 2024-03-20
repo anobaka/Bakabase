@@ -20,6 +20,7 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTas
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Configs.Fixed;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Entities;
@@ -55,12 +56,13 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly IEnumerable<IDependentComponentService> _dependentComponentServices;
         private readonly IFileMover _fileMover;
         private readonly AppUpdater _appUpdater;
+        private readonly ReservedOptions _reservedOptions;
 
-        public WebGuiHub(
+		public WebGuiHub(
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
-            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover, AppUpdater appUpdater)
+            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover, AppUpdater appUpdater, ReservedOptions reservedOptions)
         {
             _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
@@ -71,6 +73,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             _dependentComponentServices = dependentComponentServices;
             _fileMover = fileMover;
             _appUpdater = appUpdater;
+            _reservedOptions = reservedOptions;
         }
 
         public async Task GetInitialData()
@@ -96,6 +99,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
             await Clients.Caller.GetData(nameof(BulkModificationConfiguration),
                 BulkModificationService.GetConfiguration());
+
+            await Clients.Caller.GetData(nameof(ReservedOptions), _reservedOptions);
         }
     }
 }

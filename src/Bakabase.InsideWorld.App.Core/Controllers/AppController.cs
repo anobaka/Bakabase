@@ -13,6 +13,7 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.InsideWorld.Models.Configs.Fixed;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.Aos;
 using Bakabase.InsideWorld.Models.Extensions;

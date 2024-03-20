@@ -4,5 +4,4 @@ export interface IProperty {
   id: number;
   type?: StandardValueType;
   name: string;
-  isReserved: boolean;
 }

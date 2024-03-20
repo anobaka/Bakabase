@@ -4,9 +4,13 @@ import { useState } from 'react';
 import type { IFilter } from '../../../../models';
 import groupStyles from '../../index.module.scss';
 import styles from './index.module.scss';
+import FilterValue from './components/FilterValue';
 import PropertySelector from '@/components/PropertySelector';
 import ClickableIcon from '@/components/ClickableIcon';
+import type { StandardValueType } from '@/sdk/constants';
 import { SearchOperation, searchOperations } from '@/sdk/constants';
+import type { ICustomProperty } from '@/pages/CustomProperty/models';
+import store from '@/store';
 interface IProps {
   filter: IFilter;
   onRemove?: () => any;
@@ -15,7 +19,49 @@ interface IProps {
 export default ({ filter: propsFilter, onRemove }: IProps) => {
   const { t } = useTranslation();
 
+  const reservedOptions = store.useModelState('reservedOptions');
+  const standardValueTypeSearchOperationsMap = reservedOptions?.resource?.standardValueSearchOperationsMap || {};
+
   const [filter, setFilter] = useState<IFilter>(propsFilter);
+
+  const renderOperations = () => {
+    if (filter.propertyId == undefined) {
+      return (
+        <Menu>
+          <Menu.Item disabled>{t('Please select a property first')}</Menu.Item>
+        </Menu>
+      );
+    }
+    const operations = standardValueTypeSearchOperationsMap[filter.valueType!] || [];
+    if (operations.length == 0) {
+      return (
+        <Menu>
+          <Menu.Item disabled>{t('Can not operate on this property')}</Menu.Item>
+        </Menu>
+      );
+    } else {
+      return (
+        <Menu>
+          {operations.map((operation) => {
+            return (
+              <Menu.Item
+                key={operation}
+                onClick={() => {
+                  setFilter({
+                    ...filter,
+                    operation: operation,
+                  });
+                }}
+              >
+                {t(SearchOperation[operation])}
+              </Menu.Item>
+            );
+          })}
+        </Menu>
+      );
+    }
+  };
+
   return (
     <div className={`${styles.filter} ${groupStyles.removable}`} >
       <ClickableIcon
@@ -25,20 +71,22 @@ export default ({ filter: propsFilter, onRemove }: IProps) => {
         size={'small'}
         onClick={onRemove}
       />
-      <div className="property">
+      <div className={styles.property}>
         <Button
           type={'primary'}
           text
           onClick={() => {
             PropertySelector.show({
-              selectedKeys: filter.propertyId ? [{ id: filter.propertyId, isReserved: filter.isReservedProperty! }] : undefined,
-              onSubmit: async (reservedProperties, customProperties) => {
-                const property = reservedProperties?.[0] ?? customProperties?.[0];
+              selection: { [filter.isReservedProperty ? 'reservedPropertyIds' : 'customPropertyIds']: filter.propertyId == undefined ? undefined : [filter.propertyId] },
+              onSubmit: async (selectedProperties) => {
+                const property = (selectedProperties.reservedProperties?.[0] ?? selectedProperties.customProperties?.[0])!;
+                const cp = property as ICustomProperty;
                 setFilter({
                   ...filter,
                   propertyId: property.id,
                   propertyName: property.name,
-                  isReservedProperty: reservedProperties[0].isReserved,
+                  isReservedProperty: cp == undefined,
+                  valueType: property.type as unknown as StandardValueType,
                 });
               },
               multiple: false,
@@ -50,7 +98,7 @@ export default ({ filter: propsFilter, onRemove }: IProps) => {
           {filter.propertyId ? filter.propertyName : t('Property')}
         </Button>
       </div>
-      <div className="operation">
+      <div className={styles.operation}>
         <Dropdown
           trigger={(
             <Button
@@ -62,25 +110,10 @@ export default ({ filter: propsFilter, onRemove }: IProps) => {
             </Button>
           )}
         >
-          <Menu>
-            {searchOperations.map((operation) => {
-              return (
-                <Menu.Item
-                  key={operation.value}
-                  onClick={() => {
-                    setFilter({
-                      ...filter,
-                      operation: operation.value,
-                    });
-                  }}
-                >
-                  {t(operation.label)}
-                </Menu.Item>
-              );
-            })}
-          </Menu>
+          {renderOperations()}
         </Dropdown>
       </div>
+      <FilterValue filter={filter} />
     </div>
   );
 };
