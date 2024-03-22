@@ -1,6 +1,7 @@
-import { Button, Dropdown, Menu, Search } from '@alifd/next';
+import { Button, Dropdown, Menu } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
+import { useUpdateEffect } from 'react-use';
 import type { IFilter } from '../../../../models';
 import groupStyles from '../../index.module.scss';
 import styles from './index.module.scss';
@@ -8,21 +9,32 @@ import FilterValue from './components/FilterValue';
 import PropertySelector from '@/components/PropertySelector';
 import ClickableIcon from '@/components/ClickableIcon';
 import type { StandardValueType } from '@/sdk/constants';
-import { SearchOperation, searchOperations } from '@/sdk/constants';
+import { SearchOperation } from '@/sdk/constants';
 import type { ICustomProperty } from '@/pages/CustomProperty/models';
 import store from '@/store';
+
 interface IProps {
   filter: IFilter;
   onRemove?: () => any;
+  onChange?: (filter: IFilter) => any;
 }
 
-export default ({ filter: propsFilter, onRemove }: IProps) => {
+export default ({
+                  filter: propsFilter,
+                  onRemove,
+                  onChange,
+                }: IProps) => {
   const { t } = useTranslation();
 
   const reservedOptions = store.useModelState('reservedOptions');
   const standardValueTypeSearchOperationsMap = reservedOptions?.resource?.standardValueSearchOperationsMap || {};
 
   const [filter, setFilter] = useState<IFilter>(propsFilter);
+
+  useUpdateEffect(() => {
+    console.log(123);
+    onChange?.(filter);
+  }, [filter]);
 
   const renderOperations = () => {
     if (filter.propertyId == undefined) {
@@ -53,7 +65,7 @@ export default ({ filter: propsFilter, onRemove }: IProps) => {
                   });
                 }}
               >
-                {t(SearchOperation[operation])}
+                {t(`SearchOperation.${SearchOperation[operation]}`)}
               </Menu.Item>
             );
           })}
@@ -62,8 +74,10 @@ export default ({ filter: propsFilter, onRemove }: IProps) => {
     }
   };
 
+  const noValue = filter.operation == SearchOperation.IsNull || filter.operation == SearchOperation.IsNotNull;
+
   return (
-    <div className={`${styles.filter} ${groupStyles.removable}`} >
+    <div className={`${styles.filter} ${groupStyles.removable}`}>
       <ClickableIcon
         colorType={'danger'}
         className={groupStyles.remove}
@@ -105,15 +119,29 @@ export default ({ filter: propsFilter, onRemove }: IProps) => {
               type={'primary'}
               text
               size={'small'}
+              disabled={filter.propertyId == undefined}
             >
-              {filter.operation == undefined ? t('Operation') : t(SearchOperation[filter.operation])}
+              {filter.operation == undefined ? t('Operation') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
             </Button>
           )}
+          triggerType={'click'}
         >
           {renderOperations()}
         </Dropdown>
       </div>
-      <FilterValue filter={filter} />
+      {noValue ? null : (
+        <FilterValue
+          operation={filter.operation}
+          valueType={filter.valueType}
+          value={filter.value}
+          onChange={value => {
+            setFilter({
+              ...filter,
+              value,
+            });
+          }}
+        />
+      )}
     </div>
   );
 };

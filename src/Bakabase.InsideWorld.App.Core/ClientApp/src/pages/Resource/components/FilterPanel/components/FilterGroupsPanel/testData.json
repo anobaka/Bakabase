@@ -1,0 +1,35 @@
+{
+  "filters": [
+    {
+      "propertyId": 6,
+      "propertyName": "名称",
+      "isReservedProperty": false,
+      "valueType": 1,
+      "operation": 3,
+      "value": "ddddd"
+    }
+  ],
+  "combinator": 1,
+  "groups": [
+    {
+      "combinator": 2,
+      "filters": [
+        {
+          "propertyId": 11,
+          "propertyName": "标签",
+          "isReservedProperty": false,
+          "valueType": 4,
+          "operation": 13
+        },
+        {
+          "propertyId": 15,
+          "propertyName": "文件名",
+          "isReservedProperty": false,
+          "valueType": 1,
+          "operation": 3,
+          "value": "xxxx"
+        }
+      ]
+    }
+  ]
+}

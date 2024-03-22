@@ -30,5 +30,8 @@ namespace Bakabase.InsideWorld.Models.Constants
         ModifiedAt,
         FileCreatedAt,
         FileModifiedAt,
+        Category,
+        MediaLibrary,
+        Favorites
 	}
 }

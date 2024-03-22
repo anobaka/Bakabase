@@ -3,7 +3,6 @@ import { Button, Checkbox, DatePicker2, Dropdown, Icon, Input, Menu, Overlay, Ra
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useUpdate, useUpdateEffect } from 'react-use';
-import PropertySelector from 'src/components/PropertySelector';
 import FilterGroupsPanel from './components/FilterGroupsPanel';
 import CustomIcon from '@/components/CustomIcon';
 import type {
@@ -125,7 +124,7 @@ export default React.memo((props: IProps) => {
   const favoritesRef = useRef<IOption<number>[]>([]);
   const reservedPropertiesAndCandidatesRef = useRef<Record<string, IOption<string>[]>>({});
 
-  const customPropertiesMapRef = useRef<Record<number, {id: number; name: string}>>({});
+  const customPropertiesMapRef = useRef<Record<number, { id: number; name: string }>>({});
 
   const [tmpLibraryIds, setTmpLibraryIds] = useState([...(searchForm.mediaLibraryIds || [])]);
   const [tmpTagIds, setTmpTagIds] = useState([...(searchForm.tagIds || [])]);
@@ -213,7 +212,7 @@ export default React.memo((props: IProps) => {
           }));
         }),
       BApi.customProperty.getAllCustomPropertiesV2().then(t => {
-        customPropertiesMapRef.current = (t.data || []).reduce<Record<number, {id: number; name: string}>>((m, p) => {
+        customPropertiesMapRef.current = (t.data || []).reduce<Record<number, { id: number; name: string }>>((m, p) => {
           // @ts-ignore
           m[p.id!] = p;
           return m;
@@ -816,7 +815,11 @@ export default React.memo((props: IProps) => {
           </div>
         );
       })}
-      <FilterGroupsPanel />
+      <FilterGroupsPanel
+        onChange={g => {
+          console.log('[FilterGroupsPanel] onChange', g);
+        }}
+      />
       <div className="group last">
         <div className="left">
           <Button

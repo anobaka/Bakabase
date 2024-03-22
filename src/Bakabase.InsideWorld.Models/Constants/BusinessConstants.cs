@@ -134,20 +134,29 @@ namespace Bakabase.InsideWorld.Models.Constants
 		public const string TempDirectoryName = "temp";
 		public const string ComponentInfoFileName = "i.json";
 
+		public static readonly HashSet<ResourceProperty> PropertiesAppliedAliases =
+		[
+			ResourceProperty.Name,
+			ResourceProperty.Tag
+		];
 
-		public static readonly ConcurrentDictionary<ResourceProperty, StandardValueType>
+
+		public static readonly ConcurrentDictionary<SearchableReservedProperty, StandardValueType>
 			ReservedResourcePropertyAndValueTypeMap =
-				new(new Dictionary<ResourceProperty, StandardValueType>()
+				new(new Dictionary<SearchableReservedProperty, StandardValueType>()
 				{
-					{ResourceProperty.Name, StandardValueType.SingleLineText},
-					{ResourceProperty.FileName, StandardValueType.SingleLineText},
-					{ResourceProperty.DirectoryName, StandardValueType.SingleLineText},
-					{ResourceProperty.DirectoryPath, StandardValueType.SingleLineText},
-					{ResourceProperty.CreatedAt, StandardValueType.DateTime},
-					{ResourceProperty.ModifiedAt, StandardValueType.DateTime},
-					{ResourceProperty.FileCreatedAt, StandardValueType.DateTime},
-					{ResourceProperty.FileModifiedAt, StandardValueType.DateTime},
-					{ResourceProperty.Tag, StandardValueType.MultipleChoice},
+					{SearchableReservedProperty.Name, StandardValueType.SingleLineText},
+					{SearchableReservedProperty.FileName, StandardValueType.SingleLineText},
+					{SearchableReservedProperty.DirectoryName, StandardValueType.SingleLineText},
+					{SearchableReservedProperty.DirectoryPath, StandardValueType.SingleLineText},
+					{SearchableReservedProperty.CreatedAt, StandardValueType.DateTime},
+					{SearchableReservedProperty.ModifiedAt, StandardValueType.DateTime},
+					{SearchableReservedProperty.FileCreatedAt, StandardValueType.DateTime},
+					{SearchableReservedProperty.FileModifiedAt, StandardValueType.DateTime},
+					{SearchableReservedProperty.Tag, StandardValueType.MultipleChoice},
+					{SearchableReservedProperty.Category, StandardValueType.SingleChoice},
+					{SearchableReservedProperty.MediaLibrary, StandardValueType.SingleChoice},
+					{SearchableReservedProperty.Favorites, StandardValueType.SingleChoice},
 				});
 
 		public static readonly ConcurrentDictionary<StandardValueType, SearchOperation[]>

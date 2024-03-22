@@ -129,7 +129,7 @@ const ResourcePage = (props) => {
     }
 
     const onKeyDown = (e) => {
-      log('Keydown', e);
+      // log('Keydown', e);
       switch (e.code) {
         case 'ArrowLeft':
           changePage(pageableRef.current.pageIndex - 1);
@@ -165,7 +165,7 @@ const ResourcePage = (props) => {
     };
 
     const onKeyUp = (e) => {
-      log('Keyup', e);
+      // log('Keyup', e);
       switch (e.code) {
         case 'ShiftLeft': {
           shiftIsDownRef.current = false;

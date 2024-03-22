@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Button, Dropdown, Menu } from '@alifd/next';
 import React from 'react';
+import { useUpdateEffect } from 'react-use';
 import type { IGroup } from '../../models';
 import { GroupCombinator } from '../../models';
 import styles from './index.module.scss';
@@ -12,15 +13,21 @@ interface IProps {
   group: IGroup;
   isRoot: boolean;
   onRemove?: () => void;
+  onChange?: (group: IGroup) => void;
 }
 
 const FilterGroup = ({
                        group: propsGroup,
                        isRoot,
                        onRemove,
+                       onChange,
                      }: IProps) => {
   const { t } = useTranslation();
   const [group, setGroup] = React.useState<IGroup>(propsGroup);
+
+  useUpdateEffect(() => {
+    onChange?.(group);
+  }, [group]);
 
   const {
     filters,
@@ -39,6 +46,14 @@ const FilterGroup = ({
           },
         );
       }}
+      onChange={tf => {
+        setGroup(
+          {
+            ...group,
+            filters: (group.filters || []).map(fil => (fil === f ? tf : fil)),
+          },
+        );
+      }}
     />
   )).concat((groups || []).map(g => (
     <FilterGroup
@@ -48,6 +63,12 @@ const FilterGroup = ({
         setGroup({
           ...group,
           groups: (group.groups || []).filter(gr => gr !== g),
+        });
+      }}
+      onChange={tg => {
+        setGroup({
+          ...group,
+          groups: (group.groups || []).map(gr => (gr === g ? tg : gr)),
         });
       }}
     />
