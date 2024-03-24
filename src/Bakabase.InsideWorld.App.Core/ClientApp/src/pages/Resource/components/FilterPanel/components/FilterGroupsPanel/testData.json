@@ -1,14 +1,4 @@
 {
-  "filters": [
-    {
-      "propertyId": 6,
-      "propertyName": "名称",
-      "isReservedProperty": false,
-      "valueType": 1,
-      "operation": 3,
-      "value": "ddddd"
-    }
-  ],
   "combinator": 1,
   "groups": [
     {
@@ -17,14 +7,14 @@
         {
           "propertyId": 11,
           "propertyName": "标签",
-          "isReservedProperty": false,
+          "isReservedProperty": true,
           "valueType": 4,
           "operation": 13
         },
         {
           "propertyId": 15,
           "propertyName": "文件名",
-          "isReservedProperty": false,
+          "isReservedProperty": true,
           "valueType": 1,
           "operation": 3,
           "value": "xxxx"

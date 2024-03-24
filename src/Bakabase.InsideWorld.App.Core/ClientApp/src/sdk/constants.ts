@@ -114,7 +114,7 @@ export enum CoverSelectOrder {FilenameAscending = 1, FileModifyDtDescending = 2}
 export const coverSelectOrders = Object.keys(CoverSelectOrder).filter(k => typeof CoverSelectOrder[k] === 'number').map(t => ({label: t, value: CoverSelectOrder[t]}));
 export enum CustomDataType {String = 1, DateTime = 2, Number = 3, Enum = 4}
 export const customDataTypes = Object.keys(CustomDataType).filter(k => typeof CustomDataType[k] === 'number').map(t => ({label: t, value: CustomDataType[t]}));
-export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10}
+export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15}
 export const customPropertyTypes = Object.keys(CustomPropertyType).filter(k => typeof CustomPropertyType[k] === 'number').map(t => ({label: t, value: CustomPropertyType[t]}));
 export enum DownloaderStopBy {ManuallyStop = 1, AppendToTheQueue = 2}
 export const downloaderStopBies = Object.keys(DownloaderStopBy).filter(k => typeof DownloaderStopBy[k] === 'number').map(t => ({label: t, value: DownloaderStopBy[t]}));
@@ -156,10 +156,12 @@ export enum ResourceLanguage {NotSet = 0, Chinese = 1, English = 2, Japanese = 3
 export const resourceLanguages = Object.keys(ResourceLanguage).filter(k => typeof ResourceLanguage[k] === 'number').map(t => ({label: t, value: ResourceLanguage[t]}));
 export enum ResourceMatcherValueType {Layer = 1, Regex = 2, FixedText = 3}
 export const resourceMatcherValueTypes = Object.keys(ResourceMatcherValueType).filter(k => typeof ResourceMatcherValueType[k] === 'number').map(t => ({label: t, value: ResourceMatcherValueType[t]}));
-export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, ReleaseDt = 4, Publisher = 5, Name = 6, Language = 7, Volume = 8, Original = 9, Series = 10, Tag = 11, Introduction = 12, Rate = 13, CustomProperty = 14, FileName = 15, DirectoryName = 16, DirectoryPath = 17, CreatedAt = 18, ModifiedAt = 19, FileCreatedAt = 20, FileModifiedAt = 21}
+export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, ReleaseDt = 4, Publisher = 5, Name = 6, Language = 7, Volume = 8, Original = 9, Series = 10, Tag = 11, Introduction = 12, Rate = 13, CustomProperty = 14, FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21, Favorites = 22}
 export const resourceProperties = Object.keys(ResourceProperty).filter(k => typeof ResourceProperty[k] === 'number').map(t => ({label: t, value: ResourceProperty[t]}));
 export enum ResourceTaskType {Moving = 1}
 export const resourceTaskTypes = Object.keys(ResourceTaskType).filter(k => typeof ResourceTaskType[k] === 'number').map(t => ({label: t, value: ResourceTaskType[t]}));
+export enum SearchableReservedProperty {Tag = 11, FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21, Favorites = 22}
+export const searchableReservedProperties = Object.keys(SearchableReservedProperty).filter(k => typeof SearchableReservedProperty[k] === 'number').map(t => ({label: t, value: SearchableReservedProperty[t]}));
 export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
 export const searchOperations = Object.keys(SearchOperation).filter(k => typeof SearchOperation[k] === 'number').map(t => ({label: t, value: SearchOperation[t]}));
 export enum SpecialTextType {Useless = 1, Language = 2, Wrapper = 3, Standardization = 4, Volume = 6, Trim = 7, DateTime = 8}

@@ -10,11 +10,18 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions
 		public int ResourceId { get; set; }
 		public CustomPropertyDto? Property { get; set; }
 		public abstract bool IsMatch(CustomPropertyValueSearchRequestModel model);
+		public object? Value { get; set; }
 	}
 
 	public abstract record CustomPropertyValueDto<T> : CustomPropertyValueDto
 	{
-		public T? Value { get; set; }
+		private T? _value;
+
+		public new T? Value
+		{
+			get => _value;
+			set => base.Value = _value = value;
+		}
 
 		public override bool IsMatch(CustomPropertyValueSearchRequestModel model)
 		{

@@ -86,6 +86,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		private readonly InsideWorldLocalizer _localizer;
 		private readonly CustomPropertyService _customPropertyService;
 		private readonly CustomPropertyValueService _customPropertyValueService;
+		private readonly IResourceSearchContextProcessor _resourceSearchContextProcessor;
 
 		public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
 			PublisherService publisherService, AliasService aliasService,
@@ -99,7 +100,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			TagGroupService tagGroupService, IBOptionsManager<ResourceOptions> optionsManager,
 			IBOptions<ThirdPartyOptions> thirdPartyOptions, TempFileManager tempFileManager,
 			FfMpegService ffMpegService, InsideWorldLocalizer localizer, CustomPropertyService customPropertyService,
-			CustomPropertyValueService customPropertyValueService)
+			CustomPropertyValueService customPropertyValueService, IResourceSearchContextProcessor resourceSearchContextProcessor)
 		{
 			_specialTextService = specialTextService;
 			_publisherService = publisherService;
@@ -126,6 +127,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			_localizer = localizer;
 			_customPropertyService = customPropertyService;
 			_customPropertyValueService = customPropertyValueService;
+			_resourceSearchContextProcessor = resourceSearchContextProcessor;
 			_orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>(serviceProvider);
 		}
 
@@ -297,12 +299,15 @@ namespace Bakabase.InsideWorld.Business.Services
 
 		public async Task<SearchResponse<ResourceDto>> SearchV2(ResourceSearchRequestModelV2 model, bool asNoTracking)
 		{
-			var allResourceIds = await SearchResourceIds(model.Group, null);
+			var allResources = await GetAllEntities(null, false);
+			var context = new ResourceSearchContext(allResources);
+
+			var resourceIds = await SearchResourceIds(model.Group, context);
 			var ordersForSearch = model.Orders.BuildForSearch();
 
-			var resources = await _orm.Search(allResourceIds == null ? null : r => allResourceIds.Contains(r.Id),
-				model.PageIndex, model.PageSize,
-				ordersForSearch, asNoTracking);
+			Func<Resource, bool>? exp = resourceIds == null ? null : r => resourceIds.Contains(r.Id);
+
+			var resources = await _orm.Search(exp, model.PageIndex, model.PageSize, ordersForSearch, asNoTracking);
 			var dtoList = await ToDto(resources.Data.ToArray(), ResourceAdditionalItem.All);
 
 			return model.BuildResponse(dtoList, resources.TotalCount);
@@ -318,24 +323,21 @@ namespace Bakabase.InsideWorld.Business.Services
 		/// <para>Empty: all resources are invalid</para>
 		/// <para>Any: valid resource id list</para>
 		/// </returns>
-		private async Task<ResourceSearchContext> SearchResourceIds(ResourceSearchFilterGroup? group,
-			ResourceSearchContext? context)
+		private async Task<HashSet<int>?> SearchResourceIds(ResourceSearchFilterGroup? group,
+			ResourceSearchContext context)
 		{
 			if (group == null)
 			{
 				return null;
 			}
 
-			HashSet<int>? resourceIds = null;
-			var steps = new List<Func<Task>();
-			context ??= new();
+			var steps = new List<Func<Task<HashSet<int>?>>>();
 
 			if (group.Filters?.Any() == true)
 			{
 				foreach (var filter in group.Filters)
 				{
-					IResourceSearchContextProcessor f;
-					steps.Add(async () => await f.Search(filter, context));
+					steps.Add(async () => await _resourceSearchContextProcessor.Search(filter, context));
 				}
 			}
 
@@ -347,28 +349,66 @@ namespace Bakabase.InsideWorld.Business.Services
 				}
 			}
 
-			foreach (var step in steps)
+			HashSet<int>? result = null;
+
+			for (var index = 0; index < steps.Count; index++)
 			{
-				await step();
+				var step = steps[index];
+				var ids = await step();
 
-				if (context.LimitedResourceIds != null)
+				if (ids == null)
 				{
-					if (context.ExcludedResourceIds != null)
+					if (group.Combinator == Combinator.Or)
 					{
-						context.LimitedResourceIds.ExceptWith(context.ExcludedResourceIds);
+						break;
 					}
-
-					if (!context.LimitedResourceIds.Any())
+					else
+					{
+						// do nothing
+					}
+				}
+				else
+				{
+					if (!ids.Any())
 					{
 						if (group.Combinator == Combinator.And)
 						{
-							return context;
+							return [];
+						}
+						else
+						{
+							if (index == steps.Count - 1 && result == null)
+							{
+								return [];
+							}
+							else
+							{
+								// do nothing
+							}
+						}
+					}
+					else
+					{
+						if (result == null)
+						{
+							result = ids;
+						}
+						else
+						{
+							if (group.Combinator == Combinator.Or)
+							{
+								result.UnionWith(ids);
+							}
+							else
+							{
+								result.IntersectWith(ids);
+							}
 						}
 					}
 				}
 			}
 
-			return context;
+			return result;
 		}
 
 		[Obsolete]

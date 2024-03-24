@@ -145,12 +145,9 @@ namespace Bakabase.InsideWorld.Models.Constants
 			ReservedResourcePropertyAndValueTypeMap =
 				new(new Dictionary<SearchableReservedProperty, StandardValueType>()
 				{
-					{SearchableReservedProperty.Name, StandardValueType.SingleLineText},
 					{SearchableReservedProperty.FileName, StandardValueType.SingleLineText},
-					{SearchableReservedProperty.DirectoryName, StandardValueType.SingleLineText},
 					{SearchableReservedProperty.DirectoryPath, StandardValueType.SingleLineText},
 					{SearchableReservedProperty.CreatedAt, StandardValueType.DateTime},
-					{SearchableReservedProperty.ModifiedAt, StandardValueType.DateTime},
 					{SearchableReservedProperty.FileCreatedAt, StandardValueType.DateTime},
 					{SearchableReservedProperty.FileModifiedAt, StandardValueType.DateTime},
 					{SearchableReservedProperty.Tag, StandardValueType.MultipleChoice},

@@ -130,7 +130,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 			return ordersForSearch.ToArray();
 		}
 
-		public static bool AppliedAliases(this ResourceProperty rp)
+		public static bool HasAppliedAliases(this ResourceProperty rp)
 		{
 			return BusinessConstants.PropertiesAppliedAliases.Contains(rp);
 		}

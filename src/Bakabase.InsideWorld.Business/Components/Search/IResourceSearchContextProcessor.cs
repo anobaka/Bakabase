@@ -15,7 +15,6 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 		/// </summary>
 		/// <param name="filter"></param>
 		/// <param name="context"></param>
-		/// <param name="combinator"></param>
-		Task Search(ResourceSearchFilter filter, ResourceSearchContext context, Combinator combinator);
+		Task<HashSet<int>?> Search(ResourceSearchFilter filter, ResourceSearchContext context);
 	}
 }

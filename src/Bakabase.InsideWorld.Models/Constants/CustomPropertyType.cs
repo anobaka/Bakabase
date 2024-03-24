@@ -18,7 +18,10 @@ namespace Bakabase.InsideWorld.Models.Constants
 		Boolean,
 		Link,
 		Attachment,
-		// Formula,
-		// Multilevel,
+		Date,
+		DateTime,
+		Time,
+		Formula,
+		Multilevel,
 	}
 }

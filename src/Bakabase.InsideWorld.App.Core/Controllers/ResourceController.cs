@@ -122,7 +122,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 		[SwaggerOperation(OperationId = "SearchResourcesV2")]
 		public async Task<SearchResponse<ResourceDto>> Search([FromBody] ResourceSearchRequestModelV2 model)
 		{
-			return await _service.Search(model, false);
+			return await _service.SearchV2(model, false);
 		}
 
 		[HttpGet("keys")]
