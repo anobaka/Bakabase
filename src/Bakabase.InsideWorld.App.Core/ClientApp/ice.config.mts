@@ -29,7 +29,7 @@ export default defineConfig(() => ({
         route('/category', 'Category/index.tsx');
         route('/custom-component', 'CustomComponent/index.tsx');
         route('/log', 'Log/index.tsx');
-        route('/resource', 'Resource/index.tsx');
+        route('/resource', 'Resource2/index.tsx');
         route('/configuration', 'Configuration/index.tsx');
         route('/tag', 'Tag/index.tsx');
         route('/test', 'Test/index.tsx');

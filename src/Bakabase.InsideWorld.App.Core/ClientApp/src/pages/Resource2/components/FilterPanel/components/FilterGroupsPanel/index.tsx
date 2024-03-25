@@ -40,10 +40,6 @@ export default ({ group: propsGroup, onChange }: IProps) => {
 
   return (
     <div className={`group ${styles.filterGroupsPanel}`}>
-      <CustomIcon
-        type={'filter-records'}
-        // size={'small'}
-      />
       <FilterGroup
         group={group}
         isRoot
@@ -51,18 +47,6 @@ export default ({ group: propsGroup, onChange }: IProps) => {
           setGroup(group);
         }}
       />
-      <Button
-        type={'primary'}
-        size={'small'}
-        onClick={async () => {
-                const model = {
-                  group: convertGroupToDto(group),
-                };
-                const rsp = await BApi.resource.searchResourcesV2(model);
-              }}
-      >
-        {t('Search')}
-      </Button>
     </div>
   );
 };

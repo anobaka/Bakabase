@@ -1,0 +1,85 @@
+.filterPanel {
+  border: 1px solid var(--theme-border-color);
+  border-radius: 4px;
+  padding: 5px;
+  position: relative;
+
+  .contentCenterAlignedBtn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 5px;
+    &:before {
+      display: none;
+    }
+  }
+
+  &.folded {
+    //width: 10px;
+    //height: 10px;
+    overflow: hidden;
+    position: absolute;
+    right: 0;
+    top: 0;
+
+    .collapseSwitcher {
+      position: relative;
+      right: unset;
+      top: unset;
+    }
+
+    .line1, .line2, .line3 {
+      display: none;
+    }
+  }
+
+  .collapseSwitcher {
+    position: absolute;
+    right: 2px;
+    top: 0px;
+    cursor: pointer;
+  }
+
+  .left, .right {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .right {
+    .bulkOperations {
+      margin-left: 20px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+
+      .disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+    }
+  }
+
+  .line1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+    justify-content: space-between;
+
+    .searchInput {
+      min-width: 320px;
+    }
+  }
+
+  .line2 {
+    margin-bottom: 5px;
+  }
+
+  .line3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+  }
+}

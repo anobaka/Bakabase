@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Balloon, Button, Dialog, Input, List, Message } from '@alifd/next';
 import * as dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import './index.scss';
-
 import { useUpdate } from 'react-use';
+import styles from './index.module.scss';
+
 import PlaylistDetail from '@/components/Playlist/Detail/index';
 import CustomIcon from '@/components/CustomIcon';
 import { PlaylistItemType } from '@/sdk/constants';
@@ -192,7 +192,7 @@ export default ({
   }, []);
 
   return (
-    <div className={`playlist-collection ${className}`}>
+    <div className={`${styles.playlistCollection} ${className}`}>
       <List
         size="small"
         // header={<div>Notifications</div>}
@@ -200,8 +200,9 @@ export default ({
         renderItem={(pl, i) => (
           <List.Item
             key={i}
+            className={styles.item}
             extra={(
-              <>
+              <div className={styles.extra}>
                 {renderAddButton(newItemRef.current, pl)}
                 {pl.items?.length > 0 && (
                   <Button
@@ -267,7 +268,7 @@ export default ({
                   <CustomIcon type={'delete'} size={'small'} />
                   {t('Delete')}
                 </Button>
-              </>
+              </div>
             )}
             title={
               <Button
@@ -305,7 +306,7 @@ export default ({
           />
         )}
       />
-      <div className="opt">
+      <div className={styles.opt}>
         <Button
           type={'normal'}
           size={'small'}

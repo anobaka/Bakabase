@@ -1,16 +1,17 @@
-.playlist-collection {
+.playlistCollection {
   min-width: 150px;
   max-height: 500px;
-  //border: 1px solid #ddd;
+  border-radius: 4px;
   padding: 5px;
   background: var(--theme-body-background);
-  .next-list-item {
+  border: 1px solid var(--theme-border-color);
+  .item {
     padding: 5px;
     &:hover {
       background: var(--theme-block-background);
     }
 
-    .next-list-item-extra {
+    .extra {
       display: flex;
       gap: 5px;
       flex-direction: row;

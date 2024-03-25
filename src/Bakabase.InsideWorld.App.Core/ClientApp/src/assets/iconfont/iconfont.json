@@ -6,6 +6,27 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "703384",
+      "name": "playlist-play",
+      "font_class": "playlistplay",
+      "unicode": "e9ff",
+      "unicode_decimal": 59903
+    },
+    {
+      "icon_id": "4767038",
+      "name": "sort-descending",
+      "font_class": "sort-descending",
+      "unicode": "e807",
+      "unicode_decimal": 59399
+    },
+    {
+      "icon_id": "4767039",
+      "name": "sort-ascending",
+      "font_class": "sort-ascending",
+      "unicode": "e809",
+      "unicode_decimal": 59401
+    },
+    {
       "icon_id": "15766802",
       "name": "add-filter",
       "font_class": "add-filter",

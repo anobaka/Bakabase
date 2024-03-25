@@ -94,21 +94,33 @@ const FilterGroup = ({
     return acc;
   }, []);
 
-  return (
-    <div className={`${styles.filterGroup} ${isRoot ? styles.root : ''} ${styles.removable}`}>
-      <ClickableIcon
-        colorType={'danger'}
-        className={styles.remove}
-        type={'delete'}
-        size={'small'}
-        onClick={() => {
-          onRemove?.();
-        }}
-      />
-      {allElements}
+  const renderAddHandler = () => {
+    return (
       <Dropdown
         trigger={(
-          <ClickableIcon colorType={'normal'} type={'plus-circle'} />
+          // isRoot ? (
+          //   <Button
+          //     className={styles.rootGroupAddButton}
+          //     type={'normal'}
+          //     size={'small'}
+          //   >
+          //     <CustomIcon
+          //       type={'add-filter'}
+          //     />
+          //   </Button>
+          // ) : (
+          //   // <ClickableIcon colorType={'normal'} type={'plus-circle'} />
+          //   <ClickableIcon
+          //     colorType={'normal'}
+          //     type={'add-filter'}
+          //     size={'small'}
+          //   />
+          // )
+          <ClickableIcon
+            colorType={'normal'}
+            type={'add-filter'}
+            // size={'small'}
+          />
         )}
         align={'tl tr'}
         triggerType={'click'}
@@ -154,6 +166,22 @@ const FilterGroup = ({
           </Menu.Item>
         </Menu>
       </Dropdown>
+    );
+  };
+
+  return (
+    <div className={`${styles.filterGroup} ${isRoot ? styles.root : ''} ${styles.removable}`}>
+      <ClickableIcon
+        colorType={'danger'}
+        className={styles.remove}
+        type={'delete'}
+        size={'small'}
+        onClick={() => {
+          onRemove?.();
+        }}
+      />
+      {allElements}
+      {renderAddHandler()}
     </div>
   );
 };

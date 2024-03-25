@@ -3,12 +3,9 @@ import { Button, Checkbox, DatePicker2, Dropdown, Icon, Input, Menu, Overlay, Ra
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useUpdate, useUpdateEffect } from 'react-use';
-import FilterGroupsPanel from './components/FilterGroupsPanel';
 import CustomIcon from '@/components/CustomIcon';
 import type {
-  CustomPropertyValueSearchOperation,
   ResourceLanguage,
-  ResourceSearchByCustomPropertyValuesCombination,
 } from '@/sdk/constants';
 import { resourceLanguages, TagGroupAdditionalItem } from '@/sdk/constants';
 import { PlaylistCollection } from '@/components/Playlist';
@@ -85,14 +82,6 @@ interface ISearchForm {
   save?: boolean;
   pageIndex?: number;
   customPropertyIds?: number[];
-  CustomPropertiesV2?: {
-    combination: ResourceSearchByCustomPropertyValuesCombination;
-    customPropertyValueSearchModels?: {
-      propertyId: number;
-      operation: CustomPropertyValueSearchOperation;
-      value?: string;
-    }[];
-  };
 }
 
 interface IProps {
@@ -815,11 +804,6 @@ export default React.memo((props: IProps) => {
           </div>
         );
       })}
-      <FilterGroupsPanel
-        onChange={g => {
-          console.log('[FilterGroupsPanel] onChange', g);
-        }}
-      />
       <div className="group last">
         <div className="left">
           <Button

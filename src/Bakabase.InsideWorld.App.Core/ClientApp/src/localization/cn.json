@@ -1109,5 +1109,7 @@
   "SearchOperation.In":"在列表中",
   "SearchOperation.NotIn":"不在列表中",
   "SearchOperation.Matches":"正则匹配",
-  "SearchOperation.NotMatches":"正则不匹配"
+  "SearchOperation.NotMatches":"正则不匹配",
+  "Asc": "升序",
+  "Desc": "降序"
 }
