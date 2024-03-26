@@ -82,4 +82,22 @@
     gap: 10px;
     justify-content: space-between;
   }
+
+  .columnCount {
+    font-size: 14px;
+  }
+}
+
+.columnCounts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  background: var(--theme-block-background);
+  border: 1px solid var(--theme-border-color);
+  border-radius: 4px;
+  padding: 5px;
+
+  button {
+    padding: 2px 5px !important;
+  }
 }

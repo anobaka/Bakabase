@@ -7,6 +7,7 @@ using Bakabase.InsideWorld.Models.RequestModels;
 
 namespace Bakabase.InsideWorld.Models.Configs.Resource
 {
+    [Obsolete]
     public class ResourceSearchSlotItemOptions
     {
         public string Name { get; set; }

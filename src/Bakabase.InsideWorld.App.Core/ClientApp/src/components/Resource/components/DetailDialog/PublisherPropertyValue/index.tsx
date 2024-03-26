@@ -1,8 +1,8 @@
 import React from 'react';
-import EditableTree from '@/components/EditableTree';
-import Property from '@/components/Resource/components/DetailDialog/PropertyValue';
 import { Message } from '@alifd/next';
 import i18n from 'i18next';
+import EditableTree from '@/components/EditableTree';
+import Property from '@/components/Resource/components/DetailDialog/PropertyValue';
 
 const renderPublishers = (publishers = []) => {
   if (!publishers) {
@@ -32,7 +32,7 @@ const renderPublishers = (publishers = []) => {
           Message.notice(i18n.t('Under developing'));
         }}
       >{publisher.name}
-              </span>);
+      </span>);
     }
     components.push(comp);
     if (i < publishers.length - 1) {

@@ -1,7 +1,7 @@
 import { Balloon, Button, Checkbox, Dropdown, Input, Menu, Notification, Overlay, Select } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
-import { useUpdateEffect } from 'react-use';
+import { useUpdate, useUpdateEffect } from 'react-use';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './components/FilterGroupsPanel';
 import BApi from '@/sdk/BApi';
@@ -22,7 +22,8 @@ interface IProps {
   onSelectionModeChange?: (mode: 'single' | 'multiple') => any;
   selectedResourceIds?: number[];
   maxResourceColCount?: number;
-  onSearch?: (form: ISearchForm) => any;
+  searchForm?: Partial<ISearchForm>;
+  onSearch?: (form: Partial<ISearchForm>) => any;
 }
 
 const MinResourceColCount = 3;
@@ -34,6 +35,7 @@ export default ({
                   onSelectionModeChange,
                   maxResourceColCount = DefaultMaxResourceColCount,
                   onSearch,
+                  searchForm: propsSearchForm,
                 }: IProps) => {
   const { t } = useTranslation();
 
@@ -45,8 +47,7 @@ export default ({
   const [colCountsDataSource, setColCountsDataSource] = useState<{ label: any; value: number }[]>([]);
   const colCount = uiOptions.resource?.colCount ?? DefaultResourceColCount;
 
-  const [group, setGroup] = useState<IGroup>();
-
+  const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>(propsSearchForm || {});
 
   useEffect(() => {
     const ccds: { label: any; value: number }[] = [];
@@ -131,131 +132,6 @@ export default ({
     return;
   }, [selectionMode, selectedResourceIds]);
 
-
-  const renderAdditionalOptions = useCallback(() => (
-    <Popup
-      trigger={(
-        <ClickableIcon
-          type={'setting'}
-          colorType={'normal'}
-        />
-      )}
-      align={'tl tr'}
-      triggerType={'click'}
-      safeNode={'aaa'}
-    >
-      <Menu id={'aaa'}>
-        <Menu.Item className="item">
-          <Balloon.Tooltip
-            trigger={(
-              <Checkbox
-                onChange={(c) => {
-                  BApi.options.patchUiOptions({
-                    resource: {
-                      ...(uiOptions?.resource || {}),
-                      showBiggerCoverWhileHover: c,
-                    },
-                  }).then(r => {
-                    if (!r.code) {
-                      Notification.success({
-                        title: t('Saved'),
-                      });
-                    }
-                  });
-                }}
-                checked={uiOptions?.resource?.showBiggerCoverWhileHover}
-              >
-                {t('Larger cover')}
-              </Checkbox>
-            )}
-            align={'l'}
-            triggerType={'hover'}
-          >
-            {t('Show larger cover on mouse hover')}
-          </Balloon.Tooltip>
-        </Menu.Item>
-        <Menu.Item className="item">
-          <Balloon.Tooltip
-            trigger={(
-              <Checkbox
-                onChange={(c) => {
-                  BApi.options.patchUiOptions({
-                    resource: {
-                      ...(uiOptions?.resource || {}),
-                      disableMediaPreviewer: !c,
-                    },
-                  }).then(r => {
-                    if (!r.code) {
-                      Notification.success({
-                        title: t('Saved'),
-                      });
-                    }
-                  });
-                }}
-                checked={!uiOptions?.resource?.disableMediaPreviewer}
-              >
-                {t('快速预览')}
-              </Checkbox>
-            )}
-            align={'l'}
-            triggerType={'hover'}
-          >
-            {t('Preview files of a resource on mouse hover')}
-          </Balloon.Tooltip>
-        </Menu.Item>
-        <Menu.Item className="item">
-          <Balloon.Tooltip
-            trigger={(
-              <Checkbox
-                onChange={(c) => {
-                  BApi.options.patchUiOptions({
-                    resource: {
-                      ...(uiOptions?.resource || {}),
-                      disableCache: c,
-                    },
-                  }).then(r => {
-                    if (!r.code) {
-                      Notification.success({
-                        title: t('Saved'),
-                      });
-                    }
-                  });
-                }}
-                checked={uiOptions?.resource?.disableCache}
-              >
-                {t('Disable cache')}
-              </Checkbox>
-            )}
-            triggerType={'hover'}
-            align={'l'}
-          >
-            {t('Disabling cache may cause performance issues')}
-          </Balloon.Tooltip>
-        </Menu.Item>
-        <Menu.Item className="item">
-          <Select
-            label={t('Column count')}
-            size={'small'}
-            dataSource={colCountsDataSource}
-            onChange={(v) => {
-              const n = parseInt(v, 10);
-              const patches = {
-                resource: {
-                  ...(uiOptions?.resource || {}),
-                  colCount: n,
-                },
-              };
-              BApi.options.patchUiOptions(patches);
-            }}
-            value={colCount}
-            popupProps={{ v2: true }}
-
-          />
-        </Menu.Item>
-      </Menu>
-    </Popup>
-  ), [uiOptions?.resource]);
-
   return (
     <div className={`${styles.filterPanel} ${!panelVisible ? styles.folded : ''}`}>
       <ClickableIcon
@@ -307,7 +183,9 @@ export default ({
       <div className={styles.line2}>
         <div className={styles.line3}>
           <FilterGroupsPanel onChange={v => {
-            setGroup(v);
+            setSearchForm({
+              group: v,
+            });
           }}
           />
         </div>
@@ -319,10 +197,8 @@ export default ({
             size={'small'}
             onClick={async () => {
               onSearch?.({
-                group,
-                // orders,
-                page: 1,
-                pageSize: 20,
+                ...searchForm,
+                pageIndex: 1,
               });
               // const model = {
               //   group: convertGroupToDto(group),
@@ -349,6 +225,126 @@ export default ({
         </div>
         <div className={styles.right}>
           <OrderSelector />
+          <Balloon.Tooltip
+            trigger={(
+              <Checkbox
+                onChange={(c) => {
+                  BApi.options.patchUiOptions({
+                    resource: {
+                      ...(uiOptions?.resource || {}),
+                      showBiggerCoverWhileHover: c,
+                    },
+                  }).then(r => {
+                    if (!r.code) {
+                      Notification.success({
+                        title: t('Saved'),
+                      });
+                    }
+                  });
+                }}
+                checked={uiOptions?.resource?.showBiggerCoverWhileHover}
+              >
+                {t('Larger cover')}
+              </Checkbox>
+            )}
+            align={'l'}
+            triggerType={'hover'}
+          >
+            {t('Show larger cover on mouse hover')}
+          </Balloon.Tooltip>
+          <Balloon.Tooltip
+            trigger={(
+              <Checkbox
+                onChange={(c) => {
+                  BApi.options.patchUiOptions({
+                    resource: {
+                      ...(uiOptions?.resource || {}),
+                      disableMediaPreviewer: !c,
+                    },
+                  }).then(r => {
+                    if (!r.code) {
+                      Notification.success({
+                        title: t('Saved'),
+                      });
+                    }
+                  });
+                }}
+                checked={!uiOptions?.resource?.disableMediaPreviewer}
+              >
+                {t('快速预览')}
+              </Checkbox>
+            )}
+            align={'l'}
+            triggerType={'hover'}
+          >
+            {t('Preview files of a resource on mouse hover')}
+          </Balloon.Tooltip>
+          <Balloon.Tooltip
+            trigger={(
+              <Checkbox
+                onChange={(c) => {
+                  BApi.options.patchUiOptions({
+                    resource: {
+                      ...(uiOptions?.resource || {}),
+                      disableCache: c,
+                    },
+                  }).then(r => {
+                    if (!r.code) {
+                      Notification.success({
+                        title: t('Saved'),
+                      });
+                    }
+                  });
+                }}
+                checked={uiOptions?.resource?.disableCache}
+              >
+                {t('Disable cache')}
+              </Checkbox>
+            )}
+            triggerType={'hover'}
+            align={'l'}
+          >
+            {t('Disabling cache may cause performance issues')}
+          </Balloon.Tooltip>
+          <div className={styles.columnCount}>
+            {t('Column count')}
+            &nbsp;
+            <Popup
+              v2
+              trigger={(
+                <Button
+                  type={'primary'}
+                  // size={'small'}
+                  text
+                >
+                  {colCount}
+                </Button>
+              )}
+              triggerType={'click'}
+            >
+              <div className={styles.columnCounts}>
+                {colCountsDataSource.map((cc, i) => {
+                  return (
+                    <Button
+                      type={'normal'}
+                      size={'small'}
+                      onClick={async () => {
+                        const patches = {
+                          resource: {
+                            ...(uiOptions?.resource || {}),
+                            colCount: cc.value,
+                          },
+                        };
+                        await BApi.options.patchUiOptions(patches);
+                      }}
+                    >
+                      {cc.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </Popup>
+          </div>
           <div className={styles.bulkOperations}>
             {renderBulkOperations()}
             <Balloon.Tooltip
@@ -367,7 +363,6 @@ export default ({
               {t('Bulk operations')}
             </Balloon.Tooltip>
           </div>
-          {renderAdditionalOptions()}
         </div>
       </div>
     </div>

@@ -1,15 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import './index.scss';
 import i18n from 'i18next';
-import { Balloon, Button, Dialog, Select } from '@alifd/next';
-import { useUpdateEffect } from 'react-use';
+import { Balloon, Button, Dialog } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import { AddTagGroups, AddTags, GetAllTagGroups, PatchResource, SearchTags, UpdateResourceTags } from '@/sdk/apis';
-import { TagGroupAdditionalItem } from '@/sdk/constants';
-import CustomIcon from '@/components/CustomIcon';
+import { UpdateResourceTags } from '@/sdk/apis';
 import TagSelector from '@/components/TagSelector';
-import Property from '@/components/Resource/components/DetailDialog/PropertyValue';
-import EditableTree from '@/components/EditableTree';
 import ClickableIcon from '@/components/ClickableIcon';
 import SimpleLabel from '@/components/SimpleLabel';
 

@@ -310,7 +310,16 @@ namespace Bakabase.InsideWorld.Business.Services
 			var resources = await _orm.Search(exp, model.PageIndex, model.PageSize, ordersForSearch, asNoTracking);
 			var dtoList = await ToDto(resources.Data.ToArray(), ResourceAdditionalItem.All);
 
-			return model.BuildResponse(dtoList, resources.TotalCount);
+            if (model.Save)
+            {
+                await _optionsManager.SaveAsync(a => a.LastSearchV2 = new ResourceSearchOptionsV2
+                {
+                    Group = model.Group,
+                    Orders = model.Orders
+                });
+            }
+
+            return model.BuildResponse(dtoList, resources.TotalCount);
 		}
 
 		/// <summary>

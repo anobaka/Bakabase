@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Icon } from '@alifd/next';
-import { RemoveResourceCustomProperty, PatchResource } from '@/sdk/apis';
-import CustomIcon from '@/components/CustomIcon';
+import { PatchResource, RemoveResourceCustomProperty } from '@/sdk/apis';
 import ClickableIcon from '@/components/ClickableIcon';
 
 interface IProps {

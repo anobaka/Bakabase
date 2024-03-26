@@ -5,15 +5,14 @@ import type { BalloonProps } from '@alifd/next/types/balloon';
 import { useUpdate } from 'react-use';
 import serverConfig from '@/serverConfig';
 import { GetResourceCoverURL } from '@/sdk/apis';
-import noCoverImg from '@/assets/no-image-available.svg';
 import { useTraceUpdate, uuidv4 } from '@/components/utils';
 import BApi from '@/sdk/BApi';
-import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import './index.scss';
 import store from '@/store';
 import type { CoverSaveLocation } from '@/sdk/constants';
 import { ResponseCode } from '@/sdk/constants';
+import CustomIcon from '@/components/CustomIcon';
 
 interface Props {
   resourceId: number;
@@ -26,7 +25,7 @@ interface Props {
 
 export interface IResourceCoverRef {
   save: (base64Image: string, saveTarget?: CoverSaveLocation) => any;
-  reload: (ct: AbortSignal) => Promise<any>;
+  reload: (ct?: AbortSignal) => Promise<any>;
 }
 
 const Index = React.forwardRef((props: Props, ref) => {
@@ -67,9 +66,9 @@ const Index = React.forwardRef((props: Props, ref) => {
     return BApi.resource.saveCover(resourceId, {
       base64Image,
       overwrite,
-      // @ts-ignore
       saveLocation,
     }, {
+      // @ts-ignore
       ignoreError: rsp => rsp.code == ResponseCode.Conflict,
     })
       .then(a => {
@@ -125,14 +124,14 @@ const Index = React.forwardRef((props: Props, ref) => {
 
   useTraceUpdate(props, '[ResourceCover]');
 
-  const loadCover = useCallback((ct: AbortSignal) => {
+  const loadCover = useCallback((ct?: AbortSignal) => {
     let url = `${serverConfig.apiEndpoint}${GetResourceCoverURL({ id: resourceId })}`;
     if (disableCacheRef.current) {
       url += `?t=${uuidv4()}`;
     }
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      ct.addEventListener('abort', () => {
+      ct?.addEventListener('abort', () => {
         if (xhr.readyState !== XMLHttpRequest.DONE) {
           xhr.abort();
         }
@@ -205,7 +204,9 @@ const Index = React.forwardRef((props: Props, ref) => {
           <Icon type={'loading'} />
         );
       } else {
-        return renderThumbnail(noCoverImg);
+        return (
+          <CustomIcon type={'image-slash'} size={'large'} />
+        );
       }
     }
   };
@@ -216,7 +217,7 @@ const Index = React.forwardRef((props: Props, ref) => {
         onClick={onClick}
         className="resource-cover-container"
         onMouseOver={(e) => {
-          console.log('mouse over');
+          // console.log('mouse over');
           if (!disableMediaPreviewer) {
             if (!previewerHoverTimerRef.current) {
               previewerHoverTimerRef.current = setTimeout(() => {
@@ -236,7 +237,7 @@ const Index = React.forwardRef((props: Props, ref) => {
           }
         }}
         onMouseLeave={() => {
-          console.log('mouse leave');
+          // console.log('mouse leave');
           clearTimeout(previewerHoverTimerRef.current);
           previewerHoverTimerRef.current = undefined;
           if (previewerVisible) {
@@ -252,7 +253,7 @@ const Index = React.forwardRef((props: Props, ref) => {
     );
   };
 
-  console.log('rendering cover, loading: ', loading);
+  // console.log('rendering cover, loading: ', loading);
 
   if (cover) {
     if (showBiggerOnHover) {

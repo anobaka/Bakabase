@@ -1,13 +1,13 @@
 import { Checkbox, Input, Progress, Rating, Select } from '@alifd/next';
-import { Link } from '@ice/runtime/router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
 import type {
   IChoicePropertyOptions,
   ICustomProperty,
   INumberPropertyOptions,
-  IPercentagePropertyOptions, IRatingPropertyOptions,
+  IPercentagePropertyOptions,
+  IRatingPropertyOptions,
 } from '@/pages/CustomProperty/models';
 import { CustomPropertyType } from '@/sdk/constants';
 import ExternalLink from '@/components/ExternalLink';

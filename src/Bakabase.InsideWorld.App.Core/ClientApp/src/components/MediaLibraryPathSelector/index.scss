@@ -2,31 +2,6 @@
   min-width: 600px;
   padding: 10px;
 
-  .next-dialog-body {
-    &::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      border-radius: 10px;
-      background: rgba(16, 13, 177, 0.1);
-    }
-
-    &::-webkit-scrollbar-thumb {
-      border-radius: 10px;
-      background: rgba(16, 13, 177, 0.2);
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background: rgba(16, 13, 177, 0.4);
-    }
-
-    &::-webkit-scrollbar-thumb:active {
-      background: rgba(16, 13, 177, .9);
-    }
-  }
-
   .filters {
     margin-bottom: 10px;
   }

@@ -19,7 +19,10 @@ namespace Bakabase.InsideWorld.Models.Configs.Resource
     {
         public DateTime LastSyncDt { get; set; }
         public DateTime LastNfoGenerationDt { get; set; }
+        [Obsolete]
         public ResourceSearchOptions? LastSearch { get; set; }
+        public ResourceSearchOptionsV2? LastSearchV2 { get; set; }
+        [Obsolete]
         public List<ResourceSearchSlotItemOptions> SearchSlots { get; set; } = new();
         public CoverOptionsModel CoverOptions { get; set; } = new();
         public bool HideChildren { get; set; }
@@ -48,6 +51,7 @@ namespace Bakabase.InsideWorld.Models.Configs.Resource
                 AdditionalCoverDiscoveringSources = options.AdditionalCoverDiscoveringSources,
                 LastNfoGenerationDt = options.LastNfoGenerationDt,
                 LastSearch = options.LastSearch?.ToDto(),
+                LastSearchV2 = options.LastSearchV2,
                 LastSyncDt = options.LastSyncDt,
                 SearchSlots = options.SearchSlots?.Select(a => a.ToDto()).ToList() ??
                               new List<ResourceSearchSlotItemDto>(),

@@ -10,8 +10,9 @@ using Bootstrap.Models.RequestModels;
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
 	public class ResourceSearchRequestModelV2: SearchRequestModel
-	{
+    {
 		public ResourceSearchFilterGroup? Group { get; set; }
-		public ResourceSearchOptions.OrderModel[]? Orders { get; set; }
+		public ResourceSearchOrderModel[]? Orders { get; set; }
+		public bool Save { get; set; }
 	}
 }

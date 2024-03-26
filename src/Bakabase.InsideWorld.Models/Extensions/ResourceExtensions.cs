@@ -96,7 +96,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 		}
 
 		public static (Func<Resource, object> SelectKey, bool Asc, IComparer<object>? Comparer)[] BuildForSearch(
-			this ResourceSearchOptions.OrderModel[]? orders)
+			this ResourceSearchOrderModel[]? orders)
 		{
 			var ordersForSearch = new List<(Func<Resource, object> SelectKey, bool Asc, IComparer<object>? Comparer)>();
 			if (orders != null)

@@ -1,15 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pagination } from '@alifd/next';
-import { Masonry, WindowScroller, AutoSizer, CellMeasurer, createMasonryCellPositioner, CellMeasurerCache } from 'react-virtualized';
+
+import { useUpdate } from 'react-use';
 import styles from './index.module.scss';
 import FilterPanel from './components/FilterPanel';
 import type { ISearchForm } from '@/pages/Resource2/models';
 import { convertGroupToDto } from '@/pages/Resource2/helpers';
 import BApi from '@/sdk/BApi';
 import Resource from '@/components/Resource';
+import store from '@/store';
+import BusinessConstants from '@/components/BusinessConstants';
+import ResourceMasonry from '@/pages/Resource2/components/ResourceMasonry';
+import searchForm from '@/models/searchForm';
 
 const PageSize = 100;
+const MinResourceWidth = 100;
 
 interface IPageable {
   page: number;
@@ -19,178 +25,112 @@ interface IPageable {
 
 export default () => {
   const { t } = useTranslation();
+  const forceUpdate = useUpdate();
   const [pageable, setPageable] = useState<IPageable>();
 
   const [resources, setResources] = useState<any[]>([]);
 
-  const search = async (form: ISearchForm) => {
-    const dto = {
-      ...form,
-      group: convertGroupToDto(form.group),
+  const uiOptions = store.useModelState('uiOptions');
+
+  const [columnCount, setColumnCount] = useState<number>(0);
+  const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>();
+
+  const resourceOptions = store.useModelState('resourceOptions');
+
+  useEffect(() => {
+    if (resourceOptions?.lastSearchV2 && !searchForm) {
+      setSearchForm(resourceOptions.lastSearchV2);
+    }
+  }, [resourceOptions?.lastSearch]);
+
+  useEffect(() => {
+    if (uiOptions != undefined) {
+      setColumnCount(uiOptions.resource?.colCount ?? BusinessConstants.DefaultResourceColumnCount);
+      // setColumnCount(3);
+    }
+  }, [uiOptions]);
+
+
+  const pageContainerRef = useRef<any>();
+
+  const search = async (partialForm: Partial<ISearchForm>, append: boolean) => {
+    const newForm = {
+      ...searchForm,
+      ...partialForm,
       pageSize: PageSize,
+      save: true,
     };
 
-    const rsp = await BApi.resource.searchResourcesV2(dto);
+    setSearchForm(newForm);
+
+    newForm.group = convertGroupToDto(newForm.group);
+    const rsp = await BApi.resource.searchResourcesV2(newForm);
 
     setPageable({
       page: rsp.pageIndex!,
+      pageSize: PageSize,
       totalCount: rsp.totalCount!,
     });
 
-    setResources(rsp.data || []);
+    const newResources = rsp.data || [];
+    if (append) {
+      setResources([...resources, ...newResources]);
+    } else {
+      setResources(newResources);
+    }
   };
 
   useEffect(() => {
-    search({});
+    // cacheRef.current.clearAll();
+    // _resetCellPositioner();
+    // masonryRef.current.clearCellPositions();
   }, []);
 
-  const virtualizedRef = useRef<{
-    width: number;
-    height: number;
-    scrollTop: number;
-    overscanByPixels: number;
-    columnWidth: number;
-    gutterSize: number;
-    columnCount: number;
-  }>({
-    width: 0,
-    overscanByPixels: 0,
-    height: 0,
-    scrollTop: 0,
-    columnWidth: 200,
-    gutterSize: 10,
-    columnCount: 0,
-  });
-
-  const _cache = new CellMeasurerCache({
-    defaultHeight: 250,
-    defaultWidth: 200,
-    fixedWidth: true,
-  });
-
-  const cellPositionerRef = useRef<any>();
-  const masonryRef = useRef<any>();
-
-  function _calculateColumnCount() {
-    const { columnWidth, gutterSize, width } = virtualizedRef.current;
-
-    virtualizedRef.current.columnCount = Math.floor(width / (columnWidth + gutterSize));
-  }
-
-  function _cellRenderer({ index, key, parent, style }) {
-    const list = resources;
-    const { columnWidth } = virtualizedRef.current;
-
-    const resource = resources[index];
-
-    return (
-      <CellMeasurer cache={_cache} index={index} key={key} parent={parent}>
-        <div
-          className={styles.Cell}
-          style={{
-            ...style,
-            width: columnWidth,
-          }}
-        >
-          <Resource resource={resource} />
-        </div>
-      </CellMeasurer>
-    );
-  }
-
-  function _resetCellPositioner() {
-    const { columnWidth, gutterSize } = virtualizedRef.current;
-
-    cellPositionerRef.current.reset({
-      columnCount: virtualizedRef.current.columnCount,
-      columnWidth,
-      spacer: gutterSize,
-    });
-  }
-
-  function _onResize({ width }) {
-    virtualizedRef.current.width = width;
-
-    _calculateColumnCount();
-    _resetCellPositioner();
-    masonryRef.current.recomputeCellPositions();
-  }
-
-  function _renderAutoSizer({ height, scrollTop }) {
-    virtualizedRef.current.height = height;
-    virtualizedRef.current.scrollTop = scrollTop;
-
-    const { overscanByPixels } = virtualizedRef.current;
-
-    return (
-      <AutoSizer
-        disableHeight
-        height={height}
-        onResize={_onResize}
-        overscanByPixels={overscanByPixels}
-        scrollTop={virtualizedRef.current.scrollTop}
-      >
-        {_renderMasonry}
-      </AutoSizer>
-    );
-  }
-
-  function _initCellPositioner() {
-    if (typeof cellPositionerRef.current === 'undefined') {
-      const { columnWidth, gutterSize, columnCount } = virtualizedRef.current;
-
-      cellPositionerRef.current = createMasonryCellPositioner({
-        cellMeasurerCache: _cache,
-        columnCount: columnCount,
-        columnWidth,
-        spacer: gutterSize,
-      });
-    }
-  }
-
-  function _setMasonryRef(ref) {
-    masonryRef.current = ref;
-  }
-
-  function _renderMasonry({ width }) {
-    virtualizedRef.current.width = width;
-
-    _calculateColumnCount();
-    _initCellPositioner();
-
-    const { height, overscanByPixels, scrollTop } = virtualizedRef.current;
-
-    return (
-      <Masonry
-        autoHeight
-        cellCount={resources.length}
-        cellMeasurerCache={_cache}
-        cellPositioner={cellPositionerRef.current}
-        cellRenderer={_cellRenderer}
-        height={height}
-        overscanByPixels={overscanByPixels}
-        ref={_setMasonryRef}
-        scrollTop={scrollTop}
-        width={width}
-      />
-    );
-  }
-
   return (
-    <div className={styles.resourcePage}>
-      <FilterPanel onSearch={search} />
+    <div
+      className={styles.resourcePage}
+      ref={r => {
+        pageContainerRef.current = r?.parentElement;
+      }}
+    >
+      <FilterPanel onSearch={f => search(f, false)} />
       {pageable && (
         <div className={styles.pagination}>
           <Pagination
             pageSize={pageable.pageSize}
             total={pageable.totalCount}
             current={pageable.page}
+            onChange={p => {
+              search({
+                pageIndex: p,
+              }, false);
+            }}
           />
         </div>
       )}
-      <WindowScroller overscanByPixels={virtualizedRef.current.overscanByPixels}>
-        {_renderAutoSizer}
-      </WindowScroller>
+      {columnCount > 0 && (
+        <ResourceMasonry
+          cellCount={resources.length}
+          columnCount={columnCount}
+          scrollElement={pageContainerRef.current}
+          renderCell={(index, style) => {
+            return (
+              <Resource
+                resource={resources[index]}
+                style={style}
+              />
+            );
+          }}
+          loadMore={async () => {
+            const totalPage = Math.ceil((pageable?.totalCount ?? 0) / PageSize);
+            if ((pageable?.page ?? 0) < totalPage) {
+              await search({
+                pageIndex: (pageable?.page ?? 0) + 1,
+              }, true);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

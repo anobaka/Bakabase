@@ -437,6 +437,7 @@ export interface BakabaseInsideWorldModelsConfigsResourceResourceOptionsDto {
   /** @format date-time */
   lastNfoGenerationDt?: string;
   lastSearch?: BakabaseInsideWorldModelsModelsAosResourceSearchDto;
+  lastSearchV2?: BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsV2;
   searchSlots?: BakabaseInsideWorldModelsModelsAosResourceSearchSlotItemDto[] | null;
   coverOptions?: BakabaseInsideWorldModelsConfigsResourceResourceOptionsCoverOptionsModel;
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
@@ -446,6 +447,11 @@ export interface BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsOr
   /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 4: Rate, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary, 9: Name] */
   order?: BakabaseInsideWorldModelsConstantsAosResourceSearchOrder;
   asc?: boolean;
+}
+
+export interface BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsV2 {
+  group?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup;
+  orders?: BakabaseInsideWorldModelsModelsAosResourceSearchOrderModel[] | null;
 }
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
@@ -917,6 +923,12 @@ export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup {
   combinator?: BakabaseInsideWorldModelsConstantsCombinator;
   groups?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup[] | null;
   filters?: BakabaseInsideWorldModelsModelsAosResourceSearchFilter[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosResourceSearchOrderModel {
+  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 4: Rate, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary, 9: Name] */
+  order?: BakabaseInsideWorldModelsConstantsAosResourceSearchOrder;
+  asc?: boolean;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosResourceSearchSlotItemDto {
@@ -1660,7 +1672,8 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceSearchRequestMode
   /** @format int32 */
   skipCount?: number;
   group?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup;
-  orders?: BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsOrderModel[] | null;
+  orders?: BakabaseInsideWorldModelsModelsAosResourceSearchOrderModel[] | null;
+  save?: boolean;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsResourceTagUpdateRequestModel {

@@ -74,7 +74,7 @@
     "react-toastify": "^9.1.1",
     "react-use": "^17.4.0",
     "react-viewer": "^3.2.2",
-    "react-virtualized": "^9.22.3",
+    "react-virtualized": "^9.22.5",
     "universal-cookie": "^4.0.4",
     "use-deep-compare-effect": "^1.8.1",
     "use-image": "^1.0.7",

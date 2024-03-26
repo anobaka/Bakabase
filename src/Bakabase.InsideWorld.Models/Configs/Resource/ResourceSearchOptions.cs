@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Models.RequestModels;
 
 namespace Bakabase.InsideWorld.Models.Configs.Resource
 {
+	[Obsolete]
 	public class ResourceSearchOptions : SearchRequestModel
 	{
 		public string Name { set; get; }

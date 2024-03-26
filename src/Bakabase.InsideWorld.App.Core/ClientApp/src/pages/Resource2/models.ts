@@ -5,6 +5,6 @@ import type { ResourceSearchOrder } from '@/sdk/constants';
 export interface ISearchForm {
   group?: IGroup;
   orders?: {order: ResourceSearchOrder; asc: boolean}[];
-  page: number;
+  pageIndex: number;
   pageSize: number;
 }

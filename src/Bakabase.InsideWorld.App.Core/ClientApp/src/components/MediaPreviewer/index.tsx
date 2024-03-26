@@ -73,7 +73,7 @@ const MediaPreviewer = (props: IProps) => {
   }, [status]);
 
   useUpdateEffect(() => {
-    console.log('setting mouse offset', mouseOffsetX);
+    // console.log('setting mouse offset', mouseOffsetX);
     mouseOffsetXRef.current = mouseOffsetX;
     if (mouseOffsetX != undefined) {
       const percent = progressBarRef.current ? mouseOffsetX * 100 / progressBarRef.current.clientWidth : 0;
@@ -86,7 +86,9 @@ const MediaPreviewer = (props: IProps) => {
   }, [mouseOffsetX]);
 
   useEffect(() => {
-    BApi.resource.getResourceDataForPreviewer(resourceId).then((rsp) => {
+    BApi.resource.getResourceDataForPreviewer(resourceId, {
+      ignoreError: r => r.code == 404,
+    }).then((rsp) => {
       if (rsp.data && rsp.data?.length > 0) {
         const newItems: IItem[] = [];
         let prevFrame = 0;
@@ -113,11 +115,11 @@ const MediaPreviewer = (props: IProps) => {
 
   useEffect(() => {
     itemsRef.current = items;
-    console.log('items', items);
+    // console.log('items', items);
   }, [items]);
 
   useEffect(() => {
-    console.log('Current frame', currentFrame);
+    // console.log('Current frame', currentFrame);
     currentFrameRef.current = currentFrame;
     const item = itemsRef.current.find(item => item.startFrame <= currentFrame && item.endFrame >= currentFrame);
     if (item) {
@@ -125,7 +127,7 @@ const MediaPreviewer = (props: IProps) => {
         if (item == currentItemRef.current) {
           // console.log(reactPlayerRef.current, currentFrame - item.startFrame);
           if (reactPlayerRef.current) {
-            console.log('seeking video');
+            // console.log('seeking video');
             reactPlayerRef.current.seekTo((currentFrame - item.startFrame), 'seconds');
           }
         } else {
@@ -142,7 +144,7 @@ const MediaPreviewer = (props: IProps) => {
   }, [currentFrame]);
 
   useUpdateEffect(() => {
-    console.log('currentItem', currentItem);
+    // console.log('currentItem', currentItem);
     videoInitializedRef.current = false;
     currentItemRef.current = currentItem;
   }, [currentItem]);
@@ -165,7 +167,7 @@ const MediaPreviewer = (props: IProps) => {
               onLoad={e => {
                 clearTimeout(autoPlayTimeoutRef.current);
                 if (currentFrame < totalFrameCount && statusRef.current == PreviewerStatus.Playing) {
-                  console.log('Auto play next frame');
+                  // console.log('Auto play next frame');
                   autoPlayTimeoutRef.current = setTimeout(() => {
                     setCurrentFrame(currentFrame + 1);
                   }, 1000);
@@ -184,7 +186,7 @@ const MediaPreviewer = (props: IProps) => {
                 fullname: currentItem.filePath,
               })}`}
               onDuration={e => {
-                console.log('duration', e);
+                // console.log('duration', e);
               }}
               onProgress={e => {
                 // console.log('On progress', e);
@@ -197,7 +199,7 @@ const MediaPreviewer = (props: IProps) => {
                 }
               }}
               onEnded={() => {
-                console.log('Video ended');
+                // console.log('Video ended');
                 if (!isControlled()) {
                   const nextItem = items.find(item => item.startFrame > currentItem.startFrame);
                   if (nextItem) {
@@ -212,7 +214,7 @@ const MediaPreviewer = (props: IProps) => {
                   if (isControlled()) {
                     const seekTo = currentFrame - currentItem.startFrame;
                     if (seekTo > 0) {
-                      console.log(`Auto seek video to ${currentFrame - currentItem.startFrame}s`);
+                      // console.log(`Auto seek video to ${currentFrame - currentItem.startFrame}s`);
                       e.seekTo(seekTo, 'seconds');
                     }
                   }
@@ -263,7 +265,7 @@ const MediaPreviewer = (props: IProps) => {
   }, []);
 
   const renderCore = () => {
-    console.log('renderCore', status, currentItem, currentFrame);
+    // console.log('renderCore', status, currentItem, currentFrame);
     switch (status) {
       case PreviewerStatus.NothingToPreview:
         return (
