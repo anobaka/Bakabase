@@ -1,9 +1,10 @@
 import { Select } from '@alifd/next';
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ResourceSearchOrder } from '@/sdk/constants';
-import { resourceSearchOrders } from '@/sdk/constants';
+import { useUpdateEffect } from 'react-use';
 import CustomIcon from '@/components/CustomIcon';
+import type { ISearchFormOrderModel } from '@/pages/Resource/models';
+import { resourceSearchSortableProperties } from '@/sdk/constants';
 
 const directionDataSource: { label: string; asc: boolean }[] = [{
   label: 'Asc',
@@ -13,10 +14,21 @@ const directionDataSource: { label: string; asc: boolean }[] = [{
   asc: false,
 }];
 
-export default () => {
+interface IProps {
+  value?: ISearchFormOrderModel[];
+  onChange?: (value: ISearchFormOrderModel[]) => any;
+}
+
+export default ({ value: propsValue, onChange }: IProps) => {
   const { t } = useTranslation();
 
-  const orderDataSourceRef = useRef(resourceSearchOrders.reduce<{ label: any; value: string }[]>((s, x) => {
+  const [value, setValue] = useState(propsValue);
+
+  useUpdateEffect(() => {
+    setValue(propsValue);
+  }, [propsValue]);
+
+  const orderDataSourceRef = useRef(resourceSearchSortableProperties.reduce<{ label: any; value: string }[]>((s, x) => {
     directionDataSource.forEach((y) => {
       s.push({
         label: (
@@ -46,29 +58,27 @@ export default () => {
       }}
       showSearch
       dataSource={orderDataSourceRef.current}
-      // value={(searchForm.orders || []).map((a) => `${a.order}-${a.asc}`)}
+      value={(value || []).map((a) => `${a.property}-${a.asc}`)}
       size={'small'}
       onChange={(arr) => {
         // console.log(arr);
         const orderKeys = {};
-        const orders: {order: ResourceSearchOrder; asc: boolean}[] = [];
+        const orders: ISearchFormOrderModel[] = [];
         for (let i = arr.length - 1; i >= 0; i--) {
           const vl = arr[i].split('-');
           const o = vl[0];
           if (!(o in orderKeys)) {
             const a = vl[1];
             orders.splice(0, 0, {
-              order: parseInt(o, 10),
+              property: parseInt(o, 10),
               asc: a == 'true',
             });
             orderKeys[o] = a;
           }
           // console.log(vl, o, orders);
         }
-        // search({
-        //   ...searchForm,
-        //   orders,
-        // });
+        setValue(orders);
+        onChange?.(orders);
       }}
     />
   );

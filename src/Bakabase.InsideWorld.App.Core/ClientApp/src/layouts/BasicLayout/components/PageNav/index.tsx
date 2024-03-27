@@ -1,26 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Link, useLocation, history } from 'ice';
-import { Badge, Balloon, Loading, Nav } from '@alifd/next';
-import i18next from 'i18next';
-import i18n from 'i18next';
+import { history, Link, useLocation } from 'ice';
+import { Badge, Loading, Nav } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { asideMenuConfig } from '../../menuConfig';
 import CustomIcon from '@/components/CustomIcon';
 import { CheckAppInitialized } from '@/sdk/apis';
 import { BackgroundTaskStatus, InitializationContentType } from '@/sdk/constants';
 import store from '@/store';
+import AntdMenu from '@/layouts/BasicLayout/components/AntdMenu';
 
+const { Item } = Nav;
 
 const { SubNav } = Nav;
 const NavItem = Nav.Item;
-
-// mock the auth object
-// Ref: https://ice.work/docs/guide/advance/auth#%E5%88%9D%E5%A7%8B%E5%8C%96%E6%9D%83%E9%99%90%E6%95%B0%E6%8D%AE
-const AUTH_CONFIG = {
-  admin: true,
-  guest: false,
-};
 
 export interface IMenuItem {
   name: string;
@@ -29,35 +22,27 @@ export interface IMenuItem {
   children?: IMenuItem[];
 }
 
-function getNavMenuItems(menusData: any[], initIndex?: number | string, auth?: any) {
+function getNavMenuItems(menusData: any[], initIndex?: number | string) {
   if (!menusData) {
     return [];
   }
 
   return menusData
-    .filter((item) => {
-      let roleAuth = true;
-      // if item.roles is [] or undefined, roleAuth is true
-      if (auth && item.auth && item.auth instanceof Array) {
-        if (item.auth.length) {
-          roleAuth = item.auth.some((key) => auth[key]);
-        }
-      }
-      return item.name && !item.hideInMenu && roleAuth;
-    })
     .map((item, index) => {
-      return getSubMenuOrItem(item, `${initIndex}-${index}`, auth);
+      return getSubMenuOrItem(item, `${initIndex}-${index}`);
     });
 }
 
-function getSubMenuOrItem(item: IMenuItem, index?: number | string, auth?: any) {
+function getSubMenuOrItem(item: IMenuItem, index?: number | string) {
   if (item.children && item.children.some((child) => child.name)) {
-    const childrenItems = getNavMenuItems(item.children, index, auth);
+    const childrenItems = getNavMenuItems(item.children, index);
     if (childrenItems && childrenItems.length > 0) {
       const subNav = (
         <SubNav
           key={item.name}
-          icon={<CustomIcon type={item.icon} />}
+          icon={(
+            <CustomIcon type={item.icon} />
+          )}
           label={item.name}
         >
           {childrenItems}
@@ -69,10 +54,13 @@ function getSubMenuOrItem(item: IMenuItem, index?: number | string, auth?: any) 
     return null;
   }
   const navItem = (
-    <NavItem key={item.path} icon={<CustomIcon type={item.icon} />}>
-      {/* <Link to={item.path}> */}
+    <NavItem
+      key={item.path}
+      icon={(
+        <CustomIcon type={item.icon} />
+      )}
+    >
       {item.name}
-      {/* </Link> */}
     </NavItem>
   );
 
@@ -96,13 +84,13 @@ const Navigation = () => {
 
   const localizedAsideMenuConfig = asideMenuConfig.map((c) => {
     const { path } = c;
-    let name = t(c.name);
+    let name: any = t(c.name);
     if (path == '/backgroundtask') {
       if (activeTaskCount > 0) {
         name = (
           <div>
             {t(c.name)}
-          &emsp;
+            &emsp;
             <Badge count={activeTaskCount} />
           </div>
         );
@@ -152,35 +140,34 @@ const Navigation = () => {
     }
   }, [pathname]);
 
-  // console.log('5555555555555555555555555555', pathname);
-
   return (
     <div className={`nav-container ${isCollapsed ? 'collapsed' : ''}`}>
       <Loading fullScreen visible={loading} />
       <div className="nav">
         <Link to={'/'} className="top">{isCollapsed ? 'IW' : 'Inside World'}</Link>
         <div className="menu">
-          <Nav
-            type="normal"
-            openKeys={openKeys}
-            selectedKeys={[pathname]}
-            defaultSelectedKeys={[pathname]}
-            embeddable
-            activeDirection="right"
-            iconOnly={isCollapsed}
-            hasTooltip={isCollapsed}
-            mode={isCollapsed ? 'popup' : 'inline'}
-            onOpen={(keys) => {
-              setOpenKeys(keys);
-            }}
-            onItemClick={(key, object, event) => {
-              setLoading(true);
-              console.log('6666666666666666666666666666666');
-              history.push(key);
-            }}
-          >
-            {getNavMenuItems(localizedAsideMenuConfig, 0, AUTH_CONFIG, isCollapsed)}
-          </Nav>
+          <AntdMenu />
+          {/* <Nav */}
+          {/*   openMode={'multiple'} */}
+          {/*   type="normal" */}
+          {/*   openKeys={openKeys} */}
+          {/*   selectedKeys={[pathname]} */}
+          {/*   defaultSelectedKeys={[pathname]} */}
+          {/*   embeddable */}
+          {/*   iconOnly={isCollapsed} */}
+          {/*   hasTooltip={isCollapsed} */}
+          {/*   mode={isCollapsed ? 'popup' : 'inline'} */}
+          {/*   onOpen={(keys) => { */}
+          {/*     console.log(keys); */}
+          {/*     setOpenKeys(keys); */}
+          {/*   }} */}
+          {/*   onItemClick={(key, object, event) => { */}
+          {/*     setLoading(true); */}
+          {/*     history!.push(key); */}
+          {/*   }} */}
+          {/* > */}
+          {/*   {getNavMenuItems(localizedAsideMenuConfig, 0)} */}
+          {/* </Nav> */}
         </div>
       </div>
       <div

@@ -111,13 +111,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 			_customPropertyValueService = customPropertyValueService;
 		}
 
-		[HttpPost("search")]
-		[SwaggerOperation(OperationId = "SearchResources")]
-		public async Task<SearchResponse<ResourceDto>> Search([FromBody] ResourceSearchDto model)
-		{
-			return await _service.Search(model, false);
-		}
-
 		[HttpPost("search/v2")]
 		[SwaggerOperation(OperationId = "SearchResourcesV2")]
 		public async Task<SearchResponse<ResourceDto>> Search([FromBody] ResourceSearchRequestModelV2 model)

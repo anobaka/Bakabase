@@ -6759,49 +6759,6 @@ export const GetAllPublishersURL = function(parameters = {}) {
 }
 /**
  * 
- * request: SearchResources
- * url: SearchResourcesURL
- * method: SearchResources_TYPE
- * raw_url: SearchResources_RAW_URL
- * @param model - 
- */
-export const SearchResources = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/search'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const SearchResources_RAW_URL = function() {
-  return '/resource/search'
-}
-export const SearchResources_TYPE = function() {
-  return 'post'
-}
-export const SearchResourcesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/search'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: SearchResourcesV2
  * url: SearchResourcesV2URL
  * method: SearchResourcesV2_TYPE

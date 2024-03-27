@@ -1,46 +1,35 @@
 import React, { useEffect } from 'react';
 import './index.scss';
-import { history, Outlet, useLocation } from 'ice';
+import { history, Outlet } from 'ice';
 import { Dialog } from '@alifd/next';
-import i18n from 'i18next';
 import { TourProvider } from '@reactour/tour';
+import { useTranslation } from 'react-i18next';
 import PageNav from './components/PageNav';
-import { CheckAppInitialized } from '@/sdk/apis';
 import { InitializationContentType } from '@/sdk/constants';
 import FloatingAssistant from '@/components/FloatingAssistant';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import BApi from '@/sdk/BApi';
 
-export default function BasicLayout({
-                                      children,
-                                    }: {
-  children: React.ReactNode;
-}) {
-  const location = useLocation();
+export default function BasicLayout() {
+  const { t } = useTranslation();
 
   useEffect(() => {
-    CheckAppInitialized()
-      .invoke((a) => {
-        switch (a.data) {
-          case InitializationContentType.NotAcceptTerms:
-            history.push('/welcome');
-            break;
-          case InitializationContentType.NeedRestart:
-            Dialog.show({
-              title: i18n.t('Please restart app and try this later'),
-              footer: false,
-              closeMode: [],
-              closeable: false,
-            });
-            break;
-        }
-      })
-      .catch((a) => {
-        history.push('/welcome');
-      });
+    BApi.app.checkAppInitialized().then((a) => {
+      switch (a.data) {
+        case InitializationContentType.NotAcceptTerms:
+          history!.push('/welcome');
+          break;
+        case InitializationContentType.NeedRestart:
+          Dialog.show({
+            title: t('Please restart app and try this later'),
+            footer: false,
+            closeMode: [],
+            v2: true,
+          });
+          break;
+      }
+    });
   }, []);
-
-  console.log('444444444444444444444444444');
-
 
   return (
     <TourProvider steps={[]}>

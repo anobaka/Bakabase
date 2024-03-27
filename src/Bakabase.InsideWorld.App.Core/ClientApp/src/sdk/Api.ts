@@ -436,20 +436,22 @@ export interface BakabaseInsideWorldModelsConfigsResourceResourceOptionsDto {
   lastSyncDt?: string;
   /** @format date-time */
   lastNfoGenerationDt?: string;
-  lastSearch?: BakabaseInsideWorldModelsModelsAosResourceSearchDto;
   lastSearchV2?: BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsV2;
-  searchSlots?: BakabaseInsideWorldModelsModelsAosResourceSearchSlotItemDto[] | null;
   coverOptions?: BakabaseInsideWorldModelsConfigsResourceResourceOptionsCoverOptionsModel;
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
 }
 
-export interface BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsOrderModel {
-  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 4: Rate, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary, 9: Name] */
-  order?: BakabaseInsideWorldModelsConstantsAosResourceSearchOrder;
-  asc?: boolean;
-}
-
 export interface BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsV2 {
+  /** @format int32 */
+  pageIndex?: number;
+  /**
+   * @format int32
+   * @min 0
+   * @max 100
+   */
+  pageSize?: number;
+  /** @format int32 */
+  skipCount?: number;
   group?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup;
   orders?: BakabaseInsideWorldModelsModelsAosResourceSearchOrderModel[] | null;
 }
@@ -532,10 +534,10 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsTagGroupAdditionalI
 export type BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder = 1 | 2;
 
 /**
- * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 4: Rate, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary, 9: Name]
+ * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAosResourceSearchOrder = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty = 1 | 2 | 3 | 5 | 6 | 7 | 8;
 
 /**
  * [1: Running, 2: Complete, 3: Failed]
@@ -861,54 +863,6 @@ export interface BakabaseInsideWorldModelsModelsAosResourceDiff {
   subDiffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[] | null;
 }
 
-export interface BakabaseInsideWorldModelsModelsAosResourceSearchDto {
-  /** @format int32 */
-  pageIndex?: number;
-  /** @format int32 */
-  skipCount?: number;
-  name?: string | null;
-  /** @format date-time */
-  releaseStartDt?: string | null;
-  /** @format date-time */
-  releaseEndDt?: string | null;
-  /** @format date-time */
-  addStartDt?: string | null;
-  /** @format date-time */
-  addEndDt?: string | null;
-  /** @format date-time */
-  fileCreateStartDt?: string | null;
-  /** @format date-time */
-  fileCreateEndDt?: string | null;
-  /** @format date-time */
-  fileModifyStartDt?: string | null;
-  /** @format date-time */
-  fileModifyEndDt?: string | null;
-  favoritesIds?: number[] | null;
-  /** @format int32 */
-  categoryId?: number | null;
-  publisher?: string | null;
-  original?: string | null;
-  series?: string | null;
-  /** @format double */
-  minRate?: number | null;
-  languages?: BakabaseInsideWorldModelsConstantsResourceLanguage[] | null;
-  mediaLibraryIds?: number[] | null;
-  tagIds?: number[] | null;
-  excludedTagIds?: number[] | null;
-  everything?: string | null;
-  orders?: BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsOrderModel[] | null;
-  customProperties?: Record<string, string | null>;
-  customPropertyKeys?: string[] | null;
-  /** @format int32 */
-  parentId?: number | null;
-  /** @format int32 */
-  pageSize?: number;
-  hideChildren?: boolean;
-  save?: boolean;
-  customPropertyIds?: number[] | null;
-  customPropertiesV2?: BakabaseInsideWorldModelsRequestModelsResourceSearchByCustomPropertyValuesRequestModel;
-}
-
 export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilter {
   /** @format int32 */
   propertyId?: number;
@@ -926,14 +880,9 @@ export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup {
 }
 
 export interface BakabaseInsideWorldModelsModelsAosResourceSearchOrderModel {
-  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 4: Rate, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary, 9: Name] */
-  order?: BakabaseInsideWorldModelsConstantsAosResourceSearchOrder;
+  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary] */
+  property?: BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty;
   asc?: boolean;
-}
-
-export interface BakabaseInsideWorldModelsModelsAosResourceSearchSlotItemDto {
-  name?: string | null;
-  model?: BakabaseInsideWorldModelsModelsAosResourceSearchDto;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
@@ -1458,14 +1407,6 @@ export interface BakabaseInsideWorldModelsRequestModelsCustomPropertyAddOrPutReq
   options?: string | null;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsCustomPropertyValueSearchRequestModel {
-  /** @format int32 */
-  propertyId?: number;
-  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation?: BakabaseInsideWorldModelsConstantsSearchOperation;
-  value?: string | null;
-}
-
 export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel {
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
@@ -1557,12 +1498,6 @@ export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryRootPathsAddI
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsOptionsResourceOptionsPatchRequestModel {
-  /** @format date-time */
-  lastSyncDt?: string | null;
-  /** @format date-time */
-  lastNfoGenerationDt?: string | null;
-  lastSearch?: BakabaseInsideWorldModelsModelsAosResourceSearchDto;
-  searchSlots?: BakabaseInsideWorldModelsModelsAosResourceSearchSlotItemDto[] | null;
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
   coverOptions?: BakabaseInsideWorldModelsConfigsResourceResourceOptionsCoverOptionsModel;
 }
@@ -1650,14 +1585,6 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel 
 export interface BakabaseInsideWorldModelsRequestModelsResourceRawNameUpdateRequestModel {
   /** @minLength 1 */
   rawName: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceSearchByCustomPropertyValuesRequestModel {
-  /** [1: And, 2: Or] */
-  combination?: BakabaseInsideWorldModelsConstantsCombinator;
-  customPropertyValueSearchModels?:
-    | BakabaseInsideWorldModelsRequestModelsCustomPropertyValueSearchRequestModel[]
-    | null;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsResourceSearchRequestModelV2 {
@@ -2514,10 +2441,10 @@ export type SystemReflectionGenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 |
 export type SystemReflectionICustomAttributeProvider = object;
 
 export interface SystemReflectionMemberInfo {
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: SystemReflectionMemberTypes;
   declaringType?: SystemType;
   reflectedType?: SystemType;
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
   name?: string | null;
   module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
@@ -4319,23 +4246,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}/enhancement`,
         method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name SearchResources
-     * @request POST:/resource/search
-     */
-    searchResources: (data: BakabaseInsideWorldModelsModelsAosResourceSearchDto, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsDtosResourceDto, any>({
-        path: `/resource/search`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
         format: "json",
         ...params,
       }),

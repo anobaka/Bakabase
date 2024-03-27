@@ -9,7 +9,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
 {
     public record ResourceSearchOrderModel
     {
-        public ResourceSearchOrder Order { get; set; }
+        public ResourceSearchSortableProperty Property { get; set; }
         public bool Asc { get; set; }
     }
 }

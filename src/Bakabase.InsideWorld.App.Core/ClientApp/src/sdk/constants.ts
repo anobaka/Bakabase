@@ -176,8 +176,8 @@ export enum ThirdPartyId {Bilibili = 1, ExHentai = 2, Pixiv = 3}
 export const thirdPartyIds = Object.keys(ThirdPartyId).filter(k => typeof ThirdPartyId[k] === 'number').map(t => ({label: t, value: ThirdPartyId[t]}));
 export enum PasswordSearchOrder {Latest = 1, Frequency = 2}
 export const passwordSearchOrders = Object.keys(PasswordSearchOrder).filter(k => typeof PasswordSearchOrder[k] === 'number').map(t => ({label: t, value: PasswordSearchOrder[t]}));
-export enum ResourceSearchOrder {FileCreateDt = 1, FileModifyDt = 2, Filename = 3, Rate = 4, ReleaseDt = 5, AddDt = 6, Category = 7, MediaLibrary = 8, Name = 9}
-export const resourceSearchOrders = Object.keys(ResourceSearchOrder).filter(k => typeof ResourceSearchOrder[k] === 'number').map(t => ({label: t, value: ResourceSearchOrder[t]}));
+export enum ResourceSearchSortableProperty {FileCreateDt = 1, FileModifyDt = 2, Filename = 3, ReleaseDt = 5, AddDt = 6, Category = 7, MediaLibrary = 8}
+export const resourceSearchSortableProperties = Object.keys(ResourceSearchSortableProperty).filter(k => typeof ResourceSearchSortableProperty[k] === 'number').map(t => ({label: t, value: ResourceSearchSortableProperty[t]}));
 export enum AliasAdditionalItem {Candidates = 1}
 export const aliasAdditionalItems = Object.keys(AliasAdditionalItem).filter(k => typeof AliasAdditionalItem[k] === 'number').map(t => ({label: t, value: AliasAdditionalItem[t]}));
 export enum ComponentDescriptorAdditionalItem {None = 0, AssociatedCategories = 1}

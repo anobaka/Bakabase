@@ -35,6 +35,8 @@ namespace Bakabase.InsideWorld.App.Core
         {
         }
 
+        protected override int ListeningPortCount => 3;
+
         protected override Assembly[] AssembliesForGlobalConfigurationRegistrationsScanning =>
             new[] {Assembly.GetAssembly(SpecificTypeUtils<ResourceOptions>.Type)!};
 

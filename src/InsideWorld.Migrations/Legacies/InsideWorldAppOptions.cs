@@ -22,8 +22,6 @@ namespace InsideWorld.Migrations.Legacies
         [Obsolete] public bool? MinimizeOnClose { get; set; }
 
         [Obsolete] public int ResourceColCount { get; set; } = 8;
-        [Obsolete] public ResourceSearchDto ResourceSearchRequestModel { get; set; }
-        [Obsolete] public ResourceSearchSlotItemDto[] ResourceSearchRequestModelSlot = { };
         [Obsolete] public DateTime LastSyncDt { get; set; }
         [Obsolete] public string JavLibraryCookie { get; set; }
         [Obsolete] public string JavLibraryDownloadPath { get; set; }

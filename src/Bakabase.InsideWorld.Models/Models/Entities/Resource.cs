@@ -12,6 +12,7 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
     public class Resource
     {
         public int Id { get; set; }
+        [Obsolete]
         public string? Name { get; set; }
         public DateTime CreateDt { get; set; } = DateTime.Now;
         public DateTime UpdateDt { get; set; } = DateTime.Now;
@@ -34,7 +35,9 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
 
         #region Properties
 
+        [Obsolete]
         public ResourceLanguage Language { get; set; } = ResourceLanguage.NotSet;
+        [Obsolete]
         public decimal Rate { get; set; }
         public DateTime? ReleaseDt { get; set; }
         public string? Introduction { get; set; }

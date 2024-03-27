@@ -38,7 +38,7 @@ export default ({
       trigger={(
         <ClickableIcon
           className={styles.portal}
-          type={'setting'}
+          type={'ellipsis'}
           size={'small'}
           colorType={'normal'}
           onMouseEnter={e => {

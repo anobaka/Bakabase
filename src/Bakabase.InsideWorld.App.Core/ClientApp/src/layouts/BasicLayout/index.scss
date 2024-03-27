@@ -34,47 +34,47 @@
           text-decoration: none;
         }
       }
-      &>.menu {
-        flex: 1;
-        min-height: 0;
-        overflow-y: auto;
-
-        .next-nav.next-ver {
-          height: unset;
-          line-height: unset;
-          border: none;
-          background: var(--theme-block-background);
-
-          .next-menu-sub-menu {
-          }
-
-          .next-menu-item.next-nav-item {
-            //padding: 0 35px;
-            //color: #343434;
-
-            color: var(--theme-text);
-            background: var(--theme-block-background);
-
-            .next-menu-item-inner {
-              height: unset;
-              line-height: 46px;
-              .next-menu-item-text {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-              }
-            }
-
-            &.next-selected {
-              background-color: var(--theme-block-background-accent);
-              color: var(--theme-text-primary);
-              &:before {
-                content: none;
-              }
-            }
-          }
-        }
-      }
+      //&>.menu {
+      //  flex: 1;
+      //  min-height: 0;
+      //  overflow-y: auto;
+      //
+      //  .next-nav.next-ver {
+      //    height: unset;
+      //    line-height: unset;
+      //    border: none;
+      //    background: var(--theme-block-background);
+      //
+      //    .next-menu-sub-menu {
+      //    }
+      //
+      //    .next-menu-item.next-nav-item {
+      //      //padding: 0 35px;
+      //      //color: #343434;
+      //
+      //      color: var(--theme-text);
+      //      background: var(--theme-block-background);
+      //
+      //      .next-menu-item-inner {
+      //        height: unset;
+      //        line-height: 46px;
+      //        .next-menu-item-text {
+      //          display: flex;
+      //          align-items: center;
+      //          gap: 10px;
+      //        }
+      //      }
+      //
+      //      &.next-selected {
+      //        background-color: var(--theme-block-background-accent);
+      //        color: var(--theme-text-primary);
+      //        &:before {
+      //          content: none;
+      //        }
+      //      }
+      //    }
+      //  }
+      //}
       &>.bottom {
         border-top: 1px solid #EAEAEA;
         padding: 30px;

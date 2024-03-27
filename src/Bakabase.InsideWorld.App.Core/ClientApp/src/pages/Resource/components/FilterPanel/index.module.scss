@@ -19,8 +19,11 @@
     //height: 10px;
     overflow: hidden;
     position: absolute;
-    right: 0;
-    top: 0;
+    right: -5px;
+    top: -5px;
+
+    z-index: 1;
+    background: var(--theme-block-background);
 
     .collapseSwitcher {
       position: relative;

@@ -1,11 +1,13 @@
-import { AxiosResponse } from 'axios';
 import type {
   BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel,
   BakabaseInfrastructuresComponentsConfigurationsAppAppOptions,
   BakabaseInsideWorldModelsConfigsBilibiliOptions,
   BakabaseInsideWorldModelsConfigsExHentaiOptions,
   BakabaseInsideWorldModelsConfigsFileSystemOptions,
-  BakabaseInsideWorldModelsConfigsJavLibraryOptions, BakabaseInsideWorldModelsConfigsNetworkOptions,
+  BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions,
+  BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions,
+  BakabaseInsideWorldModelsConfigsJavLibraryOptions,
+  BakabaseInsideWorldModelsConfigsNetworkOptions,
   BakabaseInsideWorldModelsConfigsPixivOptions,
   BakabaseInsideWorldModelsConfigsResourceResourceOptionsDto,
   BakabaseInsideWorldModelsConfigsThirdPartyOptions,
@@ -13,16 +15,15 @@ import type {
   BakabaseInsideWorldModelsRequestModelsOptionsResourceOptionsPatchRequestModel,
   BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel,
   BootstrapModelsResponseModelsBaseResponse,
-
-  BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions,
-  BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions } from '@/sdk/Api';
-import BApi from '@/sdk/BApi';
-import {
-  Api,
 } from '@/sdk/Api';
+import BApi from '@/sdk/BApi';
+
+type SignalROptions<T> = T & {
+  initialized: boolean;
+};
 
 interface OptionsStore<TOptions, TPatchModel> {
-  state: TOptions;
+  state: SignalROptions<TOptions>;
   reducers: {
     update: (state: TOptions, payload: any) => any;
   };
@@ -31,7 +32,7 @@ interface OptionsStore<TOptions, TPatchModel> {
   });
 }
 
-const buildModel = <TOptions, TPatchModel>(patchHandler) => {
+const buildModel = <TOptions, TPatchModel>(patchHandler: (patches: TPatchModel) => Promise<BootstrapModelsResponseModelsBaseResponse>) => {
   return {
     state: {} as TOptions,
 
@@ -42,6 +43,7 @@ const buildModel = <TOptions, TPatchModel>(patchHandler) => {
         return {
           ...state,
           ...payload,
+          initialized: true,
         };
       },
     },
@@ -49,10 +51,7 @@ const buildModel = <TOptions, TPatchModel>(patchHandler) => {
     // 定义处理该模型副作用的函数
     effects: (dispatch) => ({
       async save(patches: TPatchModel) {
-        const data: BootstrapModelsResponseModelsBaseResponse = await patchHandler(patches);
-        if (!data.code) {
-          dispatch.update(data.data);
-        }
+        await patchHandler(patches);
       },
     }),
   } as OptionsStore<TOptions, TPatchModel>;

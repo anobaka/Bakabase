@@ -1,15 +1,12 @@
 ﻿using System.IO;
 using System.Reflection;
 using System.Windows;
-using Bakabase.Infrastructures;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.App.Wpf.Windows;
-using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 using MessageBox = System.Windows.MessageBox;
@@ -199,10 +196,22 @@ namespace Bakabase.InsideWorld.App.Wpf.Components
 #if DEBUG
                 await _mainWindow.WebView2.EnsureCoreWebView2Async();
 #else
-                var webview2EnvPath =
-                    Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly()!.Location)!, "Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64");
-                var env = await CoreWebView2Environment.CreateAsync(webview2EnvPath);
-                await _mainWindow.WebView2.EnsureCoreWebView2Async(env);
+                try
+                {
+                    var webViewVersion = CoreWebView2Environment.GetAvailableBrowserVersionString();
+                    if (!string.IsNullOrEmpty(webViewVersion))
+                    {
+                        await _mainWindow.WebView2.EnsureCoreWebView2Async();
+                    }
+                }
+                catch (Exception e)
+                {
+                    // fallback to fixed version
+                    var webview2EnvPath =
+                        Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly()!.Location)!, "Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64");
+                    var env = await CoreWebView2Environment.CreateAsync(webview2EnvPath);
+                    await _mainWindow.WebView2.EnsureCoreWebView2Async(env);
+                }
 #endif
             }
 

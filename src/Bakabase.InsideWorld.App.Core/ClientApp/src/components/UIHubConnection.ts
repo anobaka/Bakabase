@@ -44,6 +44,9 @@ export default class UIHubConnection {
         case 'ReservedOptions':
           store.dispatch.reservedOptions.setState(data);
           break;
+        case 'AppContext':
+          store.dispatch.appContext.setState(data);
+          break;
       }
     });
 

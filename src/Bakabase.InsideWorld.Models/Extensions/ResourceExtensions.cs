@@ -102,20 +102,20 @@ namespace Bakabase.InsideWorld.Models.Extensions
 			if (orders != null)
 			{
 				ordersForSearch.AddRange(from om in orders
-					let o = om.Order
+					let o = om.Property
 					let a = om.Asc
 					let s = ((Func<Resource, object> SelectKey, IComparer<object>? Comparer)) (o switch
 					{
-						ResourceSearchOrder.AddDt => (x => x.CreateDt, null),
-						ResourceSearchOrder.ReleaseDt => (x => x.ReleaseDt, null),
-						ResourceSearchOrder.Rate => (x => x.Rate, null),
-						ResourceSearchOrder.Category => (x => x.CategoryId, null),
-						ResourceSearchOrder.MediaLibrary => (x => x.MediaLibraryId, null),
-						ResourceSearchOrder.Name => (x => x.Name,
-							Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
-						ResourceSearchOrder.FileCreateDt => (x => x.FileCreateDt, null),
-						ResourceSearchOrder.FileModifyDt => (x => x.FileModifyDt, null),
-						ResourceSearchOrder.Filename => (x => x.RawName,
+						ResourceSearchSortableProperty.AddDt => (x => x.CreateDt, null),
+						ResourceSearchSortableProperty.ReleaseDt => (x => x.ReleaseDt, null),
+						// ResourceSearchSortableProperty.Rate => (x => x.Rate, null),
+						ResourceSearchSortableProperty.Category => (x => x.CategoryId, null),
+						ResourceSearchSortableProperty.MediaLibrary => (x => x.MediaLibraryId, null),
+						// ResourceSearchSortableProperty.Name => (x => x.Name,
+						// 	Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
+						ResourceSearchSortableProperty.FileCreateDt => (x => x.FileCreateDt, null),
+						ResourceSearchSortableProperty.FileModifyDt => (x => x.FileModifyDt, null),
+						ResourceSearchSortableProperty.Filename => (x => x.RawName,
 							Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
 						_ => throw new ArgumentOutOfRangeException()
 					})
@@ -622,133 +622,6 @@ namespace Bakabase.InsideWorld.Models.Extensions
 				Introduction = r.Introduction,
 				HasChildren = r.HasChildren,
 				ParentId = r.Parent?.Id ?? r.ParentId
-			};
-		}
-
-		public static ResourceSearchOptions ToOptions(this ResourceSearchDto dto)
-		{
-			if (dto == null)
-			{
-				return null;
-			}
-
-			return new ResourceSearchOptions
-			{
-				AddEndDt = dto.AddEndDt,
-				AddStartDt = dto.AddStartDt,
-				CategoryId = dto.CategoryId,
-				CustomPropertyKeys = dto.CustomPropertyKeys,
-				CustomPropertyValues = dto.CustomPropertyKeys
-					?.Select(a => dto.CustomProperties.TryGetValue(a, out var v) ? v : null).ToList(),
-				Everything = dto.Everything,
-				FavoritesIds = dto.FavoritesIds,
-				FileCreateEndDt = dto.FileCreateEndDt,
-				FileCreateStartDt = dto.FileCreateStartDt,
-				FileModifyEndDt = dto.FileModifyEndDt,
-				FileModifyStartDt = dto.FileModifyStartDt,
-				Languages = dto.Languages,
-				MediaLibraryIds = dto.MediaLibraryIds,
-				MinRate = dto.MinRate,
-				Name = dto.Name,
-				Orders = dto.Orders,
-				Original = dto.Original,
-				PageIndex = dto.PageIndex,
-				PageSize = dto.PageSize,
-				Publisher = dto.Publisher,
-				ReleaseEndDt = dto.ReleaseEndDt,
-				ReleaseStartDt = dto.ReleaseStartDt,
-				TagIds = dto.TagIds,
-				HideChildren = dto.HideChildren,
-				ExcludedTagIds = dto.ExcludedTagIds,
-				CustomPropertyIds = dto.CustomPropertyIds,
-				CustomProperties = dto.CustomPropertiesV2
-			};
-		}
-
-		public static ResourceSearchDto? ToDto(this ResourceSearchOptions? options)
-		{
-			if (options == null)
-			{
-				return null;
-			}
-
-			var dto = new ResourceSearchDto
-			{
-				AddEndDt = options.AddEndDt,
-				AddStartDt = options.AddStartDt,
-				CategoryId = options.CategoryId,
-				Everything = options.Everything,
-				FavoritesIds = options.FavoritesIds,
-				FileCreateEndDt = options.FileCreateEndDt,
-				FileCreateStartDt = options.FileCreateStartDt,
-				FileModifyEndDt = options.FileModifyEndDt,
-				FileModifyStartDt = options.FileModifyStartDt,
-				Languages = options.Languages,
-				MediaLibraryIds = options.MediaLibraryIds,
-				MinRate = options.MinRate,
-				Name = options.Name,
-				Orders = options.Orders,
-				Original = options.Original,
-				PageIndex = options.PageIndex,
-				PageSize = options.PageSize,
-				Publisher = options.Publisher,
-				ReleaseEndDt = options.ReleaseEndDt,
-				ReleaseStartDt = options.ReleaseStartDt,
-				TagIds = options.TagIds,
-				CustomPropertyKeys = options.CustomPropertyKeys,
-				HideChildren = options.HideChildren,
-				CustomPropertiesV2 = options.CustomProperties,
-				ExcludedTagIds = options.ExcludedTagIds,
-				CustomPropertyIds = options.CustomPropertyIds
-			};
-
-			if (options.CustomPropertyKeys?.Any() == true)
-			{
-				var map = new Dictionary<string, string>();
-				for (var i = 0; i < options.CustomPropertyKeys.Count; i++)
-				{
-					var key = options.CustomPropertyKeys[i];
-					var value = options.CustomPropertyValues?.Count > i ? options.CustomPropertyValues[i] : null;
-					if (key.IsNotEmpty() && value.IsNotEmpty())
-					{
-						map[key] = value;
-					}
-				}
-
-				if (map.Any())
-				{
-					dto.CustomProperties = map;
-				}
-			}
-
-			return dto;
-		}
-
-		public static ResourceSearchSlotItemOptions ToOptions(this ResourceSearchSlotItemDto dto)
-		{
-			if (dto == null)
-			{
-				return null;
-			}
-
-			return new ResourceSearchSlotItemOptions
-			{
-				Name = dto.Name,
-				Model = dto.Model.ToOptions()
-			};
-		}
-
-		public static ResourceSearchSlotItemDto ToDto(this ResourceSearchSlotItemOptions options)
-		{
-			if (options == null)
-			{
-				return null;
-			}
-
-			return new ResourceSearchSlotItemDto
-			{
-				Name = options.Name,
-				Model = options.Model.ToDto()
 			};
 		}
 

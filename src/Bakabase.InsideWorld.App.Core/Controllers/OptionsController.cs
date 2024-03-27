@@ -413,29 +413,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             await _insideWorldOptionsManager.Resource.SaveAsync(options =>
             {
-                if (model.LastSearch != null)
-                {
-                    options.LastSearch = model.LastSearch.ToOptions();
-                }
-
-                if (model.LastNfoGenerationDt.HasValue)
-                {
-                    options.LastNfoGenerationDt = model.LastNfoGenerationDt.Value;
-                }
-
-                if (model.LastSyncDt.HasValue)
-                {
-                    options.LastSyncDt = model.LastSyncDt.Value;
-                }
-
                 if (model.AdditionalCoverDiscoveringSources != null)
                 {
                     options.AdditionalCoverDiscoveringSources = model.AdditionalCoverDiscoveringSources;
-                }
-
-                if (model.SearchSlots != null)
-                {
-                    options.SearchSlots = model.SearchSlots?.Select(a => a.ToOptions()).ToList();
                 }
 
                 if (model.CoverOptions != null)

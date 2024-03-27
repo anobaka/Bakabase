@@ -3,6 +3,7 @@ import { Balloon, Checkbox, Dialog, Icon, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import type { BalloonProps } from '@alifd/next/types/balloon';
 import { useUpdate } from 'react-use';
+import { Img } from 'react-image';
 import serverConfig from '@/serverConfig';
 import { GetResourceCoverURL } from '@/sdk/apis';
 import { useTraceUpdate, uuidv4 } from '@/components/utils';
@@ -28,7 +29,7 @@ export interface IResourceCoverRef {
   reload: (ct?: AbortSignal) => Promise<any>;
 }
 
-const Index = React.forwardRef((props: Props, ref) => {
+const ResourceCover = React.forwardRef((props: Props, ref) => {
   const {
     resourceId,
     onClick: propsOnClick,
@@ -49,6 +50,8 @@ const Index = React.forwardRef((props: Props, ref) => {
   const previewerHoverTimerRef = useRef<any>();
 
   const disableCacheRef = useRef(disableCache);
+
+  const appContext = store.useModelState('appContext');
 
   useEffect(() => {
     disableCacheRef.current = disableCache;
@@ -125,7 +128,10 @@ const Index = React.forwardRef((props: Props, ref) => {
   useTraceUpdate(props, '[ResourceCover]');
 
   const loadCover = useCallback((ct?: AbortSignal) => {
-    let url = `${serverConfig.apiEndpoint}${GetResourceCoverURL({ id: resourceId })}`;
+    return;
+    const serverAddress = appContext.serverAddresses?.[1] ?? serverConfig.apiEndpoint;
+
+    let url = `${serverAddress}${GetResourceCoverURL({ id: resourceId })}`;
     if (disableCacheRef.current) {
       url += `?t=${uuidv4()}`;
     }
@@ -196,19 +202,38 @@ const Index = React.forwardRef((props: Props, ref) => {
   }, []);
 
   const renderCover = () => {
-    if (cover) {
-      return renderThumbnail(cover);
-    } else {
-      if (loading) {
-        return (
-          <Icon type={'loading'} />
-        );
-      } else {
-        return (
-          <CustomIcon type={'image-slash'} size={'large'} />
-        );
-      }
-    }
+    // if (loading) {
+    //   return (
+    //     <Icon type={'loading'} />
+    //   );
+    // } else {
+      const serverAddress = appContext.serverAddresses?.[1] ?? serverConfig.apiEndpoint;
+
+      let url = `${serverAddress}${GetResourceCoverURL({ id: resourceId })}`;
+
+      return (
+        <Img
+          src={[url]}
+          unloader={(
+            <CustomIcon type={'image-slash'} size={'large'} />
+          )}
+        />
+      );
+    // }
+
+    // if (cover) {
+    //   return renderThumbnail(cover);
+    // } else {
+    //   if (loading) {
+    //     return (
+    //       <Icon type={'loading'} />
+    //     );
+    //   } else {
+    //     return (
+    //       <CustomIcon type={'image-slash'} size={'large'} />
+    //     );
+    //   }
+    // }
   };
 
   const renderContainer = () => {
@@ -278,4 +303,4 @@ const Index = React.forwardRef((props: Props, ref) => {
   return renderContainer();
 });
 
-export default React.memo(Index);
+export default React.memo(ResourceCover);

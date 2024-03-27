@@ -108,8 +108,6 @@ namespace InsideWorld.Migrations
             {
                 t.LastSyncDt = _prevOptions.LastSyncDt;
                 t.LastNfoGenerationDt = _prevOptions.LastNfoGenerationDt;
-                t.LastSearch = _prevOptions.ResourceSearchRequestModel?.ToOptions();
-                t.SearchSlots = _prevOptions.ResourceSearchRequestModelSlot?.Select(a => a.ToOptions()).ToList();
                 t.AdditionalCoverDiscoveringSources = _prevOptions.AdditionalCoverDiscoveringSources;
             });
 

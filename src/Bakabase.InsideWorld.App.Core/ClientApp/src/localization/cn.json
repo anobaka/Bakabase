@@ -1111,5 +1111,8 @@
   "SearchOperation.Matches":"正则匹配",
   "SearchOperation.NotMatches":"正则不匹配",
   "Asc": "升序",
-  "Desc": "降序"
+  "Desc": "降序",
+  "Filter group": "过滤器组",
+  "Please read terms and conditions carefully before you start to use this app": "请在使用前仔细阅读使用条款",
+  "Click to check": "点击查看"
 }

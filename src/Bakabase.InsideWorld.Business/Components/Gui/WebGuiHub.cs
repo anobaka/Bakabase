@@ -30,6 +30,7 @@ using Humanizer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using AppContext = Bakabase.Infrastructures.Components.App.AppContext;
 
 namespace Bakabase.InsideWorld.Business.Components.Gui
 {
@@ -57,12 +58,13 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly IFileMover _fileMover;
         private readonly AppUpdater _appUpdater;
         private readonly ReservedOptions _reservedOptions;
+        private readonly AppContext _appContext;
 
-		public WebGuiHub(
+        public WebGuiHub(
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
-            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover, AppUpdater appUpdater, ReservedOptions reservedOptions)
+            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover, AppUpdater appUpdater, ReservedOptions reservedOptions, AppContext appContext)
         {
             _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
@@ -74,6 +76,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             _fileMover = fileMover;
             _appUpdater = appUpdater;
             _reservedOptions = reservedOptions;
+            _appContext = appContext;
         }
 
         public async Task GetInitialData()
@@ -101,6 +104,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
                 BulkModificationService.GetConfiguration());
 
             await Clients.Caller.GetData(nameof(ReservedOptions), _reservedOptions);
+
+            await Clients.Caller.GetData(nameof(AppContext), _appContext);
         }
     }
 }

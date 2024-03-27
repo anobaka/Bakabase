@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import './index.scss';
 
 import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf/utils';
-import { Button } from '@alifd/next';
+import { Button, Nav } from '@alifd/next';
 import { useTour } from '@reactour/tour';
 import { useTranslation } from 'react-i18next';
 import MediaPreviewer from '@/components/MediaPreviewer';
@@ -13,6 +13,7 @@ import Sortable from '@/pages/Test/components/Sortable';
 import PropertySelector from '@/components/PropertySelector';
 import type { ICustomProperty } from '@/pages/CustomProperty/models';
 import type { IFilter } from '@/pages/Resource/components/FilterPanel/components/FilterGroupsPanel/models';
+import AntdMenu from '@/layouts/BasicLayout/components/AntdMenu';
 
 const schema: RJSFSchema = {
   type: 'object',
@@ -109,6 +110,22 @@ export default () => {
 
   return (
     <div className={'test-page'}>
+      <AntdMenu />
+      <Nav style={{ width: '200px' }} type={'normal'} defaultOpenAll>
+        <Nav.Item icon="account">Navigation One</Nav.Item>
+        <Nav.Item icon="account">Navigation Two</Nav.Item>
+        <Nav.Item disabled icon="account">
+          Navigation Three
+        </Nav.Item>
+        <Nav.Item icon="account">Navigation Four</Nav.Item>
+        <Nav.Item icon="account">Navigation Five</Nav.Item>
+        <Nav.SubNav disabled icon="account" label="Sub Nav">
+          <Nav.Item icon="account">Nav.Item 1</Nav.Item>
+          <Nav.Item icon="account">Nav.Item 2</Nav.Item>
+          <Nav.Item icon="account">Nav.Item 3</Nav.Item>
+          <Nav.Item icon="account">Nav.Item 4</Nav.Item>
+        </Nav.SubNav>
+      </Nav>
       <Button
         type={'primary'}
         text
