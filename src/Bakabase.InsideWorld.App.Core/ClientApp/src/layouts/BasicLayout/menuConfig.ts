@@ -4,7 +4,14 @@
 
 const headerMenuConfig = [];
 
-const asideMenuConfig = [
+interface IMenuItem {
+  name: string;
+  path?: string;
+  icon?: string;
+  children?: IMenuItem[];
+}
+
+const asideMenuConfig: IMenuItem[] = [
   {
     name: 'Resource',
     path: '/resource',

@@ -213,6 +213,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
       return (
         <Img
+          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
           src={[url]}
           unloader={(
             <CustomIcon type={'image-slash'} size={'large'} />
