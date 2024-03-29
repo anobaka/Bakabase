@@ -29,48 +29,6 @@ export default ({
 
   const otherSettings = [
     {
-      label: 'Theme',
-      value: appOptions.uiTheme,
-      renderValue: () => (
-        <Radio.Group
-          // shape="button"
-          size={'small'}
-          dataSource={[{ label: t('Follow system'), value: UiTheme.FollowSystem }, { label: t('Light mode'), value: UiTheme.Light }, { label: `${t('Dark mode')}(beta)`, value: UiTheme.Dark }]}
-          value={appOptions.uiTheme}
-          onChange={(uiTheme) => {
-            PatchAppOptions({
-              model: {
-                uiTheme,
-              },
-            }).invoke((a) => {
-              location.reload();
-            });
-          }}
-        />
-      ),
-    },
-    {
-      label: 'Language',
-      value: cookies.get('lng'),
-      renderValue: () => (
-        <Radio.Group
-          shape="button"
-          size={'small'}
-          dataSource={[{ label: '中文', value: 'cn' }, { label: 'English', value: 'en' }]}
-          value={appOptions.language}
-          onChange={(language) => {
-            PatchAppOptions({
-              model: {
-                language,
-              },
-            }).invoke((a) => {
-              location.reload();
-            });
-          }}
-        />
-      ),
-    },
-    {
       label: 'Proxy',
       tip: 'You can set a proxy for network requests, such as socks5://127.0.0.1:18888',
       renderValue: () => {

@@ -1,13 +1,9 @@
-// 菜单配置
-// defaultMenuConfig：脚手架默认侧边栏配置
-// asideMenuConfig：自定义侧边导航配置
-
 const headerMenuConfig = [];
 
-interface IMenuItem {
+export interface IMenuItem {
   name: string;
   path?: string;
-  icon?: string;
+  icon: string;
   children?: IMenuItem[];
 }
 
@@ -15,107 +11,110 @@ const asideMenuConfig: IMenuItem[] = [
   {
     name: 'Resource',
     path: '/resource',
-    icon: 'image',
+    icon: 'PictureOutlined',
   },
   {
     name: 'Media library',
+    icon: 'ProductOutlined',
     children: [
       {
         name: 'Category',
         path: '/category',
-        icon: 'block',
+        icon: 'ClusterOutlined',
       },
       {
         name: 'Custom Component',
-        path: '/custom-component',
-        icon: 'USB',
+        path: '/customcomponent',
+        icon: 'ControlOutlined',
       },
       {
         name: 'Favorites',
         path: '/favorites',
-        icon: 'star',
+        icon: 'StarOutlined',
       },
     ],
   },
   {
     name: 'Data',
+    icon: 'DatabaseOutlined',
     children: [
       {
         name: 'Resource property',
-        path: '/resource-property',
-        icon: 'database',
+        path: '/resourceproperty',
+        icon: 'RadarChartOutlined',
       },
       {
         name: 'Custom property',
-        path: '/custom-property',
-        icon: 'database',
+        path: '/customproperty',
+        icon: 'RadarChartOutlined',
       },
       {
         name: 'Tag',
         path: '/tag',
-        icon: 'tags',
+        icon: 'TagsOutlined',
       },
       {
         name: 'Alias',
         path: '/alias',
-        icon: 'block',
+        icon: 'BranchesOutlined',
       },
       {
         name: 'Text',
         path: '/text',
-        icon: 'font-size',
+        icon: 'FieldStringOutlined',
       },
       {
         name: 'Enhancement Records',
-        path: '/enhancement-record',
-        icon: 'flashlight',
+        path: '/enhancementrecord',
+        icon: 'ThunderboltOutlined',
       },
     ],
   },
   {
-    name: 'Tool',
-    icon: 'experiment',
+    name: 'Tools',
+    icon: 'ToolOutlined',
     children: [
       {
         name: 'File Processor',
-        path: '/file-processor',
-        icon: 'work',
+        path: '/fileprocessor',
+        icon: 'FileSyncOutlined',
       },
       {
         name: 'Downloader',
         path: '/downloader',
-        icon: 'download',
+        icon: 'DownloadOutlined',
       },
       {
         name: 'Bulk modification',
-        path: '/bulk-modification',
-        icon: 'modify',
+        path: '/bulkmodification',
+        icon: 'EditOutlined',
       },
       {
-        name: 'Tool',
+        name: 'Other tools',
         path: '/tools',
-        icon: 'experiment',
+        icon: 'ToolOutlined',
       },
     ],
   },
   {
     name: 'System',
+    icon: 'SettingOutlined',
     children: [
       {
         name: 'Configuration',
         path: '/configuration',
-        icon: 'setting',
+        icon: 'AppstoreOutlined',
       },
 
       {
         name: 'Background Task',
-        path: '/background-task',
-        icon: 'reddit',
+        path: '/backgroundtask',
+        icon: 'InteractionOutlined',
       },
       {
         name: 'Log',
         path: '/log',
-        icon: 'detail',
+        icon: 'FileTextOutlined',
       },
     ],
   },
@@ -123,6 +122,18 @@ const asideMenuConfig: IMenuItem[] = [
     name: 'Test',
     path: '/test',
     icon: 'Folderorganizer',
+    children: [
+      {
+        name: 'common',
+        path: '/test',
+        icon: 'CodepenCircleOutlined',
+      },
+      {
+        name: 'bakaui',
+        path: '/test/bakaui',
+        icon: 'SketchOutlined',
+      },
+    ],
   }] : []),
 ];
 

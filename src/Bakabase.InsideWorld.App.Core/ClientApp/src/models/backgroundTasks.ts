@@ -1,13 +1,13 @@
-import { createModel } from "ice";
+import { createModel } from 'ice';
 
 export default createModel(
   {
-    state: [],
+    state: [] as any[],
 
     // 定义改变该模型状态的纯函数
     reducers: {
       setState: (prevState, tasks) => {
-        console.log('background tasks changed', tasks)
+        console.log('background tasks changed', tasks);
         return tasks.slice().sort((a, b) => b.startDt.localeCompare(a.startDt));
       },
       update: (prevState, task) => {
@@ -24,5 +24,5 @@ export default createModel(
     // 定义处理该模型副作用的函数
     effects: (dispatch) => ({
     }),
-  }
-)
+  },
+);

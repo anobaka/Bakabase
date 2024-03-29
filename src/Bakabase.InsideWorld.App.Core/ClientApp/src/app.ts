@@ -58,8 +58,9 @@ export const storeConfig = defineStoreConfig(async () => {
       // }
 
       if (document) {
-        document.documentElement.classList.remove('iw-theme-dark', 'iw-theme-light');
-        document.documentElement.classList.add(`iw-theme-${uiTheme == UiTheme.Dark ? 'dark' : 'light'}`);
+        const cls = document.documentElement.classList;
+        cls.remove('iw-theme-dark', 'iw-theme-light', 'dark', 'light');
+        cls.add(`iw-theme-${uiTheme == UiTheme.Dark ? 'dark' : 'light'}`, uiTheme == UiTheme.Dark ? 'dark' : 'light');
       }
 
       if (data.enableAnonymousDataTracking) {

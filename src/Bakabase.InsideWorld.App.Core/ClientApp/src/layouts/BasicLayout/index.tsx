@@ -1,15 +1,14 @@
 import React, { useEffect } from 'react';
-import './index.scss';
 import { history, Outlet } from 'ice';
 import { Dialog } from '@alifd/next';
 import { TourProvider } from '@reactour/tour';
 import { useTranslation } from 'react-i18next';
+import styles from './index.module.scss';
 import PageNav from './components/PageNav';
 import { InitializationContentType } from '@/sdk/constants';
 import FloatingAssistant from '@/components/FloatingAssistant';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import BApi from '@/sdk/BApi';
-
 export default function BasicLayout() {
   const { t } = useTranslation();
 
@@ -34,10 +33,10 @@ export default function BasicLayout() {
   return (
     <TourProvider steps={[]}>
       <ErrorBoundary>
-        <div className={'inside-world'}>
+        <div className={styles.insideWorld}>
           <FloatingAssistant />
           <PageNav />
-          <div className={'main'}>
+          <div className={styles.main}>
             <Outlet />
           </div>
         </div>

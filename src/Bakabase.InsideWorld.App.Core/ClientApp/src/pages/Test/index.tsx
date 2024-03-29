@@ -2,9 +2,11 @@ import React, { useRef, useState } from 'react';
 import './index.scss';
 
 import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf/utils';
-import { Button, Nav } from '@alifd/next';
+import { Nav } from '@alifd/next';
 import { useTour } from '@reactour/tour';
 import { useTranslation } from 'react-i18next';
+import { Tooltip, Button } from '@nextui-org/react';
+import { CloseCircleFilled } from '@ant-design/icons';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelector from '@/components/FileSystemSelector';
@@ -13,7 +15,8 @@ import Sortable from '@/pages/Test/components/Sortable';
 import PropertySelector from '@/components/PropertySelector';
 import type { ICustomProperty } from '@/pages/CustomProperty/models';
 import type { IFilter } from '@/pages/Resource/components/FilterPanel/components/FilterGroupsPanel/models';
-import AntdMenu from '@/layouts/BasicLayout/components/AntdMenu';
+import AntdMenu from '@/layouts/BasicLayout/components/PageNav/components/AntdMenu';
+import OrderSelector from '@/pages/Resource/components/FilterPanel/components/OrderSelector';
 
 const schema: RJSFSchema = {
   type: 'object',
@@ -110,6 +113,13 @@ export default () => {
 
   return (
     <div className={'test-page'}>
+      <Tooltip content="I am a tooltip">
+        <CloseCircleFilled />
+      </Tooltip>
+
+
+      <OrderSelector />
+
       <AntdMenu />
       <Nav style={{ width: '200px' }} type={'normal'} defaultOpenAll>
         <Nav.Item icon="account">Navigation One</Nav.Item>

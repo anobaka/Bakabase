@@ -58,11 +58,11 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   }, [disableCache]);
 
   useEffect(() => {
-    if (loadImmediately) {
-      loadCover(new AbortController().signal).catch(e => {
-        Message.error(e.message);
-      });
-    }
+    // if (loadImmediately) {
+    //   loadCover(new AbortController().signal).catch(e => {
+    //     Message.error(e.message);
+    //   });
+    // }
   }, []);
 
   const saveCoverInternal = useCallback((base64Image: string, overwrite?: boolean, saveLocation?: CoverSaveLocation) => {

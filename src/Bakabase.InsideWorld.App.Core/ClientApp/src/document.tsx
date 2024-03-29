@@ -1,6 +1,8 @@
 import { Meta, Title, Links, Main, Scripts, useAppData } from 'ice';
+import { UiTheme } from '@/sdk/constants';
 
 export default function Document() {
+  // todo: get from options
   return (
     <html>
       <head>

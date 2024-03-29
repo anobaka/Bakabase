@@ -327,7 +327,7 @@ export default (({
                 />
               </div>
               {renderFilter(p)}
-              <div className={`tags fixed ${p.fixedTags?.length > 0 ? '' : 'not-set'}`}>
+              <div className={`tags fixed-tags ${p.fixedTags?.length > 0 ? '' : 'not-set'}`}>
                 {p.fixedTags?.length > 0 ? p.fixedTags.map((b) => {
                   return (
                     <div className={'tag'} key={b.id}>{b.groupName ? `${b.groupName}:${b.name}` : b.name}</div>

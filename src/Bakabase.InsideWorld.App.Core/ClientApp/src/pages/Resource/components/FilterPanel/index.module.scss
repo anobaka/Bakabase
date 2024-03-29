@@ -72,6 +72,7 @@
 
     .searchInput {
       min-width: 320px;
+      @apply text-base;
     }
   }
 
@@ -84,6 +85,23 @@
     align-items: center;
     gap: 10px;
     justify-content: space-between;
+
+    .switch {
+      @apply opacity-20;
+      @apply text-base;
+      color: var(--bakaui-foreground);
+      cursor: pointer;
+
+      &.on {
+        @apply opacity-80;
+        color: var(--bakaui-primary);
+      }
+    }
+
+    .largerCover {
+
+    }
+
   }
 
   .columnCount {

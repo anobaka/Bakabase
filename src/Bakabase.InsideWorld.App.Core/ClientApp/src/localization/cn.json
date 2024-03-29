@@ -1114,5 +1114,14 @@
   "Desc": "降序",
   "Filter group": "过滤器组",
   "Please read terms and conditions carefully before you start to use this app": "请在使用前仔细阅读使用条款",
-  "Click to check": "点击查看"
+  "Click to check": "点击查看",
+  "Data": "数据",
+  "Other tools": "其他工具",
+  "Tools": "工具",
+  "System": "系统",
+  "Preview files of a resource on mouse hover": "鼠标悬浮时预览资源文件",
+  "Disabling cache may cause performance issues": "禁用缓存可能会降低加载速度",
+  "Enabling caching can improve loading speed": "启用缓存可以提高加载速度",
+  "Exit bulk operations mode": "退出批量操作模式",
+  "Bulk operations mode": "批量操作模式"
 }

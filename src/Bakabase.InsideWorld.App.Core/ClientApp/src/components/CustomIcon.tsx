@@ -1,13 +1,20 @@
-import React, { Component } from 'react';
-import DynamicIcon from '@icedesign/dynamic-icon';
-import iconfont from '@/assets/iconfont/iconfont.css';
+import React, { forwardRef } from 'react';
+import { createFromIconfontCN } from '@ant-design/icons';
+import '@/assets/iconfont/iconfont.js';
+import type { IconFontProps } from '@ant-design/icons/lib/components/IconFont';
 
-// 使用 custom 生成自定义 ICON 组件
-const CustomIcon = DynamicIcon.create({
-  fontFamily: 'iconfont',
-  prefix: 'icon',
-  css: iconfont,
-  // css: '//at.alicdn.com/t/font_2282961_zu63tekgur.css',
+const DefaultComponent = createFromIconfontCN({
+  scriptUrl: '',
 });
 
-export default CustomIcon;
+interface IProps extends IconFontProps {
+  type: string;
+}
+
+const CustomIconV2 = forwardRef<HTMLSpanElement, IProps>(({ type, ...otherProps }: IProps, ref) => {
+  return (
+    <DefaultComponent type={`icon-${type}`} {...otherProps} ref={ref} />
+  );
+});
+
+export default CustomIconV2;

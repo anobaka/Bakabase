@@ -1,7 +1,7 @@
 .alias-page {
 
   .form {
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--theme-border-color);
     padding-bottom: 5px;
     .item {
       display: flex;

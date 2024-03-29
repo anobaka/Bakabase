@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Pagination } from '@alifd/next';
 
 import { useUpdate } from 'react-use';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import FilterPanel from './components/FilterPanel';
 import type { ISearchForm } from '@/pages/Resource/models';
@@ -12,7 +13,6 @@ import Resource from '@/components/Resource';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
 import ResourceMasonry from '@/pages/Resource/components/ResourceMasonry';
-import searchForm from '@/models/searchForm';
 
 const PageSize = 100;
 const MinResourceWidth = 100;
@@ -35,6 +35,9 @@ export default () => {
   const [columnCount, setColumnCount] = useState<number>(0);
   const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>();
 
+  const [bulkOperationMode, setBulkOperationMode] = useState<boolean>(false);
+  const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
+
   const resourceOptions = store.useModelState('resourceOptions');
 
   useEffect(() => {
@@ -47,8 +50,9 @@ export default () => {
   }, [resourceOptions]);
 
   useEffect(() => {
-    if (uiOptions.initialized && columnCount == 0) {
-      setColumnCount(uiOptions.resource?.colCount ?? BusinessConstants.DefaultResourceColumnCount);
+    const c = uiOptions.resource?.colCount ?? BusinessConstants.DefaultResourceColumnCount;
+    if (uiOptions.initialized && (columnCount == 0 || columnCount != c)) {
+      setColumnCount(c);
     }
   }, [uiOptions]);
 
@@ -101,6 +105,7 @@ export default () => {
           pageIndex: 1,
         }, false)}
         searchForm={searchForm}
+        onBulkOperationModeChange={m => setBulkOperationMode(m)}
       />
       {pageable && (
         <div className={styles.pagination}>
@@ -122,11 +127,31 @@ export default () => {
           columnCount={columnCount}
           scrollElement={pageContainerRef.current}
           renderCell={(index, style) => {
+            const resource = resources[index];
+            const selected = selectedResourceIds.includes(resource.id);
             return (
-              <Resource
-                resource={resources[index]}
+              <div
+                className={'relative'}
                 style={style}
-              />
+              >
+                <div
+                  className={'absolute top-0 left-0 z-10 flex items-center justify-center w-full h-full hover:bg-[hsla(var(--nextui-foreground)/0.1)]'}
+                  onClick={() => {
+                    if (bulkOperationMode) {
+                      if (selected) {
+                        setSelectedResourceIds(selectedResourceIds.filter(id => id != resource.id));
+                      } else {
+                        setSelectedResourceIds([...selectedResourceIds, resource.id]);
+                      }
+                    }
+                  }}
+                >
+                  <CheckCircleOutlined className={'text-5xl'} />
+                </div>
+                <Resource
+                  resource={resource}
+                />
+              </div>
             );
           }}
           loadMore={async () => {

@@ -190,7 +190,7 @@ class RootEntry extends Entry {
         this._processingFsEvents = false;
       }, 500);
 
-      this.childrenWidth = this._ref!.dom!.parentElement!.clientWidth;
+      this.childrenWidth = this._ref?.dom!.parentElement?.clientWidth ?? 0;
 
       this._resizeObserver = new ResizeObserver((c) => {
         const parent = c[0];

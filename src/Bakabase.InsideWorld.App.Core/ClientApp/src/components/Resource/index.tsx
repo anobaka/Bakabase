@@ -1,8 +1,9 @@
 import { Balloon, Button, Dialog, Message, Tag } from '@alifd/next';
-import React, { useCallback, useEffect, useImperativeHandle, useReducer, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type Queue from 'queue';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
+import { PlayCircleOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import CustomIcon from '@/components/CustomIcon';
 import { OpenResourceDirectory, PlayResourceFile, RemoveResource } from '@/sdk/apis';
@@ -63,8 +64,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
   useEffect(() => {
     disableCacheRef.current = disableCache;
   }, [disableCache]);
-
-  const resourceOptions = store.useModelState('resourceOptions');
 
   useImperativeHandle(ref, (): IResourceHandler => {
     return {
@@ -216,6 +215,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const renderCover = () => {
     const elementId = `resource-${resource.id}`;
+    const playable = playableFiles.length > 0;
     return (
       <div
         className={styles.coverRectangle}
@@ -243,47 +243,22 @@ const Resource = React.forwardRef((props: Props, ref) => {
             showBiggerOnHover={showBiggerCoverOnHover}
           />
         </div>
-        <div className={styles.play}>
-          <Balloon.Tooltip
-            // popupContainer={elementId}
-            trigger={
-              <Button
-                disabled={playableFiles.length == 0}
-                type="normal"
-                onClick={clickPlayButton}
-              >
-                <CustomIcon type="play-circle" size={'xl'} />
-              </Button>
-            }
-            triggerType={['hover']}
-            align={'t'}
-          >
-            {playableFiles.length == 0 ? t('No playable file') : playableFiles.length == 1 ? t('Use player to play') : t('Select one file to play')}
-          </Balloon.Tooltip>
-        </div>
-        <div className={styles.icons}>
-          {resource.hasChildren && (
-            <CustomIcon
-              type={'package'}
-              size={'small'}
-              title={t('This is a parent resource')}
-            />
-          )}
-          {
-            resource.parentId > 0 && (
-              <CustomIcon
-                type={'node'}
-                size={'small'}
-                title={t('This is a child resource')}
-              />
-            )
-          }
-          <CustomIcon
-            type={resource.isSingleFile ? 'file' : 'folder'}
-            title={t(`This is a ${resource.isSingleFile ? 'file' : 'folder'}`)}
-            size={'small'}
-          />
-        </div>
+        {playable && (
+          <div className={styles.play}>
+            <Balloon.Tooltip
+              trigger={
+                <PlayCircleOutlined
+                  className={'text-2xl'}
+                  onClick={clickPlayButton}
+                />
+              }
+              triggerType={['hover']}
+              align={'t'}
+            >
+              {t('Use player to play')}
+            </Balloon.Tooltip>
+          </div>
+        )}
       </div>
     );
   };

@@ -1,10 +1,12 @@
-import { Select } from '@alifd/next';
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
+import { SortAscendingOutlined } from '@ant-design/icons';
 import CustomIcon from '@/components/CustomIcon';
 import type { ISearchFormOrderModel } from '@/pages/Resource/models';
-import { resourceSearchSortableProperties } from '@/sdk/constants';
+import { resourceSearchSortableProperties, type ResourceSearchSortableProperty } from '@/sdk/constants';
+import type { SelectProps } from '@/components/bakaui';
+import { Select } from '@/components/bakaui';
 
 const directionDataSource: { label: string; asc: boolean }[] = [{
   label: 'Asc',
@@ -14,12 +16,16 @@ const directionDataSource: { label: string; asc: boolean }[] = [{
   asc: false,
 }];
 
-interface IProps {
+interface IProps extends React.ComponentPropsWithoutRef<any> {
   value?: ISearchFormOrderModel[];
   onChange?: (value: ISearchFormOrderModel[]) => any;
 }
 
-export default ({ value: propsValue, onChange }: IProps) => {
+export default ({
+                  value: propsValue,
+                  onChange,
+  ...otherProps
+                }: IProps) => {
   const { t } = useTranslation();
 
   const [value, setValue] = useState(propsValue);
@@ -33,7 +39,11 @@ export default ({ value: propsValue, onChange }: IProps) => {
       s.push({
         label: (
           <div
-            style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+            }}
             title={t(y.label)}
           >
             <CustomIcon type={y.asc ? 'sort-ascending' : 'sort-descending'} size={'small'} />
@@ -49,37 +59,35 @@ export default ({ value: propsValue, onChange }: IProps) => {
 
   return (
     <Select
-      label={t('Orders')}
-      autoWidth
-      mode={'multiple'}
+      selectionMode={'multiple'}
       style={{
         maxWidth: 500,
         minWidth: 200,
       }}
-      showSearch
+      label={t('Order')}
       dataSource={orderDataSourceRef.current}
-      value={(value || []).map((a) => `${a.property}-${a.asc}`)}
-      size={'small'}
-      onChange={(arr) => {
-        // console.log(arr);
-        const orderKeys = {};
-        const orders: ISearchFormOrderModel[] = [];
-        for (let i = arr.length - 1; i >= 0; i--) {
-          const vl = arr[i].split('-');
-          const o = vl[0];
-          if (!(o in orderKeys)) {
-            const a = vl[1];
-            orders.splice(0, 0, {
-              property: parseInt(o, 10),
-              asc: a == 'true',
-            });
-            orderKeys[o] = a;
-          }
-          // console.log(vl, o, orders);
+      selectedKeys={(value || []).map((a) => `${a.property}-${a.asc}`)}
+      size={'sm'}
+      onSelectionChange={(arr) => {
+        const orderAscMap: {[key in ResourceSearchSortableProperty]?: boolean} = {};
+        for (const v of arr.values()) {
+          const vl = (v as string).split('-');
+          orderAscMap[parseInt(vl[0], 10)] = vl[1] === 'true';
         }
+
+        const orders: ISearchFormOrderModel[] = [];
+        for (const k in orderAscMap) {
+          orders.push({
+            property: parseInt(k, 10),
+            asc: orderAscMap[k],
+          });
+        }
+
         setValue(orders);
         onChange?.(orders);
       }}
+      {...otherProps}
+
     />
   );
 };
