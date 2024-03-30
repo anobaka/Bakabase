@@ -8,7 +8,7 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty;
 using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties.SingleChoice;
+using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties.Choice;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Newtonsoft.Json;
 
@@ -207,7 +207,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 		public static Dictionary<CustomPropertyType, ICustomPropertyDescriptor> Descriptors = new()
 		{
 			{
-				CustomPropertyType.SingleChoice, new SingleChoicePropertyHelper()
+				CustomPropertyType.SingleChoice, new SingleChoicePropertyDescriptor()
 			}
 		};
 

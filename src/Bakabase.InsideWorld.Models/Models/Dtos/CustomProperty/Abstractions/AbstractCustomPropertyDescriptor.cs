@@ -1,4 +1,5 @@
 ﻿using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Newtonsoft.Json;
@@ -49,7 +50,12 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions
 			return dto;
 		}
 
-		public bool IsMatch(CustomPropertyValueDto? value, CustomPropertyValueSearchRequestModel model)
+        public bool IsMatch(CustomPropertyValueDto? value, ResourceSearchFilter filter)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool IsMatch(CustomPropertyValueDto? value, CustomPropertyValueSearchRequestModel model)
 		{
 			var typedValue = value as TPropertyValue;
 
@@ -69,7 +75,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions
 	}
 
 	public abstract class
-		AbstractCustomPropertyHelper<TProperty, TPropertyOptions, TPropertyValue, TValue> :
+		AbstractCustomPropertyDescriptor<TProperty, TPropertyOptions, TPropertyValue, TValue> :
 		AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TValue>
 		where TProperty : CustomPropertyDto<TPropertyOptions>, new()
 		where TPropertyValue : CustomPropertyValueDto<TValue>, new()

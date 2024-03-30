@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Pagination } from '@alifd/next';
 
 import { useUpdate } from 'react-use';
-import { CheckCircleOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CheckCircleTwoTone } from '@ant-design/icons';
 import styles from './index.module.scss';
 import FilterPanel from './components/FilterPanel';
 import type { ISearchForm } from '@/pages/Resource/models';
@@ -105,7 +105,13 @@ export default () => {
           pageIndex: 1,
         }, false)}
         searchForm={searchForm}
-        onBulkOperationModeChange={m => setBulkOperationMode(m)}
+        selectedResourceIds={selectedResourceIds}
+        onBulkOperationModeChange={m => {
+          setBulkOperationMode(m);
+          if (!m) {
+            setSelectedResourceIds([]);
+          }
+        }}
       />
       {pageable && (
         <div className={styles.pagination}>
@@ -134,20 +140,23 @@ export default () => {
                 className={'relative'}
                 style={style}
               >
-                <div
-                  className={'absolute top-0 left-0 z-10 flex items-center justify-center w-full h-full hover:bg-[hsla(var(--nextui-foreground)/0.1)]'}
-                  onClick={() => {
-                    if (bulkOperationMode) {
-                      if (selected) {
-                        setSelectedResourceIds(selectedResourceIds.filter(id => id != resource.id));
-                      } else {
-                        setSelectedResourceIds([...selectedResourceIds, resource.id]);
+                {bulkOperationMode && (
+                  <div
+                    className={'absolute top-0 left-0 z-10 flex items-center justify-center w-full h-full hover:bg-[hsla(var(--nextui-foreground)/0.1)] hover:cursor-pointer'}
+                    onClick={() => {
+                      if (bulkOperationMode) {
+                        if (selected) {
+                          setSelectedResourceIds(selectedResourceIds.filter(id => id != resource.id));
+                        } else {
+                          setSelectedResourceIds([...selectedResourceIds, resource.id]);
+                        }
                       }
-                    }
-                  }}
-                >
-                  <CheckCircleOutlined className={'text-5xl'} />
-                </div>
+                    }}
+                  >
+                    {selected ? <CheckCircleTwoTone className={'text-5xl'} />
+                      : <CheckCircleOutlined className={'text-5xl opacity-60'} />}
+                  </div>
+                )}
                 <Resource
                   resource={resource}
                 />

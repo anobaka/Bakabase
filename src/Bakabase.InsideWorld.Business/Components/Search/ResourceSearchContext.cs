@@ -18,11 +18,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 
 		public Dictionary<string, HashSet<string>>? Aliases;
 
-		/// <summary>
-		/// It may take more time to group by value than raw list.
-		/// todo: it takes 3x time using "object as" in enumerating than typed values
-		/// </summary>
-		public Dictionary<int, Dictionary<int, object?>?>? CustomPropertyDataPool;
+		public Dictionary<int, Dictionary<int, CustomPropertyValueDto?>?>? CustomPropertyDataPool;
 
 		public Dictionary<int, Models.Models.Entities.Resource>? ResourcesPool { get; }
 

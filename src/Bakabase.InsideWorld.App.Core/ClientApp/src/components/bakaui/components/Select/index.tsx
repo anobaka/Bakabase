@@ -24,14 +24,19 @@ export default <T = object>({
   return (
     <Select
       isMultiline={isMultiline}
-      renderValue={v => (
-        <div className={'flex flex-wrap gap-2'}>
-          {v.reduce<ReactNode[]>((s, t, i) => {
-            s.push(<Chip>{dataSource.find(d => d.value === t.textValue)?.label}</Chip>);
-            return s;
-          }, [])}
-        </div>
-      )}
+      renderValue={v => {
+        if (v.length > 0) {
+          return (
+            <div className={'flex flex-wrap gap-2'}>
+              {v.reduce<ReactNode[]>((s, t, i) => {
+                s.push(<Chip>{dataSource.find(d => d.value === t.textValue)?.label}</Chip>);
+                return s;
+              }, [])}
+            </div>
+          );
+        }
+        return null;
+      }}
       {...props}
     >
       {dataSource.map(d => {

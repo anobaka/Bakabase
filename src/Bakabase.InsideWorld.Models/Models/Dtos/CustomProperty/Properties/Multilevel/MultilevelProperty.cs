@@ -5,9 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 
-namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties
+namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties.Multilevel
 {
-    public record MultilineTextProperty : CustomPropertyDto
+    internal record MultilevelProperty : CustomPropertyDto<MultilevelPropertyOptions>
     {
     }
 }

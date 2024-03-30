@@ -1,8 +1,8 @@
 import React, { forwardRef } from 'react';
 import { Icon } from '@alifd/next';
+import styles from './index.module.scss';
 import CustomIcon from '@/components/CustomIcon';
 
-import './index.scss';
 
 interface IProps extends Omit<React.HTMLProps<HTMLSpanElement>, 'ref' | 'size'>{
   colorType: 'normal' | 'danger';
@@ -15,7 +15,7 @@ const ClickableIcon = forwardRef<any, IProps>(({ size, colorType, useInBuildIcon
   if (useInBuildIcon) {
     return (
       // todo: change to antd built-in icon
-      <span className={`clickable-icon ${colorType} ${className}`}>
+      <span className={`${styles.clickableIcon} ${colorType} ${className}`}>
         <Icon
           ref={ref}
           size={size}
@@ -27,7 +27,7 @@ const ClickableIcon = forwardRef<any, IProps>(({ size, colorType, useInBuildIcon
   return (
     <CustomIcon
       ref={ref}
-      className={`clickable-icon ${colorType} ${className}`}
+      className={`${styles.clickableIcon} ${styles[colorType]} ${className}`}
       {...otherProps}
     />
   );

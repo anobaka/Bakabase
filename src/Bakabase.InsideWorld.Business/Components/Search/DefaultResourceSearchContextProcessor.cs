@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
+using Bakabase.InsideWorld.Models.RequestModels;
 using Newtonsoft.Json;
 using SQLitePCL;
 
@@ -22,16 +23,18 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 		private readonly CustomPropertyService _customPropertyService;
 		private readonly FavoritesResourceMappingService _favoritesResourceMappingService;
 		private readonly ResourceTagMappingService _resourceTagMappingService;
+        private readonly Dictionary<CustomPropertyType, ICustomPropertyDescriptor> _propertyDescriptors;
 
 		public DefaultResourceSearchContextProcessor(CustomPropertyValueService customPropertyValueService,
-			AliasService aliasService, CustomPropertyService customPropertyService, FavoritesResourceMappingService favoritesResourceMappingService, ResourceTagMappingService resourceTagMappingService)
+			AliasService aliasService, CustomPropertyService customPropertyService, FavoritesResourceMappingService favoritesResourceMappingService, ResourceTagMappingService resourceTagMappingService, IEnumerable<ICustomPropertyDescriptor> propertyDescriptors)
 		{
 			_customPropertyValueService = customPropertyValueService;
 			_aliasService = aliasService;
 			_customPropertyService = customPropertyService;
 			_favoritesResourceMappingService = favoritesResourceMappingService;
 			_resourceTagMappingService = resourceTagMappingService;
-		}
+            _propertyDescriptors = propertyDescriptors.ToDictionary(x => x.Type);
+        }
 
 		private async Task PrepareAliases(ResourceSearchFilter filter, ResourceSearchContext context)
 		{
@@ -70,23 +73,30 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 			}
 		}
 
-		private async Task<Dictionary<int, TValue>?> PrepareAndGetCustomPropertyValues<TValue>(
-			ResourceSearchFilter filter, ResourceSearchContext context)
-		{
-			context.CustomPropertyDataPool ??= new();
+        private async Task<Dictionary<int, CustomPropertyValueDto?>?> PrepareAndGetCustomPropertyValues(
+            ResourceSearchFilter filter, ResourceSearchContext context)
+        {
+            context.CustomPropertyDataPool ??= new();
 
-			if (!context.CustomPropertyDataPool.TryGetValue(filter.PropertyId, out var propertyValues))
-			{
-				var rawValues = await _customPropertyValueService.GetDtoList(x => x.PropertyId == filter.PropertyId,
-					CustomPropertyValueAdditionalItem.None, false);
-				propertyValues = rawValues.ToDictionary(x => x.ResourceId, x => x.Value);
-				context.CustomPropertyDataPool[filter.PropertyId] = propertyValues;
-			}
+            if (!context.CustomPropertyDataPool.TryGetValue(filter.PropertyId, out var propertyValues))
+            {
+                var rawValues = await _customPropertyValueService.GetDtoList(x => x.PropertyId == filter.PropertyId,
+                    CustomPropertyValueAdditionalItem.None, false);
+                propertyValues = rawValues.ToDictionary(x => x.ResourceId, x => (CustomPropertyValueDto?) x);
+                var nullValueIds = context.AllResourceIds.Except(propertyValues.Keys);
+                foreach (var id in nullValueIds)
+                {
+                    propertyValues[id] = null;
+                }
 
-			return propertyValues?.ToDictionary(x => x.Key, x => (TValue) x.Value!);
-		}
+                context.CustomPropertyDataPool[filter.PropertyId] = propertyValues;
 
-		public async Task<HashSet<int>?> Search(ResourceSearchFilter filter, ResourceSearchContext context)
+            }
+
+            return propertyValues;
+        }
+
+        public async Task<HashSet<int>?> Search(ResourceSearchFilter filter, ResourceSearchContext context)
 		{
 			HashSet<int>? set = null;
 			if (filter.PropertyId != 0 && filter.Operation != 0)
@@ -621,693 +631,709 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 				{
 					await PrepareCustomProperties(context);
 					var property = context.PropertiesDataPool![filter.PropertyId];
+                    var propertyValues = await PrepareAndGetCustomPropertyValues(filter, context);
 
-					switch (property.Type)
-					{
-						case CustomPropertyType.SingleLineText:
-						case CustomPropertyType.MultilineText:
-						case CustomPropertyType.Link:
-						{
-							var value = string.IsNullOrEmpty(filter.Value)
-								? null
-								: JsonConvert.DeserializeObject<string>(filter.Value);
+                    var descriptor = _propertyDescriptors.GetValueOrDefault(property.Type);
+                    if (descriptor != null)
+                    {
+                        set = propertyValues?.Where(x => descriptor.IsMatch(x.Value, filter)).Select(x => x.Key)
+                            .ToHashSet() ?? [];
+                    }
 
-							var propertyValues = await PrepareAndGetCustomPropertyValues<string>(filter, context);
-
-							switch (filter.Operation)
-							{
-								case SearchOperation.Equals:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										set = propertyValues?.Where(x => value.Equals(x.Value))
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotEquals:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										var ids = propertyValues?.Where(x => value.Equals(x.Value))
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								case SearchOperation.Contains:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										set = propertyValues?.Where(x => value.Contains(x.Value!))
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotContains:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										var ids = propertyValues?.Where(x => value.Contains(x.Value))
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								case SearchOperation.StartsWith:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										set = propertyValues?.Where(x => value.StartsWith(x.Value!))
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotStartsWith:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										var ids = propertyValues?.Where(x => value.StartsWith(x.Value))
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								case SearchOperation.EndsWith:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										set = propertyValues?.Where(x => value.EndsWith(x.Value!))
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotEndsWith:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										var ids = propertyValues?.Where(x => value.EndsWith(x.Value))
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								case SearchOperation.IsNull:
-								{
-									var ids = propertyValues?.Select(x => x.Key).ToHashSet();
-									if (ids?.Any() == true)
-									{
-										set = context.AllResourceIds.Except(ids).ToHashSet();
-									}
-
-									break;
-								}
-								case SearchOperation.IsNotNull:
-								{
-									set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
-									break;
-								}
-								case SearchOperation.Matches:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										var regex = new Regex(value);
-										set = propertyValues?.Where(x => regex.IsMatch(x.Value!))
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotMatches:
-								{
-									if (!string.IsNullOrEmpty(value))
-									{
-										var regex = new Regex(value);
-										var ids = propertyValues?.Where(x => regex.IsMatch(x.Value!))
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case CustomPropertyType.SingleChoice:
-						{
-							var propertyValues = await PrepareAndGetCustomPropertyValues<string>(filter, context);
-
-							switch (filter.Operation)
-							{
-								case SearchOperation.Equals:
-								case SearchOperation.NotEquals:
-								case SearchOperation.IsNull:
-								case SearchOperation.IsNotNull:
-								{
-									var value = string.IsNullOrEmpty(filter.Value)
-										? null
-										: JsonConvert.DeserializeObject<string>(filter.Value);
-									switch (filter.Operation)
-									{
-										case SearchOperation.Equals:
-										{
-											if (!string.IsNullOrEmpty(value))
-											{
-												set = propertyValues?.Where(x => value.Equals(x.Value))
-													.Select(x => x.Key)
-													.ToHashSet();
-											}
-
-											break;
-										}
-										case SearchOperation.NotEquals:
-										{
-											if (!string.IsNullOrEmpty(value))
-											{
-												var ids = propertyValues?.Where(x => value.Equals(x.Value))
-													.Select(x => x.Key)
-													.ToHashSet();
-												if (ids?.Any() == true)
-												{
-													set = context.AllResourceIds.Except(ids).ToHashSet();
-												}
-											}
-
-											break;
-										}
-										case SearchOperation.IsNull:
-										{
-											var ids = propertyValues?.Select(x => x.Key).ToHashSet();
-											if (ids?.Any() == true)
-											{
-												set = context.AllResourceIds.Except(ids).ToHashSet();
-											}
-
-											break;
-										}
-										case SearchOperation.IsNotNull:
-										{
-											set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
-											break;
-										}
-										default:
-											throw new ArgumentOutOfRangeException();
-									}
-
-									break;
-								}
-								case SearchOperation.In:
-								case SearchOperation.NotIn:
-								{
-									var value = string.IsNullOrEmpty(filter.Value)
-										? null
-										: JsonConvert.DeserializeObject<HashSet<string>>(filter.Value);
-									if (value?.Any() == true)
-									{
-										switch (filter.Operation)
-										{
-											case SearchOperation.In:
-											{
-												set = propertyValues?.Where(x => value.Contains(x.Value))
-													.Select(x => x.Key)
-													.ToHashSet() ?? [];
-												break;
-											}
-											case SearchOperation.NotIn:
-											{
-												var ids = propertyValues?.Where(x => value.Contains(x.Value))
-													.Select(x => x.Key)
-													.ToHashSet();
-												if (ids?.Any() == true)
-												{
-													set = context.AllResourceIds.Except(ids).ToHashSet();
-												}
-
-												break;
-											}
-											default:
-												throw new ArgumentOutOfRangeException();
-										}
-									}
-
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case CustomPropertyType.MultipleChoice:
-						{
-							var value = string.IsNullOrEmpty(filter.Value)
-								? null
-								: JsonConvert.DeserializeObject<string>(filter.Value);
-							var propertyValues =
-								await PrepareAndGetCustomPropertyValues<HashSet<string>>(filter, context);
-							switch (filter.Operation)
-							{
-								case SearchOperation.Contains:
-								{
-									if (value?.Any() == true)
-									{
-										set = propertyValues?.Where(x => x.Value.Contains(value))
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotContains:
-								{
-									if (value?.Any() == true)
-									{
-										var ids = propertyValues?.Where(x => x.Value.Contains(value))
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								case SearchOperation.IsNull:
-								{
-									var ids = propertyValues?.Where(x => x.Value.Any()).Select(x => x.Key).ToHashSet();
-									if (ids?.Any() == true)
-									{
-										set = context.AllResourceIds.Except(ids).ToHashSet();
-									}
-
-									break;
-								}
-								case SearchOperation.IsNotNull:
-								{
-									set = propertyValues?.Where(x => x.Value.Any()).Select(x => x.Key)
-										.ToHashSet() ?? [];
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case CustomPropertyType.Number:
-						case CustomPropertyType.Percentage:
-						case CustomPropertyType.Rating:
-						{
-							var value = string.IsNullOrEmpty(filter.Value)
-								? null
-								: JsonConvert.DeserializeObject<decimal?>(filter.Value);
-							var propertyValues = await PrepareAndGetCustomPropertyValues<decimal>(filter, context);
-							switch (filter.Operation)
-							{
-								case SearchOperation.Equals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value == x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotEquals:
-								{
-									if (value.HasValue)
-									{
-										var ids = propertyValues?.Where(x => value == x.Value)
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								case SearchOperation.GreaterThan:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value > x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.LessThan:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value < x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.GreaterThanOrEquals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value >= x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.LessThanOrEquals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value <= x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.IsNull:
-								{
-									var ids = propertyValues?.Select(x => x.Key).ToHashSet();
-									if (ids?.Any() == true)
-									{
-										set = context.AllResourceIds.Except(ids).ToHashSet();
-									}
-
-									break;
-								}
-								case SearchOperation.IsNotNull:
-								{
-									set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case CustomPropertyType.Boolean:
-						{
-							var value = string.IsNullOrEmpty(filter.Value)
-								? null
-								: JsonConvert.DeserializeObject<bool?>(filter.Value);
-							var propertyValues = await PrepareAndGetCustomPropertyValues<bool>(filter, context);
-							switch (filter.Operation)
-							{
-								case SearchOperation.Equals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value == x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotEquals:
-								{
-									if (value.HasValue)
-									{
-										var ids = propertyValues?.Where(x => value == x.Value)
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								case SearchOperation.IsNull:
-								{
-									var ids = propertyValues?.Select(x => x.Key).ToHashSet();
-									if (ids?.Any() == true)
-									{
-										set = context.AllResourceIds.Except(ids).ToHashSet();
-									}
-
-									break;
-								}
-								case SearchOperation.IsNotNull:
-								{
-									set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case CustomPropertyType.Attachment:
-						{
-							var propertyValues = await PrepareAndGetCustomPropertyValues<HashSet<int>>(filter, context);
-							switch (filter.Operation)
-							{
-								case SearchOperation.IsNull:
-								{
-									var ids = propertyValues?.Select(x => x.Key).ToHashSet();
-									if (ids?.Any() == true)
-									{
-										set = context.AllResourceIds.Except(ids).ToHashSet();
-									}
-
-									break;
-								}
-								case SearchOperation.IsNotNull:
-								{
-									set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case CustomPropertyType.Date:
-						case CustomPropertyType.DateTime:
-						{
-							var value = string.IsNullOrEmpty(filter.Value)
-								? null
-								: JsonConvert.DeserializeObject<DateTime?>(filter.Value);
-							var propertyValues = await PrepareAndGetCustomPropertyValues<DateTime>(filter, context);
-							switch (filter.Operation)
-							{
-								case SearchOperation.Equals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value == x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotEquals:
-								{
-									if (value.HasValue)
-									{
-										var ids = propertyValues?.Where(x => value == x.Value)
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								case SearchOperation.GreaterThan:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value > x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.LessThan:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value < x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.GreaterThanOrEquals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value >= x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.LessThanOrEquals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value <= x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.IsNull:
-								{
-									var ids = propertyValues?.Select(x => x.Key).ToHashSet();
-									if (ids?.Any() == true)
-									{
-										set = context.AllResourceIds.Except(ids).ToHashSet();
-									}
-
-									break;
-								}
-								case SearchOperation.IsNotNull:
-								{
-									set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case CustomPropertyType.Time:
-						{
-							var value = string.IsNullOrEmpty(filter.Value)
-								? null
-								: JsonConvert.DeserializeObject<TimeSpan?>(filter.Value);
-							var propertyValues = await PrepareAndGetCustomPropertyValues<TimeSpan>(filter, context);
-							switch (filter.Operation)
-							{
-								case SearchOperation.Equals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value == x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.NotEquals:
-								{
-									if (value.HasValue)
-									{
-										var ids = propertyValues?.Where(x => value == x.Value)
-											.Select(x => x.Key).ToHashSet();
-										if (ids?.Any() == true)
-										{
-											set = context.AllResourceIds.Except(ids).ToHashSet();
-										}
-									}
-
-									break;
-								}
-								case SearchOperation.GreaterThan:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value > x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.LessThan:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value < x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.GreaterThanOrEquals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value >= x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.LessThanOrEquals:
-								{
-									if (value.HasValue)
-									{
-										set = propertyValues?.Where(x => value <= x.Value)
-											.Select(x => x.Key).ToHashSet() ?? [];
-									}
-
-									break;
-								}
-								case SearchOperation.IsNull:
-								{
-									var ids = propertyValues?.Select(x => x.Key).ToHashSet();
-									if (ids?.Any() == true)
-									{
-										set = context.AllResourceIds.Except(ids).ToHashSet();
-									}
-
-									break;
-								}
-								case SearchOperation.IsNotNull:
-								{
-									set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case CustomPropertyType.Formula:
-						case CustomPropertyType.Multilevel:
-							break;
-						default:
-							throw new ArgumentOutOfRangeException();
-					}
-				}
-			}
+                    //                switch (property.Type)
+                    // {
+                    // 	case CustomPropertyType.SingleLineText:
+                    // 	case CustomPropertyType.MultilineText:
+                    // 	case CustomPropertyType.Link:
+                    // 	{
+                    // 		var value = string.IsNullOrEmpty(filter.Value)
+                    // 			? null
+                    // 			: JsonConvert.DeserializeObject<string>(filter.Value);
+                    //
+                    // 		var propertyValues = await PrepareAndGetCustomPropertyValues<string>(filter, context);
+                    //
+                    // 		switch (filter.Operation)
+                    // 		{
+                    // 			case SearchOperation.Equals:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value.Equals(x.Value))
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotEquals:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					var ids = propertyValues?.Where(x => value.Equals(x.Value))
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.Contains:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value.Contains(x.Value!))
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotContains:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					var ids = propertyValues?.Where(x => value.Contains(x.Value))
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.StartsWith:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value.StartsWith(x.Value!))
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotStartsWith:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					var ids = propertyValues?.Where(x => value.StartsWith(x.Value))
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.EndsWith:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value.EndsWith(x.Value!))
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotEndsWith:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					var ids = propertyValues?.Where(x => value.EndsWith(x.Value))
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNull:
+                    // 			{
+                    // 				var ids = propertyValues?.Select(x => x.Key).ToHashSet();
+                    // 				if (ids?.Any() == true)
+                    // 				{
+                    // 					set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNotNull:
+                    // 			{
+                    // 				set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.Matches:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					var regex = new Regex(value);
+                    // 					set = propertyValues?.Where(x => regex.IsMatch(x.Value!))
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotMatches:
+                    // 			{
+                    // 				if (!string.IsNullOrEmpty(value))
+                    // 				{
+                    // 					var regex = new Regex(value);
+                    // 					var ids = propertyValues?.Where(x => regex.IsMatch(x.Value!))
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			default:
+                    // 				throw new ArgumentOutOfRangeException();
+                    // 		}
+                    //
+                    // 		break;
+                    // 	}
+                    // 	case CustomPropertyType.SingleChoice:
+                    // 	{
+                    // 		var propertyValues = await PrepareAndGetCustomPropertyValues<string>(filter, context);
+                    //
+                    // 		switch (filter.Operation)
+                    // 		{
+                    // 			case SearchOperation.Equals:
+                    // 			case SearchOperation.NotEquals:
+                    // 			case SearchOperation.IsNull:
+                    // 			case SearchOperation.IsNotNull:
+                    // 			{
+                    // 				var value = string.IsNullOrEmpty(filter.Value)
+                    // 					? null
+                    // 					: JsonConvert.DeserializeObject<string>(filter.Value);
+                    // 				switch (filter.Operation)
+                    // 				{
+                    // 					case SearchOperation.Equals:
+                    // 					{
+                    // 						if (!string.IsNullOrEmpty(value))
+                    // 						{
+                    // 							set = propertyValues?.Where(x => value.Equals(x.Value))
+                    // 								.Select(x => x.Key)
+                    // 								.ToHashSet();
+                    // 						}
+                    //
+                    // 						break;
+                    // 					}
+                    // 					case SearchOperation.NotEquals:
+                    // 					{
+                    // 						if (!string.IsNullOrEmpty(value))
+                    // 						{
+                    // 							var ids = propertyValues?.Where(x => value.Equals(x.Value))
+                    // 								.Select(x => x.Key)
+                    // 								.ToHashSet();
+                    // 							if (ids?.Any() == true)
+                    // 							{
+                    // 								set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 							}
+                    // 						}
+                    //
+                    // 						break;
+                    // 					}
+                    // 					case SearchOperation.IsNull:
+                    // 					{
+                    // 						var ids = propertyValues?.Select(x => x.Key).ToHashSet();
+                    // 						if (ids?.Any() == true)
+                    // 						{
+                    // 							set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 						}
+                    //
+                    // 						break;
+                    // 					}
+                    // 					case SearchOperation.IsNotNull:
+                    // 					{
+                    // 						set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
+                    // 						break;
+                    // 					}
+                    // 					default:
+                    // 						throw new ArgumentOutOfRangeException();
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.In:
+                    // 			case SearchOperation.NotIn:
+                    // 			{
+                    // 				var value = string.IsNullOrEmpty(filter.Value)
+                    // 					? null
+                    // 					: JsonConvert.DeserializeObject<HashSet<string>>(filter.Value);
+                    // 				if (value?.Any() == true)
+                    // 				{
+                    // 					switch (filter.Operation)
+                    // 					{
+                    // 						case SearchOperation.In:
+                    // 						{
+                    // 							set = propertyValues?.Where(x => value.Contains(x.Value))
+                    // 								.Select(x => x.Key)
+                    // 								.ToHashSet() ?? [];
+                    // 							break;
+                    // 						}
+                    // 						case SearchOperation.NotIn:
+                    // 						{
+                    // 							var ids = propertyValues?.Where(x => value.Contains(x.Value))
+                    // 								.Select(x => x.Key)
+                    // 								.ToHashSet();
+                    // 							if (ids?.Any() == true)
+                    // 							{
+                    // 								set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 							}
+                    //
+                    // 							break;
+                    // 						}
+                    // 						default:
+                    // 							throw new ArgumentOutOfRangeException();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			default:
+                    // 				throw new ArgumentOutOfRangeException();
+                    // 		}
+                    //
+                    // 		break;
+                    // 	}
+                    // 	case CustomPropertyType.MultipleChoice:
+                    // 	{
+                    // 		var value = string.IsNullOrEmpty(filter.Value)
+                    // 			? null
+                    // 			: JsonConvert.DeserializeObject<string>(filter.Value);
+                    // 		var propertyValues =
+                    // 			await PrepareAndGetCustomPropertyValues<HashSet<string>>(filter, context);
+                    // 		switch (filter.Operation)
+                    // 		{
+                    // 			case SearchOperation.Contains:
+                    // 			{
+                    // 				if (value?.Any() == true)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => x.Value.Contains(value))
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotContains:
+                    // 			{
+                    // 				if (value?.Any() == true)
+                    // 				{
+                    // 					var ids = propertyValues?.Where(x => x.Value.Contains(value))
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNull:
+                    // 			{
+                    // 				var ids = propertyValues?.Where(x => x.Value.Any()).Select(x => x.Key).ToHashSet();
+                    // 				if (ids?.Any() == true)
+                    // 				{
+                    // 					set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNotNull:
+                    // 			{
+                    // 				set = propertyValues?.Where(x => x.Value.Any()).Select(x => x.Key)
+                    // 					.ToHashSet() ?? [];
+                    // 				break;
+                    // 			}
+                    // 			default:
+                    // 				throw new ArgumentOutOfRangeException();
+                    // 		}
+                    //
+                    // 		break;
+                    // 	}
+                    // 	case CustomPropertyType.Number:
+                    // 	case CustomPropertyType.Percentage:
+                    // 	case CustomPropertyType.Rating:
+                    // 	{
+                    // 		var value = string.IsNullOrEmpty(filter.Value)
+                    // 			? null
+                    // 			: JsonConvert.DeserializeObject<decimal?>(filter.Value);
+                    // 		var propertyValues = await PrepareAndGetCustomPropertyValues<decimal>(filter, context);
+                    // 		switch (filter.Operation)
+                    // 		{
+                    // 			case SearchOperation.Equals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value == x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					var ids = propertyValues?.Where(x => value == x.Value)
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.GreaterThan:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value > x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.LessThan:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value < x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.GreaterThanOrEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value >= x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.LessThanOrEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value <= x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNull:
+                    // 			{
+                    // 				var ids = propertyValues?.Select(x => x.Key).ToHashSet();
+                    // 				if (ids?.Any() == true)
+                    // 				{
+                    // 					set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNotNull:
+                    // 			{
+                    // 				set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				break;
+                    // 			}
+                    // 			default:
+                    // 				throw new ArgumentOutOfRangeException();
+                    // 		}
+                    //
+                    // 		break;
+                    // 	}
+                    // 	case CustomPropertyType.Boolean:
+                    // 	{
+                    // 		var value = string.IsNullOrEmpty(filter.Value)
+                    // 			? null
+                    // 			: JsonConvert.DeserializeObject<bool?>(filter.Value);
+                    // 		var propertyValues = await PrepareAndGetCustomPropertyValues<bool>(filter, context);
+                    // 		switch (filter.Operation)
+                    // 		{
+                    // 			case SearchOperation.Equals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value == x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					var ids = propertyValues?.Where(x => value == x.Value)
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNull:
+                    // 			{
+                    // 				var ids = propertyValues?.Select(x => x.Key).ToHashSet();
+                    // 				if (ids?.Any() == true)
+                    // 				{
+                    // 					set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNotNull:
+                    // 			{
+                    // 				set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				break;
+                    // 			}
+                    // 			default:
+                    // 				throw new ArgumentOutOfRangeException();
+                    // 		}
+                    //
+                    // 		break;
+                    // 	}
+                    // 	case CustomPropertyType.Attachment:
+                    // 	{
+                    // 		var propertyValues = await PrepareAndGetCustomPropertyValues<HashSet<int>>(filter, context);
+                    // 		switch (filter.Operation)
+                    // 		{
+                    // 			case SearchOperation.IsNull:
+                    // 			{
+                    // 				var ids = propertyValues?.Select(x => x.Key).ToHashSet();
+                    // 				if (ids?.Any() == true)
+                    // 				{
+                    // 					set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNotNull:
+                    // 			{
+                    // 				set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				break;
+                    // 			}
+                    // 			default:
+                    // 				throw new ArgumentOutOfRangeException();
+                    // 		}
+                    //
+                    // 		break;
+                    // 	}
+                    // 	case CustomPropertyType.Date:
+                    // 	case CustomPropertyType.DateTime:
+                    // 	{
+                    // 		var value = string.IsNullOrEmpty(filter.Value)
+                    // 			? null
+                    // 			: JsonConvert.DeserializeObject<DateTime?>(filter.Value);
+                    // 		var propertyValues = await PrepareAndGetCustomPropertyValues(filter, context);
+                    //
+                    //                        ICustomPropertyDescriptor descriptor = null!;
+                    //
+                    //                        var validIds = propertyValues?.Where(x => descriptor.IsMatch(x.Value, filter))
+                    //                            .Select(x => x.Key).ToHashSet() ?? [];
+                    //
+                    //
+                    //
+                    //                            switch (filter.Operation)
+                    // 		{
+                    // 			case SearchOperation.Equals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => descriptor.IsMatch(x.Value, filter))
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					var ids = propertyValues?.Where(x => value == x.Value)
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.GreaterThan:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value > x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.LessThan:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value < x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.GreaterThanOrEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value >= x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.LessThanOrEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value <= x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNull:
+                    // 			{
+                    // 				var ids = propertyValues?.Select(x => x.Key).ToHashSet();
+                    // 				if (ids?.Any() == true)
+                    // 				{
+                    // 					set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNotNull:
+                    // 			{
+                    // 				set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				break;
+                    // 			}
+                    // 			default:
+                    // 				throw new ArgumentOutOfRangeException();
+                    // 		}
+                    //
+                    // 		break;
+                    // 	}
+                    // 	case CustomPropertyType.Time:
+                    // 	{
+                    // 		var value = string.IsNullOrEmpty(filter.Value)
+                    // 			? null
+                    // 			: JsonConvert.DeserializeObject<TimeSpan?>(filter.Value);
+                    // 		var propertyValues = await PrepareAndGetCustomPropertyValues<TimeSpan>(filter, context);
+                    // 		switch (filter.Operation)
+                    // 		{
+                    // 			case SearchOperation.Equals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value == x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.NotEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					var ids = propertyValues?.Where(x => value == x.Value)
+                    // 						.Select(x => x.Key).ToHashSet();
+                    // 					if (ids?.Any() == true)
+                    // 					{
+                    // 						set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 					}
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.GreaterThan:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value > x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.LessThan:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value < x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.GreaterThanOrEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value >= x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.LessThanOrEquals:
+                    // 			{
+                    // 				if (value.HasValue)
+                    // 				{
+                    // 					set = propertyValues?.Where(x => value <= x.Value)
+                    // 						.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNull:
+                    // 			{
+                    // 				var ids = propertyValues?.Select(x => x.Key).ToHashSet();
+                    // 				if (ids?.Any() == true)
+                    // 				{
+                    // 					set = context.AllResourceIds.Except(ids).ToHashSet();
+                    // 				}
+                    //
+                    // 				break;
+                    // 			}
+                    // 			case SearchOperation.IsNotNull:
+                    // 			{
+                    // 				set = propertyValues?.Select(x => x.Key).ToHashSet() ?? [];
+                    // 				break;
+                    // 			}
+                    // 			default:
+                    // 				throw new ArgumentOutOfRangeException();
+                    // 		}
+                    //
+                    // 		break;
+                    // 	}
+                    // 	case CustomPropertyType.Formula:
+                    // 	case CustomPropertyType.Multilevel:
+                    // 		break;
+                    // 	default:
+                    // 		throw new ArgumentOutOfRangeException();
+                    // }
+                }
+            }
 
 			return set;
 		}

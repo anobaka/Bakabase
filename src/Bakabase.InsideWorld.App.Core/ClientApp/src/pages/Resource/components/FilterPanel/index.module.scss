@@ -4,51 +4,6 @@
   padding: 5px;
   position: relative;
 
-  .contentCenterAlignedBtn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 2px 5px;
-    &:before {
-      display: none;
-    }
-  }
-
-  &.folded {
-    //width: 10px;
-    //height: 10px;
-    overflow: hidden;
-    position: absolute;
-    right: -5px;
-    top: -5px;
-
-    z-index: 1;
-    background: var(--theme-block-background);
-
-    .collapseSwitcher {
-      position: relative;
-      right: unset;
-      top: unset;
-    }
-
-    .line1, .line2, .line3 {
-      display: none;
-    }
-  }
-
-  .collapseSwitcher {
-    position: absolute;
-    right: 2px;
-    top: 0px;
-    cursor: pointer;
-  }
-
-  .left, .right {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
   .right {
     .bulkOperations {
       margin-left: 20px;
@@ -61,51 +16,6 @@
         opacity: 0.5;
       }
     }
-  }
-
-  .line1 {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 5px;
-    justify-content: space-between;
-
-    .searchInput {
-      min-width: 320px;
-      @apply text-base;
-    }
-  }
-
-  .line2 {
-    margin-bottom: 5px;
-  }
-
-  .line3 {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    justify-content: space-between;
-
-    .switch {
-      @apply opacity-20;
-      @apply text-base;
-      color: var(--bakaui-foreground);
-      cursor: pointer;
-
-      &.on {
-        @apply opacity-80;
-        color: var(--bakaui-primary);
-      }
-    }
-
-    .largerCover {
-
-    }
-
-  }
-
-  .columnCount {
-    font-size: 14px;
   }
 }
 
@@ -120,5 +30,17 @@
 
   button {
     padding: 2px 5px !important;
+  }
+}
+
+.switch {
+  @apply opacity-20;
+  @apply text-base;
+  color: var(--bakaui-foreground);
+  cursor: pointer;
+
+  &.on {
+    @apply opacity-80;
+    color: var(--bakaui-primary);
   }
 }

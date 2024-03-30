@@ -36,7 +36,7 @@ export default function BasicLayout() {
         <div className={styles.insideWorld}>
           <FloatingAssistant />
           <PageNav />
-          <div className={styles.main}>
+          <div className={`${styles.main} pt-1 pb-1 pr-1`}>
             <Outlet />
           </div>
         </div>

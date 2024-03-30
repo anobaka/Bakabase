@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 using Bakabase.InsideWorld.Models.RequestModels;
 
-namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties.SingleChoice
+namespace Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Properties.Choice
 {
     public record SingleChoicePropertyValue : CustomPropertyValueDto<string>
     {

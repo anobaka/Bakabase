@@ -9,9 +9,10 @@ import FilterGroup from './components/FilterGroup';
 interface IProps {
   group?: IGroup;
   onChange?: (group: IGroup) => any;
+  portalContainer?: any;
 }
 
-export default ({ group: propsGroup, onChange }: IProps) => {
+export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
   const { t } = useTranslation();
 
   const [group, setGroup] = useState<IGroup>(propsGroup ?? { combinator: GroupCombinator.And });
@@ -25,6 +26,7 @@ export default ({ group: propsGroup, onChange }: IProps) => {
       <FilterGroup
         group={group}
         isRoot
+        portalContainer={portalContainer}
         onChange={group => {
           setGroup(group);
           onChange?.(group);

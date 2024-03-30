@@ -25,54 +25,6 @@ namespace Bakabase.InsideWorld.Business.Services
 		{
 		}
 
-		public async Task<List<int>> SearchResourceIds(ResourceSearchByCustomPropertyValuesRequestModel model)
-		{
-			if (model.CustomPropertyValueSearchModels?.Any() == true)
-			{
-				var allValueDtoList = await GetDtoList(null, CustomPropertyValueAdditionalItem.None, false);
-				var resourceValueMap =
-					allValueDtoList.GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
-						x => x.GroupBy(y => y.PropertyId).ToDictionary(y => y.Key, y => y.First()));
-				var resourceIds = new List<int>();
-				foreach (var (rId, valueMap) in resourceValueMap)
-				{
-					var match = true;
-					foreach (var m in model.CustomPropertyValueSearchModels)
-					{
-						var value = valueMap.GetValueOrDefault(m.PropertyId);
-						var hit = (value == null && m.Operation == SearchOperation.IsNull) ||
-						          value?.IsMatch(m) == true;
-						if (hit)
-						{
-							if (model.Combination == Combinator.Or)
-							{
-								// avoid unnecessary matches
-								break;
-							}
-						}
-						else
-						{
-							if (model.Combination == Combinator.And)
-							{
-								// avoid unnecessary matches
-								match = false;
-								break;
-							}
-						}
-					}
-
-					if (match)
-					{
-						resourceIds.Add(rId);
-					}
-				}
-
-				return resourceIds;
-			}
-
-			return [];
-		}
-
 		public async Task<List<CustomPropertyValueDto>> GetDtoList(Expression<Func<CustomPropertyValue, bool>>? exp,
 			CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
 		{

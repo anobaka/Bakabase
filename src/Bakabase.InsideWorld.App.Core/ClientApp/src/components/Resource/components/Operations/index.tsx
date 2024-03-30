@@ -37,9 +37,8 @@ export default ({
     <Popup
       trigger={(
         <ClickableIcon
-          className={styles.portal}
+          className={'absolute top-1 right-1 z-10 text-xl'}
           type={'ellipsis'}
-          size={'small'}
           colorType={'normal'}
           onMouseEnter={e => {
             e.preventDefault();
@@ -54,6 +53,7 @@ export default ({
           <ClickableIcon
             colorType={'normal'}
             type={'eye'}
+            className={'text-xl'}
             onClick={() => {
               ShowResourceMediaPlayer(resource.id, resource.rawFullname, (base64String: string, saveTarget?: CoverSaveLocation) => {
                 coverRef?.save(base64String, saveTarget);
@@ -64,6 +64,7 @@ export default ({
         </div>
         <div className={styles.opt} title={t('Open folder')}>
           <ClickableIcon
+            className={'text-xl'}
             colorType={'normal'}
             type={'folder-open'}
             onClick={() => open()}
@@ -82,6 +83,7 @@ export default ({
           }}
         >
           <ClickableIcon
+            className={'text-xl'}
             colorType={'normal'}
             type={'move'}
             size={'small'}
@@ -97,6 +99,7 @@ export default ({
           }}
         >
           <ClickableIcon
+            className={'text-xl'}
             colorType={'normal'}
             type={'star'}
             size={'small'}
@@ -122,6 +125,7 @@ export default ({
           }}
         >
           <ClickableIcon
+            className={'text-xl'}
             colorType={'normal'}
             type={'playlistadd'}
             size={'small'}
@@ -154,6 +158,7 @@ export default ({
           }}
         >
           <ClickableIcon
+            className={'text-xl'}
             colorType={'normal'}
             type={'tags'}
             size={'small'}
@@ -164,6 +169,7 @@ export default ({
             autoFocus={false}
             trigger={
               <ClickableIcon
+                className={'text-xl'}
                 colorType={'normal'}
                 type={'search'}
               />
@@ -200,6 +206,7 @@ export default ({
         </div>
         <div className={styles.opt} title={t('Enhancements')}>
           <ClickableIcon
+            className={'text-xl'}
             colorType={'normal'}
             type={'flashlight'}
             onClick={() => {
@@ -215,6 +222,7 @@ export default ({
         </div>
         <div className={styles.opt} title={t('Remove')}>
           <ClickableIcon
+            className={'text-xl'}
             type={'delete'}
             colorType={'danger'}
           />

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { BalloonProps } from '@alifd/next/types/balloon';
 import { useUpdate } from 'react-use';
 import { Img } from 'react-image';
+import { LoadingOutlined } from '@ant-design/icons';
 import serverConfig from '@/serverConfig';
 import { GetResourceCoverURL } from '@/sdk/apis';
 import { useTraceUpdate, uuidv4 } from '@/components/utils';
@@ -19,14 +20,13 @@ interface Props {
   resourceId: number;
   onClick?: () => any;
   showBiggerOnHover?: boolean;
-  loadImmediately?: boolean;
   disableCache?: boolean;
   disableMediaPreviewer?: boolean;
 }
 
 export interface IResourceCoverRef {
   save: (base64Image: string, saveTarget?: CoverSaveLocation) => any;
-  reload: (ct?: AbortSignal) => Promise<any>;
+  load: (refresh?: boolean) => void;
 }
 
 const ResourceCover = React.forwardRef((props: Props, ref) => {
@@ -34,16 +34,15 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     resourceId,
     onClick: propsOnClick,
     showBiggerOnHover = true,
-    loadImmediately = false,
     disableCache = false,
     disableMediaPreviewer = false,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const [loading, setLoading] = useState(true);
-  const [cover, setCover] = useState<string | ArrayBuffer | null>(null);
-  // No cache will be set after first load
-  const loadedOnceRef = useRef(false);
+  const [loaded, setLoaded] = useState(false);
+  const [url, setUrl] = useState<string>();
+
   const biggerCoverAlignRef = useRef<BalloonProps['align']>();
 
   const [previewerVisible, setPreviewerVisible] = useState(false);
@@ -58,11 +57,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   }, [disableCache]);
 
   useEffect(() => {
-    // if (loadImmediately) {
-    //   loadCover(new AbortController().signal).catch(e => {
-    //     Message.error(e.message);
-    //   });
-    // }
+    loadCover(false);
   }, []);
 
   const saveCoverInternal = useCallback((base64Image: string, overwrite?: boolean, saveLocation?: CoverSaveLocation) => {
@@ -76,7 +71,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     })
       .then(a => {
         if (!a.code) {
-          setCover(base64Image);
+          loadCover(true);
           Message.success(t('Cover saved successfully'));
           return a;
         }
@@ -116,69 +111,24 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         },
       });
     }
-  }, [cover, loading]);
+  }, [loaded, loading]);
 
   useImperativeHandle(ref, (): IResourceCoverRef => {
     return {
       save: saveCover,
-      reload: loadCover,
+      load: loadCover,
     };
   }, [saveCover]);
 
   useTraceUpdate(props, '[ResourceCover]');
 
-  const loadCover = useCallback((ct?: AbortSignal) => {
-    return;
+  const loadCover = useCallback((refresh: boolean) => {
     const serverAddress = appContext.serverAddresses?.[1] ?? serverConfig.apiEndpoint;
-
     let url = `${serverAddress}${GetResourceCoverURL({ id: resourceId })}`;
-    if (disableCacheRef.current) {
-      url += `?t=${uuidv4()}`;
+    if (refresh) {
+      url += `?${uuidv4()}`;
     }
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      ct?.addEventListener('abort', () => {
-        if (xhr.readyState !== XMLHttpRequest.DONE) {
-          xhr.abort();
-        }
-      });
-      xhr.onload = function (e) {
-        // console.log('load', e);
-      };
-      xhr.onerror = (e) => {
-        setLoading(false);
-        reject(e);
-        // console.log('error', e);
-      };
-      xhr.onabort = (e) => {
-        setLoading(false);
-        reject(e);
-        // console.log('abort', e);
-      };
-      xhr.onloadend = function (a) {
-        // console.log('loadend', xhr);
-        loadedOnceRef.current = true;
-        if (xhr.response?.size > 0) {
-          const reader = new FileReader();
-          reader.onloadend = function () {
-            setCover(reader.result);
-            resolve(reader.result);
-          };
-          reader.readAsDataURL(xhr.response);
-        } else {
-          setLoading(false);
-          resolve(undefined);
-        }
-      };
-      setLoading(true);
-      xhr.open('GET', url);
-      if (loadedOnceRef.current) {
-        xhr.setRequestHeader('Cache-Control', 'no-cache');
-        xhr.setRequestHeader('Pragma', 'no-cache');
-      }
-      xhr.responseType = 'blob';
-      xhr.send();
-    });
+    setUrl(url);
   }, []);
 
   const onClick = useCallback(() => {
@@ -187,54 +137,27 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     }
   }, [propsOnClick]);
 
-  const renderThumbnail = useCallback((data) => {
-    return (
-      <img
-        className={'cover'}
-        // @ts-ignore
-        src={data}
-        alt={''}
-        onMouseLeave={() => {
-          biggerCoverAlignRef.current = undefined;
-        }}
-      />
-    );
-  }, []);
 
   const renderCover = () => {
-    // if (loading) {
-    //   return (
-    //     <Icon type={'loading'} />
-    //   );
-    // } else {
-      const serverAddress = appContext.serverAddresses?.[1] ?? serverConfig.apiEndpoint;
-
-      let url = `${serverAddress}${GetResourceCoverURL({ id: resourceId })}`;
-
+    if (url) {
       return (
         <Img
           style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
           src={[url]}
+          onLoad={() => {
+            setLoaded(true);
+            // console.log('loaded');
+          }}
+          loader={(
+            <LoadingOutlined className={'text-2xl'} />
+          )}
           unloader={(
-            <CustomIcon type={'image-slash'} size={'large'} />
+            <CustomIcon type={'image-slash'} className={'text-2xl'} />
           )}
         />
       );
-    // }
-
-    // if (cover) {
-    //   return renderThumbnail(cover);
-    // } else {
-    //   if (loading) {
-    //     return (
-    //       <Icon type={'loading'} />
-    //     );
-    //   } else {
-    //     return (
-    //       <CustomIcon type={'image-slash'} size={'large'} />
-    //     );
-    //   }
-    // }
+    }
+    return null;
   };
 
   const renderContainer = () => {
@@ -279,9 +202,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     );
   };
 
-  // console.log('rendering cover, loading: ', loading);
+  // console.log(loaded, showBiggerOnHover);
 
-  if (cover) {
+  if (loaded) {
     if (showBiggerOnHover) {
       return (
         <Balloon
@@ -295,8 +218,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           shouldUpdatePosition
           align={biggerCoverAlignRef.current}
         >
-          {/* @ts-ignore */}
-          <img src={cover} alt={''} style={{ maxWidth: 700, maxHeight: 700 }} />
+          <img src={url} alt={''} style={{ maxWidth: 700, maxHeight: 700 }} />
         </Balloon>
       );
     }

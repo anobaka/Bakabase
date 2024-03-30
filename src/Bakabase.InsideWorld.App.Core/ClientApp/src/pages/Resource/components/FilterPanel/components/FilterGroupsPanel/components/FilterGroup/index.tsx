@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Button, Dropdown, Menu } from '@alifd/next';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useUpdateEffect } from 'react-use';
+import ReactDOM from 'react-dom';
 import type { IGroup } from '../../models';
 import { GroupCombinator } from '../../models';
 import styles from './index.module.scss';
@@ -11,21 +12,37 @@ import CustomIcon from '@/components/CustomIcon';
 
 interface IProps {
   group: IGroup;
-  isRoot: boolean;
   onRemove?: () => void;
   onChange?: (group: IGroup) => void;
+  isRoot?: boolean;
+  portalContainer?: any;
 }
 
 const FilterGroup = ({
                        group: propsGroup,
-                       isRoot,
                        onRemove,
                        onChange,
+                       isRoot = false,
+                       portalContainer,
                      }: IProps) => {
   const { t } = useTranslation();
   const [group, setGroup] = React.useState<IGroup>(propsGroup);
+  const groupRef = useRef(group);
+
+  useEffect(() => {
+    if (portalContainer) {
+      ReactDOM.render(renderAddHandler(), portalContainer);
+    }
+
+    return () => {
+      if (portalContainer) {
+        ReactDOM.unmountComponentAtNode(portalContainer);
+      }
+    };
+  }, []);
 
   useUpdateEffect(() => {
+    groupRef.current = group;
     onChange?.(group);
   }, [group]);
 
@@ -58,7 +75,6 @@ const FilterGroup = ({
   )).concat((groups || []).map(g => (
     <FilterGroup
       group={g}
-      isRoot={false}
       onRemove={() => {
         setGroup({
           ...group,
@@ -98,28 +114,10 @@ const FilterGroup = ({
     return (
       <Dropdown
         trigger={(
-          // isRoot ? (
-          //   <Button
-          //     className={styles.rootGroupAddButton}
-          //     type={'normal'}
-          //     size={'small'}
-          //   >
-          //     <CustomIcon
-          //       type={'add-filter'}
-          //     />
-          //   </Button>
-          // ) : (
-          //   // <ClickableIcon colorType={'normal'} type={'plus-circle'} />
-          //   <ClickableIcon
-          //     colorType={'normal'}
-          //     type={'add-filter'}
-          //     size={'small'}
-          //   />
-          // )
           <ClickableIcon
             colorType={'normal'}
             type={'add-filter'}
-            // size={'small'}
+            className={'text-xl'}
           />
         )}
         align={'tl tr'}
@@ -130,9 +128,9 @@ const FilterGroup = ({
             className={styles.addMenuItem}
             onClick={() => {
               setGroup({
-                ...group,
+                ...groupRef.current,
                 filters: [
-                  ...(group.filters || []),
+                  ...(groupRef.current.filters || []),
                   {},
                 ],
               });
@@ -149,9 +147,9 @@ const FilterGroup = ({
             className={styles.addMenuItem}
             onClick={() => {
               setGroup({
-                ...group,
+                ...groupRef.current,
                 groups: [
-                  ...(group.groups || []),
+                  ...(groupRef.current.groups || []),
                   { combinator: GroupCombinator.And },
                 ],
               });
@@ -181,7 +179,9 @@ const FilterGroup = ({
         }}
       />
       {allElements}
-      {renderAddHandler()}
+      {!portalContainer && (
+        renderAddHandler()
+      )}
     </div>
   );
 };

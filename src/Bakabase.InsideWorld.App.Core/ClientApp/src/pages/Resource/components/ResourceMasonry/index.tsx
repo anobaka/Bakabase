@@ -51,11 +51,9 @@ export default ({
     overscanByPixels: 0,
   });
 
-  const measuresRef = useRef<any[]>([]);
-
   useUpdateEffect(() => {
     _calculateColumnWidth();
-    console.log('resize', gridInfoRef.current.columnWidth, columnCount);
+    // console.log('resize', gridInfoRef.current.columnWidth, columnCount);
     _resetCellPositioner();
     cacheRef.current.clearAll();
     masonryRef.current.clearCellPositions();
@@ -107,6 +105,8 @@ export default ({
 
     _calculateColumnWidth();
     _resetCellPositioner();
+    cacheRef.current.clearAll();
+    masonryRef.current.clearCellPositions();
     masonryRef.current.recomputeCellPositions();
 }
 

@@ -15,6 +15,7 @@ import OrderSelector from '@/pages/Resource/components/FilterPanel/components/Or
 import { PlaylistCollection } from '@/components/Playlist';
 import type { ISearchForm } from '@/pages/Resource/models';
 import { Button, Icon, Input, Tooltip } from '@/components/bakaui';
+import CustomIcon from '@/components/CustomIcon';
 
 const { Popup } = Overlay;
 
@@ -49,6 +50,8 @@ export default ({
 
   const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>(propsSearchForm || {});
 
+  const filterGroupPortalRef = React.useRef<HTMLDivElement>(null);
+
   useUpdateEffect(() => {
     setSearchForm(propsSearchForm || {});
   }, [propsSearchForm]);
@@ -69,7 +72,7 @@ export default ({
   }, [bulkOperationMode]);
 
   const renderBulkOperations = useCallback(() => {
-    if (bulkOperationMode == 'multiple') {
+    if (bulkOperationMode) {
       const operations: { label: string; onClick: () => any; icon: string }[] = [
         {
           label: 'Set tags',
@@ -92,7 +95,7 @@ export default ({
           onClick: () => {
             MediaLibraryPathSelector.show({
               onSelect: path => BApi.resource.moveResources({
-                ids: selectedResourceIds,
+                ids: selectedResourceIds!,
                 path,
               }),
             });
@@ -103,8 +106,7 @@ export default ({
           icon: 'star',
           onClick: () => {
             FavoritesSelector.show({
-              resourceIds: resources.filter((r) => selectedResourceIds.indexOf(r.id) > -1)
-                .map(r => r.id),
+              resourceIds: selectedResourceIds!,
             });
           },
         },
@@ -119,10 +121,9 @@ export default ({
           >
             <ClickableIcon
               type={o.icon}
-              size={'small'}
               colorType={'normal'}
               onClick={o.onClick}
-              className={anyResourceSelected ? '' : styles.disabled}
+              className={`text-xl ${anyResourceSelected ? '' : styles.disabled}`}
             />
           </Tooltip>
         );
@@ -132,59 +133,49 @@ export default ({
   }, [bulkOperationMode, selectedResourceIds]);
 
   return (
-    <div className={`${styles.filterPanel} ${!panelVisible ? styles.folded : ''}`}>
-      <ClickableIcon
-        colorType={'normal'}
-        size={'small'}
-        type={panelVisible ? 'caret-up' : 'search'}
-        className={styles.collapseSwitcher}
-        onClick={() => {
-          setPanelVisible(!panelVisible);
-        }}
-      />
-      <div className={styles.line1}>
-        <div className={styles.left}>
-          <Input
-            className={styles.searchInput}
-            startContent={(
-              <SearchOutlined />
-            )}
-            placeholder={t('Search everything')}
-          />
-          <Dropdown
-            triggerType={'click'}
-            trigger={(
+    <div className={`${styles.filterPanel}`}>
+      <div className={'flex items-center gap-4'}>
+        <Input
+          startContent={(
+            <SearchOutlined className={'text-xl'} />
+          )}
+          className={'w-1/4'}
+          placeholder={t('Search everything')}
+        />
+        <div ref={filterGroupPortalRef} />
+        <Dropdown
+          triggerType={'click'}
+          trigger={(
+            <div>
               <Button
                 color={'default'}
                 size={'sm'}
-                onClick={() => {
-
-                }}
+                startContent={<CustomIcon
+                  type={'playlistplay'}
+                  className={'text-xl'}
+                />}
               >
-                <OrderedListOutlined />
                 {t('Playlist')}
               </Button>
-            )}
-          >
-            <PlaylistCollection className={'resource-page'} />
-          </Dropdown>
-        </div>
-        <div className={styles.right} />
+            </div>
+          )}
+        >
+          <PlaylistCollection className={'resource-page'} />
+        </Dropdown>
       </div>
-      <div className={styles.line2}>
-        <div className={styles.line3}>
-          <FilterGroupsPanel
-            group={searchForm.group}
-            onChange={v => {
-              setSearchForm({
-                group: v,
-              });
-            }}
-          />
-        </div>
-      </div>
-      <div className={styles.line3}>
-        <div className={styles.left}>
+      {filterGroupPortalRef.current && (
+        <FilterGroupsPanel
+          portalContainer={filterGroupPortalRef.current}
+          group={searchForm.group}
+          onChange={v => {
+            setSearchForm({
+              group: v,
+            });
+          }}
+        />
+      )}
+      <div className={'flex items-center justify-between'}>
+        <div className={'flex items-center gap-4'}>
           <Button
             color={'primary'}
             size={'sm'}
@@ -198,7 +189,7 @@ export default ({
             {t('Search')}
           </Button>
         </div>
-        <div className={styles.right}>
+        <div className={'flex items-center gap-2'}>
           <OrderSelector
             className={'mr-2'}
             value={searchForm.orders}
@@ -214,7 +205,7 @@ export default ({
           <Tooltip content={t('Show larger cover on mouse hover')}>
             <Icon
               type={'ZoomInOutlined'}
-              className={`${styles.switch} ${uiOptions?.resource?.showBiggerCoverWhileHover ? styles.on : ''}`}
+              className={`${styles.switch} ${uiOptions?.resource?.showBiggerCoverWhileHover ? styles.on : ''} text-xl`}
               onClick={() => {
                 BApi.options.patchUiOptions({
                   resource: {
@@ -228,7 +219,7 @@ export default ({
           <Tooltip content={t('Preview files of a resource on mouse hover')}>
             <Icon
               type={'PlayCircleOutlined'}
-              className={`${styles.switch} ${uiOptions?.resource?.disableMediaPreviewer ? styles.on : ''}`}
+              className={`${styles.switch} ${uiOptions?.resource?.disableMediaPreviewer ? styles.on : ''} text-xl`}
               onClick={() => {
                 BApi.options.patchUiOptions({
                   resource: {
@@ -242,7 +233,7 @@ export default ({
           <Tooltip content={t('Enabling caching can improve loading speed')}>
             <Icon
               type={'DashboardOutlined'}
-              className={`${styles.switch} ${uiOptions?.resource?.disableCache ? '' : styles.on}`}
+              className={`${styles.switch} ${uiOptions?.resource?.disableCache ? '' : styles.on} text-xl`}
               onClick={() => {
                 BApi.options.patchUiOptions({
                   resource: {
@@ -253,11 +244,12 @@ export default ({
               }}
             />
           </Tooltip>
-          <div className={styles.columnCount}>
+          <div>
             <Popup
               v2
               trigger={(
                 <Button
+                  startContent={<OrderedListOutlined />}
                   color={'default'}
                   size={'sm'}
                   className={'ml-2'}
@@ -292,18 +284,18 @@ export default ({
               </div>
             </Popup>
           </div>
-          <div className={styles.bulkOperations}>
+          <div className={'flex gap-2 items-center'}>
             {renderBulkOperations()}
             <Tooltip
               content={t(bulkOperationMode ? 'Exit bulk operations mode' : 'Bulk operations mode')}
               placement={'left'}
             >
               <ClickableIcon
-                className={'text-lg'}
+                className={'text-xl'}
                 colorType={bulkOperationMode ? 'danger' : 'normal'}
                 type={bulkOperationMode ? 'exit' : 'Multiselect'}
                 onClick={() => {
-                  setBulkOperationMode(bulkOperationMode ? 'single' : 'multiple');
+                  setBulkOperationMode(!bulkOperationMode);
                 }}
               />
             </Tooltip>

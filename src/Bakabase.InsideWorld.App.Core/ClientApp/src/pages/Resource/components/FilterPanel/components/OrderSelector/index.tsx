@@ -46,7 +46,7 @@ export default ({
             }}
             title={t(y.label)}
           >
-            <CustomIcon type={y.asc ? 'sort-ascending' : 'sort-descending'} size={'small'} />
+            <CustomIcon type={y.asc ? 'sort-ascending' : 'sort-descending'} className={'text-lg'} />
             {t(x.label)}
           </div>
         ),
@@ -64,6 +64,7 @@ export default ({
         maxWidth: 500,
         minWidth: 200,
       }}
+      placeholder={t('Select orders')}
       label={t('Order')}
       dataSource={orderDataSourceRef.current}
       selectedKeys={(value || []).map((a) => `${a.property}-${a.asc}`)}

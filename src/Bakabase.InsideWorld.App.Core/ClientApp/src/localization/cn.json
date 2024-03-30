@@ -1123,5 +1123,6 @@
   "Disabling cache may cause performance issues": "禁用缓存可能会降低加载速度",
   "Enabling caching can improve loading speed": "启用缓存可以提高加载速度",
   "Exit bulk operations mode": "退出批量操作模式",
-  "Bulk operations mode": "批量操作模式"
+  "Bulk operations mode": "批量操作模式",
+  "Select orders": "选择排序方式"
 }

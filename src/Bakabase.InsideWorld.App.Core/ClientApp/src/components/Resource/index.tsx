@@ -87,9 +87,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
   }, [disableCache]);
 
   const initialize = useCallback(async (ct: AbortSignal) => {
-    if (coverRef.current) {
-      await coverRef.current?.reload(ct);
-    }
     await loadPlayableFiles(ct);
     // log('Initialized');
   }, []);
@@ -113,17 +110,14 @@ const Resource = React.forwardRef((props: Props, ref) => {
       });
   };
 
-  const play = (file) => {
-    PlayResourceFile({
-      id: resource.categoryId,
+  const play = (file) =>
+    BApi.tool.playResourceFile(resource.categoryId, {
       file,
-    })
-      .invoke((a) => {
-        if (!a.code) {
-          Message.success(t('Opened'));
-        }
-      });
-  };
+    }).then((a) => {
+      if (!a.code) {
+        Message.success(t('Opened'));
+      }
+    });
 
   const reload = useCallback(async (ct?: AbortSignal) => {
     const newResourceRsp = await BApi.resource.getResourcesByKeys({ ids: [resource.id] });
@@ -134,9 +128,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           .forEach((k) => {
             resource[k] = nr[k];
           });
-        if (coverRef.current) {
-          await coverRef.current!.reload(ct);
-        }
+        coverRef.current?.load(true);
         await loadPlayableFiles(ct);
       }
     } else {
@@ -237,7 +229,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 ct,
               });
             }}
-            loadImmediately={false}
             resourceId={resource.id}
             ref={coverRef}
             showBiggerOnHover={showBiggerCoverOnHover}
