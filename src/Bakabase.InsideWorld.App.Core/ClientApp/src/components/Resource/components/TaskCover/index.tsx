@@ -10,10 +10,9 @@ import store from '@/store';
 
 interface IProps {
   resource: any;
-  onRemoved?: (id: number) => any;
 }
 
-export default ({ resource, onRemoved }: IProps) => {
+export default ({ resource }: IProps) => {
   const taskRef = useRef<ResourceTask>();
   const { t } = useTranslation();
   useEffect(() => {
@@ -25,7 +24,7 @@ export default ({ resource, onRemoved }: IProps) => {
         const differences = diff(task, taskRef.current);
         if (differences) {
           if (task?.percentage == 100 && task.operationOnComplete == ResourceTaskOperationOnComplete.RemoveOnResourceView) {
-            onRemoved?.(resource.id);
+
           } else {
             const prevTask = taskRef.current;
             taskRef.current = task;

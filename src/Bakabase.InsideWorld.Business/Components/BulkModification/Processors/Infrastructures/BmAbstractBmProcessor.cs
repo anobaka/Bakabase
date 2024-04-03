@@ -14,7 +14,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
 {
     public abstract class BmAbstractBmProcessor<TProcessorValue> : IBulkModificationProcessor
     {
-        public async Task Process(BulkModificationProcess process, ResourceDto resource,
+        public async Task Process(BulkModificationProcess process, Models.Domain.Resource resource,
             Dictionary<string, string?> variables)
         {
             if (process.Property != TargetProperty)
@@ -33,10 +33,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
             await ProcessInternal(value, resource, variables, process.PropertyKey);
         }
 
-        protected abstract Task ProcessInternal(TProcessorValue value, ResourceDto resource,
+        protected abstract Task ProcessInternal(TProcessorValue value, Models.Domain.Resource resource,
             Dictionary<string, string?> variables, string? propertyKey);
 
         protected abstract TProcessorValue ParseProcessorValue(BulkModificationProcess process);
-        protected abstract BulkModificationProperty TargetProperty { get; }
+        protected abstract BulkModificationFilterableProperty TargetProperty { get; }
     }
 }

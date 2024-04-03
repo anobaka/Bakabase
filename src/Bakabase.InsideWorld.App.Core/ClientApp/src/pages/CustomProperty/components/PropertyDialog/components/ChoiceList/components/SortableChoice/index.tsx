@@ -8,7 +8,6 @@ import { toast } from 'react-toastify';
 import type { IChoice } from '../../../../../../models';
 import DragHandle from '@/components/DragHandle';
 import ClickableIcon from '@/components/ClickableIcon';
-import onChange = toast.onChange;
 
 interface IProps {
   id: string;

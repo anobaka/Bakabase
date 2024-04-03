@@ -5,14 +5,14 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Tasks;
+using Bakabase.InsideWorld.Business.Models.Domain;
+using Bakabase.InsideWorld.Business.Models.Dto;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
-using Bakabase.InsideWorld.Models.Models.Entities.Implicit;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
@@ -23,7 +23,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
 {
-	[Route("~/media-library")]
+    [Route("~/media-library")]
 	public class MediaLibraryController : Controller
 	{
 		private readonly MediaLibraryService _service;
@@ -40,14 +40,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
 		[HttpGet]
 		[SwaggerOperation(OperationId = "GetAllMediaLibraries")]
-		public async Task<ListResponse<MediaLibraryDto>> Get(MediaLibraryAdditionalItem additionalItems)
+		public async Task<ListResponse<MediaLibrary>> Get(MediaLibraryAdditionalItem additionalItems)
 		{
 			return new(await _service.GetAllDto(null, additionalItems));
 		}
 
 		[HttpPost]
 		[SwaggerOperation(OperationId = "AddMediaLibrary")]
-		public async Task<BaseResponse> Add([FromBody] MediaLibraryCreateRequestModel model)
+		public async Task<BaseResponse> Add([FromBody] MediaLibraryCreateDto model)
 		{
 			return await _service.Add(model);
 		}
@@ -61,7 +61,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
 		[HttpPut("{id}")]
 		[SwaggerOperation(OperationId = "PatchMediaLibrary")]
-		public async Task<BaseResponse> Patch(int id, [FromBody] MediaLibraryPatchRequestModel model)
+		public async Task<BaseResponse> Patch(int id, [FromBody] MediaLibraryPatchDto model)
 		{
 			return await _service.Patch(id, model);
 		}
@@ -92,7 +92,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 		[HttpPost("path-configuration-validation")]
 		[SwaggerOperation(OperationId = "ValidatePathConfiguration")]
 		public async Task<SingletonResponse<PathConfigurationValidateResult>> ValidatePathConfiguration(
-			[FromBody] PathConfigurationDto pathConfiguration)
+			[FromBody] PathConfiguration pathConfiguration)
 		{
 			return await _service.Test(pathConfiguration, 100);
 		}
@@ -114,7 +114,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 				return BaseResponseBuilder.BuildBadRequest($"{nameof(model.Path)} can not be empty");
 			}
 
-			var newPc = PathConfigurationDto.CreateDefault(model.Path);
+			var newPc = PathConfiguration.CreateDefault(model.Path);
 			var library = await _service.GetDto(id, MediaLibraryAdditionalItem.None);
 			(library!.PathConfigurations ??= []).Add(newPc);
 			return await _service.Put(library);
@@ -134,7 +134,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 			var libraries = model.NameAndPaths.Select(l =>
 			{
 				var (name, paths) = l;
-				return MediaLibraryDto.CreateDefault(name, cId, paths);
+				return MediaLibrary.CreateDefault(name, cId, paths);
 			}).ToArray();
 
 			await _service.AddRange(libraries);
@@ -154,7 +154,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 			}
 
 			var library = (await _service.GetDto(mlId, MediaLibraryAdditionalItem.None))!;
-			(library.PathConfigurations ??= []).AddRange(model.RootPaths.Select(PathConfigurationDto.CreateDefault)
+			(library.PathConfigurations ??= []).AddRange(model.RootPaths.Select(PathConfiguration.CreateDefault)
 				.ToArray());
 
 			return await _service.Put(library);
@@ -178,7 +178,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
 		[HttpGet("path-related-libraries")]
 		[SwaggerOperation(OperationId = "GetPathRelatedLibraries")]
-		public async Task<ListResponse<MediaLibraryDto>> GetPathRelativeLibraries(int libraryId, string currentPath,
+		public async Task<ListResponse<MediaLibrary>> GetPathRelativeLibraries(int libraryId, string currentPath,
 			string newPath)
 		{
 			var libraries = await _service.GetAllDto(null, MediaLibraryAdditionalItem.None);
@@ -208,7 +208,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
 				return false;
 			}).ToArray();
-			return new ListResponse<MediaLibraryDto>(conflictLibraries);
+			return new ListResponse<MediaLibrary>(conflictLibraries);
 		}
 	}
 }

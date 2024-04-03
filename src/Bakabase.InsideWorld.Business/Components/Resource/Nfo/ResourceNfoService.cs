@@ -25,15 +25,15 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo
             .Where(t => !t.IsAbstract && t.IsClass &&
                         t.IsAssignableTo(SpecificTypeUtils<IResourceNfoSerializer>.Type) &&
                         t.Namespace!.StartsWith(SpecificTypeUtils<ResourceNfoService>.Type.Namespace!))
-            .Select(t => Activator.CreateInstance(t) as IResourceNfoSerializer).ToDictionary(x => x!.Version, t => t);
+            .Select(t => Activator.CreateInstance(t) as IResourceNfoSerializer).ToDictionary(x => x!.Version, t => t!);
 
-        public static string Serialize(ResourceDto resource)
+        public static string Serialize(Business.Models.Domain.Resource resource)
         {
             var newestSerializer = Serializers[Serializers.Max(s => s.Key)];
             return newestSerializer.Serialize(resource);
         }
 
-        public static async Task<ResourceDto> Deserialize(string xmlOrPath)
+        public static async Task<Business.Models.Domain.Resource> Deserialize(string xmlOrPath)
         {
             if (xmlOrPath.IsNullOrEmpty())
             {
@@ -93,11 +93,11 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo
             return dto;
         }
 
-        public static string GetFullname(ResourceDto resource)
+        public static string GetFullname(Abstractions.Models.Domain.Resource resource)
         {
-            return resource.IsSingleFile
-                ? Path.Combine(resource.Directory, $"{Path.GetFileNameWithoutExtension(resource.RawName)}{Extension}")
-                : Path.Combine(resource.RawFullname, DefaultFilename);
+            return resource.IsFile
+                ? Path.Combine(resource.Directory, $"{Path.GetFileNameWithoutExtension(resource.FileName)}{Extension}")
+                : Path.Combine(resource.Path, DefaultFilename);
         }
 
         public const string Extension = ".nfo";

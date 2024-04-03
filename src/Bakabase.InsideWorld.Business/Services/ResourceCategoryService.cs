@@ -4,7 +4,13 @@ using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
+using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Models.Domain;
+using Bakabase.InsideWorld.Business.Models.Dto;
+using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
@@ -45,11 +51,11 @@ namespace Bakabase.InsideWorld.Business.Services
 
 		#region Infrastructures
 
-		public async Task<ListResponse<TComponent>> GetComponents<TComponent>([NotNull] ResourceCategoryDto category,
+		public async Task<ListResponse<TComponent>> GetComponents<TComponent>(Category category,
 			ComponentType type)
 			where TComponent : class, IComponent
 		{
-			var componentsData = category?.ComponentsData?.Where(a => a.ComponentType == type).ToArray();
+			var componentsData = category.ComponentsData?.Where(a => a.ComponentType == type).ToArray();
 			if (componentsData?.Any() != true)
 			{
 				return ListResponseBuilder<TComponent>.BuildBadRequest(
@@ -90,28 +96,28 @@ namespace Bakabase.InsideWorld.Business.Services
 			return BaseResponseBuilder.Ok;
 		}
 
-		public async Task<List<ResourceCategoryDto>> GetAllDto(Expression<Func<ResourceCategory, bool>> selector = null,
+		public async Task<List<Category>> GetAllDto(Expression<Func<ResourceCategory, bool>> selector = null,
 			ResourceCategoryAdditionalItem additionalItems = ResourceCategoryAdditionalItem.None)
 		{
 			var data = await base.GetAll(selector);
-			var dtoList = data.Select(d => d.ToDto()).ToArray();
+			var dtoList = data.Select(d => d.ToDomainModel()).ToArray();
 			await Populate(dtoList, additionalItems);
 			return dtoList.OrderBy(a => a.Order).ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
 		}
 
-		public async Task<ResourceCategoryDto> GetByKey(int id,
+		public async Task<Category> GetByKey(int id,
 			ResourceCategoryAdditionalItem additionalItems = ResourceCategoryAdditionalItem.None)
 		{
 			var c = await base.GetByKey(id);
-			var dto = c.ToDto();
+			var dto = c.ToDomainModel();
 			await Populate(dto, additionalItems);
 			return dto;
 		}
 
-		private async Task Populate(ResourceCategoryDto dto, ResourceCategoryAdditionalItem additionalItems) =>
+		private async Task Populate(Category dto, ResourceCategoryAdditionalItem additionalItems) =>
 			await Populate(new[] {dto}, additionalItems);
 
-		private async Task Populate(ResourceCategoryDto[] dtoList, ResourceCategoryAdditionalItem additionalItems)
+		private async Task Populate(Category[] dtoList, ResourceCategoryAdditionalItem additionalItems)
 		{
 			foreach (var rca in SpecificEnumUtils<ResourceCategoryAdditionalItem>.Values)
 			{
@@ -375,7 +381,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			return await UpdateRange(changed);
 		}
 
-		public async Task<BaseResponse> SaveDataFromSetupWizard(CategorySetupWizardRequestModel model)
+		public async Task<BaseResponse> SaveDataFromSetupWizard(CategorySetupWizardInputModel model)
 		{
 			var categoryModel = new ResourceCategoryAddRequestModel
 			{
@@ -446,7 +452,7 @@ namespace Bakabase.InsideWorld.Business.Services
 					if (m.Id > 0)
 					{
 						mediaLibraryOperationRsp = await MediaLibraryService.Patch(m.Id,
-							new MediaLibraryPatchRequestModel
+							new MediaLibraryPatchDto()
 							{
 								Name = m.Name,
 								Order = m.Order,
@@ -455,7 +461,7 @@ namespace Bakabase.InsideWorld.Business.Services
 					}
 					else
 					{
-						mediaLibraryOperationRsp = await MediaLibraryService.Add(new MediaLibraryCreateRequestModel
+						mediaLibraryOperationRsp = await MediaLibraryService.Add(new MediaLibraryCreateDto
 						{
 							CategoryId = categoryId,
 							Name = m.Name,

@@ -2,6 +2,7 @@
 using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.Infrastructures.Components.Jobs;
 using Bakabase.Infrastructures.Components.Orm;
+using Bakabase.InsideWorld.App.Core.Components;
 using Bakabase.InsideWorld.App.Core.Extensions;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Caching;
@@ -47,7 +48,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace Bakabase.InsideWorld.App.Core
 {
-    public class InsideWorldStartup : AppStartup
+    public class InsideWorldStartup : AppStartup<BakabaseSwaggerCustomModelDocumentFilter>
     {
         public InsideWorldStartup(IConfiguration configuration, IWebHostEnvironment env) : base(configuration, env)
         {

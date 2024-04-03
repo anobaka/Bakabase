@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 
         public record PropertyOptions
         {
-            public BulkModificationProperty Property { get; init; }
+            public BulkModificationFilterableProperty Property { get; init; }
 
             public HashSet<BulkModificationFilterOperation> AvailableOperations { get; set; } = [];
         }

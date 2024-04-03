@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import type { UniqueIdentifier } from '@dnd-kit/core';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import {
   arrayMove,

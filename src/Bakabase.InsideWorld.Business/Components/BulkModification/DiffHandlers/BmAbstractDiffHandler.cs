@@ -13,10 +13,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers
 {
     public abstract class BmAbstractDiffHandler<TValue> : IBulkModificationDiffHandler
     {
-        protected abstract BulkModificationProperty Property { get; }
-        protected abstract void SetProperty(ResourceDto resource, TValue? value, BulkModificationDiff diff);
-        public void Apply(ResourceDto resource, BulkModificationDiff diff) => ApplyOrRevert(resource, diff, true);
-        public void Revert(ResourceDto resource, BulkModificationDiff diff) => ApplyOrRevert(resource, diff, false);
+        protected abstract BulkModificationFilterableProperty Property { get; }
+        protected abstract void SetProperty(Models.Domain.Resource resource, TValue? value, BulkModificationDiff diff);
+        public void Apply(Models.Domain.Resource resource, BulkModificationDiff diff) => ApplyOrRevert(resource, diff, true);
+        public void Revert(Models.Domain.Resource resource, BulkModificationDiff diff) => ApplyOrRevert(resource, diff, false);
 
         /// <summary>
         /// 
@@ -24,7 +24,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers
         /// <param name="resource"></param>
         /// <param name="diff"></param>
         /// <param name="apply">True for applying, false for reverting</param>
-        protected virtual void ApplyOrRevert(ResourceDto resource, BulkModificationDiff diff, bool apply)
+        protected virtual void ApplyOrRevert(Models.Domain.Resource resource, BulkModificationDiff diff, bool apply)
         {
             if (diff.Property != Property)
             {

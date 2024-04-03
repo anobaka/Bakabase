@@ -25,7 +25,7 @@ export default () => {
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
   const gotoNewCategoryPage = (noCategory: boolean) => {
-    history!.push(`/category/setup-wizard?noCategory=${noCategory ? 1 : 0}`);
+    history!.push(`/category/setupWizard?noCategory=${noCategory ? 1 : 0}`);
   };
 
   const loadAllCategories = (cb: () => void = () => {

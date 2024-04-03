@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Mod
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
@@ -109,16 +110,16 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("{id:int}/filtered-resources")]
         [SwaggerOperation(OperationId = "GetBulkModificationFilteredResources")]
-        public async Task<ListResponse<ResourceDto>> GetFilteredResources(int id)
+        public async Task<ListResponse<Resource>> GetFilteredResources(int id)
         {
             var ids = (await _tempDataService.GetByKey(id))?.GetResourceIds().ToArray();
             if (ids == null)
             {
-                return new ListResponse<ResourceDto>(new List<ResourceDto>());
+                return new ListResponse<Resource>(new List<Resource>());
             }
 
             var resources = await _resourceService.GetByKeys(ids);
-            return new ListResponse<ResourceDto>(resources);
+            return new ListResponse<Resource>(resources);
         }
 
         [HttpDelete("{id:int}")]

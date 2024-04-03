@@ -46,7 +46,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
         /// <param name="resource"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async Task<Enhancement[]> Enhance(ResourceDto resource)
+        public async Task<Enhancement[]> Enhance(Models.Domain.Resource resource)
         {
             var enhancements = new List<Enhancement>();
 
@@ -62,7 +62,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
             };
             // Search: https://bgm.tv/subject_search/%E3%83%9F%E3%82%B9%E3%83%86%E3%83%AA%E3%81%A8%E8%A8%80%E3%81%86%E5%8B%BF%E3%82%8C+%E5%8B%BF%E8%A8%80%E6%8E%A8%E7%90%86?cat=all
             // Detail: https://bgm.tv/subject/338076
-            var keyword = resource.Name ?? Path.GetFileNameWithoutExtension(resource.RawName);
+            var keyword = resource.Name ?? Path.GetFileNameWithoutExtension(resource.FileName);
             var searchUrl = $"https://bgm.tv/subject_search/{WebUtility.UrlEncode(keyword)}?cat=all";
             var sampleUri = new Uri(searchUrl);
             var searchHtml = await client.GetStringAsync(searchUrl);

@@ -8,18 +8,16 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities.Implicit;
-using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
-	public record MediaLibrary
-	{
-		public int Id { get; set; }
-		[Required] public string Name { get; set; } = string.Empty;
-		[Required] public int CategoryId { get; set; }
-		public string? PathConfigurationsJson { get; set; }
-		public int Order { get; set; }
-		public int ResourceCount { get; set; }
-	}
+    public record MediaLibrary
+    {
+        public int Id { get; set; }
+        [Required] public string Name { get; set; } = string.Empty;
+        [Required] public int CategoryId { get; set; }
+        public string? PathConfigurationsJson { get; set; }
+        public int Order { get; set; }
+        [Obsolete] public int ResourceCount { get; set; }
+    }
 }

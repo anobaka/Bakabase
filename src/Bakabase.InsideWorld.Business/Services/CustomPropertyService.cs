@@ -4,11 +4,13 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Dto;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Extensions;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
@@ -28,7 +30,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		{
 		}
 
-		public async Task<List<CustomPropertyDto>> GetDtoList(Expression<Func<CustomProperty, bool>>? selector = null,
+		public async Task<List<Abstractions.Models.Domain.CustomProperty>> GetDtoList(Expression<Func<CustomProperty, bool>>? selector = null,
 			CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
 			bool returnCopy = true)
 		{
@@ -37,7 +39,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			return dtoList;
 		}
 
-		public async Task<Dictionary<int, List<CustomPropertyDto>>> GetByCategoryIds(int[] ids)
+		public async Task<Dictionary<int, List<Abstractions.Models.Domain.CustomProperty>>> GetByCategoryIds(int[] ids)
 		{
 			var mappings = await CategoryCustomPropertyMappingService.GetAll(x => ids.Contains(x.CategoryId));
 			var propertyIds = mappings.Select(x => x.PropertyId).ToHashSet();
@@ -48,10 +50,10 @@ namespace Bakabase.InsideWorld.Business.Services
 				x => x.Select(y => propertyMap.GetValueOrDefault(y.PropertyId)).Where(y => y != null).ToList())!;
 		}
 
-		private async Task<List<CustomPropertyDto>> ToDtoList(List<CustomProperty> properties,
+		private async Task<List<Abstractions.Models.Domain.CustomProperty>> ToDtoList(List<CustomProperty> properties,
 			CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
 		{
-			var dtoList = properties.Select(p => p.ToDto()!).ToList();
+			var dtoList = properties.Select(p => p.ToDomainModel()!).ToList();
 			foreach (var ai in SpecificEnumUtils<CustomPropertyAdditionalItem>.Values)
 			{
 				if (additionalItems.HasFlag(ai))
@@ -89,7 +91,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			return dtoList;
 		}
 
-		public async Task<CustomPropertyDto> Add(CustomPropertyAddOrPutRequestModel model)
+		public async Task<Abstractions.Models.Domain.CustomProperty> Add(CustomPropertyAddOrPutDto model)
 		{
 			var data = await Add(new CustomProperty
 			{
@@ -99,10 +101,10 @@ namespace Bakabase.InsideWorld.Business.Services
 				Type = model.Type
 			});
 
-			return data.Data.ToDto()!;
+			return data.Data.ToDomainModel()!;
 		}
 
-		public async Task<CustomPropertyDto> Put(int id, CustomPropertyAddOrPutRequestModel model)
+		public async Task<Abstractions.Models.Domain.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model)
 		{
 			var rsp = await UpdateByKey(id, cp =>
 			{
@@ -111,7 +113,7 @@ namespace Bakabase.InsideWorld.Business.Services
 				cp.Type = model.Type;
 			});
 
-			return rsp.Data.ToDto()!;
+			return rsp.Data.ToDomainModel()!;
 		}
 
 		public override async Task<BaseResponse> RemoveByKey(int id)

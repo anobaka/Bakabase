@@ -51,9 +51,9 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
             return Task.FromResult((string)null);
         }
 
-        public async Task<Enhancement[]> Enhance(ResourceDto resource)
+        public async Task<Enhancement[]> Enhance(Business.Models.Domain.Resource resource)
         {
-            var match = CodeRegex.Match(resource.RawName);
+            var match = CodeRegex.Match(resource.FileName);
             var enhancements = new List<Enhancement>();
             if (match.Success)
             {

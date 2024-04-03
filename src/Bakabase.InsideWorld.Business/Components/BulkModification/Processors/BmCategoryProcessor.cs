@@ -12,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors
 {
     public class BmCategoryProcessor : BmAbstractBmProcessor<int>
     {
-        protected override Task ProcessInternal(int value, ResourceDto resource, Dictionary<string, string?> variables,
+        protected override Task ProcessInternal(int value, Models.Domain.Resource resource, Dictionary<string, string?> variables,
             string? propertyKey)
         {
             resource.CategoryId = value;
@@ -22,6 +22,6 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors
         protected override int ParseProcessorValue(BulkModificationProcess process) =>
             process.ToCategoryProcessorValue();
 
-        protected override BulkModificationProperty TargetProperty => BulkModificationProperty.Category;
+        protected override BulkModificationFilterableProperty TargetProperty => BulkModificationFilterableProperty.Category;
     }
 }

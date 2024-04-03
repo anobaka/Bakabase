@@ -16,6 +16,7 @@ const asideMenuConfig: IMenuItem[] = [
   {
     name: 'Media library',
     icon: 'ProductOutlined',
+    path: '/expandable-1',
     children: [
       {
         name: 'Category',
@@ -37,6 +38,7 @@ const asideMenuConfig: IMenuItem[] = [
   {
     name: 'Data',
     icon: 'DatabaseOutlined',
+    path: '/expandable-2',
     children: [
       {
         name: 'Resource property',
@@ -73,6 +75,7 @@ const asideMenuConfig: IMenuItem[] = [
   {
     name: 'Tools',
     icon: 'ToolOutlined',
+    path: '/expandable-3',
     children: [
       {
         name: 'File Processor',
@@ -99,6 +102,7 @@ const asideMenuConfig: IMenuItem[] = [
   {
     name: 'System',
     icon: 'SettingOutlined',
+    path: '/expandable-4',
     children: [
       {
         name: 'Configuration',
@@ -120,7 +124,7 @@ const asideMenuConfig: IMenuItem[] = [
   },
   ...(process.env.ICE_CORE_MODE == 'development' ? [{
     name: 'Test',
-    path: '/test',
+    path: '/expandable-5',
     icon: 'Folderorganizer',
     children: [
       {

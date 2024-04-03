@@ -6897,51 +6897,6 @@ export const PatchResourceURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveResource
- * url: RemoveResourceURL
- * method: RemoveResource_TYPE
- * raw_url: RemoveResource_RAW_URL
- * @param id - 
- */
-export const RemoveResource = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const RemoveResource_RAW_URL = function() {
-  return '/resource/{id}'
-}
-export const RemoveResource_TYPE = function() {
-  return 'delete'
-}
-export const RemoveResourceURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: UpdateResourceTags
  * url: UpdateResourceTagsURL
  * method: UpdateResourceTags_TYPE
@@ -7021,55 +6976,6 @@ export const OpenResourceDirectoryURL = function(parameters = {}) {
   if (parameters['id'] !== undefined) {
     queryParameters['id'] = parameters['id']
   }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: UpdateResourceRawName
- * url: UpdateResourceRawNameURL
- * method: UpdateResourceRawName_TYPE
- * raw_url: UpdateResourceRawName_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const UpdateResourceRawName = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/{id}/raw-name'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const UpdateResourceRawName_RAW_URL = function() {
-  return '/resource/{id}/raw-name'
-}
-export const UpdateResourceRawName_TYPE = function() {
-  return 'delete'
-}
-export const UpdateResourceRawNameURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/raw-name'
-  path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

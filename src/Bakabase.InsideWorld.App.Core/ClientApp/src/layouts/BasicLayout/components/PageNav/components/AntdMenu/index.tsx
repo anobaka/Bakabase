@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import type { MenuProps } from 'antd';
 import { Menu } from 'antd';
-import { history } from 'ice';
+import { history, useLocation } from 'ice';
 import { useTranslation } from 'react-i18next';
 import type { IMenuItem } from '../../menuConfig';
 import { asideMenuConfig } from '../../menuConfig';
@@ -17,6 +17,9 @@ const IconStyle = { fontSize: 16 };
 
 const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
+
+  console.log(pathname);
 
   const onClick: MenuProps['onClick'] = (e) => {
     history!.push(e.key);
@@ -39,15 +42,38 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   }
 
   function convertItem(item: IMenuItem) {
-    return getItem(t(item.name), item.path, <Icon type={item.icon} style={IconStyle} />, item.children?.map(convertItem));
+    return getItem(t(item.name), item.path, <Icon
+      type={item.icon}
+      style={IconStyle}
+    />, item.children?.map(convertItem));
   }
 
   const items: MenuProps['items'] = asideMenuConfig.map(convertItem);
 
+  const defaultOpenKeysRef = useRef(asideMenuConfig.filter(m => m.children?.some(c => pathname.includes(c.path!))).map(m => m.path!));
+  const defaultSelectedKeysRef = useRef([(() => {
+    for (const m of asideMenuConfig) {
+      if (m.path === pathname) {
+        return pathname;
+      }
+      for (const c of m.children || []) {
+        if (pathname.includes(c.path!)) {
+          return c.path!;
+        }
+      }
+    }
+    return '';
+  })()]);
 
   return (
     <Menu
-      style={{ background: 'none', border: 'none', width: '100%' }}
+      defaultOpenKeys={defaultOpenKeysRef.current}
+      defaultSelectedKeys={defaultSelectedKeysRef.current}
+      style={{
+        background: 'none',
+        border: 'none',
+        width: '100%',
+      }}
       inlineCollapsed={collapsed}
       onClick={onClick}
       mode="inline"

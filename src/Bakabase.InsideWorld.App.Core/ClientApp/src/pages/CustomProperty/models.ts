@@ -1,5 +1,5 @@
 import { CustomPropertyType } from '@/sdk/constants';
-import type { IProperty } from '@/components/Property/models';
+
 export interface ICustomProperty {
   id: number;
   name: string;

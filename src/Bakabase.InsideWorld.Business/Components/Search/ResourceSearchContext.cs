@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
+using Bakabase.Abstractions.Models.Domain;
 
 namespace Bakabase.InsideWorld.Business.Components.Search
 {
@@ -9,7 +9,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 		public HashSet<int> AllResourceIds { get; }
 		public HashSet<int> ResourceIdCandidates { get; }
 
-		public ResourceSearchContext(IEnumerable<Models.Models.Entities.Resource> allResources)
+		public ResourceSearchContext(IEnumerable<Abstractions.Models.Db.Resource> allResources)
 		{
 			ResourcesPool = allResources.ToDictionary(x => x.Id, x => x);
 			ResourceIdCandidates = ResourcesPool.Keys.ToHashSet();
@@ -18,9 +18,9 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 
 		public Dictionary<string, HashSet<string>>? Aliases;
 
-		public Dictionary<int, Dictionary<int, CustomPropertyValueDto?>?>? CustomPropertyDataPool;
+		public Dictionary<int, Dictionary<int, CustomPropertyValue?>?>? CustomPropertyDataPool;
 
-		public Dictionary<int, Models.Models.Entities.Resource>? ResourcesPool { get; }
+		public Dictionary<int, Abstractions.Models.Db.Resource>? ResourcesPool { get; }
 
 		/// <summary>
 		/// FavoritesId - ResourceIds
@@ -31,6 +31,6 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 		/// </summary>
 		public Dictionary<int, HashSet<int>>? TagResourceDataPool { get; set; }
 
-		public Dictionary<int, CustomPropertyDto>? PropertiesDataPool { get; set; }
+		public Dictionary<int, CustomProperty>? PropertiesDataPool { get; set; }
 	}
 }

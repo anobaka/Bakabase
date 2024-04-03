@@ -13,8 +13,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
     {
         public static BmFileCreateDtFilterExpressionBuilder Instance = new();
 
-        protected override BulkModificationProperty Property => BulkModificationProperty.FileCreateDt;
-        protected override DateTime? GetValue(ResourceDto resource)
+        protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.FileCreateDt;
+        protected override DateTime? GetValue(Models.Domain.Resource resource)
         {
             return resource.FileCreateDt;
         }

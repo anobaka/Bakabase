@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public interface IBulkModificationDiffHandler
     {
-        void Apply(ResourceDto resource, BulkModificationDiff diff);
-        void Revert(ResourceDto resource, BulkModificationDiff diff);
+        void Apply(Business.Models.Domain.Resource resource, BulkModificationDiff diff);
+        void Revert(Business.Models.Domain.Resource resource, BulkModificationDiff diff);
     }
 }

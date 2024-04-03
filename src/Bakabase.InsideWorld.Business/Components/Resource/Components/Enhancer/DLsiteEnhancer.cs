@@ -59,10 +59,10 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
         private const string InfoJsonUrlTemplate =
             "https://www.dlsite.com/books/product/info/ajax?product_id={0}&cdn_cache_min=1";
 
-        public async Task<Enhancement[]> Enhance(ResourceDto resource)
+        public async Task<Enhancement[]> Enhance(Models.Domain.Resource resource)
         {
             // BJ/VJ/RJ
-            var match = Regex.Match(resource.RawName);
+            var match = Regex.Match(resource.FileName);
             var enhancements = new List<Enhancement>();
             if (match.Success)
             {

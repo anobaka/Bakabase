@@ -9,6 +9,6 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.
 {
     public interface IEnhancer : IComponent
     {
-        Task<Enhancement[]> Enhance(ResourceDto resource);
+        Task<Enhancement[]> Enhance(Models.Domain.Resource resource);
     }
 }

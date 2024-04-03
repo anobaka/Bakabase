@@ -11,6 +11,6 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public interface IBulkModificationFilterExpressionBuilder
     {
-        Expression<Func<ResourceDto, bool>> Build(BulkModificationFilter filter);
+        Expression<Func<Business.Models.Domain.Resource, bool>> Build(BulkModificationFilter filter);
     }
 }

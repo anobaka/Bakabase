@@ -14,9 +14,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System.Threading.Channels;
+using Bakabase.Abstractions.Models.Db;
+using Bakabase.InsideWorld.Business.Models.Domain;
+using Bakabase.InsideWorld.Business.Models.Dto;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.InsideWorld.Models.Models.Entities.Implicit;
 using InsideWorld.Migrations.V171.Legacy.Models;
 
 namespace InsideWorld.Migrations.V171
@@ -89,9 +91,9 @@ namespace InsideWorld.Migrations.V171
 				        }
 				        if (changed)
 				        {
-					        await mlService.Patch(ml.Id, new MediaLibraryPatchRequestModel
+					        await mlService.Patch(ml.Id, new MediaLibraryPatchDto
 					        {
-						        PathConfigurations = pcs.Select(p => new PathConfigurationDto
+						        PathConfigurations = pcs.Select(p => new PathConfiguration
 						        {
                                     FixedTagIds = p.FixedTagIds,
                                     Path = p.Path,

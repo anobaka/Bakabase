@@ -30,7 +30,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
-using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bootstrap.Components.Configuration.Abstractions;
 using SearchOption = System.IO.SearchOption;
@@ -38,6 +37,9 @@ using Volume = Bakabase.InsideWorld.Models.Models.Entities.Volume;
 using System.Drawing.Imaging;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Dto;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
@@ -45,20 +47,22 @@ using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 using Bootstrap.Models.Constants;
 using CliWrap;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using StackExchange.Redis;
 using IComparer = System.Collections.IComparer;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Resource = Bakabase.InsideWorld.Business.Models.Domain.Resource;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-	public class ResourceService
+    public class ResourceService
 	{
-		private readonly FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int> _orm;
+		private readonly FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int> _orm;
 		private readonly SpecialTextService _specialTextService;
 		private readonly PublisherService _publisherService;
 		private readonly AliasService _aliasService;
@@ -128,7 +132,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			_customPropertyService = customPropertyService;
 			_customPropertyValueService = customPropertyValueService;
 			_resourceSearchContextProcessor = resourceSearchContextProcessor;
-			_orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>(serviceProvider);
+			_orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(serviceProvider);
 		}
 
 		public InsideWorldDbContext DbContext => _orm.DbContext;
@@ -224,64 +228,13 @@ namespace Bakabase.InsideWorld.Business.Services
 			return BaseResponseBuilder.Ok;
 		}
 
-		public async Task<BaseResponse> UpdateRawName(int id, string rawName)
-		{
-			if (rawName.IsNotEmpty() && rawName.RemoveInvalidFileNameChars() != rawName)
-			{
-				return BaseResponseBuilder.BuildBadRequest("Invalid characters are found in filename");
-			}
-
-			var resource = await _orm.GetByKey(id);
-			if (resource.RawName != rawName)
-			{
-				var currentFullname = resource.RawFullname;
-				resource.RawName = rawName;
-				Directory.Move(currentFullname, resource.RawFullname);
-				await _orm.Update(resource);
-				// await Resync(id);
-			}
-
-			return BaseResponseBuilder.Ok;
-		}
-
 		public Task RemoveByMediaLibraryIdsNotIn(int[] ids)
 		{
 			return _orm.RemoveAll(r => !ids.Contains(r.MediaLibraryId));
 		}
-
-		public Task RemoveByKey(int id, bool removeFiles)
+		public async Task RemoveByKeys(int[] ids)
 		{
-			return RemoveByKeys(new[] {id}, removeFiles);
-		}
-
-		public async Task RemoveByKeys(int[] ids, bool removeFiles)
-		{
-			if (removeFiles)
-			{
-				var resources = await _orm.GetByKeys(ids);
-				foreach (var resource in resources)
-				{
-					RemoveAllRelativeFiles(resource);
-				}
-			}
-
 			await _orm.RemoveByKeys(ids);
-		}
-
-		public void RemoveAllRelativeFiles(Resource resource)
-		{
-			if (resource.RawFullname.IsNotEmpty())
-			{
-				if (File.Exists(resource.RawFullname))
-				{
-					FileUtils.Delete(resource.RawFullname, true, true);
-				}
-
-				if (Directory.Exists(resource.RawFullname))
-				{
-					DirectoryUtils.Delete(resource.RawFullname, true, true);
-				}
-			}
 		}
 
 		public async Task LogicallyRemoveByCategoryId(int categoryId)
@@ -289,15 +242,15 @@ namespace Bakabase.InsideWorld.Business.Services
 			await _orm.RemoveAll(x => x.CategoryId == categoryId);
 		}
 
-		public async Task<List<ResourceDto>> GetAll(
+		public async Task<List<Models.Domain.Resource>> GetAll(
 			ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
 		{
 			var data = await _orm.GetAll();
-			var dtoList = await ToDto(data.ToArray(), additionalItems);
+			var dtoList = await ToDomainModel(data.ToArray(), additionalItems);
 			return dtoList;
 		}
 
-		public async Task<SearchResponse<ResourceDto>> SearchV2(ResourceSearchRequestModelV2 model, bool asNoTracking)
+		public async Task<SearchResponse<Resource>> SearchV2(ResourceSearchDto model, bool save, bool asNoTracking)
 		{
 			var allResources = await GetAllEntities(null, false);
 			var context = new ResourceSearchContext(allResources);
@@ -305,12 +258,12 @@ namespace Bakabase.InsideWorld.Business.Services
 			var resourceIds = await SearchResourceIds(model.Group, context);
 			var ordersForSearch = model.Orders.BuildForSearch();
 
-			Func<Resource, bool>? exp = resourceIds == null ? null : r => resourceIds.Contains(r.Id);
+			Func<Abstractions.Models.Db.Resource, bool>? exp = resourceIds == null ? null : r => resourceIds.Contains(r.Id);
 
 			var resources = await _orm.Search(exp, model.PageIndex, model.PageSize, ordersForSearch, asNoTracking);
-			var dtoList = await ToDto(resources.Data.ToArray(), ResourceAdditionalItem.All);
+			var dtoList = await ToDomainModel(resources.Data.ToArray(), ResourceAdditionalItem.All);
 
-            if (model.Save)
+            if (save)
             {
                 await _optionsManager.SaveAsync(a => a.LastSearchV2 = model);
             }
@@ -416,35 +369,35 @@ namespace Bakabase.InsideWorld.Business.Services
 			return result;
 		}
 
-		public async Task<List<Resource>> GetAll(Expression<Func<Resource, bool>> selector = null,
+		public async Task<List<Abstractions.Models.Db.Resource>> GetAll(Expression<Func<Abstractions.Models.Db.Resource, bool>> selector = null,
 			bool returnCopy = true) => await _orm.GetAll(selector, returnCopy);
 
-		public async Task<Resource?> GetByKey(int id, bool returnCopy)
+		public async Task<Abstractions.Models.Db.Resource?> GetByKey(int id, bool returnCopy)
 		{
 			var resource = await _orm.GetByKey(id, returnCopy);
 			return resource;
 		}
 
-		public async Task<ResourceDto?> GetByKey(int id, ResourceAdditionalItem additionalItems, bool returnCopy)
+		public async Task<Models.Domain.Resource?> GetByKey(int id, ResourceAdditionalItem additionalItems, bool returnCopy)
 		{
 			var resource = await _orm.GetByKey(id, returnCopy);
-			return await ToDto(resource, additionalItems);
+			return await ToDomainModel(resource, additionalItems);
 		}
 
-		public async Task<List<ResourceDto>> GetByKeys(int[] ids)
+		public async Task<List<Models.Domain.Resource>> GetByKeys(int[] ids)
 		{
 			var resources = await _orm.GetByKeys(ids);
-			var dtoList = await ToDto(resources, ResourceAdditionalItem.All);
+			var dtoList = await ToDomainModel(resources, ResourceAdditionalItem.All);
 			return dtoList;
 		}
 
-		public async Task<ResourceDto> ToDto(Resource resource,
+		public async Task<Models.Domain.Resource> ToDomainModel(Abstractions.Models.Db.Resource resource,
 			ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
 		{
-			return (await ToDto([resource], additionalItems)).FirstOrDefault()!;
+			return (await ToDomainModel([resource], additionalItems)).FirstOrDefault()!;
 		}
 
-		public async Task<List<ResourceDto>> ToDto(Resource[] resources,
+		public async Task<List<Models.Domain.Resource>> ToDomainModel(Abstractions.Models.Db.Resource[] resources,
 			ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
 		{
 			var resourceIds = resources.Select(a => a.Id).ToList();
@@ -455,7 +408,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			Dictionary<int, List<OriginalDto>> originalPool = null;
 			Dictionary<int, List<TagDto>> tagPool = null;
 			Dictionary<int, List<CustomResourceProperty>> customPropertyPool = null;
-			Dictionary<int, Dictionary<CustomPropertyDto, CustomPropertyValueDto?>?>? customPropertiesPoolV2 = null;
+			Dictionary<int, Dictionary<CustomProperty, CustomPropertyValue?>?>? customPropertiesPoolV2 = null;
 
 			foreach (var i in SpecificEnumUtils<ResourceAdditionalItem>.Values)
 			{
@@ -529,7 +482,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
 			var dtoList = resources.Select(a =>
 			{
-				var dto = a.ToDto();
+				var dto = a.ToDomainModel()!;
 				if (publisherPool?.TryGetValue(dto.Id, out var ps) == true)
 				{
 					dto.Publishers = ps;
@@ -582,7 +535,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			return dtoList;
 		}
 
-		public async Task<List<Resource>> GetAllEntities(Expression<Func<Resource, bool>>? selector = null,
+		public async Task<List<Abstractions.Models.Db.Resource>> GetAllEntities(Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
 			bool returnCopy = true)
 		{
 			return await _orm.GetAll(selector, returnCopy);
@@ -597,17 +550,17 @@ namespace Bakabase.InsideWorld.Business.Services
 		/// <param name="srs"></param>
 		/// <returns></returns>
 		[Obsolete($"Use {nameof(AddOrPutRange)} instead, or wait a new {nameof(AddOrPatchRange)} method.")]
-		public async Task<ResourceRangeAddOrUpdateResult> AddOrPatchRange(List<ResourceDto> srs)
+		public async Task<ResourceRangeAddOrUpdateResult> AddOrPatchRange(List<Resource> srs)
 		{
-			var tmpResources = srs?.ToList() ?? new List<ResourceDto>();
-			var simpleResourceMap = new Dictionary<string, ResourceDto>();
+			var tmpResources = srs?.ToList() ?? new List<Resource>();
+			var simpleResourceMap = new Dictionary<string, Resource>();
 			foreach (var s in tmpResources)
 			{
 				s.Clean();
-				simpleResourceMap.TryAdd(s.RawFullname, s);
+				simpleResourceMap.TryAdd(s.Path, s);
 			}
 
-			var parents = tmpResources.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a.RawFullname)
+			var parents = tmpResources.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a!.Path)
 				.Select(a => a.FirstOrDefault()).ToList();
 			if (parents.Any())
 			{
@@ -628,12 +581,12 @@ namespace Bakabase.InsideWorld.Business.Services
 				var aliasAddResult = await _aliasService.AddRange(allNames!);
 
 				// Resources
-				var resources = tmpResources.Select(a => a.ToEntity()).ToList();
+				var resources = tmpResources.Select(a => a.ToDbModel()!).ToList();
 				var existedResources = resources.Where(a => a.Id > 0).ToList();
 				var newResources = resources.Except(existedResources).ToList();
 				await _orm.UpdateRange(existedResources);
 				resources = (await _orm.AddRange(newResources)).Data.Concat(existedResources).ToList();
-				resources.ForEach(a => { simpleResourceMap[a.RawFullname].Id = a.Id; });
+				resources.ForEach(a => { simpleResourceMap[a.BuildPath()].Id = a.Id; });
 
 				// Publishers
 				// Changed items will be replaced instead of being updated. 
@@ -815,16 +768,16 @@ namespace Bakabase.InsideWorld.Business.Services
 		/// </summary>
 		/// <param name="resourceDtoList"></param>
 		/// <returns></returns>
-		public async Task<ResourceRangeAddOrUpdateResult> AddOrPutRange(List<ResourceDto> resourceDtoList)
+		public async Task<ResourceRangeAddOrUpdateResult> AddOrPutRange(List<Models.Domain.Resource> resourceDtoList)
 		{
-			var resourceDtoMap = new Dictionary<string, ResourceDto>();
+			var resourceDtoMap = new Dictionary<string, Models.Domain.Resource>();
 			foreach (var s in resourceDtoList)
 			{
 				s.Clean();
-				resourceDtoMap.TryAdd(s.RawFullname, s);
+				resourceDtoMap.TryAdd(s.Path, s);
 			}
 
-			var parents = resourceDtoList.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a!.RawFullname)
+			var parents = resourceDtoList.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a!.Path)
 				.Select(a => a.FirstOrDefault()).ToList();
 			if (parents.Any())
 			{
@@ -849,12 +802,12 @@ namespace Bakabase.InsideWorld.Business.Services
 
 				#region Resources
 
-				var resources = resourceDtoList.Select(a => a.ToEntity()).ToList();
+				var resources = resourceDtoList.Select(a => a.ToDbModel()!).ToList();
 				var existedResources = resources.Where(a => a.Id > 0).ToList();
 				var newResources = resources.Except(existedResources).ToList();
 				await _orm.UpdateRange(existedResources);
 				resources = (await _orm.AddRange(newResources)).Data.Concat(existedResources).ToList();
-				resources.ForEach(a => { resourceDtoMap[a.RawFullname].Id = a.Id; });
+				resources.ForEach(a => { resourceDtoMap[a.BuildPath()].Id = a.Id; });
 
 				#endregion
 
@@ -1061,7 +1014,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		/// </summary>
 		/// <returns></returns>
 
-		private async Task ReplaceWithPreferredAlias(IReadOnlyCollection<ResourceDto> resources)
+		private async Task ReplaceWithPreferredAlias(IReadOnlyCollection<Models.Domain.Resource> resources)
 		{
 			var names = resources.SelectMany(a =>
 			{
@@ -1126,7 +1079,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
 				var options = _optionsManager.Value;
 				var c = await _categoryService.GetByKey(r.CategoryId, ResourceCategoryAdditionalItem.None);
-				var result = await DiscoverCover(r.RawFullname, ct,
+				var result = await DiscoverCover(r.Path, ct,
 					c?.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending,
 					options.AdditionalCoverDiscoveringSources);
 				if (result.HasValue)
@@ -1153,7 +1106,7 @@ namespace Bakabase.InsideWorld.Business.Services
 					ComponentType.PlayableFileSelector);
 				if (selector.Data != null)
 				{
-					var files = await selector.Data.GetStartFiles(r.RawFullname, ct);
+					var files = await selector.Data.GetStartFiles(r.Path, ct);
 					return files.Select(f => f.StandardizePath()!).ToArray();
 				}
 			}
@@ -1479,7 +1432,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			private const uint SHGSI_SMALLICON = 0x1;
 		}
 
-		public async Task<List<ResourceDto>> GetNfoGenerationNeededResources(int[] resourceIds)
+		public async Task<List<Models.Domain.Resource>> GetNfoGenerationNeededResources(int[] resourceIds)
 		{
 			var categories = await _categoryService.GetAll(t => t.GenerateNfo, true);
 			var categoryIds = categories.Select(t => t.Id).ToHashSet();
@@ -1494,7 +1447,7 @@ namespace Bakabase.InsideWorld.Business.Services
 				$"{nameof(ResourceService)}:BatchUpdateTags", true);
 		}
 
-		public async Task SaveNfo(ResourceDto resource, bool overwrite, CancellationToken ct = new())
+		public async Task SaveNfo(Models.Domain.Resource resource, bool overwrite, CancellationToken ct = new())
 		{
 			var nfoFullname = ResourceNfoService.GetFullname(resource);
 			if (!resource.EnoughToGenerateNfo())
@@ -1582,7 +1535,7 @@ namespace Bakabase.InsideWorld.Business.Services
 				if (category.GenerateNfo)
                 {
                     var resources = (await GetAll(r => r.CategoryId == c.Id, false)).ToArray();
-                    var dtoList = await ToDto(resources, ResourceAdditionalItem.All);
+                    var dtoList = await ToDomainModel(resources, ResourceAdditionalItem.All);
 					totalCount += dtoList.Count;
 					foreach (var r in dtoList)
 					{
@@ -1766,11 +1719,11 @@ namespace Bakabase.InsideWorld.Business.Services
 			}
 
 			var saveTarget = saveLocation ??
-			                 _optionsManager.Value.CoverOptions.SaveLocation ?? (resource.IsSingleFile
+			                 _optionsManager.Value.CoverOptions.SaveLocation ?? (resource.IsFile
 				                 ? CoverSaveLocation.TempDirectory
 				                 : CoverSaveLocation.ResourceDirectory);
 
-			if (resource.IsSingleFile && saveTarget == CoverSaveLocation.ResourceDirectory)
+			if (resource.IsFile && saveTarget == CoverSaveLocation.ResourceDirectory)
 			{
 				return SingletonResponseBuilder<(string Path, byte[] Data)>.BuildBadRequest(
 					_localizer.Resource_CoverMustBeInDirectory());
@@ -1780,10 +1733,10 @@ namespace Bakabase.InsideWorld.Business.Services
 
 			if (saveTarget == CoverSaveLocation.ResourceDirectory)
 			{
-				if (Directory.Exists(resource.RawFullname))
+				if (Directory.Exists(resource.Path))
 				{
-					var coverFileFullnamePrefix = Path.Combine(resource.RawFullname, "cover");
-					var currentCoverFileFullname = Directory.GetFiles(resource.RawFullname)
+					var coverFileFullnamePrefix = Path.Combine(resource.Path, "cover");
+					var currentCoverFileFullname = Directory.GetFiles(resource.Path)
 						.FirstOrDefault(t => t.StartsWith(coverFileFullnamePrefix));
 					if (currentCoverFileFullname != null)
 					{
@@ -1804,7 +1757,7 @@ namespace Bakabase.InsideWorld.Business.Services
 				else
 				{
 					return SingletonResponseBuilder<(string Path, byte[] Data)>.BuildBadRequest(
-						_localizer.PathIsNotFound(resource.RawFullname));
+						_localizer.PathIsNotFound(resource.Path));
 				}
 			}
 			else

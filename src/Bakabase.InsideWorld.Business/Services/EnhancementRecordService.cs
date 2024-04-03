@@ -9,12 +9,14 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Tasks;
+using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Business.Resources;
-using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
@@ -33,6 +35,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Resource = Bakabase.Abstractions.Models.Db.Resource;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -279,7 +282,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         EnhancerName = cd.Name,
                         ResourceId = rId,
                         RuleId = et.RuleIdMap[cd.Id],
-                        ResourceRawFullName = resource.RawFullname
+                        ResourceRawFullName = resource.Path
                     };
                     records.Add(n);
                     var enhancements1 = enhancerEnhancements;
@@ -491,9 +494,9 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 foreach (var file in files)
                                 {
-                                    var fullname = resource.IsSingleFile
+                                    var fullname = resource.IsFile
                                         ? Path.Combine(resource.Directory, file.RelativePath)
-                                        : Path.Combine(resource.RawFullname, file.RelativePath);
+                                        : Path.Combine(resource.Path, file.RelativePath);
                                     if (!File.Exists(fullname))
                                     {
                                         await File.WriteAllBytesAsync(fullname, file.Data);
@@ -520,7 +523,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                 }
 
-                await ResourceService.AddOrPatchRange(new List<ResourceDto> {resource});
+                await ResourceService.AddOrPatchRange(new List<Models.Domain.Resource> {resource});
                 await AddRange(records);
 
                 doneCount++;

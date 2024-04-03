@@ -52,14 +52,14 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers
             return nfo;
         }
 
-        protected override ResourceDto ToResource(ResourceNfoV0 nfo)
+        protected override Business.Models.Domain.Resource ToResource(ResourceNfoV0 nfo)
         {
             if (nfo == null)
             {
                 return null;
             }
 
-            return new ResourceDto
+            return new Business.Models.Domain.Resource()
             {
                 Tags = nfo.Tags?.Select(t => new TagDto {Name = t}).ToList(),
                 Rate = nfo.Rate,
@@ -71,7 +71,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers
             };
         }
 
-        protected override ResourceNfoV0 ToNfo(ResourceDto resource)
+        protected override ResourceNfoV0 ToNfo(Business.Models.Domain.Resource resource)
         {
             if (resource == null)
             {

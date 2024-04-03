@@ -18,9 +18,12 @@ using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Models.Domain;
+using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
-using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
@@ -53,7 +56,7 @@ using Image = SixLabors.ImageSharp.Image;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
 {
-	[Route("~/resource")]
+    [Route("~/resource")]
 	public class ResourceController : Controller
 	{
 		private readonly ResourceService _service;
@@ -113,16 +116,16 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
 		[HttpPost("search/v2")]
 		[SwaggerOperation(OperationId = "SearchResourcesV2")]
-		public async Task<SearchResponse<ResourceDto>> Search([FromBody] ResourceSearchRequestModelV2 model)
+		public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model)
 		{
-			return await _service.SearchV2(model, false);
+			return await _service.SearchV2(model, model.Save, false);
 		}
 
 		[HttpGet("keys")]
 		[SwaggerOperation(OperationId = "GetResourcesByKeys")]
-		public async Task<ListResponse<ResourceDto>> GetByKeys([FromQuery] int[] ids)
+		public async Task<ListResponse<Resource>> GetByKeys([FromQuery] int[] ids)
 		{
-			return new ListResponse<ResourceDto>(await _service.GetByKeys(ids));
+			return new ListResponse<Resource>(await _service.GetByKeys(ids));
 		}
 
 		[HttpPut("{id}")]
@@ -145,7 +148,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 		public async Task<BaseResponse> Open(int id)
 		{
 			var resource = await _service.GetByKey(id, ResourceAdditionalItem.None, false);
-			var rawFileOrDirectoryName = Path.Combine(resource.Directory, resource.RawName);
+			var rawFileOrDirectoryName = Path.Combine(resource.Path);
 			// https://github.com/Bakabase/InsideWorld/issues/51
 			if (!System.IO.File.Exists(rawFileOrDirectoryName) && !Directory.Exists(rawFileOrDirectoryName))
 			{
@@ -156,21 +159,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 			FileService.Open(rawFileOrDirectoryName,
 				(rawAttributes & FileAttributes.Directory) != FileAttributes.Directory);
 			return BaseResponseBuilder.Ok;
-		}
-
-		[HttpDelete("{id}")]
-		[SwaggerOperation(OperationId = "RemoveResource")]
-		public async Task<BaseResponse> Remove(int id)
-		{
-			await _service.RemoveByKey(id, true);
-			return BaseResponseBuilder.Ok;
-		}
-
-		[HttpDelete("{id}/raw-name")]
-		[SwaggerOperation(OperationId = "UpdateResourceRawName")]
-		public async Task<BaseResponse> UpdateRawName(int id, [FromBody] ResourceRawNameUpdateRequestModel model)
-		{
-			return await _service.UpdateRawName(id, model.RawName);
 		}
 
 		[HttpGet("{id}/cover")]
@@ -278,7 +266,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 				{
 					var resourceService = sp.GetRequiredService<ResourceService>();
 					bt.Message = _localizer.Resource_MovingTaskSummary(
-						resources.Select(r => r.Value.DisplayName).ToArray(), mediaLibrary?.Name, model.Path);
+						resources.Select(r => r.Value.FileName).ToArray(), mediaLibrary?.Name, model.Path);
 					foreach (var id in model.Ids)
 					{
 						await _resourceTaskManager.Add(new ResourceTaskInfo
@@ -293,15 +281,15 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
 					foreach (var (id, resource) in resources)
 					{
-						if (resource.IsSingleFile)
+						if (resource.IsFile)
 						{
-							await FileUtils.MoveAsync(resource.RawFullname, model.Path, false,
+							await FileUtils.MoveAsync(resource.Path, model.Path, false,
 								async p => { await _resourceTaskManager.Update(id, t => t.Percentage = p); },
 								bt.Cts.Token);
 						}
 						else
 						{
-							await DirectoryUtils.MoveAsync(resource.RawFullname, model.Path, false,
+							await DirectoryUtils.MoveAsync(resource.Path, model.Path, false,
 								async p => { await _resourceTaskManager.Update(id, t => t.Percentage = p); },
 								bt.Cts.Token);
 						}
@@ -320,7 +308,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 							var resourceDto = (await resourceService.GetByKey(id, ResourceAdditionalItem.All, true))!;
 							resourceDto.MediaLibraryId = mediaLibrary.Id;
 							resourceDto.CategoryId = mediaLibrary.CategoryId;
-							await resourceService.AddOrPatchRange(new List<ResourceDto> {resourceDto});
+							await resourceService.AddOrPatchRange(new List<Resource> {resourceDto});
 						}
 
 						await _resourceTaskManager.Clear(id);
@@ -383,7 +371,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 		[SwaggerOperation(OperationId = "GetResourceDataForPreviewer")]
 		public async Task<ListResponse<PreviewerItem>> GetResourceDataForPreviewer(int id)
 		{
-			var resource = await _service.GetByKey(id, false);
+			var resource = (await _service.GetByKey(id, false)).ToDomainModel();
 
 			if (resource == null)
 			{
@@ -391,15 +379,15 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 			}
 
 			var filePaths = new List<string>();
-			if (System.IO.File.Exists(resource.RawFullname))
+			if (System.IO.File.Exists(resource.Path))
 			{
-				filePaths.Add(resource.RawFullname);
+				filePaths.Add(resource.Path);
 			}
 			else
 			{
-				if (Directory.Exists(resource.RawFullname))
+				if (Directory.Exists(resource.Path))
 				{
-					filePaths.AddRange(Directory.GetFiles(resource.RawFullname, "*", SearchOption.AllDirectories));
+					filePaths.AddRange(Directory.GetFiles(resource.Path, "*", SearchOption.AllDirectories));
 				}
 				else
 				{

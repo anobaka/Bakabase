@@ -42,9 +42,9 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
             return Task.FromResult<string>(null);
         }
 
-        public async Task<Enhancement[]> Enhance(ResourceDto resource)
+        public async Task<Enhancement[]> Enhance(Business.Models.Domain.Resource resource)
         {
-            var rawName = resource.RawName;
+            var rawName = resource.FileName;
             var match = Regex.Match(rawName, _options.Regex, RegexOptions.IgnoreCase);
 
             if (match.Success)

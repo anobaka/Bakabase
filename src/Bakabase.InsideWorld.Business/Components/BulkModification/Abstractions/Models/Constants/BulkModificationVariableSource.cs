@@ -12,7 +12,6 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         FileName,
         FileNameWithoutExtension,
         FullPath,
-        DirectoryName,
-        Name,
+        DirectoryName
     }
 }

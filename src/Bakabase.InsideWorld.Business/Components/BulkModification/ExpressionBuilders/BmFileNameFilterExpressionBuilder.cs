@@ -13,10 +13,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
     {
         public static BmFileNameFilterExpressionBuilder Instance = new();
 
-        protected override BulkModificationProperty Property => BulkModificationProperty.FileName;
-        protected override string? GetValue(ResourceDto resource)
+        protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.FileName;
+        protected override string? GetValue(Models.Domain.Resource resource)
         {
-            return resource.RawName;
+            return resource.FileName;
         }
     }
 }

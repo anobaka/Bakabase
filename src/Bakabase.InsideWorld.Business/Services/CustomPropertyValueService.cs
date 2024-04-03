@@ -2,16 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.InsideWorld.Models.Extensions;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Extensions;
 using Bootstrap.Components.Orm;
-using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.InsideWorld.Business.Services
@@ -25,7 +21,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		{
 		}
 
-		public async Task<List<CustomPropertyValueDto>> GetDtoList(Expression<Func<CustomPropertyValue, bool>>? exp,
+		public async Task<List<Abstractions.Models.Domain.CustomPropertyValue>> GetDtoList(Expression<Func<CustomPropertyValue, bool>>? exp,
 			CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
 		{
 			var data = await GetAll(exp, returnCopy);
@@ -33,7 +29,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			return await ToDtoList(data, additionalItems, returnCopy);
 		}
 
-		protected async Task<List<CustomPropertyValueDto>> ToDtoList(List<CustomPropertyValue> values,
+		protected async Task<List<Abstractions.Models.Domain.CustomPropertyValue>> ToDtoList(List<CustomPropertyValue> values,
 			CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
 		{
 			var propertyIds = values.Select(v => v.PropertyId).ToHashSet();

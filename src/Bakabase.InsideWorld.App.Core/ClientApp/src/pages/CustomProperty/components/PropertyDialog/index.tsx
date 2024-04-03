@@ -1,20 +1,22 @@
-import { Button, Dialog, Input, Overlay, Progress, Select, Switch } from '@alifd/next';
+import { Overlay, Progress, Select, Switch } from '@alifd/next';
 import type { DialogProps } from '@alifd/next/types/dialog';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  PropertyTypeIconMap,
-} from '../../models';
-import type { IChoice, ICustomProperty,
+import type {
   IChoicePropertyOptions,
+  ICustomProperty,
   INumberPropertyOptions,
-  IPercentagePropertyOptions, IRatingPropertyOptions } from '../../models';
+  IPercentagePropertyOptions,
+  IRatingPropertyOptions,
+} from '../../models';
+import { PropertyTypeIconMap } from '../../models';
 import ChoiceList from './components/ChoiceList';
 import { createPortalOfComponent } from '@/components/utils';
 import { CustomPropertyType } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
+import { Modal, Button, Input } from '@/components/bakaui';
 
 const { Popup } = Overlay;
 
@@ -33,6 +35,7 @@ const PropertyTypeGroup: Record<string, CustomPropertyType[]> = {
   Text: [CustomPropertyType.SingleLineText, CustomPropertyType.MultilineText, CustomPropertyType.Link],
   Number: [CustomPropertyType.Number, CustomPropertyType.Percentage, CustomPropertyType.Rating],
   Option: [CustomPropertyType.SingleChoice, CustomPropertyType.MultipleChoice],
+  DateTime: [CustomPropertyType.DateTime, CustomPropertyType.Date, CustomPropertyType.Time],
   Other: [CustomPropertyType.Attachment, CustomPropertyType.Boolean],
 };
 
@@ -259,13 +262,10 @@ const PropertyDialog = ({
   };
 
   return (
-    <Dialog
+    <Modal
       visible={visible}
-      className={'custom-property-dialog'}
+      title={t('Custom property')}
       onClose={close}
-      onCancel={close}
-      v2
-      closeMode={['close', 'esc']}
       onOk={async () => {
         const model = {
           ...property,
@@ -284,10 +284,8 @@ const PropertyDialog = ({
       }}
       {...dialogProps}
     >
-      <div
-        className={'custom-property-form'}
-      >
-        <div className="label">{t('Name')}</div>
+      <div className={'grid grid-cols-2'} >
+        <div className="align-right">{t('Name')}</div>
         <div className="value">
           <Input
             value={property.name}
@@ -310,7 +308,7 @@ const PropertyDialog = ({
               >
                 {property.type == undefined ? t('Please select') : (
                   <>
-                    <CustomIcon type={PropertyTypeIconMap[property.type]} size={'small'} />
+                    <CustomIcon type={PropertyTypeIconMap[property.type]} className={'text-medium'} />
                     {t(CustomPropertyType[property.type])}
                   </>
                 )}
@@ -341,7 +339,7 @@ const PropertyDialog = ({
                               });
                             }}
                           >
-                            <CustomIcon type={PropertyTypeIconMap[type]} size={'small'} />
+                            <CustomIcon type={PropertyTypeIconMap[type]} className={'text-medium'} />
                             {t(CustomPropertyType[type])}
                           </div>
                         );
@@ -355,7 +353,7 @@ const PropertyDialog = ({
         </div>
         {renderOptions()}
       </div>
-    </Dialog>
+    </Modal>
   );
 };
 

@@ -184,21 +184,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
     }
   }, [playableFiles]);
 
-  const remove = useCallback(() => {
-    if (confirm(t('Are you sure to delete this resource?(files on your disk will also be deleted)'))) {
-      RemoveResource({
-        id: resource.id,
-      })
-        .invoke((a) => {
-          if (!a.code) {
-            if (onRemove) {
-              onRemove(resource.id);
-            }
-          }
-        });
-    }
-  }, []);
-
   const open = () => {
     openFile(resource.id);
   };
@@ -224,7 +209,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 resource,
                 onPlay: clickPlayButton,
                 onOpen: open,
-                onRemove: remove,
                 noPlayableFile: !(playableFiles?.length > 0),
                 ct,
               });
@@ -263,7 +247,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
       />
       <TaskCover
         resource={resource}
-        onRemoved={onRemove}
       />
       {renderCover()}
       <div className={styles.info}>

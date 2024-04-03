@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Models.Attributes;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bootstrap.Components.Cryptography;

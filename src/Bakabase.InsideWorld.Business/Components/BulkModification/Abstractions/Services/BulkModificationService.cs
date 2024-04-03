@@ -15,7 +15,7 @@ using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Mod
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Processors;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Processors.BmVolumeProcessor;
+using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
@@ -50,9 +50,9 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         public static BulkModificationConfiguration GetConfiguration()
         {
             var bmc = new BulkModificationConfiguration();
-            foreach (BulkModificationProperty property in Enum.GetValues(typeof(BulkModificationProperty)))
+            foreach (BulkModificationFilterableProperty property in Enum.GetValues(typeof(BulkModificationFilterableProperty)))
             {
-                var attr = SpecificTypeUtils<BulkModificationProperty>.Type.GetField(property.ToString())!
+                var attr = SpecificTypeUtils<BulkModificationFilterableProperty>.Type.GetField(property.ToString())!
                     .GetCustomAttributes<BulkModificationPropertyFilterAttribute>(false).FirstOrDefault()!;
                 var options = new BulkModificationConfiguration.PropertyOptions
                 {
@@ -100,24 +100,14 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             return d.ToDto(tempData);
         }
 
-        private ConcurrentDictionary<BulkModificationProperty, IBulkModificationProcessor> PrepareProcessors()
+        private ConcurrentDictionary<BulkModificationFilterableProperty, IBulkModificationProcessor> PrepareProcessors()
         {
             return new(
-                new Dictionary<BulkModificationProperty, IBulkModificationProcessor>
+                new Dictionary<BulkModificationFilterableProperty, IBulkModificationProcessor>
                 {
-                    {BulkModificationProperty.Category, GetRequiredService<BmCategoryProcessor>()},
-                    {BulkModificationProperty.MediaLibrary, GetRequiredService<BmMediaLibraryProcessor>()},
-                    {BulkModificationProperty.ReleaseDt, GetRequiredService<BmReleaseDtProcessor>()},
-                    {BulkModificationProperty.Publisher, GetRequiredService<BmPublishersProcessor>()},
-                    {BulkModificationProperty.Name, GetRequiredService<BmNameProcessor>()},
-                    {BulkModificationProperty.Language, GetRequiredService<BmLanguageProcessor>()},
-                    {BulkModificationProperty.Volume, GetRequiredService<BmVolumeProcessor>()},
-                    {BulkModificationProperty.Original, GetRequiredService<BmOriginalProcessor>()},
-                    {BulkModificationProperty.Series, GetRequiredService<BmSeriesProcessor>()},
-                    {BulkModificationProperty.Tag, GetRequiredService<BmTagProcessor>()},
-                    {BulkModificationProperty.Introduction, GetRequiredService<BmIntroductionProcessor>()},
-                    {BulkModificationProperty.Rate, GetRequiredService<BmRateProcessor>()},
-                    {BulkModificationProperty.CustomProperty, GetRequiredService<BmCustomPropertiesProcessor>()},
+                    {BulkModificationFilterableProperty.Category, GetRequiredService<BmCategoryProcessor>()},
+                    {BulkModificationFilterableProperty.MediaLibrary, GetRequiredService<BmMediaLibraryProcessor>()},
+                    {BulkModificationFilterableProperty.Tag, GetRequiredService<BmTagProcessor>()},
                 });
         }
 
@@ -144,14 +134,14 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             return new ListResponse<int>(ids ?? new List<int>());
         }
 
-        public async Task<ListResponse<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>>
+        public async Task<ListResponse<(Business.Models.Domain.Resource Current, Business.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>>
             Preview(int id, CancellationToken ct)
         {
             var bm = await GetDto(id);
 
             if (bm.Status == BulkModificationStatus.Closed)
             {
-                return ListResponseBuilder<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>
+                return ListResponseBuilder<(Business.Models.Domain.Resource Current, Business.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>
                     .BuildBadRequest("Can't operate on a closed bulk modification.");
             }
 
@@ -160,7 +150,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             var resources = await ResourceService.GetByKeys(resourceIds.ToArray());
 
             var processors = PrepareProcessors();
-            var data = new List<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>();
+            var data = new List<(Business.Models.Domain.Resource Current, Business.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>();
 
             if (bm.Processes?.Any() == true)
             {
@@ -175,13 +165,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                             var sourceValue =
                                 variable.Source switch
                                 {
-                                    BulkModificationVariableSource.Name => resource.Name,
                                     BulkModificationVariableSource.None => null,
-                                    BulkModificationVariableSource.FileName => resource.RawName,
-                                    BulkModificationVariableSource.FileNameWithoutExtension => Path
-                                        .GetFileNameWithoutExtension(
-                                            resource.RawName),
-                                    BulkModificationVariableSource.FullPath => resource.RawFullname,
+                                    BulkModificationVariableSource.FileName => resource.FileName,
+                                    BulkModificationVariableSource.FileNameWithoutExtension => Path.GetFileNameWithoutExtension(resource.FileName),
+                                    BulkModificationVariableSource.FullPath => resource.Path,
                                     BulkModificationVariableSource.DirectoryName => resource.Directory,
                                     _ => throw new ArgumentOutOfRangeException()
                                 };
@@ -226,7 +213,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                     }
 
                     var diffs = resource.Compare(copy)
-                        .Select(d => d.ToBulkModificationDiff(id, resource.Id, resource.RawFullname)).ToList();
+                        .Select(d => d.ToBulkModificationDiff(id, resource.Id, resource.Path)).ToList();
                     data.Add((resource, copy, diffs));
                 }
             }
@@ -240,7 +227,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 
             await tran.CommitAsync(ct);
 
-            return new ListResponse<(ResourceDto Current, ResourceDto New, List<BulkModificationDiff> Diffs)>(data);
+            return new ListResponse<(Business.Models.Domain.Resource Current, Business.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>(data);
         }
 
         public async Task<BaseResponse> Apply(int id)

@@ -15,7 +15,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 
         public record Diff
         {
-            public BulkModificationProperty Property { get; set; }
+            public BulkModificationFilterableProperty Property { get; set; }
             public string? PropertyKey { get; set; }
             public BulkModificationDiffType Type { get; set; }
             public string? CurrentValue { get; set; }

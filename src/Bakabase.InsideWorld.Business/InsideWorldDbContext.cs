@@ -1,4 +1,5 @@
 ﻿using System;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Logging.LogService.Models.Entities;

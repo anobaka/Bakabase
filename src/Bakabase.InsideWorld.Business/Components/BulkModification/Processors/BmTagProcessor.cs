@@ -24,10 +24,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors
         protected override BmMultipleValueProcessorValue<int, string, TextProcessValue>
             ParseProcessorValue(BulkModificationProcess process) => process.ToTagProcessorValue();
 
-        protected override BulkModificationProperty TargetProperty => BulkModificationProperty.Tag;
-        protected override List<TagDto>? GetValues(ResourceDto resource) => resource.Tags;
+        protected override BulkModificationFilterableProperty TargetProperty => BulkModificationFilterableProperty.Tag;
+        protected override List<TagDto>? GetValues(Models.Domain.Resource resource) => resource.Tags;
 
-        protected override void SetValues(ResourceDto resource, List<TagDto>? values)
+        protected override void SetValues(Models.Domain.Resource resource, List<TagDto>? values)
         {
             resource.Tags = values;
         }

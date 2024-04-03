@@ -11,8 +11,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
     public abstract class BmCommonMultipleValueProcessor<TProperty> : BmAbstractBmProcessor<
         BmMultipleValueProcessorValue<int, string, TextProcessValue>> where TProperty : notnull
     {
-        protected abstract List<TProperty>? GetValues(ResourceDto resource);
-        protected abstract void SetValues(ResourceDto resource, List<TProperty>? values);
+        protected abstract List<TProperty>? GetValues(Models.Domain.Resource resource);
+        protected abstract void SetValues(Models.Domain.Resource resource, List<TProperty>? values);
         protected abstract int GetValueKey(TProperty value);
         protected abstract TProperty CreateNewValue(int id);
         protected abstract string? GetValueBizKey(TProperty value);
@@ -20,7 +20,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
 
         protected override async Task ProcessInternal(
             BmMultipleValueProcessorValue<int, string, TextProcessValue> value,
-            ResourceDto resource, Dictionary<string, string?> variables,
+            Models.Domain.Resource resource, Dictionary<string, string?> variables,
             string? propertyKey)
         {
             switch (value!.Operation)

@@ -11,7 +11,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
 {
     public abstract class BmTextProcessor : BmAbstractBmProcessor<TextProcessValue>
     {
-        protected override Task ProcessInternal(TextProcessValue value, ResourceDto resource,
+        protected override Task ProcessInternal(TextProcessValue value, Models.Domain.Resource resource,
             Dictionary<string, string?> variables, string? propertyKey)
         {
             var currentValue = GetValue(resource, propertyKey);
@@ -20,7 +20,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
             return Task.CompletedTask;
         }
 
-        protected abstract string? GetValue(ResourceDto resource, string? propertyKey);
-        protected abstract void SetValue(ResourceDto resource, string? propertyKey, string? value);
+        protected abstract string? GetValue(Models.Domain.Resource resource, string? propertyKey);
+        protected abstract void SetValue(Models.Domain.Resource resource, string? propertyKey, string? value);
     }
 }

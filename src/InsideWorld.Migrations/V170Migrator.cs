@@ -17,9 +17,9 @@ using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
-using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
+using Bakabase.InsideWorld.Business.Configurations.Models.Db;
 
 namespace InsideWorld.Migrations
 {

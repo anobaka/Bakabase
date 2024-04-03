@@ -14,6 +14,9 @@ using System.Xml.Serialization;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Models.Domain;
+using Bakabase.InsideWorld.Business.Models.Dto;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
@@ -21,8 +24,6 @@ using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
-using Bakabase.InsideWorld.Models.Models.Entities.Implicit;
-using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
@@ -43,11 +44,13 @@ using SharpCompress.Readers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using static Bakabase.InsideWorld.Models.Models.Aos.PathConfigurationValidateResult.Entry;
+using MediaLibrary = Bakabase.InsideWorld.Business.Models.Domain.MediaLibrary;
+using PathConfiguration = Bakabase.InsideWorld.Business.Models.Domain.PathConfiguration;
 using SearchOption = System.IO.SearchOption;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-	public class MediaLibraryService : ResourceService<InsideWorldDbContext, MediaLibrary, int>
+    public class MediaLibraryService : ResourceService<InsideWorldDbContext, InsideWorld.Models.Models.Entities.MediaLibrary, int>
 	{
 		private const decimal MinimalFreeSpace = 1_000_000_000;
 		protected BackgroundTaskManager BackgroundTaskManager => GetRequiredService<BackgroundTaskManager>();
@@ -67,22 +70,22 @@ namespace Bakabase.InsideWorld.Business.Services
 			_localizer = localizer;
 		}
 
-		public async Task<BaseResponse> Add(MediaLibraryCreateRequestModel model)
+		public async Task<BaseResponse> Add(MediaLibraryCreateDto model)
 		{
-			var dto = new MediaLibraryDto
+			var dto = new MediaLibrary
 			{
 				Name = model.Name,
 				CategoryId = model.CategoryId,
 				PathConfigurations = model.PathConfigurations
 			};
 
-			var t = await Add(dto.ToEntity()!);
+			var t = await Add(dto.ToDbModel()!);
 			return t;
 		}
 
-		public async Task AddRange(ICollection<MediaLibraryDto> mls)
+		public async Task AddRange(ICollection<MediaLibrary> mls)
 		{
-			var map = mls.ToDictionary(x => x, x => x.ToEntity()!);
+			var map = mls.ToDictionary(x => x, x => x.ToDbModel()!);
 			await base.AddRange(map.Values);
 			foreach (var (dto, entity) in map)
 			{
@@ -90,7 +93,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			}
 		}
 
-		public async Task<BaseResponse> Patch(int id, MediaLibraryPatchRequestModel model)
+		public async Task<BaseResponse> Patch(int id, MediaLibraryPatchDto model)
 		{
 			var ml = (await GetDto(id, MediaLibraryAdditionalItem.None))!;
 			if (model.PathConfigurations != null)
@@ -115,32 +118,32 @@ namespace Bakabase.InsideWorld.Business.Services
 				ml.Order = model.Order.Value;
 			}
 
-			var t = await Update(ml.ToEntity()!);
+			var t = await Update(ml.ToDbModel()!);
 			return t;
 		}
 
-		public async Task<BaseResponse> Put(MediaLibraryDto dto)
+		public async Task<BaseResponse> Put(MediaLibrary dto)
 		{
-			return await Update(dto.ToEntity()!);
+			return await Update(dto.ToDbModel()!);
 		}
 
-		public async Task<MediaLibraryDto?> GetDto(int id, MediaLibraryAdditionalItem additionalItems)
+		public async Task<MediaLibrary?> GetDto(int id, MediaLibraryAdditionalItem additionalItems)
 		{
 			var ml = await GetByKey(id, true);
 			return (await ToDtoList([ml], additionalItems)).FirstOrDefault();
 		}
 
-		public async Task<List<MediaLibraryDto>> GetAllDto(Expression<Func<MediaLibrary, bool>>? exp,
+		public async Task<List<MediaLibrary>> GetAllDto(Expression<Func<InsideWorld.Models.Models.Entities.MediaLibrary, bool>>? exp,
 			MediaLibraryAdditionalItem additionalItems)
 		{
 			var wss = (await base.GetAll(exp, true)).OrderBy(a => a.Order).ToList();
 			return await ToDtoList(wss, additionalItems);
 		}
 
-		protected async Task<List<MediaLibraryDto>> ToDtoList(List<MediaLibrary> mls,
+		protected async Task<List<MediaLibrary>> ToDtoList(List<InsideWorld.Models.Models.Entities.MediaLibrary> mls,
 			MediaLibraryAdditionalItem additionalItems)
 		{
-			var dtoList = mls.Select(ml => ml.ToDto()!).ToList();
+			var dtoList = mls.Select(ml => ml.ToDomainModel()!).ToList();
 			foreach (var ai in SpecificEnumUtils<MediaLibraryAdditionalItem>.Values)
 			{
 				if (additionalItems.HasFlag(ai))
@@ -229,7 +232,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		public async Task<BaseResponse> Sort(int[] ids)
 		{
 			var libraries = (await GetByKeys(ids)).ToDictionary(t => t.Id, t => t);
-			var changed = new List<MediaLibrary>();
+			var changed = new List<InsideWorld.Models.Models.Entities.MediaLibrary>();
 			for (var i = 0; i < ids.Length; i++)
 			{
 				var id = ids[i];
@@ -373,82 +376,10 @@ namespace Bakabase.InsideWorld.Business.Services
 				async (service, task) => await service.Sync(task));
 		}
 
-		private void SetPropertiesByMatchers(string rootPath, PathConfigurationValidateResult.Entry e, ResourceDto pr,
-			Dictionary<string, ResourceDto> parentResources)
+		private void SetPropertiesByMatchers(string rootPath, PathConfigurationValidateResult.Entry e, Business.Models.Domain.Resource pr,
+			Dictionary<string, Business.Models.Domain.Resource> parentResources)
 		{
-			// var standardRootPath = rootPath.StandardizePath();
-			// var otherMatchers = matchers.Where(a =>
-			//     a.Property != ResourceProperty.RootPath && a.Property != ResourceProperty.Resource);
-			// var rootPathSegments = standardRootPath.SplitPathIntoSegments();
-			//
-			// var segments = pr.RawFullname.SplitPathIntoSegments();
-			// var matchedValues =
-			//     new Dictionary<ResourceProperty, List<(MatcherValue MatcherValue, string Value)>>();
-			// foreach (var s in otherMatchers)
-			// {
-			//     switch (s.Property)
-			//     {
-			//         case ResourceProperty.ParentResource:
-			//         case ResourceProperty.ReleaseDt:
-			//         case ResourceProperty.Name:
-			//         case ResourceProperty.Volume:
-			//         case ResourceProperty.Series:
-			//         case ResourceProperty.Rate:
-			//         case ResourceProperty.Original:
-			//         case ResourceProperty.Publisher:
-			//         case ResourceProperty.Tag:
-			//         case ResourceProperty.CustomProperty:
-			//         {
-			//             var matchResult =
-			//                 ResourcePropertyMatcher.Match(segments, s, rootPathSegments.Length - 1,
-			//                     segments.Length - 1);
-			//
-			//
-			//             if (matchResult != null)
-			//             {
-			//                 var values = matchedValues.GetOrAdd(s.Property, () => new());
-			//
-			//                 switch (matchResult.Type)
-			//                 {
-			//                     case MatchResultType.Layer:
-			//                     {
-			//                         // Value of parent resource should be a complete path
-			//                         if (s.Property == ResourceProperty.ParentResource)
-			//                         {
-			//                             var prPath = string.Join(BusinessConstants.DirSeparator,
-			//                                 segments.Take(matchResult.Index!.Value + 1));
-			//                             values.Add((s, prPath));
-			//                         }
-			//                         else
-			//                         {
-			//                             values.Add((s, segments[matchResult.Index!.Value]));
-			//                         }
-			//
-			//                         break;
-			//                     }
-			//                     case MatchResultType.Regex:
-			//                     {
-			//                         values.AddRange(matchResult.Matches!.Select(m => (s, m)));
-			//                         break;
-			//                     }
-			//                     default:
-			//                         throw new ArgumentOutOfRangeException();
-			//                 }
-			//             }
-			//
-			//             break;
-			//         }
-			//         case ResourceProperty.Introduction:
-			//         case ResourceProperty.RootPath:
-			//         case ResourceProperty.Resource:
-			//         case ResourceProperty.Language:
-			//             break;
-			//         default:
-			//             throw new ArgumentOutOfRangeException();
-			//     }
-			// }
-
-			// property - custom key/string.empty - values
+		// property - custom key/string.empty - values
 			// For Property=ParentResource, value will be a absolute path.
 			var matchedValues = new Dictionary<ResourceProperty, Dictionary<string, List<string>>>();
 
@@ -497,17 +428,15 @@ namespace Bakabase.InsideWorld.Business.Services
 					{
 						case ResourceProperty.ParentResource:
 						{
-							if (firstValue != pr.RawFullname)
+							if (firstValue != pr.Path)
 							{
 								if (!parentResources.TryGetValue(firstValue, out var parent))
 								{
-									parentResources[firstValue] = parent = new ResourceDto
-									{
-										Directory = Path.GetDirectoryName(firstValue)!.StandardizePath()!,
-										RawName = Path.GetFileName(firstValue),
+									parentResources[firstValue] = parent = new Resource()
+                                    {
 										CategoryId = pr.CategoryId,
 										MediaLibraryId = pr.MediaLibraryId,
-										IsSingleFile = false
+										IsFile = false
 									};
 								}
 
@@ -585,7 +514,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
 			// Validation
 			{
-				var ignoredLibraries = new List<MediaLibraryDto>();
+				var ignoredLibraries = new List<MediaLibrary>();
 				foreach (var library in libraries)
 				{
 					if (!categories.TryGetValue(library.CategoryId, out var c))
@@ -607,12 +536,12 @@ namespace Bakabase.InsideWorld.Business.Services
 			}
 
 			// Top level directory/file name - (Filename, IsSingleFile, MediaLibraryId, FixedTagIds, TagNames)
-			var patchingResources = new Dictionary<string, ResourceDto>(StringComparer.OrdinalIgnoreCase);
-			var parentResources = new Dictionary<string, ResourceDto>();
-			var prevRawFullnameResourcesMap = new Dictionary<string, ResourceDto>();
-			var invalidData = new List<ResourceDto>();
+			var patchingResources = new Dictionary<string, Resource>(StringComparer.OrdinalIgnoreCase);
+			var parentResources = new Dictionary<string, Resource>();
+			var prevRawFullnameResourcesMap = new Dictionary<string, Resource>();
+			var invalidData = new List<Resource>();
 
-			var changedResources = new ConcurrentDictionary<string, ResourceDto>();
+			var changedResources = new ConcurrentDictionary<string, Resource>();
 
 			var step = SpecificEnumUtils<MediaLibrarySyncStep>.Values.FirstOrDefault();
 
@@ -663,13 +592,11 @@ namespace Bakabase.InsideWorld.Business.Services
 									{
 										var resourcePath =
 											$"{pscResult.Data.RootPath}{BusinessConstants.DirSeparator}{e.RelativePath}";
-										var pr = new ResourceDto()
+										var pr = new Resource()
 										{
 											CategoryId = library.CategoryId,
 											MediaLibraryId = library.Id,
-											IsSingleFile = new FileInfo(resourcePath).Exists,
-											Directory = Path.GetDirectoryName(resourcePath).StandardizePath()!,
-											RawName = Path.GetFileName(resourcePath),
+											IsFile = new FileInfo(resourcePath).Exists,
 											Tags = new List<TagDto>(),
 										};
 
@@ -686,7 +613,7 @@ namespace Bakabase.InsideWorld.Business.Services
 											SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr, parentResources);
 										}
 
-										patchingResources.TryAdd(pr.RawFullname, pr);
+										patchingResources.TryAdd(pr.Path, pr);
 										task.Percentage = basePercentage + (int) (i * percentagePerLibrary +
 											percentagePerPathConfiguration * j +
 											percentagePerItem * (++count));
@@ -750,7 +677,7 @@ namespace Bakabase.InsideWorld.Business.Services
 						var count = 0;
 						foreach (var (fullname, patches) in patchingResources)
 						{
-							FileSystemInfo fileSystemInfo = patches.IsSingleFile
+							FileSystemInfo fileSystemInfo = patches.IsFile
 								? new FileInfo(fullname)
 								: new DirectoryInfo(fullname);
 							patches.FileCreateDt =
@@ -771,7 +698,7 @@ namespace Bakabase.InsideWorld.Business.Services
 						var prevResources = await ResourceService.GetAll(ResourceAdditionalItem.All);
 
 						var prevRawFullnameResourcesList = prevResources
-							.GroupBy(a => a.RawFullname.StandardizePath(), StringComparer.OrdinalIgnoreCase)
+							.GroupBy(a => a.Path.StandardizePath(), StringComparer.OrdinalIgnoreCase)
 							.ToDictionary(t => t.Key, t => t.ToArray());
 
 						var duplicatedResources = prevRawFullnameResourcesList.Values.Where(t => t.Length > 0)
@@ -799,11 +726,11 @@ namespace Bakabase.InsideWorld.Business.Services
 
 						foreach (var r in invalidMediaLibraryResources)
 						{
-							prevRawFullnameResourcesMap.Remove(r.RawFullname);
+								prevRawFullnameResourcesMap.Remove(r.Path);
 							invalidData.Add(r);
 						}
 
-						await ResourceService.RemoveByKeys(invalidData.Select(a => a.Id).ToArray(), false);
+						await ResourceService.RemoveByKeys(invalidData.Select(a => a.Id).ToArray());
 						break;
 					}
 					case MediaLibrarySyncStep.CompareResources:
@@ -902,8 +829,8 @@ namespace Bakabase.InsideWorld.Business.Services
 						task.Message = string.Join(
 							Environment.NewLine,
 							$"[Resource] Found: {patchingResources.Count}, New: {newResources.Length} Removed: {invalidData.Count}, Updated: {resourcesToBeSaved.Count - newResources.Length}",
-							$"[Directory]: Found: {patchingResources.Count(a => !a.Value.IsSingleFile)}",
-							$"[SingleFile]: Found: {patchingResources.Count(a => a.Value.IsSingleFile)}"
+							$"[Directory]: Found: {patchingResources.Count(a => !a.Value.IsFile)}",
+							$"[File]: Found: {patchingResources.Count(a => a.Value.IsFile)}"
 						);
 						task.Percentage = basePercentage + stepPercentage;
 
@@ -922,7 +849,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		}
 
 		public async Task<SingletonResponse<PathConfigurationValidateResult>> Test(
-			PathConfigurationDto pc, int maxResourceCount = int.MaxValue)
+            PathConfiguration pc, int maxResourceCount = int.MaxValue)
 		{
 			if (pc.Path.IsNullOrEmpty())
 			{

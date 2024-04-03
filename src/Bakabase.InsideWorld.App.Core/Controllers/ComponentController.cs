@@ -14,6 +14,7 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using ComponentDescriptor = Bakabase.Abstractions.Models.Domain.ComponentDescriptor;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
 {
@@ -32,19 +33,19 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet]
         [SwaggerOperation(OperationId = "GetComponentDescriptors")]
-        public async Task<ListResponse<ComponentDescriptorDto>> GetDescriptors(ComponentType? type = null,
+        public async Task<ListResponse<ComponentDescriptor>> GetDescriptors(ComponentType? type = null,
             ComponentDescriptorAdditionalItem additionalItems = ComponentDescriptorAdditionalItem.None)
         {
-            return new ListResponse<ComponentDescriptorDto>(
+            return new ListResponse<ComponentDescriptor>(
                 await _componentService.GetDescriptorDtoList(type, additionalItems));
         }
 
         [HttpGet("key")]
         [SwaggerOperation(OperationId = "GetComponentDescriptorByKey")]
-        public async Task<SingletonResponse<ComponentDescriptorDto>> GetDescriptor(string key,
+        public async Task<SingletonResponse<ComponentDescriptor>> GetDescriptor(string key,
             ComponentDescriptorAdditionalItem additionalItems = ComponentDescriptorAdditionalItem.None)
         {
-            return new SingletonResponse<ComponentDescriptorDto>(
+            return new SingletonResponse<ComponentDescriptor>(
                 await _componentService.GetDescriptorDto(key, additionalItems));
         }
 

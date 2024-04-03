@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
+using Bakabase.InsideWorld.Business.Models.Domain;
+using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Attributes;
 using Bakabase.InsideWorld.Models.Constants;
@@ -28,10 +31,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
 		[HttpGet]
 		[SwaggerOperation(OperationId = "GetAllResourceCategories")]
-		public async Task<ListResponse<ResourceCategoryDto>> GetAll(
+		public async Task<ListResponse<Category>> GetAll(
 			[FromQuery] ResourceCategoryAdditionalItem additionalItems = ResourceCategoryAdditionalItem.None)
 		{
-			return new ListResponse<ResourceCategoryDto>(await _service.GetAllDto(null, additionalItems));
+			return new ListResponse<Category>(await _service.GetAllDto(null, additionalItems));
 		}
 
 		[HttpPost]
@@ -79,7 +82,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
 		[HttpPost("setup-wizard")]
 		[SwaggerOperation(OperationId = "SaveDataFromSetupWizard")]
-		public async Task<BaseResponse> SaveDataFromSetupWizard([FromBody] CategorySetupWizardRequestModel model)
+		public async Task<BaseResponse> SaveDataFromSetupWizard([FromBody] CategorySetupWizardInputModel model)
 		{
 			return await _service.SaveDataFromSetupWizard(model);
 		}

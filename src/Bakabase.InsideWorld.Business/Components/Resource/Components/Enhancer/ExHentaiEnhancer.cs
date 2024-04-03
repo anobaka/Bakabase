@@ -43,16 +43,16 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
             _specialTextService = specialTextService;
         }
 
-        public async Task<Enhancement[]> Enhance(ResourceDto resource)
+        public async Task<Enhancement[]> Enhance(Models.Domain.Resource resource)
         {
             var options =_optionsManager.ExHentai;
 
             var enhancements = new List<Enhancement>();
 
-            var name = resource.Name ?? resource.RawName;
+            var name = resource.Name ?? resource.FileName;
             var urlKeywords = new HashSet<string>();
 
-            var names = new List<string> { resource.Name, resource.RawName }.Where(a => a.IsNotEmpty()).ToArray();
+            var names = new List<string> { resource.Name, resource.FileName }.Where(a => a.IsNotEmpty()).ToArray();
             if (names.Any(n => Regex.IsMatch(n, UrlKeywordRegex)))
             {
                 var texts = await _specialTextService.GetAll();

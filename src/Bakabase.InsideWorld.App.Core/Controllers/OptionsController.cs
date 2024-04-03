@@ -12,14 +12,14 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Bakabase.InsideWorld.Business.Configurations.Models.Input;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Configs.Infrastructures;
-using Bakabase.InsideWorld.Models.Configs.Resource;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.InsideWorld.Models.RequestModels.Options;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
@@ -409,7 +409,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpPatch("resource")]
         [SwaggerOperation(OperationId = "PatchResourceOptions")]
-        public async Task<BaseResponse> PatchResourceOptions([FromBody] ResourceOptionsPatchRequestModel model)
+        public async Task<BaseResponse> PatchResourceOptions([FromBody] ResourceOptionsPatchInputModel model)
         {
             await _insideWorldOptionsManager.Resource.SaveAsync(options =>
             {

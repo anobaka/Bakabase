@@ -38,14 +38,14 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers
             return nfo;
         }
 
-        protected override ResourceDto ToResource(ResourceNfoV1 nfo)
+        protected override Business.Models.Domain.Resource ToResource(ResourceNfoV1 nfo)
         {
             if (nfo == null)
             {
                 return null;
             }
 
-            return new ResourceDto
+            return new Business.Models.Domain.Resource()
             {
                 Tags = nfo.TagGroups
                     ?.SelectMany(t => t.Tags.Select(a => new TagDto {Name = a.Name, GroupName = t.Name}))
@@ -59,7 +59,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers
             };
         }
 
-        protected override ResourceNfoV1 ToNfo(ResourceDto resource)
+        protected override ResourceNfoV1 ToNfo(Business.Models.Domain.Resource resource)
         {
             if (resource == null)
             {

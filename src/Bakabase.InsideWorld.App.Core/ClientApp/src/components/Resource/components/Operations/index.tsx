@@ -220,13 +220,6 @@ export default ({
             }}
           />
         </div>
-        <div className={styles.opt} title={t('Remove')}>
-          <ClickableIcon
-            className={'text-xl'}
-            type={'delete'}
-            colorType={'danger'}
-          />
-        </div>
       </div>
     </Popup>
   );

@@ -30,6 +30,7 @@ using NJsonSchema;
 using NPOI.SS.Formula.Functions;
 using Semver;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using ComponentDescriptor = Bakabase.Abstractions.Models.Domain.ComponentDescriptor;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -175,25 +176,25 @@ namespace Bakabase.InsideWorld.Business.Services
             return descriptors;
         }
 
-        public async Task<ComponentDescriptorDto> GetDescriptorDto(string key,
+        public async Task<ComponentDescriptor> GetDescriptorDto(string key,
             ComponentDescriptorAdditionalItem additionalItems = ComponentDescriptorAdditionalItem.None) =>
             (await GetDescriptorDtoList(new[] { key }, additionalItems)).FirstOrDefault();
 
-        public async Task<ComponentDescriptorDto[]> GetDescriptorDtoList(ComponentType? componentType = null,
+        public async Task<ComponentDescriptor[]> GetDescriptorDtoList(ComponentType? componentType = null,
             ComponentDescriptorAdditionalItem additionalItems = ComponentDescriptorAdditionalItem.None)
         {
             var ds = await GetDescriptors(componentType);
             return await ToDtoList(ds, additionalItems);
         }
 
-        public async Task<ComponentDescriptorDto[]> GetDescriptorDtoList(string[] keys,
+        public async Task<ComponentDescriptor[]> GetDescriptorDtoList(string[] keys,
             ComponentDescriptorAdditionalItem additionalItems = ComponentDescriptorAdditionalItem.None)
         {
             var ds = await GetDescriptors(keys);
             return await ToDtoList(ds, additionalItems);
         }
 
-        private async Task<ComponentDescriptorDto[]> ToDtoList(ComponentDescriptor[] descriptors,
+        private async Task<ComponentDescriptor[]> ToDtoList(ComponentDescriptor[] descriptors,
             ComponentDescriptorAdditionalItem additionalItems = ComponentDescriptorAdditionalItem.None)
         {
             var dtoList = descriptors.Select(d => d.ToDto()).ToArray();

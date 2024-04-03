@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
@@ -70,7 +71,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                     .Select(a => a.ResourceId).ToHashSet();
                 var resourcePaths =
                     (await _resourceService.GetAllEntities(e => resourceItemIds.Contains(e.Id), false)).ToDictionary(
-                        a => a.Id, a => a.RawFullname);
+                        a => a.Id, a => a.ToDomainModel()!.Path);
                 var fileGroups = new List<List<string>>();
                 foreach (var item in pl.Items)
                 {

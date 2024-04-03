@@ -29,9 +29,9 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
             return Task.FromResult((string) null);
         }
 
-        public async Task<Enhancement[]> Enhance(ResourceDto resource)
+        public async Task<Enhancement[]> Enhance(Business.Models.Domain.Resource resource)
         {
-            var nfoFullname = Path.Combine(resource.IsSingleFile ? resource.Directory : resource.RawFullname,
+            var nfoFullname = Path.Combine(resource.IsFile ? resource.Directory : resource.Path,
                 ResourceNfoService.DefaultFilename);
             var nfo = await ResourceNfoService.Deserialize(nfoFullname);
             var es = new List<Enhancement>();

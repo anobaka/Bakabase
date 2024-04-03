@@ -10,12 +10,12 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors.I
         BmCommonSimpleValueProcessor<TPropertyType> : BmAbstractBmProcessor<
         BmSimpleValueProcessorValue<string>> where TPropertyType : struct
     {
-        protected abstract void SetValue(ResourceDto resource, TPropertyType value);
+        protected abstract void SetValue(Models.Domain.Resource resource, TPropertyType value);
         protected abstract Task<TPropertyType?> ParseTextToValue(string str);
         protected abstract Task<TPropertyType?> TryParseStringValue(string str);
-        protected abstract void RemoveValue(ResourceDto resource);
+        protected abstract void RemoveValue(Models.Domain.Resource resource);
 
-        protected override async Task ProcessInternal(BmSimpleValueProcessorValue<string> value, ResourceDto resource,
+        protected override async Task ProcessInternal(BmSimpleValueProcessorValue<string> value, Models.Domain.Resource resource,
             Dictionary<string, string?> variables, string? propertyKey)
         {
             switch (value.Operation)

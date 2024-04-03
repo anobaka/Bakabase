@@ -13,8 +13,8 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
     {
         public static BmDirectoryPathFilterExpressionBuilder Instance = new();
 
-        protected override BulkModificationProperty Property => BulkModificationProperty.DirectoryPath;
-        protected override string? GetValue(ResourceDto resource)
+        protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.DirectoryPath;
+        protected override string? GetValue(Models.Domain.Resource resource)
         {
             return resource.Directory;
         }

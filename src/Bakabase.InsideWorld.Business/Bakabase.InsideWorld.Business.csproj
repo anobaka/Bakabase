@@ -25,6 +25,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
 		<ProjectReference Include="..\Bakabase.InsideWorld.Prefabs\Bakabase.InsideWorld.Prefabs.csproj" />
+		<ProjectReference Include="..\modules\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -64,6 +65,10 @@
 			<LastGenOutput>SharedResource.Designer.cs</LastGenOutput>
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Models\Db\" />
 	</ItemGroup>
 
 </Project>

@@ -45,9 +45,9 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
             return Task.FromResult((string) null);
         }
 
-        public async Task<Enhancement[]> Enhance(ResourceDto resource)
+        public async Task<Enhancement[]> Enhance(Business.Models.Domain.Resource resource)
         {
-            var name = resource.RawName;
+            var name = resource.FileName;
             if (name.IsNullOrEmpty())
             {
                 throw new ArgumentNullException(nameof(name));

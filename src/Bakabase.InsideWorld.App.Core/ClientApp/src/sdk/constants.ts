@@ -32,25 +32,23 @@ export enum BmMultipleValueProcessorFilterBy {All = 1, Containing = 2, Matching 
 export const bmMultipleValueProcessorFilterBies = Object.keys(BmMultipleValueProcessorFilterBy).filter(k => typeof BmMultipleValueProcessorFilterBy[k] === 'number').map(t => ({label: t, value: BmMultipleValueProcessorFilterBy[t]}));
 export enum BmMultipleValueProcessorOperation {SetWithFixedValue = 1, Add = 2, Modify = 3, Remove = 4}
 export const bmMultipleValueProcessorOperations = Object.keys(BmMultipleValueProcessorOperation).filter(k => typeof BmMultipleValueProcessorOperation[k] === 'number').map(t => ({label: t, value: BmMultipleValueProcessorOperation[t]}));
-export enum BmVolumeProcessorOperation {Modify = 1, Remove = 2}
-export const bmVolumeProcessorOperations = Object.keys(BmVolumeProcessorOperation).filter(k => typeof BmVolumeProcessorOperation[k] === 'number').map(t => ({label: t, value: BmVolumeProcessorOperation[t]}));
-export enum BmVolumeProcessorProperty {Name = 1, Title = 2}
-export const bmVolumeProcessorProperties = Object.keys(BmVolumeProcessorProperty).filter(k => typeof BmVolumeProcessorProperty[k] === 'number').map(t => ({label: t, value: BmVolumeProcessorProperty[t]}));
 export enum BulkModificationDiffOperation {None = 0, Ignore = 1, Replace = 2, Merge = 3}
 export const bulkModificationDiffOperations = Object.keys(BulkModificationDiffOperation).filter(k => typeof BulkModificationDiffOperation[k] === 'number').map(t => ({label: t, value: BulkModificationDiffOperation[t]}));
 export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
 export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
+export enum BulkModificationFilterableProperty {Category = 1, MediaLibrary = 2, FileName = 4, DirectoryPath = 5, CreateDt = 7, FileCreateDt = 8, FileModifyDt = 9, Tag = 15}
+export const bulkModificationFilterableProperties = Object.keys(BulkModificationFilterableProperty).filter(k => typeof BulkModificationFilterableProperty[k] === 'number').map(t => ({label: t, value: BulkModificationFilterableProperty[t]}));
 export enum BulkModificationFilterGroupOperation {And = 1, Or = 2}
 export const bulkModificationFilterGroupOperations = Object.keys(BulkModificationFilterGroupOperation).filter(k => typeof BulkModificationFilterGroupOperation[k] === 'number').map(t => ({label: t, value: BulkModificationFilterGroupOperation[t]}));
 export enum BulkModificationFilterOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
 export const bulkModificationFilterOperations = Object.keys(BulkModificationFilterOperation).filter(k => typeof BulkModificationFilterOperation[k] === 'number').map(t => ({label: t, value: BulkModificationFilterOperation[t]}));
+export enum BulkModificationModifiableProperty {FileName = 4, CreateDt = 7, Tag = 15}
+export const bulkModificationModifiableProperties = Object.keys(BulkModificationModifiableProperty).filter(k => typeof BulkModificationModifiableProperty[k] === 'number').map(t => ({label: t, value: BulkModificationModifiableProperty[t]}));
 export enum BulkModificationProcessOperation {Add = 1, Modify = 2, Remove = 3}
 export const bulkModificationProcessOperations = Object.keys(BulkModificationProcessOperation).filter(k => typeof BulkModificationProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationProcessOperation[t]}));
-export enum BulkModificationProperty {Category = 1, MediaLibrary = 2, Name = 3, FileName = 4, DirectoryPath = 5, ReleaseDt = 6, CreateDt = 7, FileCreateDt = 8, FileModifyDt = 9, Publisher = 10, Language = 11, Volume = 12, Original = 13, Series = 14, Tag = 15, Introduction = 16, Rate = 17, CustomProperty = 18}
-export const bulkModificationProperties = Object.keys(BulkModificationProperty).filter(k => typeof BulkModificationProperty[k] === 'number').map(t => ({label: t, value: BulkModificationProperty[t]}));
 export enum BulkModificationStatus {Processing = 1, Closed = 2}
 export const bulkModificationStatuses = Object.keys(BulkModificationStatus).filter(k => typeof BulkModificationStatus[k] === 'number').map(t => ({label: t, value: BulkModificationStatus[t]}));
-export enum BulkModificationVariableSource {None = 1, FileName = 2, FileNameWithoutExtension = 3, FullPath = 4, DirectoryName = 5, Name = 6}
+export enum BulkModificationVariableSource {None = 1, FileName = 2, FileNameWithoutExtension = 3, FullPath = 4, DirectoryName = 5}
 export const bulkModificationVariableSources = Object.keys(BulkModificationVariableSource).filter(k => typeof BulkModificationVariableSource[k] === 'number').map(t => ({label: t, value: BulkModificationVariableSource[t]}));
 export enum CloseBehavior {Prompt = 0, Exit = 1, Minimize = 2, Cancel = 1000}
 export const closeBehaviors = Object.keys(CloseBehavior).filter(k => typeof CloseBehavior[k] === 'number').map(t => ({label: t, value: CloseBehavior[t]}));
@@ -114,8 +112,6 @@ export enum CoverSelectOrder {FilenameAscending = 1, FileModifyDtDescending = 2}
 export const coverSelectOrders = Object.keys(CoverSelectOrder).filter(k => typeof CoverSelectOrder[k] === 'number').map(t => ({label: t, value: CoverSelectOrder[t]}));
 export enum CustomDataType {String = 1, DateTime = 2, Number = 3, Enum = 4}
 export const customDataTypes = Object.keys(CustomDataType).filter(k => typeof CustomDataType[k] === 'number').map(t => ({label: t, value: CustomDataType[t]}));
-export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15}
-export const customPropertyTypes = Object.keys(CustomPropertyType).filter(k => typeof CustomPropertyType[k] === 'number').map(t => ({label: t, value: CustomPropertyType[t]}));
 export enum DownloaderStopBy {ManuallyStop = 1, AppendToTheQueue = 2}
 export const downloaderStopBies = Object.keys(DownloaderStopBy).filter(k => typeof DownloaderStopBy[k] === 'number').map(t => ({label: t, value: DownloaderStopBy[t]}));
 export enum DownloadTaskAction {StartManually = 1, Restart = 2, Disable = 3, StartAutomatically = 4}
@@ -196,6 +192,8 @@ export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));
 export enum TagGroupAdditionalItem {Tags = 1, PreferredAlias = 2, TagNamePreferredAlias = 4}
 export const tagGroupAdditionalItems = Object.keys(TagGroupAdditionalItem).filter(k => typeof TagGroupAdditionalItem[k] === 'number').map(t => ({label: t, value: TagGroupAdditionalItem[t]}));
+export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15}
+export const customPropertyTypes = Object.keys(CustomPropertyType).filter(k => typeof CustomPropertyType[k] === 'number').map(t => ({label: t, value: CustomPropertyType[t]}));
 export enum LogLevel {Trace = 0, Debug = 1, Information = 2, Warning = 3, Error = 4, Critical = 5, None = 6}
 export const logLevels = Object.keys(LogLevel).filter(k => typeof LogLevel[k] === 'number').map(t => ({label: t, value: LogLevel[t]}));
 export enum OpenDialogProperty {openFile = 0, openDirectory = 1, multiSelections = 2, showHiddenFiles = 3, createDirectory = 4, promptToCreate = 5, noResolveAliases = 6, treatPackageAsDirectory = 7}

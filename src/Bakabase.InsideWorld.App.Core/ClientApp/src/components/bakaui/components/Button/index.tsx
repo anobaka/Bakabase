@@ -2,7 +2,7 @@ import { Button } from '@nextui-org/react';
 import type { ReactNode } from 'react';
 import type * as react from 'react';
 
-interface IProps extends React.ComponentPropsWithoutRef<'button'>{
+export interface ButtonProps extends React.ComponentPropsWithoutRef<'button'>{
   size?: 'sm' | 'md' | 'lg';
   color: 'default' | 'primary' | 'secondary' | 'success' | 'danger' | 'warning';
   variant?: 'solid' | 'faded' | 'bordered' | 'light' | 'flat' | 'shadow';
@@ -12,7 +12,7 @@ interface IProps extends React.ComponentPropsWithoutRef<'button'>{
   endContent?: any;
 }
 
-export default (props: IProps) => {
+export default (props: ButtonProps) => {
   return (
     <Button
       {...props}

@@ -16,7 +16,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         /// </summary>
         public string ResourcePath { get; set; } = null!;
         public int ResourceId { get; set; }
-        public BulkModificationProperty Property { get; set; }
+        public BulkModificationFilterableProperty Property { get; set; }
         public string? PropertyKey { get; set; }
 
         /// <summary>

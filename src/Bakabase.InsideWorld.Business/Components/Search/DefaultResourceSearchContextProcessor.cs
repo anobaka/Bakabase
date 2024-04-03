@@ -4,12 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.CustomProperty;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.InsideWorld.Models.Models.Dtos.CustomProperty.Abstractions;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Newtonsoft.Json;
 using SQLitePCL;
@@ -73,7 +75,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 			}
 		}
 
-        private async Task<Dictionary<int, CustomPropertyValueDto?>?> PrepareAndGetCustomPropertyValues(
+        private async Task<Dictionary<int, CustomPropertyValue?>?> PrepareAndGetCustomPropertyValues(
             ResourceSearchFilter filter, ResourceSearchContext context)
         {
             context.CustomPropertyDataPool ??= new();
@@ -82,7 +84,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
             {
                 var rawValues = await _customPropertyValueService.GetDtoList(x => x.PropertyId == filter.PropertyId,
                     CustomPropertyValueAdditionalItem.None, false);
-                propertyValues = rawValues.ToDictionary(x => x.ResourceId, x => (CustomPropertyValueDto?) x);
+                propertyValues = rawValues.ToDictionary(x => x.ResourceId, x => (CustomPropertyValue?) x);
                 var nullValueIds = context.AllResourceIds.Except(propertyValues.Keys);
                 foreach (var id in nullValueIds)
                 {
@@ -118,8 +120,8 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 							var getValue = property switch
 							{
 								SearchableReservedProperty.FileName =>
-									(Func<Models.Models.Entities.Resource, string>) (x => x.RawName),
-								SearchableReservedProperty.DirectoryPath => x => x.Directory,
+									(Func<Abstractions.Models.Db.Resource, string>) (x => x.RawName),
+								SearchableReservedProperty.DirectoryPath => x => x.Directory!,
 								_ => null!
 							};
 
@@ -285,7 +287,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 							var getValue = property switch
 							{
 								SearchableReservedProperty.CreatedAt =>
-									(Func<Models.Models.Entities.Resource, DateTime?>) (x => x.CreateDt),
+									(Func<Abstractions.Models.Db.Resource, DateTime?>) (x => x.CreateDt),
 								SearchableReservedProperty.FileCreatedAt => x => x.FileCreateDt,
 								SearchableReservedProperty.FileModifiedAt => x => x.FileModifyDt,
 								_ => null!
@@ -384,7 +386,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 							var getValue = property switch
 							{
 								SearchableReservedProperty.Category =>
-									(Func<Models.Models.Entities.Resource, int>) (x => x.CategoryId),
+									(Func<Abstractions.Models.Db.Resource, int>) (x => x.CategoryId),
 								SearchableReservedProperty.MediaLibrary => x => x.MediaLibraryId,
 								_ => null!
 							};

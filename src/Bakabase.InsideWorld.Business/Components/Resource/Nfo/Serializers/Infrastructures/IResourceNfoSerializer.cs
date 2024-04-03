@@ -10,7 +10,8 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers.Infr
     internal interface IResourceNfoSerializer
     {
         int Version { get; }
-        ResourceDto Deserialize(string xml);
-        string Serialize(ResourceDto resource);
+        [Obsolete("Decoupling with resource")]
+        Business.Models.Domain.Resource Deserialize(string xml);
+        string Serialize(Business.Models.Domain.Resource resource);
     }
 }
