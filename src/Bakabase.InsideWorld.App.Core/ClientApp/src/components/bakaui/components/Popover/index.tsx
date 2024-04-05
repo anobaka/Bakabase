@@ -6,11 +6,24 @@ interface PopoverProps {
   showArrow?: boolean;
   trigger: any;
   children: any;
+  visible?: boolean;
+  onVisibleChange?: (visible: boolean) => void;
+  closeMode?: ('mask' | 'esc')[];
 }
 
-export default ({ trigger, children, ...otherProps }: PopoverProps) => {
+export default ({ trigger, children, visible, closeMode, ...otherProps }: PopoverProps) => {
+  console.log(closeMode?.includes('esc'), closeMode?.includes('mask') == true);
   return (
-    <Popover {...otherProps}>
+    <Popover
+      isOpen={visible}
+      shouldCloseOnBlur={closeMode?.includes('esc')}
+      shouldCloseOnInteractOutside={() => closeMode?.includes('mask') == true}
+      onOpenChange={o => {
+        console.log(o, 555);
+        otherProps.onVisibleChange?.(o);
+      }}
+      {...otherProps}
+    >
       <PopoverTrigger>
         {trigger}
       </PopoverTrigger>

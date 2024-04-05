@@ -1,4 +1,3 @@
-import { Overlay, Progress, Switch } from '@alifd/next';
 import type { DialogProps } from '@alifd/next/types/dialog';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,9 +15,7 @@ import { CustomPropertyType } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
-import { Modal, Button, Input, Popover, Select } from '@/components/bakaui';
-
-const { Popup } = Overlay;
+import { Modal, Button, Input, Popover, Select, Progress, Switch } from '@/components/bakaui';
 
 interface IProps extends DialogProps {
   value?: CustomPropertyForm;
@@ -66,7 +63,7 @@ const PropertyDialog = ({
     setVisible(false);
   };
 
-  // console.log(6666, 'render');
+  // console.log(6666, property);
 
   const renderOptions = () => {
     if (property.type != undefined) {
@@ -80,58 +77,49 @@ const PropertyDialog = ({
           const multiple = property.type === CustomPropertyType.MultipleChoice;
           return (
             <>
-              <div className={'label'}>{t('Options')}</div>
-              <div className="value">
-                <ChoiceList
-                  choices={options?.choices}
-                  onChange={choices => {
-                    setProperty({
-                      ...property,
-                      options: {
-                        ...options,
-                        choices,
-                      },
-                    });
-                  }}
-                />
-              </div>
-              <div className="label">{t('Allow adding new options while choosing')}</div>
-              <div className="value">
-                <Switch
-                  size={'small'}
-                  checked={options?.allowAddingNewOptionsWhileChoosing}
-                  onChange={c => {
-                    setProperty({
-                      ...property,
-                      options: {
-                        ...options,
-                        allowAddingNewOptionsWhileChoosing: c,
-                      },
-                    });
-                  }}
-                />
-              </div>
-              <div className="label">{t('Default value')}</div>
-              <div className="value">
-                <Select
-                  mode={multiple ? 'multiple' : 'single'}
-                  value={options?.defaultValue}
-                  autoWidth
-                  hasClear
-                  style={{ width: '100%' }}
-                  dataSource={options?.choices?.map(choice => choice.value)}
-                  showSearch
-                  onChange={c => {
-                    setProperty({
-                      ...property,
-                      options: {
-                        ...options,
-                        defaultValue: c,
-                      },
-                    });
-                  }}
-                />
-              </div>
+              <ChoiceList
+                choices={options?.choices}
+                onChange={choices => {
+                  setProperty({
+                    ...property,
+                    options: {
+                      ...options,
+                      choices,
+                    },
+                  });
+                }}
+              />
+              <Switch
+                label={t('Allow adding new options while choosing')}
+                size={'sm'}
+                isSelected={options?.allowAddingNewOptionsWhileChoosing}
+                onValueChange={c => {
+                  setProperty({
+                    ...property,
+                    options: {
+                      ...options,
+                      allowAddingNewOptionsWhileChoosing: c,
+                    },
+                  });
+                }}
+              />
+              <Select
+                size={'sm'}
+                label={t('Default value')}
+                selectionMode={multiple ? 'multiple' : 'single'}
+                value={options?.defaultValue}
+                dataSource={options?.choices?.map(choice => ({ label: choice.value, value: choice.id }))}
+                onSelectionChange={c => {
+                  const array = Array.from(c.values());
+                  setProperty({
+                    ...property,
+                    options: {
+                      ...options,
+                      defaultValue: multiple ? array : array[0],
+                    },
+                  });
+                }}
+              />
             </>
           );
         }
@@ -139,84 +127,83 @@ const PropertyDialog = ({
           const options = property.options as INumberPropertyOptions;
           const previewValue = 80;
           const previewValueStr = Number(previewValue).toFixed(options?.precision || 0);
+          console.log(previewValue, options?.precision, previewValueStr);
           return (
             <>
-              <div className="label">{t('Precision')}</div>
-              <div className="value">
-                <Select
-                  mode={'single'}
-                  value={options?.precision}
-                  dataSource={NumberPrecisions}
-                  autoWidth
-                  style={{ width: '100%' }}
-                  onChange={c => {
-                    setProperty({
-                      ...property,
-                      options: {
-                        ...options,
-                        precision: c,
-                      },
-                    });
-                  }}
-                />
-              </div>
-              <div className="label">{t('Preview')}</div>
-              <div className="value">
-                {previewValueStr}
-              </div>
+              <Select
+                label={t('Precision')}
+                value={options?.precision}
+                dataSource={NumberPrecisions}
+                onSelectionChange={c => {
+                  setProperty({
+                    ...property,
+                    options: {
+                      ...options,
+                      precision: c.values().next().value,
+                    },
+                  });
+                }}
+              />
+              <Input
+                label={t('Preview')}
+                disabled
+                value={previewValueStr}
+              />
             </>
           );
         }
         case CustomPropertyType.Percentage: {
           const options = property.options as IPercentagePropertyOptions;
           const previewValue = 80;
-          const previewValueStr = Number(previewValue).toFixed(options?.precision || 0);
+          const previewValueStr = `${Number(previewValue).toFixed(options?.precision || 0)}%`;
           return (
             <>
-              <div className="label">{t('Precision')}</div>
-              <div className="value">
-                <Select
-                  mode={'single'}
-                  value={options?.precision}
-                  dataSource={NumberPrecisions}
-                  autoWidth
-                  style={{ width: '100%' }}
-                  onChange={c => {
-                    setProperty({
-                      ...property,
-                      options: {
-                        ...options,
-                        precision: c,
-                      },
-                    });
-                  }}
-                />
-              </div>
-              <div className="label">{t('Show progressbar')}</div>
-              <div className="value">
-                <Switch
-                  size={'small'}
-                  checked={options?.showProgressbar}
-                  onChange={c => {
-                    setProperty({
-                      ...property,
-                      options: {
-                        ...options,
-                        showProgressbar: c,
-                      },
-                    });
-                  }}
-                />
-              </div>
-              <div className="label">{t('Preview')}</div>
-              <div className="value">
-                {options?.showProgressbar ? (
+              <Select
+                label={t('Precision')}
+                value={options?.precision}
+                dataSource={NumberPrecisions}
+                onSelectionChange={c => {
+                  setProperty({
+                    ...property,
+                    options: {
+                      ...options,
+                      precision: c.values().next().value,
+                    },
+                  });
+                }}
+              />
+              <Switch
+                label={t('Show progressbar')}
+                size={'sm'}
+                isSelected={options?.showProgressbar}
+                onValueChange={c => {
+                  setProperty({
+                    ...property,
+                    options: {
+                      ...options,
+                      showProgressbar: c,
+                    },
+                  });
+                }}
+              />
+              {options?.showProgressbar ? (
+                <div>
+                  <div>{t('Preview')}</div>
                   <Progress
+                    className={'max-w-[70%]'}
+                    renderPercent={p => (
+                      <div className={'text-[color:var(--bakaui-color)]'}>{previewValueStr}</div>
+                    )}
                     percent={previewValue}
-                    textRender={(p) => `${previewValueStr}%`}
                   />
-                ) : `${previewValueStr}%`}
-              </div>
+                </div>
+              ) : (
+                <Input
+                  label={t('Preview')}
+                  disabled
+                  value={previewValueStr}
+                />
+              )}
             </>
           );
         }
@@ -285,64 +272,70 @@ const PropertyDialog = ({
       }}
       {...dialogProps}
     >
-      <div className={''}>
-        <Input
-          size={'sm'}
-          label={t('Name')}
-          value={property.name}
-          onValueChange={name => setProperty({
-            ...property,
-            name,
-          })}
-        />
-        <Popover
-          showArrow
-          trigger={(
-            <Button
-              color={'default'}
-              size={'sm'}
-              className={'type'}
-            >
-              {property.type == undefined ? t('Please select') : (
-                <>
-                  <CustomIcon type={PropertyTypeIconMap[property.type]} className={'text-medium'} />
-                  {t(CustomPropertyType[property.type])}
-                </>
-              )}
-            </Button>
-          )}
-          placement={'right'}
-        >
-          <div className={'p-2 flex flex-col gap-2'}>
-            {Object.keys(PropertyTypeGroup).map(group => {
-              return (
-                <div className={'pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0'}>
-                  <div className={'mb-2 font-bold'}>{t(group)}</div>
-                  <div className="grid grid-cols-2 gap-x-2 text-sm leading-5">
-                    {PropertyTypeGroup[group].map(type => {
-                      return (
-                        <Button
-                          variant={'light'}
-                          className={'justify-start'}
-                          onClick={() => {
-                            setTypeGroupsVisible(false);
-                            setProperty({
-                              ...property,
-                              type,
-                            });
-                          }}
-                        >
-                          <CustomIcon type={PropertyTypeIconMap[type]} className={'text-medium'} />
-                          {t(CustomPropertyType[type])}
-                        </Button>
-                      );
-                    })}
+      <div className={'flex flex-col gap-2'}>
+        <div className={'flex gap-2 items-center'}>
+          <Popover
+            closeMode={['mask', 'esc']}
+            showArrow
+            visible={typeGroupsVisible}
+            onVisibleChange={visible => setTypeGroupsVisible(visible)}
+            trigger={(
+              <Button
+                color={'default'}
+                size={'lg'}
+                onClick={() => setTypeGroupsVisible(true)}
+              >
+                {property.type == undefined ? t('Please select') : (
+                  <>
+                    <CustomIcon type={PropertyTypeIconMap[property.type]} className={'text-medium'} />
+                    {t(CustomPropertyType[property.type])}
+                  </>
+                )}
+              </Button>
+            )}
+            placement={'right'}
+          >
+            <div className={'p-2 flex flex-col gap-2'}>
+              {Object.keys(PropertyTypeGroup).map(group => {
+                return (
+                  <div className={'pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0'}>
+                    <div className={'mb-2 font-bold'}>{t(group)}</div>
+                    <div className="grid grid-cols-2 gap-x-2 text-sm leading-5">
+                      {PropertyTypeGroup[group].map(type => {
+                        return (
+                          <Button
+                            variant={'light'}
+                            className={'justify-start'}
+                            onClick={() => {
+                              setTypeGroupsVisible(false);
+                              setProperty({
+                                ...property,
+                                type,
+                              });
+                            }}
+                          >
+                            <CustomIcon type={PropertyTypeIconMap[type]} className={'text-medium'} />
+                            {t(CustomPropertyType[type])}
+                          </Button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
+                );
+              })}
+            </div>
+          </Popover>
+          <Input
+            className={'flex-1'}
+            size={'sm'}
+            label={t('Name')}
+            value={property.name}
+            onValueChange={name => setProperty({
+              ...property,
+              name,
             })}
-          </div>
-        </Popover>
+          />
+        </div>
         {renderOptions()}
       </div>
     </Modal>
