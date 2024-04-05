@@ -5,6 +5,7 @@ import Input from './components/Input';
 import Chip from './components/Chip';
 import Tooltip from './components/Tooltip';
 import Modal from './components/Modal';
+import Popover from './components/Popover';
 
 export {
   Button,
@@ -16,4 +17,5 @@ export {
   Chip,
   Tooltip,
   Modal,
+  Popover,
 };

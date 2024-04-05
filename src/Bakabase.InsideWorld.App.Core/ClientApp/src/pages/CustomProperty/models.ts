@@ -26,7 +26,10 @@ export const PropertyTypeIconMap: Record<CustomPropertyType, string> = {
   [CustomPropertyType.Boolean]: 'checkboxchecked',
   [CustomPropertyType.Link]: 'link',
   [CustomPropertyType.Attachment]: 'attachment',
-  // [CustomPropertyType.Formula]: 'formula'
+  // [CustomPropertyType.Formula]: 'formula',
+  [CustomPropertyType.Time]: 'time',
+  [CustomPropertyType.Date]: 'calendar-alt',
+  [CustomPropertyType.DateTime]: 'date-time',
 };
 
 export interface IChoicePropertyOptions {

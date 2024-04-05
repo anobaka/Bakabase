@@ -1,4 +1,4 @@
-import { Overlay, Progress, Select, Switch } from '@alifd/next';
+import { Overlay, Progress, Switch } from '@alifd/next';
 import type { DialogProps } from '@alifd/next/types/dialog';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ import { CustomPropertyType } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
-import { Modal, Button, Input } from '@/components/bakaui';
+import { Modal, Button, Input, Popover, Select } from '@/components/bakaui';
 
 const { Popup } = Overlay;
 
@@ -24,6 +24,7 @@ interface IProps extends DialogProps {
   value?: CustomPropertyForm;
   onSaved?: (property: ICustomProperty) => any;
 }
+
 interface CustomPropertyForm {
   id?: number;
   name?: string;
@@ -284,73 +285,64 @@ const PropertyDialog = ({
       }}
       {...dialogProps}
     >
-      <div className={'grid grid-cols-2'} >
-        <div className="align-right">{t('Name')}</div>
-        <div className="value">
-          <Input
-            value={property.name}
-            onChange={name => setProperty({
-              ...property,
-              name,
-            })}
-          />
-        </div>
-        <div className="label">{t('Type')}</div>
-        <div className="value">
-          <Popup
-            v2
-            animation={false}
-            trigger={(
-              <Button
-                text
-                type={'primary'}
-                className={'type'}
-              >
-                {property.type == undefined ? t('Please select') : (
-                  <>
-                    <CustomIcon type={PropertyTypeIconMap[property.type]} className={'text-medium'} />
-                    {t(CustomPropertyType[property.type])}
-                  </>
-                )}
-              </Button>
-            )}
-            triggerType="click"
-            placement={'rt'}
-            visible={typeGroupsVisible}
-            onVisibleChange={v => {
-              setTypeGroupsVisible(v);
-            }}
-          >
-            <div className={'grouped-property-types'}>
-              {Object.keys(PropertyTypeGroup).map(group => {
-                return (
-                  <div className={'group'}>
-                    <div className={'title'}>{t(group)}</div>
-                    <div className="types">
-                      {PropertyTypeGroup[group].map(type => {
-                        return (
-                          <div
-                            className={'type'}
-                            onClick={() => {
-                              setTypeGroupsVisible(false);
-                              setProperty({
-                                ...property,
-                                type,
-                              });
-                            }}
-                          >
-                            <CustomIcon type={PropertyTypeIconMap[type]} className={'text-medium'} />
-                            {t(CustomPropertyType[type])}
-                          </div>
-                        );
-                      })}
-                    </div>
+      <div className={''}>
+        <Input
+          size={'sm'}
+          label={t('Name')}
+          value={property.name}
+          onValueChange={name => setProperty({
+            ...property,
+            name,
+          })}
+        />
+        <Popover
+          showArrow
+          trigger={(
+            <Button
+              color={'default'}
+              size={'sm'}
+              className={'type'}
+            >
+              {property.type == undefined ? t('Please select') : (
+                <>
+                  <CustomIcon type={PropertyTypeIconMap[property.type]} className={'text-medium'} />
+                  {t(CustomPropertyType[property.type])}
+                </>
+              )}
+            </Button>
+          )}
+          placement={'right'}
+        >
+          <div className={'p-2 flex flex-col gap-2'}>
+            {Object.keys(PropertyTypeGroup).map(group => {
+              return (
+                <div className={'pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0'}>
+                  <div className={'mb-2 font-bold'}>{t(group)}</div>
+                  <div className="grid grid-cols-2 gap-x-2 text-sm leading-5">
+                    {PropertyTypeGroup[group].map(type => {
+                      return (
+                        <Button
+                          variant={'light'}
+                          className={'justify-start'}
+                          onClick={() => {
+                            setTypeGroupsVisible(false);
+                            setProperty({
+                              ...property,
+                              type,
+                            });
+                          }}
+                        >
+                          <CustomIcon type={PropertyTypeIconMap[type]} className={'text-medium'} />
+                          {t(CustomPropertyType[type])}
+                        </Button>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          </Popup>
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        </Popover>
         {renderOptions()}
       </div>
     </Modal>
