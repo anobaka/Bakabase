@@ -13,7 +13,7 @@ export default (props) => {
       size={'small'}
       type={'menu'}
       title={t('Drag to sort')}
-      className={`drag-handle ${className || ''}`}
+      className={`drag-handle ${className || ''} cursor-pointer`}
       {...(otherProps || {})}
     />
   );

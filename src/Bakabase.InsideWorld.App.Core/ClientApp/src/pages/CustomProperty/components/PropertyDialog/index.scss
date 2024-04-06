@@ -16,46 +16,6 @@
         align-items: center;
         gap: 5px;
       }
-
-      &>.choice-list {
-        .other-opts {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          .sort {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-          }
-        }
-        .sortable-choices {
-          margin: 10px 0;
-          .sortable-choice {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-
-            &>.next-input {
-              flex: 1;
-            }
-
-            &>.drag-handle {
-              color: var(--theme-text-subtle);
-            }
-          }
-        }
-        .add-opts {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-
-          &>* {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-          }
-        }
-      }
     }
   }
 }

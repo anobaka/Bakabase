@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Input } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
 import { toast } from 'react-toastify';
 import type { IChoice } from '../../../../../../models';
 import DragHandle from '@/components/DragHandle';
 import ClickableIcon from '@/components/ClickableIcon';
+import { Input } from '@/components/bakaui';
 
 interface IProps {
   id: string;
@@ -42,15 +42,13 @@ export function SortableChoice({ id, choice: propsChoice, onRemove, onChange }: 
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={'sortable-choice'}>
+    <div ref={setNodeRef} style={style} className={'flex gap-1 items-center'}>
       <DragHandle {...listeners} {...attributes} />
-      <div className="color" style={{ background: choice?.color ?? 'transparent' }} />
+      <div className={'border-1 w-[14px] h-[14px]'} style={{ background: choice?.color ?? 'transparent' }} />
       <Input
-        size={'small'}
+        size={'sm'}
         value={choice?.value}
-        hasClear
-        trim
-        onChange={value => {
+        onValueChange={value => {
           setChoice({
             ...choice,
             value,
@@ -60,7 +58,7 @@ export function SortableChoice({ id, choice: propsChoice, onRemove, onChange }: 
       <ClickableIcon
         colorType={'normal'}
         type={choice.hide == true ? 'eye-close' : 'eye'}
-        size={'small'}
+        className={'text-medium'}
         title={t('Hide in view')}
         onClick={() => {
           setChoice({
@@ -70,7 +68,7 @@ export function SortableChoice({ id, choice: propsChoice, onRemove, onChange }: 
         }}
       />
       <ClickableIcon
-        className={'remove'}
+        className={'text-medium'}
         colorType={'danger'}
         type={'delete'}
         size={'small'}

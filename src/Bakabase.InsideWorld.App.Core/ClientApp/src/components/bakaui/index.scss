@@ -2,5 +2,5 @@ html, body {
   --bakaui-primary: hsl(var(--nextui-primary));
   --bakaui-foreground: hsl(var(--nextui-foreground));
 
-  color: var(--bakaui-foreground);
+  --bakaui-color: var(--bakaui-foreground);
 }

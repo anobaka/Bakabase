@@ -6,6 +6,9 @@ import Chip from './components/Chip';
 import Tooltip from './components/Tooltip';
 import Modal from './components/Modal';
 import Popover from './components/Popover';
+import Progress from './components/Progress';
+import Switch from './components/Switch';
+import TextArea from './components/TextArea';
 
 export {
   Button,
@@ -18,4 +21,7 @@ export {
   Tooltip,
   Modal,
   Popover,
+  Progress,
+  Switch,
+  TextArea,
 };

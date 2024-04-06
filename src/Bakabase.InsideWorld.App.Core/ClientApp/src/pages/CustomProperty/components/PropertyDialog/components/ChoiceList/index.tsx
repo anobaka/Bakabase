@@ -6,12 +6,13 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Button, Input, Overlay } from '@alifd/next';
+import { Input, Overlay } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import type { IChoice } from '../../../../models';
 import { SortableChoice } from './components/SortableChoice';
 import CustomIcon from '@/components/CustomIcon';
 import { uuidv4 } from '@/components/utils';
+import { Button, Popover, TextArea } from '@/components/bakaui';
 
 const { Popup } = Overlay;
 
@@ -37,24 +38,21 @@ export default function ChoiceList({ choices: propsChoices, onChange }: IProps) 
   }, [choices]);
 
   return (
-    <div className={'choice-list'}>
-      <div className="other-opts">
+    <div className={''}>
+      <div className="flex justify-between items-center">
         <Button
-          size={'small'}
-          text
-          type={'normal'}
-          className={'sort'}
+          size={'sm'}
+          variant={'light'}
           onClick={() => {
             choices.sort((a, b) => (a.value || '').localeCompare(b.value || ''));
-            console.log(123, choices);
             setChoices([...choices]);
           }}
         >
-          <CustomIcon type={'sorting'} size={'small'} />
+          <CustomIcon type={'sorting'} className={'text-medium'} />
           {t('Sort by alphabet')}
         </Button>
       </div>
-      <div className="sortable-choices">
+      <div className="mt-2 mb-2 flex flex-col gap-1">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -82,52 +80,54 @@ export default function ChoiceList({ choices: propsChoices, onChange }: IProps) 
           </SortableContext>
         </DndContext>
       </div>
-      <div className="add-opts">
+      <div className="flex items-center justify-between">
         <Button
-          className="add"
-          size={'small'}
-          text
+          size={'sm'}
           onClick={() => {
             setChoices([...choices, { id: uuidv4() }]);
           }}
         >
           <CustomIcon
             type={'plus-circle'}
-            size={'small'}
+            className={'text-medium'}
           />
           {t('Add choice')}
         </Button>
-        <Popup
-          v2
-          animation={false}
+        <Popover
           trigger={(
             <Button
-              className="add-in-bulk"
-              size={'small'}
-              text
+              variant={'light'}
+              size={'sm'}
             >
               {t('Add in bulk')}
             </Button>
           )}
-          triggerType="click"
-          placement={'rt'}
+          placement={'right'}
           visible={addInBulkPopupVisible}
           onVisibleChange={v => {
             setAddInBulkPopupVisible(v);
           }}
         >
-          <div className={'add-choice-in-bulk-popup'}>
-            <div className="title">{t('Add choices in bulk')}</div>
-            <Input.TextArea
+          <div className={'flex flex-col gap-2 m-2 '}>
+            <div className="text-medium">{t('Add choices in bulk')}</div>
+            <TextArea
               value={addInBulkText}
-              onChange={v => setAddInBulkText(v)}
+              onValueChange={v => setAddInBulkText(v)}
               placeholder={t('Please enter the choices, one per line')}
-              rows={20}
             />
-            <div className="opts">
+            <div className="flex justify-end items-center">
               <Button
-                type={'primary'}
-                size={'small'}
+                variant={'light'}
+                size={'sm'}
+                onClick={() => {
+                  setAddInBulkPopupVisible(false);
+                }}
+              >
+                {t('Cancel')}
+              </Button>
+              <Button
+                color={'primary'}
+                size={'sm'}
                 onClick={() => {
                   const newChoices = addInBulkText.split('\n').map(c => ({ value: c, id: uuidv4() }));
                   setChoices([...choices, ...newChoices]);
@@ -136,18 +136,9 @@ export default function ChoiceList({ choices: propsChoices, onChange }: IProps) 
               >
                 {t('Add')}
               </Button>
-              <Button
-                type={'normal'}
-                size={'small'}
-                onClick={() => {
-                  setAddInBulkPopupVisible(false);
-                }}
-              >
-                {t('Cancel')}
-              </Button>
             </div>
           </div>
-        </Popup>
+        </Popover>
       </div>
     </div>
   );
