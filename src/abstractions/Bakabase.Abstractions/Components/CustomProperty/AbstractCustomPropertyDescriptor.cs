@@ -10,7 +10,7 @@ namespace Bakabase.Abstractions.Components.CustomProperty
 {
 	public abstract class
 		AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TValue> : ICustomPropertyDescriptor
-		where TProperty : Models.Domain.CustomProperty, new() where TPropertyValue : CustomPropertyValueDto<TValue>, new()
+		where TProperty : Models.Domain.CustomProperty, new() where TPropertyValue : TypedCustomPropertyValue<TValue>, new()
 	{
 		public abstract CustomPropertyType Type { get; }
 
@@ -80,7 +80,7 @@ namespace Bakabase.Abstractions.Components.CustomProperty
 		AbstractCustomPropertyDescriptor<TProperty, TPropertyOptions, TPropertyValue, TValue> :
 		AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TValue>
 		where TProperty : CustomProperty<TPropertyOptions>, new()
-		where TPropertyValue : CustomPropertyValueDto<TValue>, new()
+		where TPropertyValue : TypedCustomPropertyValue<TValue>, new()
 	{
 		public override Models.Domain.CustomProperty? BuildPropertyDto(Models.Db.CustomProperty? customProperty)
 		{

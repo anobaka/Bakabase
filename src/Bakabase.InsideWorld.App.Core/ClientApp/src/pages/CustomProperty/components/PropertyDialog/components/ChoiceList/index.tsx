@@ -19,9 +19,10 @@ const { Popup } = Overlay;
 interface IProps {
   choices?: IChoice[];
   onChange?: (choices: IChoice[]) => void;
+  className?: string;
 }
 
-export default function ChoiceList({ choices: propsChoices, onChange }: IProps) {
+export default function ChoiceList({ choices: propsChoices, onChange, className }: IProps) {
   const { t } = useTranslation();
   const [choices, setChoices] = useState<IChoice[]>(propsChoices || []);
   const [addInBulkPopupVisible, setAddInBulkPopupVisible] = useState(false);
@@ -38,7 +39,7 @@ export default function ChoiceList({ choices: propsChoices, onChange }: IProps) 
   }, [choices]);
 
   return (
-    <div className={''}>
+    <div className={className}>
       <div className="flex justify-between items-center">
         <Button
           size={'sm'}

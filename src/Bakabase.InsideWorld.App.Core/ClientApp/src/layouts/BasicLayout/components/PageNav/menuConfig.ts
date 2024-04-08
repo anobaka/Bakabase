@@ -97,6 +97,11 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/tools',
         icon: 'ToolOutlined',
       },
+      {
+        name: 'Migration',
+        path: '/migration',
+        icon: 'TruckOutlined',
+      },
     ],
   },
   {

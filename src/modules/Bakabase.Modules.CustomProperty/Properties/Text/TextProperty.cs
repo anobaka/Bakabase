@@ -6,7 +6,7 @@ namespace Bakabase.Modules.CustomProperty.Properties.Text;
 
 public record TextProperty : Abstractions.Models.Domain.CustomProperty;
 
-public record TextPropertyValue: CustomPropertyValueDto<string>
+public record TextPropertyValue: TypedCustomPropertyValue<string>
 {
     protected override bool IsMatch(string? value, CustomPropertyValueSearchRequestModel model)
     {

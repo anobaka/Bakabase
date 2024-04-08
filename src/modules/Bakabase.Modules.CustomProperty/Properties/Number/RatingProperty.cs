@@ -12,7 +12,7 @@ public record RatingPropertyOptions
 
 public record RatingProperty() : CustomProperty<RatingPropertyOptions>;
 
-public record RatingPropertyValue : CustomPropertyValueDto<decimal>
+public record RatingPropertyValue : TypedCustomPropertyValue<decimal>
 {
     protected override bool IsMatch(decimal value, CustomPropertyValueSearchRequestModel model)
     {

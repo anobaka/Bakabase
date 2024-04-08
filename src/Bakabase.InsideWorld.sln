@@ -40,9 +40,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "abstractions", "abstraction
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "modules", "modules", "{3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Abstractions", "abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj", "{8686512A-39C1-4EEE-A3F5-101D50D07763}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Abstractions", "abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj", "{8686512A-39C1-4EEE-A3F5-101D50D07763}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.CustomProperty", "modules\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj", "{CB569CF2-09AA-4D76-8E51-278642C66E0D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.CustomProperty", "modules\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj", "{CB569CF2-09AA-4D76-8E51-278642C66E0D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

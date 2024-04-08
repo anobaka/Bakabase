@@ -13,7 +13,7 @@ namespace Bakabase.Abstractions.Models.Domain
 		public object? Value { get; set; }
 	}
 
-	public abstract record CustomPropertyValueDto<T> : CustomPropertyValue
+	public abstract record TypedCustomPropertyValue<T> : CustomPropertyValue
 	{
 		private T? _value;
 

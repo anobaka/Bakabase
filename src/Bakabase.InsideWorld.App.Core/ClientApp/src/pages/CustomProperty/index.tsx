@@ -23,17 +23,18 @@ export default () => {
 
   return (
     <div>
-      <div><Button
-        size={'sm'}
-        color={'primary'}
-        onClick={() => {
-          PropertyDialog.show({
-            onSaved: loadProperties,
-          });
-        }}
-      >
-        {t('Add')}
-      </Button>
+      <div>
+        <Button
+          size={'sm'}
+          color={'primary'}
+          onClick={() => {
+            PropertyDialog.show({
+              onSaved: loadProperties,
+            });
+          }}
+        >
+          {t('Add')}
+        </Button>
       </div>
       <div className={'mt-2 flex items-start gap-2 flex-wrap'}>
         {properties.map(p => {

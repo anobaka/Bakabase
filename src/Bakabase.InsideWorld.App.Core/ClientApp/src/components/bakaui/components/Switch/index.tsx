@@ -6,6 +6,7 @@ interface SwitchProps {
   label?: any;
   onValueChange?: (value: boolean) => void;
   size?: 'sm' | 'md' | 'lg';
+  className?: string;
 }
 
 export default ({ label, ...otherProps }: SwitchProps) => {

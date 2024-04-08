@@ -4,6 +4,9 @@ import React from 'react';
 
 interface IProps {
   children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  onClick?: () => any;
 }
 
 export default (props: IProps) => {

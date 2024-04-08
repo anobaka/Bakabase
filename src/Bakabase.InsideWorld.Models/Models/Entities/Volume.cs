@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
+    [Obsolete]
     public class Volume
     {
         [Key] public int ResourceId { get; set; }

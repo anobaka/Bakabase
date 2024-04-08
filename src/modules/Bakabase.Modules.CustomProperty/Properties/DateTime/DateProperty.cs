@@ -6,4 +6,6 @@ namespace Bakabase.Modules.CustomProperty.Properties.DateTime
     {
         public override CustomPropertyType Type => CustomPropertyType.Date;
     }
+
+    public record DatePropertyValue : DateTimePropertyValue;
 }

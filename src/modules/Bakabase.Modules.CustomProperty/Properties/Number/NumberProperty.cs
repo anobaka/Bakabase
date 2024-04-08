@@ -12,7 +12,7 @@ public record NumberPropertyOptions
 
 public record NumberProperty(): CustomProperty<NumberPropertyOptions>;
 
-public record NumberPropertyValue: CustomPropertyValueDto<decimal>
+public record NumberPropertyValue: TypedCustomPropertyValue<decimal>
 {
     protected override bool IsMatch(decimal value, CustomPropertyValueSearchRequestModel model)
     {

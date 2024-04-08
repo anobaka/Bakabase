@@ -3,7 +3,7 @@ using Bakabase.InsideWorld.Models.RequestModels;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Time
 {
-    internal record TimePropertyValue: CustomPropertyValueDto<TimeSpan>
+    public record TimePropertyValue: TypedCustomPropertyValue<TimeSpan>
     {
         protected override bool IsMatch(TimeSpan value, CustomPropertyValueSearchRequestModel model)
         {

@@ -11,6 +11,7 @@ using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+    [Obsolete]
     public class FavoritesResourceMappingService : FullMemoryCacheResourceService<
         InsideWorldDbContext, FavoritesResourceMapping, int>
     {

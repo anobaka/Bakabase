@@ -1134,5 +1134,10 @@
   "SingleChoice": "单选",
   "MultipleChoice": "多选",
   "Attachment": "附件",
-  "Boolean": "是/否"
+  "Boolean": "是/否",
+  "With {{depth}} layers": "{{depth}}层数据",
+  "Convert to": "转换为",
+  "Select a property": "选择一个属性",
+  "Migration": "迁移",
+  "Migrate": "迁移"
 }

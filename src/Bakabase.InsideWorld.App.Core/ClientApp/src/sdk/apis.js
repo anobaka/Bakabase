@@ -5440,6 +5440,88 @@ export const GetPathRelatedLibrariesURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetMigrationTargets
+ * url: GetMigrationTargetsURL
+ * method: GetMigrationTargets_TYPE
+ * raw_url: GetMigrationTargets_RAW_URL
+ */
+export const GetMigrationTargets = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/migration/targets'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetMigrationTargets_RAW_URL = function() {
+  return '/migration/targets'
+}
+export const GetMigrationTargets_TYPE = function() {
+  return 'get'
+}
+export const GetMigrationTargetsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/migration/targets'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: MigrateTarget
+ * url: MigrateTargetURL
+ * method: MigrateTarget_TYPE
+ * raw_url: MigrateTarget_RAW_URL
+ * @param model - 
+ */
+export const MigrateTarget = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/migration/target/migration'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const MigrateTarget_RAW_URL = function() {
+  return '/migration/target/migration'
+}
+export const MigrateTarget_TYPE = function() {
+  return 'post'
+}
+export const MigrateTargetURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/migration/target/migration'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAppOptions
  * url: GetAppOptionsURL
  * method: GetAppOptions_TYPE

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
+    [Obsolete]
     public class FavoritesResourceMapping : IEquatable<FavoritesResourceMapping>
     {
         [Key] public int Id { get; set; }

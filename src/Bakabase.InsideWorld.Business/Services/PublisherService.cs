@@ -33,6 +33,23 @@ namespace Bakabase.InsideWorld.Business.Services
             _tagService = tagService;
         }
 
+        public async Task<Dictionary<int, List<PublisherDto>>> GetByResources()
+        {
+            var mappings = await _resourceMappingService.GetAll();
+            var resourceIds  = mappings.Select(a => a.ResourceId).Distinct().ToList();
+            var publisherIds = mappings.Select(a => a.PublisherId).Distinct().ToList();
+            var publishers = await _orm.GetAll(a => publisherIds.Contains(a.Id));
+            var publisherDtoList = publishers.Select(a => a.ToDto());
+            var publisherDtoMap = publisherDtoList.ToDictionary(a => a.Id, a => a);
+            var resourcePublishers = resourceIds.ToDictionary(a => a, a =>
+            {
+                var resourceMappings = mappings.Where(b => b.ResourceId == a).ToList();
+                return MergeResourcePublishers(null, resourceMappings, publisherDtoMap);
+            });
+            return resourceIds.ToDictionary(a => a, a => resourcePublishers.GetValueOrDefault(a))
+                .Where(x => x.Value?.Any() == true).ToDictionary(x => x.Key, x => x.Value!);
+        }
+
         public async Task<Dictionary<int, List<PublisherDto>>> GetByResourceIds(List<int> resourceIds)
         {
             var mappings = await _resourceMappingService.GetAll(a => resourceIds.Contains(a.ResourceId));
@@ -42,11 +59,6 @@ namespace Bakabase.InsideWorld.Business.Services
             var publisherDtoMap = publisherDtoList.ToDictionary(a => a.Id, a => a);
             var resourcePublishers = resourceIds.ToDictionary(a => a, a =>
             {
-                if (a == 118481)
-                {
-
-                }
-
                 var resourceMappings = mappings.Where(b => b.ResourceId == a).ToList();
                 return MergeResourcePublishers(null, resourceMappings, publisherDtoMap);
             });
@@ -59,7 +71,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return data.Select(t => t.Name).ToArray();
         }
 
-        private static List<PublisherDto> MergeResourcePublishers(PublisherDto parent,
+        private static List<PublisherDto> MergeResourcePublishers(PublisherDto? parent,
             List<PublisherResourceMapping> mappings,
             Dictionary<int, PublisherDto> publishers)
         {
@@ -177,7 +189,7 @@ namespace Bakabase.InsideWorld.Business.Services
             await _orm.Update(p);
         }
 
-        public async Task<List<PublisherDto>> GetAllDtoList(Expression<Func<Publisher, bool>>? selector = null,
+        public async Task<List<PublisherDto>> GetAll(Expression<Func<Publisher, bool>>? selector = null,
             bool returnCopy = true)
         {
             var data = await _orm.GetAll(selector, returnCopy);

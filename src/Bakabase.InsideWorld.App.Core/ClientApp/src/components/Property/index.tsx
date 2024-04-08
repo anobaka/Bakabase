@@ -30,16 +30,16 @@ export default ({ property, renderTopRight, onClick, renderBottom }: IProps) => 
       onClick={onClick}
     >
       <div className={styles.line1}>
-        <div className={styles.left}>
+        <div className={`${styles.left} mr-2`}>
           <div className={styles.name}>{property.name}</div>
           {icon != undefined && (
             <div className={styles.type}>
-              <CustomIcon type={icon} size={'small'} />
+              <CustomIcon type={icon} className={'text-medium'} />
             </div>
           )}
         </div>
         {renderTopRight && (
-          <div className={styles.right}>
+          <div className={'flex gap-0.5 items-center'}>
             {renderTopRight?.()}
           </div>
         )}

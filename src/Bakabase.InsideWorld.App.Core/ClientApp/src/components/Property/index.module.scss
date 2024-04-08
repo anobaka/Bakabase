@@ -12,6 +12,9 @@
     font-size: 14px;
 
     .left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
       .type {
         display: flex;
         align-items: center;
@@ -19,12 +22,6 @@
         color: var(--theme-text-subtle);
         font-size: 10px;
       }
-    }
-
-    &>* {
-      display: flex;
-      align-items: center;
-      gap: 5px;
     }
   }
 

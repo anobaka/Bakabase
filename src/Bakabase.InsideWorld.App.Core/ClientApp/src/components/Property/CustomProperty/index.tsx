@@ -42,7 +42,7 @@ export default ({
         <>
           <ClickableIcon
             colorType={'normal'}
-            size={'small'}
+            className={'text-medium'}
             type={'edit-square'}
             onClick={e => {
               e.preventDefault();
@@ -55,7 +55,7 @@ export default ({
           />
           <ClickableIcon
             colorType={'danger'}
-            size={'small'}
+            className={'text-medium'}
             type={'delete'}
             onClick={async (e) => {
             e.preventDefault();

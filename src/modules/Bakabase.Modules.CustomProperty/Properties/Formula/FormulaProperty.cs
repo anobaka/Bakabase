@@ -7,7 +7,7 @@ namespace Bakabase.Modules.CustomProperty.Properties.Formula;
 
 public record FormulaProperty(): Abstractions.Models.Domain.CustomProperty;
 
-public record FormulaPropertyValue(): CustomPropertyValueDto<string>
+public record FormulaPropertyValue(): TypedCustomPropertyValue<string>
 {
     protected override bool IsMatch(string? value, CustomPropertyValueSearchRequestModel model)
     {

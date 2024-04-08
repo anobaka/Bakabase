@@ -9,309 +9,66 @@
  * ---------------------------------------------------------------
  */
 
-export interface A {
-  /** @format int32 */
-  x?: number;
-}
-
-/**
- * [1: CompressedFile, 2: Video]
- * @format int32
- */
-export type AdditionalCoverDiscoveringSource = 1 | 2;
-
-export interface Alias {
+export interface BakabaseAbstractionsModelsDbCategoryComponent {
   /** @format int32 */
   id?: number;
-  /**
-   * @minLength 1
-   * @maxLength 256
-   */
-  name: string;
   /** @format int32 */
-  groupId?: number;
-  isPreferred?: boolean;
-}
-
-/**
- * [1: Candidates]
- * @format int32
- */
-export type AliasAdditionalItem = 1;
-
-export interface AliasCreateRequestModel {
+  categoryId: number;
   /** @minLength 1 */
-  name: string;
-  /** @format int32 */
-  groupId?: number | null;
+  componentKey: string;
+  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
+  componentType: BakabaseInsideWorldModelsConstantsComponentType;
+  descriptor?: BakabaseAbstractionsModelsDomainComponentDescriptor;
 }
 
-export interface AliasDto {
+export interface BakabaseAbstractionsModelsDomainCategory {
   /** @format int32 */
   id?: number;
   name?: string | null;
-  candidates?: AliasDto[] | null;
-  /** @format int32 */
-  groupId?: number;
-  /** @uniqueItems true */
-  allNames?: string[] | null;
-}
-
-export interface AliasDtoSearchResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: AliasDto[] | null;
-  /** @format int32 */
-  totalCount?: number;
-  /** @format int32 */
-  pageIndex?: number;
-  /** @format int32 */
-  pageSize?: number;
-}
-
-export interface AliasGroupUpdateRequestModel {
-  /** @format int32 */
-  targetGroupId?: number;
-}
-
-export interface AliasSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Alias;
-}
-
-export interface AliasUpdateRequestModel {
-  name?: string | null;
-  isPreferred?: boolean;
-}
-
-export interface AppInfo {
-  appDataPath?: string | null;
-  coreVersion?: string | null;
-  logPath?: string | null;
-  backupPath?: string | null;
-  tempFilesPath?: string | null;
-  notAcceptTerms?: boolean;
-  needRestart?: boolean;
-}
-
-export interface AppInfoSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: AppInfo;
-}
-
-export interface AppOptions {
-  language?: string | null;
-  version?: string | null;
-  enablePreReleaseChannel?: boolean;
-  enableAnonymousDataTracking?: boolean;
-  wwwRootPath?: string | null;
-  dataPath?: string | null;
-  prevDataPath?: string | null;
-  /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
-  closeBehavior?: CloseBehavior;
-  /** [0: FollowSystem, 1: Light, 2: Dark] */
-  uiTheme?: UiTheme;
-}
-
-export interface AppOptionsPatchRequestModel {
-  language?: string | null;
-  enablePreReleaseChannel?: boolean | null;
-  enableAnonymousDataTracking?: boolean | null;
-  /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
-  closeBehavior?: CloseBehavior;
-  /** [0: FollowSystem, 1: Light, 2: Dark] */
-  uiTheme?: UiTheme;
-}
-
-export interface AppOptionsSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: AppOptions;
-}
-
-export interface AppVersionInfo {
-  version?: string | null;
-  installers?: Installer[] | null;
-}
-
-export interface AppVersionInfoSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: AppVersionInfo;
-}
-
-/**
- * [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x]
- * @format int32
- */
-export type Architecture = 0 | 1 | 2 | 3 | 4 | 5;
-
-export interface Assembly {
-  definedTypes?: TypeInfo[] | null;
-  exportedTypes?: Type[] | null;
-  codeBase?: string | null;
-  entryPoint?: MethodInfo;
-  fullName?: string | null;
-  imageRuntimeVersion?: string | null;
-  isDynamic?: boolean;
-  location?: string | null;
-  reflectionOnly?: boolean;
-  isCollectible?: boolean;
-  isFullyTrusted?: boolean;
-  customAttributes?: CustomAttributeData[] | null;
-  escapedCodeBase?: string | null;
-  manifestModule?: Module;
-  modules?: Module[] | null;
+  color?: string | null;
+  /** @format date-time */
+  createDt?: string;
+  isValid?: boolean;
   /** @deprecated */
-  globalAssemblyCache?: boolean;
-  /** @format int64 */
-  hostContext?: number;
-  /** [0: None, 1: Level1, 2: Level2] */
-  securityRuleSet?: SecurityRuleSet;
+  message?: string | null;
+  /** @format int32 */
+  order?: number;
+  componentsData?: BakabaseAbstractionsModelsDbCategoryComponent[] | null;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
+  generateNfo?: boolean;
+  customProperties?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
+  /** @format int32 */
+  resourceDisplayNamePropertyId?: number | null;
 }
 
-export interface BackgroundTaskDto {
+export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
+  /** [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance] */
+  type?: BakabaseInsideWorldModelsConstantsComponentDescriptorType;
+  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
+  componentType?: BakabaseInsideWorldModelsConstantsComponentType;
+  assemblyQualifiedTypeName?: string | null;
+  name?: string | null;
+  description?: string | null;
+  message?: string | null;
+  optionsJson?: string | null;
+  /** @format int32 */
+  optionsId?: number | null;
+  version?: string | null;
+  dataVersion?: string | null;
+  optionsType?: SystemType;
+  optionsJsonSchema?: string | null;
   id?: string | null;
-  name?: string | null;
-  /** @format date-time */
-  startDt?: string;
-  /** [1: Running, 2: Complete, 3: Failed] */
-  status?: BackgroundTaskStatus;
-  message?: string | null;
-  /** @format int32 */
-  percentage?: number;
-  currentProcess?: string | null;
-  /** [1: Default, 2: Critical] */
-  level?: BackgroundTaskLevel;
-}
-
-export interface BackgroundTaskDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BackgroundTaskDto[] | null;
-}
-
-export interface BackgroundTaskDtoSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BackgroundTaskDto;
+  isInstanceable?: boolean;
+  associatedCategories?: BakabaseAbstractionsModelsDomainCategory[] | null;
 }
 
 /**
- * [1: Default, 2: Critical]
+ * [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel]
  * @format int32
  */
-export type BackgroundTaskLevel = 1 | 2;
-
-/**
- * [1: Running, 2: Complete, 3: Failed]
- * @format int32
- */
-export type BackgroundTaskStatus = 1 | 2 | 3;
-
-export interface BaseResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-}
-
-export interface BilibiliOptions {
-  downloader?: CommonDownloaderOptions;
-  cookie?: string | null;
-}
-
-export interface BilibiliOptionsSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BilibiliOptions;
-}
-
-/**
- * [0: None, 1: Ignore, 2: Replace, 3: Merge]
- * @format int32
- */
-export type BulkModificationDiffOperation = 0 | 1 | 2 | 3;
-
-/**
- * [1: Added, 2: Removed, 3: Modified]
- * @format int32
- */
-export type BulkModificationDiffType = 1 | 2 | 3;
-
-export interface BulkModificationDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  /** [1: Processing, 2: Closed] */
-  status?: BulkModificationStatus;
-  /** @format date-time */
-  createdAt?: string;
-  variables?: BulkModificationVariable[] | null;
-  filter?: BulkModificationFilterGroup;
-  processes?: BulkModificationProcess[] | null;
-  diffs?: ResourceDiff[] | null;
-  filteredResourceIds?: number[] | null;
-  /** @format date-time */
-  filteredAt?: string | null;
-  /** @format date-time */
-  calculatedAt?: string | null;
-  /** @format date-time */
-  appliedAt?: string | null;
-  /** @format date-time */
-  revertedAt?: string | null;
-}
-
-export interface BulkModificationDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BulkModificationDto[] | null;
-}
-
-export interface BulkModificationDtoSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BulkModificationDto;
-}
-
-export interface BulkModificationFilter {
-  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag] */
-  property?: BulkModificationFilterableProperty;
-  propertyKey?: string | null;
-  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation?: BulkModificationFilterOperation;
-  target?: string | null;
-}
-
-export interface BulkModificationFilterGroup {
-  /** [1: And, 2: Or] */
-  operation?: BulkModificationFilterGroupOperation;
-  filters?: BulkModificationFilter[] | null;
-  groups?: BulkModificationFilterGroup[] | null;
-}
-
-/**
- * [1: And, 2: Or]
- * @format int32
- */
-export type BulkModificationFilterGroupOperation = 1 | 2;
-
-/**
- * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
- * @format int32
- */
-export type BulkModificationFilterOperation =
+export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyType =
   | 1
   | 2
   | 3
@@ -326,233 +83,260 @@ export type BulkModificationFilterOperation =
   | 12
   | 13
   | 14
-  | 15
-  | 16
-  | 17
-  | 18;
+  | 15;
 
-/**
- * [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag]
- * @format int32
- */
-export type BulkModificationFilterableProperty = 1 | 2 | 4 | 5 | 7 | 8 | 9 | 15;
-
-export interface BulkModificationProcess {
-  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag] */
-  property?: BulkModificationFilterableProperty;
-  propertyKey?: string | null;
-  value?: string | null;
-}
-
-export interface BulkModificationPutRequestModel {
-  name?: string | null;
-  filter?: BulkModificationFilterGroup;
-  processes?: BulkModificationProcess[] | null;
-  variables?: BulkModificationVariable[] | null;
-}
-
-export interface BulkModificationResourceDiffs {
-  /** @format int32 */
-  id?: number;
-  path?: string | null;
-  diffs?: Diff[] | null;
-}
-
-export interface BulkModificationResourceDiffsListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BulkModificationResourceDiffs[] | null;
-}
-
-/**
- * [1: Processing, 2: Closed]
- * @format int32
- */
-export type BulkModificationStatus = 1 | 2;
-
-export interface BulkModificationVariable {
-  key?: string | null;
-  name?: string | null;
-  /** [1: None, 2: FileName, 3: FileNameWithoutExtension, 4: FullPath, 5: DirectoryName] */
-  source?: BulkModificationVariableSource;
-  find?: string | null;
-  value?: string | null;
-}
-
-/**
- * [1: None, 2: FileName, 3: FileNameWithoutExtension, 4: FullPath, 5: DirectoryName]
- * @format int32
- */
-export type BulkModificationVariableSource = 1 | 2 | 3 | 4 | 5;
-
-/**
- * [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis]
- * @format int32
- */
-export type CallingConventions = 1 | 2 | 3 | 32 | 64;
-
-export interface Category {
+export interface BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
   id?: number;
   name?: string | null;
-  color?: string | null;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel] */
+  type?: BakabaseAbstractionsModelsDomainConstantsCustomPropertyType;
   /** @format date-time */
-  createDt?: string;
-  isValid?: boolean;
-  /** @deprecated */
-  message?: string | null;
-  /** @format int32 */
-  order?: number;
-  componentsData?: CategoryComponent[] | null;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectionOrder?: CoverSelectOrder;
-  enhancementOptions?: ResourceCategoryEnhancementOptions;
-  generateNfo?: boolean;
-  customProperties?: CustomProperty[] | null;
-  /** @format int32 */
-  resourceDisplayNamePropertyId?: number | null;
+  createdAt?: string;
+  categories?: BakabaseAbstractionsModelsDomainCategory[] | null;
 }
 
-export interface CategoryComponent {
+export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
   /** @format int32 */
   id?: number;
   /** @format int32 */
-  categoryId: number;
-  /** @minLength 1 */
-  componentKey: string;
-  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-  componentType: ComponentType;
-  descriptor?: ComponentDescriptor;
-}
-
-export interface CategoryListResponse {
+  propertyId?: number;
   /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Category[] | null;
+  resourceId?: number;
+  property?: BakabaseAbstractionsModelsDomainCustomProperty;
+  value?: any;
 }
 
-export interface CategorySetupWizardInputModel {
-  category?: ResourceCategoryAddRequestModel;
-  mediaLibraries?: MediaLibrary[] | null;
-  syncAfterSaving?: boolean;
+export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
+  name?: string | null;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel] */
+  type?: BakabaseAbstractionsModelsDomainConstantsCustomPropertyType;
+  options?: string | null;
+}
+
+export interface BakabaseAbstractionsModelsDtoResourceSearchDto {
+  /** @format int32 */
+  pageIndex?: number;
+  /**
+   * @format int32
+   * @min 0
+   * @max 100
+   */
+  pageSize?: number;
+  /** @format int32 */
+  skipCount?: number;
+  group?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup;
+  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[] | null;
+}
+
+export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
+  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary] */
+  property?: BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty;
+  asc?: boolean;
+}
+
+export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel {
+  language?: string | null;
+  enablePreReleaseChannel?: boolean | null;
+  enableAnonymousDataTracking?: boolean | null;
+  /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
+  closeBehavior?: BakabaseInfrastructuresComponentsGuiCloseBehavior;
+  /** [0: FollowSystem, 1: Light, 2: Dark] */
+  uiTheme?: BakabaseInfrastructuresComponentsGuiUiTheme;
+}
+
+export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel {
+  /** @minLength 1 */
+  dataPath: string;
+}
+
+export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
+  appDataPath?: string | null;
+  coreVersion?: string | null;
+  logPath?: string | null;
+  backupPath?: string | null;
+  tempFilesPath?: string | null;
+  notAcceptTerms?: boolean;
+  needRestart?: boolean;
+}
+
+export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo {
+  version?: string | null;
+  installers?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller[] | null;
+}
+
+export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller {
+  osPlatform?: SystemRuntimeInteropServicesOSPlatform;
+  /** [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x] */
+  osArchitecture?: SystemRuntimeInteropServicesArchitecture;
+  name?: string | null;
+  url?: string | null;
+  /** @format int64 */
+  size?: number;
+}
+
+export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
+  language?: string | null;
+  version?: string | null;
+  enablePreReleaseChannel?: boolean;
+  enableAnonymousDataTracking?: boolean;
+  wwwRootPath?: string | null;
+  dataPath?: string | null;
+  prevDataPath?: string | null;
+  /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
+  closeBehavior?: BakabaseInfrastructuresComponentsGuiCloseBehavior;
+  /** [0: FollowSystem, 1: Light, 2: Dark] */
+  uiTheme?: BakabaseInfrastructuresComponentsGuiUiTheme;
 }
 
 /**
  * [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel]
  * @format int32
  */
-export type CloseBehavior = 0 | 1 | 2 | 1000;
+export type BakabaseInfrastructuresComponentsGuiCloseBehavior = 0 | 1 | 2 | 1000;
 
-export interface CollectorOptions {
-  path?: string | null;
-  /** @uniqueItems true */
-  urls?: string[] | null;
-  /** @uniqueItems true */
-  torrentOrLinkKeywords?: string[] | null;
+/**
+ * [0: FollowSystem, 1: Light, 2: Dark]
+ * @format int32
+ */
+export type BakabaseInfrastructuresComponentsGuiUiTheme = 0 | 1 | 2;
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilter {
+  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag] */
+  property?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty;
+  propertyKey?: string | null;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterOperation;
+  target?: string | null;
 }
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup {
+  /** [1: And, 2: Or] */
+  operation?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterGroupOperation;
+  filters?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilter[] | null;
+  groups?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup[] | null;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess {
+  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag] */
+  property?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty;
+  propertyKey?: string | null;
+  value?: string | null;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable {
+  key?: string | null;
+  name?: string | null;
+  /** [1: None, 2: FileName, 3: FileNameWithoutExtension, 4: FullPath, 5: DirectoryName] */
+  source?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationVariableSource;
+  find?: string | null;
+  value?: string | null;
+}
+
+/**
+ * [0: None, 1: Ignore, 2: Replace, 3: Merge]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffOperation =
+  0 | 1 | 2 | 3;
+
+/**
+ * [1: Added, 2: Removed, 3: Modified]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffType =
+  | 1
+  | 2
+  | 3;
 
 /**
  * [1: And, 2: Or]
  * @format int32
  */
-export type Combinator = 1 | 2;
-
-export interface CommonDownloaderOptions {
-  /** @format int32 */
-  threads?: number;
-  /** @format int32 */
-  interval?: number;
-  defaultPath?: string | null;
-  namingConvention?: string | null;
-}
-
-export interface ComponentDescriptor {
-  /** [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance] */
-  type?: ComponentDescriptorType;
-  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-  componentType?: ComponentType;
-  assemblyQualifiedTypeName?: string | null;
-  name?: string | null;
-  description?: string | null;
-  message?: string | null;
-  optionsJson?: string | null;
-  /** @format int32 */
-  optionsId?: number | null;
-  version?: string | null;
-  dataVersion?: string | null;
-  optionsType?: Type;
-  optionsJsonSchema?: string | null;
-  id?: string | null;
-  isInstanceable?: boolean;
-  associatedCategories?: Category[] | null;
-}
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterGroupOperation =
+  1 | 2;
 
 /**
- * [0: None, 1: AssociatedCategories]
+ * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
  * @format int32
  */
-export type ComponentDescriptorAdditionalItem = 0 | 1;
-
-export interface ComponentDescriptorListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: ComponentDescriptor[] | null;
-}
-
-export interface ComponentDescriptorSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: ComponentDescriptor;
-}
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterOperation =
+  1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
 
 /**
- * [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
+ * [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag]
  * @format int32
  */
-export type ComponentDescriptorType = 0 | 1 | 2 | 3;
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty =
+  1 | 2 | 4 | 5 | 7 | 8 | 9 | 15;
 
-export interface ComponentOptions {
+/**
+ * [1: Processing, 2: Closed]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationStatus =
+  | 1
+  | 2;
+
+/**
+ * [1: None, 2: FileName, 3: FileNameWithoutExtension, 4: FullPath, 5: DirectoryName]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationVariableSource =
+  1 | 2 | 3 | 4 | 5;
+
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto {
   /** @format int32 */
   id?: number;
-  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-  componentType: ComponentType;
-  /** @minLength 1 */
-  componentAssemblyQualifiedTypeName: string;
-  /** @minLength 1 */
-  name: string;
-  description?: string | null;
-  /** @minLength 1 */
-  json: string;
+  name?: string | null;
+  /** [1: Processing, 2: Closed] */
+  status?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationStatus;
+  /** @format date-time */
+  createdAt?: string;
+  variables?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable[] | null;
+  filter?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup;
+  processes?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[] | null;
+  diffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[] | null;
+  filteredResourceIds?: number[] | null;
+  /** @format date-time */
+  filteredAt?: string | null;
+  /** @format date-time */
+  calculatedAt?: string | null;
+  /** @format date-time */
+  appliedAt?: string | null;
+  /** @format date-time */
+  revertedAt?: string | null;
 }
 
-export interface ComponentOptionsAddRequestModel {
-  /** @minLength 1 */
-  name: string;
-  description?: string | null;
-  /** @minLength 1 */
-  componentAssemblyQualifiedTypeName: string;
-  /** @minLength 1 */
-  json: string;
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel {
+  name?: string | null;
+  filter?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup;
+  processes?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[] | null;
+  variables?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable[] | null;
 }
 
-export interface ComponentOptionsSingletonResponse {
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffs {
   /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: ComponentOptions;
+  id?: number;
+  path?: string | null;
+  diffs?:
+    | BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffsDiff[]
+    | null;
 }
 
-/**
- * [1: Enhancer, 2: PlayableFileSelector, 3: Player]
- * @format int32
- */
-export type ComponentType = 1 | 2 | 3;
+export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffsDiff {
+  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag] */
+  property?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty;
+  propertyKey?: string | null;
+  /** [1: Added, 2: Removed, 3: Modified] */
+  type?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffType;
+  currentValue?: string | null;
+  newValue?: string | null;
+  /** [0: None, 1: Ignore, 2: Replace, 3: Merge] */
+  operation?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffOperation;
+}
 
-export interface CompressedFileEntry {
+export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   path?: string | null;
   /** @format int64 */
   size?: number;
@@ -560,736 +344,13 @@ export interface CompressedFileEntry {
   sizeInMb?: number;
 }
 
-export interface CompressedFileEntryListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: CompressedFileEntry[] | null;
-}
-
-export interface ConstructorInfo {
-  name?: string | null;
-  declaringType?: Type;
-  reflectedType?: Type;
-  module?: Module;
-  customAttributes?: CustomAttributeData[] | null;
-  isCollectible?: boolean;
-  /** @format int32 */
-  metadataToken?: number;
-  /** [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
-  attributes?: MethodAttributes;
-  /** [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
-  methodImplementationFlags?: MethodImplAttributes;
-  /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
-  callingConvention?: CallingConventions;
-  isAbstract?: boolean;
-  isConstructor?: boolean;
-  isFinal?: boolean;
-  isHideBySig?: boolean;
-  isSpecialName?: boolean;
-  isStatic?: boolean;
-  isVirtual?: boolean;
-  isAssembly?: boolean;
-  isFamily?: boolean;
-  isFamilyAndAssembly?: boolean;
-  isFamilyOrAssembly?: boolean;
-  isPrivate?: boolean;
-  isPublic?: boolean;
-  isConstructedGenericMethod?: boolean;
-  isGenericMethod?: boolean;
-  isGenericMethodDefinition?: boolean;
-  containsGenericParameters?: boolean;
-  methodHandle?: RuntimeMethodHandle;
-  isSecurityCritical?: boolean;
-  isSecuritySafeCritical?: boolean;
-  isSecurityTransparent?: boolean;
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: MemberTypes;
-}
-
-/**
- * [1: BiliBili, 2: ExHentai, 3: Pixiv]
- * @format int32
- */
-export type CookieValidatorTarget = 1 | 2 | 3;
-
-export interface CoreDataMoveRequestModel {
-  /** @minLength 1 */
-  dataPath: string;
-}
-
-export interface CoverOptionsModel {
-  /** [1: ResourceDirectory, 2: TempDirectory] */
-  saveLocation?: CoverSaveLocation;
-  overwrite?: boolean | null;
-}
-
-/**
- * [1: ResourceDirectory, 2: TempDirectory]
- * @format int32
- */
-export type CoverSaveLocation = 1 | 2;
-
-export interface CoverSaveRequestModel {
-  /** @minLength 1 */
-  base64Image: string;
-  overwrite?: boolean;
-  /** [1: ResourceDirectory, 2: TempDirectory] */
-  saveLocation?: CoverSaveLocation;
-}
-
-/**
- * [1: FilenameAscending, 2: FileModifyDtDescending]
- * @format int32
- */
-export type CoverSelectOrder = 1 | 2;
-
-export interface CustomAttributeData {
-  attributeType?: Type;
-  constructor?: ConstructorInfo;
-  constructorArguments?: CustomAttributeTypedArgument[] | null;
-  namedArguments?: CustomAttributeNamedArgument[] | null;
-}
-
-export interface CustomAttributeNamedArgument {
-  memberInfo?: MemberInfo;
-  typedValue?: CustomAttributeTypedArgument;
-  memberName?: string | null;
-  isField?: boolean;
-}
-
-export interface CustomAttributeTypedArgument {
-  argumentType?: Type;
-  value?: any;
-}
-
-/**
- * [1: String, 2: DateTime, 3: Number, 4: Enum]
- * @format int32
- */
-export type CustomDataType = 1 | 2 | 3 | 4;
-
-export interface CustomProperty {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel] */
-  type?: CustomPropertyType;
-  /** @format date-time */
-  createdAt?: string;
-  categories?: Category[] | null;
-}
-
-export interface CustomPropertyAddOrPutDto {
-  name?: string | null;
-  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel] */
-  type?: CustomPropertyType;
-  options?: string | null;
-}
-
-/**
- * [0: None, 1: Category]
- * @format int32
- */
-export type CustomPropertyAdditionalItem = 0 | 1;
-
-export interface CustomPropertyListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: CustomProperty[] | null;
-}
-
-export interface CustomPropertySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: CustomProperty;
-}
-
-/**
- * [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel]
- * @format int32
- */
-export type CustomPropertyType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
-
-export interface CustomPropertyValue {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  propertyId?: number;
-  /** @format int32 */
-  resourceId?: number;
-  property?: CustomProperty;
-  value?: any;
-}
-
-export interface CustomResourceProperty {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  resourceId?: number;
-  /** @minLength 1 */
-  key: string;
-  /** @format int32 */
-  index?: number | null;
-  /** @minLength 1 */
-  value: string;
-  /** [1: String, 2: DateTime, 3: Number, 4: Enum] */
-  valueType?: CustomDataType;
-}
-
-export interface DashboardStatistics {
-  categoryResourceCounts?: TextAndCount[] | null;
-  todayAddedCategoryResourceCounts?: TextAndCount[] | null;
-  thisWeekAddedCategoryResourceCounts?: TextAndCount[] | null;
-  thisMonthAddedCategoryResourceCounts?: TextAndCount[] | null;
-  resourceTrending?: WeekCount[] | null;
-  propertyResourceCounts?: PropertyAndCount[] | null;
-  tagResourceCounts?: TextAndCount[] | null;
-  downloaderDataCounts?: DownloaderTaskCount[] | null;
-  thirdPartyRequestCounts?: ThirdPartyRequestCount[] | null;
-  fileMover?: FileMoverInfo;
-  otherCounts?: TextAndCount[][] | null;
-}
-
-export interface DashboardStatisticsSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: DashboardStatistics;
-}
-
-export interface DependentComponentVersion {
+export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
   version?: string | null;
   description?: string | null;
   canUpdate?: boolean;
 }
 
-export interface DependentComponentVersionSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: DependentComponentVersion;
-}
-
-export interface Diff {
-  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag] */
-  property?: BulkModificationFilterableProperty;
-  propertyKey?: string | null;
-  /** [1: Added, 2: Removed, 3: Modified] */
-  type?: BulkModificationDiffType;
-  currentValue?: string | null;
-  newValue?: string | null;
-  /** [0: None, 1: Ignore, 2: Replace, 3: Merge] */
-  operation?: BulkModificationDiffOperation;
-}
-
-export interface DownloadTask {
-  /** @format int32 */
-  id?: number;
-  /** @minLength 1 */
-  key: string;
-  name?: string | null;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
-  thirdPartyId?: ThirdPartyId;
-  /** @format int32 */
-  type?: number;
-  /** @format double */
-  progress?: number;
-  /** @format date-time */
-  downloadStatusUpdateDt?: string;
-  /** @format int64 */
-  interval?: number | null;
-  /** @format int32 */
-  startPage?: number | null;
-  /** @format int32 */
-  endPage?: number | null;
-  message?: string | null;
-  checkpoint?: string | null;
-  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
-  status?: DownloadTaskStatus;
-  /** @minLength 1 */
-  downloadPath: string;
-  displayName?: string | null;
-}
-
-/**
- * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
- * @format int32
- */
-export type DownloadTaskAction = 1 | 2 | 3 | 4;
-
-/**
- * [0: NotSet, 1: StopOthers, 2: Ignore]
- * @format int32
- */
-export type DownloadTaskActionOnConflict = 0 | 1 | 2;
-
-export interface DownloadTaskCreateRequestModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
-  thirdPartyId: ThirdPartyId;
-  /** @format int32 */
-  type: number;
-  keyAndNames?: Record<string, string>;
-  /** @format int64 */
-  interval?: number | null;
-  /** @format int32 */
-  startPage?: number | null;
-  /** @format int32 */
-  endPage?: number | null;
-  checkpoint?: string | null;
-  forceCreating?: boolean;
-  /** @minLength 1 */
-  downloadPath: string;
-}
-
-export interface DownloadTaskDto {
-  /** @format int32 */
-  id?: number;
-  key?: string | null;
-  name?: string | null;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
-  thirdPartyId?: ThirdPartyId;
-  /** @format int32 */
-  type?: number;
-  /** @format double */
-  progress?: number;
-  /** @format date-time */
-  downloadStatusUpdateDt?: string;
-  /** @format int64 */
-  interval?: number | null;
-  /** @format int32 */
-  startPage?: number | null;
-  /** @format int32 */
-  endPage?: number | null;
-  message?: string | null;
-  checkpoint?: string | null;
-  /** [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled] */
-  status?: DownloadTaskDtoStatus;
-  downloadPath?: string | null;
-  current?: string | null;
-  /** @format int32 */
-  failureTimes?: number;
-  /** @format date-time */
-  nextStartDt?: string | null;
-  /** @uniqueItems true */
-  availableActions?: DownloadTaskAction[] | null;
-  displayName?: string | null;
-  canStart?: boolean;
-}
-
-export interface DownloadTaskDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: DownloadTaskDto[] | null;
-}
-
-export interface DownloadTaskDtoSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: DownloadTaskDto;
-}
-
-/**
- * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
- * @format int32
- */
-export type DownloadTaskDtoStatus = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
-
-export interface DownloadTaskStartRequestModel {
-  ids?: number[] | null;
-  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
-  actionOnConflict?: DownloadTaskActionOnConflict;
-}
-
-/**
- * [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
- * @format int32
- */
-export type DownloadTaskStatus = 100 | 200 | 300 | 400;
-
-export interface DownloaderNamingDefinitions {
-  fields?: Field[] | null;
-  defaultConvention?: string | null;
-}
-
-export interface DownloaderTaskCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
-  id?: ThirdPartyId;
-  statusAndCounts?: Record<string, number>;
-}
-
-export interface EnhancementRecordDto {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  resourceId?: number;
-  resourceRawFullName?: string | null;
-  enhancerName?: string | null;
-  enhancerDescriptorId?: string | null;
-  ruleId?: string | null;
-  success?: boolean;
-  enhancement?: string | null;
-  message?: string | null;
-  /** @format date-time */
-  createDt?: string;
-}
-
-export interface EnhancementRecordDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: EnhancementRecordDto[] | null;
-}
-
-export interface EnhancementRecordDtoSearchResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: EnhancementRecordDto[] | null;
-  /** @format int32 */
-  totalCount?: number;
-  /** @format int32 */
-  pageIndex?: number;
-  /** @format int32 */
-  pageSize?: number;
-}
-
-export interface Entry {
-  isDirectory?: boolean;
-  relativePath?: string | null;
-  segmentAndMatchedValues?: SegmentMatchResult[] | null;
-  globalMatchedValues?: GlobalMatchedValue[] | null;
-}
-
-/**
- * [0: None, 512: SpecialName, 1024: ReservedMask, 1024: ReservedMask]
- * @format int32
- */
-export type EventAttributes = 0 | 512 | 1024;
-
-export interface EventInfo {
-  name?: string | null;
-  declaringType?: Type;
-  reflectedType?: Type;
-  module?: Module;
-  customAttributes?: CustomAttributeData[] | null;
-  isCollectible?: boolean;
-  /** @format int32 */
-  metadataToken?: number;
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: MemberTypes;
-  /** [0: None, 512: SpecialName, 1024: ReservedMask, 1024: ReservedMask] */
-  attributes?: EventAttributes;
-  isSpecialName?: boolean;
-  addMethod?: MethodInfo;
-  removeMethod?: MethodInfo;
-  raiseMethod?: MethodInfo;
-  isMulticast?: boolean;
-  eventHandlerType?: Type;
-}
-
-export interface EverythingExtractionStatus {
-  running?: boolean;
-  current?: string | null;
-  /** @format int32 */
-  doneCount?: number;
-  /** @format int32 */
-  failedCount?: number;
-  /** @format int32 */
-  totalCount?: number;
-  /** @format int32 */
-  percent?: number;
-  /** @format date-time */
-  startDt?: string;
-  failures?: Failure[] | null;
-}
-
-export interface EverythingExtractionStatusSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: EverythingExtractionStatus;
-}
-
-export interface ExHentaiEnhancerOptions {
-  excludedTags?: string[] | null;
-}
-
-export interface ExHentaiOptions {
-  downloader?: CommonDownloaderOptions;
-  cookie?: string | null;
-  enhancer?: ExHentaiEnhancerOptions;
-}
-
-export interface ExHentaiOptionsSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: ExHentaiOptions;
-}
-
-export interface Failure {
-  fullnameList?: string[] | null;
-  error?: string | null;
-}
-
-export interface Favorites {
-  /** @format int64 */
-  id?: number;
-  title?: string | null;
-  /** @format int32 */
-  mediaCount?: number;
-}
-
-export interface FavoritesAddOrUpdateRequestModel {
-  /** @format int32 */
-  id?: number;
-  /** @minLength 1 */
-  name: string;
-  description?: string | null;
-  /** @format date-time */
-  createDt?: string;
-}
-
-export interface FavoritesDto {
-  /** @format int32 */
-  id?: number;
-  /** @minLength 1 */
-  name: string;
-  description?: string | null;
-  /** @format date-time */
-  createDt?: string;
-}
-
-export interface FavoritesDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: FavoritesDto[] | null;
-}
-
-export interface FavoritesListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Favorites[] | null;
-}
-
-export interface FavoritesResourceMappingAddOrRemoveRequestModel {
-  /** @format int32 */
-  resourceId?: number;
-}
-
-export interface Field {
-  key?: string | null;
-  description?: string | null;
-  example?: string | null;
-}
-
-/**
- * [0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: FieldAccessMask, 16: Static, 32: InitOnly, 64: Literal, 128: NotSerialized, 256: HasFieldRVA, 512: SpecialName, 1024: RTSpecialName, 4096: HasFieldMarshal, 8192: PinvokeImpl, 32768: HasDefault, 38144: ReservedMask]
- * @format int32
- */
-export type FieldAttributes =
-  | 0
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6
-  | 7
-  | 16
-  | 32
-  | 64
-  | 128
-  | 256
-  | 512
-  | 1024
-  | 4096
-  | 8192
-  | 32768
-  | 38144;
-
-export interface FieldInfo {
-  name?: string | null;
-  declaringType?: Type;
-  reflectedType?: Type;
-  module?: Module;
-  customAttributes?: CustomAttributeData[] | null;
-  isCollectible?: boolean;
-  /** @format int32 */
-  metadataToken?: number;
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: MemberTypes;
-  /** [0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: FieldAccessMask, 16: Static, 32: InitOnly, 64: Literal, 128: NotSerialized, 256: HasFieldRVA, 512: SpecialName, 1024: RTSpecialName, 4096: HasFieldMarshal, 8192: PinvokeImpl, 32768: HasDefault, 38144: ReservedMask] */
-  attributes?: FieldAttributes;
-  fieldType?: Type;
-  isInitOnly?: boolean;
-  isLiteral?: boolean;
-  isNotSerialized?: boolean;
-  isPinvokeImpl?: boolean;
-  isSpecialName?: boolean;
-  isStatic?: boolean;
-  isAssembly?: boolean;
-  isFamily?: boolean;
-  isFamilyAndAssembly?: boolean;
-  isFamilyOrAssembly?: boolean;
-  isPrivate?: boolean;
-  isPublic?: boolean;
-  isSecurityCritical?: boolean;
-  isSecuritySafeCritical?: boolean;
-  isSecurityTransparent?: boolean;
-  fieldHandle?: RuntimeFieldHandle;
-}
-
-export interface FileDecompressRequestModel {
-  paths?: string[] | null;
-  password?: string | null;
-}
-
-export interface FileEntriesMergeResult {
-  rootPath?: string | null;
-  currentNames?: string[] | null;
-  mergeResult?: Record<string, string[]>;
-}
-
-export interface FileEntriesMergeResultSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: FileEntriesMergeResult;
-}
-
-export interface FileMoveRequestModel {
-  destDir?: string | null;
-  entryPaths?: string[] | null;
-}
-
-export interface FileMoverInfo {
-  /** @format int32 */
-  sourceCount?: number;
-  /** @format int32 */
-  targetCount?: number;
-}
-
-export interface FileMoverOptions {
-  targets?: Target[] | null;
-  enabled?: boolean;
-  delay?: TimeSpan;
-}
-
-export interface FileProcessorOptions {
-  workingDirectory?: string | null;
-}
-
-export interface FileRemoveRequestModel {
-  paths?: string[] | null;
-}
-
-export interface FileRenameRequestModel {
-  fullname?: string | null;
-  newName?: string | null;
-}
-
-export interface FileSystemOptions {
-  recentMovingDestinations?: string[] | null;
-  fileMover?: FileMoverOptions;
-  fileProcessor?: FileProcessorOptions;
-}
-
-export interface FileSystemOptionsSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: FileSystemOptions;
-}
-
-/**
- * [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask]
- * @format int32
- */
-export type GenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 | 16 | 28;
-
-export interface GlobalMatchedValue {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
-  property?: ResourceProperty;
-  key?: string | null;
-  values?: string[] | null;
-}
-
-export type ICustomAttributeProvider = object;
-
-export interface IdBasedSortRequestModel {
-  ids?: number[] | null;
-}
-
-/**
- * [1: NotAcceptTerms, 2: NeedRestart]
- * @format int32
- */
-export type InitializationContentType = 1 | 2;
-
-export interface InitializationContentTypeSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  /** [1: NotAcceptTerms, 2: NeedRestart] */
-  data?: InitializationContentType;
-}
-
-export interface Installer {
-  osPlatform?: OSPlatform;
-  /** [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x] */
-  osArchitecture?: Architecture;
-  name?: string | null;
-  url?: string | null;
-  /** @format int64 */
-  size?: number;
-}
-
-export interface Int32DownloaderNamingDefinitionsDictionarySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, DownloaderNamingDefinitions>;
-}
-
-export interface Int32Int32ArrayDictionarySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, number[] | null>;
-}
-
-export interface Int32ListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: number[] | null;
-}
-
-export interface Int32SingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  /** @format int32 */
-  data?: number;
-}
-
-export type IntPtr = object;
-
-/**
- * [1: Hidden]
- * @format int32
- */
-export type IwFsAttribute = 1;
-
-export interface IwFsCompressedFileGroup {
+export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup {
   keyName?: string | null;
   files?: string[] | null;
   extension?: string | null;
@@ -1298,14 +359,36 @@ export interface IwFsCompressedFileGroup {
   passwordCandidates?: string[] | null;
 }
 
-export interface IwFsEntry {
+export interface BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo {
+  /** @format int32 */
+  childrenCount?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo {
+  path?: string | null;
+  /** [1: Decompressing, 2: Moving] */
+  type?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntryTaskType;
+  /** @format int32 */
+  percentage?: number;
+  error?: string | null;
+  backgroundTaskId?: string | null;
+  name?: string | null;
+}
+
+/**
+ * [1: Hidden]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsAttribute = 1;
+
+export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
   path?: string | null;
   name?: string | null;
   meaningfulName?: string | null;
   ext?: string | null;
-  attributes?: IwFsAttribute[] | null;
+  attributes?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsAttribute[] | null;
   /** [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 10000: Invalid] */
-  type?: IwFsType;
+  type?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType;
   /** @format int64 */
   size?: number | null;
   /** @format int32 */
@@ -1317,139 +400,84 @@ export interface IwFsEntry {
   passwordsForDecompressing?: string[] | null;
 }
 
-export interface IwFsEntryLazyInfo {
-  /** @format int32 */
-  childrenCount?: number;
-}
-
-export interface IwFsEntryLazyInfoSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: IwFsEntryLazyInfo;
-}
-
-export interface IwFsEntrySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: IwFsEntry;
-}
-
 /**
  * [1: Decompressing, 2: Moving]
  * @format int32
  */
-export type IwFsEntryTaskType = 1 | 2;
+export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntryTaskType = 1 | 2;
 
-export interface IwFsPreview {
-  entries?: IwFsEntry[] | null;
-  directoryChain?: IwFsEntry[] | null;
-  compressedFileGroups?: IwFsCompressedFileGroup[] | null;
-}
-
-export interface IwFsPreviewSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: IwFsPreview;
-}
-
-export interface IwFsTaskInfo {
-  path?: string | null;
-  /** [1: Decompressing, 2: Moving] */
-  type?: IwFsEntryTaskType;
-  /** @format int32 */
-  percentage?: number;
-  error?: string | null;
-  backgroundTaskId?: string | null;
-  name?: string | null;
-}
-
-export interface IwFsTaskInfoSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: IwFsTaskInfo;
+export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview {
+  entries?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[] | null;
+  directoryChain?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[] | null;
+  compressedFileGroups?: BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup[] | null;
 }
 
 /**
  * [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 10000: Invalid]
  * @format int32
  */
-export type IwFsType = 0 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 10000;
+export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
+  | 0
+  | 100
+  | 200
+  | 300
+  | 400
+  | 500
+  | 600
+  | 700
+  | 10000;
 
-export interface JavLibraryOptions {
-  cookie?: string | null;
-  collector?: CollectorOptions;
-}
-
-export interface JavLibraryOptionsSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: JavLibraryOptions;
-}
-
-/**
- * [0: Sequential, 2: Explicit, 3: Auto]
- * @format int32
- */
-export type LayoutKind = 0 | 2 | 3;
-
-export interface Log {
-  /** @format int32 */
-  id?: number;
+export interface BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
+  id?: string | null;
+  name?: string | null;
   /** @format date-time */
-  dateTime?: string;
-  /** [0: Trace, 1: Debug, 2: Information, 3: Warning, 4: Error, 5: Critical, 6: None] */
-  level?: LogLevel;
-  logger?: string | null;
-  event?: string | null;
+  startDt?: string;
+  /** [1: Running, 2: Complete, 3: Failed] */
+  status?: BakabaseInsideWorldModelsConstantsBackgroundTaskStatus;
   message?: string | null;
-  read?: boolean;
+  /** @format int32 */
+  percentage?: number;
+  currentProcess?: string | null;
+  /** [1: Default, 2: Critical] */
+  level?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskLevel;
 }
 
 /**
- * [0: Trace, 1: Debug, 2: Information, 3: Warning, 4: Error, 5: Critical, 6: None]
+ * [1: Default, 2: Critical]
  * @format int32
  */
-export type LogLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export type BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskLevel = 1 | 2;
 
-export interface LogListResponse {
+export interface BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites {
+  /** @format int64 */
+  id?: number;
+  title?: string | null;
   /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Log[] | null;
+  mediaCount?: number;
 }
 
-export interface LogSearchResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Log[] | null;
-  /** @format int32 */
-  totalCount?: number;
-  /** @format int32 */
-  pageIndex?: number;
-  /** @format int32 */
-  pageSize?: number;
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDbResourceOptionsCoverOptionsModel {
+  /** [1: ResourceDirectory, 2: TempDirectory] */
+  saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
+  overwrite?: boolean | null;
 }
 
-export interface MatcherValue {
-  fixedText?: string | null;
-  /** @format int32 */
-  layer?: number | null;
-  regex?: string | null;
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
-  property?: ResourceProperty;
-  /** [1: Layer, 2: Regex, 3: FixedText] */
-  valueType?: ResourceMatcherValueType;
-  key?: string | null;
-  isValid?: boolean;
+export interface BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsDto {
+  /** @format date-time */
+  lastSyncDt?: string;
+  /** @format date-time */
+  lastNfoGenerationDt?: string;
+  lastSearchV2?: BakabaseAbstractionsModelsDtoResourceSearchDto;
+  coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDbResourceOptionsCoverOptionsModel;
+  additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
 }
 
-export interface MediaLibrary {
+export interface BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel {
+  additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
+  coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDbResourceOptionsCoverOptionsModel;
+}
+
+export interface BakabaseInsideWorldBusinessModelsDomainMediaLibrary {
   /** @format int32 */
   id?: number;
   /** @minLength 1 */
@@ -1460,494 +488,31 @@ export interface MediaLibrary {
   order?: number;
   /** @format int32 */
   resourceCount?: number;
-  fileSystemInformation?: Record<string, MediaLibraryFileSystemInformation>;
-  category?: Category;
-  pathConfigurations?: PathConfiguration[] | null;
+  fileSystemInformation?: Record<string, BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation>;
+  category?: BakabaseAbstractionsModelsDomainCategory;
+  pathConfigurations?: BakabaseInsideWorldBusinessModelsDomainPathConfiguration[] | null;
 }
 
-export interface MediaLibraryAddInBulkRequestModel {
-  nameAndPaths: Record<string, string[] | null>;
-}
-
-/**
- * [0: None, 1: Category, 2: FileSystemInfo, 4: FixedTags]
- * @format int32
- */
-export type MediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
-
-export interface MediaLibraryCreateDto {
-  /** @minLength 1 */
-  name: string;
+export interface BakabaseInsideWorldBusinessModelsDomainMigrationTarget {
   /** @format int32 */
-  categoryId: number;
-  pathConfigurations?: PathConfiguration[] | null;
+  dataCount?: number;
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  propertyKey?: string | null;
+  /** @format int32 */
+  targetPropertyId?: number | null;
+  subTargets?: BakabaseInsideWorldBusinessModelsDomainMigrationTarget[] | null;
+  data?: any;
 }
 
-/**
- * [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied]
- * @format int32
- */
-export type MediaLibraryFileSystemError = 1 | 2 | 3;
-
-export interface MediaLibraryFileSystemInformation {
-  /** @format int64 */
-  totalSize?: number;
-  /** @format int64 */
-  freeSpace?: number;
-  /** @format double */
-  usedPercentage?: number;
-  /** @format double */
-  freePercentage?: number;
-  /** @format double */
-  freeSpaceInGb?: number;
-  /** [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied] */
-  error?: MediaLibraryFileSystemError;
-}
-
-export interface MediaLibraryListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: MediaLibrary[] | null;
-}
-
-export interface MediaLibraryPatchDto {
-  name?: string | null;
-  pathConfigurations?: PathConfiguration[] | null;
-  /** @format int32 */
-  order?: number | null;
-}
-
-export interface MediaLibraryPathConfigurationCreateRequestModel {
-  /** @minLength 1 */
-  path: string;
-}
-
-export interface MediaLibraryRootPathsAddInBulkRequestModel {
-  rootPaths?: string[] | null;
-}
-
-/**
- * [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown]
- * @format int32
- */
-export type MediaType = 1 | 2 | 3 | 4 | 1000;
-
-export interface MemberInfo {
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: MemberTypes;
-  declaringType?: Type;
-  reflectedType?: Type;
-  name?: string | null;
-  module?: Module;
-  customAttributes?: CustomAttributeData[] | null;
-  isCollectible?: boolean;
-  /** @format int32 */
-  metadataToken?: number;
-}
-
-/**
- * [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All]
- * @format int32
- */
-export type MemberTypes = 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128 | 191;
-
-/**
- * [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask]
- * @format int32
- */
-export type MethodAttributes =
-  | 0
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6
-  | 7
-  | 8
-  | 16
-  | 32
-  | 64
-  | 128
-  | 256
-  | 512
-  | 1024
-  | 2048
-  | 4096
-  | 8192
-  | 16384
-  | 32768
-  | 53248;
-
-export interface MethodBase {
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: MemberTypes;
-  name?: string | null;
-  declaringType?: Type;
-  reflectedType?: Type;
-  module?: Module;
-  customAttributes?: CustomAttributeData[] | null;
-  isCollectible?: boolean;
-  /** @format int32 */
-  metadataToken?: number;
-  /** [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
-  attributes?: MethodAttributes;
-  /** [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
-  methodImplementationFlags?: MethodImplAttributes;
-  /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
-  callingConvention?: CallingConventions;
-  isAbstract?: boolean;
-  isConstructor?: boolean;
-  isFinal?: boolean;
-  isHideBySig?: boolean;
-  isSpecialName?: boolean;
-  isStatic?: boolean;
-  isVirtual?: boolean;
-  isAssembly?: boolean;
-  isFamily?: boolean;
-  isFamilyAndAssembly?: boolean;
-  isFamilyOrAssembly?: boolean;
-  isPrivate?: boolean;
-  isPublic?: boolean;
-  isConstructedGenericMethod?: boolean;
-  isGenericMethod?: boolean;
-  isGenericMethodDefinition?: boolean;
-  containsGenericParameters?: boolean;
-  methodHandle?: RuntimeMethodHandle;
-  isSecurityCritical?: boolean;
-  isSecuritySafeCritical?: boolean;
-  isSecurityTransparent?: boolean;
-}
-
-/**
- * [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal]
- * @format int32
- */
-export type MethodImplAttributes = 0 | 1 | 2 | 3 | 4 | 8 | 16 | 32 | 64 | 128 | 256 | 512 | 4096 | 65535;
-
-export interface MethodInfo {
-  name?: string | null;
-  declaringType?: Type;
-  reflectedType?: Type;
-  module?: Module;
-  customAttributes?: CustomAttributeData[] | null;
-  isCollectible?: boolean;
-  /** @format int32 */
-  metadataToken?: number;
-  /** [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
-  attributes?: MethodAttributes;
-  /** [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
-  methodImplementationFlags?: MethodImplAttributes;
-  /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
-  callingConvention?: CallingConventions;
-  isAbstract?: boolean;
-  isConstructor?: boolean;
-  isFinal?: boolean;
-  isHideBySig?: boolean;
-  isSpecialName?: boolean;
-  isStatic?: boolean;
-  isVirtual?: boolean;
-  isAssembly?: boolean;
-  isFamily?: boolean;
-  isFamilyAndAssembly?: boolean;
-  isFamilyOrAssembly?: boolean;
-  isPrivate?: boolean;
-  isPublic?: boolean;
-  isConstructedGenericMethod?: boolean;
-  isGenericMethod?: boolean;
-  isGenericMethodDefinition?: boolean;
-  containsGenericParameters?: boolean;
-  methodHandle?: RuntimeMethodHandle;
-  isSecurityCritical?: boolean;
-  isSecuritySafeCritical?: boolean;
-  isSecurityTransparent?: boolean;
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: MemberTypes;
-  returnParameter?: ParameterInfo;
-  returnType?: Type;
-  returnTypeCustomAttributes?: ICustomAttributeProvider;
-}
-
-export interface Module {
-  assembly?: Assembly;
-  fullyQualifiedName?: string | null;
-  name?: string | null;
-  /** @format int32 */
-  mdStreamVersion?: number;
-  /** @format uuid */
-  moduleVersionId?: string;
-  scopeName?: string | null;
-  moduleHandle?: ModuleHandle;
-  customAttributes?: CustomAttributeData[] | null;
-  /** @format int32 */
-  metadataToken?: number;
-}
-
-export interface ModuleHandle {
-  /** @format int32 */
-  mdStreamVersion?: number;
-}
-
-export interface NetworkOptions {
-  proxy?: ProxyOptions;
-}
-
-export interface NetworkOptionsSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: NetworkOptions;
-}
-
-export type OSPlatform = object;
-
-export interface OriginalDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-}
-
-export interface OriginalDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: OriginalDto[] | null;
-}
-
-/**
- * [0: None, 1: In, 2: Out, 4: Lcid, 8: Retval, 16: Optional, 4096: HasDefault, 8192: HasFieldMarshal, 16384: Reserved3, 32768: Reserved4, 61440: ReservedMask]
- * @format int32
- */
-export type ParameterAttributes = 0 | 1 | 2 | 4 | 8 | 16 | 4096 | 8192 | 16384 | 32768 | 61440;
-
-export interface ParameterInfo {
-  /** [0: None, 1: In, 2: Out, 4: Lcid, 8: Retval, 16: Optional, 4096: HasDefault, 8192: HasFieldMarshal, 16384: Reserved3, 32768: Reserved4, 61440: ReservedMask] */
-  attributes?: ParameterAttributes;
-  member?: MemberInfo;
-  name?: string | null;
-  parameterType?: Type;
-  /** @format int32 */
-  position?: number;
-  isIn?: boolean;
-  isLcid?: boolean;
-  isOptional?: boolean;
-  isOut?: boolean;
-  isRetval?: boolean;
-  defaultValue?: any;
-  rawDefaultValue?: any;
-  hasDefaultValue?: boolean;
-  customAttributes?: CustomAttributeData[] | null;
-  /** @format int32 */
-  metadataToken?: number;
-}
-
-export interface Password {
-  /** @maxLength 64 */
-  text?: string | null;
-  /** @format int32 */
-  usedTimes?: number;
-  /** @format date-time */
-  lastUsedAt?: string;
-}
-
-export interface PasswordListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Password[] | null;
-}
-
-/**
- * [1: Latest, 2: Frequency]
- * @format int32
- */
-export type PasswordSearchOrder = 1 | 2;
-
-export interface PasswordSearchResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Password[] | null;
-  /** @format int32 */
-  totalCount?: number;
-  /** @format int32 */
-  pageIndex?: number;
-  /** @format int32 */
-  pageSize?: number;
-}
-
-export interface PathConfiguration {
+export interface BakabaseInsideWorldBusinessModelsDomainPathConfiguration {
   path?: string | null;
   fixedTagIds?: number[] | null;
-  rpmValues?: MatcherValue[] | null;
-  fixedTags?: TagDto[] | null;
+  rpmValues?: BakabaseInsideWorldModelsModelsAosMatcherValue[] | null;
+  fixedTags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
 }
 
-export interface PathConfigurationRemoveRequestModel {
-  /** @format int32 */
-  index: number;
-}
-
-export interface PathConfigurationValidateResult {
-  rootPath?: string | null;
-  entries?: Entry[] | null;
-}
-
-export interface PathConfigurationValidateResultSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: PathConfigurationValidateResult;
-}
-
-export interface PixivOptions {
-  cookie?: string | null;
-  downloader?: CommonDownloaderOptions;
-}
-
-export interface PixivOptionsSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: PixivOptions;
-}
-
-export interface PlaylistDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  items?: PlaylistItemDto[] | null;
-  /** @format int32 */
-  interval?: number;
-  /** @format int32 */
-  order?: number;
-}
-
-export interface PlaylistDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: PlaylistDto[] | null;
-}
-
-export interface PlaylistDtoSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: PlaylistDto;
-}
-
-export interface PlaylistItemDto {
-  /** [1: Resource, 2: Video, 3: Image, 4: Audio] */
-  type?: PlaylistItemType;
-  /** @format int32 */
-  resourceId?: number | null;
-  file?: string | null;
-  startTime?: TimeSpan;
-  endTime?: TimeSpan;
-}
-
-/**
- * [1: Resource, 2: Video, 3: Image, 4: Audio]
- * @format int32
- */
-export type PlaylistItemType = 1 | 2 | 3 | 4;
-
-export interface PreviewerItem {
-  filePath?: string | null;
-  /** [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown] */
-  type?: MediaType;
-  /** @format int32 */
-  duration?: number;
-}
-
-export interface PreviewerItemListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: PreviewerItem[] | null;
-}
-
-export interface PropertyAndCount {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
-  property?: ResourceProperty;
-  propertyKey?: string | null;
-  value?: string | null;
-  /** @format int32 */
-  count?: number;
-}
-
-/**
- * [0: None, 512: SpecialName, 1024: RTSpecialName, 4096: HasDefault, 8192: Reserved2, 16384: Reserved3, 32768: Reserved4, 62464: ReservedMask]
- * @format int32
- */
-export type PropertyAttributes = 0 | 512 | 1024 | 4096 | 8192 | 16384 | 32768 | 62464;
-
-export interface PropertyInfo {
-  name?: string | null;
-  declaringType?: Type;
-  reflectedType?: Type;
-  module?: Module;
-  customAttributes?: CustomAttributeData[] | null;
-  isCollectible?: boolean;
-  /** @format int32 */
-  metadataToken?: number;
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: MemberTypes;
-  propertyType?: Type;
-  /** [0: None, 512: SpecialName, 1024: RTSpecialName, 4096: HasDefault, 8192: Reserved2, 16384: Reserved3, 32768: Reserved4, 62464: ReservedMask] */
-  attributes?: PropertyAttributes;
-  isSpecialName?: boolean;
-  canRead?: boolean;
-  canWrite?: boolean;
-  getMethod?: MethodInfo;
-  setMethod?: MethodInfo;
-}
-
-export interface ProxyCredentials {
-  username?: string | null;
-  password?: string | null;
-  domain?: string | null;
-}
-
-export interface ProxyOptions {
-  address?: string | null;
-  credentials?: ProxyCredentials;
-}
-
-export interface PublisherDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  subPublishers?: PublisherDto[] | null;
-  /** @format int32 */
-  rank?: number;
-  favorite?: boolean;
-  tags?: TagDto[] | null;
-}
-
-export interface PublisherDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: PublisherDto[] | null;
-}
-
-export interface PublisherUpdateModel {
-  name?: string | null;
-  /** @format int32 */
-  rank?: number | null;
-  favorite?: boolean | null;
-  tagIds?: number[] | null;
-}
-
-export interface RemoveSameEntryInWorkingDirectoryRequestModel {
-  workingDir?: string | null;
-  entryPath?: string | null;
-}
-
-export interface Resource {
+export interface BakabaseInsideWorldBusinessModelsDomainResource {
   /** @format int32 */
   id?: number;
   /** @format int32 */
@@ -1969,15 +534,15 @@ export interface Resource {
   fileCreateDt?: string;
   /** @format date-time */
   fileModifyDt?: string;
-  tags?: TagDto[] | null;
-  parent?: Resource;
-  customPropertiesV2?: CustomProperty[] | null;
-  customPropertyValues?: CustomPropertyValue[] | null;
+  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
+  parent?: BakabaseInsideWorldBusinessModelsDomainResource;
+  customPropertiesV2?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
+  customPropertyValues?: BakabaseAbstractionsModelsDomainCustomPropertyValue[] | null;
   /** @deprecated */
-  customProperties?: Record<string, CustomResourceProperty[] | null>;
+  customProperties?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
   /** @deprecated */
   introduction?: string | null;
-  series?: SeriesDto;
+  series?: BakabaseInsideWorldModelsModelsDtosSeriesDto;
   /**
    * @deprecated
    * @format double
@@ -1985,13 +550,13 @@ export interface Resource {
   rate?: number;
   /** @deprecated */
   name?: string | null;
-  volume?: VolumeDto;
+  volume?: BakabaseInsideWorldModelsModelsDtosVolumeDto;
   /** [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian] */
-  language?: ResourceLanguage;
+  language?: BakabaseInsideWorldModelsConstantsResourceLanguage;
   /** @deprecated */
-  publishers?: PublisherDto[] | null;
+  publishers?: BakabaseInsideWorldModelsModelsDtosPublisherDto[] | null;
   /** @deprecated */
-  originals?: OriginalDto[] | null;
+  originals?: BakabaseInsideWorldModelsModelsDtosOriginalDto[] | null;
   /**
    * @deprecated
    * @format date-time
@@ -1999,141 +564,342 @@ export interface Resource {
   releaseDt?: string | null;
 }
 
-export type ResourceCategory = object;
-
-export interface ResourceCategoryAddRequestModel {
+export interface BakabaseInsideWorldBusinessModelsDtoMediaLibraryCreateDto {
+  /** @minLength 1 */
+  name: string;
   /** @format int32 */
-  id?: number;
+  categoryId: number;
+  pathConfigurations?: BakabaseInsideWorldBusinessModelsDomainPathConfiguration[] | null;
+}
+
+export interface BakabaseInsideWorldBusinessModelsDtoMediaLibraryPatchDto {
   name?: string | null;
-  color?: string | null;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectionOrder?: CoverSelectOrder;
+  pathConfigurations?: BakabaseInsideWorldBusinessModelsDomainPathConfiguration[] | null;
   /** @format int32 */
   order?: number | null;
-  generateNfo?: boolean | null;
-  componentsData?: SimpleCategoryComponent[] | null;
-  enhancementOptions?: ResourceCategoryEnhancementOptions;
 }
+
+export interface BakabaseInsideWorldBusinessModelsInputCategorySetupWizardInputModel {
+  category?: BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModel;
+  mediaLibraries?: BakabaseInsideWorldBusinessModelsDomainMediaLibrary[] | null;
+  syncAfterSaving?: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel {
+  /** @format int32 */
+  pageIndex?: number;
+  /**
+   * @format int32
+   * @min 0
+   * @max 100
+   */
+  pageSize?: number;
+  /** @format int32 */
+  skipCount?: number;
+  group?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup;
+  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[] | null;
+  save?: boolean;
+}
+
+export interface BakabaseInsideWorldModelsConfigsBilibiliOptions {
+  downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
+  cookie?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsExHentaiOptions {
+  downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
+  cookie?: string | null;
+  enhancer?: BakabaseInsideWorldModelsConfigsExHentaiOptionsExHentaiEnhancerOptions;
+}
+
+export interface BakabaseInsideWorldModelsConfigsExHentaiOptionsExHentaiEnhancerOptions {
+  excludedTags?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsFileSystemOptions {
+  recentMovingDestinations?: string[] | null;
+  fileMover?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions;
+  fileProcessor?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions;
+}
+
+export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions {
+  targets?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptionsTarget[] | null;
+  enabled?: boolean;
+  delay?: SystemTimeSpan;
+}
+
+export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptionsTarget {
+  path?: string | null;
+  sources?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions {
+  workingDirectory?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions {
+  /** @format int32 */
+  threads?: number;
+  /** @format int32 */
+  interval?: number;
+  defaultPath?: string | null;
+  namingConvention?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsJavLibraryOptions {
+  cookie?: string | null;
+  collector?: BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptions;
+}
+
+export interface BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptions {
+  path?: string | null;
+  /** @uniqueItems true */
+  urls?: string[] | null;
+  /** @uniqueItems true */
+  torrentOrLinkKeywords?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsNetworkOptions {
+  proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions;
+}
+
+export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions {
+  address?: string | null;
+  credentials?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials;
+}
+
+export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials {
+  username?: string | null;
+  password?: string | null;
+  domain?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsPixivOptions {
+  cookie?: string | null;
+  downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
+}
+
+export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
+  simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[] | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions {
+  name?: string | null;
+  urlTemplate?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsUIOptions {
+  resource?: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
+  /** [0: Default, 1: Resource] */
+  startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
+}
+
+export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
+  /** @format int32 */
+  colCount?: number;
+  showBiggerCoverWhileHover?: boolean;
+  disableMediaPreviewer?: boolean;
+  disableCache?: boolean;
+}
+
+/**
+ * [1: CompressedFile, 2: Video]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource = 1 | 2;
+
+/**
+ * [1: Candidates]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsAliasAdditionalItem = 1;
+
+/**
+ * [0: None, 1: AssociatedCategories]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem = 0 | 1;
+
+/**
+ * [0: None, 1: Category]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 1;
+
+/**
+ * [0: None, 1: Category, 2: FileSystemInfo, 4: FixedTags]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
  * [0: None, 1: Components, 3: Validation, 4: CustomProperties]
  * @format int32
  */
-export type ResourceCategoryAdditionalItem = 0 | 1 | 3 | 4;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem = 0 | 1 | 3 | 4;
 
-export interface ResourceCategoryComponentConfigureRequestModel {
-  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-  type: ComponentType;
-  componentKeys: string[];
-  enhancementOptions?: ResourceCategoryEnhancementOptions;
-}
+/**
+ * [0: None, 1: GroupName, 2: PreferredAlias]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsTagAdditionalItem = 0 | 1 | 2;
 
-export interface ResourceCategoryCustomPropertyBindRequestModel {
-  customPropertyIds?: number[] | null;
-}
+/**
+ * [1: Tags, 2: PreferredAlias, 4: TagNamePreferredAlias]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsTagGroupAdditionalItem = 1 | 2 | 4;
 
-export interface ResourceCategoryDuplicateRequestModel {
-  name?: string | null;
-}
+/**
+ * [1: Latest, 2: Frequency]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder = 1 | 2;
 
-export interface ResourceCategoryEnhancementOptions {
-  enhancementPriorities?: Record<string, string[]>;
-  defaultPriority?: string[] | null;
-}
+/**
+ * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty = 1 | 2 | 3 | 5 | 6 | 7 | 8;
 
-export interface ResourceCategoryUpdateRequestModel {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  color?: string | null;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectionOrder?: CoverSelectOrder;
-  /** @format int32 */
-  order?: number | null;
-  generateNfo?: boolean | null;
-}
+/**
+ * [1: Running, 2: Complete, 3: Failed]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsBackgroundTaskStatus = 1 | 2 | 3;
 
-export interface ResourceCustomPropertyValuePutRequestModel {
-  value?: string | null;
-}
+/**
+ * [1: And, 2: Or]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsCombinator = 1 | 2;
 
-export interface ResourceDiff {
-  /** [0: Category, 1: MediaLibrary, 2: ReleaseDt, 3: Publisher, 4: Name, 5: Language, 6: Volume, 7: Original, 8: Series, 9: Tag, 10: Introduction, 11: Rate, 12: CustomProperty] */
-  property?: ResourceDiffProperty;
-  currentValue?: any;
-  newValue?: any;
-  /** [1: Added, 2: Removed, 3: Modified] */
-  type?: ResourceDiffType;
-  key?: string | null;
-  subDiffs?: ResourceDiff[] | null;
-}
+/**
+ * [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsComponentDescriptorType = 0 | 1 | 2 | 3;
+
+/**
+ * [1: Enhancer, 2: PlayableFileSelector, 3: Player]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsComponentType = 1 | 2 | 3;
+
+/**
+ * [1: BiliBili, 2: ExHentai, 3: Pixiv]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsCookieValidatorTarget = 1 | 2 | 3;
+
+/**
+ * [1: ResourceDirectory, 2: TempDirectory]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsCoverSaveLocation = 1 | 2;
+
+/**
+ * [1: FilenameAscending, 2: FileModifyDtDescending]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsCoverSelectOrder = 1 | 2;
+
+/**
+ * [1: String, 2: DateTime, 3: Number, 4: Enum]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsCustomDataType = 1 | 2 | 3 | 4;
+
+/**
+ * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsDownloadTaskAction = 1 | 2 | 3 | 4;
+
+/**
+ * [0: NotSet, 1: StopOthers, 2: Ignore]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict = 0 | 1 | 2;
+
+/**
+ * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsDownloadTaskDtoStatus = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
+
+/**
+ * [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsDownloadTaskStatus = 100 | 200 | 300 | 400;
+
+/**
+ * [1: NotAcceptTerms, 2: NeedRestart]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsInitializationContentType = 1 | 2;
+
+/**
+ * [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsMediaLibraryFileSystemError = 1 | 2 | 3;
+
+/**
+ * [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsMediaType = 1 | 2 | 3 | 4 | 1000;
+
+/**
+ * [1: Resource, 2: Video, 3: Image, 4: Audio]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsPlaylistItemType = 1 | 2 | 3 | 4;
 
 /**
  * [0: Category, 1: MediaLibrary, 2: ReleaseDt, 3: Publisher, 4: Name, 5: Language, 6: Volume, 7: Original, 8: Series, 9: Tag, 10: Introduction, 11: Rate, 12: CustomProperty]
  * @format int32
  */
-export type ResourceDiffProperty = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+export type BakabaseInsideWorldModelsConstantsResourceDiffProperty =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12;
 
 /**
  * [1: Added, 2: Removed, 3: Modified]
  * @format int32
  */
-export type ResourceDiffType = 1 | 2 | 3;
+export type BakabaseInsideWorldModelsConstantsResourceDiffType = 1 | 2 | 3;
 
 /**
  * [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian]
  * @format int32
  */
-export type ResourceLanguage = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-
-export interface ResourceListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Resource[] | null;
-}
+export type BakabaseInsideWorldModelsConstantsResourceLanguage = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 /**
  * [1: Layer, 2: Regex, 3: FixedText]
  * @format int32
  */
-export type ResourceMatcherValueType = 1 | 2 | 3;
-
-export interface ResourceMoveRequestModel {
-  ids: number[];
-  /** @format int32 */
-  mediaLibraryId?: number | null;
-  /** @minLength 1 */
-  path: string;
-}
-
-export interface ResourceOptionsDto {
-  /** @format date-time */
-  lastSyncDt?: string;
-  /** @format date-time */
-  lastNfoGenerationDt?: string;
-  lastSearchV2?: ResourceSearchDto;
-  coverOptions?: CoverOptionsModel;
-  additionalCoverDiscoveringSources?: AdditionalCoverDiscoveringSource[] | null;
-}
-
-export interface ResourceOptionsDtoSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: ResourceOptionsDto;
-}
-
-export interface ResourceOptionsPatchInputModel {
-  additionalCoverDiscoveringSources?: AdditionalCoverDiscoveringSource[] | null;
-  coverOptions?: CoverOptionsModel;
-}
+export type BakabaseInsideWorldModelsConstantsResourceMatcherValueType = 1 | 2 | 3;
 
 /**
  * [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites]
  * @format int32
  */
-export type ResourceProperty =
+export type BakabaseInsideWorldModelsConstantsResourceProperty =
   | 1
   | 2
   | 3
@@ -2157,276 +923,351 @@ export type ResourceProperty =
   | 21
   | 22;
 
-export interface ResourceSearchDto {
-  /** @format int32 */
-  pageIndex?: number;
-  /**
-   * @format int32
-   * @min 0
-   * @max 100
-   */
-  pageSize?: number;
-  /** @format int32 */
-  skipCount?: number;
-  group?: ResourceSearchFilterGroup;
-  orders?: ResourceSearchOrderInputModel[] | null;
-}
-
-export interface ResourceSearchFilter {
-  /** @format int32 */
-  propertyId?: number;
-  isReservedProperty?: boolean;
-  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation?: SearchOperation;
-  value?: string | null;
-}
-
-export interface ResourceSearchFilterGroup {
-  /** [1: And, 2: Or] */
-  combinator?: Combinator;
-  groups?: ResourceSearchFilterGroup[] | null;
-  filters?: ResourceSearchFilter[] | null;
-}
-
-export interface ResourceSearchInputModel {
-  /** @format int32 */
-  pageIndex?: number;
-  /**
-   * @format int32
-   * @min 0
-   * @max 100
-   */
-  pageSize?: number;
-  /** @format int32 */
-  skipCount?: number;
-  group?: ResourceSearchFilterGroup;
-  orders?: ResourceSearchOrderInputModel[] | null;
-  save?: boolean;
-}
-
-export interface ResourceSearchOrderInputModel {
-  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary] */
-  property?: ResourceSearchSortableProperty;
-  asc?: boolean;
-}
-
-export interface ResourceSearchResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Resource[] | null;
-  /** @format int32 */
-  totalCount?: number;
-  /** @format int32 */
-  pageIndex?: number;
-  /** @format int32 */
-  pageSize?: number;
-}
-
-/**
- * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary]
- * @format int32
- */
-export type ResourceSearchSortableProperty = 1 | 2 | 3 | 5 | 6 | 7 | 8;
-
-export interface ResourceTagUpdateRequestModel {
-  resourceTagIds: Record<string, number[]>;
-}
-
-export interface ResourceUpdateRequestModel {
-  publishers?: PublisherDto[] | null;
-  name?: string | null;
-  originals?: string[] | null;
-  series?: string | null;
-  /** @format date-time */
-  releaseDt?: string | null;
-  /** [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian] */
-  language?: ResourceLanguage;
-  /** @format double */
-  rate?: number | null;
-  tags?: TagDto[] | null;
-  introduction?: string | null;
-}
-
-export interface RuntimeFieldHandle {
-  value?: IntPtr;
-}
-
-export interface RuntimeMethodHandle {
-  value?: IntPtr;
-}
-
-export interface RuntimeTypeHandle {
-  value?: IntPtr;
-}
-
 /**
  * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
  * @format int32
  */
-export type SearchOperation = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
-
-/**
- * [0: None, 1: Level1, 2: Level2]
- * @format int32
- */
-export type SecurityRuleSet = 0 | 1 | 2;
-
-export interface SegmentMatchResult {
-  value?: string | null;
-  properties?: SegmentPropertyResult[] | null;
-}
-
-export interface SegmentPropertyResult {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
-  property?: ResourceProperty;
-  keys?: string[] | null;
-}
-
-export interface SeriesDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-}
-
-export interface SeriesDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: SeriesDto[] | null;
-}
-
-export interface SimpleCategoryComponent {
-  /** @minLength 1 */
-  componentKey: string;
-  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-  componentType: ComponentType;
-}
-
-export interface SimpleSearchEngineOptions {
-  name?: string | null;
-  urlTemplate?: string | null;
-}
-
-export interface SpecialText {
-  /** @format int32 */
-  id?: number;
-  /**
-   * @minLength 1
-   * @maxLength 64
-   */
-  value1: string;
-  /** @maxLength 64 */
-  value2?: string | null;
-  /** [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime] */
-  type?: SpecialTextType;
-}
-
-export interface SpecialTextCreateRequestModel {
-  /** [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime] */
-  type?: SpecialTextType;
-  value1?: string | null;
-  value2?: string | null;
-}
-
-export interface SpecialTextSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: SpecialText;
-}
+export type BakabaseInsideWorldModelsConstantsSearchOperation =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18;
 
 /**
  * [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime]
  * @format int32
  */
-export type SpecialTextType = 1 | 2 | 3 | 4 | 6 | 7 | 8;
-
-export interface SpecialTextTypeSpecialTextListDictionarySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, SpecialText[] | null>;
-}
-
-export interface SpecialTextUpdateRequestModel {
-  value1?: string | null;
-  value2?: string | null;
-}
+export type BakabaseInsideWorldModelsConstantsSpecialTextType = 1 | 2 | 3 | 4 | 6 | 7 | 8;
 
 /**
  * [0: Default, 1: Resource]
  * @format int32
  */
-export type StartupPage = 0 | 1;
-
-export interface StringCustomResourcePropertyListDictionarySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, CustomResourceProperty[] | null>;
-}
-
-export interface StringInt32DictionarySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, number | null>;
-}
-
-export interface StringListListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: string[][] | null;
-}
-
-export interface StringListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: string[] | null;
-}
-
-export interface StringMediaTypeDictionarySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, MediaType>;
-}
-
-export interface StringSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: string | null;
-}
-
-export interface StringStringArrayDictionarySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, string[] | null>;
-}
-
-export interface StructLayoutAttribute {
-  typeId?: any;
-  /** [0: Sequential, 2: Explicit, 3: Auto] */
-  value?: LayoutKind;
-}
-
-export interface SubdirectoriesExtractRequestModel {
-  /** @minLength 1 */
-  path: string;
-}
+export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
 
 /**
- * [0: None, 1: GroupName, 2: PreferredAlias]
+ * [1: Bilibili, 2: ExHentai, 3: Pixiv]
  * @format int32
  */
-export type TagAdditionalItem = 0 | 1 | 2;
+export type BakabaseInsideWorldModelsConstantsThirdPartyId = 1 | 2 | 3;
 
-export interface TagDto {
+export interface BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
+  fields?: BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitionsField[] | null;
+  defaultConvention?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitionsField {
+  key?: string | null;
+  description?: string | null;
+  example?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult {
+  rootPath?: string | null;
+  currentNames?: string[] | null;
+  mergeResult?: Record<string, string[]>;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosMatcherValue {
+  fixedText?: string | null;
+  /** @format int32 */
+  layer?: number | null;
+  regex?: string | null;
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  /** [1: Layer, 2: Regex, 3: FixedText] */
+  valueType?: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
+  key?: string | null;
+  isValid?: boolean;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation {
+  /** @format int64 */
+  totalSize?: number;
+  /** @format int64 */
+  freeSpace?: number;
+  /** @format double */
+  usedPercentage?: number;
+  /** @format double */
+  freePercentage?: number;
+  /** @format double */
+  freeSpaceInGb?: number;
+  /** [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied] */
+  error?: BakabaseInsideWorldModelsConstantsMediaLibraryFileSystemError;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult {
+  rootPath?: string | null;
+  entries?: BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntry[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntry {
+  isDirectory?: boolean;
+  relativePath?: string | null;
+  segmentAndMatchedValues?:
+    | BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResult[]
+    | null;
+  globalMatchedValues?:
+    | BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntryGlobalMatchedValue[]
+    | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntryGlobalMatchedValue {
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  key?: string | null;
+  values?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResult {
+  value?: string | null;
+  properties?:
+    | BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResultSegmentPropertyResult[]
+    | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResultSegmentPropertyResult {
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  keys?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
+  filePath?: string | null;
+  /** [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown] */
+  type?: BakabaseInsideWorldModelsConstantsMediaType;
+  /** @format int32 */
+  duration?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosResourceDiff {
+  /** [0: Category, 1: MediaLibrary, 2: ReleaseDt, 3: Publisher, 4: Name, 5: Language, 6: Volume, 7: Original, 8: Series, 9: Tag, 10: Introduction, 11: Rate, 12: CustomProperty] */
+  property?: BakabaseInsideWorldModelsConstantsResourceDiffProperty;
+  currentValue?: any;
+  newValue?: any;
+  /** [1: Added, 2: Removed, 3: Modified] */
+  type?: BakabaseInsideWorldModelsConstantsResourceDiffType;
+  key?: string | null;
+  subDiffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilter {
+  /** @format int32 */
+  propertyId?: number;
+  isReservedProperty?: boolean;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation?: BakabaseInsideWorldModelsConstantsSearchOperation;
+  value?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup {
+  /** [1: And, 2: Or] */
+  combinator?: BakabaseInsideWorldModelsConstantsCombinator;
+  groups?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup[] | null;
+  filters?: BakabaseInsideWorldModelsModelsAosResourceSearchFilter[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  counts?: Record<string, number>;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosAliasDto {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  candidates?: BakabaseInsideWorldModelsModelsDtosAliasDto[] | null;
+  /** @format int32 */
+  groupId?: number;
+  /** @uniqueItems true */
+  allNames?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
+  categoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  todayAddedCategoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  thisWeekAddedCategoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  thisMonthAddedCategoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  resourceTrending?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount[] | null;
+  propertyResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount[] | null;
+  tagResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
+  downloaderDataCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount[] | null;
+  thirdPartyRequestCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount[] | null;
+  fileMover?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMoverInfo;
+  otherCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[][] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  statusAndCounts?: Record<string, number>;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMoverInfo {
+  /** @format int32 */
+  sourceCount?: number;
+  /** @format int32 */
+  targetCount?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount {
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  propertyKey?: string | null;
+  value?: string | null;
+  /** @format int32 */
+  count?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount {
+  label?: string | null;
+  name?: string | null;
+  /** @format int32 */
+  count?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  resultType?: number;
+  /** @format int32 */
+  taskCount?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount {
+  /** @format int32 */
+  offset?: number;
+  /** @format int32 */
+  count?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
+  /** @format int32 */
+  id?: number;
+  key?: string | null;
+  name?: string | null;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  type?: number;
+  /** @format double */
+  progress?: number;
+  /** @format date-time */
+  downloadStatusUpdateDt?: string;
+  /** @format int64 */
+  interval?: number | null;
+  /** @format int32 */
+  startPage?: number | null;
+  /** @format int32 */
+  endPage?: number | null;
+  message?: string | null;
+  checkpoint?: string | null;
+  /** [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled] */
+  status?: BakabaseInsideWorldModelsConstantsDownloadTaskDtoStatus;
+  downloadPath?: string | null;
+  current?: string | null;
+  /** @format int32 */
+  failureTimes?: number;
+  /** @format date-time */
+  nextStartDt?: string | null;
+  /** @uniqueItems true */
+  availableActions?: BakabaseInsideWorldModelsConstantsDownloadTaskAction[] | null;
+  displayName?: string | null;
+  canStart?: boolean;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  resourceId?: number;
+  resourceRawFullName?: string | null;
+  enhancerName?: string | null;
+  enhancerDescriptorId?: string | null;
+  ruleId?: string | null;
+  success?: boolean;
+  enhancement?: string | null;
+  message?: string | null;
+  /** @format date-time */
+  createDt?: string;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosFavoritesDto {
+  /** @format int32 */
+  id?: number;
+  /** @minLength 1 */
+  name: string;
+  description?: string | null;
+  /** @format date-time */
+  createDt?: string;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosOriginalDto {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosPlaylistDto {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  items?: BakabaseInsideWorldModelsModelsDtosPlaylistItemDto[] | null;
+  /** @format int32 */
+  interval?: number;
+  /** @format int32 */
+  order?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosPlaylistItemDto {
+  /** [1: Resource, 2: Video, 3: Image, 4: Audio] */
+  type?: BakabaseInsideWorldModelsConstantsPlaylistItemType;
+  /** @format int32 */
+  resourceId?: number | null;
+  file?: string | null;
+  startTime?: SystemTimeSpan;
+  endTime?: SystemTimeSpan;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosPublisherDto {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  subPublishers?: BakabaseInsideWorldModelsModelsDtosPublisherDto[] | null;
+  /** @format int32 */
+  rank?: number;
+  favorite?: boolean;
+  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions {
+  enhancementPriorities?: Record<string, string[]>;
+  defaultPriority?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosSeriesDto {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosTagDto {
   /** @format int32 */
   id?: number;
   name?: string | null;
@@ -2441,59 +1282,370 @@ export interface TagDto {
   displayName?: string | null;
 }
 
-export interface TagDtoListResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: TagDto[] | null;
-}
-
-export interface TagGroupAddRequestModel {
-  names: string[];
-}
-
-/**
- * [1: Tags, 2: PreferredAlias, 4: TagNamePreferredAlias]
- * @format int32
- */
-export type TagGroupAdditionalItem = 1 | 2 | 4;
-
-export interface TagGroupDto {
+export interface BakabaseInsideWorldModelsModelsDtosTagGroupDto {
   /** @format int32 */
   id?: number;
   name?: string | null;
   /** @format int32 */
   order?: number;
-  tags?: TagDto[] | null;
+  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
   preferredAlias?: string | null;
 }
 
-export interface TagGroupDtoListResponse {
+export interface BakabaseInsideWorldModelsModelsDtosVolumeDto {
   /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: TagGroupDto[] | null;
+  index?: number;
+  name?: string | null;
+  title?: string | null;
+  /** @format int32 */
+  serialId?: number;
+  /** @format int32 */
+  resourceId?: number;
 }
 
-export interface TagGroupUpdateRequestModel {
+export interface BakabaseInsideWorldModelsModelsEntitiesAlias {
+  /** @format int32 */
+  id?: number;
+  /**
+   * @minLength 1
+   * @maxLength 256
+   */
+  name: string;
+  /** @format int32 */
+  groupId?: number;
+  isPreferred?: boolean;
+}
+
+export interface BakabaseInsideWorldModelsModelsEntitiesComponentOptions {
+  /** @format int32 */
+  id?: number;
+  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
+  componentType: BakabaseInsideWorldModelsConstantsComponentType;
+  /** @minLength 1 */
+  componentAssemblyQualifiedTypeName: string;
+  /** @minLength 1 */
+  name: string;
+  description?: string | null;
+  /** @minLength 1 */
+  json: string;
+}
+
+export interface BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  resourceId?: number;
+  /** @minLength 1 */
+  key: string;
+  /** @format int32 */
+  index?: number | null;
+  /** @minLength 1 */
+  value: string;
+  /** [1: String, 2: DateTime, 3: Number, 4: Enum] */
+  valueType?: BakabaseInsideWorldModelsConstantsCustomDataType;
+}
+
+export interface BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
+  /** @format int32 */
+  id?: number;
+  /** @minLength 1 */
+  key: string;
+  name?: string | null;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  type?: number;
+  /** @format double */
+  progress?: number;
+  /** @format date-time */
+  downloadStatusUpdateDt?: string;
+  /** @format int64 */
+  interval?: number | null;
+  /** @format int32 */
+  startPage?: number | null;
+  /** @format int32 */
+  endPage?: number | null;
+  message?: string | null;
+  checkpoint?: string | null;
+  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
+  status?: BakabaseInsideWorldModelsConstantsDownloadTaskStatus;
+  /** @minLength 1 */
+  downloadPath: string;
+  displayName?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsModelsEntitiesPassword {
+  /** @maxLength 64 */
+  text?: string | null;
+  /** @format int32 */
+  usedTimes?: number;
+  /** @format date-time */
+  lastUsedAt?: string;
+}
+
+export interface BakabaseInsideWorldModelsModelsEntitiesSpecialText {
+  /** @format int32 */
+  id?: number;
+  /**
+   * @minLength 1
+   * @maxLength 64
+   */
+  value1: string;
+  /** @maxLength 64 */
+  value2?: string | null;
+  /** [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime] */
+  type?: BakabaseInsideWorldModelsConstantsSpecialTextType;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsAliasCreateRequestModel {
+  /** @minLength 1 */
+  name: string;
+  /** @format int32 */
+  groupId?: number | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsAliasGroupUpdateRequestModel {
+  /** @format int32 */
+  targetGroupId?: number;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsAliasUpdateRequestModel {
+  name?: string | null;
+  isPreferred?: boolean;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsComponentOptionsAddRequestModel {
+  /** @minLength 1 */
+  name: string;
+  description?: string | null;
+  /** @minLength 1 */
+  componentAssemblyQualifiedTypeName: string;
+  /** @minLength 1 */
+  json: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsCoverSaveRequestModel {
+  /** @minLength 1 */
+  base64Image: string;
+  overwrite?: boolean;
+  /** [1: ResourceDirectory, 2: TempDirectory] */
+  saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  type: number;
+  keyAndNames?: Record<string, string>;
+  /** @format int64 */
+  interval?: number | null;
+  /** @format int32 */
+  startPage?: number | null;
+  /** @format int32 */
+  endPage?: number | null;
+  checkpoint?: string | null;
+  forceCreating?: boolean;
+  /** @minLength 1 */
+  downloadPath: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel {
+  ids?: number[] | null;
+  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+  actionOnConflict?: BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel {
+  /** @format int32 */
+  id?: number;
+  /** @minLength 1 */
+  name: string;
+  description?: string | null;
+  /** @format date-time */
+  createDt?: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsFavoritesResourceMappingAddOrRemoveRequestModel {
+  /** @format int32 */
+  resourceId?: number;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsFileDecompressRequestModel {
+  paths?: string[] | null;
+  password?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsFileMoveRequestModel {
+  destDir?: string | null;
+  entryPaths?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsFileRemoveRequestModel {
+  paths?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsFileRenameRequestModel {
+  fullname?: string | null;
+  newName?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel {
+  ids?: number[] | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryAddInBulkRequestModel {
+  nameAndPaths: Record<string, string[] | null>;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryPathConfigurationCreateRequestModel {
+  /** @minLength 1 */
+  path: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryRootPathsAddInBulkRequestModel {
+  rootPaths?: string[] | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsPathConfigurationRemoveRequestModel {
+  /** @format int32 */
+  index: number;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsPublisherUpdateModel {
+  name?: string | null;
+  /** @format int32 */
+  rank?: number | null;
+  favorite?: boolean | null;
+  tagIds?: number[] | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingDirectoryRequestModel {
+  workingDir?: string | null;
+  entryPath?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModel {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  color?: string | null;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  /** @format int32 */
+  order?: number | null;
+  generateNfo?: boolean | null;
+  componentsData?:
+    | BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModelSimpleCategoryComponent[]
+    | null;
+  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModelSimpleCategoryComponent {
+  /** @minLength 1 */
+  componentKey: string;
+  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
+  componentType: BakabaseInsideWorldModelsConstantsComponentType;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryComponentConfigureRequestModel {
+  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
+  type: BakabaseInsideWorldModelsConstantsComponentType;
+  componentKeys: string[];
+  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryCustomPropertyBindRequestModel {
+  customPropertyIds?: number[] | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryDuplicateRequestModel {
+  name?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateRequestModel {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  color?: string | null;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  /** @format int32 */
+  order?: number | null;
+  generateNfo?: boolean | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceCustomPropertyValuePutRequestModel {
+  value?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel {
+  ids: number[];
+  /** @format int32 */
+  mediaLibraryId?: number | null;
+  /** @minLength 1 */
+  path: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceTagUpdateRequestModel {
+  resourceTagIds: Record<string, number[]>;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsResourceUpdateRequestModel {
+  publishers?: BakabaseInsideWorldModelsModelsDtosPublisherDto[] | null;
+  name?: string | null;
+  originals?: string[] | null;
+  series?: string | null;
+  /** @format date-time */
+  releaseDt?: string | null;
+  /** [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian] */
+  language?: BakabaseInsideWorldModelsConstantsResourceLanguage;
+  /** @format double */
+  rate?: number | null;
+  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
+  introduction?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsSpecialTextCreateRequestModel {
+  /** [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime] */
+  type?: BakabaseInsideWorldModelsConstantsSpecialTextType;
+  value1?: string | null;
+  value2?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsSpecialTextUpdateRequestModel {
+  value1?: string | null;
+  value2?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsSubdirectoriesExtractRequestModel {
+  /** @minLength 1 */
+  path: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsTagGroupAddRequestModel {
+  names: string[];
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsTagGroupUpdateRequestModel {
   name?: string | null;
   /** @format int32 */
   order?: number | null;
 }
 
-export interface TagMoveRequestModel {
+export interface BakabaseInsideWorldModelsRequestModelsTagMoveRequestModel {
   /** @format int32 */
   targetTagId?: number | null;
   /** @format int32 */
   targetGroupId?: number | null;
 }
 
-export interface TagNameUpdateRequestModel {
+export interface BakabaseInsideWorldModelsRequestModelsTagNameUpdateRequestModel {
   /** @minLength 1 */
   name: string;
 }
 
-export interface TagUpdateRequestModel {
+export interface BakabaseInsideWorldModelsRequestModelsTagUpdateRequestModel {
   color?: string | null;
   /** @format int32 */
   groupId?: number | null;
@@ -2501,167 +1653,1008 @@ export interface TagUpdateRequestModel {
   order?: number | null;
 }
 
-export interface Target {
-  path?: string | null;
-  sources?: string[] | null;
+export interface BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel {
+  resource?: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
+  /** [0: Default, 1: Resource] */
+  startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
 }
 
-export interface TextAndCount {
-  label?: string | null;
-  name?: string | null;
+export interface BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatus {
+  running?: boolean;
+  current?: string | null;
   /** @format int32 */
-  count?: number;
+  doneCount?: number;
+  /** @format int32 */
+  failedCount?: number;
+  /** @format int32 */
+  totalCount?: number;
+  /** @format int32 */
+  percent?: number;
+  /** @format date-time */
+  startDt?: string;
+  failures?: BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatusFailure[] | null;
+}
+
+export interface BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatusFailure {
+  fullnameList?: string[] | null;
+  error?: string | null;
+}
+
+export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
+  /** @format int32 */
+  id?: number;
+  /** @format date-time */
+  dateTime?: string;
+  /** [0: Trace, 1: Debug, 2: Information, 3: Warning, 4: Error, 5: Critical, 6: None] */
+  level?: MicrosoftExtensionsLoggingLogLevel;
+  logger?: string | null;
+  event?: string | null;
+  message?: string | null;
+  read?: boolean;
+}
+
+export interface BootstrapModelsResponseModelsBaseResponse {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainCategory[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainComponentDescriptor {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainComponentDescriptor[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCustomProperty {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffs {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?:
+    | BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffs[]
+    | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMediaLibrary {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessModelsDomainMediaLibrary[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMigrationTarget {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessModelsDomainMigrationTarget[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainResource {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessModelsDomainResource[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsAosPreviewerItem[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosDownloadTaskDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosFavoritesDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosFavoritesDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosOriginalDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPublisherDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosPublisherDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosSeriesDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosSeriesDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagGroupDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosTagGroupDto[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsEntitiesPassword[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BootstrapComponentsLoggingLogServiceModelsEntitiesLog[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1SystemCollectionsGenericList1SystemString {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: string[][] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1SystemInt32 {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: number[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1SystemString {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: string[] | null;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldBusinessModelsDomainResource {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessModelsDomainResource[] | null;
+  /** @format int32 */
+  totalCount?: number;
+  /** @format int32 */
+  pageIndex?: number;
+  /** @format int32 */
+  pageSize?: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsDtosAliasDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosAliasDto[] | null;
+  /** @format int32 */
+  totalCount?: number;
+  /** @format int32 */
+  pageIndex?: number;
+  /** @format int32 */
+  pageSize?: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto[] | null;
+  /** @format int32 */
+  totalCount?: number;
+  /** @format int32 */
+  pageIndex?: number;
+  /** @format int32 */
+  pageSize?: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsEntitiesPassword[] | null;
+  /** @format int32 */
+  totalCount?: number;
+  /** @format int32 */
+  pageIndex?: number;
+  /** @format int32 */
+  pageSize?: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BootstrapComponentsLoggingLogServiceModelsEntitiesLog[] | null;
+  /** @format int32 */
+  totalCount?: number;
+  /** @format int32 */
+  pageIndex?: number;
+  /** @format int32 */
+  pageSize?: number;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainComponentDescriptor {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainComponentDescriptor;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCustomProperty {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainCustomProperty;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsDto;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsBilibiliOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsConfigsBilibiliOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsExHentaiOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsConfigsExHentaiOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsFileSystemOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsConfigsFileSystemOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsJavLibraryOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsConfigsJavLibraryOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsNetworkOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsConfigsNetworkOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsPixivOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsConfigsPixivOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsThirdPartyOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsConfigsThirdPartyOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsConfigsUIOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConstantsInitializationContentType {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  /** [1: NotAcceptTerms, 2: NeedRestart] */
+  data?: BakabaseInsideWorldModelsConstantsInitializationContentType;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics[] | null;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosDashboardStatistics;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosDownloadTaskDto;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesAlias {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsEntitiesAlias;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesComponentOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsEntitiesComponentOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesSpecialText {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsModelsEntitiesSpecialText;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatus {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatus;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2BakabaseInsideWorldModelsConstantsSpecialTextTypeSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesSpecialText {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, BakabaseInsideWorldModelsModelsEntitiesSpecialText[] | null>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32 {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, number[] | null>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldModelsConstantsMediaType {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, BakabaseInsideWorldModelsConstantsMediaType>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemInt32 {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, number | null>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemString {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, string[] | null>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemInt32 {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  /** @format int32 */
+  data?: number;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: string | null;
 }
 
 /**
- * [1: Bilibili, 2: ExHentai, 3: Pixiv]
+ * [0: Trace, 1: Debug, 2: Information, 3: Warning, 4: Error, 5: Critical, 6: None]
  * @format int32
  */
-export type ThirdPartyId = 1 | 2 | 3;
+export type MicrosoftExtensionsLoggingLogLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export interface ThirdPartyOptions {
-  simpleSearchEngines?: SimpleSearchEngineOptions[] | null;
-}
+export type SystemIntPtr = object;
 
-export interface ThirdPartyOptionsSingletonResponse {
+export interface SystemModuleHandle {
   /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: ThirdPartyOptions;
+  mdStreamVersion?: number;
 }
 
-export interface ThirdPartyRequestCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
-  id?: ThirdPartyId;
-  /** @format int32 */
-  resultType?: number;
-  /** @format int32 */
-  taskCount?: number;
-}
-
-export interface ThirdPartyRequestStatistics {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
-  id?: ThirdPartyId;
-  counts?: Record<string, number>;
-}
-
-export interface ThirdPartyRequestStatisticsArraySingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: ThirdPartyRequestStatistics[] | null;
-}
-
-export interface TimeSpan {
+export interface SystemReflectionAssembly {
+  definedTypes?: SystemReflectionTypeInfo[] | null;
+  exportedTypes?: SystemType[] | null;
+  codeBase?: string | null;
+  entryPoint?: SystemReflectionMethodInfo;
+  fullName?: string | null;
+  imageRuntimeVersion?: string | null;
+  isDynamic?: boolean;
+  location?: string | null;
+  reflectionOnly?: boolean;
+  isCollectible?: boolean;
+  isFullyTrusted?: boolean;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  escapedCodeBase?: string | null;
+  manifestModule?: SystemReflectionModule;
+  modules?: SystemReflectionModule[] | null;
+  /** @deprecated */
+  globalAssemblyCache?: boolean;
   /** @format int64 */
-  ticks?: number;
-  /** @format int32 */
-  days?: number;
-  /** @format int32 */
-  hours?: number;
-  /** @format int32 */
-  milliseconds?: number;
-  /** @format int32 */
-  minutes?: number;
-  /** @format int32 */
-  seconds?: number;
-  /** @format double */
-  totalDays?: number;
-  /** @format double */
-  totalHours?: number;
-  /** @format double */
-  totalMilliseconds?: number;
-  /** @format double */
-  totalMinutes?: number;
-  /** @format double */
-  totalSeconds?: number;
+  hostContext?: number;
+  /** [0: None, 1: Level1, 2: Level2] */
+  securityRuleSet?: SystemSecuritySecurityRuleSet;
 }
 
-export interface Type {
+/**
+ * [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis]
+ * @format int32
+ */
+export type SystemReflectionCallingConventions = 1 | 2 | 3 | 32 | 64;
+
+export interface SystemReflectionConstructorInfo {
   name?: string | null;
-  customAttributes?: CustomAttributeData[] | null;
+  declaringType?: SystemType;
+  reflectedType?: SystemType;
+  module?: SystemReflectionModule;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
   /** @format int32 */
   metadataToken?: number;
-  isInterface?: boolean;
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: MemberTypes;
-  namespace?: string | null;
-  assemblyQualifiedName?: string | null;
-  fullName?: string | null;
-  assembly?: Assembly;
-  module?: Module;
-  isNested?: boolean;
-  declaringType?: Type;
-  declaringMethod?: MethodBase;
-  reflectedType?: Type;
-  underlyingSystemType?: Type;
-  isTypeDefinition?: boolean;
-  isArray?: boolean;
-  isByRef?: boolean;
-  isPointer?: boolean;
-  isConstructedGenericType?: boolean;
-  isGenericParameter?: boolean;
-  isGenericTypeParameter?: boolean;
-  isGenericMethodParameter?: boolean;
-  isGenericType?: boolean;
-  isGenericTypeDefinition?: boolean;
-  isSZArray?: boolean;
-  isVariableBoundArray?: boolean;
-  isByRefLike?: boolean;
-  hasElementType?: boolean;
-  genericTypeArguments?: Type[] | null;
-  /** @format int32 */
-  genericParameterPosition?: number;
-  /** [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask] */
-  genericParameterAttributes?: GenericParameterAttributes;
-  /** [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: VisibilityMask, 7: VisibilityMask, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: StringFormatMask, 196608: StringFormatMask, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask] */
-  attributes?: TypeAttributes;
+  /** [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
+  attributes?: SystemReflectionMethodAttributes;
+  /** [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
+  methodImplementationFlags?: SystemReflectionMethodImplAttributes;
+  /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
+  callingConvention?: SystemReflectionCallingConventions;
   isAbstract?: boolean;
-  isImport?: boolean;
-  isSealed?: boolean;
+  isConstructor?: boolean;
+  isFinal?: boolean;
+  isHideBySig?: boolean;
   isSpecialName?: boolean;
-  isClass?: boolean;
-  isNestedAssembly?: boolean;
-  isNestedFamANDAssem?: boolean;
-  isNestedFamily?: boolean;
-  isNestedFamORAssem?: boolean;
-  isNestedPrivate?: boolean;
-  isNestedPublic?: boolean;
-  isNotPublic?: boolean;
+  isStatic?: boolean;
+  isVirtual?: boolean;
+  isAssembly?: boolean;
+  isFamily?: boolean;
+  isFamilyAndAssembly?: boolean;
+  isFamilyOrAssembly?: boolean;
+  isPrivate?: boolean;
   isPublic?: boolean;
-  isAutoLayout?: boolean;
-  isExplicitLayout?: boolean;
-  isLayoutSequential?: boolean;
-  isAnsiClass?: boolean;
-  isAutoClass?: boolean;
-  isUnicodeClass?: boolean;
-  isCOMObject?: boolean;
-  isContextful?: boolean;
-  isEnum?: boolean;
-  isMarshalByRef?: boolean;
-  isPrimitive?: boolean;
-  isValueType?: boolean;
-  isSignatureType?: boolean;
+  isConstructedGenericMethod?: boolean;
+  isGenericMethod?: boolean;
+  isGenericMethodDefinition?: boolean;
+  containsGenericParameters?: boolean;
+  methodHandle?: SystemRuntimeMethodHandle;
   isSecurityCritical?: boolean;
   isSecuritySafeCritical?: boolean;
   isSecurityTransparent?: boolean;
-  structLayoutAttribute?: StructLayoutAttribute;
-  typeInitializer?: ConstructorInfo;
-  typeHandle?: RuntimeTypeHandle;
-  /** @format uuid */
-  guid?: string;
-  baseType?: Type;
-  isSerializable?: boolean;
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
+}
+
+export interface SystemReflectionCustomAttributeData {
+  attributeType?: SystemType;
+  constructor?: SystemReflectionConstructorInfo;
+  constructorArguments?: SystemReflectionCustomAttributeTypedArgument[] | null;
+  namedArguments?: SystemReflectionCustomAttributeNamedArgument[] | null;
+}
+
+export interface SystemReflectionCustomAttributeNamedArgument {
+  memberInfo?: SystemReflectionMemberInfo;
+  typedValue?: SystemReflectionCustomAttributeTypedArgument;
+  memberName?: string | null;
+  isField?: boolean;
+}
+
+export interface SystemReflectionCustomAttributeTypedArgument {
+  argumentType?: SystemType;
+  value?: any;
+}
+
+/**
+ * [0: None, 512: SpecialName, 1024: ReservedMask, 1024: ReservedMask]
+ * @format int32
+ */
+export type SystemReflectionEventAttributes = 0 | 512 | 1024;
+
+export interface SystemReflectionEventInfo {
+  name?: string | null;
+  declaringType?: SystemType;
+  reflectedType?: SystemType;
+  module?: SystemReflectionModule;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  isCollectible?: boolean;
+  /** @format int32 */
+  metadataToken?: number;
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
+  /** [0: None, 512: SpecialName, 1024: ReservedMask, 1024: ReservedMask] */
+  attributes?: SystemReflectionEventAttributes;
+  isSpecialName?: boolean;
+  addMethod?: SystemReflectionMethodInfo;
+  removeMethod?: SystemReflectionMethodInfo;
+  raiseMethod?: SystemReflectionMethodInfo;
+  isMulticast?: boolean;
+  eventHandlerType?: SystemType;
+}
+
+/**
+ * [0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: FieldAccessMask, 16: Static, 32: InitOnly, 64: Literal, 128: NotSerialized, 256: HasFieldRVA, 512: SpecialName, 1024: RTSpecialName, 4096: HasFieldMarshal, 8192: PinvokeImpl, 32768: HasDefault, 38144: ReservedMask]
+ * @format int32
+ */
+export type SystemReflectionFieldAttributes =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 16
+  | 32
+  | 64
+  | 128
+  | 256
+  | 512
+  | 1024
+  | 4096
+  | 8192
+  | 32768
+  | 38144;
+
+export interface SystemReflectionFieldInfo {
+  name?: string | null;
+  declaringType?: SystemType;
+  reflectedType?: SystemType;
+  module?: SystemReflectionModule;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  isCollectible?: boolean;
+  /** @format int32 */
+  metadataToken?: number;
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
+  /** [0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: FieldAccessMask, 16: Static, 32: InitOnly, 64: Literal, 128: NotSerialized, 256: HasFieldRVA, 512: SpecialName, 1024: RTSpecialName, 4096: HasFieldMarshal, 8192: PinvokeImpl, 32768: HasDefault, 38144: ReservedMask] */
+  attributes?: SystemReflectionFieldAttributes;
+  fieldType?: SystemType;
+  isInitOnly?: boolean;
+  isLiteral?: boolean;
+  isNotSerialized?: boolean;
+  isPinvokeImpl?: boolean;
+  isSpecialName?: boolean;
+  isStatic?: boolean;
+  isAssembly?: boolean;
+  isFamily?: boolean;
+  isFamilyAndAssembly?: boolean;
+  isFamilyOrAssembly?: boolean;
+  isPrivate?: boolean;
+  isPublic?: boolean;
+  isSecurityCritical?: boolean;
+  isSecuritySafeCritical?: boolean;
+  isSecurityTransparent?: boolean;
+  fieldHandle?: SystemRuntimeFieldHandle;
+}
+
+/**
+ * [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask]
+ * @format int32
+ */
+export type SystemReflectionGenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 | 16 | 28;
+
+export type SystemReflectionICustomAttributeProvider = object;
+
+export interface SystemReflectionMemberInfo {
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
+  declaringType?: SystemType;
+  reflectedType?: SystemType;
+  name?: string | null;
+  module?: SystemReflectionModule;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  isCollectible?: boolean;
+  /** @format int32 */
+  metadataToken?: number;
+}
+
+/**
+ * [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All]
+ * @format int32
+ */
+export type SystemReflectionMemberTypes = 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128 | 191;
+
+/**
+ * [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask]
+ * @format int32
+ */
+export type SystemReflectionMethodAttributes =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 16
+  | 32
+  | 64
+  | 128
+  | 256
+  | 512
+  | 1024
+  | 2048
+  | 4096
+  | 8192
+  | 16384
+  | 32768
+  | 53248;
+
+export interface SystemReflectionMethodBase {
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
+  name?: string | null;
+  declaringType?: SystemType;
+  reflectedType?: SystemType;
+  module?: SystemReflectionModule;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  isCollectible?: boolean;
+  /** @format int32 */
+  metadataToken?: number;
+  /** [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
+  attributes?: SystemReflectionMethodAttributes;
+  /** [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
+  methodImplementationFlags?: SystemReflectionMethodImplAttributes;
+  /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
+  callingConvention?: SystemReflectionCallingConventions;
+  isAbstract?: boolean;
+  isConstructor?: boolean;
+  isFinal?: boolean;
+  isHideBySig?: boolean;
+  isSpecialName?: boolean;
+  isStatic?: boolean;
+  isVirtual?: boolean;
+  isAssembly?: boolean;
+  isFamily?: boolean;
+  isFamilyAndAssembly?: boolean;
+  isFamilyOrAssembly?: boolean;
+  isPrivate?: boolean;
+  isPublic?: boolean;
+  isConstructedGenericMethod?: boolean;
+  isGenericMethod?: boolean;
+  isGenericMethodDefinition?: boolean;
   containsGenericParameters?: boolean;
-  isVisible?: boolean;
+  methodHandle?: SystemRuntimeMethodHandle;
+  isSecurityCritical?: boolean;
+  isSecuritySafeCritical?: boolean;
+  isSecurityTransparent?: boolean;
+}
+
+/**
+ * [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal]
+ * @format int32
+ */
+export type SystemReflectionMethodImplAttributes =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 8
+  | 16
+  | 32
+  | 64
+  | 128
+  | 256
+  | 512
+  | 4096
+  | 65535;
+
+export interface SystemReflectionMethodInfo {
+  name?: string | null;
+  declaringType?: SystemType;
+  reflectedType?: SystemType;
+  module?: SystemReflectionModule;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  isCollectible?: boolean;
+  /** @format int32 */
+  metadataToken?: number;
+  /** [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
+  attributes?: SystemReflectionMethodAttributes;
+  /** [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
+  methodImplementationFlags?: SystemReflectionMethodImplAttributes;
+  /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
+  callingConvention?: SystemReflectionCallingConventions;
+  isAbstract?: boolean;
+  isConstructor?: boolean;
+  isFinal?: boolean;
+  isHideBySig?: boolean;
+  isSpecialName?: boolean;
+  isStatic?: boolean;
+  isVirtual?: boolean;
+  isAssembly?: boolean;
+  isFamily?: boolean;
+  isFamilyAndAssembly?: boolean;
+  isFamilyOrAssembly?: boolean;
+  isPrivate?: boolean;
+  isPublic?: boolean;
+  isConstructedGenericMethod?: boolean;
+  isGenericMethod?: boolean;
+  isGenericMethodDefinition?: boolean;
+  containsGenericParameters?: boolean;
+  methodHandle?: SystemRuntimeMethodHandle;
+  isSecurityCritical?: boolean;
+  isSecuritySafeCritical?: boolean;
+  isSecurityTransparent?: boolean;
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
+  returnParameter?: SystemReflectionParameterInfo;
+  returnType?: SystemType;
+  returnTypeCustomAttributes?: SystemReflectionICustomAttributeProvider;
+}
+
+export interface SystemReflectionModule {
+  assembly?: SystemReflectionAssembly;
+  fullyQualifiedName?: string | null;
+  name?: string | null;
+  /** @format int32 */
+  mdStreamVersion?: number;
+  /** @format uuid */
+  moduleVersionId?: string;
+  scopeName?: string | null;
+  moduleHandle?: SystemModuleHandle;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  /** @format int32 */
+  metadataToken?: number;
+}
+
+/**
+ * [0: None, 1: In, 2: Out, 4: Lcid, 8: Retval, 16: Optional, 4096: HasDefault, 8192: HasFieldMarshal, 16384: Reserved3, 32768: Reserved4, 61440: ReservedMask]
+ * @format int32
+ */
+export type SystemReflectionParameterAttributes = 0 | 1 | 2 | 4 | 8 | 16 | 4096 | 8192 | 16384 | 32768 | 61440;
+
+export interface SystemReflectionParameterInfo {
+  /** [0: None, 1: In, 2: Out, 4: Lcid, 8: Retval, 16: Optional, 4096: HasDefault, 8192: HasFieldMarshal, 16384: Reserved3, 32768: Reserved4, 61440: ReservedMask] */
+  attributes?: SystemReflectionParameterAttributes;
+  member?: SystemReflectionMemberInfo;
+  name?: string | null;
+  parameterType?: SystemType;
+  /** @format int32 */
+  position?: number;
+  isIn?: boolean;
+  isLcid?: boolean;
+  isOptional?: boolean;
+  isOut?: boolean;
+  isRetval?: boolean;
+  defaultValue?: any;
+  rawDefaultValue?: any;
+  hasDefaultValue?: boolean;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  /** @format int32 */
+  metadataToken?: number;
+}
+
+/**
+ * [0: None, 512: SpecialName, 1024: RTSpecialName, 4096: HasDefault, 8192: Reserved2, 16384: Reserved3, 32768: Reserved4, 62464: ReservedMask]
+ * @format int32
+ */
+export type SystemReflectionPropertyAttributes = 0 | 512 | 1024 | 4096 | 8192 | 16384 | 32768 | 62464;
+
+export interface SystemReflectionPropertyInfo {
+  name?: string | null;
+  declaringType?: SystemType;
+  reflectedType?: SystemType;
+  module?: SystemReflectionModule;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  isCollectible?: boolean;
+  /** @format int32 */
+  metadataToken?: number;
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
+  propertyType?: SystemType;
+  /** [0: None, 512: SpecialName, 1024: RTSpecialName, 4096: HasDefault, 8192: Reserved2, 16384: Reserved3, 32768: Reserved4, 62464: ReservedMask] */
+  attributes?: SystemReflectionPropertyAttributes;
+  isSpecialName?: boolean;
+  canRead?: boolean;
+  canWrite?: boolean;
+  getMethod?: SystemReflectionMethodInfo;
+  setMethod?: SystemReflectionMethodInfo;
 }
 
 /**
  * [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: VisibilityMask, 7: VisibilityMask, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: StringFormatMask, 196608: StringFormatMask, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask]
  * @format int32
  */
-export type TypeAttributes =
+export type SystemReflectionTypeAttributes =
   | 0
   | 1
   | 2
@@ -2689,25 +2682,25 @@ export type TypeAttributes =
   | 1048576
   | 12582912;
 
-export interface TypeInfo {
+export interface SystemReflectionTypeInfo {
   name?: string | null;
-  customAttributes?: CustomAttributeData[] | null;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
   /** @format int32 */
   metadataToken?: number;
   isInterface?: boolean;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: MemberTypes;
+  memberType?: SystemReflectionMemberTypes;
   namespace?: string | null;
   assemblyQualifiedName?: string | null;
   fullName?: string | null;
-  assembly?: Assembly;
-  module?: Module;
+  assembly?: SystemReflectionAssembly;
+  module?: SystemReflectionModule;
   isNested?: boolean;
-  declaringType?: Type;
-  declaringMethod?: MethodBase;
-  reflectedType?: Type;
-  underlyingSystemType?: Type;
+  declaringType?: SystemType;
+  declaringMethod?: SystemReflectionMethodBase;
+  reflectedType?: SystemType;
+  underlyingSystemType?: SystemType;
   isTypeDefinition?: boolean;
   isArray?: boolean;
   isByRef?: boolean;
@@ -2722,13 +2715,13 @@ export interface TypeInfo {
   isVariableBoundArray?: boolean;
   isByRefLike?: boolean;
   hasElementType?: boolean;
-  genericTypeArguments?: Type[] | null;
+  genericTypeArguments?: SystemType[] | null;
   /** @format int32 */
   genericParameterPosition?: number;
   /** [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask] */
-  genericParameterAttributes?: GenericParameterAttributes;
+  genericParameterAttributes?: SystemReflectionGenericParameterAttributes;
   /** [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: VisibilityMask, 7: VisibilityMask, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: StringFormatMask, 196608: StringFormatMask, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask] */
-  attributes?: TypeAttributes;
+  attributes?: SystemReflectionTypeAttributes;
   isAbstract?: boolean;
   isImport?: boolean;
   isSealed?: boolean;
@@ -2758,75 +2751,167 @@ export interface TypeInfo {
   isSecurityCritical?: boolean;
   isSecuritySafeCritical?: boolean;
   isSecurityTransparent?: boolean;
-  structLayoutAttribute?: StructLayoutAttribute;
-  typeInitializer?: ConstructorInfo;
-  typeHandle?: RuntimeTypeHandle;
+  structLayoutAttribute?: SystemRuntimeInteropServicesStructLayoutAttribute;
+  typeInitializer?: SystemReflectionConstructorInfo;
+  typeHandle?: SystemRuntimeTypeHandle;
   /** @format uuid */
   guid?: string;
-  baseType?: Type;
+  baseType?: SystemType;
   isSerializable?: boolean;
   containsGenericParameters?: boolean;
   isVisible?: boolean;
-  genericTypeParameters?: Type[] | null;
-  declaredConstructors?: ConstructorInfo[] | null;
-  declaredEvents?: EventInfo[] | null;
-  declaredFields?: FieldInfo[] | null;
-  declaredMembers?: MemberInfo[] | null;
-  declaredMethods?: MethodInfo[] | null;
-  declaredNestedTypes?: TypeInfo[] | null;
-  declaredProperties?: PropertyInfo[] | null;
-  implementedInterfaces?: Type[] | null;
-}
-
-export interface UIOptions {
-  resource?: UIResourceOptions;
-  /** [0: Default, 1: Resource] */
-  startupPage?: StartupPage;
-}
-
-export interface UIOptionsPatchRequestModel {
-  resource?: UIResourceOptions;
-  /** [0: Default, 1: Resource] */
-  startupPage?: StartupPage;
-}
-
-export interface UIOptionsSingletonResponse {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: UIOptions;
-}
-
-export interface UIResourceOptions {
-  /** @format int32 */
-  colCount?: number;
-  showBiggerCoverWhileHover?: boolean;
-  disableMediaPreviewer?: boolean;
-  disableCache?: boolean;
+  genericTypeParameters?: SystemType[] | null;
+  declaredConstructors?: SystemReflectionConstructorInfo[] | null;
+  declaredEvents?: SystemReflectionEventInfo[] | null;
+  declaredFields?: SystemReflectionFieldInfo[] | null;
+  declaredMembers?: SystemReflectionMemberInfo[] | null;
+  declaredMethods?: SystemReflectionMethodInfo[] | null;
+  declaredNestedTypes?: SystemReflectionTypeInfo[] | null;
+  declaredProperties?: SystemReflectionPropertyInfo[] | null;
+  implementedInterfaces?: SystemType[] | null;
 }
 
 /**
- * [0: FollowSystem, 1: Light, 2: Dark]
+ * [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x]
  * @format int32
  */
-export type UiTheme = 0 | 1 | 2;
+export type SystemRuntimeInteropServicesArchitecture = 0 | 1 | 2 | 3 | 4 | 5;
 
-export interface VolumeDto {
-  /** @format int32 */
-  index?: number;
-  name?: string | null;
-  title?: string | null;
-  /** @format int32 */
-  serialId?: number;
-  /** @format int32 */
-  resourceId?: number;
+/**
+ * [0: Sequential, 2: Explicit, 3: Auto]
+ * @format int32
+ */
+export type SystemRuntimeInteropServicesLayoutKind = 0 | 2 | 3;
+
+export type SystemRuntimeInteropServicesOSPlatform = object;
+
+export interface SystemRuntimeInteropServicesStructLayoutAttribute {
+  typeId?: any;
+  /** [0: Sequential, 2: Explicit, 3: Auto] */
+  value?: SystemRuntimeInteropServicesLayoutKind;
 }
 
-export interface WeekCount {
+export interface SystemRuntimeFieldHandle {
+  value?: SystemIntPtr;
+}
+
+export interface SystemRuntimeMethodHandle {
+  value?: SystemIntPtr;
+}
+
+export interface SystemRuntimeTypeHandle {
+  value?: SystemIntPtr;
+}
+
+/**
+ * [0: None, 1: Level1, 2: Level2]
+ * @format int32
+ */
+export type SystemSecuritySecurityRuleSet = 0 | 1 | 2;
+
+export interface SystemTimeSpan {
+  /** @format int64 */
+  ticks?: number;
   /** @format int32 */
-  offset?: number;
+  days?: number;
   /** @format int32 */
-  count?: number;
+  hours?: number;
+  /** @format int32 */
+  milliseconds?: number;
+  /** @format int32 */
+  minutes?: number;
+  /** @format int32 */
+  seconds?: number;
+  /** @format double */
+  totalDays?: number;
+  /** @format double */
+  totalHours?: number;
+  /** @format double */
+  totalMilliseconds?: number;
+  /** @format double */
+  totalMinutes?: number;
+  /** @format double */
+  totalSeconds?: number;
+}
+
+export interface SystemType {
+  name?: string | null;
+  customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  isCollectible?: boolean;
+  /** @format int32 */
+  metadataToken?: number;
+  isInterface?: boolean;
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
+  namespace?: string | null;
+  assemblyQualifiedName?: string | null;
+  fullName?: string | null;
+  assembly?: SystemReflectionAssembly;
+  module?: SystemReflectionModule;
+  isNested?: boolean;
+  declaringType?: SystemType;
+  declaringMethod?: SystemReflectionMethodBase;
+  reflectedType?: SystemType;
+  underlyingSystemType?: SystemType;
+  isTypeDefinition?: boolean;
+  isArray?: boolean;
+  isByRef?: boolean;
+  isPointer?: boolean;
+  isConstructedGenericType?: boolean;
+  isGenericParameter?: boolean;
+  isGenericTypeParameter?: boolean;
+  isGenericMethodParameter?: boolean;
+  isGenericType?: boolean;
+  isGenericTypeDefinition?: boolean;
+  isSZArray?: boolean;
+  isVariableBoundArray?: boolean;
+  isByRefLike?: boolean;
+  hasElementType?: boolean;
+  genericTypeArguments?: SystemType[] | null;
+  /** @format int32 */
+  genericParameterPosition?: number;
+  /** [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask] */
+  genericParameterAttributes?: SystemReflectionGenericParameterAttributes;
+  /** [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: VisibilityMask, 7: VisibilityMask, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: StringFormatMask, 196608: StringFormatMask, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask] */
+  attributes?: SystemReflectionTypeAttributes;
+  isAbstract?: boolean;
+  isImport?: boolean;
+  isSealed?: boolean;
+  isSpecialName?: boolean;
+  isClass?: boolean;
+  isNestedAssembly?: boolean;
+  isNestedFamANDAssem?: boolean;
+  isNestedFamily?: boolean;
+  isNestedFamORAssem?: boolean;
+  isNestedPrivate?: boolean;
+  isNestedPublic?: boolean;
+  isNotPublic?: boolean;
+  isPublic?: boolean;
+  isAutoLayout?: boolean;
+  isExplicitLayout?: boolean;
+  isLayoutSequential?: boolean;
+  isAnsiClass?: boolean;
+  isAutoClass?: boolean;
+  isUnicodeClass?: boolean;
+  isCOMObject?: boolean;
+  isContextful?: boolean;
+  isEnum?: boolean;
+  isMarshalByRef?: boolean;
+  isPrimitive?: boolean;
+  isValueType?: boolean;
+  isSignatureType?: boolean;
+  isSecurityCritical?: boolean;
+  isSecuritySafeCritical?: boolean;
+  isSecurityTransparent?: boolean;
+  structLayoutAttribute?: SystemRuntimeInteropServicesStructLayoutAttribute;
+  typeInitializer?: SystemReflectionConstructorInfo;
+  typeHandle?: SystemRuntimeTypeHandle;
+  /** @format uuid */
+  guid?: string;
+  baseType?: SystemType;
+  isSerializable?: boolean;
+  containsGenericParameters?: boolean;
+  isVisible?: boolean;
 }
 
 export type QueryParamsType = Record<string | number, any>;
@@ -3053,7 +3138,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/alias/{id}
      */
     getAlias: (id: number, params: RequestParams = {}) =>
-      this.request<AliasSingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesAlias, any>({
         path: `/alias/${id}`,
         method: "GET",
         format: "json",
@@ -3067,8 +3152,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name UpdateAlias
      * @request PUT:/alias/{id}
      */
-    updateAlias: (id: number, data: AliasUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    updateAlias: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsAliasUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/alias/${id}`,
         method: "PUT",
         body: data,
@@ -3085,7 +3174,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/alias/{id}
      */
     removeAlias: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/alias/${id}`,
         method: "DELETE",
         format: "json",
@@ -3105,7 +3194,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         name?: string;
         exactly?: boolean;
         /** [1: Candidates] */
-        additionalItems?: AliasAdditionalItem;
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsAliasAdditionalItem;
         /** @format int32 */
         pageIndex?: number;
         /**
@@ -3119,7 +3208,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<AliasDtoSearchResponse, any>({
+      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsDtosAliasDto, any>({
         path: `/alias`,
         method: "GET",
         query: query,
@@ -3134,8 +3223,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name CreateAlias
      * @request POST:/alias
      */
-    createAlias: (data: AliasCreateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    createAlias: (data: BakabaseInsideWorldModelsRequestModelsAliasCreateRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/alias`,
         method: "POST",
         body: data,
@@ -3152,7 +3241,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/alias/export
      */
     exportAliases: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/alias/export`,
         method: "POST",
         format: "json",
@@ -3173,7 +3262,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/alias/import`,
         method: "POST",
         body: data,
@@ -3191,7 +3280,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/alias-group/{id}
      */
     removeAliasGroup: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/alias-group/${id}`,
         method: "DELETE",
         format: "json",
@@ -3205,8 +3294,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name MergeAliasGroup
      * @request PUT:/alias-group/{id}
      */
-    mergeAliasGroup: (id: number, data: AliasGroupUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    mergeAliasGroup: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsAliasGroupUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/alias-group/${id}`,
         method: "PUT",
         body: data,
@@ -3224,7 +3317,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/app/initialized
      */
     checkAppInitialized: (params: RequestParams = {}) =>
-      this.request<InitializationContentTypeSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConstantsInitializationContentType,
+        any
+      >({
         path: `/app/initialized`,
         method: "GET",
         format: "json",
@@ -3239,7 +3335,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/app/info
      */
     getAppInfo: (params: RequestParams = {}) =>
-      this.request<AppInfoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo,
+        any
+      >({
         path: `/app/info`,
         method: "GET",
         format: "json",
@@ -3254,7 +3353,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/app/terms
      */
     acceptTerms: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/app/terms`,
         method: "POST",
         format: "json",
@@ -3268,8 +3367,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name MoveCoreData
      * @request PUT:/app/data-path
      */
-    moveCoreData: (data: CoreDataMoveRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    moveCoreData: (
+      data: BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/app/data-path`,
         method: "PUT",
         body: data,
@@ -3287,7 +3389,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/background-task
      */
     getAllBackgroundTasks: (params: RequestParams = {}) =>
-      this.request<BackgroundTaskDtoListResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto,
+        any
+      >({
         path: `/background-task`,
         method: "GET",
         format: "json",
@@ -3302,7 +3407,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/background-task
      */
     clearInactiveBackgroundTasks: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/background-task`,
         method: "DELETE",
         format: "json",
@@ -3322,7 +3427,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BackgroundTaskDtoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto,
+        any
+      >({
         path: `/background-task/by-name`,
         method: "GET",
         query: query,
@@ -3338,7 +3446,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/background-task/{id}/stop
      */
     stopBackgroundTask: (id: string, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/background-task/${id}/stop`,
         method: "DELETE",
         format: "json",
@@ -3353,7 +3461,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/background-task/{id}
      */
     removeBackgroundTask: (id: string, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/background-task/${id}`,
         method: "DELETE",
         format: "json",
@@ -3369,7 +3477,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/bilibili/favorites
      */
     getBiliBiliFavorites: (params: RequestParams = {}) =>
-      this.request<FavoritesListResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites,
+        any
+      >({
         path: `/bilibili/favorites`,
         method: "GET",
         format: "json",
@@ -3385,7 +3496,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/bulk-modification/{id}
      */
     getBulkModificationById: (id: number, params: RequestParams = {}) =>
-      this.request<BulkModificationDtoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto,
+        any
+      >({
         path: `/bulk-modification/${id}`,
         method: "GET",
         format: "json",
@@ -3399,8 +3513,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutBulkModification
      * @request PUT:/bulk-modification/{id}
      */
-    putBulkModification: (id: number, data: BulkModificationPutRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    putBulkModification: (
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}`,
         method: "PUT",
         body: data,
@@ -3417,7 +3535,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/bulk-modification/{id}
      */
     deleteBulkModification: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}`,
         method: "DELETE",
         format: "json",
@@ -3432,7 +3550,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/bulk-modification
      */
     getAllBulkModifications: (params: RequestParams = {}) =>
-      this.request<BulkModificationDtoListResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto,
+        any
+      >({
         path: `/bulk-modification`,
         method: "GET",
         format: "json",
@@ -3446,8 +3567,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name CreateBulkModification
      * @request POST:/bulk-modification
      */
-    createBulkModification: (data: BulkModificationPutRequestModel, params: RequestParams = {}) =>
-      this.request<BulkModificationDtoSingletonResponse, any>({
+    createBulkModification: (
+      data: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto,
+        any
+      >({
         path: `/bulk-modification`,
         method: "POST",
         body: data,
@@ -3464,7 +3591,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/bulk-modification/{id}/duplication
      */
     duplicateBulkModification: (id: number, params: RequestParams = {}) =>
-      this.request<BulkModificationDtoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto,
+        any
+      >({
         path: `/bulk-modification/${id}/duplication`,
         method: "POST",
         format: "json",
@@ -3479,7 +3609,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PUT:/bulk-modification/{id}/close
      */
     closeBulkModification: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}/close`,
         method: "PUT",
         format: "json",
@@ -3494,7 +3624,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PUT:/bulk-modification/{id}/filter
      */
     performBulkModificationFiltering: (id: number, params: RequestParams = {}) =>
-      this.request<Int32ListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1SystemInt32, any>({
         path: `/bulk-modification/${id}/filter`,
         method: "PUT",
         format: "json",
@@ -3509,7 +3639,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/bulk-modification/{id}/filtered-resources
      */
     getBulkModificationFilteredResources: (id: number, params: RequestParams = {}) =>
-      this.request<ResourceListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainResource, any>({
         path: `/bulk-modification/${id}/filtered-resources`,
         method: "GET",
         format: "json",
@@ -3524,7 +3654,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/bulk-modification/{bmId}/diffs
      */
     getBulkModificationResourceDiffs: (bmId: number, params: RequestParams = {}) =>
-      this.request<BulkModificationResourceDiffsListResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffs,
+        any
+      >({
         path: `/bulk-modification/${bmId}/diffs`,
         method: "GET",
         format: "json",
@@ -3539,7 +3672,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/bulk-modification/{id}/diffs
      */
     calculateBulkModificationResourceDiffs: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}/diffs`,
         method: "POST",
         format: "json",
@@ -3554,7 +3687,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/bulk-modification/{id}/apply
      */
     applyBulkModification: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}/apply`,
         method: "POST",
         format: "json",
@@ -3569,7 +3702,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/bulk-modification/{id}/revert
      */
     revertBulkModification: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}/revert`,
         method: "POST",
         format: "json",
@@ -3587,13 +3720,13 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getComponentDescriptors: (
       query?: {
         /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-        type?: ComponentType;
+        type?: BakabaseInsideWorldModelsConstantsComponentType;
         /** [0: None, 1: AssociatedCategories] */
-        additionalItems?: ComponentDescriptorAdditionalItem;
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
-      this.request<ComponentDescriptorListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainComponentDescriptor, any>({
         path: `/component`,
         method: "GET",
         query: query,
@@ -3612,11 +3745,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       query?: {
         key?: string;
         /** [0: None, 1: AssociatedCategories] */
-        additionalItems?: ComponentDescriptorAdditionalItem;
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
-      this.request<ComponentDescriptorSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainComponentDescriptor,
+        any
+      >({
         path: `/component/key`,
         method: "GET",
         query: query,
@@ -3637,7 +3773,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/component/dependency/discovery`,
         method: "GET",
         query: query,
@@ -3658,7 +3794,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<DependentComponentVersionSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion,
+        any
+      >({
         path: `/component/dependency/latest-version`,
         method: "GET",
         query: query,
@@ -3679,7 +3818,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/component/dependency`,
         method: "POST",
         query: query,
@@ -3695,8 +3834,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddComponentOptions
      * @request POST:/component-options
      */
-    addComponentOptions: (data: ComponentOptionsAddRequestModel, params: RequestParams = {}) =>
-      this.request<ComponentOptionsSingletonResponse, any>({
+    addComponentOptions: (
+      data: BakabaseInsideWorldModelsRequestModelsComponentOptionsAddRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesComponentOptions,
+        any
+      >({
         path: `/component-options`,
         method: "POST",
         body: data,
@@ -3712,8 +3857,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutComponentOptions
      * @request PUT:/component-options/{id}
      */
-    putComponentOptions: (id: number, data: ComponentOptionsAddRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    putComponentOptions: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsComponentOptionsAddRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/component-options/${id}`,
         method: "PUT",
         body: data,
@@ -3730,7 +3879,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/component-options/{id}
      */
     removeComponentOptions: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/component-options/${id}`,
         method: "DELETE",
         format: "json",
@@ -3746,7 +3895,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/api/constant/extension-media-types
      */
     getAllExtensionMediaTypes: (params: RequestParams = {}) =>
-      this.request<StringMediaTypeDictionarySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldModelsConstantsMediaType,
+        any
+      >({
         path: `/api/constant/extension-media-types`,
         method: "GET",
         format: "json",
@@ -3779,11 +3931,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllCustomPropertiesV2: (
       query?: {
         /** [0: None, 1: Category] */
-        additionalItems?: CustomPropertyAdditionalItem;
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
-      this.request<CustomPropertyListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCustomProperty, any>({
         path: `/custom-property`,
         method: "GET",
         query: query,
@@ -3798,8 +3950,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddCustomProperty
      * @request POST:/custom-property
      */
-    addCustomProperty: (data: CustomPropertyAddOrPutDto, params: RequestParams = {}) =>
-      this.request<CustomPropertySingletonResponse, any>({
+    addCustomProperty: (data: BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCustomProperty, any>({
         path: `/custom-property`,
         method: "POST",
         body: data,
@@ -3815,8 +3967,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutCustomProperty
      * @request PUT:/custom-property/{id}
      */
-    putCustomProperty: (id: number, data: CustomPropertyAddOrPutDto, params: RequestParams = {}) =>
-      this.request<CustomPropertySingletonResponse, any>({
+    putCustomProperty: (
+      id: number,
+      data: BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCustomProperty, any>({
         path: `/custom-property/${id}`,
         method: "PUT",
         body: data,
@@ -3833,7 +3989,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/custom-property/{id}
      */
     removeCustomProperty: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/custom-property/${id}`,
         method: "DELETE",
         format: "json",
@@ -3849,7 +4005,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/dashboard
      */
     getStatistics: (params: RequestParams = {}) =>
-      this.request<DashboardStatisticsSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
+        any
+      >({
         path: `/dashboard`,
         method: "GET",
         format: "json",
@@ -3865,7 +4024,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/download-task/downloader/naming-definitions
      */
     getAllDownloaderNamingDefinitions: (params: RequestParams = {}) =>
-      this.request<Int32DownloaderNamingDefinitionsDictionarySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions,
+        any
+      >({
         path: `/download-task/downloader/naming-definitions`,
         method: "GET",
         format: "json",
@@ -3880,7 +4042,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/download-task
      */
     getAllDownloadTasks: (params: RequestParams = {}) =>
-      this.request<DownloadTaskDtoListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto, any>({
         path: `/download-task`,
         method: "GET",
         format: "json",
@@ -3894,8 +4056,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name CreateDownloadTask
      * @request POST:/download-task
      */
-    createDownloadTask: (data: DownloadTaskCreateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    createDownloadTask: (
+      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task`,
         method: "POST",
         body: data,
@@ -3912,7 +4077,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/download-task/{id}
      */
     getDownloadTask: (id: number, params: RequestParams = {}) =>
-      this.request<DownloadTaskDtoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto,
+        any
+      >({
         path: `/download-task/${id}`,
         method: "GET",
         format: "json",
@@ -3927,7 +4095,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/download-task/{id}
      */
     removeDownloadTask: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/${id}`,
         method: "DELETE",
         format: "json",
@@ -3941,8 +4109,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutDownloadTask
      * @request PUT:/download-task/{id}
      */
-    putDownloadTask: (id: number, data: DownloadTask, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    putDownloadTask: (
+      id: number,
+      data: BakabaseInsideWorldModelsModelsEntitiesDownloadTask,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/${id}`,
         method: "PUT",
         body: data,
@@ -3959,7 +4131,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/download-task/ids
      */
     removeDownloadTasksByIds: (data: number[], params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/ids`,
         method: "DELETE",
         body: data,
@@ -3975,8 +4147,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name StartDownloadTasks
      * @request POST:/download-task/download
      */
-    startDownloadTasks: (data: DownloadTaskStartRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    startDownloadTasks: (
+      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/download`,
         method: "POST",
         body: data,
@@ -3993,7 +4168,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/download-task/download
      */
     stopDownloadTasks: (data: number[], params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/download`,
         method: "DELETE",
         body: data,
@@ -4011,7 +4186,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/{id}/enhancement
      */
     getResourceEnhancementRecords: (id: number, params: RequestParams = {}) =>
-      this.request<EnhancementRecordDtoListResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto,
+        any
+      >({
         path: `/resource/${id}/enhancement`,
         method: "GET",
         format: "json",
@@ -4026,7 +4204,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/resource/{id}/enhancement
      */
     enhanceResource: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}/enhancement`,
         method: "POST",
         format: "json",
@@ -4041,7 +4219,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/resource/{id}/enhancement
      */
     removeResourceEnhancementRecords: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}/enhancement`,
         method: "DELETE",
         format: "json",
@@ -4055,8 +4233,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SearchResourcesV2
      * @request POST:/resource/search/v2
      */
-    searchResourcesV2: (data: ResourceSearchInputModel, params: RequestParams = {}) =>
-      this.request<ResourceSearchResponse, any>({
+    searchResourcesV2: (
+      data: BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldBusinessModelsDomainResource, any>({
         path: `/resource/search/v2`,
         method: "POST",
         body: data,
@@ -4078,7 +4259,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<ResourceListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainResource, any>({
         path: `/resource/keys`,
         method: "GET",
         query: query,
@@ -4093,8 +4274,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchResource
      * @request PUT:/resource/{id}
      */
-    patchResource: (id: number, data: ResourceUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchResource: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}`,
         method: "PUT",
         body: data,
@@ -4110,8 +4295,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name UpdateResourceTags
      * @request PUT:/resource/tag
      */
-    updateResourceTags: (data: ResourceTagUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    updateResourceTags: (
+      data: BakabaseInsideWorldModelsRequestModelsResourceTagUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/tag`,
         method: "PUT",
         body: data,
@@ -4134,7 +4322,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/directory`,
         method: "GET",
         query: query,
@@ -4163,8 +4351,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SaveCover
      * @request POST:/resource/{id}/cover
      */
-    saveCover: (id: number, data: CoverSaveRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    saveCover: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsCoverSaveRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}/cover`,
         method: "POST",
         body: data,
@@ -4181,7 +4373,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/{id}/playable-files
      */
     getResourcePlayableFiles: (id: number, params: RequestParams = {}) =>
-      this.request<StringListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/resource/${id}/playable-files`,
         method: "GET",
         format: "json",
@@ -4196,7 +4388,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/custom-property-keys
      */
     getAllCustomPropertyKeys: (params: RequestParams = {}) =>
-      this.request<StringListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/resource/custom-property-keys`,
         method: "GET",
         format: "json",
@@ -4211,7 +4403,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/custom-properties-and-candidates
      */
     getAllCustomPropertiesAndCandidates: (params: RequestParams = {}) =>
-      this.request<StringStringArrayDictionarySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemString,
+        any
+      >({
         path: `/resource/custom-properties-and-candidates`,
         method: "GET",
         format: "json",
@@ -4226,7 +4421,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/reserved-properties-and-candidates
      */
     getAllReservedPropertiesAndCandidates: (params: RequestParams = {}) =>
-      this.request<StringStringArrayDictionarySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemString,
+        any
+      >({
         path: `/resource/reserved-properties-and-candidates`,
         method: "GET",
         format: "json",
@@ -4241,7 +4439,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/resource/resource/{id}/custom-property/{propertyKey}
      */
     removeResourceCustomProperty: (id: number, propertyKey: string, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/resource/${id}/custom-property/${propertyKey}`,
         method: "DELETE",
         format: "json",
@@ -4255,8 +4453,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name MoveResources
      * @request PUT:/resource/move
      */
-    moveResources: (data: ResourceMoveRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    moveResources: (data: BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/move`,
         method: "PUT",
         body: data,
@@ -4273,7 +4471,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/resource/{id}/task
      */
     clearResourceTask: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}/task`,
         method: "DELETE",
         format: "json",
@@ -4293,7 +4491,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<Int32Int32ArrayDictionarySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32,
+        any
+      >({
         path: `/resource/favorites-mappings`,
         method: "GET",
         query: query,
@@ -4309,7 +4510,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/resource/nfo
      */
     startResourceNfoGenerationTask: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/nfo`,
         method: "POST",
         format: "json",
@@ -4324,7 +4525,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/{id}/previewer
      */
     getResourceDataForPreviewer: (id: number, params: RequestParams = {}) =>
-      this.request<PreviewerItemListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem, any>({
         path: `/resource/${id}/previewer`,
         method: "GET",
         format: "json",
@@ -4339,7 +4540,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/original/all
      */
     getAllOriginals: (params: RequestParams = {}) =>
-      this.request<OriginalDtoListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto, any>({
         path: `/resource/original/all`,
         method: "GET",
         format: "json",
@@ -4354,7 +4555,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/series/all
      */
     getAllSeries: (params: RequestParams = {}) =>
-      this.request<SeriesDtoListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosSeriesDto, any>({
         path: `/resource/series/all`,
         method: "GET",
         format: "json",
@@ -4369,7 +4570,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/custom-property/all
      */
     getAllCustomProperties: (params: RequestParams = {}) =>
-      this.request<StringCustomResourcePropertyListDictionarySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty,
+        any
+      >({
         path: `/resource/custom-property/all`,
         method: "GET",
         format: "json",
@@ -4386,10 +4590,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putResourceCustomPropertyValue: (
       id: number,
       pId: number,
-      data: ResourceCustomPropertyValuePutRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCustomPropertyValuePutRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}/custom-property/${pId}/value`,
         method: "PUT",
         body: data,
@@ -4407,7 +4611,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/media-library/{id}/enhancement
      */
     removeMediaLibraryEnhancementRecords: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${id}/enhancement`,
         method: "DELETE",
         format: "json",
@@ -4424,11 +4628,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllMediaLibraries: (
       query?: {
         /** [0: None, 1: Category, 2: FileSystemInfo, 4: FixedTags] */
-        additionalItems?: MediaLibraryAdditionalItem;
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
-      this.request<MediaLibraryListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMediaLibrary, any>({
         path: `/media-library`,
         method: "GET",
         query: query,
@@ -4443,8 +4647,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddMediaLibrary
      * @request POST:/media-library
      */
-    addMediaLibrary: (data: MediaLibraryCreateDto, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    addMediaLibrary: (data: BakabaseInsideWorldBusinessModelsDtoMediaLibraryCreateDto, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library`,
         method: "POST",
         body: data,
@@ -4461,7 +4665,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/media-library/{id}
      */
     removeMediaLibrary: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${id}`,
         method: "DELETE",
         format: "json",
@@ -4475,8 +4679,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchMediaLibrary
      * @request PUT:/media-library/{id}
      */
-    patchMediaLibrary: (id: number, data: MediaLibraryPatchDto, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchMediaLibrary: (
+      id: number,
+      data: BakabaseInsideWorldBusinessModelsDtoMediaLibraryPatchDto,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${id}`,
         method: "PUT",
         body: data,
@@ -4493,7 +4701,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/media-library/sync/status
      */
     getMediaLibrarySyncStatus: (params: RequestParams = {}) =>
-      this.request<BackgroundTaskDtoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto,
+        any
+      >({
         path: `/media-library/sync/status`,
         method: "GET",
         format: "json",
@@ -4508,7 +4719,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PUT:/media-library/sync
      */
     syncMediaLibrary: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/sync`,
         method: "PUT",
         format: "json",
@@ -4523,7 +4734,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/media-library/sync
      */
     stopSyncMediaLibrary: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/sync`,
         method: "DELETE",
         format: "json",
@@ -4537,8 +4748,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name ValidatePathConfiguration
      * @request POST:/media-library/path-configuration-validation
      */
-    validatePathConfiguration: (data: PathConfiguration, params: RequestParams = {}) =>
-      this.request<PathConfigurationValidateResultSingletonResponse, any>({
+    validatePathConfiguration: (
+      data: BakabaseInsideWorldBusinessModelsDomainPathConfiguration,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult,
+        any
+      >({
         path: `/media-library/path-configuration-validation`,
         method: "POST",
         body: data,
@@ -4554,8 +4771,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SortMediaLibrariesInCategory
      * @request PUT:/media-library/orders-in-category
      */
-    sortMediaLibrariesInCategory: (data: IdBasedSortRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    sortMediaLibrariesInCategory: (
+      data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/orders-in-category`,
         method: "PUT",
         body: data,
@@ -4573,10 +4793,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     addMediaLibraryPathConfiguration: (
       id: number,
-      data: MediaLibraryPathConfigurationCreateRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryPathConfigurationCreateRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${id}/path-configuration`,
         method: "POST",
         body: data,
@@ -4594,10 +4814,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     removeMediaLibraryPathConfiguration: (
       id: number,
-      data: PathConfigurationRemoveRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsPathConfigurationRemoveRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${id}/path-configuration`,
         method: "DELETE",
         body: data,
@@ -4613,8 +4833,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddMediaLibrariesInBulk
      * @request POST:/media-library/bulk-add/{cId}
      */
-    addMediaLibrariesInBulk: (cId: number, data: MediaLibraryAddInBulkRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    addMediaLibrariesInBulk: (
+      cId: number,
+      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryAddInBulkRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/bulk-add/${cId}`,
         method: "POST",
         body: data,
@@ -4632,10 +4856,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     addMediaLibraryRootPathsInBulk: (
       mlId: number,
-      data: MediaLibraryRootPathsAddInBulkRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryRootPathsAddInBulkRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${mlId}/path-configuration/root-paths`,
         method: "POST",
         body: data,
@@ -4660,7 +4884,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<MediaLibraryListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMediaLibrary, any>({
         path: `/media-library/path-related-libraries`,
         method: "GET",
         query: query,
@@ -4677,7 +4901,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/category/{id}/enhancement
      */
     removeCategoryEnhancementRecords: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/${id}/enhancement`,
         method: "DELETE",
         format: "json",
@@ -4711,7 +4935,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<EnhancementRecordDtoSearchResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto,
+        any
+      >({
         path: `/enhancement-record`,
         method: "GET",
         query: query,
@@ -4728,7 +4955,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/favorites
      */
     getAllFavorites: (params: RequestParams = {}) =>
-      this.request<FavoritesDtoListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosFavoritesDto, any>({
         path: `/favorites`,
         method: "GET",
         format: "json",
@@ -4742,8 +4969,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddFavorites
      * @request POST:/favorites
      */
-    addFavorites: (data: FavoritesAddOrUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    addFavorites: (
+      data: BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/favorites`,
         method: "POST",
         body: data,
@@ -4759,8 +4989,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutFavorites
      * @request PATCH:/favorites/{id}
      */
-    putFavorites: (id: number, data: FavoritesAddOrUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    putFavorites: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/favorites/${id}`,
         method: "PATCH",
         body: data,
@@ -4777,7 +5011,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/favorites/{id}
      */
     deleteFavorites: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/favorites/${id}`,
         method: "DELETE",
         format: "json",
@@ -4793,10 +5027,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     addResourceToFavorites: (
       id: number,
-      data: FavoritesResourceMappingAddOrRemoveRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsFavoritesResourceMappingAddOrRemoveRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/favorites/${id}/resource`,
         method: "POST",
         body: data,
@@ -4814,10 +5048,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     deleteResourceFromFavorites: (
       id: number,
-      data: FavoritesResourceMappingAddOrRemoveRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsFavoritesResourceMappingAddOrRemoveRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/favorites/${id}/resource`,
         method: "DELETE",
         body: data,
@@ -4834,7 +5068,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PUT:/favorites/resource-mapping
      */
     putResourcesFavorites: (data: Record<string, number[]>, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/favorites/resource-mapping`,
         method: "PUT",
         body: data,
@@ -4857,7 +5091,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<IwFsTaskInfoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo,
+        any
+      >({
         path: `/file/task-info`,
         method: "GET",
         query: query,
@@ -4878,7 +5115,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<IwFsEntryLazyInfoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo,
+        any
+      >({
         path: `/file/iwfs-info`,
         method: "GET",
         query: query,
@@ -4899,7 +5139,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<IwFsEntrySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry,
+        any
+      >({
         path: `/file/iwfs-entry`,
         method: "GET",
         query: query,
@@ -4920,7 +5163,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/directory`,
         method: "POST",
         query: query,
@@ -4941,7 +5184,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<IwFsPreviewSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview,
+        any
+      >({
         path: `/file/children/iwfs-info`,
         method: "GET",
         query: query,
@@ -4956,8 +5202,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name RemoveFiles
      * @request DELETE:/file
      */
-    removeFiles: (data: FileRemoveRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    removeFiles: (data: BakabaseInsideWorldModelsRequestModelsFileRemoveRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file`,
         method: "DELETE",
         body: data,
@@ -4973,8 +5219,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name RenameFile
      * @request PUT:/file/name
      */
-    renameFile: (data: FileRenameRequestModel, params: RequestParams = {}) =>
-      this.request<StringSingletonResponse, any>({
+    renameFile: (data: BakabaseInsideWorldModelsRequestModelsFileRenameRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
         path: `/file/name`,
         method: "PUT",
         body: data,
@@ -4991,7 +5237,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/file/recycle-bin
      */
     openRecycleBin: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/recycle-bin`,
         method: "GET",
         format: "json",
@@ -5011,7 +5257,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/extract-and-remove-directory`,
         method: "POST",
         query: query,
@@ -5026,8 +5272,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name MoveEntries
      * @request POST:/file/move-entries
      */
-    moveEntries: (data: FileMoveRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    moveEntries: (data: BakabaseInsideWorldModelsRequestModelsFileMoveRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/move-entries`,
         method: "POST",
         body: data,
@@ -5044,10 +5290,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/file/same-name-entries-in-working-directory
      */
     getSameNameEntriesInWorkingDirectory: (
-      data: RemoveSameEntryInWorkingDirectoryRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingDirectoryRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<StringListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/file/same-name-entries-in-working-directory`,
         method: "POST",
         body: data,
@@ -5064,10 +5310,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/file/same-name-entry-in-working-directory
      */
     removeSameNameEntryInWorkingDirectory: (
-      data: RemoveSameEntryInWorkingDirectoryRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingDirectoryRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<StringListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/file/same-name-entry-in-working-directory`,
         method: "DELETE",
         body: data,
@@ -5089,7 +5335,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/standardize`,
         method: "PUT",
         query: query,
@@ -5124,8 +5370,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name DecompressFiles
      * @request POST:/file/decompression
      */
-    decompressFiles: (data: FileDecompressRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    decompressFiles: (
+      data: BakabaseInsideWorldModelsRequestModelsFileDecompressRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/decompression`,
         method: "POST",
         body: data,
@@ -5147,7 +5396,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<StringSingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
         path: `/file/icon`,
         method: "GET",
         query: query,
@@ -5168,7 +5417,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<StringListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/file/all-files`,
         method: "GET",
         query: query,
@@ -5189,7 +5438,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<CompressedFileEntryListResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry,
+        any
+      >({
         path: `/file/compressed-file/entries`,
         method: "GET",
         query: query,
@@ -5211,7 +5463,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<StringInt32DictionarySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemInt32,
+        any
+      >({
         path: `/file/file-extension-counts`,
         method: "GET",
         query: query,
@@ -5227,7 +5482,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PUT:/file/merge-preview
      */
     previewFileEntriesMergeResult: (data: string[], params: RequestParams = {}) =>
-      this.request<FileEntriesMergeResultSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult,
+        any
+      >({
         path: `/file/merge-preview`,
         method: "PUT",
         body: data,
@@ -5244,7 +5502,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PUT:/file/merge-preview-in-root-path
      */
     previewFileEntriesMergeResultInRootPath: (data: string, params: RequestParams = {}) =>
-      this.request<FileEntriesMergeResultSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult,
+        any
+      >({
         path: `/file/merge-preview-in-root-path`,
         method: "PUT",
         body: data,
@@ -5261,7 +5522,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PUT:/file/merge
      */
     mergeFileEntries: (data: string[], params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/merge`,
         method: "PUT",
         body: data,
@@ -5278,7 +5539,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PUT:/file/merge-by
      */
     mergeFileEntriesInRootPath: (data: string, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/merge-by`,
         method: "PUT",
         body: data,
@@ -5302,7 +5563,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<StringListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/file/directory/file-entries`,
         method: "GET",
         query: query,
@@ -5323,7 +5584,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/file-processor-watcher`,
         method: "POST",
         query: query,
@@ -5339,7 +5600,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/file/file-processor-watcher
      */
     stopWatchingChangesInFileProcessorWorkspace: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/file-processor-watcher`,
         method: "DELETE",
         format: "json",
@@ -5360,7 +5621,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<StringListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/gui/files-selector`,
         method: "GET",
         query: query,
@@ -5381,7 +5642,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<StringSingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
         path: `/gui/file-selector`,
         method: "GET",
         query: query,
@@ -5402,7 +5663,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<StringSingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
         path: `/gui/folder-selector`,
         method: "GET",
         query: query,
@@ -5423,7 +5684,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/gui/url`,
         method: "GET",
         query: query,
@@ -5440,7 +5701,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/log
      */
     getAllLogs: (params: RequestParams = {}) =>
-      this.request<LogListResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog,
+        any
+      >({
         path: `/log`,
         method: "GET",
         format: "json",
@@ -5455,7 +5719,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/log
      */
     clearAllLog: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/log`,
         method: "DELETE",
         format: "json",
@@ -5472,7 +5736,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     searchLogs: (
       query?: {
         /** [0: Trace, 1: Debug, 2: Information, 3: Warning, 4: Error, 5: Critical, 6: None] */
-        level?: LogLevel;
+        level?: MicrosoftExtensionsLoggingLogLevel;
         /** @format date-time */
         startDt?: string;
         /** @format date-time */
@@ -5493,7 +5757,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<LogSearchResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog,
+        any
+      >({
         path: `/log/filtered`,
         method: "GET",
         query: query,
@@ -5509,7 +5776,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/log/unread/count
      */
     getUnreadLogCount: (params: RequestParams = {}) =>
-      this.request<Int32SingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
         path: `/log/unread/count`,
         method: "GET",
         format: "json",
@@ -5524,7 +5791,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/log/{id}/read
      */
     readLog: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/log/${id}/read`,
         method: "PATCH",
         format: "json",
@@ -5539,9 +5806,45 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/log/read
      */
     readAllLog: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/log/read`,
         method: "PATCH",
+        format: "json",
+        ...params,
+      }),
+  };
+  migration = {
+    /**
+     * No description
+     *
+     * @tags Migration
+     * @name GetMigrationTargets
+     * @request GET:/migration/targets
+     */
+    getMigrationTargets: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMigrationTarget,
+        any
+      >({
+        path: `/migration/targets`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Migration
+     * @name MigrateTarget
+     * @request POST:/migration/target/migration
+     */
+    migrateTarget: (data: BakabaseInsideWorldBusinessModelsDomainMigrationTarget, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/migration/target/migration`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -5555,7 +5858,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/app
      */
     getAppOptions: (params: RequestParams = {}) =>
-      this.request<AppOptionsSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsConfigurationsAppAppOptions,
+        any
+      >({
         path: `/options/app`,
         method: "GET",
         format: "json",
@@ -5569,8 +5875,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchAppOptions
      * @request PATCH:/options/app
      */
-    patchAppOptions: (data: AppOptionsPatchRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchAppOptions: (
+      data: BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/app`,
         method: "PATCH",
         body: data,
@@ -5587,7 +5896,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/ui
      */
     getUiOptions: (params: RequestParams = {}) =>
-      this.request<UIOptionsSingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptions, any>({
         path: `/options/ui`,
         method: "GET",
         format: "json",
@@ -5601,8 +5910,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchUiOptions
      * @request PATCH:/options/ui
      */
-    patchUiOptions: (data: UIOptionsPatchRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchUiOptions: (
+      data: BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/ui`,
         method: "PATCH",
         body: data,
@@ -5619,12 +5931,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/bilibili
      */
     getBilibiliOptions: (params: RequestParams = {}) =>
-      this.request<BilibiliOptionsSingletonResponse, any>({
-        path: `/options/bilibili`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsBilibiliOptions, any>(
+        {
+          path: `/options/bilibili`,
+          method: "GET",
+          format: "json",
+          ...params,
+        },
+      ),
 
     /**
      * No description
@@ -5633,8 +5947,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchBilibiliOptions
      * @request PATCH:/options/bilibili
      */
-    patchBilibiliOptions: (data: BilibiliOptions, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchBilibiliOptions: (data: BakabaseInsideWorldModelsConfigsBilibiliOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/bilibili`,
         method: "PATCH",
         body: data,
@@ -5651,12 +5965,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/exhentai
      */
     getExHentaiOptions: (params: RequestParams = {}) =>
-      this.request<ExHentaiOptionsSingletonResponse, any>({
-        path: `/options/exhentai`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsExHentaiOptions, any>(
+        {
+          path: `/options/exhentai`,
+          method: "GET",
+          format: "json",
+          ...params,
+        },
+      ),
 
     /**
      * No description
@@ -5665,8 +5981,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchExHentaiOptions
      * @request PATCH:/options/exhentai
      */
-    patchExHentaiOptions: (data: ExHentaiOptions, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchExHentaiOptions: (data: BakabaseInsideWorldModelsConfigsExHentaiOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/exhentai`,
         method: "PATCH",
         body: data,
@@ -5683,7 +5999,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/filesystem
      */
     getFileSystemOptions: (params: RequestParams = {}) =>
-      this.request<FileSystemOptionsSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsFileSystemOptions,
+        any
+      >({
         path: `/options/filesystem`,
         method: "GET",
         format: "json",
@@ -5697,8 +6016,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchFileSystemOptions
      * @request PATCH:/options/filesystem
      */
-    patchFileSystemOptions: (data: FileSystemOptions, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchFileSystemOptions: (data: BakabaseInsideWorldModelsConfigsFileSystemOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/filesystem`,
         method: "PATCH",
         body: data,
@@ -5715,7 +6034,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/javlibrary
      */
     getJavLibraryOptions: (params: RequestParams = {}) =>
-      this.request<JavLibraryOptionsSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsJavLibraryOptions,
+        any
+      >({
         path: `/options/javlibrary`,
         method: "GET",
         format: "json",
@@ -5729,8 +6051,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchJavLibraryOptions
      * @request PATCH:/options/javlibrary
      */
-    patchJavLibraryOptions: (data: JavLibraryOptions, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchJavLibraryOptions: (data: BakabaseInsideWorldModelsConfigsJavLibraryOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/javlibrary`,
         method: "PATCH",
         body: data,
@@ -5747,7 +6069,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/pixiv
      */
     getPixivOptions: (params: RequestParams = {}) =>
-      this.request<PixivOptionsSingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsPixivOptions, any>({
         path: `/options/pixiv`,
         method: "GET",
         format: "json",
@@ -5761,8 +6083,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchPixivOptions
      * @request PATCH:/options/pixiv
      */
-    patchPixivOptions: (data: PixivOptions, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchPixivOptions: (data: BakabaseInsideWorldModelsConfigsPixivOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/pixiv`,
         method: "PATCH",
         body: data,
@@ -5779,7 +6101,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/resource
      */
     getResourceOptions: (params: RequestParams = {}) =>
-      this.request<ResourceOptionsDtoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsDto,
+        any
+      >({
         path: `/options/resource`,
         method: "GET",
         format: "json",
@@ -5793,8 +6118,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchResourceOptions
      * @request PATCH:/options/resource
      */
-    patchResourceOptions: (data: ResourceOptionsPatchInputModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchResourceOptions: (
+      data: BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/resource`,
         method: "PATCH",
         body: data,
@@ -5811,7 +6139,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/thirdparty
      */
     getThirdPartyOptions: (params: RequestParams = {}) =>
-      this.request<ThirdPartyOptionsSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsThirdPartyOptions,
+        any
+      >({
         path: `/options/thirdparty`,
         method: "GET",
         format: "json",
@@ -5825,8 +6156,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchThirdPartyOptions
      * @request PATCH:/options/thirdparty
      */
-    patchThirdPartyOptions: (data: ThirdPartyOptions, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchThirdPartyOptions: (data: BakabaseInsideWorldModelsConfigsThirdPartyOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/thirdparty`,
         method: "PATCH",
         body: data,
@@ -5843,7 +6174,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/network
      */
     getNetworkOptions: (params: RequestParams = {}) =>
-      this.request<NetworkOptionsSingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsNetworkOptions, any>({
         path: `/options/network`,
         method: "GET",
         format: "json",
@@ -5857,8 +6188,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchNetworkOptions
      * @request PATCH:/options/network
      */
-    patchNetworkOptions: (data: NetworkOptions, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    patchNetworkOptions: (data: BakabaseInsideWorldModelsConfigsNetworkOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/network`,
         method: "PATCH",
         body: data,
@@ -5878,7 +6209,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     searchPasswords: (
       query?: {
         /** [1: Latest, 2: Frequency] */
-        order?: PasswordSearchOrder;
+        order?: BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder;
         /** @format int32 */
         pageIndex?: number;
         /**
@@ -5892,7 +6223,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<PasswordSearchResponse, any>({
+      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsEntitiesPassword, any>({
         path: `/password`,
         method: "GET",
         query: query,
@@ -5908,7 +6239,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/password/all
      */
     getAllPasswords: (params: RequestParams = {}) =>
-      this.request<PasswordListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword, any>({
         path: `/password/all`,
         method: "GET",
         format: "json",
@@ -5923,7 +6254,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/password/{password}
      */
     deletePassword: (password: string, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/password/${password}`,
         method: "DELETE",
         format: "json",
@@ -5939,7 +6270,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/playlist/{id}
      */
     getPlaylist: (id: number, params: RequestParams = {}) =>
-      this.request<PlaylistDtoSingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto, any>({
         path: `/playlist/${id}`,
         method: "GET",
         format: "json",
@@ -5954,7 +6285,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/playlist/{id}
      */
     deletePlaylist: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/playlist/${id}`,
         method: "DELETE",
         format: "json",
@@ -5969,7 +6300,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/playlist
      */
     getAllPlaylists: (params: RequestParams = {}) =>
-      this.request<PlaylistDtoListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto, any>({
         path: `/playlist`,
         method: "GET",
         format: "json",
@@ -5983,8 +6314,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddPlaylist
      * @request POST:/playlist
      */
-    addPlaylist: (data: PlaylistDto, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    addPlaylist: (data: BakabaseInsideWorldModelsModelsDtosPlaylistDto, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/playlist`,
         method: "POST",
         body: data,
@@ -6000,8 +6331,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutPlaylist
      * @request PUT:/playlist
      */
-    putPlaylist: (data: PlaylistDto, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    putPlaylist: (data: BakabaseInsideWorldModelsModelsDtosPlaylistDto, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/playlist`,
         method: "PUT",
         body: data,
@@ -6018,7 +6349,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/playlist/{id}/files
      */
     getPlaylistFiles: (id: number, params: RequestParams = {}) =>
-      this.request<StringListListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1SystemCollectionsGenericList1SystemString, any>({
         path: `/playlist/${id}/files`,
         method: "GET",
         format: "json",
@@ -6033,8 +6364,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name UpdatePublisher
      * @request PUT:/publisher/{id}
      */
-    updatePublisher: (id: number, data: PublisherUpdateModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    updatePublisher: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsPublisherUpdateModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/publisher/${id}`,
         method: "PUT",
         body: data,
@@ -6051,7 +6386,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/publisher/all
      */
     getAllPublishers: (params: RequestParams = {}) =>
-      this.request<PublisherDtoListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPublisherDto, any>({
         path: `/publisher/all`,
         method: "GET",
         format: "json",
@@ -6069,11 +6404,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllResourceCategories: (
       query?: {
         /** [0: None, 1: Components, 3: Validation, 4: CustomProperties] */
-        additionalItems?: ResourceCategoryAdditionalItem;
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
-      this.request<CategoryListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory, any>({
         path: `/resource-category`,
         method: "GET",
         query: query,
@@ -6088,8 +6423,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddResourceCategory
      * @request POST:/resource-category
      */
-    addResourceCategory: (data: ResourceCategoryAddRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    addResourceCategory: (
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category`,
         method: "POST",
         body: data,
@@ -6105,8 +6443,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name DuplicateResourceCategory
      * @request POST:/resource-category/{id}/duplication
      */
-    duplicateResourceCategory: (id: number, data: ResourceCategoryDuplicateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    duplicateResourceCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryDuplicateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category/${id}/duplication`,
         method: "POST",
         body: data,
@@ -6122,8 +6464,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name UpdateResourceCategory
      * @request PUT:/resource-category/{id}
      */
-    updateResourceCategory: (id: number, data: ResourceCategoryUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    updateResourceCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category/${id}`,
         method: "PUT",
         body: data,
@@ -6140,7 +6486,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/resource-category/{id}
      */
     deleteResourceCategoryAndClearAllRelatedData: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category/${id}`,
         method: "DELETE",
         format: "json",
@@ -6156,10 +6502,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     configureResourceCategoryComponents: (
       id: number,
-      data: ResourceCategoryComponentConfigureRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryComponentConfigureRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category/${id}/component`,
         method: "PUT",
         body: data,
@@ -6175,8 +6521,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SortCategories
      * @request PUT:/resource-category/orders
      */
-    sortCategories: (data: IdBasedSortRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    sortCategories: (data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category/orders`,
         method: "PUT",
         body: data,
@@ -6192,8 +6538,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SaveDataFromSetupWizard
      * @request POST:/resource-category/setup-wizard
      */
-    saveDataFromSetupWizard: (data: CategorySetupWizardInputModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    saveDataFromSetupWizard: (
+      data: BakabaseInsideWorldBusinessModelsInputCategorySetupWizardInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category/setup-wizard`,
         method: "POST",
         body: data,
@@ -6211,10 +6560,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     bindCustomPropertiesToCategory: (
       id: number,
-      data: ResourceCategoryCustomPropertyBindRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryCustomPropertyBindRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-category/${id}/custom-properties`,
         method: "PUT",
         body: data,
@@ -6232,7 +6581,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/special-text
      */
     getAllSpecialText: (params: RequestParams = {}) =>
-      this.request<SpecialTextTypeSpecialTextListDictionarySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2BakabaseInsideWorldModelsConstantsSpecialTextTypeSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesSpecialText,
+        any
+      >({
         path: `/special-text`,
         method: "GET",
         format: "json",
@@ -6246,8 +6598,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name CreateSpecialText
      * @request POST:/special-text
      */
-    createSpecialText: (data: SpecialTextCreateRequestModel, params: RequestParams = {}) =>
-      this.request<SpecialTextSingletonResponse, any>({
+    createSpecialText: (
+      data: BakabaseInsideWorldModelsRequestModelsSpecialTextCreateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesSpecialText,
+        any
+      >({
         path: `/special-text`,
         method: "POST",
         body: data,
@@ -6264,7 +6622,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/special-text/{id}
      */
     deleteSpecialText: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/special-text/${id}`,
         method: "DELETE",
         format: "json",
@@ -6278,8 +6636,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name UpdateSpecialText
      * @request PUT:/special-text/{id}
      */
-    updateSpecialText: (id: number, data: SpecialTextUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    updateSpecialText: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsSpecialTextUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/special-text/${id}`,
         method: "PUT",
         body: data,
@@ -6296,7 +6658,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/special-text/prefabs
      */
     addSpecialTextPrefabs: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/special-text/prefabs`,
         method: "POST",
         format: "json",
@@ -6316,7 +6678,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<StringSingletonResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
         path: `/special-text/pretreatment`,
         method: "POST",
         query: query,
@@ -6335,11 +6697,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllTags: (
       query?: {
         /** [0: None, 1: GroupName, 2: PreferredAlias] */
-        additionalItems?: TagAdditionalItem;
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsTagAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
-      this.request<TagDtoListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagDto, any>({
         path: `/tag`,
         method: "GET",
         query: query,
@@ -6355,7 +6717,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/tag
      */
     addTags: (data: Record<string, string[]>, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tag`,
         method: "POST",
         body: data,
@@ -6375,11 +6737,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       query?: {
         ids?: number[];
         /** [0: None, 1: GroupName, 2: PreferredAlias] */
-        additionalItems?: TagAdditionalItem;
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsTagAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
-      this.request<TagDtoListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagDto, any>({
         path: `/tag/ids`,
         method: "GET",
         query: query,
@@ -6394,8 +6756,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name UpdateTagName
      * @request PUT:/tag/{id}/name
      */
-    updateTagName: (id: number, data: TagNameUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    updateTagName: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsTagNameUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tag/${id}/name`,
         method: "PUT",
         body: data,
@@ -6411,8 +6777,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name UpdateTag
      * @request PATCH:/tag/{id}
      */
-    updateTag: (id: number, data: TagUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    updateTag: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsTagUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tag/${id}`,
         method: "PATCH",
         body: data,
@@ -6429,7 +6799,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/tag/{id}
      */
     removeTag: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tag/${id}`,
         method: "DELETE",
         format: "json",
@@ -6443,8 +6813,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name MoveTag
      * @request PUT:/tag/{id}/move
      */
-    moveTag: (id: number, data: TagMoveRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    moveTag: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsTagMoveRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tag/${id}/move`,
         method: "PUT",
         body: data,
@@ -6461,7 +6835,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/tag/bulk
      */
     bulkDeleteTags: (data: number[], params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tag/bulk`,
         method: "DELETE",
         body: data,
@@ -6481,11 +6855,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllTagGroups: (
       query?: {
         /** [1: Tags, 2: PreferredAlias, 4: TagNamePreferredAlias] */
-        additionalItems?: TagGroupAdditionalItem;
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsTagGroupAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
-      this.request<TagGroupDtoListResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagGroupDto, any>({
         path: `/TagGroup`,
         method: "GET",
         query: query,
@@ -6500,8 +6874,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddTagGroups
      * @request POST:/TagGroup
      */
-    addTagGroups: (data: TagGroupAddRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    addTagGroups: (data: BakabaseInsideWorldModelsRequestModelsTagGroupAddRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/TagGroup`,
         method: "POST",
         body: data,
@@ -6517,8 +6891,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name UpdateTagGroup
      * @request PUT:/TagGroup/{id}
      */
-    updateTagGroup: (id: number, data: TagGroupUpdateRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    updateTagGroup: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsTagGroupUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/TagGroup/${id}`,
         method: "PUT",
         body: data,
@@ -6535,7 +6913,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/TagGroup/{id}
      */
     removeTagGroup: (id: number, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/TagGroup/${id}`,
         method: "DELETE",
         format: "json",
@@ -6549,8 +6927,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SortTagGroups
      * @request PUT:/TagGroup/orders
      */
-    sortTagGroups: (data: IdBasedSortRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    sortTagGroups: (data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/TagGroup/orders`,
         method: "PUT",
         body: data,
@@ -6568,7 +6946,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/third-party/request-statistics
      */
     getAllThirdPartyRequestStatistics: (params: RequestParams = {}) =>
-      this.request<ThirdPartyRequestStatisticsArraySingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics,
+        any
+      >({
         path: `/third-party/request-statistics`,
         method: "GET",
         format: "json",
@@ -6583,8 +6964,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name ExtraSubdirectories
      * @request POST:/tool/extra-subdirectories
      */
-    extraSubdirectories: (data: SubdirectoriesExtractRequestModel, params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+    extraSubdirectories: (
+      data: BakabaseInsideWorldModelsRequestModelsSubdirectoriesExtractRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/extra-subdirectories`,
         method: "POST",
         body: data,
@@ -6607,7 +6991,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/open`,
         method: "GET",
         query: query,
@@ -6628,7 +7012,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/remove-relay-directories`,
         method: "POST",
         query: query,
@@ -6649,7 +7033,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/group-files-into-directories`,
         method: "POST",
         query: query,
@@ -6670,7 +7054,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/everything-extraction`,
         method: "POST",
         query: query,
@@ -6686,7 +7070,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/tool/everything-extraction
      */
     stopExtractingEverything: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/everything-extraction`,
         method: "DELETE",
         format: "json",
@@ -6701,7 +7085,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/tool/everything-extraction/status
      */
     getEverythingExtractionStatus: (params: RequestParams = {}) =>
-      this.request<EverythingExtractionStatusSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatus,
+        any
+      >({
         path: `/tool/everything-extraction/status`,
         method: "GET",
         format: "json",
@@ -6722,7 +7109,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/${id}/play`,
         method: "GET",
         query: query,
@@ -6755,12 +7142,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     validateCookie: (
       query?: {
         /** [1: BiliBili, 2: ExHentai, 3: Pixiv] */
-        target?: CookieValidatorTarget;
+        target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
         cookie?: string;
       },
       params: RequestParams = {},
     ) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/cookie-validation`,
         method: "GET",
         query: query,
@@ -6777,7 +7164,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/updater/app/new-version
      */
     getNewAppVersion: (params: RequestParams = {}) =>
-      this.request<AppVersionInfoSingletonResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo,
+        any
+      >({
         path: `/updater/app/new-version`,
         method: "GET",
         format: "json",
@@ -6792,7 +7182,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/updater/app/update
      */
     startUpdatingApp: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/updater/app/update`,
         method: "POST",
         format: "json",
@@ -6807,7 +7197,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/updater/app/update
      */
     stopUpdatingApp: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/updater/app/update`,
         method: "DELETE",
         format: "json",
@@ -6822,7 +7212,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/updater/app/restart
      */
     restartAndUpdateApp: (params: RequestParams = {}) =>
-      this.request<BaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/updater/app/restart`,
         method: "POST",
         format: "json",

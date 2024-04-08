@@ -69,6 +69,7 @@
 
 	<ItemGroup>
 	  <Folder Include="Models\Db\" />
+	  <Folder Include="Models\View\Constants\" />
 	</ItemGroup>
 
 </Project>

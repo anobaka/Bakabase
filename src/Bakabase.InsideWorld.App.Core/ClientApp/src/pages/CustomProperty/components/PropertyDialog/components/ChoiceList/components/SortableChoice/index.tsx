@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import type { IChoice } from '../../../../../../models';
 import DragHandle from '@/components/DragHandle';
 import ClickableIcon from '@/components/ClickableIcon';
-import { Input } from '@/components/bakaui';
+import { ColorPicker, Input, Popover } from '@/components/bakaui';
 
 interface IProps {
   id: string;
@@ -29,7 +29,7 @@ export function SortableChoice({ id, choice: propsChoice, onRemove, onChange }: 
   const [choice, setChoice] = useState(propsChoice);
 
   useEffect(() => {
-    console.log(9999, 'new rendering');
+    // console.log(9999, 'new rendering');
   }, []);
 
   useUpdateEffect(() => {
@@ -44,7 +44,7 @@ export function SortableChoice({ id, choice: propsChoice, onRemove, onChange }: 
   return (
     <div ref={setNodeRef} style={style} className={'flex gap-1 items-center'}>
       <DragHandle {...listeners} {...attributes} />
-      <div className={'border-1 w-[14px] h-[14px]'} style={{ background: choice?.color ?? 'transparent' }} />
+      <ColorPicker />
       <Input
         size={'sm'}
         value={choice?.value}

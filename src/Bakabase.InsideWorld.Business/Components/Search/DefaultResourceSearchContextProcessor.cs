@@ -51,7 +51,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 		private async Task PrepareCustomProperties(ResourceSearchContext context)
 		{
 			context.PropertiesDataPool ??=
-				(await _customPropertyService.GetDtoList(null, CustomPropertyAdditionalItem.None, false))
+				(await _customPropertyService.GetAll(null, CustomPropertyAdditionalItem.None, false))
 				.ToDictionary(x => x.Id, x => x);
 		}
 
@@ -82,7 +82,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 
             if (!context.CustomPropertyDataPool.TryGetValue(filter.PropertyId, out var propertyValues))
             {
-                var rawValues = await _customPropertyValueService.GetDtoList(x => x.PropertyId == filter.PropertyId,
+                var rawValues = await _customPropertyValueService.GetAll(x => x.PropertyId == filter.PropertyId,
                     CustomPropertyValueAdditionalItem.None, false);
                 propertyValues = rawValues.ToDictionary(x => x.ResourceId, x => (CustomPropertyValue?) x);
                 var nullValueIds = context.AllResourceIds.Except(propertyValues.Keys);

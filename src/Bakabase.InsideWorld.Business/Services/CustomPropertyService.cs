@@ -30,7 +30,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		{
 		}
 
-		public async Task<List<Abstractions.Models.Domain.CustomProperty>> GetDtoList(Expression<Func<CustomProperty, bool>>? selector = null,
+		public async Task<List<Abstractions.Models.Domain.CustomProperty>> GetAll(Expression<Func<CustomProperty, bool>>? selector = null,
 			CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
 			bool returnCopy = true)
 		{
@@ -38,12 +38,20 @@ namespace Bakabase.InsideWorld.Business.Services
 			var dtoList = await ToDtoList(data, additionalItems);
 			return dtoList;
 		}
+		public async Task<Abstractions.Models.Domain.CustomProperty> GetByKey(int id,
+			CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
+			bool returnCopy = true)
+        {
+            var data = await base.GetByKey(id, returnCopy);
+            var dtoList = await ToDtoList([data], additionalItems);
+            return dtoList.First();
+        }
 
 		public async Task<Dictionary<int, List<Abstractions.Models.Domain.CustomProperty>>> GetByCategoryIds(int[] ids)
 		{
 			var mappings = await CategoryCustomPropertyMappingService.GetAll(x => ids.Contains(x.CategoryId));
 			var propertyIds = mappings.Select(x => x.PropertyId).ToHashSet();
-			var properties = await GetDtoList(x => propertyIds.Contains(x.Id));
+			var properties = await GetAll(x => propertyIds.Contains(x.Id));
 			var propertyMap = properties.ToDictionary(x => x.Id);
 
 			return mappings.GroupBy(x => x.CategoryId).ToDictionary(x => x.Key,

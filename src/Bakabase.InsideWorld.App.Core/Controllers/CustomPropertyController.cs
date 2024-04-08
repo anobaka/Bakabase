@@ -26,7 +26,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 		[SwaggerOperation(OperationId = "GetAllCustomPropertiesV2")]
 		public async Task<ListResponse<CustomProperty>> GetAll(CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
 		{
-			return new ListResponse<CustomProperty>(await _service.GetDtoList(null, additionalItems, false));
+			return new ListResponse<CustomProperty>(await _service.GetAll(null, additionalItems, false));
 		}
 
 		[HttpPost]

@@ -409,5 +409,10 @@ namespace Bakabase.InsideWorld.Models.Extensions
                 Tags = publisher.Tags.Select(s => s.Clone()).ToList()
             };
         }
+
+        public static int GetLayers(this PublisherDto publisher)
+        {
+            return publisher.SubPublishers.Any() ? publisher.SubPublishers.Max(GetLayers) + 1 : 1;
+        }
     }
 }

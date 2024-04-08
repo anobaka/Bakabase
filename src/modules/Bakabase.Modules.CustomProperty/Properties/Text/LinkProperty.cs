@@ -13,7 +13,7 @@ public record LinkData
 
 public record LinkProperty() : Abstractions.Models.Domain.CustomProperty;
 
-public record LinkPropertyValue: CustomPropertyValueDto<LinkData>
+public record LinkPropertyValue: TypedCustomPropertyValue<LinkData>
 {
     protected override bool IsMatch(LinkData? value, CustomPropertyValueSearchRequestModel model)
     {

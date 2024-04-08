@@ -2,6 +2,7 @@
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
+    [Obsolete]
     public class PublisherTagMapping: IEquatable<PublisherTagMapping>
     {
         public int Id { get; set; }

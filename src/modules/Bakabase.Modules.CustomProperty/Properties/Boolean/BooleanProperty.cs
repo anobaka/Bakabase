@@ -7,7 +7,7 @@ namespace Bakabase.Modules.CustomProperty.Properties.Boolean;
 
 public record BooleanProperty(): Abstractions.Models.Domain.CustomProperty;
 
-public record BooleanPropertyValue : CustomPropertyValueDto<bool>
+public record BooleanPropertyValue : TypedCustomPropertyValue<bool>
 {
     protected override bool IsMatch(bool value, CustomPropertyValueSearchRequestModel model)
     {

@@ -19,7 +19,7 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   const { t } = useTranslation();
   const { pathname } = useLocation();
 
-  console.log(pathname);
+  // console.log(pathname);
 
   const onClick: MenuProps['onClick'] = (e) => {
     history!.push(e.key);

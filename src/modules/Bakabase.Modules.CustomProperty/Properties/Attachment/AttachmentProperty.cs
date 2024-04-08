@@ -7,7 +7,7 @@ namespace Bakabase.Modules.CustomProperty.Properties.Attachment;
 
 public record AttachmentProperty() : Abstractions.Models.Domain.CustomProperty;
 
-public record AttachmentPropertyValue : CustomPropertyValueDto<string[]>
+public record AttachmentPropertyValue : TypedCustomPropertyValue<string[]>
 {
     protected override bool IsMatch(string[]? value, CustomPropertyValueSearchRequestModel model)
     {

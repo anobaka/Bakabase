@@ -8,11 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\View\" />
+    <ProjectReference Include="..\..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
+    <Folder Include="Models\View\" />
   </ItemGroup>
 
 </Project>

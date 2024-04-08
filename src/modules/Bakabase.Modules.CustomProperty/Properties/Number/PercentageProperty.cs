@@ -13,7 +13,7 @@ public record PercentagePropertyOptions
 
 public record PercentageProperty() : CustomProperty<PercentagePropertyOptions>;
 
-public record PercentagePropertyValue : CustomPropertyValueDto<decimal>
+public record PercentagePropertyValue : TypedCustomPropertyValue<decimal>
 {
     protected override bool IsMatch(decimal value, CustomPropertyValueSearchRequestModel model)
     {

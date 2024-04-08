@@ -1,7 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
+    [Obsolete]
     public class Publisher
     {
         public int Id { get; set; }

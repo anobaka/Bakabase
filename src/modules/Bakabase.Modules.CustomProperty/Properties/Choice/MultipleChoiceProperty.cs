@@ -7,7 +7,7 @@ namespace Bakabase.Modules.CustomProperty.Properties.Choice;
 
 public record MultipleChoiceProperty : ChoiceProperty<string[]>;
 
-public record MultipleChoicePropertyValue : CustomPropertyValueDto<string[]>
+public record MultipleChoicePropertyValue : TypedCustomPropertyValue<string[]>
 {
     protected override bool IsMatch(string[]? value, CustomPropertyValueSearchRequestModel model)
     {

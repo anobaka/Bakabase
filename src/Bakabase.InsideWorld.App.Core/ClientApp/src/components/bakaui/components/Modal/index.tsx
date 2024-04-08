@@ -1,5 +1,6 @@
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, useDisclosure } from '@nextui-org/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { ModalProps } from '@nextui-org/modal/dist/modal';
 import type { ButtonProps } from '@/components/bakaui';
 import { Button } from '@/components/bakaui';
 
@@ -16,11 +17,36 @@ interface IProps {
   footer?: React.ReactNode | false | ISimpleFooter;
   onClose?: () => void;
   onOk?: () => void;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
 
 export default (props: IProps) => {
   const [visible, setVisible] = useState(props.visible);
+
+  const [size, setSize] = useState<ModalProps['size']>();
+
+  useEffect(() => {
+    switch (props.size) {
+      case 'sm':
+        setSize('sm');
+        break;
+      case 'md':
+        setSize('lg');
+        break;
+      case 'lg':
+        setSize('2xl');
+        break;
+      case 'xl':
+        setSize('5xl');
+        break;
+      case 'full':
+        setSize('full');
+        break;
+      default:
+        setSize(undefined);
+    }
+  }, [props.size]);
 
   const onClose = () => {
     setVisible(true);
@@ -66,11 +92,12 @@ export default (props: IProps) => {
     );
   };
 
-
   return (
     <Modal
       isOpen={props.visible ?? visible}
       onClose={onClose}
+      scrollBehavior={'inside'}
+      size={size}
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">{props.title}</ModalHeader>

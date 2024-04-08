@@ -35,7 +35,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "GetAllPublishers")]
         public async Task<ListResponse<PublisherDto>> GetAll()
         {
-            var data = await _service.GetAllDtoList(null, false);
+            var data = await _service.GetAll(null, false);
             return new ListResponse<PublisherDto>(data);
         }
     }

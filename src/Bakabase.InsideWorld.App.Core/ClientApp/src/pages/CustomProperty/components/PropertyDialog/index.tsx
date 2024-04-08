@@ -1,5 +1,5 @@
 import type { DialogProps } from '@alifd/next/types/dialog';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   IChoicePropertyOptions,
@@ -17,7 +17,7 @@ import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
 import { Modal, Button, Input, Popover, Select, Progress, Switch } from '@/components/bakaui';
 
-interface IProps extends DialogProps {
+interface IProps {
   value?: CustomPropertyForm;
   onSaved?: (property: ICustomProperty) => any;
 }
@@ -78,6 +78,7 @@ const PropertyDialog = ({
           return (
             <>
               <ChoiceList
+                className={'mt-4'}
                 choices={options?.choices}
                 onChange={choices => {
                   setProperty({
@@ -90,6 +91,7 @@ const PropertyDialog = ({
                 }}
               />
               <Switch
+                className={'mt-4'}
                 label={t('Allow adding new options while choosing')}
                 size={'sm'}
                 isSelected={options?.allowAddingNewOptionsWhileChoosing}
@@ -104,6 +106,7 @@ const PropertyDialog = ({
                 }}
               />
               <Select
+                className={'mt-2'}
                 size={'sm'}
                 label={t('Default value')}
                 selectionMode={multiple ? 'multiple' : 'single'}
@@ -214,12 +217,9 @@ const PropertyDialog = ({
               <div className="label">{t('Max value')}</div>
               <div className="value">
                 <Select
-                  mode={'single'}
                   value={options?.maxValue}
                   dataSource={RatingMaxValueDataSource}
-                  autoWidth
-                  style={{ width: '100%' }}
-                  onChange={c => {
+                  onSelectionChange={c => {
                     setProperty({
                       ...property,
                       options: {
@@ -240,10 +240,16 @@ const PropertyDialog = ({
         case CustomPropertyType.Link:
         case CustomPropertyType.Attachment:
           break;
-        // case CustomPropertyType.Formula:
-        //   break;
-        // case CustomPropertyType.Multilevel:
-        //   break;
+        case CustomPropertyType.Date:
+          break;
+        case CustomPropertyType.DateTime:
+          break;
+        case CustomPropertyType.Time:
+          break;
+        case CustomPropertyType.Formula:
+          break;
+        case CustomPropertyType.Multilevel:
+          break;
       }
     }
     return;

@@ -451,7 +451,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
 							var categoryIds = resources.Select(r => r.CategoryId).Distinct().ToArray();
 							var categoryProperties = await _customPropertyService.GetByCategoryIds(categoryIds);
-							var customPropertiesValues = (await _customPropertyValueService.GetDtoList(
+							var customPropertiesValues = (await _customPropertyValueService.GetAll(
 								x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
 								true)).GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
 								x => x.ToDictionary(y => y.PropertyId, y => y));
