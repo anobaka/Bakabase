@@ -46,6 +46,9 @@ export default () => {
         </div>
       ) : (
         <>
+          <div className={'opacity-70'}>
+            {t('Because the new feature is not compatible with some historical data, please complete the data migration before using it.')}
+          </div>
           <div>
             {/* <div className={'flex gap-3 flex-1 min-h-0'}> */}
             {/* <div className="left rounded border-1 overflow-auto pt-1 pl-1 pb-1 pr-2 min-w-[120px]"> */}

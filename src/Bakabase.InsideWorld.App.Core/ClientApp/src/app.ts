@@ -1,5 +1,5 @@
 import './global.scss';
-import UIHubConnection from '@/components/UIHubConnection';
+import UIHubConnection from '@/components/SignalR/UIHubConnection';
 import dayjs from 'dayjs';
 import '@/assets/iconfont/iconfont';
 
@@ -34,7 +34,7 @@ export const storeConfig = defineStoreConfig(async () => {
 
   try {
     const { data } = await BApi.options.getAppOptions() || {};
-    console.log(data);
+    // console.log(data);
 
     if (data) {
       window.enableAnonymousDataTracking = data.enableAnonymousDataTracking;

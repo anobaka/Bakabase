@@ -1,187 +1,223 @@
-import { Dialog, Overlay } from '@alifd/next';
-import type { DialogProps } from '@alifd/next/types/dialog';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import styles from './index.module.scss';
+import PropertyDialog from '../PropertyDialog';
 import type { IProperty } from '@/components/Property/models';
 import Property from '@/components/Property';
 import { createPortalOfComponent } from '@/components/utils';
+import type { CustomPropertyType } from '@/sdk/constants';
 import {
   CustomPropertyAdditionalItem,
   ResourceProperty as EnumResourceProperty,
   StandardValueType,
 } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
-import type { ICustomProperty } from '@/pages/CustomProperty/models';
-import CustomProperty from '@/components/Property/CustomProperty';
 import store from '@/store';
+import { Button, Chip, Modal, Spacer } from '@/components/bakaui';
 
-const { Popup } = Overlay;
-
-interface ISelection {
-  reservedPropertyIds?: number[];
-  customPropertyIds?: number[];
+interface IKey {
+  id: number;
+  isReserved: boolean;
 }
 
 interface IProps {
-  selection?: ISelection;
-  onSubmit?: (selectedProperties: {
-    reservedProperties?: IProperty[];
-    customProperties?: ICustomProperty[];
-  }) => Promise<any>;
-  dialogProps?: DialogProps;
+  selection?: IKey[];
+  onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
   multiple?: boolean;
   pool: 'reserved' | 'custom' | 'all';
+  valueTypes?: StandardValueType[];
+  editable?: boolean;
+  addable?: boolean;
+  removable?: boolean;
 }
 
 const PropertySelector = ({
                             selection: propsSelection,
                             onSubmit: propsOnSubmit,
-                            dialogProps,
                             multiple = true,
                             pool,
+                            valueTypes,
+                            addable,
+                            editable,
+                            removable,
                           }: IProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
 
   const reservedOptions = store.useModelState('reservedOptions');
-
-  const [reservedProperties, setReservedProperties] = useState<IProperty[]>([]);
-  const [customProperties, setCustomProperties] = useState<ICustomProperty[]>([]);
-
-  const [selection, setSelection] = useState<ISelection>(propsSelection || {});
+  const [properties, setProperties] = useState<IProperty[]>([]);
+  const initializedRef = useRef(false);
+  const [selection, setSelection] = useState<IKey[]>(propsSelection || []);
 
   useEffect(() => {
-    const map = reservedOptions.resource.reservedResourcePropertyAndValueTypeMap || {};
-    setReservedProperties(Object.keys(map).map<IProperty>(pStr => {
-      const p = parseInt(pStr, 10) as EnumResourceProperty;
-      return {
-        id: p,
-        name: t(EnumResourceProperty[p]),
-        type: map[p],
-        isReserved: true,
-      };
-    }));
+    if (reservedOptions.initialized && !initializedRef.current) {
+      initializedRef.current = true;
+      loadProperties();
+    }
   }, [reservedOptions]);
 
   const loadProperties = async () => {
+    const arr: IProperty[] = [];
+    if (pool == 'all' || pool == 'reserved') {
+      const map = reservedOptions.resource.reservedResourcePropertyAndValueTypeMap || {};
+      arr.push(
+        ...Object.keys(map).map<IProperty>(pStr => {
+          const p = parseInt(pStr, 10) as EnumResourceProperty;
+          return {
+            id: p,
+            name: t(EnumResourceProperty[p]),
+            type: map[p],
+            isReserved: true,
+          };
+        }),
+      );
+    }
     if (pool == 'all' || pool == 'custom') {
       const rsp = await BApi.customProperty.getAllCustomPropertiesV2({ additionalItems: CustomPropertyAdditionalItem.Category });
       // @ts-ignore
-      setCustomProperties((rsp.data || []));
+      arr.push(...(rsp.data || []));
     }
+    setProperties(arr);
   };
 
   useEffect(() => {
-    loadProperties();
   }, []);
 
   const close = () => {
     setVisible(false);
   };
 
-  const renderProperty = (id: number, isReserved: boolean) => {
-    const selectedIds = (isReserved ? selection?.reservedPropertyIds : selection?.customPropertyIds) || [];
-    const selected = selectedIds?.includes(id);
-    const compKey = `${isReserved}-${id}`;
-    const onClick = async () => {
-      const newSelection: ISelection = {
-        ...selection,
-        [isReserved ? 'reservedPropertyIds' : 'customPropertyIds']:
-          multiple
-            ? selected
-              ? selectedIds.filter(x => x != id) : [id, ...(selectedIds)]
-            : selected
-              ? [] : [id],
-      };
-
-      setSelection(newSelection);
-      if (!multiple && !selected) {
-        await onSubmit(newSelection);
-        close();
-      }
-    };
-
+  const renderProperty = (property: IProperty) => {
+    const selected = selection.some(s => s.id == property.id && s.isReserved == property.isReserved);
     // console.log(id, isReserved, reservedProperties, customProperties);
-
-    if (isReserved) {
-      const property = reservedProperties.find(p => p.id == id)!;
-      if (property) {
-        return (
-          <Property
-            key={compKey}
-            property={property}
-            onClick={onClick}
-          />
-        );
-      }
-    } else {
-      const property = customProperties.find(p => p.id === id)!;
-      if (property) {
-        return (
-          <CustomProperty
-            key={compKey}
-            property={property}
-            onClick={onClick}
-          />
-        );
-      }
-    }
-    return;
+    return (
+      <Property
+        property={property}
+        onClick={async () => {
+          if (multiple) {
+            if (selected) {
+              setSelection(selection.filter(s => s.id != property.id && s.isReserved == property.isReserved));
+            } else {
+              setSelection([...selection, {
+                id: property.id,
+                isReserved: property.isReserved,
+              }]);
+            }
+          } else {
+            if (selected) {
+              setSelection([]);
+            } else {
+              const ns = [{
+                id: property.id,
+                isReserved: property.isReserved,
+              }];
+              setSelection(ns);
+              await onSubmit(ns);
+              close();
+            }
+          }
+        }}
+        editable={editable}
+        removable={removable}
+      />
+    );
   };
 
-  const onSubmit = async (selection: ISelection) => {
+  const onSubmit = async (selection: IKey[]) => {
     // console.log(customProperties, selection);
     if (propsOnSubmit) {
-      const rps = selection.reservedPropertyIds?.map(x => reservedProperties.find(p => p.id === x)).filter(x => x).map(x => x!);
-      const cps = selection.customPropertyIds?.map(x => customProperties?.find(p => p.id === x)).filter(x => x).map(x => x!);
-      await propsOnSubmit({
-        reservedProperties: rps,
-        customProperties: cps,
-      });
+      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.isReserved == s.isReserved)).filter(x => x != undefined) as IProperty[]);
     }
   };
 
-  console.log('render', reservedProperties, customProperties);
+  // console.log('render', reservedProperties, customProperties);
+
+  const renderFilter = () => {
+    const filters: any[] = [];
+    if (pool != 'all') {
+      filters.push(
+        <Chip size={'sm'}>{t(pool == 'reserved' ? 'Reserved properties' : 'Custom properties')}</Chip>,
+      );
+    }
+    if (valueTypes) {
+      filters.push(
+        ...valueTypes.map(vt => <Chip size={'sm'}>{t(StandardValueType[vt])}</Chip>),
+      );
+    }
+
+    if (filters.length > 0) {
+      return (
+        <div className={'flex gap-1 items-center mb-2 flex-wrap'}>
+          {t('Filtering')}
+          <Spacer />
+          {filters}
+        </div>
+      );
+    } else {
+      return null;
+    }
+  };
+
+  const selectedProperties = selection.map(s => properties.find(p => p.id == s.id && p.isReserved == s.isReserved)).filter(x => x).map(x => x!);
+  const unselectedProperties = properties.filter(p => !selection.some(s => s.id == p.id && s.isReserved == p.isReserved));
+  const propertyCount = selectedProperties.length + unselectedProperties.length;
+
+  const renderProperties = () => {
+    if (propertyCount == 0) {
+      return (
+        <div className={'flex items-center justify-center gap-2 mt-6'}>
+          {t('No properties available')}
+          {addable && (
+            <Button
+              color={'primary'}
+              size={'sm'}
+              onClick={() => {
+                PropertyDialog.show({
+                  onSaved: loadProperties,
+                  validValueTypes: valueTypes?.map(v => v as unknown as CustomPropertyType),
+                });
+              }}
+            >
+              {t('Add a property')}
+            </Button>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className={'flex gap-2'}>
+        <div className={'border-1 rounded p-2'}>
+          <div className={'font-bold'}>{t('Selected')}</div>
+          <div className={'mt-2 flex flex-wrap gap-2 items-start'}>
+            {selectedProperties.map(p => renderProperty(p))}
+          </div>
+        </div>
+        <div className={'border-1 rounded p-2 flex-1 border-dashed'}>
+          <div className={'font-bold'}>{t('Not selected')}</div>
+          <div className={'mt-2 flex flex-wrap gap-2 items-start'}>
+            {unselectedProperties.map(p => renderProperty(p))}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <Dialog
+    <Modal
       visible={visible}
-      className={styles.propertySelector}
       onClose={close}
-      onCancel={close}
-      v2
-      closeMode={['close', 'mask', 'esc']}
       onOk={async () => {
         await onSubmit(selection);
         close();
       }}
       title={t(multiple ? 'Select properties' : 'Select a property')}
-      style={{ minWidth: '800px' }}
-      footer={multiple}
-      {...dialogProps}
+      footer={(multiple === true && propertyCount > 0) ? true : (<Spacer />)}
     >
-      <div className={styles.customProperties}>
-        <div className={styles.selected}>
-          <div className={styles.title}>{t('Selected')}</div>
-          <div className={styles.list}>
-            {selection?.reservedPropertyIds?.map(id => renderProperty(id, true))}
-            {selection?.customPropertyIds?.map(id => renderProperty(id, false))}
-          </div>
-        </div>
-        <div className={styles.notSelected}>
-          <div className={styles.title}>{t('Not selected')}</div>
-          <div className={styles.list}>
-            {(pool == 'all' || pool == 'reserved') && (
-              reservedProperties.filter(x => !selection?.reservedPropertyIds?.includes(x.id)).map(r => renderProperty(r.id, true))
-            )}
-            {(pool == 'all' || pool == 'custom') && (
-              customProperties.filter(x => !selection?.customPropertyIds?.includes(x.id)).map(r => renderProperty(r.id, false))
-            )}
-          </div>
-        </div>
+      <div>
+        {renderFilter()}
+        {renderProperties()}
       </div>
-    </Dialog>
+    </Modal>
   );
 };
 

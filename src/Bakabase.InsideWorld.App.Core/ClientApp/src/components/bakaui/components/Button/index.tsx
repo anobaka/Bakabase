@@ -17,6 +17,7 @@ const Button = forwardRef((props: ButtonProps, ref: react.Ref<HTMLButtonElement>
   return (
     <NextUiButton
       ref={ref}
+      isDisabled={props.disabled}
       {...props}
     />
   );

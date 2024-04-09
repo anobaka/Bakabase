@@ -17,13 +17,11 @@ import type {
   BootstrapModelsResponseModelsBaseResponse,
 } from '@/sdk/Api';
 import BApi from '@/sdk/BApi';
+import type { SignalRData } from '@/components/SignalR/models';
 
-type SignalROptions<T> = T & {
-  initialized: boolean;
-};
 
 interface OptionsStore<TOptions, TPatchModel> {
-  state: SignalROptions<TOptions>;
+  state: SignalRData<TOptions>;
   reducers: {
     update: (state: TOptions, payload: any) => any;
   };
@@ -39,7 +37,7 @@ const buildModel = <TOptions, TPatchModel>(patchHandler: (patches: TPatchModel) 
     // 定义改变该模型状态的纯函数
     reducers: {
       update(state, payload) {
-        console.log('model changing', payload);
+        // console.log('model changing', payload);
         return {
           ...state,
           ...payload,

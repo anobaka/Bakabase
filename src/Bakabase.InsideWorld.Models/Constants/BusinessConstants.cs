@@ -300,10 +300,10 @@ namespace Bakabase.InsideWorld.Models.Constants
                     {
                         [StandardValueType.MultipleChoice], new()
                         {
-                            {StandardValueType.SingleLineText, Constants.StandardValueConversionLoss.MultipleValuesWillBeMerged},
-                            {StandardValueType.MultilineText, Constants.StandardValueConversionLoss.MultipleValuesWillBeMerged},
-                            {StandardValueType.Link, Constants.StandardValueConversionLoss.MultipleValuesWillBeMerged},
-                            {StandardValueType.SingleChoice, Constants.StandardValueConversionLoss.MultipleValuesWillBeMerged},
+                            {StandardValueType.SingleLineText, Constants.StandardValueConversionLoss.ValuesWillBeMerged},
+                            {StandardValueType.MultilineText, Constants.StandardValueConversionLoss.ValuesWillBeMerged},
+                            {StandardValueType.Link, Constants.StandardValueConversionLoss.ValuesWillBeMerged},
+                            {StandardValueType.SingleChoice, Constants.StandardValueConversionLoss.ValuesWillBeMerged},
                             {StandardValueType.MultipleChoice, Constants.StandardValueConversionLoss.None},
                             {
                                 StandardValueType.Number,
@@ -346,7 +346,7 @@ namespace Bakabase.InsideWorld.Models.Constants
                         {
                             {StandardValueType.SingleLineText, Constants.StandardValueConversionLoss.None},
                             {StandardValueType.MultilineText, Constants.StandardValueConversionLoss.None},
-                            {StandardValueType.Link, Constants.StandardValueConversionLoss.None},
+                            {StandardValueType.Link, Constants.StandardValueConversionLoss.All},
                             {StandardValueType.SingleChoice, Constants.StandardValueConversionLoss.None},
                             {StandardValueType.MultipleChoice, Constants.StandardValueConversionLoss.None},
                             {StandardValueType.Number, Constants.StandardValueConversionLoss.None},
@@ -366,7 +366,7 @@ namespace Bakabase.InsideWorld.Models.Constants
                         {
                             {StandardValueType.SingleLineText, Constants.StandardValueConversionLoss.None},
                             {StandardValueType.MultilineText, Constants.StandardValueConversionLoss.None},
-                            {StandardValueType.Link, Constants.StandardValueConversionLoss.None},
+                            {StandardValueType.Link, Constants.StandardValueConversionLoss.All},
                             {StandardValueType.SingleChoice, Constants.StandardValueConversionLoss.None},
                             {StandardValueType.MultipleChoice, Constants.StandardValueConversionLoss.None},
                             {StandardValueType.Number, Constants.StandardValueConversionLoss.None},
@@ -504,49 +504,19 @@ namespace Bakabase.InsideWorld.Models.Constants
                     {
                         [StandardValueType.Multilevel], new()
                         {
-                            {StandardValueType.SingleLineText, Constants.StandardValueConversionLoss.ChildrenWillBeLost},
-                            {StandardValueType.MultilineText, Constants.StandardValueConversionLoss.ChildrenWillBeLost},
-                            {StandardValueType.Link, Constants.StandardValueConversionLoss.ChildrenWillBeLost},
-                            {StandardValueType.SingleChoice, Constants.StandardValueConversionLoss.ChildrenWillBeLost},
-                            {StandardValueType.MultipleChoice, Constants.StandardValueConversionLoss.ChildrenWillBeLost},
-                            {
-                                StandardValueType.Number,
-                                Constants.StandardValueConversionLoss.ChildrenWillBeLost |
-                                Constants.StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                                Constants.StandardValueConversionLoss.OnlyFirstValueWillBeRemained
-                            },
-                            {
-                                StandardValueType.Percentage,
-                                Constants.StandardValueConversionLoss.ChildrenWillBeLost |
-                                Constants.StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                                Constants.StandardValueConversionLoss.OnlyFirstValueWillBeRemained
-                            },
-                            {
-                                StandardValueType.Rating,
-                                Constants.StandardValueConversionLoss.ChildrenWillBeLost |
-                                Constants.StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                                Constants.StandardValueConversionLoss.OnlyFirstValueWillBeRemained
-                            },
+                            {StandardValueType.SingleLineText, Constants.StandardValueConversionLoss.ValuesWillBeMerged},
+                            {StandardValueType.MultilineText, Constants.StandardValueConversionLoss.ValuesWillBeMerged},
+                            {StandardValueType.Link, Constants.StandardValueConversionLoss.ValuesWillBeMerged},
+                            {StandardValueType.SingleChoice, Constants.StandardValueConversionLoss.ValuesWillBeMerged},
+                            {StandardValueType.MultipleChoice, Constants.StandardValueConversionLoss.ValuesWillBeMerged},
+                            {StandardValueType.Number, Constants.StandardValueConversionLoss.All},
+                            {StandardValueType.Percentage, Constants.StandardValueConversionLoss.All},
+                            {StandardValueType.Rating, Constants.StandardValueConversionLoss.All},
                             {StandardValueType.Boolean, Constants.StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue},
                             {StandardValueType.Attachment, Constants.StandardValueConversionLoss.All},
-                            {
-                                StandardValueType.Date,
-                                Constants.StandardValueConversionLoss.ChildrenWillBeLost |
-                                Constants.StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                                Constants.StandardValueConversionLoss.OnlyFirstValueWillBeRemained
-                            },
-                            {
-                                StandardValueType.DateTime,
-                                Constants.StandardValueConversionLoss.ChildrenWillBeLost |
-                                Constants.StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                                Constants.StandardValueConversionLoss.OnlyFirstValueWillBeRemained
-                            },
-                            {
-                                StandardValueType.Time,
-                                Constants.StandardValueConversionLoss.ChildrenWillBeLost |
-                                Constants.StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                                Constants.StandardValueConversionLoss.OnlyFirstValueWillBeRemained
-                            },
+                            {StandardValueType.Date, Constants.StandardValueConversionLoss.All},
+                            {StandardValueType.DateTime, Constants.StandardValueConversionLoss.All},
+                            {StandardValueType.Time, Constants.StandardValueConversionLoss.All},
                             {StandardValueType.Formula, Constants.StandardValueConversionLoss.All},
                             {StandardValueType.Multilevel, Constants.StandardValueConversionLoss.None},
                         }

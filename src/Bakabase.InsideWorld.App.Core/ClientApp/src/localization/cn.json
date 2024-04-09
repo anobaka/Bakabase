@@ -1139,5 +1139,20 @@
   "Convert to": "转换为",
   "Select a property": "选择一个属性",
   "Migration": "迁移",
-  "Migrate": "迁移"
+  "Migrate": "迁移",
+  "Some data will be lost": "部分数据将会丢失",
+  "check them here": "点此查看",
+  "Confirm": "确定",
+  "StandardValueConversionLoss.All":"数据将会丢失",
+  "StandardValueConversionLoss.InconvertibleDataWillBeLost":"不可转换的数据将会丢失",
+  "StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue":"非空值将会被转换为'是'",
+  "StandardValueConversionLoss.ValuesWillBeMerged":"数据将会被合并",
+  "StandardValueConversionLoss.OnlyFirstValueWillBeRemained":"仅保留第一个数据",
+  "StandardValueConversionLoss.NonZeroValueWillBeConvertedToTrue":"非零值将会被转换为'是'",
+  "StandardValueConversionLoss.TextWillBeLost":"文本信息将会丢失",
+  "StandardValueConversionLoss.TimeWillBeLost":"时间信息将会丢失",
+  "StandardValueConversionLoss.DateWillBeLost":"日期信息将会丢失",
+  "Because the new feature is not compatible with some historical data, please complete the data migration before using it.": "由于新功能与部分历史数据不兼容，请在使用前完成数据迁移。",
+  "No properties available": "没有可用的属性",
+  "Add a property": "添加一个属性"
 }

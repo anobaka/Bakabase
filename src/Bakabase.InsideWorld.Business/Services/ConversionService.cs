@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bootstrap.Extensions;
+using Bakabase.Modules.CustomProperty.Properties.Text;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -30,12 +31,12 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<StandardValueConversionLoss> CheckConversionLoss<T>(T data, StandardValueType fromType,
             StandardValueType toType)
         {
-            if (fromType == toType)
+            if (fromType == toType || data == null)
             {
                 return StandardValueConversionLoss.None;
             }
 
-            var fallbackLoss = BusinessConstants.StandardValueConversionLoss[fromType][toType];
+            var fallbackLoss = fromType.GetEstimatedLoss(toType);
             var fallbackLossFlags = SpecificEnumUtils<StandardValueConversionLoss>.Values
                 .Where(x => fallbackLoss.HasFlag(x)).ToList();
 
@@ -60,6 +61,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                     }
 
                                     break;
+                                case StandardValueType.Boolean:
+                                    return StandardValueConversionLoss.All;
                                 case StandardValueType.Date:
                                 case StandardValueType.DateTime:
                                     if (!(await _specialTextService.TryToParseDateTime(typedData)).HasValue)
@@ -77,12 +80,21 @@ namespace Bakabase.InsideWorld.Business.Services
                                     break;
                             }
                         }
+                        else
+                        {
+                            return StandardValueConversionLoss.None;
+                        }
 
                         break;
                     }
                     case StandardValueType.SingleChoice:
                     {
                         var typedData = data as string;
+                        if (string.IsNullOrEmpty(typedData))
+                        {
+                            return StandardValueConversionLoss.None;
+                        }
+
                         switch (toType)
                         {
                             case StandardValueType.Number:
@@ -95,20 +107,21 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                 break;
                             case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
+                                return StandardValueConversionLoss.All;
                             case StandardValueType.Date:
-                                break;
                             case StandardValueType.DateTime:
+                                if (!(await _specialTextService.TryToParseDateTime(typedData)).HasValue)
+                                {
+                                    return StandardValueConversionLoss.All;
+                                }
+
                                 break;
                             case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
+                                if (!TimeSpan.TryParse(typedData, out var _))
+                                {
+                                    return StandardValueConversionLoss.All;
+                                }
+
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
@@ -118,413 +131,198 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                     case StandardValueType.MultipleChoice:
                     {
+                        var typedData = data as List<string>;
+                        if (typedData?.Any() != true)
+                        {
+                            return StandardValueConversionLoss.None;
+                        }
+
                         switch (toType)
                         {
                             case StandardValueType.SingleLineText:
-                                break;
                             case StandardValueType.MultilineText:
-                                break;
                             case StandardValueType.SingleChoice:
+                            case StandardValueType.Link:
+                                if (typedData.Count > 1)
+                                {
+                                    return StandardValueConversionLoss.ValuesWillBeMerged;
+                                }
+
                                 break;
                             case StandardValueType.MultipleChoice:
                                 break;
                             case StandardValueType.Number:
-                                break;
                             case StandardValueType.Percentage:
-                                break;
                             case StandardValueType.Rating:
-                                break;
+                            {
+                                var loss = StandardValueConversionLoss.None;
+                                if (typedData.Count > 1)
+                                {
+                                    loss |= StandardValueConversionLoss.OnlyFirstValueWillBeRemained;
+                                }
+
+                                if (!decimal.TryParse(typedData[0], out var d))
+                                {
+                                    loss |= StandardValueConversionLoss.All;
+                                }
+
+                                return loss;
+                            }
                             case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
+                                return StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue;
                             case StandardValueType.Date:
-                                break;
                             case StandardValueType.DateTime:
-                                break;
+                            {
+                                var loss = StandardValueConversionLoss.None;
+                                if (typedData.Count > 1)
+                                {
+                                    loss |= StandardValueConversionLoss.OnlyFirstValueWillBeRemained;
+                                }
+
+                                if (!(await _specialTextService.TryToParseDateTime(typedData[0])).HasValue)
+                                {
+                                    loss |= StandardValueConversionLoss.All;
+                                }
+
+                                return loss;
+                            }
                             case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
+                            {
+                                var loss = StandardValueConversionLoss.None;
+                                if (typedData.Count > 1)
+                                {
+                                    loss |= StandardValueConversionLoss.OnlyFirstValueWillBeRemained;
+                                }
+
+                                if (!TimeSpan.TryParse(typedData[0], out var _))
+                                {
+                                    return StandardValueConversionLoss.All;
+                                }
+
+                                return loss;
+                            }
                         }
 
                         break;
                     }
                     case StandardValueType.Number:
-                    {
-                        switch (toType)
-                        {
-                            case StandardValueType.SingleLineText:
-                                break;
-                            case StandardValueType.MultilineText:
-                                break;
-                            case StandardValueType.SingleChoice:
-                                break;
-                            case StandardValueType.MultipleChoice:
-                                break;
-                            case StandardValueType.Number:
-                                break;
-                            case StandardValueType.Percentage:
-                                break;
-                            case StandardValueType.Rating:
-                                break;
-                            case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
-                            case StandardValueType.Date:
-                                break;
-                            case StandardValueType.DateTime:
-                                break;
-                            case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
-                        }
-
-                        break;
-                    }
                     case StandardValueType.Percentage:
-                    {
-                        switch (toType)
-                        {
-                            case StandardValueType.SingleLineText:
-                                break;
-                            case StandardValueType.MultilineText:
-                                break;
-                            case StandardValueType.SingleChoice:
-                                break;
-                            case StandardValueType.MultipleChoice:
-                                break;
-                            case StandardValueType.Number:
-                                break;
-                            case StandardValueType.Percentage:
-                                break;
-                            case StandardValueType.Rating:
-                                break;
-                            case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
-                            case StandardValueType.Date:
-                                break;
-                            case StandardValueType.DateTime:
-                                break;
-                            case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
-                        }
-
-                        break;
-                    }
                     case StandardValueType.Rating:
                     {
-                        switch (toType)
+                        if (data is decimal typedData)
                         {
-                            case StandardValueType.SingleLineText:
-                                break;
-                            case StandardValueType.MultilineText:
-                                break;
-                            case StandardValueType.SingleChoice:
-                                break;
-                            case StandardValueType.MultipleChoice:
-                                break;
-                            case StandardValueType.Number:
-                                break;
-                            case StandardValueType.Percentage:
-                                break;
-                            case StandardValueType.Rating:
-                                break;
-                            case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
-                            case StandardValueType.Date:
-                                break;
-                            case StandardValueType.DateTime:
-                                break;
-                            case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
+                            switch (toType)
+                            {
+                                case StandardValueType.Boolean:
+                                    return StandardValueConversionLoss.NonZeroValueWillBeConvertedToTrue;
+                            }
+
+                            break;
                         }
 
-                        break;
-                    }
-                    case StandardValueType.Boolean:
-                    {
-                        switch (toType)
-                        {
-                            case StandardValueType.SingleLineText:
-                                break;
-                            case StandardValueType.MultilineText:
-                                break;
-                            case StandardValueType.SingleChoice:
-                                break;
-                            case StandardValueType.MultipleChoice:
-                                break;
-                            case StandardValueType.Number:
-                                break;
-                            case StandardValueType.Percentage:
-                                break;
-                            case StandardValueType.Rating:
-                                break;
-                            case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
-                            case StandardValueType.Date:
-                                break;
-                            case StandardValueType.DateTime:
-                                break;
-                            case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
-                        }
-
-                        break;
+                        return StandardValueConversionLoss.None;
                     }
                     case StandardValueType.Link:
                     {
-                        switch (toType)
+                        if (data is LinkData typedData)
                         {
-                            case StandardValueType.SingleLineText:
-                                break;
-                            case StandardValueType.MultilineText:
-                                break;
-                            case StandardValueType.SingleChoice:
-                                break;
-                            case StandardValueType.MultipleChoice:
-                                break;
-                            case StandardValueType.Number:
-                                break;
-                            case StandardValueType.Percentage:
-                                break;
-                            case StandardValueType.Rating:
-                                break;
-                            case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
-                            case StandardValueType.Date:
-                                break;
-                            case StandardValueType.DateTime:
-                                break;
-                            case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
+                            switch (toType)
+                            {
+                                case StandardValueType.SingleLineText:
+                                case StandardValueType.MultilineText:
+                                case StandardValueType.SingleChoice:
+                                case StandardValueType.MultipleChoice:
+                                case StandardValueType.Attachment:
+                                    return StandardValueConversionLoss.TextWillBeLost;
+                            }
                         }
 
-                        break;
-                    }
-                    case StandardValueType.Attachment:
-                    {
-                        switch (toType)
-                        {
-                            case StandardValueType.SingleLineText:
-                                break;
-                            case StandardValueType.MultilineText:
-                                break;
-                            case StandardValueType.SingleChoice:
-                                break;
-                            case StandardValueType.MultipleChoice:
-                                break;
-                            case StandardValueType.Number:
-                                break;
-                            case StandardValueType.Percentage:
-                                break;
-                            case StandardValueType.Rating:
-                                break;
-                            case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
-                            case StandardValueType.Date:
-                                break;
-                            case StandardValueType.DateTime:
-                                break;
-                            case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
-                        }
-
-                        break;
+                        return StandardValueConversionLoss.None;
                     }
                     case StandardValueType.Date:
                     {
+                        if (!(data is DateTime typedData))
+                        {
+                            return StandardValueConversionLoss.None;
+                        }
+
                         switch (toType)
                         {
-                            case StandardValueType.SingleLineText:
-                                break;
-                            case StandardValueType.MultilineText:
-                                break;
-                            case StandardValueType.SingleChoice:
-                                break;
-                            case StandardValueType.MultipleChoice:
-                                break;
-                            case StandardValueType.Number:
-                                break;
-                            case StandardValueType.Percentage:
-                                break;
-                            case StandardValueType.Rating:
-                                break;
                             case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
-                            case StandardValueType.Date:
-                                break;
-                            case StandardValueType.DateTime:
-                                break;
-                            case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
+                                return StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue;
                         }
 
                         break;
                     }
                     case StandardValueType.DateTime:
                     {
-                        switch (toType)
+                        if (data is DateTime)
                         {
-                            case StandardValueType.SingleLineText:
-                                break;
-                            case StandardValueType.MultilineText:
-                                break;
-                            case StandardValueType.SingleChoice:
-                                break;
-                            case StandardValueType.MultipleChoice:
-                                break;
-                            case StandardValueType.Number:
-                                break;
-                            case StandardValueType.Percentage:
-                                break;
-                            case StandardValueType.Rating:
-                                break;
-                            case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
-                            case StandardValueType.Date:
-                                break;
-                            case StandardValueType.DateTime:
-                                break;
-                            case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
+                            switch (toType)
+                            {
+                                case StandardValueType.Boolean:
+                                    return StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue;
+                                case StandardValueType.Date:
+                                    return StandardValueConversionLoss.TimeWillBeLost;
+                                case StandardValueType.Time:
+                                    return StandardValueConversionLoss.DateWillBeLost;
+                            }
+                        }
+                        else
+                        {
+                            return StandardValueConversionLoss.None;
                         }
 
                         break;
                     }
                     case StandardValueType.Time:
                     {
-                        switch (toType)
+                        if (data is TimeSpan)
                         {
-                            case StandardValueType.SingleLineText:
-                                break;
-                            case StandardValueType.MultilineText:
-                                break;
-                            case StandardValueType.SingleChoice:
-                                break;
-                            case StandardValueType.MultipleChoice:
-                                break;
-                            case StandardValueType.Number:
-                                break;
-                            case StandardValueType.Percentage:
-                                break;
-                            case StandardValueType.Rating:
-                                break;
-                            case StandardValueType.Boolean:
-                                break;
-                            case StandardValueType.Link:
-                                break;
-                            case StandardValueType.Attachment:
-                                break;
-                            case StandardValueType.Date:
-                                break;
-                            case StandardValueType.DateTime:
-                                break;
-                            case StandardValueType.Time:
-                                break;
-                            case StandardValueType.Formula:
-                                break;
-                            case StandardValueType.Multilevel:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(toType), toType, null);
+                            switch (toType)
+                            {
+                                case StandardValueType.Boolean:
+                                    return StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue;
+                            }
+                        }
+                        else
+                        {
+                            return StandardValueConversionLoss.None;
                         }
 
                         break;
                     }
-                    case StandardValueType.Formula:
                     case StandardValueType.Multilevel:
+                    {
+                        if (data is List<string> link && link.Any())
+                        {
+                            switch (toType)
+                            {
+                                case StandardValueType.SingleLineText:
+                                case StandardValueType.MultilineText:
+                                case StandardValueType.SingleChoice:
+                                case StandardValueType.Link:
+                                case StandardValueType.MultipleChoice:
+                                {
+                                    return link.Count > 1
+                                        ? StandardValueConversionLoss.ValuesWillBeMerged
+                                        : StandardValueConversionLoss.None;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            return StandardValueConversionLoss.None;
+                        }
+
+                        break;
+                    }
                     default:
                         throw new ArgumentOutOfRangeException(nameof(fromType), fromType, null);
                 }
             }
 
             return fallbackLoss;
-
         }
     }
 }

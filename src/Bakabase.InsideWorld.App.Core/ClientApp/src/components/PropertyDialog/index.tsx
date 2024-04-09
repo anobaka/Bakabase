@@ -1,25 +1,25 @@
-import type { DialogProps } from '@alifd/next/types/dialog';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type {
-  IChoicePropertyOptions,
-  ICustomProperty,
-  INumberPropertyOptions,
-  IPercentagePropertyOptions,
-  IRatingPropertyOptions,
-} from '../../models';
-import { PropertyTypeIconMap } from '../../models';
 import ChoiceList from './components/ChoiceList';
 import { createPortalOfComponent } from '@/components/utils';
 import { CustomPropertyType } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
-import { Modal, Button, Input, Popover, Select, Progress, Switch } from '@/components/bakaui';
+import { Button, Input, Modal, Popover, Progress, Select, Switch } from '@/components/bakaui';
+import type {
+  IChoicePropertyOptions,
+  INumberPropertyOptions,
+  IPercentagePropertyOptions,
+  IProperty,
+  IRatingPropertyOptions,
+} from '@/components/Property/models';
+import { PropertyTypeIconMap } from '@/components/Property/models';
 
 interface IProps {
   value?: CustomPropertyForm;
-  onSaved?: (property: ICustomProperty) => any;
+  onSaved?: (property: IProperty) => any;
+  validValueTypes?: CustomPropertyType[];
 }
 
 interface CustomPropertyForm {
@@ -51,7 +51,8 @@ const RatingMaxValueDataSource = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(x => ({
 const PropertyDialog = ({
                           value,
                           onSaved,
-                          ...dialogProps
+                          validValueTypes,
+                          ...props
                         }: IProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
@@ -111,7 +112,10 @@ const PropertyDialog = ({
                 label={t('Default value')}
                 selectionMode={multiple ? 'multiple' : 'single'}
                 value={options?.defaultValue}
-                dataSource={options?.choices?.map(choice => ({ label: choice.value, value: choice.id }))}
+                dataSource={options?.choices?.map(choice => ({
+                  label: choice.value,
+                  value: choice.id,
+                }))}
                 onSelectionChange={c => {
                   const array = Array.from(c.values());
                   setProperty({
@@ -276,7 +280,7 @@ const PropertyDialog = ({
           close();
         }
       }}
-      {...dialogProps}
+      {...props}
     >
       <div className={'flex flex-col gap-2'}>
         <div className={'flex gap-2 items-center'}>
@@ -293,7 +297,7 @@ const PropertyDialog = ({
               >
                 {property.type == undefined ? t('Please select') : (
                   <>
-                    <CustomIcon type={PropertyTypeIconMap[property.type]} className={'text-medium'} />
+                    <CustomIcon type={PropertyTypeIconMap[property.type]!} className={'text-medium'} />
                     {t(CustomPropertyType[property.type])}
                   </>
                 )}
@@ -310,6 +314,7 @@ const PropertyDialog = ({
                       {PropertyTypeGroup[group].map(type => {
                         return (
                           <Button
+                            disabled={validValueTypes?.includes(type) === false}
                             variant={'light'}
                             className={'justify-start'}
                             onClick={() => {
@@ -320,7 +325,7 @@ const PropertyDialog = ({
                               });
                             }}
                           >
-                            <CustomIcon type={PropertyTypeIconMap[type]} className={'text-medium'} />
+                            <CustomIcon type={PropertyTypeIconMap[type]!} className={'text-medium'} />
                             {t(CustomPropertyType[type])}
                           </Button>
                         );

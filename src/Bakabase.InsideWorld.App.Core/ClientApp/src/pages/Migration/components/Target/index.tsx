@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
+import { FileSearchOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import SimplePropertySelector from '../SimplePropertySelector';
-import { ResourceProperty } from '@/sdk/constants';
+import type { CustomPropertyType } from '@/sdk/constants';
+import { ResourceProperty, StandardValueConversionLoss } from '@/sdk/constants';
 import { Button, Chip, Modal } from '@/components/bakaui';
 import type { ICustomProperty } from '@/pages/CustomProperty/models';
 import BApi from '@/sdk/BApi';
@@ -13,6 +15,10 @@ export interface MigrationTarget {
   propertyKey?: string;
   dataCount: number;
   data?: any;
+  targetCandidates?: {
+    type: CustomPropertyType;
+    lossData?: Record<string, string[]>;
+  }[];
 }
 
 interface IProps {
@@ -31,15 +37,21 @@ const Target = ({
   const label = target.label ?? target.propertyKey ?? t(ResourceProperty[target.property!]);
   const [dataDialogVisible, setDataDialogVisible] = useState(false);
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
+  const [lossDataDialogVisible, setLossDataDialogVisible] = useState(false);
 
   const [selectedProperty, setSelectedProperty] = useState<ICustomProperty>();
 
+  const lossData = target.targetCandidates?.find(d => d.type == selectedProperty?.type)?.lossData;
+
   return (
-    <div className={`flex ${isLeaf ? '' : 'flex-col mt-2'} gap-2`}>
+    <div className={`flex ${isLeaf ? '' : 'flex-col'} gap-2 mt-1 mb-1`}>
       {isLeaf && (
         <Modal
+          title={t('Data')}
           size={'xl'}
-          footer={false}
+          footer={{
+            actions: ['ok'],
+          }}
           visible={dataDialogVisible}
           onClose={() => setDataDialogVisible(false)}
         >
@@ -50,18 +62,50 @@ const Target = ({
           </div>
         </Modal>
       )}
+      {
+        lossData && (
+          <Modal
+            title={t('Some data will be lost')}
+            size={'xl'}
+            footer={{
+              actions: ['ok'],
+            }}
+            visible={lossDataDialogVisible}
+            onClose={() => setLossDataDialogVisible(false)}
+          >
+            <div className={'flex flex-col gap-1'}>
+              {Object.keys(lossData).map(k => {
+                const lossType = StandardValueConversionLoss[parseInt(k, 10)];
+                return (
+                  <div>
+                    <div className={'font-bold'}>{t(`StandardValueConversionLoss.${lossType}`)}</div>
+                    <div className={'flex flex-wrap gap-1'}>
+                      {lossData[k].map(d => (
+                        <Chip>{d}</Chip>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Modal>
+        )
+      }
       <div className={'flex items-center gap-2 text-medium'}>
         {label}
         {isLeaf && (
-          <Chip
+          <Button
             size={'sm'}
+            variant={'light'}
+            color={'primary'}
             className={'cursor-pointer'}
             onClick={() => {
               setDataDialogVisible(true);
             }}
           >
+            <FileSearchOutlined />
             {target.dataCount}
-          </Chip>
+          </Button>
         )}
       </div>
       {target.subTargets ? (
@@ -91,7 +135,23 @@ const Target = ({
             {t('Are you sure to migrate')} {label} {t('to')} {selectedProperty?.name}?
           </Modal>
           {t('Convert to')}
-          <SimplePropertySelector onSelected={p => setSelectedProperty(p)} />
+          <SimplePropertySelector
+            onSelected={p => setSelectedProperty(p)}
+            valueTypes={target.targetCandidates?.map(tc => tc.type)}
+          />
+          {lossData && (
+            <Button
+              color={'danger'}
+              size={'sm'}
+              variant={'light'}
+              onClick={() => {
+                setLossDataDialogVisible(true);
+              }}
+            >
+              <InfoCircleOutlined />
+              {t('Some data will be lost')}, {t('check them here')}
+            </Button>
+          )}
           {selectedProperty && (
             <Button
               color={'primary'}

@@ -1,6 +1,7 @@
-import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, useDisclosure } from '@nextui-org/react';
+import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@nextui-org/react';
 import { useEffect, useState } from 'react';
 import type { ModalProps } from '@nextui-org/modal/dist/modal';
+import { useTranslation } from 'react-i18next';
 import type { ButtonProps } from '@/components/bakaui';
 import { Button } from '@/components/bakaui';
 
@@ -14,7 +15,7 @@ interface IProps {
   title?: any;
   children?: any;
   visible?: boolean;
-  footer?: React.ReactNode | false | ISimpleFooter;
+  footer?: any | boolean | ISimpleFooter;
   onClose?: () => void;
   onOk?: () => void;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
@@ -22,6 +23,7 @@ interface IProps {
 
 
 export default (props: IProps) => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(props.visible);
 
   const [size, setSize] = useState<ModalProps['size']>();
@@ -58,14 +60,14 @@ export default (props: IProps) => {
       return null;
     }
 
-    const simpleFooter: ISimpleFooter = props.footer === undefined ? {
+    const simpleFooter: ISimpleFooter | undefined = (props.footer === undefined || props.footer === true) ? {
       actions: ['ok', 'cancel'],
-    } : props.footer as ISimpleFooter;
+    } : props.footer?.['actions'] ? props.footer as ISimpleFooter : undefined;
 
     if (simpleFooter == undefined) {
       return (
         <ModalFooter>
-          {props.children}
+          {props.footer}
         </ModalFooter>
       );
     }
@@ -74,14 +76,14 @@ export default (props: IProps) => {
     if (simpleFooter.actions.includes('cancel')) {
       elements.push(
         <Button color="danger" variant="light" onClick={onClose} key={'cancel'}>
-          Close
+          {t('Close')}
         </Button>,
       );
     }
     if (simpleFooter.actions.includes('ok')) {
       elements.push(
         <Button color="primary" onClick={props.onOk} key={'ok'}>
-          Action
+          {t('Confirm')}
         </Button>,
       );
     }

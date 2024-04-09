@@ -137,6 +137,9 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
 
             services.AddSingleton<IResourceSearchContextProcessor, DefaultResourceSearchContextProcessor>();
 
+            services.AddScoped<MigrationService>();
+            services.AddScoped<ConversionService>();
+
             return services;
         }
 

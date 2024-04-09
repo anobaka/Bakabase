@@ -1,15 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import PropertyDialog from './components/PropertyDialog';
-import CustomProperty from '@/components/Property/CustomProperty';
+import PropertyDialog from '@/components/PropertyDialog';
 import BApi from '@/sdk/BApi';
 import { CustomPropertyAdditionalItem } from '@/sdk/constants';
 import type { ICustomProperty } from '@/pages/CustomProperty/models';
 import { Button } from '@/components/bakaui';
+import Property from '@/components/Property';
+import type { IProperty } from '@/components/Property/models';
 
 export default () => {
   const { t } = useTranslation();
-  const [properties, setProperties] = useState<ICustomProperty[]>([]);
+  const [properties, setProperties] = useState<IProperty[]>([]);
 
   const loadProperties = async () => {
     const rsp = await BApi.customProperty.getAllCustomPropertiesV2({ additionalItems: CustomPropertyAdditionalItem.Category });
@@ -39,7 +40,7 @@ export default () => {
       <div className={'mt-2 flex items-start gap-2 flex-wrap'}>
         {properties.map(p => {
           return (
-            <CustomProperty
+            <Property
               property={p}
               onSaved={loadProperties}
               key={p.id}

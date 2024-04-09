@@ -162,6 +162,8 @@ export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContain
 export const searchOperations = Object.keys(SearchOperation).filter(k => typeof SearchOperation[k] === 'number').map(t => ({label: t, value: SearchOperation[t]}));
 export enum SpecialTextType {Useless = 1, Language = 2, Wrapper = 3, Standardization = 4, Volume = 6, Trim = 7, DateTime = 8}
 export const specialTextTypes = Object.keys(SpecialTextType).filter(k => typeof SpecialTextType[k] === 'number').map(t => ({label: t, value: SpecialTextType[t]}));
+export enum StandardValueConversionLoss {None = 0, All = 1, InconvertibleDataWillBeLost = 2, NotEmptyValueWillBeConvertedToTrue = 4, ValuesWillBeMerged = 8, OnlyFirstValueWillBeRemained = 16, NonZeroValueWillBeConvertedToTrue = 32, TextWillBeLost = 64, TimeWillBeLost = 128, DateWillBeLost = 256}
+export const standardValueConversionLosses = Object.keys(StandardValueConversionLoss).filter(k => typeof StandardValueConversionLoss[k] === 'number').map(t => ({label: t, value: StandardValueConversionLoss[t]}));
 export enum StandardValueType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15}
 export const standardValueTypes = Object.keys(StandardValueType).filter(k => typeof StandardValueType[k] === 'number').map(t => ({label: t, value: StandardValueType[t]}));
 export enum StartupPage {Default = 0, Resource = 1}
