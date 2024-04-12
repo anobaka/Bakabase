@@ -7,16 +7,14 @@ import BApi from '@/sdk/BApi';
 
 const { Popup } = Overlay;
 
-interface IProps extends DialogProps {
+interface IProps {
   category: { id: number; name: string; customProperties: {id: number}[] };
   onSaved?: () => any;
-  dialogProps?: DialogProps;
 }
 
 const CategoryCustomPropertyBinderDialog = ({
                                               category,
                                               onSaved,
-                                              ...dialogProps
                                             }: IProps) => {
   const { t } = useTranslation();
 
@@ -24,13 +22,10 @@ const CategoryCustomPropertyBinderDialog = ({
     <PropertySelector
       multiple
       pool={'custom'}
-      selection={{ customPropertyIds: category.customProperties?.map(c => c.id) }}
-      dialogProps={{
-        title: t('Binding custom properties to category {{categoryName}}', { categoryName: category.name }),
-        ...dialogProps,
-      }}
-      onSubmit={async (selectedProperties) => {
-        const rsp = await BApi.resourceCategory.bindCustomPropertiesToCategory(category.id, { customPropertyIds: selectedProperties?.customProperties?.map(p => p.id) });
+      selection={category.customProperties?.map(c => ({ id: c.id, isReserved: false }))}
+      title={t('Binding custom properties to category {{categoryName}}', { categoryName: category.name })}
+      onSubmit={async (properties) => {
+        const rsp = await BApi.resourceCategory.bindCustomPropertiesToCategory(category.id, { customPropertyIds: properties?.map(p => p.id) });
         if (!rsp.code) {
           onSaved?.();
         } else {

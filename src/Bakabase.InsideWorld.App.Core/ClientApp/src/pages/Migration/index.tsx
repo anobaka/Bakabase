@@ -42,7 +42,7 @@ export default () => {
         </div>
       ) : allMigrationsAreDone ? (
         <div className={'min-h-full flex items-center justify-center text-2xl'}>
-          {t('Congratulations, you have migrated all data.')}
+          {t('Congratulations, all data has been migrated')}
         </div>
       ) : (
         <>

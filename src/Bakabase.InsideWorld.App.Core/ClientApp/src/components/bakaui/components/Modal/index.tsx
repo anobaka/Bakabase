@@ -1,9 +1,11 @@
-import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@nextui-org/react';
+import { Modal as NextUiModal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@nextui-org/react';
 import { useEffect, useState } from 'react';
 import type { ModalProps } from '@nextui-org/modal/dist/modal';
 import { useTranslation } from 'react-i18next';
 import type { ButtonProps } from '@/components/bakaui';
 import { Button } from '@/components/bakaui';
+import { createPortalOfComponent } from '@/components/utils';
+import PropertyDialog from '@/components/PropertyDialog';
 
 interface ISimpleFooter {
   actions: ('ok' | 'cancel')[];
@@ -14,19 +16,22 @@ interface ISimpleFooter {
 interface IProps {
   title?: any;
   children?: any;
+  defaultVisible?: boolean;
   visible?: boolean;
   footer?: any | boolean | ISimpleFooter;
   onClose?: () => void;
-  onOk?: () => void;
+  onOk?: () => any;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
 
-export default (props: IProps) => {
+const Modal = (props: IProps) => {
   const { t } = useTranslation();
-  const [visible, setVisible] = useState(props.visible);
+  const [visible, setVisible] = useState(props.defaultVisible ?? props.visible);
 
   const [size, setSize] = useState<ModalProps['size']>();
+
+  const [okLoading, setOkLoading] = useState(false);
 
   useEffect(() => {
     switch (props.size) {
@@ -51,7 +56,7 @@ export default (props: IProps) => {
   }, [props.size]);
 
   const onClose = () => {
-    setVisible(true);
+    setVisible(false);
     props.onClose?.();
   };
 
@@ -76,14 +81,35 @@ export default (props: IProps) => {
     if (simpleFooter.actions.includes('cancel')) {
       elements.push(
         <Button color="danger" variant="light" onClick={onClose} key={'cancel'}>
-          {t('Close')}
+          {simpleFooter.cancelProps?.children ?? t('Close')}
         </Button>,
       );
     }
     if (simpleFooter.actions.includes('ok')) {
       elements.push(
-        <Button color="primary" onClick={props.onOk} key={'ok'}>
-          {t('Confirm')}
+        <Button
+          isLoading={okLoading}
+          color="primary"
+          onClick={async () => {
+            const r = props.onOk?.();
+            if (r instanceof Promise) {
+              setOkLoading(true);
+              try {
+                const result = await r;
+                onClose();
+              } catch (e) {
+
+              } finally {
+                setOkLoading(false);
+              }
+            } else {
+              onClose();
+            }
+            // console.log('onok sync finish');
+          }}
+          key={'ok'}
+        >
+          {simpleFooter.okProps?.children ?? t('Confirm')}
         </Button>,
       );
     }
@@ -95,8 +121,8 @@ export default (props: IProps) => {
   };
 
   return (
-    <Modal
-      isOpen={props.visible ?? visible}
+    <NextUiModal
+      isOpen={props.visible != undefined ? props.visible : visible}
       onClose={onClose}
       scrollBehavior={'inside'}
       size={size}
@@ -108,6 +134,10 @@ export default (props: IProps) => {
         </ModalBody>
         {renderFooter()}
       </ModalContent>
-    </Modal>
+    </NextUiModal>
   );
 };
+
+Modal.show = (props: IProps) => createPortalOfComponent(Modal, { ...props, defaultVisible: true });
+
+export default Modal;

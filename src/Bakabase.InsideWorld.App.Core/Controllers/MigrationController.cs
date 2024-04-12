@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Models.Domain;
+using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
@@ -53,7 +54,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpPost("target/migration")]
         [SwaggerOperation(OperationId = "MigrateTarget")]
-        public async Task<BaseResponse> ApplyMigration([FromBody] MigrationTarget target)
+        public async Task<BaseResponse> ApplyMigration([FromBody] MigrationTargetApplyInputModel target)
         {
             return await _migrationService.ApplyMigration(target);
         }

@@ -15,9 +15,11 @@ public record MultipleChoicePropertyValue : TypedCustomPropertyValue<string[]>
     }
 }
 
-public class MultipleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<MultipleChoiceProperty, MultipleChoicePropertyValue, string[]>
+public class MultipleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<MultipleChoiceProperty,
+    ChoicePropertyOptions<string[]>, MultipleChoicePropertyValue, string[]>
 {
     public override CustomPropertyType Type => CustomPropertyType.MultipleChoice;
+
     protected override bool IsMatch(string[]? value, CustomPropertyValueSearchRequestModel model)
     {
         throw new NotImplementedException();

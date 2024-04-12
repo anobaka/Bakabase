@@ -5,7 +5,7 @@ import type { SelectedItems } from '@nextui-org/select/dist/use-select';
 import { Chip } from '@/components/bakaui';
 
 
-export interface SelectProps<T> extends Omit<CollectionBase<T>, 'children'>, Omit<React.ComponentPropsWithoutRef<'select'>, 'size' | 'color' | 'children'> {
+export interface SelectProps<T> extends Omit<CollectionBase<T>, 'children'>, Omit<React.ComponentPropsWithoutRef<'select'>, 'value' | 'size' | 'color' | 'children'> {
   size?: 'sm' | 'md' | 'lg';
   label?: string;
   selectionMode?: 'single' | 'multiple';
@@ -21,11 +21,15 @@ export default <T = object>({
                               ...props
                             }: SelectProps<T>) => {
   const isMultiline = props.selectionMode === 'multiple';
+
+
+  console.log(props.selectedKeys, dataSource);
+
   return (
     <Select
       isMultiline={isMultiline}
       renderValue={v => {
-        console.log(v, dataSource, 5555);
+        // console.log(v, dataSource, 5555);
         if (v.length > 0) {
           return (
             <div className={'flex flex-wrap gap-2'}>
@@ -42,7 +46,11 @@ export default <T = object>({
     >
       {dataSource.map(d => {
         return (
-          <SelectItem key={d.value} value={d.value} textValue={d.value.toString()}>
+          <SelectItem
+            key={d.value}
+            value={d.value}
+            textValue={d.value.toString()}
+          >
             {d.label}
           </SelectItem>
         );

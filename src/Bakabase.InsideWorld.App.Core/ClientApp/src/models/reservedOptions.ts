@@ -13,6 +13,7 @@ export default {
   // 定义改变该模型状态的纯函数
   reducers: {
     update(state, payload) {
+      console.log(state, payload);
       return {
         ...state,
         ...payload,
@@ -23,5 +24,6 @@ export default {
 
   // 定义处理该模型副作用的函数
   effects: (dispatch) => ({
+
   }),
 };

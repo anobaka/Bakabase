@@ -11,6 +11,7 @@ export interface ButtonProps extends React.ComponentPropsWithoutRef<'button'>{
   isIconOnly?: boolean;
   startContent?: any;
   endContent?: any;
+  isLoading?: boolean;
 }
 
 const Button = forwardRef((props: ButtonProps, ref: react.Ref<HTMLButtonElement>) => {

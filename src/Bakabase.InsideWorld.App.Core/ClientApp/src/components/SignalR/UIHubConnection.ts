@@ -42,7 +42,7 @@ export default class UIHubConnection {
           store.dispatch.fileMovingProgresses.setState(data);
           break;
         case 'ReservedOptions':
-          store.dispatch.reservedOptions.setState(data);
+          store.dispatch.reservedOptions.update(data);
           break;
         case 'AppContext':
           store.dispatch.appContext.setState(data);

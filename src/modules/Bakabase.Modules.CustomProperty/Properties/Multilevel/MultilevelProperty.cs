@@ -2,7 +2,7 @@
 
 namespace Bakabase.Modules.CustomProperty.Properties.Multilevel
 {
-    internal record MultilevelProperty : CustomProperty<MultilevelPropertyOptions>
+    public record MultilevelProperty : CustomProperty<MultilevelPropertyOptions>
     {
     }
 }

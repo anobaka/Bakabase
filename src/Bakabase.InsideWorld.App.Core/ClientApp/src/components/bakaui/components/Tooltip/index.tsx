@@ -16,10 +16,19 @@ type TooltipPlacement =
   | 'right-start'
   | 'right-end';
 
+type Color = 'default' |
+  'foreground' |
+  'primary' |
+  'secondary' |
+  'success' |
+  'warning' |
+  'danger';
+
 interface IProps {
   content: ReactNode;
   children: React.ReactNode;
   placement?: TooltipPlacement;
+  color?: Color;
 }
 
 export default (props: IProps) => {

@@ -28,6 +28,7 @@ interface IProps {
   editable?: boolean;
   addable?: boolean;
   removable?: boolean;
+  title?: any;
 }
 
 const PropertySelector = ({
@@ -39,6 +40,7 @@ const PropertySelector = ({
                             addable,
                             editable,
                             removable,
+                            title,
                           }: IProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
@@ -48,7 +50,11 @@ const PropertySelector = ({
   const initializedRef = useRef(false);
   const [selection, setSelection] = useState<IKey[]>(propsSelection || []);
 
+  console.log('props selection', propsSelection, properties);
+
   useEffect(() => {
+    // console.log(reservedOptions.initialized, initializedRef.current);
+
     if (reservedOptions.initialized && !initializedRef.current) {
       initializedRef.current = true;
       loadProperties();
@@ -74,9 +80,13 @@ const PropertySelector = ({
     if (pool == 'all' || pool == 'custom') {
       const rsp = await BApi.customProperty.getAllCustomPropertiesV2({ additionalItems: CustomPropertyAdditionalItem.Category });
       // @ts-ignore
-      arr.push(...(rsp.data || []));
+      arr.push(...(rsp.data || []).map(d => ({
+        ...d,
+        isReserved: false,
+      })));
     }
     setProperties(arr);
+    console.log('reloaded', arr);
   };
 
   useEffect(() => {
@@ -118,6 +128,7 @@ const PropertySelector = ({
         }}
         editable={editable}
         removable={removable}
+        onSaved={loadProperties}
       />
     );
   };
@@ -157,8 +168,14 @@ const PropertySelector = ({
     }
   };
 
-  const selectedProperties = selection.map(s => properties.find(p => p.id == s.id && p.isReserved == s.isReserved)).filter(x => x).map(x => x!);
-  const unselectedProperties = properties.filter(p => !selection.some(s => s.id == p.id && s.isReserved == p.isReserved));
+  const filteredProperties = properties.filter(p => {
+    if (valueTypes) {
+      return valueTypes.includes(p.type);
+    }
+    return true;
+  });
+  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.isReserved == s.isReserved)).filter(x => x).map(x => x!);
+  const unselectedProperties = filteredProperties.filter(p => !selection.some(s => s.id == p.id && s.isReserved == p.isReserved));
   const propertyCount = selectedProperties.length + unselectedProperties.length;
 
   const renderProperties = () => {
@@ -185,32 +202,48 @@ const PropertySelector = ({
     }
 
     return (
-      <div className={'flex gap-2'}>
-        <div className={'border-1 rounded p-2'}>
-          <div className={'font-bold'}>{t('Selected')}</div>
-          <div className={'mt-2 flex flex-wrap gap-2 items-start'}>
-            {selectedProperties.map(p => renderProperty(p))}
+      <>
+        <Button
+          color={'primary'}
+          size={'sm'}
+          className={'mb-2'}
+          onClick={() => {
+            PropertyDialog.show({
+              onSaved: loadProperties,
+              validValueTypes: valueTypes?.map(v => v as unknown as CustomPropertyType),
+            });
+          }}
+        >
+          {t('Add a property')}
+        </Button>
+        <div className={'flex gap-2'}>
+          <div className={'border-1 rounded p-2'}>
+            <div className={'font-bold'}>{t('Selected')}</div>
+            <div className={'mt-2 flex flex-wrap gap-2 items-start'}>
+              {selectedProperties.map(p => renderProperty(p))}
+            </div>
+          </div>
+          <div className={'border-1 rounded p-2 flex-1 border-dashed'}>
+            <div className={'font-bold'}>{t('Not selected')}</div>
+            <div className={'mt-2 flex flex-wrap gap-2 items-start'}>
+              {unselectedProperties.map(p => renderProperty(p))}
+            </div>
           </div>
         </div>
-        <div className={'border-1 rounded p-2 flex-1 border-dashed'}>
-          <div className={'font-bold'}>{t('Not selected')}</div>
-          <div className={'mt-2 flex flex-wrap gap-2 items-start'}>
-            {unselectedProperties.map(p => renderProperty(p))}
-          </div>
-        </div>
-      </div>
+      </>
     );
   };
 
   return (
     <Modal
+      size={'xl'}
       visible={visible}
       onClose={close}
       onOk={async () => {
         await onSubmit(selection);
         close();
       }}
-      title={t(multiple ? 'Select properties' : 'Select a property')}
+      title={title ?? t(multiple ? 'Select properties' : 'Select a property')}
       footer={(multiple === true && propertyCount > 0) ? true : (<Spacer />)}
     >
       <div>

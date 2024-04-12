@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ChoiceList from './components/ChoiceList';
 import { createPortalOfComponent } from '@/components/utils';
-import { CustomPropertyType } from '@/sdk/constants';
+import { CustomPropertyType, StandardValueConversionLoss } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
-import { Button, Input, Modal, Popover, Progress, Select, Switch } from '@/components/bakaui';
+import { Button, Chip, Input, Modal, Popover, Progress, Select, Switch, Tab, Tabs } from '@/components/bakaui';
 import type {
   IChoicePropertyOptions,
   INumberPropertyOptions,
@@ -18,7 +18,7 @@ import { PropertyTypeIconMap } from '@/components/Property/models';
 
 interface IProps {
   value?: CustomPropertyForm;
-  onSaved?: (property: IProperty) => any;
+  onSaved?: (property: Omit<IProperty, 'isReserved'>) => any;
   validValueTypes?: CustomPropertyType[];
 }
 
@@ -111,7 +111,7 @@ const PropertyDialog = ({
                 size={'sm'}
                 label={t('Default value')}
                 selectionMode={multiple ? 'multiple' : 'single'}
-                value={options?.defaultValue}
+                selectedKeys={options?.defaultValue}
                 dataSource={options?.choices?.map(choice => ({
                   label: choice.value,
                   value: choice.id,
@@ -131,15 +131,16 @@ const PropertyDialog = ({
           );
         }
         case CustomPropertyType.Number: {
-          const options = property.options as INumberPropertyOptions;
+          const options = property.options as INumberPropertyOptions ?? {};
           const previewValue = 80;
           const previewValueStr = Number(previewValue).toFixed(options?.precision || 0);
-          console.log(previewValue, options?.precision, previewValueStr);
+          // console.log(previewValue, options?.precision, previewValueStr);
+          options.precision ??= 0;
           return (
             <>
               <Select
                 label={t('Precision')}
-                value={options?.precision}
+                selectedKeys={[options.precision.toString()]}
                 dataSource={NumberPrecisions}
                 onSelectionChange={c => {
                   setProperty({
@@ -160,14 +161,15 @@ const PropertyDialog = ({
           );
         }
         case CustomPropertyType.Percentage: {
-          const options = property.options as IPercentagePropertyOptions;
+          const options = property.options as IPercentagePropertyOptions ?? {};
           const previewValue = 80;
           const previewValueStr = `${Number(previewValue).toFixed(options?.precision || 0)}%`;
+          options.precision ??= 0;
           return (
             <>
               <Select
                 label={t('Precision')}
-                value={options?.precision}
+                selectedKeys={[options.precision.toString()]}
                 dataSource={NumberPrecisions}
                 onSelectionChange={c => {
                   setProperty({
@@ -215,28 +217,26 @@ const PropertyDialog = ({
           );
         }
         case CustomPropertyType.Rating: {
-          const options = property.options as IRatingPropertyOptions;
+          const options = property.options as IRatingPropertyOptions ?? {};
+          options.maxValue ??= 5;
           return (
             <>
-              <div className="label">{t('Max value')}</div>
-              <div className="value">
-                <Select
-                  value={options?.maxValue}
-                  dataSource={RatingMaxValueDataSource}
-                  onSelectionChange={c => {
-                    setProperty({
-                      ...property,
-                      options: {
-                        ...options,
-                        maxValue: c,
-                      },
-                    });
-                  }}
-                />
-              </div>
+              <Select
+                label={t('Max value')}
+                selectedKeys={[options.maxValue.toString()]}
+                dataSource={RatingMaxValueDataSource}
+                onSelectionChange={c => {
+                  setProperty({
+                    ...property,
+                    options: {
+                      ...options,
+                      maxValue: c.values().next().value,
+                    },
+                  });
+                }}
+              />
             </>
           );
-          break;
         }
         case CustomPropertyType.Boolean: {
           break;
@@ -272,6 +272,7 @@ const PropertyDialog = ({
         };
         const rsp = (property.id != undefined && property.id > 0) ? await BApi.customProperty.putCustomProperty(property.id, model) : await BApi.customProperty.addCustomProperty(model);
         if (!rsp.code) {
+          // console.log('on saved', onSaved);
           onSaved?.({
             id: rsp.data!.id!,
             name: rsp.data!.name!,
@@ -318,11 +319,89 @@ const PropertyDialog = ({
                             variant={'light'}
                             className={'justify-start'}
                             onClick={() => {
+                              if (property.id != undefined && property.id > 0) {
+                                // change property type
+                                const model = Modal.show({
+                                  title: t('You are changing property type'),
+                                  children: t('Changing the property type may cause the loss of existing data. Click \'continue\' to check.'),
+                                  footer: {
+                                    actions: ['ok', 'cancel'],
+                                    okProps: {
+                                      children: t('Continue'),
+                                    },
+                                  },
+                                  onOk: async () => {
+                                    const rsp = await BApi.customProperty.calculateCustomPropertyTypeConversionLoss(property.id!, type);
+                                    if (rsp.data) {
+                                      const {
+                                        totalDataCount,
+                                        incompatibleDataCount,
+                                        lossData,
+                                      } = rsp.data;
+                                      const lossKeys = lossData ? Object.keys(lossData) : undefined;
+                                      Modal.show({
+                                        title: t('Final check'),
+                                        size: incompatibleDataCount! > 0 ? 'lg' : undefined,
+                                        children: (
+                                          <div>
+                                            <div className={'text-medium'}>
+                                              {incompatibleDataCount! > 0 ? t('Found {{count}} data, and {{incompatibleDataCount}} data will not be retained', {
+                                                count: totalDataCount!,
+                                                incompatibleDataCount: incompatibleDataCount,
+                                              }) : t('Found {{count}} data, and all of them will be retained', { count: totalDataCount! })}
+                                            </div>
+                                            <div className={'font-bold'}>
+                                              {t('Be careful, this process is irreversible')}
+                                            </div>
+                                            {lossKeys && lossKeys.length > 0 && (
+                                              <Tabs>
+                                                {lossKeys.map(k => {
+                                                  const loss = parseInt(k, 10) as StandardValueConversionLoss;
+                                                  const data = lossData![k];
+                                                  return (
+                                                    <Tab
+                                                      key={loss}
+                                                      className={'mt-2'}
+                                                      title={(
+                                                        <>
+                                                          {t(`StandardValueConversionLoss.${StandardValueConversionLoss[loss]}`)}
+                                                          ({data.length})
+                                                        </>
+                                                      )}
+                                                    >
+                                                      <div className={'flex flex-wrap gap-2'}>
+                                                        {data.map(d => {
+                                                          return (
+                                                            <Chip size={'sm'}>
+                                                              {d}
+                                                            </Chip>
+                                                          );
+                                                        })}
+                                                      </div>
+                                                    </Tab>
+                                                  );
+                                                })}
+                                              </Tabs>
+                                            )}
+                                          </div>
+                                        ),
+                                        footer: {
+                                          actions: ['ok', 'cancel'],
+                                          okProps: {
+                                            children: t('Convert'),
+                                          },
+                                        },
+                                      });
+                                    }
+                                  },
+                                });
+                              } else {
+                                setProperty({
+                                  ...property,
+                                  type,
+                                });
+                              }
                               setTypeGroupsVisible(false);
-                              setProperty({
-                                ...property,
-                                type,
-                              });
                             }}
                           >
                             <CustomIcon type={PropertyTypeIconMap[type]!} className={'text-medium'} />

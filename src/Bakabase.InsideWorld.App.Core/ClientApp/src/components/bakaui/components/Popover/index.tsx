@@ -12,7 +12,7 @@ interface PopoverProps {
 }
 
 export default ({ trigger, children, visible, closeMode, ...otherProps }: PopoverProps) => {
-  console.log(closeMode?.includes('esc'), closeMode?.includes('mask') == true);
+  // console.log(closeMode?.includes('esc'), closeMode?.includes('mask') == true);
   return (
     <Popover
       isOpen={visible}

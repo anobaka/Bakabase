@@ -30,12 +30,14 @@ namespace Bakabase.InsideWorld.Business.Configurations
         public readonly IBOptionsManager<ThirdPartyOptions> ThirdParty;
         public readonly IBOptionsManager<ResourceOptions> Resource;
         public readonly IBOptionsManager<NetworkOptions> Network;
+        public readonly IBOptionsManager<MigrationOptions> Migration;
 
         public InsideWorldOptionsManagerPool(IBOptionsManager<UIOptions> ui, IBOptionsManager<BilibiliOptions> bilibili,
             IBOptionsManager<ExHentaiOptions> exHentai, IBOptionsManager<FileSystemOptions> fileSystem,
             IBOptionsManager<JavLibraryOptions> javLibrary, IBOptionsManager<PixivOptions> pixiv,
             IBOptionsManager<ThirdPartyOptions> thirdParty, IBOptionsManager<ResourceOptions> resource,
-            IBOptionsManager<AppOptions> app, IBOptionsManager<NetworkOptions> network)
+            IBOptionsManager<AppOptions> app, IBOptionsManager<NetworkOptions> network,
+            IBOptionsManager<MigrationOptions> migration)
         {
             UI = ui;
             Bilibili = bilibili;
@@ -47,6 +49,7 @@ namespace Bakabase.InsideWorld.Business.Configurations
             Resource = resource;
             App = app;
             Network = network;
+            Migration = migration;
 
             AllOptionsManagers = SpecificTypeUtils<InsideWorldOptionsManagerPool>.Type.GetFields()
                 .Where(a =>

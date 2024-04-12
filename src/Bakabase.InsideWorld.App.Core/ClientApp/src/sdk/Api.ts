@@ -135,6 +135,14 @@ export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
   asc?: boolean;
 }
 
+export interface BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel {
+  /** @format int32 */
+  totalDataCount?: number;
+  /** @format int32 */
+  incompatibleDataCount?: number;
+  lossData?: Record<string, string[]>;
+}
+
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel {
   language?: string | null;
   enablePreReleaseChannel?: boolean | null;
@@ -583,6 +591,14 @@ export interface BakabaseInsideWorldBusinessModelsInputCategorySetupWizardInputM
   category?: BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModel;
   mediaLibraries?: BakabaseInsideWorldBusinessModelsDomainMediaLibrary[] | null;
   syncAfterSaving?: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessModelsInputMigrationTargetApplyInputModel {
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  propertyKey?: string | null;
+  /** @format int32 */
+  targetPropertyId?: number | null;
 }
 
 export interface BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel {
@@ -1962,6 +1978,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainCustomProperty;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
   /** @format int32 */
   code?: number;
@@ -2432,10 +2455,10 @@ export type SystemReflectionGenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 |
 export type SystemReflectionICustomAttributeProvider = object;
 
 export interface SystemReflectionMemberInfo {
-  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
-  memberType?: SystemReflectionMemberTypes;
   declaringType?: SystemType;
   reflectedType?: SystemType;
+  /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
+  memberType?: SystemReflectionMemberTypes;
   name?: string | null;
   module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
@@ -3992,6 +4015,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/custom-property/${id}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name CalculateCustomPropertyTypeConversionLoss
+     * @request POST:/custom-property/{id}/{type}/loss
+     */
+    calculateCustomPropertyTypeConversionLoss: (
+      id: number,
+      type: BakabaseAbstractionsModelsDomainConstantsCustomPropertyType,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel,
+        any
+      >({
+        path: `/custom-property/${id}/${type}/loss`,
+        method: "POST",
         format: "json",
         ...params,
       }),
@@ -5839,7 +5884,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name MigrateTarget
      * @request POST:/migration/target/migration
      */
-    migrateTarget: (data: BakabaseInsideWorldBusinessModelsDomainMigrationTarget, params: RequestParams = {}) =>
+    migrateTarget: (
+      data: BakabaseInsideWorldBusinessModelsInputMigrationTargetApplyInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/migration/target/migration`,
         method: "POST",

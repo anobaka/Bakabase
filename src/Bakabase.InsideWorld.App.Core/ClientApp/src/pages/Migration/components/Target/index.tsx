@@ -5,8 +5,8 @@ import SimplePropertySelector from '../SimplePropertySelector';
 import type { CustomPropertyType } from '@/sdk/constants';
 import { ResourceProperty, StandardValueConversionLoss } from '@/sdk/constants';
 import { Button, Chip, Modal } from '@/components/bakaui';
-import type { ICustomProperty } from '@/pages/CustomProperty/models';
 import BApi from '@/sdk/BApi';
+import type { IProperty } from '@/components/Property/models';
 
 export interface MigrationTarget {
   label?: string;
@@ -39,9 +39,10 @@ const Target = ({
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
   const [lossDataDialogVisible, setLossDataDialogVisible] = useState(false);
 
-  const [selectedProperty, setSelectedProperty] = useState<ICustomProperty>();
+  const [selectedProperty, setSelectedProperty] = useState<IProperty>();
 
-  const lossData = target.targetCandidates?.find(d => d.type == selectedProperty?.type)?.lossData;
+  const lossData = target.targetCandidates?.find(d => d.type == (selectedProperty?.type as unknown as CustomPropertyType))?.lossData;
+  const hasLossData = lossData && Object.keys(lossData).length > 0;
 
   return (
     <div className={`flex ${isLeaf ? '' : 'flex-col'} gap-2 mt-1 mb-1`}>
@@ -63,7 +64,7 @@ const Target = ({
         </Modal>
       )}
       {
-        lossData && (
+        hasLossData && (
           <Modal
             title={t('Some data will be lost')}
             size={'xl'}
@@ -103,7 +104,7 @@ const Target = ({
               setDataDialogVisible(true);
             }}
           >
-            <FileSearchOutlined />
+            <FileSearchOutlined className={'text-small'} />
             {target.dataCount}
           </Button>
         )}
@@ -113,7 +114,11 @@ const Target = ({
           {target.subTargets.map((subTarget, i) => {
             return (
               <div key={i} className={'flex items-center gap-2'}>
-                <Target target={subTarget} isLeaf={!subTarget?.subTargets} />
+                <Target
+                  target={subTarget}
+                  isLeaf={!subTarget?.subTargets}
+                  onMigrated={onMigrated}
+                />
               </div>
             );
           })}
@@ -132,14 +137,14 @@ const Target = ({
               onMigrated?.();
             }}
           >
-            {t('Are you sure to migrate')} {label} {t('to')} {selectedProperty?.name}?
+            {t('Are you sure to migrate [{{target}}] to [{{property}}]?', { target: label, property: selectedProperty?.name })}
           </Modal>
           {t('Convert to')}
           <SimplePropertySelector
             onSelected={p => setSelectedProperty(p)}
             valueTypes={target.targetCandidates?.map(tc => tc.type)}
           />
-          {lossData && (
+          {hasLossData && (
             <Button
               color={'danger'}
               size={'sm'}
@@ -148,7 +153,7 @@ const Target = ({
                 setLossDataDialogVisible(true);
               }}
             >
-              <InfoCircleOutlined />
+              <InfoCircleOutlined className={'text-small'} />
               {t('Some data will be lost')}, {t('check them here')}
             </Button>
           )}

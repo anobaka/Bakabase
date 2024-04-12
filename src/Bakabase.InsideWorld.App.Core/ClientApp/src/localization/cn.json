@@ -1154,5 +1154,18 @@
   "StandardValueConversionLoss.DateWillBeLost":"日期信息将会丢失",
   "Because the new feature is not compatible with some historical data, please complete the data migration before using it.": "由于新功能与部分历史数据不兼容，请在使用前完成数据迁移。",
   "No properties available": "没有可用的属性",
-  "Add a property": "添加一个属性"
+  "Add a property": "添加一个属性",
+  "Max value": "最大值",
+  "Are you sure to migrate [{{target}}] to [{{property}}]?": "确定要将[{{target}}]迁移至[{{property}}]吗？",
+  "Congratulations, all data has been migrated": "恭喜您完成了所有数据迁移任务",
+  "Conversion loss": "转换损失",
+  "All data will be retained": "所有数据将会保留",
+  "Found {{count}} data, and {{incompatibleDataCount}} data will not be retained": "找到{{count}}条数据，其中{{incompatibleDataCount}}条数据将不会被保留",
+  "You are changing property type": "您正在更改属性类型",
+  "Changing the property type may cause the loss of existing data. Click 'continue' to check.": "更改属性类型可能会导致现有数据丢失。点击'继续'查看。",
+  "Continue": "继续",
+  "Final check": "最终检查",
+  "Found {{count}} data, and all of them will be retained": "找到{{count}}条数据，所有数据都将会被保留",
+  "Convert": "转换",
+  "Be careful, this process is irreversible": "请注意，此操作不可逆"
 }

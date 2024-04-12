@@ -2094,6 +2094,57 @@ export const RemoveCustomPropertyURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: CalculateCustomPropertyTypeConversionLoss
+ * url: CalculateCustomPropertyTypeConversionLossURL
+ * method: CalculateCustomPropertyTypeConversionLoss_TYPE
+ * raw_url: CalculateCustomPropertyTypeConversionLoss_RAW_URL
+ * @param id - 
+ * @param type - 
+ */
+export const CalculateCustomPropertyTypeConversionLoss = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property/{id}/{type}/loss'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  path = path.replace('{type}', `${parameters['type']}`)
+  if (parameters['type'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: type'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const CalculateCustomPropertyTypeConversionLoss_RAW_URL = function() {
+  return '/custom-property/{id}/{type}/loss'
+}
+export const CalculateCustomPropertyTypeConversionLoss_TYPE = function() {
+  return 'post'
+}
+export const CalculateCustomPropertyTypeConversionLossURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property/{id}/{type}/loss'
+  path = path.replace('{id}', `${parameters['id']}`)
+  path = path.replace('{type}', `${parameters['type']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetStatistics
  * url: GetStatisticsURL
  * method: GetStatistics_TYPE

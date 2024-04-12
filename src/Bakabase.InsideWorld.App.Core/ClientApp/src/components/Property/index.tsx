@@ -6,10 +6,11 @@ import { PropertyTypeIconMap } from './models';
 import CustomIcon from '@/components/CustomIcon';
 import ClickableIcon from '@/components/ClickableIcon';
 import PropertyDialog from '@/components/PropertyDialog';
-import { Modal } from '@/components/bakaui';
+import { Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import SimpleLabel from '@/components/SimpleLabel';
-import type { CustomPropertyType, StandardValueType } from '@/sdk/constants';
+import type { CustomPropertyType } from '@/sdk/constants';
+import { StandardValueType } from '@/sdk/constants';
 
 interface IProps {
   property: IProperty;
@@ -40,7 +41,7 @@ export default ({
   return (
     <div
       key={property.id}
-      className={styles.property}
+      className={`${styles.property} group`}
       onClick={onClick}
     >
       <Modal
@@ -58,13 +59,20 @@ export default ({
         <div className={`${styles.left} mr-2`}>
           <div className={styles.name}>{property.name}</div>
           {icon != undefined && (
-            <div className={styles.type}>
-              <CustomIcon type={icon} className={'text-medium'} />
-            </div>
+            <Tooltip
+              color={'foreground'}
+              content={t(StandardValueType[property.type])}
+            >
+              <div className={styles.type}>
+                <CustomIcon
+                  type={icon}
+                  className={'text-small'}
+                />
+              </div>
+            </Tooltip>
           )}
         </div>
-        (
-        <div className={'flex gap-0.5 items-center'}>
+        <div className={'flex gap-0.5 items-center invisible group-hover:visible'}>
           {editable && (
             <ClickableIcon
               colorType={'normal'}
@@ -100,7 +108,6 @@ export default ({
             />
           )}
         </div>
-        )
       </div>
       <div className={styles.categories}>
         {property.categories?.map(c => {

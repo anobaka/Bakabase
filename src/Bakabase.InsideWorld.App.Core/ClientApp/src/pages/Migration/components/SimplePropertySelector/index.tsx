@@ -2,18 +2,18 @@ import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import PropertySelector from '@/components/PropertySelector';
 import { Button } from '@/components/bakaui';
-import type { ICustomProperty } from '@/pages/CustomProperty/models';
 import type { CustomPropertyType, StandardValueType } from '@/sdk/constants';
+import type { IProperty } from '@/components/Property/models';
 
 interface IProps {
-  onSelected?: (property: ICustomProperty) => any;
+  onSelected?: (property: IProperty) => any;
   valueTypes?: CustomPropertyType[];
 }
 
 export default (props: IProps) => {
   const { t } = useTranslation();
 
-  const [property, setProperty] = useState<ICustomProperty>();
+  const [property, setProperty] = useState<IProperty>();
 
   return (
     <Button
@@ -23,12 +23,14 @@ export default (props: IProps) => {
       className={'ml-2'}
       onClick={() => {
         PropertySelector.show({
+          editable: true,
+          removable: true,
           addable: true,
           pool: 'custom',
           multiple: false,
           valueTypes: props.valueTypes?.map(v => v as unknown as StandardValueType),
           onSubmit: async (selected) => {
-            const p = selected.customProperties![0];
+            const p = selected![0];
             setProperty(p);
             props.onSelected?.(p);
           },

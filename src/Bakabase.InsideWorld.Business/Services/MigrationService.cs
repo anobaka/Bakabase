@@ -4,10 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.CustomProperty;
+using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Dto;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Domain;
+using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Business.Models.View;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
@@ -19,6 +24,7 @@ using Bakabase.Modules.CustomProperty.Properties.DateTime;
 using Bakabase.Modules.CustomProperty.Properties.Number;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 using Bakabase.Modules.CustomProperty.Properties.Time;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
@@ -45,6 +51,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly Dictionary<CustomPropertyType, ICustomPropertyDescriptor> _customPropertyDescriptors;
         private readonly SpecialTextService _specialTextService;
         private readonly ConversionService _conversionService;
+        private readonly IBOptionsManager<MigrationOptions> _migrationOptions;
 
         public MigrationService(PublisherService publisherService, VolumeService volumeService,
             SeriesService seriesService, OriginalService originalService,
@@ -54,7 +61,7 @@ namespace Bakabase.InsideWorld.Business.Services
             IEnumerable<ICustomPropertyDescriptor> customPropertyDescriptors,
             FavoritesResourceMappingService favoritesResourceMappingService,
             OriginalResourceMappingService originalResourceMappingService, SpecialTextService specialTextService,
-            ConversionService conversionService)
+            ConversionService conversionService, IBOptionsManager<MigrationOptions> migrationOptions)
         {
             _publisherService = publisherService;
             _volumeService = volumeService;
@@ -69,54 +76,115 @@ namespace Bakabase.InsideWorld.Business.Services
             _originalResourceMappingService = originalResourceMappingService;
             _specialTextService = specialTextService;
             _conversionService = conversionService;
+            _migrationOptions = migrationOptions;
             _customPropertyDescriptors = customPropertyDescriptors.ToDictionary(x => x.Type, x => x);
         }
 
         public async Task<List<MigrationTargetViewModel>> GetMigrationTargets()
         {
-            var publishers = (await _publisherService.GetAll()).Select(x => x.Name).ToHashSet().ToList();
-            var originals = (await _originalService.GetAllDtoList()).Select(x => x.Name).ToList();
-            var series = (await _seriesService.GetAll()).Select(x => x.Name).ToList();
-            var volumes = (await _volumeService.GetAll()).Select(v => v.ToDto()!).ToList();
-            var customResourceProperties = (await _customResourcePropertyService.GetAll())!;
-            var resources = await _resourceService.GetAllEntities();
-            var introductions = resources.Select(r => r.Introduction).Where(s => !string.IsNullOrEmpty(s)).Distinct()
-                .ToList();
-            var rates = resources.Select(r => r.Rate).Where(r => r > 0).Distinct().ToList();
-            var languages = resources.Select(r => r.Language).Where(r => r > 0).Distinct().ToList();
-            var releaseDtList = resources.Select(r => r.ReleaseDt).Where(r => r.HasValue).Select(r => r!.Value)
-                .Distinct().ToList();
-            var favorites = (await _favoritesService.GetAll()).Select(f => f.Name).Distinct().ToList();
-
-            var targets = new List<MigrationTargetViewModel>
+            var targets = new List<MigrationTargetViewModel>();
+            var doneProperties = _migrationOptions.Value?.Properties?.Select(x => x.Property).ToHashSet() ??
+                                 new HashSet<ResourceProperty>();
+            if (!doneProperties.Contains(ResourceProperty.Publisher))
             {
-                await _buildSimpleMigrationTargetViewModel(publishers, ResourceProperty.Publisher, null,
-                    CustomPropertyType.MultipleChoice, [CustomPropertyType.MultipleChoice], s => s),
-                await _buildSimpleMigrationTargetViewModel(originals, ResourceProperty.Original, null,
-                    CustomPropertyType.MultipleChoice, [CustomPropertyType.MultipleChoice], s => s),
-                await _buildSimpleMigrationTargetViewModel(series, ResourceProperty.Series, null,
-                    CustomPropertyType.SingleChoice, [CustomPropertyType.SingleChoice], s => s),
-                await _buildVolumeMigrationTargetViewModel(volumes),
+                var publishers = (await _publisherService.GetAll()).Select(x => x.Name).ToHashSet().ToList();
+                targets.Add(await _buildSimpleMigrationTargetViewModel(publishers, ResourceProperty.Publisher, null,
+                    CustomPropertyType.MultipleChoice, [CustomPropertyType.MultipleChoice], s => s));
+            }
 
-                await _buildSimpleMigrationTargetViewModel<string>(introductions, ResourceProperty.Introduction, null,
-                    CustomPropertyType.MultilineText, [CustomPropertyType.MultilineText], s => s),
-                await _buildSimpleMigrationTargetViewModel(rates, ResourceProperty.Rate, null,
-                    CustomPropertyType.Rating, [CustomPropertyType.Rating], r => r.ToString("F2")),
-                await _buildSimpleMigrationTargetViewModel(languages, ResourceProperty.Language, null,
-                    CustomPropertyType.SingleChoice, [CustomPropertyType.SingleChoice], l => l.ToString()),
-                await _buildSimpleMigrationTargetViewModel(releaseDtList, ResourceProperty.ReleaseDt, null,
-                    CustomPropertyType.Date, [CustomPropertyType.Date, CustomPropertyType.DateTime],
-                    r => r.ToString("yyyy-MM-dd HH:mm:ss")),
+            if (!doneProperties.Contains(ResourceProperty.Name) ||
+                !doneProperties.Contains(ResourceProperty.Introduction) ||
+                !doneProperties.Contains(ResourceProperty.Rate) ||
+                !doneProperties.Contains(ResourceProperty.Language) ||
+                !doneProperties.Contains(ResourceProperty.ReleaseDt))
+            {
+                var resources = await _resourceService.GetAllEntities();
 
-                await _buildCustomPropertyMigrationTargetViewModel(customResourceProperties),
-                await _buildSimpleMigrationTargetViewModel(favorites, ResourceProperty.Favorites, null,
-                    CustomPropertyType.SingleChoice, [CustomPropertyType.SingleChoice], s => s)
-            };
+                if (!doneProperties.Contains(ResourceProperty.Name))
+                {
+                    var names = resources.Select(x => x.Name).Where(x => !string.IsNullOrEmpty(x)).ToHashSet().ToList();
+                    targets.Add(await _buildSimpleMigrationTargetViewModel(names, ResourceProperty.Name, null,
+                        CustomPropertyType.SingleLineText, [CustomPropertyType.SingleLineText], s => s));
+                }
+
+                if (!doneProperties.Contains(ResourceProperty.Introduction))
+                {
+                    var introductions = resources.Select(x => x.Introduction).Where(x => !string.IsNullOrEmpty(x))
+                        .ToHashSet().ToList();
+                    targets.Add(await _buildSimpleMigrationTargetViewModel(introductions, ResourceProperty.Introduction,
+                        null, CustomPropertyType.MultilineText, [CustomPropertyType.MultilineText], s => s));
+                }
+
+                if (!doneProperties.Contains(ResourceProperty.Rate))
+                {
+                    var rates = resources.Select(x => x.Rate).Where(x => x > 0).ToHashSet().ToList();
+                    targets.Add(await _buildSimpleMigrationTargetViewModel(rates, ResourceProperty.Rate, null,
+                        CustomPropertyType.Rating, [CustomPropertyType.Rating], r => r.ToString("F2")));
+                }
+
+                if (!doneProperties.Contains(ResourceProperty.Language))
+                {
+                    var languages = resources.Select(x => x.Language).Where(x => x > 0).ToHashSet().ToList();
+                    targets.Add(await _buildSimpleMigrationTargetViewModel(languages, ResourceProperty.Language, null,
+                        CustomPropertyType.SingleChoice, [CustomPropertyType.SingleChoice], l => l.ToString()));
+                }
+
+                if (!doneProperties.Contains(ResourceProperty.ReleaseDt))
+                {
+                    var releaseDtList = resources.Select(x => x.ReleaseDt).Where(x => x.HasValue).Select(x => x!.Value)
+                        .ToHashSet().ToList();
+                    targets.Add(await _buildSimpleMigrationTargetViewModel(releaseDtList, ResourceProperty.ReleaseDt,
+                        null, CustomPropertyType.Date, [CustomPropertyType.Date, CustomPropertyType.DateTime],
+                        r => r.ToString("yyyy-MM-dd HH:mm:ss")));
+                }
+            }
+
+            if (!doneProperties.Contains(ResourceProperty.Original))
+            {
+                var originals = (await _originalService.GetAllDtoList()).Select(x => x.Name).ToList();
+                targets.Add(await _buildSimpleMigrationTargetViewModel(originals, ResourceProperty.Original, null,
+                    CustomPropertyType.MultipleChoice, [CustomPropertyType.MultipleChoice], s => s));
+            }
+
+            if (!doneProperties.Contains(ResourceProperty.Series))
+            {
+                var series = (await _seriesService.GetAll()).Select(x => x.Name).ToList();
+                targets.Add(await _buildSimpleMigrationTargetViewModel(series, ResourceProperty.Series, null,
+                    CustomPropertyType.SingleChoice, [CustomPropertyType.SingleChoice], s => s));
+            }
+
+            var allVolumeKeys = new string[] {nameof(VolumeDto.Index), nameof(VolumeDto.Title), nameof(VolumeDto.Name)};
+            var doneVolumeKeys = _migrationOptions.Value?.Properties?.Where(p => p.Property == ResourceProperty.Volume)
+                .Select(p => p.PropertyKey).Where(s => !string.IsNullOrEmpty(s)).ToHashSet() ?? [];
+            var restVolumeKeys = allVolumeKeys.Except(doneVolumeKeys).ToHashSet();
+            if (restVolumeKeys.Any())
+            {
+                var volumes = (await _volumeService.GetAll()).Select(v => v.ToDto()!).ToList();
+                var target = await _buildVolumeMigrationTargetViewModel(volumes, restVolumeKeys!);
+                if (target != null)
+                {
+                    targets.Add(target);
+                }
+            }
+
+            if (!doneProperties.Contains(ResourceProperty.Favorites))
+            {
+                var favorites = (await _favoritesService.GetAll()).Select(f => f.Name).Distinct().ToList();
+                targets.Add(await _buildSimpleMigrationTargetViewModel(favorites, ResourceProperty.Favorites, null,
+                    CustomPropertyType.SingleChoice, [CustomPropertyType.SingleChoice], s => s));
+            }
+
+            var doneCustomPropertyKeys = _migrationOptions.Value?.Properties?
+                .Where(p => p.Property == ResourceProperty.CustomProperty).Select(p => p.PropertyKey)
+                .Where(s => !string.IsNullOrEmpty(s)).ToHashSet() ?? [];
+            var customResourceProperties = (await _customResourcePropertyService.GetAll())!;
+            targets.Add(
+                await _buildCustomPropertyMigrationTargetViewModel(customResourceProperties, doneCustomPropertyKeys!));
 
             return targets.Where(t => t.DataCount > 0).ToList();
         }
 
-        private async Task<MigrationTargetViewModel> _buildVolumeMigrationTargetViewModel(List<VolumeDto> volumes)
+        private async Task<MigrationTargetViewModel?> _buildVolumeMigrationTargetViewModel(List<VolumeDto> volumes, HashSet<string> includedKeys)
         {
             var indexes = volumes.Select(v => v.Index).ToHashSet();
             var titles = volumes.Select(v => v.Title).Where(x => !string.IsNullOrEmpty(x)).ToHashSet();
@@ -124,40 +192,49 @@ namespace Bakabase.InsideWorld.Business.Services
 
             var subTargets = new List<MigrationTargetViewModel>();
 
-            if (indexes.Any())
+            if (indexes.Any() && includedKeys.Contains(nameof(VolumeDto.Index)))
             {
-                subTargets.Add(await _buildSimpleMigrationTargetViewModel(indexes.ToList(), ResourceProperty.Volume, nameof(VolumeDto.Index),
+                subTargets.Add(await _buildSimpleMigrationTargetViewModel(indexes.ToList(), ResourceProperty.Volume,
+                    nameof(VolumeDto.Index),
                     CustomPropertyType.Number, [CustomPropertyType.Number], s => s.ToString()));
             }
 
-            if (titles.Any())
+            if (titles.Any() && includedKeys.Contains(nameof(VolumeDto.Title)))
             {
-                subTargets.Add(await _buildSimpleMigrationTargetViewModel(titles.ToList(), ResourceProperty.Volume, nameof(VolumeDto.Title),
-                                       CustomPropertyType.SingleLineText, [CustomPropertyType.SingleLineText], s => s!));
+                subTargets.Add(await _buildSimpleMigrationTargetViewModel(titles.ToList(), ResourceProperty.Volume,
+                    nameof(VolumeDto.Title),
+                    CustomPropertyType.SingleLineText, [CustomPropertyType.SingleLineText], s => s!));
             }
 
-            if (names.Any())
+            if (names.Any() && includedKeys.Contains(nameof(VolumeDto.Name)))
             {
-                subTargets.Add(await _buildSimpleMigrationTargetViewModel(names.ToList(), ResourceProperty.Volume, nameof(VolumeDto.Name),
-                                                          CustomPropertyType.SingleLineText, [CustomPropertyType.SingleLineText], s => s!));
+                subTargets.Add(await _buildSimpleMigrationTargetViewModel(names.ToList(), ResourceProperty.Volume,
+                    nameof(VolumeDto.Name),
+                    CustomPropertyType.SingleLineText, [CustomPropertyType.SingleLineText], s => s!));
             }
 
-            return new MigrationTargetViewModel
+            if (subTargets.Any())
             {
-                Property = ResourceProperty.Volume,
-                DataCount = volumes.Count,
-                SubTargets = subTargets
-            };
+                return new MigrationTargetViewModel
+                {
+                    Property = ResourceProperty.Volume,
+                    DataCount = volumes.Count,
+                    SubTargets = subTargets
+                };
+            }
+
+            return null;
         }
 
         private async Task<MigrationTargetViewModel> _buildCustomPropertyMigrationTargetViewModel(
-            List<CustomResourceProperty> customResourceProperties)
+            List<CustomResourceProperty> customResourceProperties, HashSet<string> ignoredKeys)
         {
             var customPropertiesGroups = customResourceProperties.GroupBy(x => x.ResourceId)
                 .ToDictionary(d => d.Key,
                     d => d.GroupBy(c => c.Key)
                         .ToDictionary(e => e.Key, e => e.Select(f => f.Value).ToList()))
                 .SelectMany(a => a.Value).GroupBy(a => a.Key)
+                .Where(a => !ignoredKeys.Contains(a.Key))
                 .ToDictionary(a => a.Key, a =>
                 {
                     var lists = a.Select(b => b.Value.Distinct().OrderBy(c => c).ToList()).ToList();
@@ -238,7 +315,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 DataCount = data.Count,
                 Property = property,
                 PropertyKey = propertyKey,
-                TargetCandidates = []
+                TargetCandidates = [] 
             };
 
             foreach (var tc in candidateTargetTypes)
@@ -272,7 +349,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return model;
         }
 
-        public async Task<BaseResponse> ApplyMigration(MigrationTarget target)
+        public async Task<BaseResponse> ApplyMigration(MigrationTargetApplyInputModel target)
         {
             var targetProperty = await _customPropertyService.GetByKey(target.TargetPropertyId!.Value);
 
@@ -335,6 +412,14 @@ namespace Bakabase.InsideWorld.Business.Services
                                 ResourceId = x,
                                 Value = resourcePublishersMap[x].Select(y => choiceValueIdMap[y.Name!]!).ToArray()
                             }).ToList();
+
+                            var propertyDbModel = typedProperty.ToDbModel()!;
+                            await _customPropertyService.Put(typedProperty.Id, new CustomPropertyAddOrPutDto
+                            {
+                                Name = propertyDbModel.Name,
+                                Options = propertyDbModel.Options,
+                                Type = propertyDbModel.Type
+                            });
                             await _customPropertyValueService.AddRange(newValues);
                             break;
                         }
@@ -390,12 +475,14 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             var choiceValues = resourceData.Values.ToHashSet().Select(s => s.ToString()).ToArray();
                             Dictionary<string, string> choiceValueIdMap;
+                            CustomProperty propertyDbModel;
                             if (targetProperty.Type == CustomPropertyType.SingleChoice)
                             {
                                 var typedProperty = targetProperty as SingleChoiceProperty;
                                 typedProperty!.Options!.AddChoices(true, choiceValues);
                                 choiceValueIdMap = typedProperty.Options!.Choices!.GroupBy(x => x.Value)
                                     .ToDictionary(x => x.Key, x => x.First().Id);
+                                propertyDbModel = typedProperty.ToDbModel()!;
                             }
                             else
                             {
@@ -403,6 +490,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 typedProperty!.Options!.AddChoices(true, choiceValues);
                                 choiceValueIdMap = typedProperty.Options!.Choices!.GroupBy(x => x.Value)
                                     .ToDictionary(x => x.Key, x => x.First().Id);
+                                propertyDbModel = typedProperty.ToDbModel()!;
                             }
 
                             var languageChoiceMap = new Dictionary<ResourceLanguage, string>();
@@ -421,6 +509,12 @@ namespace Bakabase.InsideWorld.Business.Services
                                 ResourceId = x,
                                 Value = languageChoiceMap[resourceData[x]]
                             }).ToList();
+                            await _customPropertyService.Put(targetProperty.Id, new CustomPropertyAddOrPutDto
+                            {
+                                Name = propertyDbModel.Name,
+                                Options = propertyDbModel.Options,
+                                Type = propertyDbModel.Type
+                            });
                             await _customPropertyValueService.AddRange(newValues);
                             break;
                         }
@@ -559,6 +653,13 @@ namespace Bakabase.InsideWorld.Business.Services
                                 ResourceId = x,
                                 Value = resourceOriginalsMap[x].Select(y => choiceValueIdMap[y!]!).ToArray()
                             }).ToList();
+                            var propertyDbModel = typedProperty.ToDbModel()!;
+                            await _customPropertyService.Put(typedProperty.Id, new CustomPropertyAddOrPutDto
+                            {
+                                Name = propertyDbModel.Name,
+                                Options = propertyDbModel.Options,
+                                Type = propertyDbModel.Type
+                            });
                             await _customPropertyValueService.AddRange(newValues);
                             break;
                         }
@@ -597,6 +698,13 @@ namespace Bakabase.InsideWorld.Business.Services
                                 ResourceId = x,
                                 Value = choiceValueIdMap[resourceSeriesMap[x]!]
                             }).ToList();
+                            var propertyDbModel = typedProperty.ToDbModel()!;
+                            await _customPropertyService.Put(typedProperty.Id, new CustomPropertyAddOrPutDto
+                            {
+                                Name = propertyDbModel.Name,
+                                Options = propertyDbModel.Options,
+                                Type = propertyDbModel.Type
+                            });
                             await _customPropertyValueService.AddRange(newValues);
                             break;
                         }
@@ -704,8 +812,9 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
                         case CustomPropertyType.SingleChoice:
                         {
-                            var choiceValues = propertyValues.Values
-                                .Select(x => string.Join(BusinessConstants.TextSeparator, x)).Distinct().ToArray();
+                            var resourceValues = propertyValues.ToDictionary(d => d.Key,
+                                d => string.Join(BusinessConstants.TextSeparator, d.Value));
+                            var choiceValues = resourceValues.Values.ToHashSet().ToArray();
                             var typedProperty = targetProperty as SingleChoiceProperty;
                             typedProperty!.Options!.AddChoices(true, choiceValues!);
                             var choiceValueIdMap = typedProperty.Options!.Choices!.GroupBy(x => x.Value)
@@ -716,8 +825,15 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 PropertyId = targetProperty.Id,
                                 ResourceId = x,
-                                Value = choiceValueIdMap[propertyValues[x].First()!]
+                                Value = choiceValueIdMap[resourceValues[x]!]
                             }).ToList();
+                            var propertyDbModel = typedProperty.ToDbModel()!;
+                            await _customPropertyService.Put(typedProperty.Id, new CustomPropertyAddOrPutDto
+                            {
+                                Name = propertyDbModel.Name,
+                                Options = propertyDbModel.Options,
+                                Type = propertyDbModel.Type
+                            });
                             await _customPropertyValueService.AddRange(newValues);
                             break;
                         }
@@ -736,6 +852,13 @@ namespace Bakabase.InsideWorld.Business.Services
                                 ResourceId = x,
                                 Value = propertyValues[x].Select(y => choiceValueIdMap[y!]!).ToArray()
                             }).ToList();
+                            var propertyDbModel = typedProperty.ToDbModel()!;
+                            await _customPropertyService.Put(typedProperty.Id, new CustomPropertyAddOrPutDto
+                            {
+                                Name = propertyDbModel.Name,
+                                Options = propertyDbModel.Options,
+                                Type = propertyDbModel.Type
+                            });
                             await _customPropertyValueService.AddRange(newValues);
                             break;
                         }
@@ -911,6 +1034,13 @@ namespace Bakabase.InsideWorld.Business.Services
                                 ResourceId = x,
                                 Value = resourceFavoritesNamesMap[x].Select(y => choiceValueIdMap[y!]!).ToArray()
                             }).ToList();
+                            var propertyDbModel = typedProperty.ToDbModel()!;
+                            await _customPropertyService.Put(typedProperty.Id, new CustomPropertyAddOrPutDto
+                            {
+                                Name = propertyDbModel.Name,
+                                Options = propertyDbModel.Options,
+                                Type = propertyDbModel.Type
+                            });
                             await _customPropertyValueService.AddRange(newValues);
                             break;
                         }
@@ -920,11 +1050,19 @@ namespace Bakabase.InsideWorld.Business.Services
 
                     break;
                 }
-                case null:
-                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+            await _migrationOptions.SaveAsync(m =>
+            {
+                if (m.Properties?.Any(x => x.Property == target.Property && x.PropertyKey == target.PropertyKey) !=
+                    true)
+                {
+                    (m.Properties ??= []).Add(new MigrationOptions.PropertyMigrationOptions
+                        {PropertyKey = target.PropertyKey, Property = target.Property});
+                }
+            });
 
             return BaseResponseBuilder.Ok;
         }
