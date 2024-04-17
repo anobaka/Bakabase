@@ -296,7 +296,7 @@ const PropertyDialog = ({
                 size={'lg'}
                 onClick={() => setTypeGroupsVisible(true)}
               >
-                {property.type == undefined ? t('Please select') : (
+                {property.type == undefined ? t('Select a type') : (
                   <>
                     <CustomIcon type={PropertyTypeIconMap[property.type]!} className={'text-medium'} />
                     {t(CustomPropertyType[property.type])}

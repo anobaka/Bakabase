@@ -9,7 +9,7 @@ namespace Bakabase.Abstractions.Models.Domain
 		public int PropertyId { get; set; }
 		public int ResourceId { get; set; }
 		public CustomProperty? Property { get; set; }
-		public abstract bool IsMatch(CustomPropertyValueSearchRequestModel model);
+		// public abstract bool IsMatch(CustomPropertyValueSearchRequestModel model);
 		public object? Value { get; set; }
 	}
 
@@ -23,12 +23,12 @@ namespace Bakabase.Abstractions.Models.Domain
 			set => base.Value = _value = value;
 		}
 
-		public override bool IsMatch(CustomPropertyValueSearchRequestModel model)
-		{
-			return IsMatch(string.IsNullOrEmpty(model.Value) ? default : JsonConvert.DeserializeObject<T>(model.Value),
-				model);
-		}
-
-		protected abstract bool IsMatch(T? value, CustomPropertyValueSearchRequestModel model);
+		// public override bool IsMatch(CustomPropertyValueSearchRequestModel model)
+		// {
+		// 	return IsMatch(string.IsNullOrEmpty(model.Value) ? default : JsonConvert.DeserializeObject<T>(model.Value),
+		// 		model);
+		// }
+		//
+		// protected abstract bool IsMatch(T? value, CustomPropertyValueSearchRequestModel model);
 	}
 }

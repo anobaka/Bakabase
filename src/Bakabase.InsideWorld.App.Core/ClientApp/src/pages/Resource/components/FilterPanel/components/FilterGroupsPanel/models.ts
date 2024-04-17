@@ -7,11 +7,9 @@ export enum GroupCombinator {
 
 export interface IFilter {
   propertyId?: number;
-  propertyName?: string;
   isReservedProperty?: boolean;
   group?: IGroup;
   operation?: SearchOperation;
-  valueType?: StandardValueType;
   value?: any;
 }
 

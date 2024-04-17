@@ -41,7 +41,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     CustomPropertyAdditionalItem.None, returnCopy);
             var propertyMap = properties.ToDictionary(x => x.Id);
             var dtoList = values
-                .Select(v => CustomPropertyExtensions.Descriptors[propertyMap[v.PropertyId].Type].BuildValueDto(v)!)
+                .Select(v => CustomPropertyExtensions.Descriptors[propertyMap[v.PropertyId].Type].BuildDomainValue(v)!)
                 .ToList();
 
             foreach (var dto in dtoList)

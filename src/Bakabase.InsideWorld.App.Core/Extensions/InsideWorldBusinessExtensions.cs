@@ -1,14 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Processors;
+using Bakabase.InsideWorld.Business.Components.Conversion;
+using Bakabase.InsideWorld.Business.Components.Conversion.Value;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
+using Bakabase.InsideWorld.Business.Components.Migration;
 using Bakabase.InsideWorld.Business.Components.Network;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer;
@@ -26,6 +31,7 @@ using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Configs.Fixed;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.CustomProperty.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
@@ -133,12 +139,26 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddScoped<CustomPropertyValueService>();
             services.AddScoped<CategoryCustomPropertyMappingService>();
 
-            services.AddSingleton<ReservedOptions>();
+            services.AddSingleton<ReservedOptions>(t =>
+            {
+                var options = new ReservedOptions();
+                var customPropertyDescriptors = t.GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>();
+                options.Resource.StandardValueSearchOperationsMap =
+                    customPropertyDescriptors.ToDictionary(d => (int) d.Type.ToStandardValueType(),
+                        d => d.SearchOperations);
+                return options;
+            });
 
             services.AddSingleton<IResourceSearchContextProcessor, DefaultResourceSearchContextProcessor>();
 
             services.AddScoped<MigrationService>();
             services.AddScoped<ConversionService>();
+
+            services.AddValueConversion();
+            services.AddScoped<PropertyValueConverter>();
+            services.AddScoped<V190Migrator>();
+
+            services.AddCustomProperty();
 
             return services;
         }

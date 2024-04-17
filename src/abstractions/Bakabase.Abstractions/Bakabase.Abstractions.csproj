@@ -11,4 +11,8 @@
     <ProjectReference Include="..\..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Components\Text\" />
+  </ItemGroup>
+
 </Project>

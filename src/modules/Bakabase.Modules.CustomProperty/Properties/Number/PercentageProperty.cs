@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Properties.Number.Abstractions;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Number;
 
@@ -13,21 +14,10 @@ public record PercentagePropertyOptions
 
 public record PercentageProperty() : CustomProperty<PercentagePropertyOptions>;
 
-public record PercentagePropertyValue : TypedCustomPropertyValue<decimal>
-{
-    protected override bool IsMatch(decimal value, CustomPropertyValueSearchRequestModel model)
-    {
-        throw new System.NotImplementedException();
-    }
-}
+public record PercentagePropertyValue : TypedCustomPropertyValue<decimal>;
 
-public class PercentagePropertyDescriptor : AbstractCustomPropertyDescriptor<PercentageProperty, PercentagePropertyOptions,
-    PercentagePropertyValue, decimal>
+public class PercentagePropertyDescriptor : NumberPropertyDescriptor<PercentageProperty, PercentagePropertyOptions,
+    PercentagePropertyValue>
 {
     public override CustomPropertyType Type => CustomPropertyType.Percentage;
-
-    protected override bool IsMatch(decimal value, CustomPropertyValueSearchRequestModel model)
-    {
-        throw new System.NotImplementedException();
-    }
 }

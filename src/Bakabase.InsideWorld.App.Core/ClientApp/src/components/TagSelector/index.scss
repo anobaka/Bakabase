@@ -17,40 +17,4 @@
       gap: 5px;
     }
   }
-
-  .tag-groups {
-    .icon-plus-circle {
-      margin-left: 10px;
-      color: #999;
-      cursor: pointer;
-
-      &:hover {
-        color: #666;
-      }
-    }
-    .group-name {
-      margin-bottom: 5px;
-      display: flex;
-      align-items: center;
-      color: #999;
-      font-size: 14px;
-
-      .selected-tag-count {
-        color: var(--theme-text-primary);
-        margin-left: 5px;
-      }
-    }
-
-    .tag-group {
-      margin-bottom: 15px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 2.5px;
-      align-items: center;
-
-      .next-tag {
-        //margin-right: 5px;
-      }
-    }
-  }
 }

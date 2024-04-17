@@ -123,6 +123,8 @@ export default ({
     );
   };
 
+  // console.log(value, editing, operation, valueType, 666);
+
   const renderEditingValue = () => {
     switch (valueType!) {
       case StandardValueType.SingleLineText:

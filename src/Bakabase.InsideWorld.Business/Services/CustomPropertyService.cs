@@ -21,7 +21,9 @@ using Bakabase.Modules.CustomProperty.Properties.DateTime;
 using Bakabase.Modules.CustomProperty.Properties.Formula;
 using Bakabase.Modules.CustomProperty.Properties.Multilevel;
 using Bakabase.Modules.CustomProperty.Properties.Number;
+using Bakabase.Modules.CustomProperty.Properties.Number.Abstractions;
 using Bakabase.Modules.CustomProperty.Properties.Text;
+using Bakabase.Modules.CustomProperty.Properties.Text.Abstractions;
 using Bakabase.Modules.CustomProperty.Properties.Time;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
@@ -296,14 +298,24 @@ namespace Bakabase.InsideWorld.Business.Services
                 case CustomPropertyType.Multilevel:
                 {
                     var typedProperty = (property as MultilevelProperty)!;
-                    typedValues =
-                    [
-                        ..values.Cast<MultilevelPropertyValue>().Select(s =>
-                            string.IsNullOrEmpty(s.Value)
-                                ? null
-                                : typedProperty.Options?.Data?.Select(x => x.FindLabel(s.Value))
-                                    .FirstOrDefault(x => x != null))
-                    ];
+                    var allChains = new List<List<List<string>>>();
+                    foreach (var s in values.Cast<MultilevelPropertyValue>())
+                    {
+                        if (s.Value?.Any() == true)
+                        {
+                            var chains = s.Value
+                                .Select(item =>
+                                    typedProperty.Options?.Data?.Select(x => x.FindLabel(item))
+                                        .FirstOrDefault(x => x != null)?.ToList()).OfType<List<string>>().ToList();
+
+                            if (chains.Any())
+                            {
+                                allChains.Add(chains);
+                            }
+                        }
+                    }
+
+                    typedValues = [..allChains];
                     getDisplayStr = s => string.Join(BusinessConstants.TextSeparator, (s as string[])!);
                     break;
                 }
@@ -319,10 +331,10 @@ namespace Bakabase.InsideWorld.Business.Services
 
             foreach (var d in typedValues)
             {
-                var loss = await ConversionService.CheckConversionLoss(d, property.Type.ToStandardValueType(),
+                var (nv, loss) = await ConversionService.CheckConversionLoss(d, property.Type.ToStandardValueType(),
                     type.ToStandardValueType());
-                var list = SpecificEnumUtils<StandardValueConversionLoss>.Values.Where(s =>
-                    loss.HasFlag(s) && s != StandardValueConversionLoss.None).ToList();
+                var list = SpecificEnumUtils<StandardValueConversionLoss>.Values.Where(s => loss?.HasFlag(s) == true)
+                    .ToList();
                 foreach (var l in list)
                 {
                     var str = getDisplayStr(d);

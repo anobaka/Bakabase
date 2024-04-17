@@ -1,5 +1,5 @@
-import { Chip } from '@nextui-org/react';
-import React from 'react';
+import { Chip as NextUIChip } from '@nextui-org/react';
+import React, { forwardRef } from 'react';
 
 
 interface IProps {
@@ -9,8 +9,10 @@ interface IProps {
   onClick?: () => any;
 }
 
-export default (props: IProps) => {
+const Chip = forwardRef<any, IProps>((props: IProps, ref) => {
   return (
-    <Chip {...props} />
+    <NextUIChip ref={ref} {...props} />
   );
-};
+});
+
+export default Chip;

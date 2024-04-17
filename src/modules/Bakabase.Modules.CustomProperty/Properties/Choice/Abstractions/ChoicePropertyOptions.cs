@@ -1,4 +1,4 @@
-﻿namespace Bakabase.Modules.CustomProperty.Properties.Choice
+﻿namespace Bakabase.Modules.CustomProperty.Properties.Choice.Abstractions
 {
     public record ChoicePropertyOptions<TValue>
     {

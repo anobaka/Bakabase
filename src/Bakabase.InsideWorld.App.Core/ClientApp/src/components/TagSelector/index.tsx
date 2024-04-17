@@ -11,6 +11,8 @@ import { Tag as TagDto } from '@/core/models/Tag';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
+import AliasAppliedChip from '@/components/Chips/AliasAppliedChip';
+import { Chip, Spacer } from '@/components/bakaui';
 
 interface IValue {
   tagIds: number[];
@@ -64,6 +66,7 @@ const TagSelector = (props: IProps) => {
 
   const loadAllGroups = useCallback(() => {
     const additionalItems = TagGroupAdditionalItem.PreferredAlias | TagGroupAdditionalItem.Tags | TagGroupAdditionalItem.TagNamePreferredAlias;
+    // @ts-ignore
     BApi.tagGroup.getAllTagGroups({ additionalItems })
       .then((a) => {
         const data = a.data || [];
@@ -154,7 +157,7 @@ const TagSelector = (props: IProps) => {
   };
 
   return (
-    <div className={'tag-selector'} {...otherProps}>
+    <div className={'tag-selector min-h-[100px]'} {...otherProps}>
       <div className="opt">
         <div className="left">
           <Input
@@ -169,7 +172,7 @@ const TagSelector = (props: IProps) => {
             value={keyword}
             onChange={(v) => setKeyword(v)}
           />
-          <IceLabel inverse={false} status={'info'}>{t('Alias applied')}</IceLabel>
+          <AliasAppliedChip />
           {t('{{count}} selected', { count: finalValue.tagIds.length })}
         </div>
         <div className="right">
@@ -186,32 +189,37 @@ const TagSelector = (props: IProps) => {
           )}
         </div>
       </div>
-      <div className="tag-groups">
+      <div className="grid grid-cols-8 gap-x-5 mt-5">
         {filteredTagGroups.map((g) => {
           const selectedTagsCount = finalValue.tagIds.filter((id) => g.tags?.some((gt) => gt.id == id)).length ?? 0;
           return (
             <React.Fragment key={g.id}>
-              <div className={'group-name'}>
-                {g.displayName?.length > 0 ? g.displayName : t('Default')}
+              <div className={'col-span-1'}>
+                <div>
+                  <Chip size={'sm'}>
+                    {g.displayName?.length > 0 ? g.displayName : t('Default')}
+                  </Chip>
+                  <Spacer x={10} />
+                  {enableCreation && (
+                    <CustomIcon
+                      type={'plus-circle'}
+                      className={'text-small'}
+                      onClick={() => {
+                        renderCreationDialog('Tag name list, and press enter to add a new tag.', AddTags, (arr) => ({
+                          [g.id]: arr,
+                        }));
+                      }}
+                    />
+                  )}
+                </div>
                 {selectedTagsCount > 0 && (
-                  <div className={'selected-tag-count'}>
+                  <div style={{ color: 'var(--bakaui-primary)' }} className={'text-small'}>
                     ({t('{{count}} selected', { count: selectedTagsCount })})
                   </div>
                 )}
-                {enableCreation && (
-                  <CustomIcon
-                    type={'plus-circle'}
-                    size={'small'}
-                    onClick={() => {
-                      renderCreationDialog('Tag name list, and press enter to add a new tag.', AddTags, (arr) => ({
-                        [g.id]: arr,
-                      }));
-                    }}
-                  />
-                )}
               </div>
               {g.tags?.length > 0 && (
-                <div className={'tag-group'}>
+                <div className={'flex flex-wrap gap-1 col-span-7'}>
                   {g.tags.map((tag) => {
                       let tagComp;
                       const checked = finalValue.tagIds.includes(tag.id);

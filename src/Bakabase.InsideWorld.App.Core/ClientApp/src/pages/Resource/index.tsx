@@ -154,7 +154,7 @@ export default () => {
                     }}
                   >
                     {selected ? <CheckCircleTwoTone className={'text-5xl'} />
-                      : <CheckCircleOutlined className={'text-5xl opacity-60'} />}
+                      : <CheckCircleOutlined className={'text-5xl opacity-80'} />}
                   </div>
                 )}
                 <Resource

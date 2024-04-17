@@ -1,4 +1,4 @@
-﻿using Bakabase.Modules.CustomProperty.Properties.Choice;
+﻿using Bakabase.Modules.CustomProperty.Properties.Choice.Abstractions;
 using Quartz;
 using System;
 using System.Collections.Generic;
@@ -10,11 +10,11 @@ namespace Bakabase.Modules.CustomProperty.Extensions
 {
     public static class ChoicePropertyExtensions
     {
-        public static void AddChoices<T>(this ChoicePropertyOptions<T> options, bool ignoreSame, params string[] values)
+        public static void AddChoices<T>(this ChoicePropertyOptions<T> options, bool ignoreSameValue, params string[] values)
         {
             options.Choices ??= new List<ChoicePropertyOptions<T>.ChoiceOptions>();
 
-            if (ignoreSame)
+            if (ignoreSameValue)
             {
                 var current = options.Choices.Select(c => c.Value).ToHashSet();
                 values = values.ToHashSet().Except(current).ToArray();

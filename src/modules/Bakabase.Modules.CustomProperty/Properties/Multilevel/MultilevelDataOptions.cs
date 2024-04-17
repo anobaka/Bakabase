@@ -5,6 +5,6 @@
         public string Id { get; set; } = null!;
         public string Value { get; set; } = null!;
         public string Color { get; set; } = null!;
-        public MultilevelDataOptions[]? Children { get; set; }
+        public List<MultilevelDataOptions>? Children { get; set; }
     }
 }

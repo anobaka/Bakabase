@@ -6,7 +6,7 @@ import { OrderedListOutlined, SearchOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './components/FilterGroupsPanel';
 import BApi from '@/sdk/BApi';
-import ShowTagSelector from '@/components/Resource/components/ShowTagSelector';
+import ResourceTagBinderDialog from '@/components/Resource/components/ResourceTagBinderDialog';
 import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
 import FavoritesSelector from '@/pages/Resource/components/FavoritesSelector';
 import store from '@/store';
@@ -78,15 +78,7 @@ export default ({
           label: 'Set tags',
           icon: 'tags',
           onClick: () => {
-            const data = selectedResourceIds?.map(id => {
-              const r = resources.find(r => r.id == id)!;
-              return {
-                ...r,
-                handler: resourceHandlersRef.current[id],
-              };
-            });
-
-            ShowTagSelector(data);
+            ResourceTagBinderDialog.show({ resourceIds: selectedResourceIds ?? [] });
           },
         },
         {
@@ -265,6 +257,7 @@ export default ({
                 {colCountsDataSource.map((cc, i) => {
                   return (
                     <Button
+                      key={i}
                       color={'default'}
                       size={'sm'}
                       onClick={async () => {

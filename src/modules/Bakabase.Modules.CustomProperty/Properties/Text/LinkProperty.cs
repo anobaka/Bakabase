@@ -2,6 +2,8 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Properties.Text.Abstractions;
+using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Text;
 
@@ -31,22 +33,16 @@ public record LinkData
     }
 }
 
-public record LinkProperty() : Abstractions.Models.Domain.CustomProperty;
+public record LinkProperty() : Bakabase.Abstractions.Models.Domain.CustomProperty;
 
-public record LinkPropertyValue: TypedCustomPropertyValue<LinkData>
-{
-    protected override bool IsMatch(LinkData? value, CustomPropertyValueSearchRequestModel model)
-    {
-        throw new NotImplementedException();
-    }
-}
+public record LinkPropertyValue : TypedCustomPropertyValue<LinkData>;
 
-public class LinkPropertyDescriptor : AbstractCustomPropertyDescriptor<LinkProperty, LinkPropertyValue, LinkData>
+public class LinkPropertyDescriptor : TextPropertyDescriptor<LinkPropertyValue, LinkData>
 {
     public override CustomPropertyType Type => CustomPropertyType.Link;
 
-    protected override bool IsMatch(LinkData? value, CustomPropertyValueSearchRequestModel model)
+    protected override string[] GetMatchSources(LinkData? value)
     {
-        throw new NotImplementedException();
+        return new[] {value?.Text, value?.Url}.Where(s => !string.IsNullOrEmpty(s)).ToArray()!;
     }
 }

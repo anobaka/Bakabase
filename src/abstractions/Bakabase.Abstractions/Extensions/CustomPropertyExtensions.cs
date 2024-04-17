@@ -5,7 +5,7 @@ namespace Bakabase.Abstractions.Extensions;
 
 public static class CustomPropertyExtensions
 {
-    public static Models.Db.CustomProperty? ToDbModel<T>(this CustomProperty<T>? domain)
+    public static Models.Db.CustomProperty? ToDbModel(this CustomProperty? domain)
     {
         if (domain == null)
         {

@@ -7,10 +7,20 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
-	public record CustomPropertyValueSearchRequestModel
-	{
-		public int PropertyId { get; set; }
-		public SearchOperation Operation { get; set; }
-		public string? Value { get; set; }
-	}
+    public record CustomPropertyValueSearchRequestModel
+    {
+        public int PropertyId { get; set; }
+        public SearchOperation Operation { get; set; }
+        public string? Value { get; set; }
+
+        public T? DeserializeValue<T>()
+        {
+            if (string.IsNullOrEmpty(Value))
+            {
+                return default;
+            }
+
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(Value);
+        }
+    }
 }

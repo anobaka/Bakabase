@@ -423,7 +423,7 @@ export function createPortalOfComponent(Component: React.ComponentType<any>, pro
     // console.trace(19282);
     setTimeout(() => {
       root.unmount();
-      node.parentElement?.removeChild(node);
+      node.remove();
     }, 1);
   };
 
@@ -439,7 +439,7 @@ export function createPortalOfComponent(Component: React.ComponentType<any>, pro
           }
           unmount();
         }}
-      />,
+      />
     </store.Provider>,
   );
 

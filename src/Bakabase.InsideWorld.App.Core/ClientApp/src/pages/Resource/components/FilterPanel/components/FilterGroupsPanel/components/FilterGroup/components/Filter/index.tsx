@@ -8,21 +8,22 @@ import styles from './index.module.scss';
 import FilterValue from './components/FilterValue';
 import PropertySelector from '@/components/PropertySelector';
 import ClickableIcon from '@/components/ClickableIcon';
-import type { StandardValueType } from '@/sdk/constants';
-import { SearchOperation } from '@/sdk/constants';
-import type { ICustomProperty } from '@/pages/CustomProperty/models';
+import { ResourceProperty, SearchOperation } from '@/sdk/constants';
 import store from '@/store';
+import type { IProperty } from '@/components/Property/models';
 
 interface IProps {
   filter: IFilter;
   onRemove?: () => any;
   onChange?: (filter: IFilter) => any;
+  propertyMap: Record<number, IProperty>;
 }
 
 export default ({
                   filter: propsFilter,
                   onRemove,
                   onChange,
+                  propertyMap,
                 }: IProps) => {
   const { t } = useTranslation();
 
@@ -32,9 +33,12 @@ export default ({
   const [filter, setFilter] = useState<IFilter>(propsFilter);
 
   useUpdateEffect(() => {
-    console.log(123);
     onChange?.(filter);
   }, [filter]);
+
+  useUpdateEffect(() => {
+    setFilter(propsFilter);
+  }, [propsFilter]);
 
   const renderOperations = () => {
     if (filter.propertyId == undefined) {
@@ -44,7 +48,7 @@ export default ({
         </Menu>
       );
     }
-    const operations = standardValueTypeSearchOperationsMap[filter.valueType!] || [];
+    const operations = standardValueTypeSearchOperationsMap[propertyMap?.[filter.propertyId!]?.type] || [];
     if (operations.length == 0) {
       return (
         <Menu>
@@ -91,16 +95,15 @@ export default ({
           text
           onClick={() => {
             PropertySelector.show({
-              selection: { [filter.isReservedProperty ? 'reservedPropertyIds' : 'customPropertyIds']: filter.propertyId == undefined ? undefined : [filter.propertyId] },
+              selection: filter.propertyId == undefined
+                ? undefined
+                : [{ id: filter.propertyId, isReserved: filter.isReservedProperty! }],
               onSubmit: async (selectedProperties) => {
-                const property = (selectedProperties.reservedProperties?.[0] ?? selectedProperties.customProperties?.[0])!;
-                const cp = property as ICustomProperty;
+                const property = selectedProperties[0]!;
                 setFilter({
                   ...filter,
                   propertyId: property.id,
-                  propertyName: property.name,
-                  isReservedProperty: cp == undefined,
-                  valueType: property.type as unknown as StandardValueType,
+                  isReservedProperty: property.isReserved,
                 });
               },
               multiple: false,
@@ -109,7 +112,7 @@ export default ({
           }}
           size={'small'}
         >
-          {filter.propertyId ? filter.propertyName : t('Property')}
+          {(filter.propertyId ? filter.isReservedProperty ? t(ResourceProperty[filter.propertyId]) : propertyMap[filter.propertyId]?.name : t('Property')) ?? t('Unknown property')}
         </Button>
       </div>
       <div className={styles.operation}>
@@ -132,7 +135,7 @@ export default ({
       {noValue ? null : (
         <FilterValue
           operation={filter.operation}
-          valueType={filter.valueType}
+          valueType={propertyMap?.[filter.propertyId!]?.type}
           value={filter.value}
           onChange={value => {
             setFilter({

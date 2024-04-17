@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Properties.Number.Abstractions;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Number;
 
@@ -12,21 +13,10 @@ public record RatingPropertyOptions
 
 public record RatingProperty() : CustomProperty<RatingPropertyOptions>;
 
-public record RatingPropertyValue : TypedCustomPropertyValue<decimal>
-{
-    protected override bool IsMatch(decimal value, CustomPropertyValueSearchRequestModel model)
-    {
-        throw new System.NotImplementedException();
-    }
-}
+public record RatingPropertyValue : TypedCustomPropertyValue<decimal>;
 
-public class RatingPropertyDescriptor : AbstractCustomPropertyDescriptor<RatingProperty, RatingPropertyOptions,
-    RatingPropertyValue, decimal>
+public class RatingPropertyDescriptor : NumberPropertyDescriptor<RatingProperty, RatingPropertyOptions,
+    RatingPropertyValue>
 {
     public override CustomPropertyType Type => CustomPropertyType.Rating;
-
-    protected override bool IsMatch(decimal value, CustomPropertyValueSearchRequestModel model)
-    {
-        throw new System.NotImplementedException();
-    }
 }

@@ -17,8 +17,7 @@ namespace Bakabase.InsideWorld.Models.Configs.Fixed
 			public IDictionary<int, StandardValueType> ReservedResourcePropertyAndValueTypeMap { get; set; } =
 				BusinessConstants.ReservedResourcePropertyAndValueTypeMap.ToDictionary(x => (int) x.Key, x => x.Value);
 
-			public IDictionary<int, SearchOperation[]> StandardValueSearchOperationsMap { get; set; } =
-				BusinessConstants.StandardValueSearchOperationsMap.ToDictionary(x => (int) x.Key, x => x.Value);
-		}
+            public Dictionary<int, SearchOperation[]> StandardValueSearchOperationsMap { get; set; } = new();
+        }
 	}
 }

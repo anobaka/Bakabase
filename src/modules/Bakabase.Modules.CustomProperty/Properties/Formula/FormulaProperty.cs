@@ -1,26 +1,32 @@
 ﻿using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Formula;
 
 public record FormulaProperty(): Abstractions.Models.Domain.CustomProperty;
 
-public record FormulaPropertyValue(): TypedCustomPropertyValue<string>
-{
-    protected override bool IsMatch(string? value, CustomPropertyValueSearchRequestModel model)
-    {
-        throw new System.NotImplementedException();
-    }
-}
+public record FormulaPropertyValue() : TypedCustomPropertyValue<string>;
 
 public class FormulaPropertyDescriptor : AbstractCustomPropertyDescriptor<FormulaProperty, FormulaPropertyValue, string>
 {
     public override CustomPropertyType Type => CustomPropertyType.Formula;
 
+    public override SearchOperation[] SearchOperations { get; } =
+    [
+        SearchOperation.IsNull,
+        SearchOperation.IsNotNull,
+    ];
+
     protected override bool IsMatch(string? value, CustomPropertyValueSearchRequestModel model)
     {
-        throw new System.NotImplementedException();
+        return model.Operation switch
+        {
+            SearchOperation.IsNull => string.IsNullOrEmpty(value),
+            SearchOperation.IsNotNull => !string.IsNullOrEmpty(value),
+            _ => true
+        };
     }
 }

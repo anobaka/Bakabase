@@ -1,17 +1,16 @@
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FileSearchOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import SimplePropertySelector from '../SimplePropertySelector';
 import type { CustomPropertyType } from '@/sdk/constants';
 import { ResourceProperty, StandardValueConversionLoss } from '@/sdk/constants';
-import { Button, Chip, Modal } from '@/components/bakaui';
+import { Button, Chip, Modal, Tab, Tabs } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import type { IProperty } from '@/components/Property/models';
 
 export interface MigrationTarget {
-  label?: string;
   subTargets?: MigrationTarget[];
-  property?: ResourceProperty;
+  property: ResourceProperty;
   propertyKey?: string;
   dataCount: number;
   data?: any;
@@ -34,7 +33,7 @@ const Target = ({
                 }: IProps) => {
   const { t } = useTranslation();
 
-  const label = target.label ?? target.propertyKey ?? t(ResourceProperty[target.property!]);
+  const [label, setLabel] = useState<string>();
   const [dataDialogVisible, setDataDialogVisible] = useState(false);
   const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
   const [lossDataDialogVisible, setLossDataDialogVisible] = useState(false);
@@ -43,6 +42,14 @@ const Target = ({
 
   const lossData = target.targetCandidates?.find(d => d.type == (selectedProperty?.type as unknown as CustomPropertyType))?.lossData;
   const hasLossData = lossData && Object.keys(lossData).length > 0;
+
+  useEffect(() => {
+    if (target.property == ResourceProperty.Volume && target.propertyKey != undefined) {
+      setLabel(t(`${ResourceProperty[target.property]}.${target.propertyKey}`));
+    } else {
+      setLabel(target.propertyKey ?? t(ResourceProperty[target.property!]));
+    }
+  }, []);
 
   return (
     <div className={`flex ${isLeaf ? '' : 'flex-col'} gap-2 mt-1 mb-1`}>
@@ -74,21 +81,20 @@ const Target = ({
             visible={lossDataDialogVisible}
             onClose={() => setLossDataDialogVisible(false)}
           >
-            <div className={'flex flex-col gap-1'}>
+            <Tabs>
               {Object.keys(lossData).map(k => {
                 const lossType = StandardValueConversionLoss[parseInt(k, 10)];
                 return (
-                  <div>
-                    <div className={'font-bold'}>{t(`StandardValueConversionLoss.${lossType}`)}</div>
+                  <Tab title={`${t(`StandardValueConversionLoss.${lossType}`)}(${lossData[k].length})`} key={k}>
                     <div className={'flex flex-wrap gap-1'}>
                       {lossData[k].map(d => (
                         <Chip>{d}</Chip>
                       ))}
                     </div>
-                  </div>
+                  </Tab>
                 );
               })}
-            </div>
+            </Tabs>
           </Modal>
         )
       }

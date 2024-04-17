@@ -9,6 +9,7 @@ import styles from './index.module.scss';
 import Filter from './components/Filter';
 import ClickableIcon from '@/components/ClickableIcon';
 import CustomIcon from '@/components/CustomIcon';
+import type { IProperty } from '@/components/Property/models';
 
 interface IProps {
   group: IGroup;
@@ -16,6 +17,7 @@ interface IProps {
   onChange?: (group: IGroup) => void;
   isRoot?: boolean;
   portalContainer?: any;
+  propertyMap: Record<number, IProperty>;
 }
 
 const FilterGroup = ({
@@ -24,6 +26,7 @@ const FilterGroup = ({
                        onChange,
                        isRoot = false,
                        portalContainer,
+                       propertyMap,
                      }: IProps) => {
   const { t } = useTranslation();
   const [group, setGroup] = React.useState<IGroup>(propsGroup);
@@ -46,14 +49,21 @@ const FilterGroup = ({
     onChange?.(group);
   }, [group]);
 
+  useUpdateEffect(() => {
+    setGroup(propsGroup);
+    console.log(propsGroup, 123);
+  }, [propsGroup]);
+
   const {
     filters,
     groups,
     combinator,
   } = group;
 
-  const conditionElements: any[] = (filters || []).map(f => (
+  const conditionElements: any[] = (filters || []).map((f, i) => (
     <Filter
+      propertyMap={propertyMap}
+      key={`f-${i}`}
       filter={f}
       onRemove={() => {
         setGroup(
@@ -72,8 +82,10 @@ const FilterGroup = ({
         );
       }}
     />
-  )).concat((groups || []).map(g => (
+  )).concat((groups || []).map((g, i) => (
     <FilterGroup
+      propertyMap={propertyMap}
+      key={`g-${i}`}
       group={g}
       onRemove={() => {
         setGroup({
@@ -95,6 +107,7 @@ const FilterGroup = ({
     if (i < conditionElements.length - 1) {
       acc.push(
         <Button
+          key={`c-${i}`}
           type={'primary'}
           text
           className={styles.combinator}

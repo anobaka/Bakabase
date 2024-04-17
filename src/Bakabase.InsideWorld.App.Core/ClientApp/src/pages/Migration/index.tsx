@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import { Divider, Listbox, ListboxItem, ListboxSection, Spinner } from '@/components/bakaui';
+import { Divider, Listbox, ListboxItem, ListboxSection, Spacer, Spinner } from '@/components/bakaui';
 import { ResourceProperty } from '@/sdk/constants';
 import type { MigrationTarget } from '@/pages/Migration/components/Target';
 import Target from '@/pages/Migration/components/Target';
@@ -39,6 +39,8 @@ export default () => {
       {loadingTargets ? (
         <div className={'min-h-full flex items-center justify-center text-2xl'}>
           <Spinner />
+          <Spacer x={5} />
+          {t('We are checking all the data, this may take up to 1 minute, please wait.')}
         </div>
       ) : allMigrationsAreDone ? (
         <div className={'min-h-full flex items-center justify-center text-2xl'}>

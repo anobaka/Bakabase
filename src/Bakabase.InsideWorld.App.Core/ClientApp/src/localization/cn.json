@@ -1167,5 +1167,10 @@
   "Final check": "最终检查",
   "Found {{count}} data, and all of them will be retained": "找到{{count}}条数据，所有数据都将会被保留",
   "Convert": "转换",
-  "Be careful, this process is irreversible": "请注意，此操作不可逆"
+  "Be careful, this process is irreversible": "请注意，此操作不可逆",
+  "Volume.Index": "期数序号",
+  "Volume.Name": "期数名称",
+  "Volume.Title": "期数标题",
+  "We are checking all the data, this may take up to 1 minute, please wait.": "我们正在检查所有数据，这可能需要1分钟，请耐心等待。",
+  "Select a type": "选择类型"
 }

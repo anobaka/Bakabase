@@ -9,13 +9,13 @@ using CustomPropertyValue = Bakabase.Abstractions.Models.Domain.CustomPropertyVa
 namespace Bakabase.Abstractions.Components.CustomProperty
 {
     public abstract class
-        AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TValue> : ICustomPropertyDescriptor
+        AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TInnerValue> : ICustomPropertyDescriptor
         where TProperty : Models.Domain.CustomProperty, new()
-        where TPropertyValue : TypedCustomPropertyValue<TValue>, new()
+        where TPropertyValue : TypedCustomPropertyValue<TInnerValue>, new()
     {
         public abstract CustomPropertyType Type { get; }
 
-        public virtual Models.Domain.CustomProperty? BuildPropertyDto(Models.Db.CustomProperty? customProperty)
+        public virtual Models.Domain.CustomProperty? BuildDomainProperty(Models.Db.CustomProperty? customProperty)
         {
             if (customProperty == null)
             {
@@ -32,7 +32,7 @@ namespace Bakabase.Abstractions.Components.CustomProperty
             };
         }
 
-        public virtual CustomPropertyValue? BuildValueDto(Models.Db.CustomPropertyValue? value)
+        public virtual CustomPropertyValue? BuildDomainValue(Models.Db.CustomPropertyValue? value)
         {
             if (value == null)
             {
@@ -47,7 +47,7 @@ namespace Bakabase.Abstractions.Components.CustomProperty
                 ResourceId = value.ResourceId,
                 Value = string.IsNullOrEmpty(value.Value)
                     ? default
-                    : JsonConvert.DeserializeObject<TValue>(value.Value)
+                    : JsonConvert.DeserializeObject<TInnerValue>(value.Value)
             };
 
             return dto;
@@ -57,6 +57,8 @@ namespace Bakabase.Abstractions.Components.CustomProperty
         {
             throw new System.NotImplementedException();
         }
+
+        public abstract SearchOperation[] SearchOperations { get; }
 
         public bool IsMatch(CustomPropertyValue? value, CustomPropertyValueSearchRequestModel model)
         {
@@ -74,7 +76,7 @@ namespace Bakabase.Abstractions.Components.CustomProperty
             return IsMatch(typedValue == null ? default : typedValue.Value, model);
         }
 
-        protected abstract bool IsMatch(TValue? value, CustomPropertyValueSearchRequestModel model);
+        protected abstract bool IsMatch(TInnerValue? value, CustomPropertyValueSearchRequestModel model);
     }
 
     public abstract class
@@ -84,9 +86,9 @@ namespace Bakabase.Abstractions.Components.CustomProperty
         where TPropertyValue : TypedCustomPropertyValue<TValue>, new()
         where TPropertyOptions : new()
     {
-        public override Models.Domain.CustomProperty? BuildPropertyDto(Models.Db.CustomProperty? customProperty)
+        public override Models.Domain.CustomProperty? BuildDomainProperty(Models.Db.CustomProperty? customProperty)
         {
-            var p = base.BuildPropertyDto(customProperty);
+            var p = base.BuildDomainProperty(customProperty);
             if (p is TProperty sp)
             {
                 try

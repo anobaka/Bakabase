@@ -23,7 +23,7 @@ export default <T = object>({
   const isMultiline = props.selectionMode === 'multiple';
 
 
-  console.log(props.selectedKeys, dataSource);
+  // console.log(props.selectedKeys, dataSource);
 
   return (
     <Select

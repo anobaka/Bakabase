@@ -5,7 +5,7 @@ import PropertyDialog from '@/components/PropertyDialog';
 import BApi from '@/sdk/BApi';
 import { StandardValueType } from '@/sdk/constants';
 import { CustomPropertyAdditionalItem } from '@/sdk/constants';
-import { Button, Input } from '@/components/bakaui';
+import { Button, Chip, Input } from '@/components/bakaui';
 import Property from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
 
@@ -33,7 +33,7 @@ export default () => {
 
   return (
     <div>
-      <div className={'flex items-center gap-2'}>
+      <div className={'flex items-center gap-2 mb-4'}>
         <Button
           size={'sm'}
           color={'primary'}
@@ -60,8 +60,12 @@ export default () => {
         const type = parseInt(k, 10);
         const ps = groupedFilteredProperties[k];
         return (
-          <div className={''}>
-            <div className={'mb-1 mt-2'}>{t(StandardValueType[type])}</div>
+          <div className={'flex gap-4 mt-2'}>
+            <div className={'mb-1 max-w-[80px] w-[80px]'}>
+              <Chip>
+                {t(StandardValueType[type])}
+              </Chip>
+            </div>
             <div className={'flex items-start gap-2 flex-wrap'}>
               {ps.map(p => {
                 return (

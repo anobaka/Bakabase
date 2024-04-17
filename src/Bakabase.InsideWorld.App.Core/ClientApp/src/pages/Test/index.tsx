@@ -5,7 +5,7 @@ import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf
 import { Nav } from '@alifd/next';
 import { useTour } from '@reactour/tour';
 import { useTranslation } from 'react-i18next';
-import { Tooltip, Button } from '@nextui-org/react';
+import { Tooltip, Button, Chip } from '@nextui-org/react';
 import { CloseCircleFilled } from '@ant-design/icons';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import SimpleLabel from '@/components/SimpleLabel';
@@ -114,7 +114,7 @@ export default () => {
   return (
     <div className={'test-page'}>
       <Tooltip content="I am a tooltip">
-        <CloseCircleFilled />
+        <Chip>123456</Chip>
       </Tooltip>
 
 

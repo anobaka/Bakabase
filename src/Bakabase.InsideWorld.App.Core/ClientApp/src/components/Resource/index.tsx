@@ -36,6 +36,7 @@ interface Props {
   disableCache?: boolean;
   disableMediaPreviewer?: boolean;
   style?: any;
+  className?: string;
 }
 
 const Resource = React.forwardRef((props: Props, ref) => {
@@ -239,7 +240,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   };
 
   return (
-    <div className={styles.resource} key={resource.id} style={style}>
+    <div className={`${styles.resource} ${props.className}`} key={resource.id} style={style}>
       <Operations
         resource={resource}
         coverRef={coverRef.current}
