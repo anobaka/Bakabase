@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Dropdown, DropdownMenu, DropdownItem, DropdownTrigger, RadioGroup, Radio } from '@nextui-org/react';
+import AceEditor from 'react-ace';
 import ChoiceList from './components/ChoiceList';
 import { createPortalOfComponent } from '@/components/utils';
 import { CustomPropertyType, StandardValueConversionLoss } from '@/sdk/constants';
@@ -15,6 +17,9 @@ import type {
   IRatingPropertyOptions,
 } from '@/components/Property/models';
 import { PropertyTypeIconMap } from '@/components/Property/models';
+import 'ace-builds/src-noconflict/mode-javascript';
+import 'ace-builds/src-noconflict/theme-monokai';
+import 'ace-builds/src-noconflict/ext-language_tools';
 
 interface IProps {
   value?: CustomPropertyForm;
@@ -34,7 +39,11 @@ const PropertyTypeGroup: Record<string, CustomPropertyType[]> = {
   Number: [CustomPropertyType.Number, CustomPropertyType.Percentage, CustomPropertyType.Rating],
   Option: [CustomPropertyType.SingleChoice, CustomPropertyType.MultipleChoice],
   DateTime: [CustomPropertyType.DateTime, CustomPropertyType.Date, CustomPropertyType.Time],
-  Other: [CustomPropertyType.Attachment, CustomPropertyType.Boolean],
+  Other: [
+    CustomPropertyType.Attachment,
+    CustomPropertyType.Boolean,
+    // CustomPropertyType.Formula
+  ],
 };
 
 
@@ -250,10 +259,31 @@ const PropertyDialog = ({
           break;
         case CustomPropertyType.Time:
           break;
-        case CustomPropertyType.Formula:
+        case CustomPropertyType.Formula: {
+          return (
+            <>
+              <RadioGroup
+                label={t('Formula syntax')}
+                orientation="horizontal"
+              >
+                <Radio value="buenos-aires">Javascript</Radio>
+              </RadioGroup>
+              <AceEditor
+                mode="javascript"
+                theme="monokai"
+                wrapEnabled
+                onChange={v => {
+                  console.log(v);
+                }}
+                name="UNIQUE_ID_OF_DIV"
+                editorProps={{ $blockScrolling: true }}
+              />,
+            </>
+          );
+        }
+        case CustomPropertyType.Multilevel: {
           break;
-        case CustomPropertyType.Multilevel:
-          break;
+        }
       }
     }
     return;

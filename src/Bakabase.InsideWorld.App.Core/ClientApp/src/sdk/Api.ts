@@ -94,6 +94,7 @@ export interface BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format date-time */
   createdAt?: string;
   categories?: BakabaseAbstractionsModelsDomainCategory[] | null;
+  options?: any;
 }
 
 export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
@@ -1964,6 +1965,13 @@ export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponents
   pageSize?: number;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainCategory;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainComponentDescriptor {
   /** @format int32 */
   code?: number;
@@ -2455,10 +2463,10 @@ export type SystemReflectionGenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 |
 export type SystemReflectionICustomAttributeProvider = object;
 
 export interface SystemReflectionMemberInfo {
-  declaringType?: SystemType;
-  reflectedType?: SystemType;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
+  declaringType?: SystemType;
+  reflectedType?: SystemType;
   name?: string | null;
   module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
@@ -6446,6 +6454,65 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags ResourceCategory
+     * @name GetResourceCategory
+     * @request GET:/resource-category/{id}
+     */
+    getResourceCategory: (
+      id: number,
+      query?: {
+        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory, any>({
+        path: `/resource-category/${id}`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name UpdateResourceCategory
+     * @request PUT:/resource-category/{id}
+     */
+    updateResourceCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name DeleteResourceCategoryAndClearAllRelatedData
+     * @request DELETE:/resource-category/{id}
+     */
+    deleteResourceCategoryAndClearAllRelatedData: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
      * @name GetAllResourceCategories
      * @request GET:/resource-category
      */
@@ -6501,42 +6568,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name UpdateResourceCategory
-     * @request PUT:/resource-category/{id}
-     */
-    updateResourceCategory: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name DeleteResourceCategoryAndClearAllRelatedData
-     * @request DELETE:/resource-category/{id}
-     */
-    deleteResourceCategoryAndClearAllRelatedData: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}`,
-        method: "DELETE",
         format: "json",
         ...params,
       }),

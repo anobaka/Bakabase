@@ -1,31 +1,29 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Balloon, Button, Checkbox, Dialog, Icon, Input, Select, Tag } from '@alifd/next';
-import IceLabel from '@icedesign/label';
-import { usePrevious, useUpdateEffect } from 'react-use';
+import { Balloon, Button, Dialog, Icon, Input, Select, Tag } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import { set } from 'immer/dist/utils/common';
+import { Accordion, AccordionItem, Checkbox } from '@/components/bakaui';
 import { AddTagGroups, AddTags } from '@/sdk/apis';
 import { TagGroupAdditionalItem } from '@/sdk/constants';
 import { TagGroup as TagGroupDto } from '@/core/models/TagGroup';
 import { Tag as TagDto } from '@/core/models/Tag';
-import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
 import AliasAppliedChip from '@/components/Chips/AliasAppliedChip';
-import { Chip, Spacer } from '@/components/bakaui';
 
-interface IValue {
-  tagIds: number[];
-  tagIdExternalIdsMap?: Record<number, any[]>;
+
+export enum TagSelection {
+  Selected = 1,
+  NotSelected,
+  Indeterminate,
 }
 
+export type TagSelectorValue = Record<number, TagSelection>;
+
 interface IProps {
-  onChange?: (value: IValue, tagMap: { [tagId: number]: TagDto }) => any;
+  onChange?: (value: TagSelectorValue, tagMap: { [tagId: number]: TagDto }) => any;
   enableCreation?: boolean;
-  defaultValue?: IValue;
-  value?: IValue;
-  externalIds?: any[];
-  multiple?: boolean;
+  defaultValue?: TagSelectorValue;
+  value?: TagSelectorValue;
 }
 
 const TagSelector = (props: IProps) => {
@@ -35,32 +33,29 @@ const TagSelector = (props: IProps) => {
     value: propsValue,
     onChange = (value, tags) => {
     },
-    externalIds,
-    multiple = true,
     ...otherProps
   } = props;
   const { t } = useTranslation();
   const [tagGroups, setTagGroups] = useState<TagGroupDto[]>([]);
   const [keyword, setKeyword] = useState<string>('');
-  const [internalValue, setInternalValue] = useState<IValue>(propsValue ?? defaultValue ?? { tagIds: [], tagIdExternalIdsMap: {} });
+  const [value, setValue] = useState<TagSelectorValue>(propsValue ?? defaultValue ?? { });
 
-  const finalValue = propsValue ?? internalValue;
-
-  useUpdateEffect(() => {
+  const changeValue = (value: TagSelectorValue) => {
+    setValue(value);
     if (onChange) {
       const tags = tagGroups.reduce<{ [tagId: number]: TagDto }>((s, t) => {
-        for (const tag of t.tags.filter((a) => internalValue.tagIds.includes(a.id))) {
+        for (const tag of t.tags.filter((a) => value[a.id] != TagSelection.NotSelected)) {
           s[tag.id] = tag;
         }
         return s;
       }, {});
-      onChange(internalValue, tags);
+      onChange(value, tags);
     }
-  }, [internalValue]);
+  };
 
   useEffect(() => {
     if (propsValue) {
-      setInternalValue(propsValue);
+      setValue(propsValue);
     }
   }, [propsValue]);
 
@@ -157,9 +152,9 @@ const TagSelector = (props: IProps) => {
   };
 
   return (
-    <div className={'tag-selector min-h-[100px]'} {...otherProps}>
-      <div className="opt">
-        <div className="left">
+    <div className={'min-w-[600px] min-h-[100px]'} {...otherProps}>
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <Input
             size={'small'}
             innerAfter={
@@ -173,7 +168,7 @@ const TagSelector = (props: IProps) => {
             onChange={(v) => setKeyword(v)}
           />
           <AliasAppliedChip />
-          {t('{{count}} selected', { count: finalValue.tagIds.length })}
+          {t('{{count}} selected', { count: Object.keys(value).length })}
         </div>
         <div className="right">
           {enableCreation && (
@@ -189,110 +184,77 @@ const TagSelector = (props: IProps) => {
           )}
         </div>
       </div>
-      <div className="grid grid-cols-8 gap-x-5 mt-5">
-        {filteredTagGroups.map((g) => {
-          const selectedTagsCount = finalValue.tagIds.filter((id) => g.tags?.some((gt) => gt.id == id)).length ?? 0;
-          return (
-            <React.Fragment key={g.id}>
-              <div className={'col-span-1'}>
-                <div>
-                  <Chip size={'sm'}>
-                    {g.displayName?.length > 0 ? g.displayName : t('Default')}
-                  </Chip>
-                  <Spacer x={10} />
-                  {enableCreation && (
-                    <CustomIcon
-                      type={'plus-circle'}
-                      className={'text-small'}
-                      onClick={() => {
-                        renderCreationDialog('Tag name list, and press enter to add a new tag.', AddTags, (arr) => ({
-                          [g.id]: arr,
-                        }));
-                      }}
-                    />
-                  )}
-                </div>
-                {selectedTagsCount > 0 && (
-                  <div style={{ color: 'var(--bakaui-primary)' }} className={'text-small'}>
-                    ({t('{{count}} selected', { count: selectedTagsCount })})
+      {filteredTagGroups.length > 0 && (
+        <Accordion
+          className="pt-5 pb-5"
+          variant="splitted"
+          defaultExpandedKeys={filteredTagGroups.map(g => g.id.toString())}
+          selectionMode="multiple"
+        >
+          {filteredTagGroups.map((g) => {
+            const selectedTagsCount = g.tags.filter((t) => value[t.id] != TagSelection.NotSelected).length;
+            return (
+              <AccordionItem
+                key={g.id}
+                subtitle={(
+                  <div>
+                    {enableCreation && (
+                      <CustomIcon
+                        type={'plus-circle'}
+                        className={'text-small'}
+                        onClick={() => {
+                          renderCreationDialog('Tag name list, and press enter to add a new tag.', AddTags, (arr) => ({
+                            [g.id]: arr,
+                          }));
+                        }}
+                      />
+                    )}
+                    <div style={{ color: 'var(--bakaui-primary)' }} className={'text-small'}>
+                      {t('{{count}} selected', { count: selectedTagsCount })}
+                    </div>
                   </div>
                 )}
-              </div>
-              {g.tags?.length > 0 && (
-                <div className={'flex flex-wrap gap-1 col-span-7'}>
-                  {g.tags.map((tag) => {
-                      let tagComp;
-                      const checked = finalValue.tagIds.includes(tag.id);
-                      if (externalIds) {
-                        const selectedEIds = finalValue.tagIdExternalIdsMap?.[tag.id] || [];
-                        const intersection = selectedEIds.filter(eId => externalIds.includes(eId));
-                        const indeterminate = intersection.length > 0 && intersection.length < selectedEIds.length;
+                title={(
+                  g.displayName?.length > 0 ? g.displayName : t('Default')
+                )}
+              >
+                {g.tags?.length > 0 && (
+                  <div className={'flex flex-wrap gap-1 col-span-7'}>
+                    {g.tags.map((tag) => {
+                        let tagComp;
+                        const selection = value[tag.id];
                         tagComp = (
                           <Checkbox
                             key={tag.id}
-                            checked={checked}
-                            indeterminate={indeterminate}
-                            onChange={() => {
-                              if (indeterminate || !checked) {
-                                setInternalValue({
-                                  tagIds: finalValue.tagIds.filter(t => t != tag.id).concat(tag.id),
-                                  tagIdExternalIdsMap: {
-                                    ...finalValue.tagIdExternalIdsMap,
-                                    [tag.id]: externalIds,
-                                  },
-                                });
-                              } else {
-                                let newMap: Record<number, any[]> | undefined;
-                                if (finalValue.tagIdExternalIdsMap) {
-                                  newMap = { ...finalValue.tagIdExternalIdsMap };
-                                  delete newMap[tag.id];
-                                }
-                                setInternalValue({
-                                  tagIdExternalIdsMap: newMap,
-                                  tagIds: finalValue.tagIds.filter(t => t != tag.id),
-                                });
-                              }
+                            isSelected={selection == TagSelection.Selected}
+                            isIndeterminate={selection == TagSelection.Indeterminate}
+                            onValueChange={(checked) => {
+                              const newStatus = selection == TagSelection.Selected ? TagSelection.NotSelected : TagSelection.Selected;
+                              changeValue({ ...value, [tag.id]: newStatus });
                             }}
-                            label={tag.displayName}
-                          />
-                        );
-                      } else {
-                        tagComp = (
-                          <Tag.Selectable
-                            // type={'primary'}
-                            key={tag.id}
-                            checked={checked}
-                            onChange={(c) => {
-                              const newIds = multiple ? checked
-                                ? finalValue.tagIds.filter((a) => a != tag.id) : finalValue.tagIds.concat(tag.id) : [tag.id];
-                              setInternalValue({
-                                ...finalValue,
-                                tagIds: newIds,
-                              });
-                            }}
-                            size={'small'}
                           >
-                            <span style={{ color: tag.color }}>{tag.displayName}</span>
-                          </Tag.Selectable>
+                            {tag.displayName}
+                          </Checkbox>
                         );
-                      }
-                      if (tag.displayName != tag.name
-                      ) {
-                        tagComp = (
-                          <Balloon.Tooltip trigger={tagComp} align={'t'} key={tag.id}>
-                            {t('Raw name')}: {tag.name}
-                          </Balloon.Tooltip>
-                        );
-                      }
-                      return tagComp;
-                    },
-                  )}
-                </div>
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
+                        if (tag.displayName != tag.name
+                        ) {
+                          tagComp = (
+                            <Balloon.Tooltip trigger={tagComp} align={'t'} key={tag.id}>
+                              {t('Raw name')}: {tag.name}
+                            </Balloon.Tooltip>
+                          );
+                        }
+                        return tagComp;
+                      },
+                    )}
+                  </div>
+                )}
+
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      )}
     </div>
   );
 };

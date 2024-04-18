@@ -32,7 +32,6 @@ interface IProps {
 }
 
 export default (props: IProps) => {
-  console.log(props.children);
   return (
     <Tooltip
       showArrow

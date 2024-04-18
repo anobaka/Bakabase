@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Badge, Balloon, Button, Checkbox, Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
+import { Balloon, Checkbox, Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
 import { SketchPicker } from 'react-color';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -16,6 +16,8 @@ import BApi from '@/sdk/BApi';
 import ClickableIcon from '@/components/ClickableIcon';
 import SimpleLabel from '@/components/SimpleLabel';
 import CategoryCustomPropertyBinderDialog from '@/pages/Category/components/CustomPropertyBinder';
+import { Chip, Button, Spacer, Tooltip, Badge } from '@/components/bakaui';
+import DisplayNameRuleEditorDialog from '@/pages/Category/components/DisplayNameRuleEditorDialog';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -271,22 +273,13 @@ export default (({
               </span>
             )}
           </div>
-          <Balloon.Tooltip
-            trigger={(
-              <Badge
-                className={'count'}
-                count={libraries.reduce((s, t) => s + t.resourceCount, 0)}
-                overflowCount={9999999}
-              />
-            )}
-            triggerType={'hover'}
-            align={'t'}
-          >
-            {t('Count of resources')}
-          </Balloon.Tooltip>
           <Dropdown
             trigger={(
-              <ClickableIcon type={'ellipsis-circle'} colorType={'normal'} />
+              <ClickableIcon
+                type={'ellipsis-circle'}
+                colorType={'normal'}
+                className={'text-large'}
+              />
             )}
             className={'category-page-category-more-operations-popup'}
             triggerType={['click']}
@@ -337,11 +330,21 @@ export default (({
               </Menu.Item>
             </Menu>
           </Dropdown>
+          <Spacer x={2} />
+          <Tooltip
+            content={t('Count of resources')}
+          >
+            <Badge
+              content={libraries.reduce((s, t) => s + t.resourceCount, 0)}
+              color={'primary'}
+              variant={'flat'}
+            >&nbsp;</Badge>
+          </Tooltip>
         </div>
         <div className="right">
           <Button
-            type={'normal'}
-            size={'small'}
+            variant={'bordered'}
+            size={'sm'}
             onClick={() => {
               let name;
               Dialog.show({
@@ -376,18 +379,15 @@ export default (({
             // console.log(components, comp);
             return (
               <div className={'component setting'} key={type.value}>
-                <Balloon.Tooltip
-                  triggerType={'hover'}
-                  align={'t'}
-                  trigger={(
-                    <SimpleLabel
-                      status={'default'}
-                    >{t(type.label)}
-                    </SimpleLabel>
-                  )}
+                <Tooltip
+                  content={t(ComponentTips[type.value])}
                 >
-                  {t(ComponentTips[type.value])}
-                </Balloon.Tooltip>
+                  <Chip
+                    size={'sm'}
+                    radius={'sm'}
+                  >{t(type.label)}
+                  </Chip>
+                </Tooltip>
 
                 &emsp;
                 {comp ? (
@@ -416,7 +416,10 @@ export default (({
             );
           })}
         <div className={'setting'}>
-          <SimpleLabel status={'default'}>{t('Priority on cover selection')}</SimpleLabel>
+          <Chip
+            size={'sm'}
+            radius={'sm'}
+          >{t('Priority on cover selection')}</Chip>
           &emsp;
           <span className="editable">
             <span
@@ -444,16 +447,14 @@ export default (({
           </span>
         </div>
         <div className={'setting'}>
-          <Balloon.Tooltip
-            trigger={(
-              <SimpleLabel status={'default'}>
-                {t('Generate nfo')}
-
-              </SimpleLabel>
-            )}
-            align={'t'}
-          >{t('You can share tags and rate of same physical filesystem item from different app instances by enabling this option, but it may cause poor performance of tag-related operations.')}
-          </Balloon.Tooltip>
+          <Tooltip
+            content={t('You can share tags and rate of same physical filesystem item from different app instances by enabling this option, but it may cause poor performance of tag-related operations.')}
+          >
+            <Chip
+              size={'sm'}
+              radius={'sm'}
+            >{t('Generate nfo')}</Chip>
+          </Tooltip>
           &emsp;
           <Checkbox
             checked={category.generateNfo}
@@ -473,18 +474,15 @@ export default (({
             }}
           />
         </div>
-        <div className={'setting enhancers'}>
-          <Balloon.Tooltip
-            trigger={(
-              <SimpleLabel status={'default'}>
-                {t('Enhancers')}
-              </SimpleLabel>
-            )}
-            triggerType={'hover'}
-            align={'t'}
+        <div className={'setting enhancers col-span-3'}>
+          <Tooltip
+            content={t(ComponentTips[ComponentType.Enhancer])}
           >
-            {t(ComponentTips[ComponentType.Enhancer])}
-          </Balloon.Tooltip>
+            <Chip
+              size={'sm'}
+              radius={'sm'}
+            >{t('Enhancers')}</Chip>
+          </Tooltip>
           <div
             className="items"
           >
@@ -502,7 +500,7 @@ export default (({
           </div>
         </div>
         <div
-          className={'setting custom-properties'}
+          className={'setting custom-properties col-span-3'}
           onClick={() => {
             CategoryCustomPropertyBinderDialog.show({
               category: category,
@@ -510,9 +508,12 @@ export default (({
             });
           }}
         >
-          <SimpleLabel status={'default'}>
+          <Chip
+            size={'sm'}
+            radius={'sm'}
+          >
             {t('Custom properties')}
-          </SimpleLabel>
+          </Chip>
           <div
             className="items"
           >
@@ -526,6 +527,33 @@ export default (({
             ))}
           </div>
         </div>
+        <div className={'col-span-3'}>
+          <div className={'flex flex-wrap items-center gap-2'}>
+            <Tooltip
+              content={t('You can set a rule to display name of resources. By default, file name will be used as display name')}
+            >
+              <Chip
+                size={'sm'}
+                radius={'sm'}
+              >
+                {t('Display name rule')}
+              </Chip>
+            </Tooltip>
+            <Spacer x={2} />
+            <Button
+              variant={'light'}
+              size={'sm'}
+              color={'primary'}
+              onClick={() => {
+                DisplayNameRuleEditorDialog.show({
+                  categoryId: category.id,
+                });
+              }}
+            >
+              {t('Click to set')}
+            </Button>
+          </div>
+        </div>
       </div>
       <div className="libraries-line block">
         <div className="libraries-header">
@@ -533,16 +561,12 @@ export default (({
             <div className="title">
               {t('Media libraries')}
             </div>
-            <Balloon.Tooltip
-              trigger={(
-                <CustomIcon type="warning-circle" />
-              )}
-              triggerType={'hover'}
-              align={'t'}
-            >
-              {t('Resources will not loaded automatically after modifying media libraries, ' +
+            <Tooltip
+              content={t('Resources will not loaded automatically after modifying media libraries, ' +
                 'you can click "sync button" at top-right of current page to load your resources immediately.')}
-            </Balloon.Tooltip>
+            >
+              <CustomIcon type="warning-circle" />
+            </Tooltip>
             <Dropdown
               trigger={(
                 <ClickableIcon

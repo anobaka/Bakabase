@@ -18,6 +18,9 @@ import Spacer from './components/Spacer';
 import { Listbox, ListboxItem, ListboxSection } from './components/Listbox';
 import Spinner from './components/Spinner';
 import { Breadcrumbs, BreadcrumbItem } from './components/Breadcumbs';
+import { Accordion, AccordionItem } from './components/Accordion';
+import Checkbox from './components/Checkbox';
+import Badge from './components/Badge';
 
 export {
   Button,
@@ -49,4 +52,8 @@ export {
   Spinner,
   Breadcrumbs,
   BreadcrumbItem,
+  Accordion,
+  AccordionItem,
+  Checkbox,
+  Badge,
 };

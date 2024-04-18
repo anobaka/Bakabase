@@ -112,6 +112,17 @@ export default () => {
             setSelectedResourceIds([]);
           }
         }}
+        reloadResources={ids => {
+          BApi.resource.getResourcesByKeys({ ids }).then(r => {
+            for (const res of (r.data || [])) {
+              const idx = resources.findIndex(r => r.id == res.id);
+              if (idx > -1) {
+                resources[idx] = res;
+              }
+            }
+            setResources([...resources]);
+          });
+        }}
       />
       {pageable && (
         <div className={styles.pagination}>

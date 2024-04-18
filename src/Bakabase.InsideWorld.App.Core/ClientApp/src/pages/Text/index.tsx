@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { AddSpecialTextPrefabs, CreateSpecialText, DeleteSpecialText, GetAllSpecialText, UpdateSpecialText } from '../../sdk/apis';
 import { ResourceLanguage, resourceLanguages, SpecialTextType, specialTextTypes } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
+import BApi from '@/sdk/BApi';
 
 const { Row, Col } = Grid;
 
@@ -34,7 +35,7 @@ const detailInputStyles = {
 };
 
 const renderDetail = (text, cb) => {
-  console.log(text);
+  // console.log(text);
   const { value1, value2, type } = text;
   const values = [value1, value2];
   const elements = [];
@@ -164,10 +165,10 @@ export default () => {
   }, []);
 
   const loadData = () => {
-    GetAllSpecialText().invoke((t) => {
+    BApi.specialText.getAllSpecialText().then((t) => {
       const { data } = t;
       const ts = specialTextTypes.map((t) => {
-        const list = data[t.label];
+        const list = data[t.value];
         list.sort((a, b) => a.value1.localeCompare(b.value1));
         return {
           type: t.label,

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
@@ -22,9 +23,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet]
         [SwaggerOperation(OperationId = "GetAllSpecialText")]
-        public async Task<SingletonResponse<Dictionary<SpecialTextType, List<SpecialText>>>> GetAll()
+        public async Task<SingletonResponse<Dictionary<int, List<SpecialText>>>> GetAll()
         {
-            return new(await _textService.GetAll());
+            return new((await _textService.GetAll()).ToDictionary(d => (int) d.Key, d => d.Value));
         }
 
         [HttpDelete("{id}")]

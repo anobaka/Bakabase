@@ -25,6 +25,7 @@ interface IProps {
   maxResourceColCount?: number;
   searchForm?: Partial<ISearchForm>;
   onSearch?: (form: Partial<ISearchForm>) => any;
+  reloadResources: (ids: number[]) => any;
 }
 
 const MinResourceColCount = 3;
@@ -37,6 +38,7 @@ export default ({
                   maxResourceColCount = DefaultMaxResourceColCount,
                   onSearch,
                   searchForm: propsSearchForm,
+                  reloadResources,
                 }: IProps) => {
   const { t } = useTranslation();
 
@@ -78,7 +80,10 @@ export default ({
           label: 'Set tags',
           icon: 'tags',
           onClick: () => {
-            ResourceTagBinderDialog.show({ resourceIds: selectedResourceIds ?? [] });
+            ResourceTagBinderDialog.show({
+              resourceIds: selectedResourceIds!,
+              onSaved: () => reloadResources?.(selectedResourceIds!),
+            });
           },
         },
         {
@@ -114,8 +119,12 @@ export default ({
             <ClickableIcon
               type={o.icon}
               colorType={'normal'}
-              onClick={o.onClick}
-              className={`text-xl ${anyResourceSelected ? '' : styles.disabled}`}
+              onClick={() => {
+                if (anyResourceSelected) {
+                  o.onClick();
+                }
+              }}
+              className={`text-xl ${anyResourceSelected ? '' : '!cursor-not-allowed opacity-50'}`}
             />
           </Tooltip>
         );
@@ -138,18 +147,16 @@ export default ({
         <Dropdown
           triggerType={'click'}
           trigger={(
-            <div>
-              <Button
-                color={'default'}
-                size={'sm'}
-                startContent={<CustomIcon
-                  type={'playlistplay'}
-                  className={'text-xl'}
-                />}
-              >
-                {t('Playlist')}
-              </Button>
-            </div>
+            <Button
+              color={'default'}
+              size={'sm'}
+              startContent={<CustomIcon
+                type={'playlistplay'}
+                className={'text-xl'}
+              />}
+            >
+              {t('Playlist')}
+            </Button>
           )}
         >
           <PlaylistCollection className={'resource-page'} />

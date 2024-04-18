@@ -1172,5 +1172,12 @@
   "Volume.Name": "期数名称",
   "Volume.Title": "期数标题",
   "We are checking all the data, this may take up to 1 minute, please wait.": "我们正在检查所有数据，这可能需要1分钟，请耐心等待。",
-  "Select a type": "选择类型"
+  "Select a type": "选择类型",
+  "Bind tags to resources": "绑定资源标签",
+  "Formula": "公式",
+  "Duplicating a category": "复制分类",
+  "Please input a new name for the duplicated category": "请为复制的分类录入一个新名称",
+  "Click to set": "点击设置",
+  "Display name rule": "名称展示规则",
+  "You can set a rule to display name of resources. By default, file name will be used as display name": "您可以设置一个规则来展示资源的名称。默认情况下，文件名将会被用作展示名称"
 }
