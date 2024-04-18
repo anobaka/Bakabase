@@ -21,6 +21,7 @@ import { Breadcrumbs, BreadcrumbItem } from './components/Breadcumbs';
 import { Accordion, AccordionItem } from './components/Accordion';
 import Checkbox from './components/Checkbox';
 import Badge from './components/Badge';
+import Code from './components/Code';
 
 export {
   Button,
@@ -56,4 +57,5 @@ export {
   AccordionItem,
   Checkbox,
   Badge,
+  Code,
 };

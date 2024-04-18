@@ -42,5 +42,6 @@
   "Position.End": "the end",
   "BulkModification.Processor.Demonstrator.Operation.Filter.FilteredData": "Data filtered by <0/> <1>{{find}}</1>",
   "TextOperation.Backward": "backward",
-  "TextOperation.Forward": "forward"
+  "TextOperation.Forward": "forward",
+  "category.displayNameRule.propertyExample": "To add a property value as a variable in the rule, you can use the following format: <1>{name of property}</1>. For example, <3>{{{samplePropertyName}}}</3> will be replaced with the value of the property named <5>{{samplePropertyName}}</5>"
 }

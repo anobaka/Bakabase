@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Chip, Modal } from '@/components/bakaui';
+import React, { useEffect, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
+import { renderToString } from 'react-dom/server';
+import ContentEditable from 'react-contenteditable';
+import { useUpdate } from 'react-use';
+import { Button } from '@alifd/next';
+import { InfoCircleOutlined } from '@ant-design/icons';
+import { Chip, Code, Modal } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import { ResourceCategoryAdditionalItem, SpecialTextType } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
+
 
 interface IProps {
   categoryId: number;
@@ -13,7 +19,6 @@ interface IProps {
 interface ICategory {
   id: number;
   name: string;
-  rule?: string;
 }
 
 enum RulePartType {
@@ -22,17 +27,19 @@ enum RulePartType {
   Property = 3,
 }
 
-type RulePart = {text: string; type: RulePartType};
-type Wrapper = {left: string; right: string};
+type RulePart = { text: string; type: RulePartType };
+type Wrapper = { left: string; right: string };
 
 const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
   const { t } = useTranslation();
+  const forceUpdate = useUpdate();
   const [visible, setVisible] = useState(true);
 
-  const [wrappers, setWrappers] = useState< Wrapper[]>([]);
+  const [wrappers, setWrappers] = useState<Wrapper[]>([]);
   const [category, setCategory] = useState<ICategory>();
 
   const [properties, setProperties] = useState<IProperty[]>([]);
+  const [ruleHtml, setRuleHtml] = useState<string>('');
 
   useEffect(() => {
     BApi.specialText.getAllSpecialText().then(r => {
@@ -51,9 +58,9 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
       setCategory({
         id: c.id!,
         name: c.name!,
-        rule: r.data!.displayNameRule?.textRule,
       });
 
+      setRuleHtml(buildRuleHtml(c.displayNameRule?.textRule || '') || '');
       const arr: IProperty[] = [];
       const cps = c.customProperties as IProperty[] || [];
       arr.push(...cps);
@@ -67,6 +74,7 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
 
   const extractRuleParts = (rule: string, wrappedVariables: string[], wrappers: Wrapper[]): RulePart[] => {
     const parts: RulePart[] = [];
+    console.log(wrappedVariables, wrappers);
     for (let i = 0; i < rule.length; i++) {
       const c = rule[i];
       let matched = false;
@@ -105,13 +113,10 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
     return parts;
   };
 
-  const renderRule = () => {
-    const rule = category?.rule || '';
-    return rule;
+  const buildRuleHtml = (rule: string) => {
     const wrappedVariables = properties.map(p => `{${p.name}}`);
     const parts = extractRuleParts(rule, wrappedVariables, wrappers);
-    console.log(parts);
-    return parts.map(p => {
+    const components = parts.map(p => {
       switch (p.type) {
         case RulePartType.Text:
           return (
@@ -127,6 +132,9 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
           );
       }
     });
+    const html = renderToString(<>{components}</>);
+    console.log(parts, html);
+    return html;
   };
 
   return (
@@ -138,17 +146,33 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
     >
       <div>
         <div>
-          <div>
+          <div className={'flex flex-wrap'}>
+            <InfoCircleOutlined className={'text-medium'} />
+            &nbsp;
             {t('You can use any combination of text and following properties in rule, and you can add more properties in category configuration.')}
           </div>
-          <div>
-            {t('To add a property value as a variable in the rule, you can use the following format: {name of property}. For example, {name} will be replaced with the value of the property named "name".')}
+          <div className={'flex flex-wrap items-center'}>
+            <InfoCircleOutlined className={'text-medium'} />
+            &nbsp;
+            <Trans
+              i18nKey={'category.displayNameRule.propertyExample'}
+              values={{
+                samplePropertyName: properties[0]?.name ?? t('Name'),
+              }}
+            >
+              To add a property value as a variable in the rule, you can use the following
+              format: <Code>{'{name of property}'}</Code>.
+              For example, <Code>{'{samplePropertyName}'}</Code> will be replaced with the value of the property
+              named <Code>sampleName</Code>
+            </Trans>
           </div>
-          <div>
+          <div className={'flex flex-wrap'}>
+            <InfoCircleOutlined className={'text-medium'} />
+            &nbsp;
             {t('Be careful if you have multiple properties with same name, only a random one will be replaced.')}
           </div>
         </div>
-        <div className={'flex flex-wrap gap-1'}>
+        <div className={'flex flex-wrap gap-1 mt-2'}>
           {properties.map(p => (
             <Chip
               size={'sm'}
@@ -160,11 +184,13 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
         </div>
       </div>
       <div>
-        <div>
-          {t('You can safely use any of following text wrappers to wrap the properties, and wrappers surrounding the property with empty value will be removed automatically. ' +
-            'You can check and set the wrappers in special text configuration.')}
+        <div className={'flex flex-wrap'}>
+          <InfoCircleOutlined className={'text-medium'} />
+          &nbsp;
+          {t('You can safely use any of following text wrappers to wrap the properties, and wrappers surrounding the property with empty value will be removed automatically.')}
+          {t('You can check and set the wrappers in special text configuration.')}
         </div>
-        <div className={'flex flex-wrap gap-1'}>
+        <div className={'flex flex-wrap gap-1 mt-2'}>
           {wrappers.map(w => (
             <Chip
               size={'sm'}
@@ -177,22 +203,23 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
           ))}
         </div>
       </div>
+      <div className={'flex flex-wrap'}>
+        <InfoCircleOutlined className={'text-medium'} />
+        &nbsp;
+        {t('If you leave the rule with empty value, the file name will be the display name.')}
+      </div>
       <div>
         <div>{t('Display name rule')}</div>
-        <div
-          suppressContentEditableWarning
-          contentEditable
-          className={'border-1 rounded'}
-          onInput={e => {
-            const nv = e.currentTarget.textContent || '';
-            category!.rule = nv;
-            setCategory({
-              ...category!,
-            });
+        <ContentEditable
+          autoFocus
+          className={'border-1 rounded mt-1 p-2'}
+          html={ruleHtml}
+          onChange={v => {
+            // console.log('changes', v, v.target.value, v.currentTarget.textContent);
+            setRuleHtml(buildRuleHtml(v.currentTarget.textContent));
           }}
-        >
-          {renderRule()}
-        </div>
+          tagName={'pre'}
+        />
       </div>
     </Modal>
   );
