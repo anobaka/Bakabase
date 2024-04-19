@@ -90,5 +90,8 @@ namespace Bakabase.InsideWorld.Business.Resources
 
         public string Downloader_FailedToStart(string taskName, string message) =>
             this[nameof(Downloader_FailedToStart), taskName, message];
+
+        public string Tags() => this[nameof(Tags)];
+        public string Rating() => this[nameof(Rating)];
     }
 }

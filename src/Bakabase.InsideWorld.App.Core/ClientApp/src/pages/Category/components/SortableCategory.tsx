@@ -539,7 +539,6 @@ export default (({
                 {t('Display name rule')}
               </Chip>
             </Tooltip>
-            <Spacer x={2} />
             <Button
               variant={'light'}
               size={'sm'}

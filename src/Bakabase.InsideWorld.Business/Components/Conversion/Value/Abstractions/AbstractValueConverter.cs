@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Properties.Multilevel;
 using Bakabase.Modules.CustomProperty.Properties.Text;
+using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions
 {
@@ -45,6 +46,11 @@ namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions
                 StandardValueType.Multilevel => ConvertToMultilevel(typedCurrentValue),
                 _ => throw new ArgumentOutOfRangeException(nameof(toType), toType, null)
             };
+        }
+
+        public (bool IsValid, Type RequiredType) ValidateType(object? value)
+        {
+            return (value is TValue, SpecificTypeUtils<TValue>.Type);
         }
 
         protected abstract TValue? ConvertToTypedValue(object? currentValue);

@@ -4,11 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Network;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai.Models.RequestModels;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
@@ -21,11 +23,7 @@ using Microsoft.Extensions.Options;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
 {
-    [Enhancer(new object[]
-    {
-        ReservedResourceProperty.Tag,
-        ReservedResourceProperty.Rate,
-    }, null, Description = "1. Cookie of ExHentai must be set in system properties.\n2. The first item of search result will be treated as matched resource.\n3. You can set excluding tags also.")]
+    [Enhancer(Description = "1. Cookie of ExHentai must be set in system properties.\n2. The first item of search result will be treated as matched resource.\n3. You can set excluding tags also.", Target = new Target())]
     public class ExHentaiEnhancer : IEnhancer
     {
         private readonly ExHentaiClient _exHentaiClient;
@@ -33,15 +31,23 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer
         private readonly InsideWorldOptionsManagerPool _optionsManager;
         private readonly SpecialTextService _specialTextService;
         private const string UrlKeywordRegex = "[a-zA-Z0-9]{10,}";
+        private readonly InsideWorldLocalizer _localizer;
 
         public ExHentaiEnhancer(ExHentaiClient exHentaiClient, IServiceProvider services,
-            InsideWorldOptionsManagerPool optionsManager, SpecialTextService specialTextService)
+            InsideWorldOptionsManagerPool optionsManager, SpecialTextService specialTextService, InsideWorldLocalizer localizer)
         {
             _exHentaiClient = exHentaiClient;
             _services = services;
             _optionsManager = optionsManager;
             _specialTextService = specialTextService;
+            _localizer = localizer;
         }
+
+        public TargetAttribute[] Targets =>
+        [
+            new TargetAttribute(_localizer.Tags(), StandardValueType.Multilevel),
+            new TargetAttribute(_localizer.Rating(), StandardValueType.Rating)
+        ];
 
         public async Task<Enhancement[]> Enhance(Models.Domain.Resource resource)
         {

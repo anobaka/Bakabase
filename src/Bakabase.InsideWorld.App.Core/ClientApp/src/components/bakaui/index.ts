@@ -22,6 +22,7 @@ import { Accordion, AccordionItem } from './components/Accordion';
 import Checkbox from './components/Checkbox';
 import Badge from './components/Badge';
 import Code from './components/Code';
+import Carousel from './components/Carousel';
 
 export {
   Button,
@@ -58,4 +59,5 @@ export {
   Checkbox,
   Badge,
   Code,
+  Carousel,
 };

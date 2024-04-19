@@ -3,9 +3,8 @@ import { Trans, useTranslation } from 'react-i18next';
 import { renderToString } from 'react-dom/server';
 import ContentEditable from 'react-contenteditable';
 import { useUpdate } from 'react-use';
-import { Button } from '@alifd/next';
 import { InfoCircleOutlined } from '@ant-design/icons';
-import { Chip, Code, Modal } from '@/components/bakaui';
+import { Chip, Code, Modal, Button } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import { ResourceCategoryAdditionalItem, SpecialTextType } from '@/sdk/constants';
@@ -40,6 +39,7 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
 
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [ruleHtml, setRuleHtml] = useState<string>('');
+  const ruleTextRef = useRef('');
 
   useEffect(() => {
     BApi.specialText.getAllSpecialText().then(r => {
@@ -124,7 +124,10 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
           );
         case RulePartType.Wrapper:
           return (
-            <span className={'font-bold'}>{p.text}</span>
+            <span
+              // className={'font-bold'}
+              style={{ color: 'var(--bakaui-secondary)' }}
+            >{p.text}</span>
           );
         case RulePartType.Property:
           return (
@@ -216,11 +219,21 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
           html={ruleHtml}
           onChange={v => {
             // console.log('changes', v, v.target.value, v.currentTarget.textContent);
-            setRuleHtml(buildRuleHtml(v.currentTarget.textContent));
+            ruleTextRef.current = v.currentTarget.textContent || '';
+            setRuleHtml(buildRuleHtml(ruleTextRef.current));
           }}
           tagName={'pre'}
         />
       </div>
+      {ruleTextRef.current.length > 0 && (
+        <div>
+          <Button
+            variant={'light'}
+            color={'primary'}
+            onClick={() => {}}
+          >{t('Click to preview')}</Button>
+        </div>
+      )}
     </Modal>
   );
 };
