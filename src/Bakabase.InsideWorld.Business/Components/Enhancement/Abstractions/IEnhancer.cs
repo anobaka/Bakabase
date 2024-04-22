@@ -9,5 +9,6 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions;
 
 public interface IEnhancer
 {
+    EnhancerId Id { get; }
     Task<List<Enhancement>?> Enhance(Bakabase.Abstractions.Models.Domain.Resource resource, object? options);
 }

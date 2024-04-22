@@ -1,4 +1,5 @@
-﻿using Bakabase.InsideWorld.Models.RequestModels;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.RequestModels;
 using Newtonsoft.Json;
 
 namespace Bakabase.Abstractions.Models.Domain
@@ -9,9 +10,9 @@ namespace Bakabase.Abstractions.Models.Domain
 		public int PropertyId { get; set; }
 		public int ResourceId { get; set; }
 		public CustomProperty? Property { get; set; }
-		// public abstract bool IsMatch(CustomPropertyValueSearchRequestModel model);
 		public object? Value { get; set; }
-	}
+		public CustomPropertyValueLayer Layer { get; set; }
+    }
 
 	public abstract record TypedCustomPropertyValue<T> : CustomPropertyValue
 	{
@@ -22,13 +23,5 @@ namespace Bakabase.Abstractions.Models.Domain
 			get => _value;
 			set => base.Value = _value = value;
 		}
-
-		// public override bool IsMatch(CustomPropertyValueSearchRequestModel model)
-		// {
-		// 	return IsMatch(string.IsNullOrEmpty(model.Value) ? default : JsonConvert.DeserializeObject<T>(model.Value),
-		// 		model);
-		// }
-		//
-		// protected abstract bool IsMatch(T? value, CustomPropertyValueSearchRequestModel model);
 	}
 }

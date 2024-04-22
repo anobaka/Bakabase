@@ -40,6 +40,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Enhancers.ExHenta
             throw new NotImplementedException();
         }
 
+        public override EnhancerId Id => EnhancerId.ExHentai;
+
         protected object? BuildTargetValue(ExHentaiRawData data, ExHentaiEnhancerTarget target)
         {
             switch (target)

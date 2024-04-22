@@ -8,6 +8,10 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
 {
     public record EnhancementRecord
     {
-
+        public int Id { get; set; }
+        public int ResourceId { get; set; }
+        public EnhancerId EnhancerId { get; set; }
+        public string? Enhancements { get; set; }
+        public DateTime EnhancedAt { get; set; }
     }
 }

@@ -37,6 +37,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
 
         protected abstract Task<TRawData> GetRawData(Bakabase.Abstractions.Models.Domain.Resource resource);
 
+        public abstract EnhancerId Id { get; }
+
         public async Task<List<Enhancement>?> Enhance(Bakabase.Abstractions.Models.Domain.Resource resource,
             object? options)
         {
