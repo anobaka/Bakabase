@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions;
+using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters.Abstractions
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstractions
 {
-    public abstract class ListStringValueConverter : AbstractValueConverter<List<string>>
+    public abstract class ListStringValueConverter : AbstractStandardValueHandler<List<string>>
     {
         private readonly SpecialTextService _specialTextService;
 

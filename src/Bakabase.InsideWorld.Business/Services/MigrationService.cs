@@ -8,8 +8,8 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.InsideWorld.Business.Components.Conversion;
-using Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Migration;
+using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Business.Models.Input;
@@ -48,13 +48,13 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IBOptionsManager<MigrationOptions> _migrationOptions;
         private readonly PropertyValueConverter _propertyValueConverter;
         private readonly V190Migrator _v190Migrator;
-        private readonly Dictionary<StandardValueType, IValueConverter> _valueConverters;
+        private readonly Dictionary<StandardValueType, IStandardValueHandler> _valueConverters;
 
         public MigrationService(CustomResourcePropertyService customResourcePropertyService,
             CustomPropertyService customPropertyService,
             CustomPropertyValueService customPropertyValueService,
             ConversionService conversionService, IBOptionsManager<MigrationOptions> migrationOptions,
-            PropertyValueConverter propertyValueConverter, V190Migrator v190Migrator, IEnumerable<IValueConverter> valueConverters)
+            PropertyValueConverter propertyValueConverter, V190Migrator v190Migrator, IEnumerable<IStandardValueHandler> valueConverters)
         {
             _customResourcePropertyService = customResourcePropertyService;
             _customPropertyService = customPropertyService;

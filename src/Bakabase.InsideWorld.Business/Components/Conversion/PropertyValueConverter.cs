@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions;
+using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Helpers;
@@ -17,9 +17,9 @@ namespace Bakabase.InsideWorld.Business.Components.Conversion;
 
 public class PropertyValueConverter
 {
-    private readonly Dictionary<StandardValueType, IValueConverter> _converters;
+    private readonly Dictionary<StandardValueType, IStandardValueHandler> _converters;
 
-    public PropertyValueConverter(IEnumerable<IValueConverter> converters)
+    public PropertyValueConverter(IEnumerable<IStandardValueHandler> converters)
     {
         _converters = converters.ToDictionary(d => d.Type, d => d);
     }

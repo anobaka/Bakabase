@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.CustomProperty.Properties.Multilevel;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
 {
@@ -12,6 +13,5 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
         public int Target { get; set; }
         public StandardValueType ValueType { get; set; }
         public object? Value { get; set; }
-        public string? Error { get; set; }
     }
 }

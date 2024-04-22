@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions;
+using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters.Abstractions
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstractions
 {
-    public abstract class StringValueConverter : AbstractValueConverter<string>
+    public abstract class StringValueConverter : AbstractStandardValueHandler<string>
     {
         public abstract override StandardValueType Type { get; }
         private readonly SpecialTextService _specialTextService;
@@ -65,7 +64,7 @@ namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters.A
             (null, StandardValueConversionLoss.All);
 
         public override (LinkData? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(string currentValue) =>
-            (new LinkData {Text = currentValue, Url = currentValue}, null);
+            (new LinkData { Text = currentValue, Url = currentValue }, null);
 
         public override (List<List<string>>? NewValue, StandardValueConversionLoss? Loss)
             ConvertToMultilevel(string currentValue) => ([[currentValue]], null);

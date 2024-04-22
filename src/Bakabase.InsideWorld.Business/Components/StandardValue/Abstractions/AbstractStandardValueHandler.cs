@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.CustomProperty.Properties.Multilevel;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 using Bootstrap.Extensions;
 
-namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions
 {
-    public abstract class AbstractValueConverter<TValue> : IValueConverter
+    public abstract class AbstractStandardValueHandler<TValue> : IStandardValueHandler
     {
         public abstract StandardValueType Type { get; }
 
@@ -48,10 +45,12 @@ namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions
             };
         }
 
-        public (bool IsValid, Type RequiredType) ValidateType(object? value)
+        public bool ValidateType(object? value)
         {
-            return (value is TValue, SpecificTypeUtils<TValue>.Type);
+            return value is TValue;
         }
+
+        public Type ExpectedType => SpecificTypeUtils<TValue>.Type;
 
         protected abstract TValue? ConvertToTypedValue(object? currentValue);
 

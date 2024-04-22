@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions;
+using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 {
-    public class LinkValueConverter : AbstractValueConverter<LinkData>
+    public class LinkValueConverter : AbstractStandardValueHandler<LinkData>
     {
         public override StandardValueType Type => StandardValueType.Link;
 

@@ -1,19 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions;
+using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 {
-    public class TimeValueConverter : AbstractValueConverter<TimeSpan>
+    public class DateTimeValueConverter : AbstractStandardValueHandler<DateTime>
     {
-        private const string Template = "g";
+        private const string Template = "yyyy-MM-dd HH:mm:ss";
 
-        public override StandardValueType Type => StandardValueType.Time;
+        public override StandardValueType Type => StandardValueType.DateTime;
 
         public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
             new()
@@ -35,57 +33,56 @@ namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters
                 {StandardValueType.Multilevel, StandardValueConversionLoss.All},
             };
 
-        protected override TimeSpan ConvertToTypedValue(object? currentValue)
+        protected override DateTime ConvertToTypedValue(object? currentValue)
         {
-            return currentValue is TimeSpan dt ? dt : default;
+            return currentValue is DateTime dt ? dt : default;
         }
 
-        public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(TimeSpan currentValue)
+        public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(DateTime currentValue)
         {
             return (currentValue.ToString(Template), null);
         }
 
         public override (List<string>? NewValue, StandardValueConversionLoss? Loss) ConvertToListString(
-            TimeSpan currentValue)
+            DateTime currentValue)
         {
             return ([currentValue.ToString(Template)], null);
         }
 
-        public override (decimal? NewValue, StandardValueConversionLoss? Loss) ConvertToNumber(TimeSpan currentValue)
+        public override (decimal? NewValue, StandardValueConversionLoss? Loss) ConvertToNumber(DateTime currentValue)
         {
             return (null, StandardValueConversionLoss.All);
         }
 
-        public override (bool? NewValue, StandardValueConversionLoss? Loss) ConvertToBoolean(TimeSpan currentValue)
+        public override (bool? NewValue, StandardValueConversionLoss? Loss) ConvertToBoolean(DateTime currentValue)
         {
             return (true, StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue);
         }
 
-        public override (LinkData? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(TimeSpan currentValue)
+        public override (LinkData? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(DateTime currentValue)
         {
             var str = currentValue.ToString(Template);
-            return (new LinkData {Url = str, Text = str}, null);
+            return (new LinkData { Url = str, Text = str }, null);
         }
 
-        public override Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(
-            TimeSpan currentValue)
+        public override async Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(
+            DateTime currentValue)
         {
-            return Task.FromResult<(DateTime? NewValue, StandardValueConversionLoss? Loss)>((null,
-                StandardValueConversionLoss.All));
+            return (currentValue, null);
         }
 
-        public override (TimeSpan? NewValue, StandardValueConversionLoss? Loss) ConvertToTime(TimeSpan currentValue)
+        public override (TimeSpan? NewValue, StandardValueConversionLoss? Loss) ConvertToTime(DateTime currentValue)
         {
-            return (currentValue, StandardValueConversionLoss.DateWillBeLost);
+            return (currentValue.TimeOfDay, StandardValueConversionLoss.DateWillBeLost);
         }
 
-        public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToFormula(TimeSpan currentValue)
+        public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToFormula(DateTime currentValue)
         {
             return (null, StandardValueConversionLoss.All);
         }
 
         public override (List<List<string>>? NewValue, StandardValueConversionLoss? Loss) ConvertToMultilevel(
-            TimeSpan currentValue)
+            DateTime currentValue)
         {
             return ([[currentValue.ToString(Template)]], null);
         }

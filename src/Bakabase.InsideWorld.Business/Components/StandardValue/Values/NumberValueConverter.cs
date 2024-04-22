@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions;
+using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 {
-    public class NumberValueConverter : AbstractValueConverter<decimal>
+    public class NumberValueConverter : AbstractStandardValueHandler<decimal>
     {
         public override StandardValueType Type => StandardValueType.Number;
 

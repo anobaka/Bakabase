@@ -5,20 +5,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.CustomProperty;
+using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bootstrap.Extensions;
 using Bakabase.Modules.CustomProperty.Properties.Text;
-using Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
     public class ConversionService
     {
         private readonly SpecialTextService _specialTextService;
-        private readonly Dictionary<StandardValueType, IValueConverter> _valueConverters;
+        private readonly Dictionary<StandardValueType, IStandardValueHandler> _valueConverters;
 
-        public ConversionService(SpecialTextService specialTextService, IEnumerable<IValueConverter> valueConverters)
+        public ConversionService(SpecialTextService specialTextService, IEnumerable<IStandardValueHandler> valueConverters)
         {
             _specialTextService = specialTextService;
             _valueConverters = valueConverters.ToDictionary(d => d.Type, d => d);

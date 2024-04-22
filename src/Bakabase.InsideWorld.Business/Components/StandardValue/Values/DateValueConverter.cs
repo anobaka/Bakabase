@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 {
     public class DateValueConverter : DateTimeValueConverter
     {

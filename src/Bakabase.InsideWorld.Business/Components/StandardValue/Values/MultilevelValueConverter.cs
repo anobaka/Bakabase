@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Conversion.Value.Abstractions;
+using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 {
-    public class MultilevelValueConverter : AbstractValueConverter<List<List<string>>>
+    public class MultilevelValueConverter : AbstractStandardValueHandler<List<List<string>>>
     {
         public override StandardValueType Type => StandardValueType.Multilevel;
 
@@ -44,7 +43,7 @@ namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters
         {
             var nv = string.Join(BusinessConstants.LayerTextSeparator,
                 currentValue.Select(s => string.Join(BusinessConstants.TextSeparator, s)));
-            return (nv, (currentValue.Count > 1 || currentValue.Any(s => s.Count > 1))
+            return (nv, currentValue.Count > 1 || currentValue.Any(s => s.Count > 1)
                 ? StandardValueConversionLoss.ValuesWillBeMerged
                 : null);
         }
@@ -72,7 +71,7 @@ namespace Bakabase.InsideWorld.Business.Components.Conversion.Value.Converters
             List<List<string>> currentValue)
         {
             var (nv, loss) = ConvertToString(currentValue);
-            return (new LinkData {Url = nv, Text = nv}, loss);
+            return (new LinkData { Url = nv, Text = nv }, loss);
         }
 
         public override async Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(
