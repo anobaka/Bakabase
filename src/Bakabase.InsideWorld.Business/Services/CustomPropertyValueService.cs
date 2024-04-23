@@ -79,5 +79,12 @@ namespace Bakabase.InsideWorld.Business.Services
             await AddRange(dbModels);
             return BaseResponseBuilder.Ok;
         }
+
+        public async Task<BaseResponse> UpdateRange(IEnumerable<Abstractions.Models.Domain.CustomPropertyValue> values)
+        {
+            var dbModels = values.Select(v => Abstractions.Extensions.CustomPropertyExtensions.ToDbModel(v)!).ToList();
+            await UpdateRange(dbModels);
+            return BaseResponseBuilder.Ok;
+        }
     }
 }

@@ -22,6 +22,6 @@ namespace Bakabase.InsideWorld.Models.Constants
         DateTime,
         Time,
         Formula,
-        Multilevel,
+        MultilevelText,
     }
 }

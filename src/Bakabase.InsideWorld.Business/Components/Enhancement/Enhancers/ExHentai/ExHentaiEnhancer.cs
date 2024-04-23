@@ -12,20 +12,20 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancement.Enhancers.ExHentai
 {
-    public class ExHentaiEnhancer : AbstractEnhancer<ExHentaiEnhancerTarget, ExHentaiRawData, object?>
+    public class ExHentaiEnhancer : AbstractEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>
     {
-        public ExHentaiEnhancer(IEnhancerDescriptor descriptor, IEnumerable<IStandardValueHandler> valueConverters,
-            ILoggerFactory loggerFactory) : base(descriptor, valueConverters, loggerFactory)
+        public ExHentaiEnhancer(IEnumerable<IStandardValueHandler> valueConverters, ILoggerFactory loggerFactory) :
+            base(valueConverters, loggerFactory)
         {
         }
 
-        protected override async Task<Dictionary<ExHentaiEnhancerTarget, object?>?> ConvertRawDataByTargets(
-            ExHentaiRawData rawData)
+        protected override async Task<Dictionary<ExHentaiEnhancerTarget, object?>?> ConvertContextByTargets(
+            ExHentaiEnhancerContext context)
         {
             var targetValues = new Dictionary<ExHentaiEnhancerTarget, object?>();
             foreach (var target in SpecificEnumUtils<ExHentaiEnhancerTarget>.Values)
             {
-                var v = BuildTargetValue(rawData, target);
+                var v = BuildTargetValue(context, target);
                 if (v != null)
                 {
                     targetValues.Add(target, v);
@@ -35,14 +35,14 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Enhancers.ExHenta
             return targetValues;
         }
 
-        protected override async Task<ExHentaiRawData> GetRawData(Bakabase.Abstractions.Models.Domain.Resource resource)
+        protected override async Task<ExHentaiEnhancerContext> BuildContext(Bakabase.Abstractions.Models.Domain.Resource resource)
         {
             throw new NotImplementedException();
         }
 
         public override EnhancerId Id => EnhancerId.ExHentai;
 
-        protected object? BuildTargetValue(ExHentaiRawData data, ExHentaiEnhancerTarget target)
+        protected object? BuildTargetValue(ExHentaiEnhancerContext data, ExHentaiEnhancerTarget target)
         {
             switch (target)
             {

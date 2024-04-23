@@ -18,39 +18,37 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
     /// 
     /// </summary>
     /// <typeparam name="TEnumTarget"></typeparam>
-    /// <typeparam name="TRawData"></typeparam>
+    /// <typeparam name="TContext"></typeparam>
     /// <typeparam name="TEnhancerOptions">You can pass <see cref="object?"/> if there isn't any options.</typeparam>
-    public abstract class AbstractEnhancer<TEnumTarget, TRawData, TEnhancerOptions> : IEnhancer
-        where TEnumTarget : Enum where TEnhancerOptions : class? where TRawData : class?
+    public abstract class AbstractEnhancer<TEnumTarget, TContext, TEnhancerOptions> : IEnhancer
+        where TEnumTarget : Enum where TEnhancerOptions : class? where TContext : class?
     {
-        protected readonly IEnhancerDescriptor Descriptor;
         protected readonly IEnumerable<IStandardValueHandler> ValueConverters;
         protected readonly ILogger Logger;
 
-        protected AbstractEnhancer(IEnhancerDescriptor descriptor, IEnumerable<IStandardValueHandler> valueConverters,
+        protected AbstractEnhancer(IEnumerable<IStandardValueHandler> valueConverters,
             ILoggerFactory loggerFactory)
         {
-            Descriptor = descriptor;
             ValueConverters = valueConverters;
             Logger = loggerFactory.CreateLogger(GetType());
         }
 
-        protected abstract Task<TRawData> GetRawData(Bakabase.Abstractions.Models.Domain.Resource resource);
+        protected abstract Task<TContext> BuildContext(Bakabase.Abstractions.Models.Domain.Resource resource);
 
         public abstract EnhancerId Id { get; }
 
         public async Task<List<Enhancement>?> Enhance(Bakabase.Abstractions.Models.Domain.Resource resource,
             object? options)
         {
-            var rawData = await GetRawData(resource);
-            if (rawData == null)
+            var context = await BuildContext(resource);
+            if (context == null)
             {
                 return null;
             }
 
-            Logger.LogInformation($"Got raw data: {resource.ToJson()}");
+            Logger.LogInformation($"Got context: {resource.ToJson()}");
 
-            var targetValues = await ConvertRawDataByTargets(rawData);
+            var targetValues = await ConvertContextByTargets(context);
             if (targetValues == null)
             {
                 return null;
@@ -61,8 +59,9 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
             {
                 if (value != null)
                 {
+                    var targetAttr = target.GetAttribute<EnhancerTargetAttribute>();
                     var intTarget = (int) (object) target;
-                    var vt = Descriptor.TargetValueTypeMap[intTarget];
+                    var vt = targetAttr.ValueType;
                     var vc = ValueConverters.FirstOrDefault(x => x.Type == vt)!;
                     var isValid = vc.ValidateType(value);
                     var e = new Enhancement
@@ -79,20 +78,9 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
             return enhancements;
         }
 
-        protected abstract Task<Dictionary<TEnumTarget, object?>?> ConvertRawDataByTargets(TRawData rawData);
+        protected abstract Task<Dictionary<TEnumTarget, object?>?> ConvertContextByTargets(TContext context);
 
         protected virtual object? ApplyOptions(TEnumTarget target, object? initValue, TEnhancerOptions? options) =>
             initValue;
-    }
-
-    public enum ExHentaiEnhancerTarget
-    {
-        Rating = 1,
-        Tags = 2,
-    }
-
-    public interface IEnhancerDescriptor
-    {
-        public Dictionary<int, StandardValueType> TargetValueTypeMap { get; set; }
     }
 }

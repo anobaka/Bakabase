@@ -29,7 +29,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.DateTime, StandardValueConversionLoss.All},
                 {StandardValueType.Time, StandardValueConversionLoss.All},
                 {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.Multilevel, StandardValueConversionLoss.All},
+                {StandardValueType.MultilevelText, StandardValueConversionLoss.All},
 
             };
 

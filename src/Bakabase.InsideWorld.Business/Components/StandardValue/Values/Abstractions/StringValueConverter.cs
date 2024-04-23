@@ -35,7 +35,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstract
                 {StandardValueType.DateTime, StandardValueConversionLoss.InconvertibleDataWillBeLost},
                 {StandardValueType.Time, StandardValueConversionLoss.InconvertibleDataWillBeLost},
                 {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.Multilevel, StandardValueConversionLoss.All},
+                {StandardValueType.MultilevelText, StandardValueConversionLoss.All},
             };
 
         protected override string? ConvertToTypedValue(object? currentValue)

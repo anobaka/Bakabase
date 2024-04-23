@@ -40,7 +40,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions
                 StandardValueType.DateTime => await ConvertToDateTime(typedCurrentValue),
                 StandardValueType.Time => ConvertToTime(typedCurrentValue),
                 StandardValueType.Formula => ConvertToFormula(typedCurrentValue),
-                StandardValueType.Multilevel => ConvertToMultilevel(typedCurrentValue),
+                StandardValueType.MultilevelText => ConvertToMultilevel(typedCurrentValue),
                 _ => throw new ArgumentOutOfRangeException(nameof(toType), toType, null)
             };
         }

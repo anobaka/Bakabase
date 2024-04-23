@@ -1329,7 +1329,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                     // 		break;
                     // 	}
                     // 	case CustomPropertyType.Formula:
-                    // 	case CustomPropertyType.Multilevel:
+                    // 	case CustomPropertyType.MultilevelText:
                     // 		break;
                     // 	default:
                     // 		throw new ArgumentOutOfRangeException();

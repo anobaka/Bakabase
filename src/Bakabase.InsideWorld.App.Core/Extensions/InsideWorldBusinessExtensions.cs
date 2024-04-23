@@ -95,13 +95,13 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.TryAddSingleton<AudioPlayableFileSelector>();
             services.RegisterAllRegisteredTypeAs<IPlayableFileSelector>();
 
-            services.TryAddScoped<InsideWorldEnhancer>();
-            services.TryAddScoped<DLsiteEnhancer>();
-            //services.TryAddSingleton<DMMEnhancer>();
-            services.TryAddScoped<JavLibraryEnhancer>();
-            services.TryAddScoped<BangumiEnhancer>();
-            services.TryAddScoped<ExHentaiEnhancer>();
-            services.TryAddScoped<NfoEnhancer>();
+            // services.TryAddScoped<InsideWorldEnhancer>();
+            // services.TryAddScoped<DLsiteEnhancer>();
+            // //services.TryAddSingleton<DMMEnhancer>();
+            // services.TryAddScoped<JavLibraryEnhancer>();
+            // services.TryAddScoped<BangumiEnhancer>();
+            // services.TryAddScoped<ExHentaiEnhancer>();
+            // services.TryAddScoped<NfoEnhancer>();
             //services.TryAddTransient<IOptions<InsideWorldAppOptions>>(t =>
             //{
             //    var options = InsideWorldAppService.GetInsideWorldOptionsAsync().ConfigureAwait(false).GetAwaiter().GetResult();

@@ -22,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.DateTime, null},
                 {StandardValueType.Time, StandardValueConversionLoss.All},
                 {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.Multilevel, StandardValueConversionLoss.All},
+                {StandardValueType.MultilevelText, StandardValueConversionLoss.All},
             };
 
         public override StandardValueType Type => StandardValueType.Date;

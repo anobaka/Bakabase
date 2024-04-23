@@ -47,7 +47,8 @@ namespace Bakabase.Abstractions.Components.CustomProperty
                 ResourceId = value.ResourceId,
                 Value = string.IsNullOrEmpty(value.Value)
                     ? default
-                    : JsonConvert.DeserializeObject<TInnerValue>(value.Value)
+                    : JsonConvert.DeserializeObject<TInnerValue>(value.Value),
+                Layer = value.Layer
             };
 
             return dto;

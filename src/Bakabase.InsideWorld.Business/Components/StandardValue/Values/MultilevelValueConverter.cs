@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 {
     public class MultilevelValueConverter : AbstractStandardValueHandler<List<List<string>>>
     {
-        public override StandardValueType Type => StandardValueType.Multilevel;
+        public override StandardValueType Type => StandardValueType.MultilevelText;
 
         public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
             new()
@@ -29,7 +29,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.DateTime, StandardValueConversionLoss.All},
                 {StandardValueType.Time, StandardValueConversionLoss.All},
                 {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.Multilevel, null},
+                {StandardValueType.MultilevelText, null},
             };
 
         protected override List<List<string>>? ConvertToTypedValue(object? currentValue)

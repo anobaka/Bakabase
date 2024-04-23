@@ -59,7 +59,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstract
                     StandardValueConversionLoss.OnlyFirstNotEmptyValueWillBeRemained
                 },
                 {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.Multilevel, null},
+                {StandardValueType.MultilevelText, null},
             };
 
         protected override List<string>? ConvertToTypedValue(object? currentValue)

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Bakabase.InsideWorld.Business.Migrations
 {
-    public partial class V181Beta1 : Migration
+    public partial class V190Beta1CustomProperty : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -47,7 +47,8 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     ResourceId = table.Column<int>(type: "INTEGER", nullable: false),
                     PropertyId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Value = table.Column<string>(type: "TEXT", nullable: true)
+                    Value = table.Column<string>(type: "TEXT", nullable: true),
+                    Layer = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -69,6 +70,11 @@ namespace Bakabase.InsideWorld.Business.Migrations
                 name: "IX_CustomPropertyValues_ResourceId",
                 table: "CustomPropertyValues",
                 column: "ResourceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomPropertyValues_ResourceId_PropertyId_Layer",
+                table: "CustomPropertyValues",
+                columns: new[] { "ResourceId", "PropertyId", "Layer" });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

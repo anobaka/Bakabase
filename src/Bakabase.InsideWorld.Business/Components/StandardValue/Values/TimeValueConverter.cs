@@ -30,7 +30,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.DateTime, null},
                 {StandardValueType.Time, StandardValueConversionLoss.DateWillBeLost},
                 {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.Multilevel, StandardValueConversionLoss.All},
+                {StandardValueType.MultilevelText, StandardValueConversionLoss.All},
             };
 
         protected override TimeSpan ConvertToTypedValue(object? currentValue)
