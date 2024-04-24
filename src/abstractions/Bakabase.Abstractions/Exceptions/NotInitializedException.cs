@@ -1,7 +1,6 @@
-﻿using System;
-using Bakabase.InsideWorld.Models.Constants;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
 
-namespace Bakabase.InsideWorld.Models.Exceptions
+namespace Bakabase.Abstractions.Exceptions
 {
     public class NotInitializedException : Exception
     {

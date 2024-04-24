@@ -2,6 +2,7 @@
 using Bakabase.InsideWorld.Models.Configs.CustomOptions;
 using Bakabase.InsideWorld.Models.Constants;
 using System.Linq;
+using Bakabase.Abstractions.Components.Configuration;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector
 {
@@ -11,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableF
     {
         public VideoPlayableFileSelector() : base(new ExtensionBasedPlayableFileSelectorOptions
         {
-            Extensions = BusinessConstants.VideoExtensions.ToArray(),
+            Extensions = InternalOptions.VideoExtensions.ToArray(),
             MaxFileCount = int.MaxValue
         })
         {

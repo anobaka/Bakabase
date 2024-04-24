@@ -1,5 +1,4 @@
-﻿using Bakabase.InsideWorld.Models.Attributes;
-using Bakabase.InsideWorld.Models.Constants;
+﻿using Bakabase.InsideWorld.Models.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;

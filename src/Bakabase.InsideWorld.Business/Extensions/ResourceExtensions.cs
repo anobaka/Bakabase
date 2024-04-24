@@ -13,6 +13,8 @@ using Bootstrap.Extensions;
 using CsQuery.ExtensionMethods.Internal;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using System.IO;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Models.Components;
 
 namespace Bakabase.InsideWorld.Business.Extensions
@@ -526,6 +528,18 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 CustomPropertyValues = r.CustomPropertyValues?.Select(p => p == null ? null : p with { }).ToList(),
                 Tags = r.Tags?.Select(t => t with { }).ToList()
             };
+        }
+
+        public static bool HasAppliedAliases(this ResourceProperty rp)
+        {
+            return InternalOptions.PropertiesAppliedAliases.Contains(rp);
+        }
+
+        public static string BuildPath(this Abstractions.Models.Db.Resource r)
+        {
+            return Path
+                .Combine(new[] { r.Directory, r.RawName }.Where(a => !string.IsNullOrEmpty(a)).ToArray())
+                .StandardizePath()!;
         }
     }
 }

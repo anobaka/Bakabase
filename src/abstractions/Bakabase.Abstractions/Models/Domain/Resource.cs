@@ -1,6 +1,7 @@
 ﻿using Bakabase.InsideWorld.Models.Constants;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Models.Extensions;
 
 namespace Bakabase.Abstractions.Models.Domain;

@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.ResponseModels;
 using Bootstrap.Components.Logging.LogService.Services;
@@ -69,7 +70,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                         var compressedFileExtensionRegexPart =
                             string.Join('|',
-                                BusinessConstants.CompressedFileExtensions.Select(a => Regex.Escape(a.TrimStart('.'))));
+                                InternalOptions.CompressedFileExtensions.Select(a => Regex.Escape(a.TrimStart('.'))));
                         // 文件名.z01
                         // 文件名.zip
                         // 文件名.zip.001
@@ -286,7 +287,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             MemoryStream keyStream = null;
 
-            if (BusinessConstants.SevenZipCompressedFileExtension.Equals(file.Extension,
+            if (InternalOptions.SevenZipCompressedFileExtension.Equals(file.Extension,
                     StringComparison.OrdinalIgnoreCase))
             {
                 var archive = SevenZipArchive.Open(file.FullName);

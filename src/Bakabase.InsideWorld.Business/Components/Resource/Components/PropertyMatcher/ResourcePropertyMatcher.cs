@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 
@@ -57,7 +58,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyM
                 {
                     if (startIndex >= -1 && endIndex <= segments.Length && startIndex + 1 < endIndex)
                     {
-                        var subPath = string.Join(BusinessConstants.DirSeparator,
+                        var subPath = string.Join(InternalOptions.DirSeparator,
                             segments.Skip(startIndex.Value + 1).Take((endIndex - startIndex).Value - 1));
                         var matches = Regex.Matches(subPath, value.Regex!);
                         if (matches.Any())
@@ -73,7 +74,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyM
                                 var match = matches.FirstOrDefault()!;
                                 var matchedValue = subPath.Substring(0, match.Index + match.Value.Length);
                                 // matched value can't starts with unc prefix, so we can split it safely.
-                                var layer = matchedValue.Split(BusinessConstants.DirSeparator).Length;
+                                var layer = matchedValue.Split(InternalOptions.DirSeparator).Length;
                                 return MatchResult.OfLayer(layer, layer + startIndex.Value);
                             }
                         }
@@ -96,7 +97,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyM
                                 return MatchResult.OfLayer(layer, startIndex + layer);
                             }
 
-                            str += BusinessConstants.DirSeparator;
+                            str += InternalOptions.DirSeparator;
                         }
                     }
 

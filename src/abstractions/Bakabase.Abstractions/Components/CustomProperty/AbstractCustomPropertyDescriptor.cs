@@ -1,15 +1,13 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Extensions;
+﻿using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
-using Google.Protobuf.WellKnownTypes;
 using Newtonsoft.Json;
 using CustomPropertyValue = Bakabase.Abstractions.Models.Domain.CustomPropertyValue;
 
-namespace Bakabase.Modules.CustomProperty.Models.Domain
+namespace Bakabase.Abstractions.Components.CustomProperty
 {
     public abstract class
         AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TInnerValue> : ICustomPropertyDescriptor

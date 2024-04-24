@@ -20,7 +20,6 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTas
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Services;
-using Bakabase.InsideWorld.Models.Configs.Fixed;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Entities;
@@ -31,6 +30,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using AppContext = Bakabase.Infrastructures.Components.App.AppContext;
+using InternalOptionsDto = Bakabase.InsideWorld.Business.Models.Dto.InternalOptionsDto;
 
 namespace Bakabase.InsideWorld.Business.Components.Gui
 {
@@ -57,14 +57,14 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly IEnumerable<IDependentComponentService> _dependentComponentServices;
         private readonly IFileMover _fileMover;
         private readonly AppUpdater _appUpdater;
-        private readonly ReservedOptions _reservedOptions;
+        private readonly InternalOptionsDto _reservedOptions;
         private readonly AppContext _appContext;
 
         public WebGuiHub(
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
-            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover, AppUpdater appUpdater, ReservedOptions reservedOptions, AppContext appContext)
+            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover, AppUpdater appUpdater, InternalOptionsDto reservedOptions, AppContext appContext)
         {
             _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
@@ -103,7 +103,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             await Clients.Caller.GetData(nameof(BulkModificationConfiguration),
                 BulkModificationService.GetConfiguration());
 
-            await Clients.Caller.GetData(nameof(ReservedOptions), _reservedOptions);
+            await Clients.Caller.GetData(nameof(InternalOptionsDto), _reservedOptions);
 
             await Clients.Caller.GetData(nameof(AppContext), _appContext);
         }

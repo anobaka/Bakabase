@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using Microsoft.Extensions.Localization;
 using System.Threading;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Business.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -26,7 +27,7 @@ namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili
         {
         }
 
-        protected override string HttpClientName => BusinessConstants.HttpClientNames.Bilibili;
+        protected override string HttpClientName => InternalOptions.HttpClientNames.Bilibili;
 
         public async Task<List<Favorites>> GetFavorites()
         {

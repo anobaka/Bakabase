@@ -12,6 +12,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
@@ -154,7 +156,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 }
                 else
                 {
-                    if (!root.StartsWith(BusinessConstants.UncPathPrefix))
+                    if (!root.StartsWith(InternalOptions.UncPathPrefix))
                     {
                         if (!System.IO.File.Exists(root))
                         {
@@ -169,7 +171,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
                 if (isDirectory)
                 {
-                    var dirWithPathSep = $"{root.StandardizePath()}{BusinessConstants.DirSeparator}";
+                    var dirWithPathSep = $"{root.StandardizePath()}{InternalOptions.DirSeparator}";
                     files = Directory.GetFileSystemEntries(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
                 }
                 else
@@ -515,24 +517,24 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         public async Task<IActionResult> Play(string fullname)
         {
             var ext = Path.GetExtension(fullname);
-            if (BusinessConstants.ImageExtensions.Contains(ext) || BusinessConstants.VideoExtensions.Contains(ext) ||
-                BusinessConstants.AudioExtensions.Contains(ext) || BusinessConstants.TextExtensions.Contains(ext))
+            if (InternalOptions.ImageExtensions.Contains(ext) || InternalOptions.VideoExtensions.Contains(ext) ||
+                InternalOptions.AudioExtensions.Contains(ext) || InternalOptions.TextExtensions.Contains(ext))
             {
-                if (fullname.Contains(BusinessConstants.CompressedFileRootSeparator))
+                if (fullname.Contains(InternalOptions.CompressedFileRootSeparator))
                 {
-                    var tmpSegments = fullname.Split(BusinessConstants.CompressedFileRootSeparator);
+                    var tmpSegments = fullname.Split(InternalOptions.CompressedFileRootSeparator);
                     var segments = new List<string>();
                     for (var i = 0; i < tmpSegments.Length; i++)
                     {
                         var s = tmpSegments[i];
-                        if (BusinessConstants.CompressedFileExtensions.Any(e =>
+                        if (InternalOptions.CompressedFileExtensions.Any(e =>
                                 s.EndsWith(e, StringComparison.OrdinalIgnoreCase)))
                         {
                             segments.Add(s);
                         }
                         else
                         {
-                            var combined = $"{s}{BusinessConstants.CompressedFileRootSeparator}";
+                            var combined = $"{s}{InternalOptions.CompressedFileRootSeparator}";
                             if (i < tmpSegments.Length - 1)
                             {
                                 combined += tmpSegments[i + 1];
@@ -821,7 +823,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             if (System.IO.File.Exists(path))
             {
                 var ext = Path.GetExtension(path).ToLower();
-                var cacheKey = ext == BusinessConstants.ExeExtension ? path : ext;
+                var cacheKey = ext == InternalOptions.ExeExtension ? path : ext;
                 if (!IconVault.TryGetValue(cacheKey, out iconBase64))
                 {
                     lock (IconVaultLock)

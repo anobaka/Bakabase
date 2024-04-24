@@ -7,6 +7,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Aliyun.OSS;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Extensions;
+using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bootstrap.Extensions;
@@ -27,7 +30,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             {
                 var ext1 = Path.GetExtension(f);
                 var extInfo = new ExtInfo { Raw = ext1 };
-                var ext1IsKeyExt = BusinessConstants.CompressedFileExtensions.Contains(ext1);
+                var ext1IsKeyExt = InternalOptions.CompressedFileExtensions.Contains(ext1);
                 if (ext1IsKeyExt)
                 {
                     extInfo.TypeKey = ext1;
@@ -65,7 +68,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                     }
                     else
                     {
-                        if (BusinessConstants.CompressedFileExtensions.Contains(ext2))
+                        if (InternalOptions.CompressedFileExtensions.Contains(ext2))
                         {
                             extInfo.TypeKey = ext2;
 

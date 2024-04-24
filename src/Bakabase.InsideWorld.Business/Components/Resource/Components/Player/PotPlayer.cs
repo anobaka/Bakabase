@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Services;
-using Bakabase.InsideWorld.Models.Attributes;
 using Bakabase.InsideWorld.Models.Configs.CustomOptions;
 using Bootstrap.Extensions;
 using Google.Protobuf.Reflection;

@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Resource.Components;
-using Bakabase.InsideWorld.Models.Attributes;
 using Bakabase.InsideWorld.Models.Components;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;

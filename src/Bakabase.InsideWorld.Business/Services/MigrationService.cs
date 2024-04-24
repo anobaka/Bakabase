@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
@@ -71,7 +72,7 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             var targets = new List<MigrationTargetViewModel>();
             var doneProperties = _migrationOptions.Value?.Properties;
-            var toStringForListString = (Func<object, string>?) (s => string.Join(BusinessConstants.TextSeparator, (s as IEnumerable<string>)!));
+            var toStringForListString = (Func<object, string>?) (s => string.Join(InternalOptions.TextSeparator, (s as IEnumerable<string>)!));
             var propertyAndKeys =
                 new List<(ResourceProperty Property, string? PropertyKey, Func<object, string>? BuildValueLabel)>
                 {

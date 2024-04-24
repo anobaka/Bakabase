@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
@@ -35,16 +36,16 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             var map = new Dictionary<MediaType, ImmutableHashSet<string>>
             {
                 {
-                    MediaType.Image, BusinessConstants.ImageExtensions
+                    MediaType.Image, InternalOptions.ImageExtensions
                 },
                 {
-                    MediaType.Audio, BusinessConstants.AudioExtensions
+                    MediaType.Audio, InternalOptions.AudioExtensions
                 },
                 {
-                    MediaType.Video, BusinessConstants.VideoExtensions
+                    MediaType.Video, InternalOptions.VideoExtensions
                 },
                 {
-                    MediaType.Text, BusinessConstants.TextExtensions
+                    MediaType.Text, InternalOptions.TextExtensions
                 }
             };
 

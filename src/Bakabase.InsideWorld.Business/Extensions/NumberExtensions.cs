@@ -1,11 +1,9 @@
-﻿using Bakabase.InsideWorld.Models.Constants;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Text;
-using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Models.Extensions
+namespace Bakabase.InsideWorld.Business.Extensions
 {
     public static class NumberExtensions
     {
@@ -26,10 +24,10 @@ namespace Bakabase.InsideWorld.Models.Extensions
             var sb = new StringBuilder("^");
             for (var i = 0; i < layer; i++)
             {
-                sb.Append(BusinessConstants.RegexForOnePathLayer);
+                sb.Append(InternalOptions.RegexForOnePathLayer);
                 if (i < layer - 1)
                 {
-                    sb.Append($"\\{BusinessConstants.DirSeparator}");
+                    sb.Append($"\\{InternalOptions.DirSeparator}");
                 }
             }
 

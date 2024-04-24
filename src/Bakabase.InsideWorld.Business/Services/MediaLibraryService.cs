@@ -11,6 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
@@ -272,9 +274,9 @@ namespace Bakabase.InsideWorld.Business.Services
 			int maxCount = int.MaxValue)
 		{
 			rootPath = rootPath.StandardizePath()!;
-			if (!rootPath.EndsWith(BusinessConstants.DirSeparator))
+			if (!rootPath.EndsWith(InternalOptions.DirSeparator))
 			{
-				rootPath += BusinessConstants.DirSeparator;
+				rootPath += InternalOptions.DirSeparator;
 			}
 
 			var list = new List<string>();
@@ -332,7 +334,7 @@ namespace Bakabase.InsideWorld.Business.Services
 						var relativePath = e![rootPath.Length..];
 
 						// ignore sub contents
-						if (list.Any(l => e.StartsWith(l + BusinessConstants.DirSeparator)))
+						if (list.Any(l => e.StartsWith(l + InternalOptions.DirSeparator)))
 						{
 							continue;
 						}
@@ -363,7 +365,7 @@ namespace Bakabase.InsideWorld.Business.Services
 					throw new ArgumentOutOfRangeException();
 			}
 
-			return list.Where(e => !BusinessConstants.IgnoredFileExtensions.Contains(Path.GetExtension(e))).ToArray();
+			return list.Where(e => !InternalOptions.IgnoredFileExtensions.Contains(Path.GetExtension(e))).ToArray();
 		}
 
 		/// <summary>
@@ -399,7 +401,7 @@ namespace Bakabase.InsideWorld.Business.Services
 								if (p.Property == ResourceProperty.ParentResource)
 								{
 									v = Path.Combine(rootPath,
-											string.Join(BusinessConstants.DirSeparator,
+											string.Join(InternalOptions.DirSeparator,
 												e.SegmentAndMatchedValues.Take(i + 1).Select(a => a.Value)))
 										.StandardizePath()!;
 								}
@@ -591,7 +593,7 @@ namespace Bakabase.InsideWorld.Business.Services
 									foreach (var e in pscResult.Data.Entries)
 									{
 										var resourcePath =
-											$"{pscResult.Data.RootPath}{BusinessConstants.DirSeparator}{e.RelativePath}";
+											$"{pscResult.Data.RootPath}{InternalOptions.DirSeparator}{e.RelativePath}";
 										var pr = new Resource()
 										{
 											CategoryId = library.CategoryId,
@@ -880,7 +882,7 @@ namespace Bakabase.InsideWorld.Business.Services
 					var segments = f.SplitPathIntoSegments();
 
 					var relativeSegments = segments[rootSegments.Length..];
-					var relativePath = string.Join(BusinessConstants.DirSeparator, relativeSegments);
+					var relativePath = string.Join(InternalOptions.DirSeparator, relativeSegments);
 
 					var otherMatchers = pc.RpmValues!.Where(a =>
 						a.Property != ResourceProperty.Resource && a.Property != ResourceProperty.RootPath).ToList();

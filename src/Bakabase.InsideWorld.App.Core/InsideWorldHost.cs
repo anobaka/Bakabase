@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Gui;
@@ -72,7 +73,7 @@ namespace Bakabase.InsideWorld.App.Core
                 scope.ServiceProvider.GetRequiredService<IBOptionsManager<UpdaterOptions>>();
             // force fixing oss configuration
             await updaterOptionsManager.SaveAsync(a =>
-                a.AppUpdaterOssObjectPrefix = BusinessConstants.AppOssObjectPrefix);
+                a.AppUpdaterOssObjectPrefix = InternalOptions.AppOssObjectPrefix);
 
             var dependencies = serviceProvider.GetRequiredService<IEnumerable<IDependentComponentService>>().ToList();
             foreach (var d in dependencies)

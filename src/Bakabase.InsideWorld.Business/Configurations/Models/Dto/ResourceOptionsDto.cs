@@ -3,7 +3,7 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.InsideWorld.Business.Configurations.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Business.Configurations.Models.Input
+namespace Bakabase.InsideWorld.Business.Configurations.Models.Dto
 {
     public record ResourceOptionsDto
     {

@@ -1,5 +1,6 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Dto;
+using Bakabase.InsideWorld.Business.Configurations.Models.Dto;
 using Bakabase.InsideWorld.Business.Configurations.Models.Input;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Configuration.Abstractions;

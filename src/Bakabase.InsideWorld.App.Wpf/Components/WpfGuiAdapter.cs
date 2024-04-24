@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Reflection;
 using System.Windows;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.App.Wpf.Windows;

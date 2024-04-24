@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Network;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv.Models;
@@ -24,7 +25,7 @@ namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv
     public class PixivClient : InsideWorldHttpClient
     {
         public const string LoginStateCheckUrl = "https://www.pixiv.net/ajax/user/extra";
-        protected override string HttpClientName => BusinessConstants.HttpClientNames.Pixiv;
+        protected override string HttpClientName => InternalOptions.HttpClientNames.Pixiv;
 
         public PixivClient(InsideWorldLocalizer localizer, IHttpClientFactory httpClientFactory,
             ILoggerFactory loggerFactory) : base(localizer, httpClientFactory, loggerFactory)

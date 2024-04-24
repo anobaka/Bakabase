@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Tasks.Progressor.Abstractions;
@@ -33,7 +34,7 @@ namespace Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary
             await UpdateProgress(t => t.Results = @params.Urls.ToDictionary(a => a, a => (bool?)null));
 
 
-            var client = _httpClientFactory.CreateClient(BusinessConstants.HttpClientNames.JavLibrary);
+            var client = _httpClientFactory.CreateClient(InternalOptions.HttpClientNames.JavLibrary);
 
             // var client = new HttpClient
             // {

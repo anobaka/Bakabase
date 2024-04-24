@@ -26,9 +26,9 @@ using Bakabase.InsideWorld.Business.Components.StandardValue;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
+using Bakabase.InsideWorld.Business.Models.Dto;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.InsideWorld.Models.Configs.Fixed;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.CustomProperty.Extensions;
@@ -38,6 +38,7 @@ using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using InternalOptions = Bakabase.Abstractions.Components.Configuration.InternalOptions;
 
 namespace Bakabase.InsideWorld.App.Core.Extensions
 {
@@ -139,9 +140,9 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddScoped<CustomPropertyValueService>();
             services.AddScoped<CategoryCustomPropertyMappingService>();
 
-            services.AddSingleton<ReservedOptions>(t =>
+            services.AddSingleton<InternalOptionsDto>(t =>
             {
-                var options = new ReservedOptions();
+                var options = new InternalOptionsDto();
                 var customPropertyDescriptors = t.GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>();
                 options.Resource.StandardValueSearchOperationsMap =
                     customPropertyDescriptors.ToDictionary(d => (int) d.Type.ToStandardValueType(),
@@ -168,7 +169,7 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
         {
             services.TryAddSingleton<THttpClientHandler>();
             services.AddHttpClient(name,
-                    t => { t.DefaultRequestHeaders.Add("User-Agent", BusinessConstants.DefaultHttpUserAgent); })
+                    t => { t.DefaultRequestHeaders.Add("User-Agent", InternalOptions.DefaultHttpUserAgent); })
                 // todo: let http client factory handle its lifetime automatically after changing queue mechanism of inside world handler 
                 .SetHandlerLifetime(TimeSpan.FromDays(30))
                 .ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<THttpClientHandler>());

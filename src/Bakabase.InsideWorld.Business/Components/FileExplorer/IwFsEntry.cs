@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Extensions;
 using NPOI.SS.Formula.Functions;
@@ -80,19 +82,19 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 
             if (type == IwFsType.Unknown)
             {
-                if (BusinessConstants.ImageExtensions.Contains(ext))
+                if (InternalOptions.ImageExtensions.Contains(ext))
                 {
                     type = IwFsType.Image;
                 }
                 else
                 {
-                    if (BusinessConstants.VideoExtensions.Contains(ext))
+                    if (InternalOptions.VideoExtensions.Contains(ext))
                     {
                         type = IwFsType.Video;
                     }
                     else
                     {
-                        if (BusinessConstants.AudioExtensions.Contains(ext))
+                        if (InternalOptions.AudioExtensions.Contains(ext))
                         {
                             type = IwFsType.Audio;
                         }

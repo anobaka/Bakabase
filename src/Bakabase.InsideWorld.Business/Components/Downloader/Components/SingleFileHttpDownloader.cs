@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.Extensions.Logging;
 
@@ -17,7 +18,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
     {
         public SingleFileHttpDownloader(IHttpClientFactory httpClientFactory,
             ILogger<SingleFileHttpDownloader> logger) : this(
-            httpClientFactory.CreateClient(BusinessConstants.HttpClientNames.Default), logger)
+            httpClientFactory.CreateClient(InternalOptions.HttpClientNames.Default), logger)
         {
 
         }

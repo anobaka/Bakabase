@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Models.Configs.CustomOptions;
 using Bakabase.InsideWorld.Models.Constants;
@@ -11,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableF
     {
         public ImagePlayableFileSelector() : base(new ExtensionBasedPlayableFileSelectorOptions
         {
-            Extensions = BusinessConstants.ImageExtensions.ToArray(),
+            Extensions = InternalOptions.ImageExtensions.ToArray(),
             MaxFileCount = 1
         })
         {

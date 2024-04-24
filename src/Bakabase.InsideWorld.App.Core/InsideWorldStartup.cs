@@ -1,4 +1,5 @@
-﻿using Bakabase.Infrastructures.Components.App;
+﻿using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.Infrastructures.Components.Jobs;
 using Bakabase.Infrastructures.Components.Orm;
@@ -69,9 +70,9 @@ namespace Bakabase.InsideWorld.App.Core
             services.AddBootstrapServices<InsideWorldDbContext>(c =>
                 c.UseBootstrapSqLite(AppDataPath, "bakabase_insideworld"));
 
-            services.AddInsideWorldHttpClient<InsideWorldHttpClientHandler>(BusinessConstants.HttpClientNames.Default);
+            services.AddInsideWorldHttpClient<InsideWorldHttpClientHandler>(InternalOptions.HttpClientNames.Default);
 
-            services.AddInsideWorldHttpClient<JavLibraryThirdPartyHttpMessageHandler>(BusinessConstants.HttpClientNames
+            services.AddInsideWorldHttpClient<JavLibraryThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
                 .JavLibrary);
             services.AddSimpleProgressor<JavLibraryDownloader>();
 
@@ -79,14 +80,14 @@ namespace Bakabase.InsideWorld.App.Core
 
             services.TryAddSingleton<ThirdPartyHttpRequestLogger>();
 
-            services.AddInsideWorldHttpClient<BilibiliThirdPartyHttpMessageHandler>(BusinessConstants.HttpClientNames
+            services.AddInsideWorldHttpClient<BilibiliThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
                 .Bilibili);
             services.TryAddSingleton<BilibiliClient>();
             services.AddTransient<BilibiliDownloader>();
             services.TryAddSingleton<BilibiliDownloaderOptionsValidator>();
             services.TryAddSingleton<BilibiliCookieValidator>();
 
-            services.AddInsideWorldHttpClient<ExHentaiThirdPartyHttpMessageHandler>(BusinessConstants.HttpClientNames
+            services.AddInsideWorldHttpClient<ExHentaiThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
                 .ExHentai);
             services.TryAddSingleton<ExHentaiClient>();
             services.AddTransient<ExHentaiSingleWorkDownloader>();
@@ -96,7 +97,7 @@ namespace Bakabase.InsideWorld.App.Core
             services.TryAddSingleton<ExHentaiCookieValidator>();
 
             services.AddInsideWorldHttpClient<PixivThirdPartyHttpMessageHandler>(
-                BusinessConstants.HttpClientNames.Pixiv);
+                InternalOptions.HttpClientNames.Pixiv);
             services.TryAddSingleton<PixivClient>();
             services.AddTransient<PixivSearchDownloader>();
             services.AddTransient<PixivRankingDownloader>();

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv.Models;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
@@ -42,7 +43,7 @@ namespace Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructu
         /// <summary>
         /// The new cookie is not set while validating the cookie, so we should use a clean <see cref="HttpClient"/> to handle this request to avoid the cookie being set with previous cookie.
         /// </summary>
-        protected virtual string HttpClientName { get; } = BusinessConstants.HttpClientNames.Default;
+        protected virtual string HttpClientName { get; } = InternalOptions.HttpClientNames.Default;
 
         protected abstract string Url { get; }
         protected abstract Task<(bool Success, string? Message, string? Content)> Validate(HttpResponseMessage rsp);

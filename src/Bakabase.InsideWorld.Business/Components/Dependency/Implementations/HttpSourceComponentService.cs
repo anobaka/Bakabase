@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
@@ -21,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
             IHttpClientFactory httpClientFactory)
         : DependentComponentService(loggerFactory, appService, directoryName)
     {
-        protected HttpClient HttpClient = httpClientFactory.CreateClient(BusinessConstants.HttpClientNames.Default);
+        protected HttpClient HttpClient = httpClientFactory.CreateClient(InternalOptions.HttpClientNames.Default);
 
         protected abstract Task<Dictionary<string, string>> GetDownloadUrls(DependentComponentVersion version,
             CancellationToken ct);

@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Linq;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bootstrap.Extensions;
-using Microsoft.OpenApi.Extensions;
-using Octokit;
-using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Bakabase.InsideWorld.Models.Constants
+namespace Bakabase.Abstractions.Components.Configuration
 {
-    public class BusinessConstants
+    public class InternalOptions
     {
         public static readonly ImmutableHashSet<string> ImageExtensions =
             ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
@@ -144,18 +138,18 @@ namespace Bakabase.InsideWorld.Models.Constants
         ];
 
 
-        // public static readonly ConcurrentDictionary<SearchableReservedProperty, int>
-        //     ReservedResourcePropertyAndValueTypeMap =
-        //         new(new Dictionary<SearchableReservedProperty, int>()
-        //         {
-        //             {SearchableReservedProperty.FileName, StandardValueType.SingleLineText},
-        //             {SearchableReservedProperty.DirectoryPath, StandardValueType.SingleLineText},
-        //             {SearchableReservedProperty.CreatedAt, StandardValueType.DateTime},
-        //             {SearchableReservedProperty.FileCreatedAt, StandardValueType.DateTime},
-        //             {SearchableReservedProperty.FileModifiedAt, StandardValueType.DateTime},
-        //             {SearchableReservedProperty.Tag, StandardValueType.MultipleTextChoice},
-        //             {SearchableReservedProperty.Category, StandardValueType.SingleTextChoice},
-        //             {SearchableReservedProperty.MediaLibrary, StandardValueType.SingleTextChoice},
-        //         });
+        public static readonly ConcurrentDictionary<SearchableReservedProperty, CustomPropertyType>
+            ReservedResourcePropertyAndValueTypeMap =
+                new(new Dictionary<SearchableReservedProperty, CustomPropertyType>()
+                {
+                    {SearchableReservedProperty.FileName, CustomPropertyType.SingleLineText},
+                    {SearchableReservedProperty.DirectoryPath, CustomPropertyType.SingleLineText},
+                    {SearchableReservedProperty.CreatedAt, CustomPropertyType.DateTime},
+                    {SearchableReservedProperty.FileCreatedAt, CustomPropertyType.DateTime},
+                    {SearchableReservedProperty.FileModifiedAt, CustomPropertyType.DateTime},
+                    {SearchableReservedProperty.Tag, CustomPropertyType.MultipleChoice},
+                    {SearchableReservedProperty.Category, CustomPropertyType.SingleChoice},
+                    {SearchableReservedProperty.MediaLibrary, CustomPropertyType.SingleChoice},
+                });
     }
 }

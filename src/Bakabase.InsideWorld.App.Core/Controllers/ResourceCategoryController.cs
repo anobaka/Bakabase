@@ -8,7 +8,6 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infr
 using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Business.Services;
-using Bakabase.InsideWorld.Models.Attributes;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Dtos;

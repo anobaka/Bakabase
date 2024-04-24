@@ -1,18 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
-using Bakabase.InsideWorld.Business.Models.Domain;
-using Bakabase.InsideWorld.Models.Components;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bootstrap.Extensions;
-using Microsoft.Extensions.DependencyInjection;
-using NPOI.SS.Formula.Functions;
 
-namespace Bakabase.InsideWorld.Models.Attributes
+namespace Bakabase.InsideWorld.Business.Components.Resource.Components
 {
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
     public abstract class ComponentAttribute : Attribute

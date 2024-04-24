@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
@@ -215,7 +216,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
 
                     typedValues = [..uniqueArrList];
-                    getDisplayStr = s => string.Join(BusinessConstants.TextSeparator, (s as List<string>)!);
+                    getDisplayStr = s => string.Join(InternalOptions.TextSeparator, (s as List<string>)!);
                     break;
                 }
                 case CustomPropertyType.Number:
@@ -266,7 +267,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             .Select(s => s.TypedValue?.Where(v => !string.IsNullOrEmpty(v)).ToList())
                             .Where(s => s?.Any() == true).Distinct()
                     ];
-                    getDisplayStr = s => string.Join(BusinessConstants.TextSeparator, (s as List<string>)!);
+                    getDisplayStr = s => string.Join(InternalOptions.TextSeparator, (s as List<string>)!);
                     break;
                 }
                 case CustomPropertyType.Date:
@@ -325,7 +326,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
 
                     typedValues = [..allChains];
-                    getDisplayStr = s => string.Join(BusinessConstants.TextSeparator, (s as string[])!);
+                    getDisplayStr = s => string.Join(InternalOptions.TextSeparator, (s as string[])!);
                     break;
                 }
                 default:

@@ -37,6 +37,7 @@ using Volume = Bakabase.InsideWorld.Models.Models.Entities.Volume;
 using System.Drawing.Imaging;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Dto;
@@ -1188,7 +1189,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			CancellationToken ct, CoverSelectOrder order,
 			AdditionalCoverDiscoveringSource[] additionalSources)
 		{
-			var imageExtensions = BusinessConstants.ImageExtensions;
+			var imageExtensions = InternalOptions.ImageExtensions;
 
 			if (!File.Exists(path) && !Directory.Exists(path))
 			{
@@ -1240,7 +1241,7 @@ namespace Bakabase.InsideWorld.Business.Services
 							}
 
 							var firstVideoFile = files.FirstOrDefault(t =>
-								BusinessConstants.VideoExtensions.Contains(Path.GetExtension(t.Name)));
+								InternalOptions.VideoExtensions.Contains(Path.GetExtension(t.Name)));
 							if (firstVideoFile == null)
 							{
 								break;
@@ -1276,14 +1277,14 @@ namespace Bakabase.InsideWorld.Business.Services
 								var file = files[i];
 								if (file.Length > 0)
 								{
-									if (BusinessConstants.CompressedFileExtensions.Contains(file.Extension))
+									if (InternalOptions.CompressedFileExtensions.Contains(file.Extension))
 									{
 										try
 										{
 											MemoryStream imageStream = null;
 											string key = null;
 
-											if (BusinessConstants.SevenZipCompressedFileExtension.Equals(file.Extension,
+											if (InternalOptions.SevenZipCompressedFileExtension.Equals(file.Extension,
 												    StringComparison.OrdinalIgnoreCase))
 											{
 												var archive = SevenZipArchive.Open(file.FullName);

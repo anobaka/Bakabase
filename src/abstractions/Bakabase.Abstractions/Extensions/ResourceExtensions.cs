@@ -46,12 +46,5 @@ namespace Bakabase.Abstractions.Extensions
 
             return ordersForSearch.ToArray();
         }
-
-        public static string BuildPath(this Resource r)
-        {
-            return Path
-                .Combine(new[] {r.Directory, r.RawName}.Where(a => !string.IsNullOrEmpty(a)).ToArray())
-                .StandardizePath()!;
-        }
     }
 }

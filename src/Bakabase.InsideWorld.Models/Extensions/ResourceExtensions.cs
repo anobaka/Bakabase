@@ -47,11 +47,6 @@ namespace Bakabase.InsideWorld.Models.Extensions
 			};
 		}
 
-		public static bool HasAppliedAliases(this ResourceProperty rp)
-		{
-			return BusinessConstants.PropertiesAppliedAliases.Contains(rp);
-		}
-
 		#endregion
 
 		#region Strings

@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 
 namespace Bakabase.InsideWorld.Business.Extensions
 {
@@ -14,7 +15,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
     {
         public static Stream OpenAsImage(string path)
         {
-            if (Path.GetExtension(path).Equals(BusinessConstants.IcoFileExtension, StringComparison.OrdinalIgnoreCase))
+            if (Path.GetExtension(path).Equals(InternalOptions.IcoFileExtension, StringComparison.OrdinalIgnoreCase))
             {
                 var bitmap = new Icon(File.OpenRead(path)).ToBitmap();
                 var ms = new MemoryStream();

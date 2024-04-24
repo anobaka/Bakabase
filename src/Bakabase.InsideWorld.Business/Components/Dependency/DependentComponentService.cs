@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
@@ -33,7 +34,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
             DirectoryName = directoryName;
             DefaultLocation = Path.Combine(appService.ComponentsPath, DirectoryName);
-            TempDirectory = Path.Combine(DefaultLocation, BusinessConstants.TempDirectoryName);
+            TempDirectory = Path.Combine(DefaultLocation, InternalOptions.TempDirectoryName);
         }
 
         protected string GetExecutableWithValidation(string name) => Status == DependentComponentStatus.Installed

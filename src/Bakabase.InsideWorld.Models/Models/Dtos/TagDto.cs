@@ -17,6 +17,8 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         public string? GroupName { get; set; }
         public string? GroupNamePreferredAlias { get; set; }
 
+        public const string TagNameSeparator = ":";
+
         public string DisplayName
         {
             get
@@ -25,7 +27,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
                 var gn = GroupNamePreferredAlias ?? GroupName;
                 if (gn.IsNotEmpty())
                 {
-                    sb.Append(gn).Append(BusinessConstants.TagNameSeparator);
+                    sb.Append(gn).Append(TagNameSeparator);
                 }
 
                 sb.Append(PreferredAlias ?? Name);

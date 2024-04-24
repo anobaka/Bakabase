@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
-using Bakabase.InsideWorld.Models.Attributes;
 using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Player
@@ -17,7 +17,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Player
         public async Task Play(string file)
         {
             // todo: windows only.
-            var windowsSafeFile = file.Replace(BusinessConstants.DirSeparator, BusinessConstants.WindowsSpecificDirSeparator);
+            var windowsSafeFile = file.Replace(InternalOptions.DirSeparator, InternalOptions.WindowsSpecificDirSeparator);
 
             var p = new Process
             {

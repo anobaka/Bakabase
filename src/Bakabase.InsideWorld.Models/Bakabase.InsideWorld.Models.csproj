@@ -7,8 +7,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Attributes\**" />
 	  <Compile Remove="Models\Nfos\**" />
+	  <EmbeddedResource Remove="Attributes\**" />
 	  <EmbeddedResource Remove="Models\Nfos\**" />
+	  <None Remove="Attributes\**" />
 	  <None Remove="Models\Nfos\**" />
 	</ItemGroup>
 
@@ -24,7 +27,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Attributes\" />
 	  <Folder Include="RequestModels\Options\" />
 	</ItemGroup>
 

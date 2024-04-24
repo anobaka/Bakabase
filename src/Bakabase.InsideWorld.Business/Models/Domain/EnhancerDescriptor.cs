@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Models.Domain;
-using Bakabase.InsideWorld.Business.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 
-namespace Bakabase.InsideWorld.Models.Models.Dtos
+namespace Bakabase.InsideWorld.Business.Models.Domain
 {
     public record EnhancerDescriptor : ComponentDescriptor
     {

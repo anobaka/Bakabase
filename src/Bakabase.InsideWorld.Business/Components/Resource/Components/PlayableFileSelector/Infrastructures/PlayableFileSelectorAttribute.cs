@@ -1,5 +1,4 @@
 ﻿using System;
-using Bakabase.InsideWorld.Models.Attributes;
 using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures
