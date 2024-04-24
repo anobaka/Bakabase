@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Extensions;
-using Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.StandardValue;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Newtonsoft.Json;
 
-namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
+namespace Bakabase.Abstractions.Extensions
 {
     public static class EnhancementExtensions
     {
@@ -28,14 +21,14 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
             };
         }
 
-        public static Models.Domain.Enhancement? ToDomainModel(this Models.Db.Enhancement? dbModel)
+        public static Enhancement? ToDomainModel(this Models.Db.Enhancement? dbModel)
         {
             if (dbModel == null)
             {
                 return null;
             }
 
-            return new Models.Domain.Enhancement
+            return new Enhancement
             {
                 CreatedAt = dbModel.CreatedAt,
                 EnhancerId = dbModel.EnhancerId,
@@ -47,7 +40,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
             };
         }
 
-        public static Models.Db.Enhancement? ToDbModel(this Models.Domain.Enhancement? domainModel)
+        public static Models.Db.Enhancement? ToDbModel(this Enhancement? domainModel)
         {
             if (domainModel == null)
             {

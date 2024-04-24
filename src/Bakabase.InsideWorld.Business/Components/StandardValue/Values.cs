@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 
 namespace Bakabase.InsideWorld.Business.Components.StandardValue;
 

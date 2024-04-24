@@ -7,18 +7,17 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Conversion;
-using Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions.Models.Db;
-using Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.StandardValue;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.Modules.CustomProperty.Extensions;
 using NPOI.SS.Formula.Functions;
+using IEnhancer = Bakabase.Abstractions.Components.Enhancer.IEnhancer;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
 {
@@ -49,7 +48,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
             _enhancers = new ConcurrentDictionary<EnhancerId, IEnhancer>(enhancers.ToDictionary(d => d.Id, d => d));
         }
 
-        protected async Task ApplyEnhancementsToResources(List<Models.Domain.Enhancement> enhancements)
+        protected async Task ApplyEnhancementsToResources(List<Bakabase.Abstractions.Models.Domain.Enhancement> enhancements)
         {
             var resourceIds = enhancements.Select(s => s.ResourceId).ToHashSet();
             var resourceMap = (await _resourceService.GetByKeys(resourceIds.ToArray())).ToDictionary(d => d.Id, d => d);
@@ -71,7 +70,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
                 (await _customPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId),
                     CustomPropertyValueAdditionalItem.None, true));
 
-            var enhancementTargetOptionsMap = new Dictionary<Models.Domain.Enhancement, EnhancerTargetOptions>();
+            var enhancementTargetOptionsMap = new Dictionary<Bakabase.Abstractions.Models.Domain.Enhancement, EnhancerTargetOptions>();
             foreach (var enhancement in enhancements)
             {
                 var resource = resourceMap.GetValueOrDefault(enhancement.ResourceId);
@@ -175,7 +174,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
                         var enhancementRawValues = await enhancer.CreateEnhancements(resource);
                         if (enhancementRawValues?.Any() == true)
                         {
-                            var enhancements = enhancementRawValues.Select(v => new Models.Domain.Enhancement
+                            var enhancements = enhancementRawValues.Select(v => new Bakabase.Abstractions.Models.Domain.Enhancement
                             {
                                 Target = v.Target,
                                 CreatedAt = DateTime.Now,
@@ -186,11 +185,11 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
                             }).ToList();
 
                             var enhancementsToAdd = enhancements
-                                .Except(dbEnhancements, Models.Domain.Enhancement.BizKeyComparer).ToList();
+                                .Except(dbEnhancements, Bakabase.Abstractions.Models.Domain.Enhancement.BizKeyComparer).ToList();
                             var enhancementsToUpdate = enhancements.Except(enhancementsToAdd).ToList();
                             foreach (var e in enhancementsToUpdate)
                             {
-                                e.Id = dbEnhancements.First(x => Models.Domain.Enhancement.BizKeyComparer.Equals(x, e))
+                                e.Id = dbEnhancements.First(x => Bakabase.Abstractions.Models.Domain.Enhancement.BizKeyComparer.Equals(x, e))
                                     .Id;
                             }
 

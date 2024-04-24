@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Reflection;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
+using Bakabase.Abstractions.Components.StandardValue;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 

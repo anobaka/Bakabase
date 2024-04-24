@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.StandardValue;
-using Bakabase.Abstractions.Models.Domain.Constants;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
+namespace Bakabase.Abstractions.Components.StandardValue;
 
 /// <summary>
 /// This is a *very* abstract layer to define the abilities of a base value in global scope. 

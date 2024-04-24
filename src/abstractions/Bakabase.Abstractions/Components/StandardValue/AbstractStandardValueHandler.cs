@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.StandardValue;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.CustomProperty.Properties.Text;
 using Bootstrap.Extensions;
 
-namespace Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions
+namespace Bakabase.Abstractions.Components.StandardValue
 {
     public abstract class AbstractStandardValueHandler<TValue> : IStandardValueHandler
     {

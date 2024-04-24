@@ -1,5 +1,5 @@
-﻿using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions;
+﻿using Bakabase.Abstractions.Components.Enhancer;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancement.Enhancers.Bangumi;

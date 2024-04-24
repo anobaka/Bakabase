@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
 
-namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions.Models.Domain
+namespace Bakabase.Abstractions.Models.Domain
 {
     public record CategoryEnhancerOptions
     {

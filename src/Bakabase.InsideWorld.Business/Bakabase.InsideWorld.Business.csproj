@@ -29,6 +29,7 @@
 		<ProjectReference Include="..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
 		<ProjectReference Include="..\Bakabase.InsideWorld.Prefabs\Bakabase.InsideWorld.Prefabs.csproj" />
 		<ProjectReference Include="..\modules\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj" />
+		<ProjectReference Include="..\modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

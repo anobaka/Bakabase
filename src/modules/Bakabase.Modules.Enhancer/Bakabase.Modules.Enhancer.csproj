@@ -8,12 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Components\Text\" />
-    <Folder Include="Services\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
+    <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
+    <ProjectReference Include="..\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj" />
   </ItemGroup>
 
 </Project>

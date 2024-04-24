@@ -1,18 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Aliyun.Api.LogService.Infrastructure.Serialization.Protobuf;
-using Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.StandardValue;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
-using Bakabase.InsideWorld.Models.Constants;
+﻿using Bakabase.Abstractions.Components.StandardValue;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
-namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
+namespace Bakabase.Abstractions.Components.Enhancer
 {
     /// <summary>
     /// 

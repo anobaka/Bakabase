@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Models.Constants;
 using Newtonsoft.Json;
 
@@ -12,10 +11,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue
 {
     public static class StandardValueExtensions
     {
-        public static string? Serialize(this object? value)
-        {
-            return value == null ? null : JsonConvert.SerializeObject(value);
-        }
+
 
         public static HashSet<string>? ExtractTextsForAlias(this object value, StandardValueType valueType)
         {

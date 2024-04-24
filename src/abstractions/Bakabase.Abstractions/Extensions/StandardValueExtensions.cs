@@ -21,4 +21,9 @@ public static class StandardValueExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(valueType), valueType, null)
         };
     }
+
+    public static string? Serialize(this object? value)
+    {
+        return value == null ? null : JsonConvert.SerializeObject(value);
+    }
 }
