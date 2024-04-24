@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models.Domain;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Number.Abstractions;
 
@@ -13,15 +14,17 @@ public record NumberPropertyOptions
 
 public record NumberProperty() : CustomProperty<NumberPropertyOptions>;
 
-public record NumberPropertyValue : TypedCustomPropertyValue<decimal>;
+public record NumberPropertyValue : CustomPropertyValue<decimal>;
 
 public abstract class NumberPropertyDescriptor<TProperty, TOptions, TValue> : AbstractCustomPropertyDescriptor<
     TProperty,
     TOptions,
     TValue, decimal> where TProperty : CustomProperty<TOptions>, new()
     where TOptions : new()
-    where TValue : TypedCustomPropertyValue<decimal>, new()
+    where TValue : CustomPropertyValue<decimal>, new()
 {
+    public override StandardValueType ValueType => StandardValueType.Decimal;
+
     public override SearchOperation[] SearchOperations { get; } =
     [
         SearchOperation.Equals,

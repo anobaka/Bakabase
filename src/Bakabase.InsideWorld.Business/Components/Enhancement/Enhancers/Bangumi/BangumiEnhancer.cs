@@ -13,7 +13,7 @@ public class BangumiEnhancer : AbstractEnhancer<BangumiEnhancerTarget, BangumiEn
     {
     }
 
-    protected override async Task<BangumiEnhancerContext> BuildContext(Bakabase.Abstractions.Models.Domain.Resource resource)
+    protected override async Task<BangumiEnhancerContext> BuildContext(global::Bakabase.Abstractions.Models.Domain.Resource resource)
     {
         throw new System.NotImplementedException();
     }

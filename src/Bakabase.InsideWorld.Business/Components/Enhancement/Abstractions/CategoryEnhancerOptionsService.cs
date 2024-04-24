@@ -9,9 +9,9 @@ using Bootstrap.Components.Orm.Infrastructures;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
 {
-    public class CategoryEnhancerService : ResourceService<InsideWorldDbContext, Models.Db.CategoryEnhancerOptions, int>
+    public class CategoryEnhancerOptionsService : ResourceService<InsideWorldDbContext, Models.Db.CategoryEnhancerOptions, int>
     {
-        public CategoryEnhancerService(IServiceProvider serviceProvider) : base(serviceProvider)
+        public CategoryEnhancerOptionsService(IServiceProvider serviceProvider) : base(serviceProvider)
         {
         }
 
@@ -19,11 +19,6 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
         {
             var data = await base.GetAll(exp, false);
             return data.Select(d => d.ToDomainModel()!).ToList();
-        }
-
-        public async Task<List<CategoryEnhancerOptions>> GetByCategoryId(int categoryId)
-        {
-            return await GetAll(x => x.CategoryId == categoryId);
         }
     }
 }

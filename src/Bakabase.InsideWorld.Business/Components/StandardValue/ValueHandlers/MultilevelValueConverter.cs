@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 {
     public class MultilevelValueConverter : AbstractStandardValueHandler<List<List<string>>>
     {
-        public override StandardValueType Type => StandardValueType.MultilevelText;
+        public override StandardValueType Type => StandardValueType.MultipleTextTree;
 
         public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
             new()
@@ -18,8 +18,8 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.SingleLineText, StandardValueConversionLoss.ValuesWillBeMerged},
                 {StandardValueType.MultilineText, StandardValueConversionLoss.ValuesWillBeMerged},
                 {StandardValueType.Link, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.SingleChoice, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.MultipleChoice, StandardValueConversionLoss.ValuesWillBeMerged},
+                {StandardValueType.SingleTextChoice, StandardValueConversionLoss.ValuesWillBeMerged},
+                {StandardValueType.MultipleTextChoice, StandardValueConversionLoss.ValuesWillBeMerged},
                 {StandardValueType.Number, StandardValueConversionLoss.All},
                 {StandardValueType.Percentage, StandardValueConversionLoss.All},
                 {StandardValueType.Rating, StandardValueConversionLoss.All},
@@ -29,7 +29,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.DateTime, StandardValueConversionLoss.All},
                 {StandardValueType.Time, StandardValueConversionLoss.All},
                 {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.MultilevelText, null},
+                {StandardValueType.MultipleTextTree, null},
             };
 
         protected override List<List<string>>? ConvertToTypedValue(object? currentValue)

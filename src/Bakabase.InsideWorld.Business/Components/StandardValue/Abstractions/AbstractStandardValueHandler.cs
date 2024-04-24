@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.StandardValue;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 using Bootstrap.Extensions;
@@ -26,21 +29,14 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions
 
             return toType switch
             {
-                StandardValueType.SingleLineText => ConvertToString(typedCurrentValue),
-                StandardValueType.MultilineText => ConvertToString(typedCurrentValue),
-                StandardValueType.SingleChoice => ConvertToString(typedCurrentValue),
-                StandardValueType.MultipleChoice => ConvertToListString(typedCurrentValue),
-                StandardValueType.Number => ConvertToNumber(typedCurrentValue),
-                StandardValueType.Percentage => ConvertToNumber(typedCurrentValue),
-                StandardValueType.Rating => ConvertToNumber(typedCurrentValue),
                 StandardValueType.Boolean => ConvertToBoolean(typedCurrentValue),
                 StandardValueType.Link => ConvertToLink(typedCurrentValue),
-                StandardValueType.Attachment => ConvertToListString(typedCurrentValue),
-                StandardValueType.Date => await ConvertToDateTime(typedCurrentValue),
                 StandardValueType.DateTime => await ConvertToDateTime(typedCurrentValue),
                 StandardValueType.Time => ConvertToTime(typedCurrentValue),
-                StandardValueType.Formula => ConvertToFormula(typedCurrentValue),
-                StandardValueType.MultilevelText => ConvertToMultilevel(typedCurrentValue),
+                StandardValueType.String => ConvertToString(typedCurrentValue),
+                StandardValueType.ListString => ConvertToListString(typedCurrentValue),
+                StandardValueType.Decimal => ConvertToNumber(typedCurrentValue),
+                StandardValueType.ListListString => ConvertToMultilevel(typedCurrentValue),
                 _ => throw new ArgumentOutOfRangeException(nameof(toType), toType, null)
             };
         }

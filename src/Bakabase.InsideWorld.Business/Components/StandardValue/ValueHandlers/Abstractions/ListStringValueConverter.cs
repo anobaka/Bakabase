@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
@@ -24,8 +26,8 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstract
                 {StandardValueType.SingleLineText, StandardValueConversionLoss.ValuesWillBeMerged},
                 {StandardValueType.MultilineText, StandardValueConversionLoss.ValuesWillBeMerged},
                 {StandardValueType.Link, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.SingleChoice, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.MultipleChoice, null},
+                {StandardValueType.SingleTextChoice, StandardValueConversionLoss.ValuesWillBeMerged},
+                {StandardValueType.MultipleTextChoice, null},
                 {
                     StandardValueType.Number,
                     StandardValueConversionLoss.InconvertibleDataWillBeLost |
@@ -59,7 +61,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstract
                     StandardValueConversionLoss.OnlyFirstNotEmptyValueWillBeRemained
                 },
                 {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.MultilevelText, null},
+                {StandardValueType.MultipleTextTree, null},
             };
 
         protected override List<string>? ConvertToTypedValue(object? currentValue)

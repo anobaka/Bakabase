@@ -11,6 +11,6 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions.Mode
         public int Id { get; set; }
         public int CategoryId { get; set; }
         public EnhancerId EnhancerId { get; set; }
-        public Dictionary<int, int>? TargetPropertyIdMap { get; set; }
+        public Dictionary<int, EnhancerTargetOptions>? TargetOptionsMap { get; set; }
     }
 }

@@ -25,36 +25,36 @@ namespace Bakabase.Modules.CustomProperty.Helpers
             switch (type)
             {
                 case CustomPropertyType.SingleLineText:
-                    return new SingleLineTextPropertyValue {Value = typedInnerValue as string};
+                    return new SingleLineTextPropertyValue {TypedValue = typedInnerValue as string};
                 case CustomPropertyType.MultilineText:
-                    return new MultilineTextPropertyValue() {Value = typedInnerValue as string };
+                    return new MultilineTextPropertyValue() {TypedValue = typedInnerValue as string };
                 case CustomPropertyType.SingleChoice:
-                    return new SingleChoicePropertyValue {Value = typedInnerValue as string};
+                    return new SingleChoicePropertyValue {TypedValue = typedInnerValue as string};
                 case CustomPropertyType.MultipleChoice:
-                    return new MultipleChoicePropertyValue() {Value = typedInnerValue as List<string> };
+                    return new MultipleChoicePropertyValue() {TypedValue = typedInnerValue as List<string> };
                 case CustomPropertyType.Number:
-                    return new NumberPropertyValue {Value = typedInnerValue is decimal value1 ? value1 : 0};
+                    return new NumberPropertyValue {TypedValue = typedInnerValue is decimal value1 ? value1 : 0};
                 case CustomPropertyType.Percentage:
-                    return new PercentagePropertyValue() {Value = typedInnerValue is decimal value2 ? value2 : 0};
+                    return new PercentagePropertyValue() {TypedValue = typedInnerValue is decimal value2 ? value2 : 0};
                 case CustomPropertyType.Rating:
-                    return new RatingPropertyValue() {Value = typedInnerValue is decimal value3 ? value3 : 0};
+                    return new RatingPropertyValue() {TypedValue = typedInnerValue is decimal value3 ? value3 : 0};
                 case CustomPropertyType.Boolean:
-                    return new BooleanPropertyValue() {Value = typedInnerValue is true};
+                    return new BooleanPropertyValue() {TypedValue = typedInnerValue is true};
                 case CustomPropertyType.Link:
-                    return new LinkPropertyValue() {Value = typedInnerValue as LinkData};
+                    return new LinkPropertyValue() {TypedValue = typedInnerValue as LinkData};
                 case CustomPropertyType.Attachment:
-                    return new AttachmentPropertyValue() {Value = typedInnerValue as List<string> };
+                    return new AttachmentPropertyValue() {TypedValue = typedInnerValue as List<string> };
                 case CustomPropertyType.Date:
-                    return new DatePropertyValue() {Value = typedInnerValue is DateTime date ? date : default};
+                    return new DatePropertyValue() {TypedValue = typedInnerValue is DateTime date ? date : default};
                 case CustomPropertyType.DateTime:
                     return new DateTimePropertyValue()
-                        {Value = typedInnerValue is DateTime dateTime ? dateTime : default};
+                        {TypedValue = typedInnerValue is DateTime dateTime ? dateTime : default};
                 case CustomPropertyType.Time:
-                    return new TimePropertyValue() {Value = typedInnerValue is TimeSpan timeSpan ? timeSpan : default};
+                    return new TimePropertyValue() {TypedValue = typedInnerValue is TimeSpan timeSpan ? timeSpan : default};
                 case CustomPropertyType.Formula:
-                    return new FormulaPropertyValue() {Value = typedInnerValue as string};
+                    return new FormulaPropertyValue() {TypedValue = typedInnerValue as string};
                 case CustomPropertyType.Multilevel:
-                    return new MultilevelPropertyValue() {Value = typedInnerValue as List<string> };
+                    return new MultilevelPropertyValue() {TypedValue = typedInnerValue as List<string> };
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }

@@ -17,8 +17,8 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.SingleLineText, StandardValueConversionLoss.All},
                 {StandardValueType.MultilineText, StandardValueConversionLoss.All},
                 {StandardValueType.Link, StandardValueConversionLoss.All},
-                {StandardValueType.SingleChoice, StandardValueConversionLoss.All},
-                {StandardValueType.MultipleChoice, StandardValueConversionLoss.All},
+                {StandardValueType.SingleTextChoice, StandardValueConversionLoss.All},
+                {StandardValueType.MultipleTextChoice, StandardValueConversionLoss.All},
                 {StandardValueType.Number, StandardValueConversionLoss.All},
                 {StandardValueType.Percentage, StandardValueConversionLoss.All},
                 {StandardValueType.Rating, StandardValueConversionLoss.All},
@@ -28,7 +28,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.DateTime, StandardValueConversionLoss.All},
                 {StandardValueType.Time, StandardValueConversionLoss.All},
                 {StandardValueType.Formula, null},
-                {StandardValueType.MultilevelText, StandardValueConversionLoss.All},
+                {StandardValueType.MultipleTextTree, StandardValueConversionLoss.All},
             };
 
         protected override string? ConvertToTypedValue(object? currentValue)

@@ -3,15 +3,17 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models.Domain;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Time;
 
 public record TimeProperty: Abstractions.Models.Domain.CustomProperty;
 
-public record TimePropertyValue : TypedCustomPropertyValue<TimeSpan>;
+public record TimePropertyValue : CustomPropertyValue<TimeSpan>;
 
 public class TimePropertyDescriptor : AbstractCustomPropertyDescriptor<TimeProperty, TimePropertyValue, TimeSpan>
 {
+    public override StandardValueType ValueType => StandardValueType.Time;
     public override CustomPropertyType Type => CustomPropertyType.Time;
 
     public override SearchOperation[] SearchOperations { get; } =

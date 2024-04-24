@@ -3,16 +3,18 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models.Domain;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Multilevel;
 
 public record MultilevelProperty : CustomProperty<MultilevelPropertyOptions>;
 
-public record MultilevelPropertyValue : TypedCustomPropertyValue<List<string>>;
+public record MultilevelPropertyValue : CustomPropertyValue<List<string>>;
 
 public class MultilevelPropertyDescriptor : AbstractCustomPropertyDescriptor<MultilevelProperty,
     MultilevelPropertyOptions, MultilevelPropertyValue, List<string>>
 {
+    public override StandardValueType ValueType => StandardValueType.ListString;
     public override CustomPropertyType Type => CustomPropertyType.Multilevel;
 
     public override SearchOperation[] SearchOperations { get; } =

@@ -144,18 +144,18 @@ namespace Bakabase.InsideWorld.Models.Constants
         ];
 
 
-        public static readonly ConcurrentDictionary<SearchableReservedProperty, StandardValueType>
-            ReservedResourcePropertyAndValueTypeMap =
-                new(new Dictionary<SearchableReservedProperty, StandardValueType>()
-                {
-                    {SearchableReservedProperty.FileName, StandardValueType.SingleLineText},
-                    {SearchableReservedProperty.DirectoryPath, StandardValueType.SingleLineText},
-                    {SearchableReservedProperty.CreatedAt, StandardValueType.DateTime},
-                    {SearchableReservedProperty.FileCreatedAt, StandardValueType.DateTime},
-                    {SearchableReservedProperty.FileModifiedAt, StandardValueType.DateTime},
-                    {SearchableReservedProperty.Tag, StandardValueType.MultipleChoice},
-                    {SearchableReservedProperty.Category, StandardValueType.SingleChoice},
-                    {SearchableReservedProperty.MediaLibrary, StandardValueType.SingleChoice},
-                });
+        // public static readonly ConcurrentDictionary<SearchableReservedProperty, int>
+        //     ReservedResourcePropertyAndValueTypeMap =
+        //         new(new Dictionary<SearchableReservedProperty, int>()
+        //         {
+        //             {SearchableReservedProperty.FileName, StandardValueType.SingleLineText},
+        //             {SearchableReservedProperty.DirectoryPath, StandardValueType.SingleLineText},
+        //             {SearchableReservedProperty.CreatedAt, StandardValueType.DateTime},
+        //             {SearchableReservedProperty.FileCreatedAt, StandardValueType.DateTime},
+        //             {SearchableReservedProperty.FileModifiedAt, StandardValueType.DateTime},
+        //             {SearchableReservedProperty.Tag, StandardValueType.MultipleTextChoice},
+        //             {SearchableReservedProperty.Category, StandardValueType.SingleTextChoice},
+        //             {SearchableReservedProperty.MediaLibrary, StandardValueType.SingleTextChoice},
+        //         });
     }
 }

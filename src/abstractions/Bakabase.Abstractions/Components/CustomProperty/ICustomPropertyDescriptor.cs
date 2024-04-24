@@ -8,6 +8,7 @@ namespace Bakabase.Abstractions.Components.CustomProperty
 {
     public interface ICustomPropertyDescriptor
     {
+        StandardValueType ValueType { get; }
         CustomPropertyType Type { get; }
         Models.Domain.CustomProperty? BuildDomainProperty(Models.Db.CustomProperty? customProperty);
         CustomPropertyValue? BuildDomainValue(Models.Db.CustomPropertyValue? value);

@@ -3,17 +3,19 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models.Domain;
 using Bakabase.Modules.CustomProperty.Properties.Choice.Abstractions;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Choice;
 
 public record MultipleChoiceProperty : ChoiceProperty<List<string>>;
 
-public record MultipleChoicePropertyValue : TypedCustomPropertyValue<List<string>>;
+public record MultipleChoicePropertyValue : CustomPropertyValue<List<string>>;
 
 public class MultipleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<MultipleChoiceProperty,
     ChoicePropertyOptions<List<string>>, MultipleChoicePropertyValue, List<string>>
 {
+    public override StandardValueType ValueType => StandardValueType.ListString;
     public override CustomPropertyType Type => CustomPropertyType.MultipleChoice;
 
     public override SearchOperation[] SearchOperations { get; } =

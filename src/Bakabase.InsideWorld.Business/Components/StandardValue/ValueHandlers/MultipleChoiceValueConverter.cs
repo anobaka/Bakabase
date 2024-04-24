@@ -4,12 +4,12 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 {
-    public class SingleChoiceValueConverter : StringValueConverter
+    public class MultipleChoiceValueConverter : ListStringValueConverter
     {
-        public SingleChoiceValueConverter(SpecialTextService specialTextService) : base(specialTextService)
+        public MultipleChoiceValueConverter(SpecialTextService specialTextService) : base(specialTextService)
         {
         }
 
-        public override StandardValueType Type => StandardValueType.SingleChoice;
+        public override StandardValueType Type => StandardValueType.MultipleTextChoice;
     }
 }

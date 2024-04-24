@@ -45,7 +45,7 @@
 //
 //         public TargetAttribute[] Targets =>
 //         [
-//             new TargetAttribute(_localizer.Tags(), StandardValueType.MultilevelText),
+//             new TargetAttribute(_localizer.Tags(), StandardValueType.MultipleTextTree),
 //             new TargetAttribute(_localizer.Rating(), StandardValueType.Rating)
 //         ];
 //

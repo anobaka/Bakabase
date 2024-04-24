@@ -3,15 +3,17 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models.Domain;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Formula;
 
 public record FormulaProperty(): Abstractions.Models.Domain.CustomProperty;
 
-public record FormulaPropertyValue() : TypedCustomPropertyValue<string>;
+public record FormulaPropertyValue() : CustomPropertyValue<string>;
 
 public class FormulaPropertyDescriptor : AbstractCustomPropertyDescriptor<FormulaProperty, FormulaPropertyValue, string>
 {
+    public override StandardValueType ValueType => StandardValueType.String;
     public override CustomPropertyType Type => CustomPropertyType.Formula;
 
     public override SearchOperation[] SearchOperations { get; } =

@@ -3,15 +3,20 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models.Domain;
 using Newtonsoft.Json;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Boolean;
 
 public record BooleanProperty(): Abstractions.Models.Domain.CustomProperty;
-public record BooleanPropertyValue : TypedCustomPropertyValue<bool>;
-
-public class BooleanPropertyDescriptor : AbstractCustomPropertyDescriptor<BooleanProperty, BooleanPropertyValue, bool>
+public record BooleanPropertyValue : CustomPropertyValue<bool>
 {
+}
+
+public class BooleanPropertyDescriptor : AbstractCustomPropertyDescriptor<BooleanProperty, BooleanPropertyValue,
+    bool>
+{
+    public override StandardValueType ValueType => StandardValueType.Boolean;
     public override CustomPropertyType Type => CustomPropertyType.Boolean;
 
     public override SearchOperation[] SearchOperations { get; } =

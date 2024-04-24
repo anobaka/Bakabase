@@ -11,6 +11,5 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions.Mode
         Bakabase.Abstractions.Models.Domain.Resource Resource,
         IEnhancer Enhancer,
         CategoryEnhancerOptions CategoryEnhancerOptions,
-        Dictionary<int, CustomProperty> TargetPropertyMap,
-        List<CustomPropertyValue>? CurrentValues);
+        Dictionary<int, CustomProperty> TargetPropertyMap);
 }

@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Components\StandardValue\" />
     <Folder Include="Components\Text\" />
   </ItemGroup>
 

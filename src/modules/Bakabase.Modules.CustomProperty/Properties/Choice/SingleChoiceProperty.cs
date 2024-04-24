@@ -3,13 +3,14 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models.Domain;
 using Bakabase.Modules.CustomProperty.Properties.Choice.Abstractions;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Choice;
 
 public record SingleChoiceProperty : ChoiceProperty<string>;
 
-public record SingleChoicePropertyValue : TypedCustomPropertyValue<string>
+public record SingleChoicePropertyValue : CustomPropertyValue<string>
 {
     // protected override bool IsMatch(string? value, CustomPropertyValueSearchRequestModel model)
     // {
@@ -20,6 +21,7 @@ public record SingleChoicePropertyValue : TypedCustomPropertyValue<string>
 public class SingleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<SingleChoiceProperty,
     ChoicePropertyOptions<string>, SingleChoicePropertyValue, string>
 {
+    public override StandardValueType ValueType => StandardValueType.String;
     public override CustomPropertyType Type => CustomPropertyType.SingleChoice;
 
     public override SearchOperation[] SearchOperations { get; } =

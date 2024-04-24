@@ -11,8 +11,8 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.SingleLineText, null},
                 {StandardValueType.MultilineText, null},
                 {StandardValueType.Link, null},
-                {StandardValueType.SingleChoice, null},
-                {StandardValueType.MultipleChoice, null},
+                {StandardValueType.SingleTextChoice, null},
+                {StandardValueType.MultipleTextChoice, null},
                 {StandardValueType.Number, StandardValueConversionLoss.All},
                 {StandardValueType.Percentage, StandardValueConversionLoss.All},
                 {StandardValueType.Rating, StandardValueConversionLoss.All},
@@ -22,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
                 {StandardValueType.DateTime, null},
                 {StandardValueType.Time, StandardValueConversionLoss.All},
                 {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.MultilevelText, StandardValueConversionLoss.All},
+                {StandardValueType.MultipleTextTree, StandardValueConversionLoss.All},
             };
 
         public override StandardValueType Type => StandardValueType.Date;

@@ -1,18 +1,22 @@
 ﻿using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models.Domain;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Text.Abstractions;
 
 public record TextProperty : Bakabase.Abstractions.Models.Domain.CustomProperty;
 
-public record TextPropertyValue : TypedCustomPropertyValue<string>;
+public record TextPropertyValue : CustomPropertyValue<string>;
 
 public abstract class
-    TextPropertyDescriptor<TPropertyValue, TInnerValue> : AbstractCustomPropertyDescriptor<TextProperty, TPropertyValue, TInnerValue> where TPropertyValue : TypedCustomPropertyValue<TInnerValue>, new()
+    TextPropertyDescriptor<TPropertyValue, TInnerValue> : AbstractCustomPropertyDescriptor<TextProperty, TPropertyValue, TInnerValue> where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
 {
+    public override StandardValueType ValueType => StandardValueType.String;
+
     public override SearchOperation[] SearchOperations { get; } =
     [
         SearchOperation.Equals,

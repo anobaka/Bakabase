@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.StandardValue;
 using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Extensions;
@@ -50,7 +51,7 @@ public class PropertyValueConverter
                 if (!string.IsNullOrEmpty(typedValue))
                 {
                     (typedProperty.Options ??= new ChoicePropertyOptions<string>()).AddChoices(true, typedValue);
-                    nv = typedProperty.Options.Choices!.First(x => x.Value == typedValue).Id;
+                    nv = new TextValueBuilder(typedProperty.Options.Choices!.First(x => x.Value == typedValue).Id);
                 }
 
                 break;

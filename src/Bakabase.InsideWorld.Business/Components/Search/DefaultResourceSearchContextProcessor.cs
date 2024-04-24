@@ -799,7 +799,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                     //
                     // 		break;
                     // 	}
-                    // 	case CustomPropertyType.SingleChoice:
+                    // 	case CustomPropertyType.SingleTextChoice:
                     // 	{
                     // 		var propertyValues = await PrepareAndGetCustomPropertyValues<string>(filter, context);
                     //
@@ -904,7 +904,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                     //
                     // 		break;
                     // 	}
-                    // 	case CustomPropertyType.MultipleChoice:
+                    // 	case CustomPropertyType.MultipleTextChoice:
                     // 	{
                     // 		var value = string.IsNullOrEmpty(filter.Value)
                     // 			? null
@@ -1329,7 +1329,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                     // 		break;
                     // 	}
                     // 	case CustomPropertyType.Formula:
-                    // 	case CustomPropertyType.MultilevelText:
+                    // 	case CustomPropertyType.MultipleTextTree:
                     // 		break;
                     // 	default:
                     // 		throw new ArgumentOutOfRangeException();

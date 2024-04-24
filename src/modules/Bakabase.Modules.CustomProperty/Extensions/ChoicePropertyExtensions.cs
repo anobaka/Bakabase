@@ -12,19 +12,21 @@ namespace Bakabase.Modules.CustomProperty.Extensions
     {
         public static void AddChoices<T>(this ChoicePropertyOptions<T> options, bool ignoreSameValue, params string[] values)
         {
-            options.Choices ??= new List<ChoicePropertyOptions<T>.ChoiceOptions>();
-
-            if (ignoreSameValue)
+            if (options.AllowAddingNewOptionsDynamically)
             {
-                var current = options.Choices.Select(c => c.Value).ToHashSet();
-                values = values.ToHashSet().Except(current).ToArray();
+                options.Choices ??= new List<ChoicePropertyOptions<T>.ChoiceOptions>();
+                if (ignoreSameValue)
+                {
+                    var current = options.Choices.Select(c => c.Value).ToHashSet();
+                    values = values.ToHashSet().Except(current).ToArray();
+                }
+
+                options.Choices.AddRange(values.Select(v => new ChoicePropertyOptions<T>.ChoiceOptions
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Value = v
+                }));
             }
-
-            options.Choices.AddRange(values.Select(v => new ChoicePropertyOptions<T>.ChoiceOptions
-            {
-                Id = Guid.NewGuid().ToString(),
-                Value = v
-            }));
         }
     }
 }

@@ -7,7 +7,7 @@ using Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancement.Enhancers.Bakabase
 {
-    public class BakabaseEnhancer: AbstractEnhancer<>
-    {
-    }
+    // public class BakabaseEnhancer: AbstractEnhancer<>
+    // {
+    // }
 }

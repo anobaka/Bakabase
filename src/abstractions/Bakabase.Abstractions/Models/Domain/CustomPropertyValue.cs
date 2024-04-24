@@ -10,7 +10,7 @@ namespace Bakabase.Abstractions.Models.Domain
         public int PropertyId { get; set; }
         public int ResourceId { get; set; }
         public CustomProperty? Property { get; set; }
-        public object? Value { get; set; }
+        public virtual object? Value => null;
         public CustomPropertyValueLayer Layer { get; set; }
 
         private sealed class CustomPropertyValueBizKeyComparer : IEqualityComparer<CustomPropertyValue>
@@ -34,14 +34,10 @@ namespace Bakabase.Abstractions.Models.Domain
             new CustomPropertyValueBizKeyComparer();
     }
 
-    public abstract record TypedCustomPropertyValue<T> : CustomPropertyValue
-    {
-        private T? _value;
 
-        public new T? Value
-        {
-            get => _value;
-            set => base.Value = _value = value;
-        }
+    public abstract record CustomPropertyValue<TValue> : CustomPropertyValue
+    {
+        public TValue? TypedValue { get; set; }
+        public override object? Value => TypedValue;
     }
 }

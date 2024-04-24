@@ -66,6 +66,15 @@ namespace Bakabase.InsideWorld.Business.Services
             return dtoList.First();
         }
 
+        public async Task<List<Abstractions.Models.Domain.CustomProperty>> GetByKeys(IEnumerable<int> ids,
+            CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
+            bool returnCopy = true)
+        {
+            var data = await base.GetByKeys(ids, returnCopy);
+            var dtoList = await ToDtoList(data.ToList(), additionalItems);
+            return dtoList;
+        }
+
         public async Task<Dictionary<int, List<Abstractions.Models.Domain.CustomProperty>>> GetByCategoryIds(int[] ids)
         {
             var mappings = await CategoryCustomPropertyMappingService.GetAll(x => ids.Contains(x.CategoryId));
@@ -166,7 +175,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<TextPropertyValue>().Select(s => s.Value).Where(s => !string.IsNullOrEmpty(s))
+                        ..values.Cast<TextPropertyValue>().Select(s => s.TypedValue).Where(s => !string.IsNullOrEmpty(s))
                             .Distinct()
                     ];
                     break;
@@ -178,7 +187,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     typedValues =
                     [
                         ..values.Cast<SingleChoicePropertyValue>()
-                            .Select(v => string.IsNullOrEmpty(v.Value) ? null : choiceMap?.GetValueOrDefault(v.Value))
+                            .Select(v => string.IsNullOrEmpty(v.TypedValue) ? null : choiceMap?.GetValueOrDefault(v.TypedValue))
                             .Where(s => !string.IsNullOrEmpty(s)).Distinct()
                     ];
                     break;
@@ -190,8 +199,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
                     var arrList = values.Cast<MultipleChoicePropertyValue>()
                         .Select(v =>
-                            v.Value?.Any() == true
-                                ? v.Value.Select(x => choiceMap?.GetValueOrDefault(x))
+                            v.TypedValue?.Any() == true
+                                ? v.TypedValue.Select(x => choiceMap?.GetValueOrDefault(x))
                                     .Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(a => a).ToList()
                                 : null)
                         .Where(s => s?.Any() == true).ToList();
@@ -213,7 +222,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<NumberPropertyValue>().Select(s => s.Value).Distinct()
+                        ..values.Cast<NumberPropertyValue>().Select(s => s.TypedValue).Distinct()
                     ];
                     break;
                 }
@@ -221,7 +230,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<PercentagePropertyValue>().Select(s => s.Value).Distinct()
+                        ..values.Cast<PercentagePropertyValue>().Select(s => s.TypedValue).Distinct()
                     ];
                     break;
                 }
@@ -229,7 +238,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<RatingPropertyValue>().Select(s => s.Value).Distinct()
+                        ..values.Cast<RatingPropertyValue>().Select(s => s.TypedValue).Distinct()
                     ];
                     break;
                 }
@@ -237,7 +246,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<BooleanPropertyValue>().Select(s => s.Value).Distinct()
+                        ..values.Cast<BooleanPropertyValue>().Select(s => s.TypedValue).Distinct()
                     ];
                     break;
                 }
@@ -245,7 +254,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<LinkPropertyValue>().Select(s => s.Value).Distinct()
+                        ..values.Cast<LinkPropertyValue>().Select(s => s.TypedValue).Distinct()
                     ];
                     break;
                 }
@@ -254,7 +263,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     typedValues =
                     [
                         ..values.Cast<AttachmentPropertyValue>()
-                            .Select(s => s.Value?.Where(v => !string.IsNullOrEmpty(v)).ToList())
+                            .Select(s => s.TypedValue?.Where(v => !string.IsNullOrEmpty(v)).ToList())
                             .Where(s => s?.Any() == true).Distinct()
                     ];
                     getDisplayStr = s => string.Join(BusinessConstants.TextSeparator, (s as List<string>)!);
@@ -264,7 +273,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<DatePropertyValue>().Select(s => s.Value).Distinct()
+                        ..values.Cast<DatePropertyValue>().Select(s => s.TypedValue).Distinct()
                     ];
                     getDisplayStr = s => ((DateTime) s).ToString("yyyy-MM-dd");
                     break;
@@ -273,7 +282,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<DateTimePropertyValue>().Select(s => s.Value).Distinct()
+                        ..values.Cast<DateTimePropertyValue>().Select(s => s.TypedValue).Distinct()
                     ];
                     getDisplayStr = s => ((DateTime) s).ToString("yyyy-MM-dd HH:mm:ss");
                     break;
@@ -282,7 +291,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<TimePropertyValue>().Select(s => s.Value).Distinct()
+                        ..values.Cast<TimePropertyValue>().Select(s => s.TypedValue).Distinct()
                     ];
                     getDisplayStr = s => ((TimeSpan) s).ToString("g");
                     break;
@@ -291,7 +300,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     typedValues =
                     [
-                        ..values.Cast<FormulaPropertyValue>().Select(s => s.Value).Distinct()
+                        ..values.Cast<FormulaPropertyValue>().Select(s => s.TypedValue).Distinct()
                     ];
                     break;
                 }
@@ -301,9 +310,9 @@ namespace Bakabase.InsideWorld.Business.Services
                     var allChains = new List<List<List<string>>>();
                     foreach (var s in values.Cast<MultilevelPropertyValue>())
                     {
-                        if (s.Value?.Any() == true)
+                        if (s.TypedValue?.Any() == true)
                         {
-                            var chains = s.Value
+                            var chains = s.TypedValue
                                 .Select(item =>
                                     typedProperty.Options?.Data?.Select(x => x.FindLabel(item))
                                         .FirstOrDefault(x => x != null)?.ToList()).OfType<List<string>>().ToList();

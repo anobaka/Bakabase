@@ -10,6 +10,8 @@ using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bootstrap.Extensions;
 using Bakabase.Modules.CustomProperty.Properties.Text;
+using Bakabase.Abstractions.Components.StandardValue;
+using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -32,8 +34,7 @@ namespace Bakabase.InsideWorld.Business.Services
         /// <param name="toType"></param>
         /// <returns>Loss information</returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public async Task<(object? NewValue, StandardValueConversionLoss? Loss)> CheckConversionLoss(object? data,
-            StandardValueType fromType,
+        public async Task<(object? NewValue, StandardValueConversionLoss? Loss)> CheckConversionLoss(object? data, StandardValueType fromType,
             StandardValueType toType)
         {
             var converter = _valueConverters[fromType];

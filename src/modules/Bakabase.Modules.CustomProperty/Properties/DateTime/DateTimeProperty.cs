@@ -3,15 +3,17 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models.Domain;
 
 namespace Bakabase.Modules.CustomProperty.Properties.DateTime;
 public record DateTimeProperty : Abstractions.Models.Domain.CustomProperty;
-public record DateTimePropertyValue : TypedCustomPropertyValue<System.DateTime>;
+public record DateTimePropertyValue : CustomPropertyValue<System.DateTime>;
 
 public class
     DateTimePropertyDescriptor : AbstractCustomPropertyDescriptor<DateTimeProperty, DateTimePropertyValue,
     System.DateTime>
 {
+    public override StandardValueType ValueType => StandardValueType.DateTime;
     public override CustomPropertyType Type => CustomPropertyType.DateTime;
 
     public override SearchOperation[] SearchOperations { get; } =

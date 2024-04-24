@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Aliyun.Api.LogService.Infrastructure.Serialization.Protobuf;
+using Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.StandardValue;
 using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions.Models;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
@@ -37,8 +37,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
 
         public abstract EnhancerId Id { get; }
 
-        public async Task<List<Enhancement>?> Enhance(Bakabase.Abstractions.Models.Domain.Resource resource,
-            object? options)
+        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Bakabase.Abstractions.Models.Domain.Resource resource)
         {
             var context = await BuildContext(resource);
             if (context == null)
@@ -54,7 +53,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
                 return null;
             }
 
-            var enhancements = new List<Enhancement>();
+            var enhancements = new List<EnhancementRawValue>();
             foreach (var (target, value) in targetValues)
             {
                 if (value != null)
@@ -64,10 +63,10 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
                     var vt = targetAttr.ValueType;
                     var vc = ValueConverters.FirstOrDefault(x => x.Type == vt)!;
                     var isValid = vc.ValidateType(value);
-                    var e = new Enhancement
+                    var e = new EnhancementRawValue
                     {
                         Target = intTarget,
-                        Value = ApplyOptions(target, value, options as TEnhancerOptions),
+                        Value = value,
                         ValueType = vt,
                     };
 
@@ -79,8 +78,5 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
         }
 
         protected abstract Task<Dictionary<TEnumTarget, object?>?> ConvertContextByTargets(TContext context);
-
-        protected virtual object? ApplyOptions(TEnumTarget target, object? initValue, TEnhancerOptions? options) =>
-            initValue;
     }
 }

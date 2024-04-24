@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
@@ -53,21 +54,21 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
             return property switch
             {
                 ResourceProperty.ReleaseDt => StandardValueType.DateTime,
-                ResourceProperty.Publisher => StandardValueType.MultipleChoice,
-                ResourceProperty.Name => StandardValueType.SingleLineText,
-                ResourceProperty.Language => StandardValueType.SingleChoice,
+                ResourceProperty.Publisher => StandardValueType.ListString,
+                ResourceProperty.Name => StandardValueType.String,
+                ResourceProperty.Language => StandardValueType.String,
                 ResourceProperty.Volume => propertyKey switch
                 {
-                    nameof(Volume.Index) => StandardValueType.Number,
-                    nameof(Volume.Title) => StandardValueType.SingleLineText,
-                    nameof(Volume.Name) => StandardValueType.SingleLineText,
+                    nameof(Volume.Index) => StandardValueType.Decimal,
+                    nameof(Volume.Title) => StandardValueType.String,
+                    nameof(Volume.Name) => StandardValueType.String,
                 },
-                ResourceProperty.Original => StandardValueType.MultipleChoice,
-                ResourceProperty.Series => StandardValueType.SingleChoice,
-                ResourceProperty.Introduction => StandardValueType.MultilineText,
-                ResourceProperty.Rate => StandardValueType.Rating,
-                ResourceProperty.CustomProperty => StandardValueType.MultipleChoice,
-                ResourceProperty.Favorites => StandardValueType.MultipleChoice,
+                ResourceProperty.Original => StandardValueType.ListString,
+                ResourceProperty.Series => StandardValueType.String,
+                ResourceProperty.Introduction => StandardValueType.String,
+                ResourceProperty.Rate => StandardValueType.Decimal,
+                ResourceProperty.CustomProperty => StandardValueType.ListString,
+                ResourceProperty.Favorites => StandardValueType.ListString,
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }
