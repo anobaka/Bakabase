@@ -32,7 +32,7 @@ using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class CustomPropertyService : FullMemoryCacheResourceService<InsideWorldDbContext, CustomProperty, int>
+    public class CustomPropertyService : FullMemoryCacheResourceService<InsideWorldDbContext, CustomProperty, int>, ICustomPropertyService
     {
         protected CategoryCustomPropertyMappingService CategoryCustomPropertyMappingService =>
             GetRequiredService<CategoryCustomPropertyMappingService>();

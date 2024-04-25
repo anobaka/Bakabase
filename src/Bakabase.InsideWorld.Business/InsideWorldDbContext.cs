@@ -27,7 +27,6 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<PublisherTagMapping> PublisherTagMappings { get; set; }
         public DbSet<MediaLibrary> MediaLibraries { get; set; }
         public DbSet<Playlist> Playlists { get; set; }
-        public DbSet<EnhancementRecord> EnhancementRecords { get; set; }
         public DbSet<ComponentOptions> ComponentOptions { get; set; }
         public DbSet<CategoryComponent> CategoryComponents { get; set; }
         public DbSet<Favorites> Favorites { get; set; }
@@ -47,6 +46,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<CustomProperty> CustomProperties { get; set; }
         public DbSet<CustomPropertyValue> CustomPropertyValues { get; set; }
         public DbSet<CategoryCustomPropertyMapping> CategoryCustomPropertyMappings { get; set; }
+
+        public DbSet<Enhancement>
 
         public InsideWorldDbContext()
         {

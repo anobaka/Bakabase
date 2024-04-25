@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.Enhancer.Abstractions;
 using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.StandardValue

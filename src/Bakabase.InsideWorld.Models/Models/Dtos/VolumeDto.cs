@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
+    [Obsolete]
     public record VolumeDto
     {
         public int Index { get; set; }

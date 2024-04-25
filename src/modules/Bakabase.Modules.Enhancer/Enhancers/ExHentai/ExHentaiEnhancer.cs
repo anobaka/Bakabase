@@ -49,7 +49,7 @@
 //                 {
 //                     if (data.Rating.HasValue)
 //                     {
-//                         return new DecimalValue(data.Rating.Value);
+//                         return new DecimalValueBuilder(data.Rating.Value);
 //                         return StandardValueCreator.CreateRatingValue(data.Rating.Value, 5);
 //                     }
 //
@@ -57,8 +57,8 @@
 //                 }
 //                 case ExHentaiEnhancerTarget.Tags:
 //                 {
-//                     var value = data.Tags?.Select(t => new MultipleTextTreeValue
-//                             {Value = t.Key, Children = t.Value.Select(x => new MultipleTextTreeValue {Value = x}).ToList()})
+//                     var value = data.Tags?.Select(t => new MultipleTextTreeValueBuilder
+//                             {Value = t.Key, Children = t.Value.Select(x => new MultipleTextTreeValueBuilder {Value = x}).ToList()})
 //                         .ToArray();
 //                     if (value?.Length > 0)
 //                     {

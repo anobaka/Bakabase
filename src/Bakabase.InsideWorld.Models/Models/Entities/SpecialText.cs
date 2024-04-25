@@ -8,8 +8,7 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
 		[Key]
 		public int Id { get; set; }
 
-		[Required, MaxLength(64)]
-		public string Value1 { set; get; }
+        [Required, MaxLength(64)] public string Value1 { set; get; } = null!;
 
 		[MaxLength(64)]
 		public string? Value2 { set; get; }

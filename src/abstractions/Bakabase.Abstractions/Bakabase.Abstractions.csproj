@@ -9,7 +9,11 @@
 
   <ItemGroup>
     <Folder Include="Components\Text\" />
-    <Folder Include="Services\" />
+    <Folder Include="Helpers\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" />
   </ItemGroup>
 
   <ItemGroup>

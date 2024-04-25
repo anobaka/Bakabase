@@ -1,21 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 using Bakabase.Abstractions.Extensions;
-using Bakabase.InsideWorld.Business.Components.StandardValue;
+using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bootstrap.Components.Orm.Infrastructures;
+using Microsoft.EntityFrameworkCore;
 
-namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
+namespace Bakabase.Modules.Enhancer.Services
 {
-    public class EnhancementService : ResourceService<InsideWorldDbContext, Bakabase.Abstractions.Models.Db.Enhancement, int>
+    public class AbstractEnhancementService<TDbContext>(IServiceProvider serviceProvider)
+        : ResourceService<TDbContext, Bakabase.Abstractions.Models.Db.Enhancement, int>(serviceProvider),
+            IEnhancementService where TDbContext : DbContext
     {
-        public EnhancementService(IServiceProvider serviceProvider) : base(serviceProvider)
-        {
-        }
-
         public async Task<List<Bakabase.Abstractions.Models.Domain.Enhancement>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>>? exp)
         {
             var data = await base.GetAll(exp);

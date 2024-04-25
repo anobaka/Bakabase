@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Bakabase.InsideWorld.Business.Components.Enhancement.Enhancers.Bakabase
+﻿namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
 {
-    internal record BakabaseEnhancerContext
+    public record BakabaseEnhancerContext
     {
+        public string? Name { get; set; }
+        public string? Series { get; set; }
+        public List<string>? Publishers { get; set; }
+        public DateTime? ReleaseDt { get; set; }
+        public string? VolumeName { get; set; }
+        public string? VolumeTitle { get; set; }
+        public List<string>? Originals { get; set; }
+        public string? Language { get; set; }
     }
 }

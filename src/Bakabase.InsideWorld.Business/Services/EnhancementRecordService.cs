@@ -35,6 +35,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Enhancement = Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures.Enhancement;
 using Resource = Bakabase.Abstractions.Models.Db.Resource;
 
 namespace Bakabase.InsideWorld.Business.Services

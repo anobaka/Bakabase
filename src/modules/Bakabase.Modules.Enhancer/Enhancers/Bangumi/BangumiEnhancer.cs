@@ -1,12 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.Enhancer;
-using Bakabase.Abstractions.Components.StandardValue;
+﻿using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.InsideWorld.Business.Components.Enhancement.Enhancers.Bangumi;
+namespace Bakabase.Modules.Enhancer.Enhancers.Bangumi;
 
 public class BangumiEnhancer : AbstractEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>
 {

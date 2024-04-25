@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Modules.Enhancer.Abstractions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Localization;
 
@@ -11,21 +13,15 @@ namespace Bakabase.InsideWorld.Business.Resources
     /// <summary>
     /// todo: Redirect raw <see cref="IStringLocalizer"/> callings to here
     /// </summary>
-    public class InsideWorldLocalizer : IStringLocalizer<Business.SharedResource>
+    public class InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
+        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer
     {
-        private readonly IStringLocalizer<Business.SharedResource> _localizer;
-
-        public InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
-        {
-            _localizer = localizer;
-        }
-
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
-            _localizer.GetAllStrings(includeParentCultures);
+            localizer.GetAllStrings(includeParentCultures);
 
-        public LocalizedString this[string name] => _localizer[name];
+        public LocalizedString this[string name] => localizer[name];
 
-        public LocalizedString this[string name, params object?[] arguments] => _localizer[name, arguments];
+        public LocalizedString this[string name, params object?[] arguments] => localizer[name, arguments];
 
         public string Component_NotDeletableWhenUsingByCategories(IEnumerable<string> categoryNames) =>
             this[nameof(Component_NotDeletableWhenUsingByCategories), string.Join(',', categoryNames)];
@@ -84,6 +80,7 @@ namespace Bakabase.InsideWorld.Business.Resources
 
         private string Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource() =>
             this[nameof(Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource)];
+
         public string ValueIsNotSet(string name) => this[nameof(ValueIsNotSet), name];
 
         public string NewFolderName() => this[nameof(NewFolderName)];
@@ -93,5 +90,8 @@ namespace Bakabase.InsideWorld.Business.Resources
 
         public string Tags() => this[nameof(Tags)];
         public string Rating() => this[nameof(Rating)];
+
+        public string SpecialText_HistoricalLanguageValue2ShouldBeModified() =>
+            this[nameof(SpecialText_HistoricalLanguageValue2ShouldBeModified)];
     }
 }

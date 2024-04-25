@@ -1,6 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
 
-namespace Bakabase.Abstractions.Components.Enhancer;
+namespace Bakabase.Modules.Enhancer.Abstractions.Attributes;
 
 public class EnhancerTargetAttribute(StandardValueType valueType) : Attribute
 {

@@ -2,40 +2,35 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Conversion;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.StandardValue;
 using Bakabase.InsideWorld.Business.Services;
-using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.Modules.CustomProperty.Extensions;
-using NPOI.SS.Formula.Functions;
-using IEnhancer = Bakabase.Abstractions.Components.Enhancer.IEnhancer;
+using Bakabase.Modules.Enhancer.Abstractions.Services;
+using EnhancerAttribute = Bakabase.Modules.Enhancer.Abstractions.Attributes.EnhancerAttribute;
+using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.IEnhancer;
 
-namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
+namespace Bakabase.InsideWorld.Business.Components.Enhancer
 {
-    public class EnhancerService
+    public class EnhancerService : IEnhancerService
     {
-        private readonly CustomPropertyService _customPropertyService;
+        private readonly ICustomPropertyService _customPropertyService;
         private readonly PropertyValueConverter _propertyValueConverter;
         private readonly ResourceService _resourceService;
         private readonly CustomPropertyValueService _customPropertyValueService;
         private readonly ConcurrentDictionary<EnhancerId, IEnhancer> _enhancers;
-        private readonly EnhancementService _enhancementService;
-        private readonly CategoryEnhancerOptionsService _categoryEnhancerService;
+        private readonly IEnhancementService _enhancementService;
+        private readonly ICategoryEnhancerOptionsService _categoryEnhancerService;
         private readonly StandardValueService _standardValueService;
 
-        public EnhancerService(CustomPropertyService customPropertyService,
+        public EnhancerService(ICustomPropertyService customPropertyService,
             PropertyValueConverter propertyValueConverter, ResourceService resourceService,
             CustomPropertyValueService customPropertyValueService, IEnumerable<IEnhancer> enhancers,
-            EnhancementService enhancementService, CategoryEnhancerOptionsService categoryEnhancerService,
+            IEnhancementService enhancementService, ICategoryEnhancerOptionsService categoryEnhancerService,
             StandardValueService standardValueService)
         {
             _customPropertyService = customPropertyService;
@@ -67,8 +62,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
                 (await _customPropertyService.GetByKeys(propertyIds, CustomPropertyAdditionalItem.None, false))
                 .ToDictionary(d => d.Id, d => d);
             var currentPropertyValues =
-                (await _customPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId),
-                    CustomPropertyValueAdditionalItem.None, true));
+                await _customPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId),
+                    CustomPropertyValueAdditionalItem.None, true);
 
             var enhancementTargetOptionsMap = new Dictionary<Bakabase.Abstractions.Models.Domain.Enhancement, EnhancerTargetOptions>();
             foreach (var enhancement in enhancements)
@@ -100,6 +95,9 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
                     enhancementsIntegratedWithAlias.ToDictionary(d => d.Value!, d => d.ValueType));
             }
 
+            var enhancerCustomPropertyValueLayerMap = _enhancers.ToDictionary(d => d.Key,
+                d => d.Value.GetType().GetRequiredAttribute<EnhancerAttribute>().CustomPropertyValueLayer);
+
             var pvs = new List<CustomPropertyValue>();
             foreach (var (enhancement, targetOptions) in enhancementTargetOptionsMap)
             {
@@ -111,6 +109,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
                 }
 
                 var pv = await _propertyValueConverter.Convert(enhancement.ValueType, enhancement.Value, property);
+                pv.Layer = enhancerCustomPropertyValueLayerMap[enhancement.EnhancerId];
                 pvs.Add(pv);
             }
 
@@ -121,14 +120,14 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancement.Abstractions
             await _customPropertyValueService.AddRange(valuesToAdd);
         }
 
-        protected async Task Enhance(List<Business.Models.Domain.Resource> targetResources)
+        protected async Task Enhance(List<Models.Domain.Resource> targetResources)
         {
             var categoryIds = targetResources.Select(c => c.CategoryId).ToHashSet();
             var categoryIdEnhancerOptionsMap =
                 (await _categoryEnhancerService.GetAll(x => categoryIds.Contains(x.CategoryId)))
                 .GroupBy(d => d.CategoryId)
                 .ToDictionary(d => d.Key, d => d.ToList());
-            var tasks = new Dictionary<IEnhancer, List<Business.Models.Domain.Resource>>();
+            var tasks = new Dictionary<IEnhancer, List<Models.Domain.Resource>>();
             foreach (var tr in targetResources)
             {
                 var enhancerOptions = categoryIdEnhancerOptionsMap.GetValueOrDefault(tr.CategoryId);

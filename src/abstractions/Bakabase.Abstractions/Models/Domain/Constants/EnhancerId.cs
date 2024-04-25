@@ -2,6 +2,7 @@
 {
     public enum EnhancerId
     {
-        ExHentai = 1
+        Bakabase = 1,
+        ExHentai
     }
 }

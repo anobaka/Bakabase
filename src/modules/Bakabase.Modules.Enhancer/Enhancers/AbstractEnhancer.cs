@@ -1,10 +1,12 @@
 ﻿using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Enhancer.Abstractions;
+using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Abstractions.Components.Enhancer
+namespace Bakabase.Modules.Enhancer.Enhancers
 {
     /// <summary>
     /// 
@@ -25,11 +27,11 @@ namespace Bakabase.Abstractions.Components.Enhancer
             Logger = loggerFactory.CreateLogger(GetType());
         }
 
-        protected abstract Task<TContext> BuildContext(Bakabase.Abstractions.Models.Domain.Resource resource);
+        protected abstract Task<TContext> BuildContext(Resource resource);
 
         public abstract EnhancerId Id { get; }
 
-        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Bakabase.Abstractions.Models.Domain.Resource resource)
+        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource)
         {
             var context = await BuildContext(resource);
             if (context == null)
@@ -40,26 +42,27 @@ namespace Bakabase.Abstractions.Components.Enhancer
             Logger.LogInformation($"Got context: {resource.ToJson()}");
 
             var targetValues = await ConvertContextByTargets(context);
-            if (targetValues == null)
+            if (targetValues?.Any(x => x.Value.Value != null) != true)
             {
                 return null;
             }
 
             var enhancements = new List<EnhancementRawValue>();
-            foreach (var (target, value) in targetValues)
+            foreach (var (target, valueBuilder) in targetValues)
             {
+                var value = valueBuilder?.Value;
                 if (value != null)
                 {
                     var targetAttr = target.GetAttribute<EnhancerTargetAttribute>();
                     var intTarget = (int) (object) target;
                     var vt = targetAttr.ValueType;
-                    var vc = ValueConverters.FirstOrDefault(x => x.Type == vt)!;
-                    var isValid = vc.ValidateType(value);
+                    // var vc = ValueConverters.FirstOrDefault(x => x.Type == vt)!;
+                    // var isValid = vc.ValidateType(value);
                     var e = new EnhancementRawValue
                     {
                         Target = intTarget,
                         Value = value,
-                        ValueType = vt,
+                        ValueType = vt
                     };
 
                     enhancements.Add(e);
@@ -69,6 +72,14 @@ namespace Bakabase.Abstractions.Components.Enhancer
             return enhancements;
         }
 
-        protected abstract Task<Dictionary<TEnumTarget, object?>?> ConvertContextByTargets(TContext context);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns>
+        /// The value of the dictionary MUST be the standard value, which can be generated safely via <see cref="IStandardValueBuilder{TValue}"/>
+        /// </returns>
+        protected abstract Task<Dictionary<TEnumTarget, IStandardValueBuilder>> ConvertContextByTargets(
+            TContext context);
     }
 }

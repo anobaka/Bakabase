@@ -1,5 +1,8 @@
-﻿namespace Bakabase.InsideWorld.Models.Constants
+﻿using System;
+
+namespace Bakabase.InsideWorld.Models.Constants
 {
+    [Obsolete]
     public enum ResourceLanguage
     {
         NotSet = 0,

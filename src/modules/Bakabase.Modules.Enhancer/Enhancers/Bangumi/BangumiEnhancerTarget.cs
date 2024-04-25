@@ -1,8 +1,7 @@
-﻿using Bakabase.Abstractions.Components.Enhancer;
-using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Models.Constants;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Enhancer.Abstractions;
 
-namespace Bakabase.InsideWorld.Business.Components.Enhancement.Enhancers.Bangumi;
+namespace Bakabase.Modules.Enhancer.Enhancers.Bangumi;
 
 public enum BangumiEnhancerTarget
 {
