@@ -14,12 +14,12 @@ using Newtonsoft.Json.Linq;
 using System.Text;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Configurations.App;
+using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
-using Bakabase.InsideWorld.Business.Configurations.Models.Db;
 
 namespace InsideWorld.Migrations
 {

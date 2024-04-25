@@ -1,6 +1,6 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Dto;
-using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Configurations.Models.Dto

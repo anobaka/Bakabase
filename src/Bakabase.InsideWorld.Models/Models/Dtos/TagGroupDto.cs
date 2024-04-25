@@ -20,7 +20,9 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         public static TagGroupDto CreateDefault() => new()
         {
             Id = DefaultGroupId,
-            Name = "Default"
+            Name = DefaultGroupName
         };
+
+        public const string DefaultGroupName = "Default";
     }
 }

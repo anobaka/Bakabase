@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
+using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 
 namespace Bakabase.InsideWorld.Business.Components.Migration
@@ -27,12 +29,15 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
         private readonly ResourceService _resourceService;
         private readonly CustomPropertyService _customPropertyService;
         private readonly CustomPropertyValueService _customPropertyValueService;
+        private readonly TagGroupService _tagGroupService;
+        private readonly ResourceTagMappingService _resourceTagMappingService;
 
         public V190Migrator(PublisherService publisherService, VolumeService volumeService, SeriesService seriesService,
             OriginalService originalService, OriginalResourceMappingService originalResourceMappingService,
             CustomResourcePropertyService customResourcePropertyService, FavoritesService favoritesService,
             FavoritesResourceMappingService favoritesResourceMappingService, ResourceService resourceService,
-            CustomPropertyService customPropertyService, CustomPropertyValueService customPropertyValueService)
+            CustomPropertyService customPropertyService, CustomPropertyValueService customPropertyValueService,
+            TagGroupService tagGroupService, ResourceTagMappingService resourceTagMappingService)
         {
             _publisherService = publisherService;
             _volumeService = volumeService;
@@ -45,6 +50,8 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
             _resourceService = resourceService;
             _customPropertyService = customPropertyService;
             _customPropertyValueService = customPropertyValueService;
+            _tagGroupService = tagGroupService;
+            _resourceTagMappingService = resourceTagMappingService;
         }
 
 
@@ -69,6 +76,7 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
                 ResourceProperty.Rate => StandardValueType.Decimal,
                 ResourceProperty.CustomProperty => StandardValueType.ListString,
                 ResourceProperty.Favorites => StandardValueType.ListString,
+                ResourceProperty.Tag => StandardValueType.ListListString,
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }
@@ -204,6 +212,26 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
                             x => x.Select(y => favorites.GetValueOrDefault(y.FavoritesId)?.Name)
                                 .Where(y => !string.IsNullOrEmpty(y)).Distinct().ToList()).Where(x => x.Value.Any())
                         .ToDictionary(x => x.Key, x => (object?) x.Value);
+                    return (valueType, valueMap);
+                }
+                case ResourceProperty.Tag:
+                {
+                    var tagGroups = await _tagGroupService.GetAll(TagGroupAdditionalItem.Tags);
+                    var tagIdStdTreeMap = tagGroups.SelectMany(g => g.Tags.Select(t =>
+                    {
+                        var list = new List<string>
+                        {
+                            g.Name == TagGroupDto.DefaultGroupName ? string.Empty : g.Name,
+                            t.Name
+                        };
+                        return (t.Id, Chain: list);
+                    })).ToDictionary(d => d.Id, d => d.Chain);
+                    var resourceTagMappings = await _resourceTagMappingService.GetAll();
+                    var valueMap = resourceTagMappings.GroupBy(d => d.ResourceId)
+                        .ToDictionary(d => d.Key,
+                            d => (object?) d.Select(c => tagIdStdTreeMap.GetValueOrDefault(c.TagId))
+                                .Where(c => c != null)
+                                .OfType<List<string>>().ToList());
                     return (valueType, valueMap);
                 }
                 default:

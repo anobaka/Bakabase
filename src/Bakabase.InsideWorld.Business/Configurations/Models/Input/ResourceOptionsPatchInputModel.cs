@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 
 namespace Bakabase.InsideWorld.Business.Configurations.Models.Input
 {

@@ -14,7 +14,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Tasks;
-using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;

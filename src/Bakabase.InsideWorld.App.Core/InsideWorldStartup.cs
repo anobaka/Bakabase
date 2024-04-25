@@ -18,6 +18,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsValidator;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
+using Bakabase.InsideWorld.Business.Components.Enhancer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
@@ -34,6 +35,7 @@ using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.Enhancer.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage.OneDrive;
@@ -133,6 +135,8 @@ namespace Bakabase.InsideWorld.App.Core
             services.TryAddSingleton<IFileMover, FileMover>();
 
             services.TryAddSingleton<InsideWorldWebProxy>();
+
+            services.AddEnhancers<EnhancementService, EnhancerService, CategoryEnhancerOptionsService>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

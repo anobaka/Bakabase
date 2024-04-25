@@ -51,7 +51,7 @@ public class PropertyValueConverter
                 if (!string.IsNullOrEmpty(typedValue))
                 {
                     (typedProperty.Options ??= new ChoicePropertyOptions<string>()).AddChoices(true, typedValue);
-                    nv = new TextValueBuilder(typedProperty.Options.Choices!.First(x => x.Value == typedValue).Id);
+                    nv = new StringValueBuilder(typedProperty.Options.Choices!.First(x => x.Value == typedValue).Id);
                 }
 
                 break;

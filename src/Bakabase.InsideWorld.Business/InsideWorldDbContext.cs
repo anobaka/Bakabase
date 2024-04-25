@@ -47,7 +47,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<CustomPropertyValue> CustomPropertyValues { get; set; }
         public DbSet<CategoryCustomPropertyMapping> CategoryCustomPropertyMappings { get; set; }
 
-        public DbSet<Enhancement>
+        public DbSet<Enhancement> Enhancements { get; set; }
+        public DbSet<CategoryEnhancerOptions> CategoryEnhancerOptions { get; set; }
 
         public InsideWorldDbContext()
         {
@@ -111,8 +112,6 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.FileModifyDt);
                 t.HasIndex(a => a.Rate);
             });
-
-            modelBuilder.Entity<EnhancementRecord>(t => { t.HasIndex(a => a.ResourceId); });
 
             modelBuilder.Entity<MediaLibrary>(t =>
             {

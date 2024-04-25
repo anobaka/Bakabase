@@ -12,7 +12,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
 using Bakabase.InsideWorld.Business.Configurations;
-using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Configurations.Models.Dto;
 using Bakabase.InsideWorld.Business.Configurations.Models.Input;
 using Bakabase.InsideWorld.Business.Extensions;

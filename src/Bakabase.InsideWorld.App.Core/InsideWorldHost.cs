@@ -17,9 +17,10 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
-using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
@@ -39,7 +40,10 @@ namespace Bakabase.InsideWorld.App.Core
         protected override int ListeningPortCount => 3;
 
         protected override Assembly[] AssembliesForGlobalConfigurationRegistrationsScanning =>
-            new[] {Assembly.GetAssembly(SpecificTypeUtils<ResourceOptions>.Type)!};
+            [
+                Assembly.GetAssembly(SpecificTypeUtils<ResourceOptions>.Type)!,
+                Assembly.GetAssembly(SpecificTypeUtils<UIOptions>.Type)!,
+            ];
 
         protected override void Initialize()
         {

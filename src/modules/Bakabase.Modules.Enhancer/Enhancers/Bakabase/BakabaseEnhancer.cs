@@ -105,14 +105,14 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
             {
                 IStandardValueBuilder valueBuilder = target switch
                 {
-                    BakabaseEnhancerTarget.Name => new TextValueBuilder(context.Name),
-                    BakabaseEnhancerTarget.Series => new TextValueBuilder(context.Series),
-                    BakabaseEnhancerTarget.Publisher => new MultipleTextValueBuilder(context.Publishers),
+                    BakabaseEnhancerTarget.Name => new StringValueBuilder(context.Name),
+                    BakabaseEnhancerTarget.Series => new StringValueBuilder(context.Series),
+                    BakabaseEnhancerTarget.Publisher => new ListStringValueBuilder(context.Publishers),
                     BakabaseEnhancerTarget.ReleaseDt => new DateTimeValueBuilder(context.ReleaseDt),
-                    BakabaseEnhancerTarget.VolumeName => new TextValueBuilder(context.VolumeName),
-                    BakabaseEnhancerTarget.VolumeTitle => new TextValueBuilder(context.VolumeTitle),
-                    BakabaseEnhancerTarget.Originals => new MultipleTextValueBuilder(context.Originals),
-                    BakabaseEnhancerTarget.Language => new TextValueBuilder(context.Language),
+                    BakabaseEnhancerTarget.VolumeName => new StringValueBuilder(context.VolumeName),
+                    BakabaseEnhancerTarget.VolumeTitle => new StringValueBuilder(context.VolumeTitle),
+                    BakabaseEnhancerTarget.Originals => new ListStringValueBuilder(context.Originals),
+                    BakabaseEnhancerTarget.Language => new StringValueBuilder(context.Language),
                     _ => throw new ArgumentOutOfRangeException()
                 };
 

@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
+using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 
 namespace Bakabase.Modules.Enhancer.Enhancers.ExHentai;
 

@@ -11,16 +11,16 @@ namespace Bakabase.InsideWorld.Models.Constants
         RootPath = 1,
         ParentResource,
         Resource,
-        ReleaseDt,
-        Publisher,
-        Name,
-        Language,
-        Volume,
-        Original,
-        Series,
-        Tag,
-        Introduction,
-        Rate,
+        [Obsolete] ReleaseDt,
+        [Obsolete] Publisher,
+        [Obsolete] Name,
+        [Obsolete] Language,
+        [Obsolete] Volume,
+        [Obsolete] Original,
+        [Obsolete] Series,
+        [Obsolete] Tag,
+        [Obsolete] Introduction,
+        [Obsolete] Rate,
         CustomProperty,
         FileName,
         DirectoryPath,
@@ -29,6 +29,6 @@ namespace Bakabase.InsideWorld.Models.Constants
         FileModifiedAt,
         Category,
         MediaLibrary,
-        Favorites
-	}
+        [Obsolete] Favorites
+    }
 }

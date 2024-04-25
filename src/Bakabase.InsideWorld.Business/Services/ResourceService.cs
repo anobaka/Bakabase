@@ -45,6 +45,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Search;
+using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
@@ -56,7 +57,6 @@ using Newtonsoft.Json.Linq;
 using StackExchange.Redis;
 using IComparer = System.Collections.IComparer;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using Bakabase.InsideWorld.Business.Configurations.Models.Db;
 using Resource = Bakabase.InsideWorld.Business.Models.Domain.Resource;
 
 namespace Bakabase.InsideWorld.Business.Services

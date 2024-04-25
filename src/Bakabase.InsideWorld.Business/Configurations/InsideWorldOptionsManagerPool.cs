@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Configurations;
 using Bakabase.Infrastructures.Components.Configurations.App;
-using Bakabase.InsideWorld.Business.Configurations.Models.Db;
+using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Models.Configs;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;

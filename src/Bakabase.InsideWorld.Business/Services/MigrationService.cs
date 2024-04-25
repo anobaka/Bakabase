@@ -76,18 +76,24 @@ namespace Bakabase.InsideWorld.Business.Services
             var propertyAndKeys =
                 new List<(ResourceProperty Property, string? PropertyKey, Func<object, string>? BuildValueLabel)>
                 {
-                    (ResourceProperty.Publisher, null,toStringForListString),
+                    (ResourceProperty.Publisher, null, toStringForListString),
                     (ResourceProperty.Name, null, null),
                     (ResourceProperty.Introduction, null, null),
                     (ResourceProperty.Rate, null, null),
                     (ResourceProperty.Language, null, null),
                     (ResourceProperty.ReleaseDt, null, null),
-                    (ResourceProperty.Original, null,toStringForListString),
+                    (ResourceProperty.Original, null, toStringForListString),
                     (ResourceProperty.Volume, nameof(VolumeDto.Index), null),
                     (ResourceProperty.Volume, nameof(VolumeDto.Title), null),
                     (ResourceProperty.Volume, nameof(VolumeDto.Name), null),
                     (ResourceProperty.Series, null, null),
                     (ResourceProperty.Favorites, null, null),
+                    (ResourceProperty.Tag, null, s =>
+                    {
+                        var data = (s as List<List<string>>)!;
+                        return string.Join(InternalOptions.TextSeparator,
+                            data.Select(x => string.Join(InternalOptions.TagNameSeparator, x)));
+                    })
                 };
 
             var customPropertyValueKeys = await _customResourcePropertyService.GetAllKeys();

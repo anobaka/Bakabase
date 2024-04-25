@@ -1,11 +1,10 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.InsideWorld.Business.Configurations.Models.Dto;
-using Bakabase.InsideWorld.Business.Configurations.Models.Input;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
 
-namespace Bakabase.InsideWorld.Business.Configurations.Models.Db
+namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
 {
     [Options]
     public record ResourceOptions
