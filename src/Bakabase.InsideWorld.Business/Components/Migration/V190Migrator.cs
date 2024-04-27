@@ -157,7 +157,7 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
                         case nameof(Volume.Index):
                         {
                             var valueMap =
-                                resourceVolumeMap.ToDictionary(x => x.Key, x => (object?) x.Value.Index);
+                                resourceVolumeMap.ToDictionary(x => x.Key, x => (object?) (decimal)x.Value.Index);
                             return (valueType, valueMap);
                         }
                         case nameof(Volume.Title):

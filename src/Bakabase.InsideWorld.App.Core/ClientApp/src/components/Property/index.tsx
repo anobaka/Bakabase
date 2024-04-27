@@ -109,7 +109,7 @@ export default ({
           )}
         </div>
       </div>
-      <div className={styles.categories}>
+      <div className={`${styles.categories} flex flex-wrap gap-1`}>
         {property.categories?.map(c => {
           return (
             <SimpleLabel key={c.id} className={styles.category}>

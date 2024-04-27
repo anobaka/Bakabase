@@ -30,7 +30,9 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.ValueHandlers
         protected override string? BuildDisplayValue(List<List<string>> value)
         {
             return string.Join(InternalOptions.TextSeparator,
-                value.Select(s => string.Join(InternalOptions.LayerTextSeparator, s)));
+                value.Select(s =>
+                        string.Join(InternalOptions.LayerTextSeparator, s.Where(c => !string.IsNullOrEmpty(c))))
+                    .Where(c => !string.IsNullOrEmpty(c)));
         }
 
         protected override List<List<string>>? ConvertToTypedValue(object? currentValue)

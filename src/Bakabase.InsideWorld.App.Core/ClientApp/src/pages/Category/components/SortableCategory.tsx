@@ -500,31 +500,52 @@ export default (({
           </div>
         </div>
         <div
-          className={'setting custom-properties col-span-3'}
-          onClick={() => {
-            CategoryCustomPropertyBinderDialog.show({
-              category: category,
-              onSaved: loadAllCategories,
-            });
-          }}
+          className={'col-span-3'}
         >
-          <Chip
-            size={'sm'}
-            radius={'sm'}
-          >
-            {t('Custom properties')}
-          </Chip>
-          <div
-            className="items"
-          >
-            {category.customProperties?.map((e, i) => (
-              <div
-                className={'item'}
-                key={e.id}
-              >
-                {e.name}
-              </div>
-            ))}
+          <div className={'flex flex-wrap items-center gap-2'}>
+            <Chip
+              size={'sm'}
+              radius={'sm'}
+            >
+              {t('Custom properties')}
+            </Chip>
+            {
+              category.customProperties?.length > 0 ? (
+                <div
+                  className="flex flex-wrap gap-1"
+                >
+                  {category.customProperties?.map((e, i) => (
+                    <Button
+                      size={'sm'}
+                      key={e.id}
+                      onClick={() => {
+                        CategoryCustomPropertyBinderDialog.show({
+                          category: category,
+                          onSaved: loadAllCategories,
+                        });
+                      }}
+                    >
+                      {e.name}
+                    </Button>
+                  ))}
+                </div>
+              ) : (
+                <Button
+                  className={''}
+                  variant={'light'}
+                  size={'sm'}
+                  color={'primary'}
+                  onClick={() => {
+                    CategoryCustomPropertyBinderDialog.show({
+                      category: category,
+                      onSaved: loadAllCategories,
+                    });
+                  }}
+                >
+                  {t('Click to set')}
+                </Button>
+              )
+            }
           </div>
         </div>
         <div className={'col-span-3'}>

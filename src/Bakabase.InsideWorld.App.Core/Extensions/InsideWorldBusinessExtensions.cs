@@ -147,9 +147,8 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             {
                 var options = new InternalOptionsDto();
                 var customPropertyDescriptors = t.GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>();
-                options.Resource.StandardValueSearchOperationsMap =
-                    customPropertyDescriptors.ToDictionary(d => (int) d.Type.ToStandardValueType(),
-                        d => d.SearchOperations);
+                options.Resource.CustomPropertyValueSearchOperationsMap =
+                    customPropertyDescriptors.ToDictionary(d => (int) d.Type, d => d.SearchOperations);
                 return options;
             });
 

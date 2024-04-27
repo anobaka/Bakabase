@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Configurations;
@@ -103,7 +104,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             await Clients.Caller.GetData(nameof(BulkModificationConfiguration),
                 BulkModificationService.GetConfiguration());
 
-            await Clients.Caller.GetData(nameof(InternalOptionsDto), _reservedOptions);
+            await Clients.Caller.GetData(nameof(InternalOptions), _reservedOptions);
 
             await Clients.Caller.GetData(nameof(AppContext), _appContext);
         }

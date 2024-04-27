@@ -177,12 +177,16 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
         </div>
         <div className={'flex flex-wrap gap-1 mt-2'}>
           {properties.map(p => (
-            <Chip
+            <Button
               size={'sm'}
               key={p.id}
+              onClick={() => {
+                ruleTextRef.current += `{${p.name}}`;
+                setRuleHtml(buildRuleHtml(ruleTextRef.current));
+              }}
             >
               {p.name}
-            </Chip>
+            </Button>
           ))}
         </div>
       </div>
@@ -228,8 +232,8 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
       {ruleTextRef.current.length > 0 && (
         <div>
           <Button
-            variant={'light'}
-            color={'primary'}
+            // variant={'light'}
+            // color={'primary'}
             onClick={() => {}}
           >{t('Click to preview')}</Button>
         </div>

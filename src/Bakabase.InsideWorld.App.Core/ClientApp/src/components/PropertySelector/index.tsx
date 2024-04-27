@@ -45,7 +45,7 @@ const PropertySelector = ({
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
 
-  const reservedOptions = store.useModelState('reservedOptions');
+  const internalOptions = store.useModelState('internalOptions');
   const [properties, setProperties] = useState<IProperty[]>([]);
   const initializedRef = useRef(false);
   const [selection, setSelection] = useState<IKey[]>(propsSelection || []);
@@ -53,18 +53,18 @@ const PropertySelector = ({
   console.log('props selection', propsSelection, properties);
 
   useEffect(() => {
-    // console.log(reservedOptions.initialized, initializedRef.current);
+    console.log(internalOptions.initialized, initializedRef.current);
 
-    if (reservedOptions.initialized && !initializedRef.current) {
+    if (internalOptions.initialized && !initializedRef.current) {
       initializedRef.current = true;
       loadProperties();
     }
-  }, [reservedOptions]);
+  }, [internalOptions]);
 
   const loadProperties = async () => {
     const arr: IProperty[] = [];
     if (pool == 'all' || pool == 'reserved') {
-      const map = reservedOptions.resource.reservedResourcePropertyAndValueTypeMap || {};
+      const map = internalOptions.resource.reservedResourcePropertyAndValueTypeMap || {};
       arr.push(
         ...Object.keys(map).map<IProperty>(pStr => {
           const p = parseInt(pStr, 10) as EnumResourceProperty;

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
 using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Business.Models.Input;
@@ -101,6 +102,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             [FromBody] ResourceCategoryCustomPropertyBindRequestModel model)
         {
             return await _service.BindCustomProperties(id, model);
+        }
+
+        [HttpPost("{id:int}/resource/display-name-rule/preview")]
+        [SwaggerOperation(OperationId = "PreviewCategoryDisplayNameRule")]
+        public async Task<List<CategoryResourceDisplayNameViewModel>> PreviewDisplayNameRule(int id, string textRule, int maxCount = 100)
+        {
+            var resources = await _
         }
     }
 }

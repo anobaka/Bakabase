@@ -5,9 +5,10 @@ namespace Bakabase.Abstractions.Services;
 
 public interface ISpecialTextService
 {
+    [Obsolete]
     List<SpecialText> this[SpecialTextType type] { get; }
     Task<string> Pretreatment(string name);
-    // Task<List<SpecialText>> GetAll(SpecialTextType type, bool returnCopy = true);
+    Task<List<SpecialText>> GetAll(SpecialTextType type, bool returnCopy = true);
     // Task<Dictionary<SpecialTextType, List<SpecialText>>> GetAll();
     // Task<List<SpecialText>> GetAll(Expression<Func<SpecialText, bool>> selector = null, bool returnCopy = true);
     // Task<SingletonResponse<SpecialText>> Add(SpecialTextCreateRequestModel model);

@@ -134,6 +134,16 @@ namespace Bakabase.InsideWorld.Business.Services
             ResourceProperty property, string? propertyKey, Func<T, string?> toString)
         {
             var distinctData = data.Distinct().ToArray();
+
+            try
+            {
+                var a = distinctData.Select(toString).Where(s => !string.IsNullOrEmpty(s)).OfType<string>();
+                var b = a.ToList();
+            }
+            catch (Exception ex)
+            {
+            }
+
             var model = new MigrationTargetViewModel
             {
                 Data = distinctData,

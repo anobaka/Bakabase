@@ -64,10 +64,15 @@ const Target = ({
           visible={dataDialogVisible}
           onClose={() => setDataDialogVisible(false)}
         >
-          <div className={'flex flex-wrap gap-1'}>
-            {target.dataForDisplay?.map(d => (
-              <Chip>{d}</Chip>
-            ))}
+          <div>
+            <div className={'italic mb-2'}>
+              {t('Data not relative to resource will not be migrated.')}
+            </div>
+            <div className={'flex flex-wrap gap-1'}>
+              {target.dataForDisplay?.map(d => (
+                <Chip>{d}</Chip>
+              ))}
+            </div>
           </div>
         </Modal>
       )}

@@ -20,11 +20,15 @@ export default () => {
     setLoadingTargets(true);
     try {
       const rsp = await BApi.migration.getMigrationTargets();
-      const ts = rsp.data || [];
-      // @ts-ignore
-      setTargets(ts);
-      if (ts.length == 0) {
-        setAllMigrationsAreDone(true);
+      if (rsp.code) {
+        setError(true);
+      } else {
+        const ts = rsp.data || [];
+        // @ts-ignore
+        setTargets(ts);
+        if (ts.length == 0) {
+          setAllMigrationsAreDone(true);
+        }
       }
     } catch (e) {
       setError(true);

@@ -44,7 +44,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.ValueHandlers
 
         protected override string? BuildDisplayValue(List<string> value)
         {
-            return string.Join(InternalOptions.TextSeparator, value);
+            return string.Join(InternalOptions.TextSeparator, value.Where(v => !string.IsNullOrEmpty(v)));
         }
 
         protected override List<string>? ConvertToTypedValue(object? currentValue)

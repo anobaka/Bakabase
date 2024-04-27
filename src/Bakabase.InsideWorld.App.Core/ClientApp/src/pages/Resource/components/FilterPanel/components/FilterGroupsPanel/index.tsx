@@ -21,12 +21,12 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
 
   const [group, setGroup] = useState<IGroup>(propsGroup ?? { combinator: GroupCombinator.And });
   const [propertyMap, setPropertyMap] = useState<Record<number, IProperty>>({});
-  const reservedOptions = store.useModelState('reservedOptions');
+  const internalOptions = store.useModelState('internalOptions');
   const initializedRef = useRef(false);
 
   const loadProperties = async () => {
     const arr: IProperty[] = [];
-      const map = reservedOptions.resource.reservedResourcePropertyAndValueTypeMap || {};
+      const map = internalOptions.resource.reservedResourcePropertyAndValueTypeMap || {};
       arr.push(
         ...Object.keys(map).map<IProperty>(pStr => {
           const p = parseInt(pStr, 10) as EnumResourceProperty;
@@ -52,11 +52,11 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
   };
 
   useEffect(() => {
-    if (reservedOptions.initialized && !initializedRef.current) {
+    if (internalOptions.initialized && !initializedRef.current) {
       initializedRef.current = true;
       loadProperties();
     }
-  }, [reservedOptions]);
+  }, [internalOptions]);
 
   useEffect(() => {
   }, []);

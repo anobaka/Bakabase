@@ -4,8 +4,16 @@ using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.CustomProperty;
+using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Dto;
+using Bakabase.Abstractions.Models.Input;
+using Bakabase.Abstractions.Models.View;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Domain;
@@ -18,6 +26,7 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Extensions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
@@ -33,464 +42,597 @@ using IComponent = Bakabase.InsideWorld.Business.Components.Resource.Components.
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-	public class ResourceCategoryService : Bootstrap.Components.Orm.Infrastructures.ResourceService<InsideWorldDbContext
-		,
-		ResourceCategory, int>
-	{
-		protected MediaLibraryService MediaLibraryService => GetRequiredService<MediaLibraryService>();
-		protected CategoryCustomPropertyMappingService CategoryCustomPropertyMappingService => GetRequiredService<CategoryCustomPropertyMappingService>();
-		protected ResourceService ResourceService => GetRequiredService<ResourceService>();
-		protected ComponentService ComponentService => GetRequiredService<ComponentService>();
-		protected CategoryComponentService CategoryComponentService => GetRequiredService<CategoryComponentService>();
-		protected IStringLocalizer<SharedResource> Localizer => GetRequiredService<IStringLocalizer<SharedResource>>();
-		protected CustomPropertyService CustomPropertyService => GetRequiredService<CustomPropertyService>();
+    public class ResourceCategoryService : Bootstrap.Components.Orm.Infrastructures.ResourceService<InsideWorldDbContext
+        ,
+        ResourceCategory, int>
+    {
+        protected MediaLibraryService MediaLibraryService => GetRequiredService<MediaLibraryService>();
 
-		public ResourceCategoryService(IServiceProvider serviceProvider) : base(serviceProvider)
-		{
-		}
+        protected CategoryCustomPropertyMappingService CategoryCustomPropertyMappingService =>
+            GetRequiredService<CategoryCustomPropertyMappingService>();
 
-		#region Infrastructures
+        protected ResourceService ResourceService => GetRequiredService<ResourceService>();
+        protected ComponentService ComponentService => GetRequiredService<ComponentService>();
+        protected CategoryComponentService CategoryComponentService => GetRequiredService<CategoryComponentService>();
+        protected IStringLocalizer<SharedResource> Localizer => GetRequiredService<IStringLocalizer<SharedResource>>();
+        protected CustomPropertyService CustomPropertyService => GetRequiredService<CustomPropertyService>();
 
-		public async Task<ListResponse<TComponent>> GetComponents<TComponent>(Category category,
-			ComponentType type)
-			where TComponent : class, IComponent
-		{
-			var componentsData = category.ComponentsData?.Where(a => a.ComponentType == type).ToArray();
-			if (componentsData?.Any() != true)
-			{
-				return ListResponseBuilder<TComponent>.BuildBadRequest(
-					Localizer[SharedResource.Category_ComponentWithTypeHasNotBeenConfigured, type, category.Name]);
-			}
+        protected Dictionary<CustomPropertyType, ICustomPropertyDescriptor> CustomPropertyDescriptorMap =>
+            GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>().ToDictionary(d => d.Type, d => d);
 
-			var components =
-				await ComponentService.CreateInstances<TComponent>(componentsData.Select(a => a.ComponentKey)
-					.ToArray());
-			return new ListResponse<TComponent>(components.Keys);
-		}
+        protected Dictionary<StandardValueType, IStandardValueHandler> StandardValueHandlerMap =>
+            GetRequiredService<IEnumerable<IStandardValueHandler>>().ToDictionary(d => d.Type, d => d);
 
-		public async Task<ListResponse<TComponent>> GetComponents<TComponent>(int id, ComponentType type)
-			where TComponent : class, IComponent =>
-			await GetComponents<TComponent>(await GetByKey(id, ResourceCategoryAdditionalItem.Components), type);
+        protected ISpecialTextService SpecialTextService => GetRequiredService<ISpecialTextService>();
 
-		public async Task<SingletonResponse<TComponent>> GetFirstComponent<TComponent>(int id, ComponentType type)
-			where TComponent : class, IComponent
-		{
-			var rsp = await GetComponents<TComponent>(await GetByKey(id, ResourceCategoryAdditionalItem.Components),
-				type);
-			return rsp.Code == 0
-				? new SingletonResponse<TComponent>(rsp.Data.FirstOrDefault())
-				: SingletonResponseBuilder<TComponent>.Build((ResponseCode) rsp.Code, rsp.Message);
-		}
+        public ResourceCategoryService(IServiceProvider serviceProvider) : base(serviceProvider)
+        {
+        }
 
-		#endregion
+        #region Infrastructures
 
-		public async Task<BaseResponse> Play(int id, string file)
-		{
-			var playerRsp = await GetFirstComponent<IPlayer>(id, ComponentType.Player);
-			if (playerRsp.Data == null)
-			{
-				return playerRsp;
-			}
+        public async Task<ListResponse<TComponent>> GetComponents<TComponent>(Category category,
+            ComponentType type)
+            where TComponent : class, IComponent
+        {
+            var componentsData = category.ComponentsData?.Where(a => a.ComponentType == type).ToArray();
+            if (componentsData?.Any() != true)
+            {
+                return ListResponseBuilder<TComponent>.BuildBadRequest(
+                    Localizer[SharedResource.Category_ComponentWithTypeHasNotBeenConfigured, type, category.Name]);
+            }
 
-			await playerRsp.Data.Play(file);
-			return BaseResponseBuilder.Ok;
-		}
+            var components =
+                await ComponentService.CreateInstances<TComponent>(componentsData.Select(a => a.ComponentKey)
+                    .ToArray());
+            return new ListResponse<TComponent>(components.Keys);
+        }
 
-		public async Task<List<Category>> GetAllDto(Expression<Func<ResourceCategory, bool>> selector = null,
-			ResourceCategoryAdditionalItem additionalItems = ResourceCategoryAdditionalItem.None)
-		{
-			var data = await base.GetAll(selector);
-			var dtoList = data.Select(d => d.ToDomainModel()).ToArray();
-			await Populate(dtoList, additionalItems);
-			return dtoList.OrderBy(a => a.Order).ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
-		}
+        public async Task<ListResponse<TComponent>> GetComponents<TComponent>(int id, ComponentType type)
+            where TComponent : class, IComponent =>
+            await GetComponents<TComponent>(await GetByKey(id, ResourceCategoryAdditionalItem.Components), type);
 
-		public async Task<Category> GetByKey(int id,
-			ResourceCategoryAdditionalItem additionalItems = ResourceCategoryAdditionalItem.None)
-		{
-			var c = await base.GetByKey(id);
-			var dto = c.ToDomainModel();
-			await Populate(dto, additionalItems);
-			return dto;
-		}
+        public async Task<SingletonResponse<TComponent>> GetFirstComponent<TComponent>(int id, ComponentType type)
+            where TComponent : class, IComponent
+        {
+            var rsp = await GetComponents<TComponent>(await GetByKey(id, ResourceCategoryAdditionalItem.Components),
+                type);
+            return rsp.Code == 0
+                ? new SingletonResponse<TComponent>(rsp.Data.FirstOrDefault())
+                : SingletonResponseBuilder<TComponent>.Build((ResponseCode) rsp.Code, rsp.Message);
+        }
 
-		private async Task Populate(Category dto, ResourceCategoryAdditionalItem additionalItems) =>
-			await Populate(new[] {dto}, additionalItems);
+        #endregion
 
-		private async Task Populate(Category[] dtoList, ResourceCategoryAdditionalItem additionalItems)
-		{
-			foreach (var rca in SpecificEnumUtils<ResourceCategoryAdditionalItem>.Values)
-			{
-				if (additionalItems.HasFlag(rca))
-				{
-					switch (rca)
-					{
-						case ResourceCategoryAdditionalItem.None:
-							break;
-						case ResourceCategoryAdditionalItem.Components:
-						{
-							var categoryIds = dtoList.Select(a => a.Id).ToArray();
-							var cds = await CategoryComponentService.GetAll(a => categoryIds.Contains(a.CategoryId));
-							var cdsMap = cds.GroupBy(a => a.CategoryId).ToDictionary(a => a.Key, a => a.ToArray());
+        public async Task<BaseResponse> Play(int id, string file)
+        {
+            var playerRsp = await GetFirstComponent<IPlayer>(id, ComponentType.Player);
+            if (playerRsp.Data == null)
+            {
+                return playerRsp;
+            }
 
-							var componentKeys = cds.Select(a => a.ComponentKey).Distinct().ToArray();
-							var descriptors = await ComponentService.GetDescriptors(componentKeys);
+            await playerRsp.Data.Play(file);
+            return BaseResponseBuilder.Ok;
+        }
 
-							foreach (var a in cdsMap.Values.SelectMany(arr => arr))
-							{
-								a.Descriptor = descriptors.FirstOrDefault(b => b.Id == a.ComponentKey);
-							}
+        public async Task<List<Category>> GetAllDto(Expression<Func<ResourceCategory, bool>> selector = null,
+            ResourceCategoryAdditionalItem additionalItems = ResourceCategoryAdditionalItem.None)
+        {
+            var data = await base.GetAll(selector);
+            var dtoList = data.Select(d => d.ToDomainModel()).ToArray();
+            await Populate(dtoList, additionalItems);
+            return dtoList.OrderBy(a => a.Order).ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        }
 
-							foreach (var d in dtoList)
-							{
-								d.ComponentsData = cdsMap.TryGetValue(d.Id, out var t)
-									? t
-									: Array.Empty<CategoryComponent>();
-							}
+        public async Task<Category> GetByKey(int id,
+            ResourceCategoryAdditionalItem additionalItems = ResourceCategoryAdditionalItem.None)
+        {
+            var c = await base.GetByKey(id);
+            var dto = c.ToDomainModel();
+            await Populate(dto, additionalItems);
+            return dto;
+        }
 
-							break;
-						}
-						case ResourceCategoryAdditionalItem.Validation:
-						{
-							foreach (var d in dtoList)
-							{
-								d.IsValid = true;
-								if (d.ComponentsData?.Any() == true)
-								{
-									var v = await ValidateComponentsData(d.ComponentsData?.Select(a => a.ComponentKey)
-										.ToArray());
-									if (v.Code != 0)
-									{
-										d.IsValid = false;
-										d.Message = v.Message;
-										break;
-									}
-								}
-							}
+        private async Task Populate(Category dto, ResourceCategoryAdditionalItem additionalItems) =>
+            await Populate(new[] {dto}, additionalItems);
 
-							break;
-						}
-						case ResourceCategoryAdditionalItem.CustomProperties:
-						{
-							var cIds = dtoList.Select(a => a.Id).ToArray();
-							var customPropertiesMap = await CustomPropertyService.GetByCategoryIds(cIds);
-							foreach (var d in dtoList)
-							{
-								d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id);
-							}
+        private async Task Populate(Category[] dtoList, ResourceCategoryAdditionalItem additionalItems)
+        {
+            foreach (var rca in SpecificEnumUtils<ResourceCategoryAdditionalItem>.Values)
+            {
+                if (additionalItems.HasFlag(rca))
+                {
+                    switch (rca)
+                    {
+                        case ResourceCategoryAdditionalItem.None:
+                            break;
+                        case ResourceCategoryAdditionalItem.Components:
+                        {
+                            var categoryIds = dtoList.Select(a => a.Id).ToArray();
+                            var cds = await CategoryComponentService.GetAll(a => categoryIds.Contains(a.CategoryId));
+                            var cdsMap = cds.GroupBy(a => a.CategoryId).ToDictionary(a => a.Key, a => a.ToArray());
 
-							break;
-						}
-						default:
-							throw new ArgumentOutOfRangeException();
-					}
-				}
-			}
-		}
+                            var componentKeys = cds.Select(a => a.ComponentKey).Distinct().ToArray();
+                            var descriptors = await ComponentService.GetDescriptors(componentKeys);
 
-		public async Task<SingletonResponse<ResourceCategory>> Add(ResourceCategoryAddRequestModel model)
-		{
-			var componentKeys = model.ComponentsData?.Select(a => a.ComponentKey).ToArray();
-			if (componentKeys?.Any() == true)
-			{
-				var validation = await ValidateComponentsData(componentKeys);
-				if (validation.Code != 0)
-				{
-					return SingletonResponseBuilder<ResourceCategory>.Build((ResponseCode) validation.Code,
-						validation.Message);
-				}
-			}
+                            foreach (var a in cdsMap.Values.SelectMany(arr => arr))
+                            {
+                                a.Descriptor = descriptors.FirstOrDefault(b => b.Id == a.ComponentKey);
+                            }
 
-			model.EnhancementOptions?.Standardize(model.ComponentsData
-				?.Where(a => a.ComponentType == ComponentType.Enhancer).Select(a => a.ComponentKey).ToArray());
+                            foreach (var d in dtoList)
+                            {
+                                d.ComponentsData = cdsMap.TryGetValue(d.Id, out var t)
+                                    ? t
+                                    : Array.Empty<CategoryComponent>();
+                            }
 
-			var category = new ResourceCategory
-			{
-				Color = model.Color,
-				CreateDt = DateTime.Now,
-				Name = model.Name,
-				CoverSelectionOrder = model.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending,
-				Order = model.Order ?? 0,
-				GenerateNfo = model.GenerateNfo ?? false,
-				EnhancementOptionsJson = model.EnhancementOptions == null
-					? null
-					: JsonConvert.SerializeObject(model.EnhancementOptions)
-			};
+                            break;
+                        }
+                        case ResourceCategoryAdditionalItem.Validation:
+                        {
+                            foreach (var d in dtoList)
+                            {
+                                d.IsValid = true;
+                                if (d.ComponentsData?.Any() == true)
+                                {
+                                    var v = await ValidateComponentsData(d.ComponentsData?.Select(a => a.ComponentKey)
+                                        .ToArray());
+                                    if (v.Code != 0)
+                                    {
+                                        d.IsValid = false;
+                                        d.Message = v.Message;
+                                        break;
+                                    }
+                                }
+                            }
 
-			if (componentKeys?.Any() == true)
-			{
-				var externalTran = DbContext.Database.CurrentTransaction;
-				IDbContextTransaction tran = null;
-				if (externalTran == null)
-				{
-					tran = await DbContext.Database.BeginTransactionAsync();
-				}
+                            break;
+                        }
+                        case ResourceCategoryAdditionalItem.CustomProperties:
+                        {
+                            var cIds = dtoList.Select(a => a.Id).ToArray();
+                            var customPropertiesMap = await CustomPropertyService.GetByCategoryIds(cIds);
+                            foreach (var d in dtoList)
+                            {
+                                d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id);
+                            }
 
-				await base.Add(category);
-				await CategoryComponentService.Configure(category.Id, componentKeys);
+                            break;
+                        }
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+        }
 
-				if (externalTran == null)
-				{
-					await tran.CommitAsync();
-				}
-			}
-			else
-			{
-				await base.Add(category);
-			}
+        public async Task<SingletonResponse<ResourceCategory>> Add(ResourceCategoryAddRequestModel model)
+        {
+            var componentKeys = model.ComponentsData?.Select(a => a.ComponentKey).ToArray();
+            if (componentKeys?.Any() == true)
+            {
+                var validation = await ValidateComponentsData(componentKeys);
+                if (validation.Code != 0)
+                {
+                    return SingletonResponseBuilder<ResourceCategory>.Build((ResponseCode) validation.Code,
+                        validation.Message);
+                }
+            }
 
-			return new SingletonResponse<ResourceCategory>(category);
-		}
+            model.EnhancementOptions?.Standardize(model.ComponentsData
+                ?.Where(a => a.ComponentType == ComponentType.Enhancer).Select(a => a.ComponentKey).ToArray());
 
-		public async Task<SingletonResponse<ResourceCategory>> Duplicate(int id,
-			ResourceCategoryDuplicateRequestModel model)
-		{
-			var category = await base.GetByKey(id);
+            var category = new ResourceCategory
+            {
+                Color = model.Color,
+                CreateDt = DateTime.Now,
+                Name = model.Name,
+                CoverSelectionOrder = model.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending,
+                Order = model.Order ?? 0,
+                GenerateNfo = model.GenerateNfo ?? false,
+                EnhancementOptionsJson = model.EnhancementOptions == null
+                    ? null
+                    : JsonConvert.SerializeObject(model.EnhancementOptions)
+            };
 
-			await using var tran = await DbContext.Database.BeginTransactionAsync();
+            if (componentKeys?.Any() == true)
+            {
+                var externalTran = DbContext.Database.CurrentTransaction;
+                IDbContextTransaction tran = null;
+                if (externalTran == null)
+                {
+                    tran = await DbContext.Database.BeginTransactionAsync();
+                }
 
-			var newCategory = (await Add(category.Duplicate(model.Name))).Data;
-			await MediaLibraryService.Duplicate(id, newCategory.Id);
-			await CategoryComponentService.Duplicate(id, newCategory.Id);
+                await base.Add(category);
+                await CategoryComponentService.Configure(category.Id, componentKeys);
 
-			await tran.CommitAsync();
+                if (externalTran == null)
+                {
+                    await tran.CommitAsync();
+                }
+            }
+            else
+            {
+                await base.Add(category);
+            }
 
-			return new SingletonResponse<ResourceCategory>(newCategory);
-		}
+            return new SingletonResponse<ResourceCategory>(category);
+        }
 
-		private async Task<BaseResponse> ValidateComponentsData(string[] keys)
-		{
-			if (keys != null)
-			{
-				var cds = await ComponentService.GetDescriptors(keys);
-				var invalidResponse = cds.Select(d => d.BuildValidationResponse()).FirstOrDefault(a => a.Code != 0);
-				if (invalidResponse != null)
-				{
-					return invalidResponse;
-				}
-			}
+        public async Task<SingletonResponse<ResourceCategory>> Duplicate(int id,
+            ResourceCategoryDuplicateRequestModel model)
+        {
+            var category = await base.GetByKey(id);
 
-			return BaseResponseBuilder.Ok;
-		}
+            await using var tran = await DbContext.Database.BeginTransactionAsync();
 
-		public async Task<BaseResponse> ConfigureComponents(int id,
-			ResourceCategoryComponentConfigureRequestModel model)
-		{
-			var componentKeys = model.ComponentKeys ?? Array.Empty<string>();
+            var newCategory = (await Add(category.Duplicate(model.Name))).Data;
+            await MediaLibraryService.Duplicate(id, newCategory.Id);
+            await CategoryComponentService.Duplicate(id, newCategory.Id);
 
-			var validation = await ValidateComponentsData(model.ComponentKeys);
-			if (validation.Code != 0)
-			{
-				return validation;
-			}
+            await tran.CommitAsync();
 
-			var category = await base.GetByKey(id);
-			switch (model.Type)
-			{
-				case ComponentType.Enhancer:
-				{
-					ResourceCategoryEnhancementOptions eo;
-					if (componentKeys.Any())
-					{
-						eo = model.EnhancementOptions ?? new ResourceCategoryEnhancementOptions();
-						eo.Standardize(componentKeys);
-					}
-					else
-					{
-						eo = null;
-					}
+            return new SingletonResponse<ResourceCategory>(newCategory);
+        }
 
-					category.EnhancementOptionsJson = eo != null ? JsonConvert.SerializeObject(eo) : null;
-					break;
-				}
-				case ComponentType.PlayableFileSelector:
-					break;
-				case ComponentType.Player:
-					break;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
+        private async Task<BaseResponse> ValidateComponentsData(string[] keys)
+        {
+            if (keys != null)
+            {
+                var cds = await ComponentService.GetDescriptors(keys);
+                var invalidResponse = cds.Select(d => d.BuildValidationResponse()).FirstOrDefault(a => a.Code != 0);
+                if (invalidResponse != null)
+                {
+                    return invalidResponse;
+                }
+            }
 
-			await using var tran = await DbContext.Database.BeginTransactionAsync();
-			await CategoryComponentService.Configure(id, componentKeys, model.Type);
-			await DbContext.SaveChangesAsync();
-			await tran.CommitAsync();
-			return BaseResponseBuilder.Ok;
-		}
+            return BaseResponseBuilder.Ok;
+        }
 
-		public async Task<BaseResponse> Patch(int id, ResourceCategoryUpdateRequestModel model)
-		{
-			var category = await base.GetByKey(id);
-			if (model.Name.IsNotEmpty())
-			{
-				category.Name = model.Name;
-			}
+        public async Task<BaseResponse> ConfigureComponents(int id,
+            ResourceCategoryComponentConfigureRequestModel model)
+        {
+            var componentKeys = model.ComponentKeys ?? Array.Empty<string>();
 
-			if (model.Order.HasValue)
-			{
-				category.Order = model.Order.Value;
-			}
+            var validation = await ValidateComponentsData(model.ComponentKeys);
+            if (validation.Code != 0)
+            {
+                return validation;
+            }
 
-			if (model.Color.IsNotEmpty())
-			{
-				category.Color = model.Color;
-			}
+            var category = await base.GetByKey(id);
+            switch (model.Type)
+            {
+                case ComponentType.Enhancer:
+                {
+                    ResourceCategoryEnhancementOptions eo;
+                    if (componentKeys.Any())
+                    {
+                        eo = model.EnhancementOptions ?? new ResourceCategoryEnhancementOptions();
+                        eo.Standardize(componentKeys);
+                    }
+                    else
+                    {
+                        eo = null;
+                    }
 
-			if (model.CoverSelectionOrder.HasValue)
-			{
-				category.CoverSelectionOrder = model.CoverSelectionOrder.Value;
-			}
+                    category.EnhancementOptionsJson = eo != null ? JsonConvert.SerializeObject(eo) : null;
+                    break;
+                }
+                case ComponentType.PlayableFileSelector:
+                    break;
+                case ComponentType.Player:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
 
-			if (model.GenerateNfo.HasValue)
-			{
-				category.GenerateNfo = model.GenerateNfo.Value;
-			}
+            await using var tran = await DbContext.Database.BeginTransactionAsync();
+            await CategoryComponentService.Configure(id, componentKeys, model.Type);
+            await DbContext.SaveChangesAsync();
+            await tran.CommitAsync();
+            return BaseResponseBuilder.Ok;
+        }
 
-			await DbContext.SaveChangesAsync();
-			return BaseResponseBuilder.Ok;
-		}
+        public async Task<BaseResponse> Patch(int id, ResourceCategoryUpdateRequestModel model)
+        {
+            var category = await base.GetByKey(id);
+            if (model.Name.IsNotEmpty())
+            {
+                category.Name = model.Name;
+            }
 
-		/// <summary>
-		/// All related data will be deleted too.
-		/// </summary>
-		/// <param name="id"></param>
-		/// <returns></returns>
-		public async Task<BaseResponse> DeleteAndClearAllRelatedData(int id)
-		{
-			await MediaLibraryService.RemoveAll(x => x.CategoryId == id);
-			await ResourceService.LogicallyRemoveByCategoryId(id);
-			await CategoryComponentService.RemoveAll(x => x.CategoryId == id);
+            if (model.Order.HasValue)
+            {
+                category.Order = model.Order.Value;
+            }
 
-			return await base.RemoveByKey(id);
-		}
+            if (model.Color.IsNotEmpty())
+            {
+                category.Color = model.Color;
+            }
 
-		public async Task<BaseResponse> Sort(int[] ids)
-		{
-			var categories = (await GetByKeys(ids)).ToDictionary(t => t.Id, t => t);
-			var changed = new List<ResourceCategory>();
-			for (var i = 0; i < ids.Length; i++)
-			{
-				var id = ids[i];
-				if (categories.TryGetValue(id, out var t) && t.Order != i)
-				{
-					t.Order = i;
-					changed.Add(t);
-				}
-			}
+            if (model.CoverSelectionOrder.HasValue)
+            {
+                category.CoverSelectionOrder = model.CoverSelectionOrder.Value;
+            }
 
-			return await UpdateRange(changed);
-		}
+            if (model.GenerateNfo.HasValue)
+            {
+                category.GenerateNfo = model.GenerateNfo.Value;
+            }
 
-		public async Task<BaseResponse> SaveDataFromSetupWizard(CategorySetupWizardInputModel model)
-		{
-			var categoryModel = new ResourceCategoryAddRequestModel
-			{
-				Color = model.Category.Color,
-				ComponentsData = model.Category.ComponentsData,
-				CoverSelectionOrder = model.Category.CoverSelectionOrder,
-				EnhancementOptions = model.Category.EnhancementOptions,
-				GenerateNfo = model.Category.GenerateNfo,
-				Name = model.Category.Name,
-				Order = model.Category.Order
-			};
+            await DbContext.SaveChangesAsync();
+            return BaseResponseBuilder.Ok;
+        }
 
-			BaseResponse categoryOperationRsp;
-			var categoryId = model.Category.Id;
+        /// <summary>
+        /// All related data will be deleted too.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<BaseResponse> DeleteAndClearAllRelatedData(int id)
+        {
+            await MediaLibraryService.RemoveAll(x => x.CategoryId == id);
+            await ResourceService.LogicallyRemoveByCategoryId(id);
+            await CategoryComponentService.RemoveAll(x => x.CategoryId == id);
 
-			await using var tran = await DbContext.Database.BeginTransactionAsync();
+            return await base.RemoveByKey(id);
+        }
 
-			if (model.Category.Id > 0)
-			{
-				ResourceCategoryEnhancementOptions eo = null;
-				var componentKeys = model.Category.ComponentsData?.Select(a => a.ComponentKey).ToArray() ??
-				                    Array.Empty<string>();
-				if (componentKeys.Any())
-				{
-					var validation = await ValidateComponentsData(componentKeys);
-					if (validation.Code != 0)
-					{
-						return validation;
-					}
+        public async Task<BaseResponse> Sort(int[] ids)
+        {
+            var categories = (await GetByKeys(ids)).ToDictionary(t => t.Id, t => t);
+            var changed = new List<ResourceCategory>();
+            for (var i = 0; i < ids.Length; i++)
+            {
+                var id = ids[i];
+                if (categories.TryGetValue(id, out var t) && t.Order != i)
+                {
+                    t.Order = i;
+                    changed.Add(t);
+                }
+            }
 
-					var descriptors = await ComponentService.GetDescriptors(componentKeys);
-					var enhancerKeys = descriptors.Where(a => a.ComponentType == ComponentType.Enhancer)
-						.Select(a => a.Id).ToArray();
-					if (enhancerKeys.Any())
-					{
-						eo = model.Category.EnhancementOptions ?? new();
-						eo.Standardize(enhancerKeys);
-					}
-				}
+            return await UpdateRange(changed);
+        }
 
-				await CategoryComponentService.Configure(model.Category.Id, componentKeys);
-				var category = await base.GetByKey(model.Category.Id);
-				category.EnhancementOptionsJson = eo == null ? null : JsonConvert.SerializeObject(eo);
-				await DbContext.SaveChangesAsync();
+        public async Task<BaseResponse> SaveDataFromSetupWizard(CategorySetupWizardInputModel model)
+        {
+            var categoryModel = new ResourceCategoryAddRequestModel
+            {
+                Color = model.Category.Color,
+                ComponentsData = model.Category.ComponentsData,
+                CoverSelectionOrder = model.Category.CoverSelectionOrder,
+                EnhancementOptions = model.Category.EnhancementOptions,
+                GenerateNfo = model.Category.GenerateNfo,
+                Name = model.Category.Name,
+                Order = model.Category.Order
+            };
 
-				categoryOperationRsp = await Patch(model.Category.Id, categoryModel);
-			}
-			else
-			{
-				categoryOperationRsp = await Add(categoryModel);
-				if (categoryOperationRsp.Code == 0)
-				{
-					categoryId = ((SingletonResponse<ResourceCategory>) categoryOperationRsp).Data.Id;
-				}
-			}
+            BaseResponse categoryOperationRsp;
+            var categoryId = model.Category.Id;
 
-			if (categoryOperationRsp.Code != 0)
-			{
-				return categoryOperationRsp;
-			}
+            await using var tran = await DbContext.Database.BeginTransactionAsync();
 
-			if (model.MediaLibraries?.Length > 0)
-			{
-				foreach (var m in model.MediaLibraries)
-				{
-					BaseResponse mediaLibraryOperationRsp;
+            if (model.Category.Id > 0)
+            {
+                ResourceCategoryEnhancementOptions eo = null;
+                var componentKeys = model.Category.ComponentsData?.Select(a => a.ComponentKey).ToArray() ??
+                                    Array.Empty<string>();
+                if (componentKeys.Any())
+                {
+                    var validation = await ValidateComponentsData(componentKeys);
+                    if (validation.Code != 0)
+                    {
+                        return validation;
+                    }
 
-					if (m.Id > 0)
-					{
-						mediaLibraryOperationRsp = await MediaLibraryService.Patch(m.Id,
-							new MediaLibraryPatchDto()
-							{
-								Name = m.Name,
-								Order = m.Order,
-								PathConfigurations = m.PathConfigurations
-							});
-					}
-					else
-					{
-						mediaLibraryOperationRsp = await MediaLibraryService.Add(new MediaLibraryCreateDto
-						{
-							CategoryId = categoryId,
-							Name = m.Name,
-							PathConfigurations = m.PathConfigurations
-						});
-					}
+                    var descriptors = await ComponentService.GetDescriptors(componentKeys);
+                    var enhancerKeys = descriptors.Where(a => a.ComponentType == ComponentType.Enhancer)
+                        .Select(a => a.Id).ToArray();
+                    if (enhancerKeys.Any())
+                    {
+                        eo = model.Category.EnhancementOptions ?? new();
+                        eo.Standardize(enhancerKeys);
+                    }
+                }
 
-					if (mediaLibraryOperationRsp.Code != 0)
-					{
-						return mediaLibraryOperationRsp;
-					}
-				}
-			}
+                await CategoryComponentService.Configure(model.Category.Id, componentKeys);
+                var category = await base.GetByKey(model.Category.Id);
+                category.EnhancementOptionsJson = eo == null ? null : JsonConvert.SerializeObject(eo);
+                await DbContext.SaveChangesAsync();
 
-			await tran.CommitAsync();
+                categoryOperationRsp = await Patch(model.Category.Id, categoryModel);
+            }
+            else
+            {
+                categoryOperationRsp = await Add(categoryModel);
+                if (categoryOperationRsp.Code == 0)
+                {
+                    categoryId = ((SingletonResponse<ResourceCategory>) categoryOperationRsp).Data.Id;
+                }
+            }
 
-			if (model.SyncAfterSaving)
-			{
-				MediaLibraryService.SyncInBackgroundTask();
-			}
+            if (categoryOperationRsp.Code != 0)
+            {
+                return categoryOperationRsp;
+            }
 
-			return BaseResponseBuilder.Ok;
-		}
+            if (model.MediaLibraries?.Length > 0)
+            {
+                foreach (var m in model.MediaLibraries)
+                {
+                    BaseResponse mediaLibraryOperationRsp;
 
-		public async Task<BaseResponse> BindCustomProperties(int id, ResourceCategoryCustomPropertyBindRequestModel model)
-		{
-			await CategoryCustomPropertyMappingService.BindCustomPropertiesToCategory(id,
-				model.CustomPropertyIds);
-			return BaseResponseBuilder.Ok;
-		}
-	}
+                    if (m.Id > 0)
+                    {
+                        mediaLibraryOperationRsp = await MediaLibraryService.Patch(m.Id,
+                            new MediaLibraryPatchDto()
+                            {
+                                Name = m.Name,
+                                Order = m.Order,
+                                PathConfigurations = m.PathConfigurations
+                            });
+                    }
+                    else
+                    {
+                        mediaLibraryOperationRsp = await MediaLibraryService.Add(new MediaLibraryCreateDto
+                        {
+                            CategoryId = categoryId,
+                            Name = m.Name,
+                            PathConfigurations = m.PathConfigurations
+                        });
+                    }
+
+                    if (mediaLibraryOperationRsp.Code != 0)
+                    {
+                        return mediaLibraryOperationRsp;
+                    }
+                }
+            }
+
+            await tran.CommitAsync();
+
+            if (model.SyncAfterSaving)
+            {
+                MediaLibraryService.SyncInBackgroundTask();
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<BaseResponse> BindCustomProperties(int id,
+            ResourceCategoryCustomPropertyBindRequestModel model)
+        {
+            await CategoryCustomPropertyMappingService.BindCustomPropertiesToCategory(id,
+                model.CustomPropertyIds);
+            return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<List<CategoryResourceDisplayNameViewModel>> PreviewDisplayNameRule(int id, string textRule,
+            int maxCount = 100)
+        {
+            var resourcesSearchResult = await ResourceService.SearchV2(new ResourceSearchDto
+            {
+                Group = new ResourceSearchFilterGroup
+                {
+                    Combinator = Combinator.And, Filters =
+                    [
+                        new ResourceSearchFilter
+                        {
+                            IsReservedProperty = true,
+                            Operation = SearchOperation.Equals,
+                            PropertyId = (int) ResourceProperty.Category,
+                            Value = id.ToJson()
+                        }
+                    ]
+                },
+                // Orders = [new ResourceSearchOrderInputModel
+                //             {
+                //                 Asc = false,
+                // 	Property = 
+                //             }]
+                PageIndex = 0,
+                PageSize = maxCount
+            }, false, true);
+
+            var resources = resourcesSearchResult.Data ?? [];
+
+            var category = await GetByKey(id, ResourceCategoryAdditionalItem.CustomProperties);
+            var matcherPropertyMap = (category.CustomProperties ?? []).GroupBy(d => d.Name)
+                .ToDictionary(d => $"{{{d.Key}}}", d => d.First());
+
+            var wrapperPairs = (await SpecialTextService.GetAll(SpecialTextType.Wrapper))
+                .GroupBy(d => d.Value1)
+                .Select(d => (Left: d.Key,
+                    Rights: d.Select(c => c.Value2).Where(s => !string.IsNullOrEmpty(s)).Distinct().OfType<string>()
+                        .OrderByDescending(x => x.Length).ToList()))
+                .OrderByDescending(d => d.Left.Length)
+                .ToList();
+
+            var result = new List<CategoryResourceDisplayNameViewModel>();
+
+            foreach (var r in resources)
+            {
+                var replacements = matcherPropertyMap.ToDictionary(d => d.Key,
+                    d =>
+                    {
+                        var value = r.CustomPropertyValues?.FirstOrDefault(a => a?.PropertyId == d.Value.Id);
+                        if (value != null)
+                        {
+                            var displayValue = CustomPropertyDescriptorMap[d.Value.Type]
+                                .BuildValueForDisplay(d.Value, value);
+                            var stdValueHandler = StandardValueHandlerMap[d.Value.Type.ToStandardValueType()];
+                            return stdValueHandler.BuildDisplayValue(displayValue);
+                        }
+
+                        return null;
+                    });
+                var displayName = textRule;
+                foreach (var (find, replace) in replacements)
+                {
+                    while (true)
+                    {
+                        var idxOfFind = displayName.IndexOf(find, StringComparison.Ordinal);
+                        if (idxOfFind == -1)
+                        {
+                            break;
+                        }
+
+                        var cursorIdx = idxOfFind;
+                        displayName = displayName.Remove(cursorIdx, find.Length);
+                        if (string.IsNullOrEmpty(replace))
+                        {
+                            while (cursorIdx > 0)
+                            {
+                                var wrappersWithEmptyContentIsRemoved = false;
+                                foreach (var (left, rights) in wrapperPairs)
+                                {
+                                    var startIdx = cursorIdx - left.Length;
+                                    if (startIdx >= 0)
+                                    {
+                                        if (displayName.IndexOf(left, startIdx, StringComparison.Ordinal) == startIdx)
+                                        {
+                                            var firstMatchedRightWrapper = rights.FirstOrDefault(x =>
+                                                displayName.IndexOf(x, cursorIdx, StringComparison.Ordinal) ==
+                                                cursorIdx);
+                                            if (!string.IsNullOrEmpty(firstMatchedRightWrapper))
+                                            {
+                                                displayName = displayName.Remove(startIdx,
+                                                    left.Length + firstMatchedRightWrapper.Length);
+                                                cursorIdx = startIdx;
+                                                wrappersWithEmptyContentIsRemoved = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (!wrappersWithEmptyContentIsRemoved)
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            displayName = displayName.Insert(cursorIdx, replace);
+                        }
+                    }
+                }
+
+                result.Add(new CategoryResourceDisplayNameViewModel
+                {
+                    ResourceId = r.Id,
+                    ResourcePath = r.Path,
+                    Segments = 
+                });
+            }
+        }
+    }
 }

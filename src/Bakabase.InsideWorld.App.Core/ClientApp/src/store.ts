@@ -11,7 +11,7 @@ import iwFsEntryChangeEvents from '@/models/iwFsEntryChangeEvents';
 import dependentComponentContexts from '@/models/dependentComponentContexts';
 import fileMovingProgresses from '@/models/fileMovingProgresses';
 import appUpdaterState from '@/models/appUpdaterState';
-import reservedOptions from '@/models/reservedOptions';
+import internalOptions from '@/models/internalOptions';
 import appContext from '@/models/appContext';
 
 const {
@@ -38,7 +38,7 @@ export default createStore({
   dependentComponentContexts,
   fileMovingProgresses,
   appUpdaterState,
-  reservedOptions,
+  internalOptions,
   appContext,
 
   appOptions,

@@ -27,8 +27,8 @@ export default ({
                 }: IProps) => {
   const { t } = useTranslation();
 
-  const reservedOptions = store.useModelState('reservedOptions');
-  const standardValueTypeSearchOperationsMap = reservedOptions?.resource?.standardValueSearchOperationsMap || {};
+  const internalOptions = store.useModelState('internalOptions');
+  const standardValueTypeSearchOperationsMap = internalOptions?.resource?.customPropertyValueSearchOperationsMap || {};
 
   const [filter, setFilter] = useState<IFilter>(propsFilter);
 
