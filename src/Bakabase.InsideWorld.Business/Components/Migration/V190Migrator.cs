@@ -97,6 +97,23 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
             });
             return valueMap;
         }
+        private static Dictionary<int, List<List<string>>> MergeSameValue(Dictionary<int, List<List<string>>> typedValueMap)
+        {
+            var listMap = new Dictionary<string, List<List<string>>>();
+            var separator = $"[{Guid.NewGuid().ToString("N")[..6]}]";
+            var tagGroupAndTagSeparator = $"[{Guid.NewGuid().ToString("N")[..6]}]";
+            var valueMap = typedValueMap.ToDictionary(d => d.Key, d =>
+            {
+                var key = string.Join(separator, d.Value.Select(c => string.Join(tagGroupAndTagSeparator, c)));
+                if (!listMap.TryGetValue(key, out var list))
+                {
+                    list = listMap[key] = d.Value;
+                }
+
+                return list;
+            });
+            return valueMap;
+        }
 
         public async Task<(StandardValueType ValueType, Dictionary<int, object?> ResourceValueMap)>
             PreparePropertyValuesForObsoleteProperties(ResourceProperty property, string? propertyKey)
@@ -227,11 +244,12 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
                         return (t.Id, Chain: list);
                     })).ToDictionary(d => d.Id, d => d.Chain);
                     var resourceTagMappings = await _resourceTagMappingService.GetAll();
-                    var valueMap = resourceTagMappings.GroupBy(d => d.ResourceId)
+                    var typedValueMap = resourceTagMappings.GroupBy(d => d.ResourceId)
                         .ToDictionary(d => d.Key,
-                            d => (object?) d.Select(c => tagIdStdTreeMap.GetValueOrDefault(c.TagId))
+                            d => d.Select(c => tagIdStdTreeMap.GetValueOrDefault(c.TagId))
                                 .Where(c => c != null)
                                 .OfType<List<string>>().ToList());
+                    var valueMap = MergeSameValue(typedValueMap).ToDictionary(d => d.Key, d => (object?) d.Value);
                     return (valueType, valueMap);
                 }
                 default:

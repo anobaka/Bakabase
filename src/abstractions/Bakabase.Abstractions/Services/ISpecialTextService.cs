@@ -15,8 +15,8 @@ public interface ISpecialTextService
     // Task<BaseResponse> UpdateByKey(int id, SpecialTextUpdateRequestModel model);
     // Task<SingletonResponse<SpecialText>> UpdateByKey(Int32 key, Action<SpecialText> modify);
     // Task<BaseResponse> AddPrefabs();
-    // Task<DateTime?> TryToParseDateTime(string? str);
-    // Task<(int Index, DateTime DateTime)[]> TryToParseDateTime(string[] strings);
+    Task<DateTime?> TryToParseDateTime(string? str);
+    Task<List<(int Index, DateTime DateTime)>> TryToParseDateTime(string[] strings);
     // Task<ResourceLanguage?> TryToParseLanguage(string str);
     // Task<SpecialTextService.WrappedContent[]> MatchAllContentsWithWrappers(string str);
     // Task<(VolumeDto Volume, string Match, int Index)?> TryToParseVolume(string str);

@@ -22,8 +22,6 @@ public abstract class NumberPropertyDescriptor<TProperty, TOptions, TValue> : Ab
     where TOptions : new()
     where TValue : CustomPropertyValue<decimal>, new()
 {
-    public override StandardValueType ValueType => StandardValueType.Decimal;
-
     public override SearchOperation[] SearchOperations { get; } =
     [
         SearchOperation.Equals,

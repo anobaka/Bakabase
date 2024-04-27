@@ -12,7 +12,6 @@ public class
     DateTimePropertyDescriptor : AbstractCustomPropertyDescriptor<DateTimeProperty, DateTimePropertyValue,
     System.DateTime>
 {
-    public override StandardValueType ValueType => StandardValueType.DateTime;
     public override CustomPropertyType Type => CustomPropertyType.DateTime;
 
     public override SearchOperation[] SearchOperations { get; } =

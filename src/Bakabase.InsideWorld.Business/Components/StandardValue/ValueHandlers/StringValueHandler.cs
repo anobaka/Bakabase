@@ -1,41 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
+using Bakabase.Abstractions.Components.StandardValue;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstractions
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.ValueHandlers
 {
-    public abstract class StringValueConverter : AbstractStandardValueHandler<string>
+    public class StringValueHandler(ISpecialTextService specialTextService) : AbstractStandardValueHandler<string>
     {
-        public abstract override StandardValueType Type { get; }
-        private readonly SpecialTextService _specialTextService;
-
-        protected StringValueConverter(SpecialTextService specialTextService)
-        {
-            _specialTextService = specialTextService;
-        }
+        public override StandardValueType Type => StandardValueType.String;
 
         public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss =>
             new Dictionary<StandardValueType, StandardValueConversionLoss?>
             {
-                {StandardValueType.SingleLineText, null},
-                {StandardValueType.MultilineText, null},
+                {StandardValueType.String, null},
+                {StandardValueType.ListString, null},
+                {StandardValueType.Decimal, StandardValueConversionLoss.InconvertibleDataWillBeLost},
                 {StandardValueType.Link, null},
-                {StandardValueType.SingleTextChoice, null},
-                {StandardValueType.MultipleTextChoice, null},
-                {StandardValueType.Number, StandardValueConversionLoss.InconvertibleDataWillBeLost},
-                {StandardValueType.Percentage, StandardValueConversionLoss.InconvertibleDataWillBeLost},
-                {StandardValueType.Rating, StandardValueConversionLoss.InconvertibleDataWillBeLost},
                 {StandardValueType.Boolean, StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue},
-                {StandardValueType.Attachment, StandardValueConversionLoss.All},
-                {StandardValueType.Date, StandardValueConversionLoss.InconvertibleDataWillBeLost},
                 {StandardValueType.DateTime, StandardValueConversionLoss.InconvertibleDataWillBeLost},
                 {StandardValueType.Time, StandardValueConversionLoss.InconvertibleDataWillBeLost},
-                {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.MultipleTextTree, StandardValueConversionLoss.All},
+                {StandardValueType.ListListString, null},
             };
 
         protected override string? ConvertToTypedValue(object? currentValue)
@@ -56,7 +45,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstract
         public override async Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(
             string currentValue)
         {
-            var date = await _specialTextService.TryToParseDateTime(currentValue);
+            var date = await specialTextService.TryToParseDateTime(currentValue);
             return (date, date.HasValue ? null : StandardValueConversionLoss.All);
         }
 

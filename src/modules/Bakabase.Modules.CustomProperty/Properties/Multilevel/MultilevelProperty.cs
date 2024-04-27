@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Extensions;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Multilevel;
 
@@ -13,7 +14,6 @@ public record MultilevelPropertyValue : CustomPropertyValue<List<string>>;
 public class MultilevelPropertyDescriptor : AbstractCustomPropertyDescriptor<MultilevelProperty,
     MultilevelPropertyOptions, MultilevelPropertyValue, List<string>>
 {
-    public override StandardValueType ValueType => StandardValueType.ListString;
     public override CustomPropertyType Type => CustomPropertyType.Multilevel;
 
     public override SearchOperation[] SearchOperations { get; } =
@@ -51,5 +51,30 @@ public class MultilevelPropertyDescriptor : AbstractCustomPropertyDescriptor<Mul
             default:
                 return true;
         }
+    }
+
+    protected override object? BuildValueForDisplay(MultilevelProperty property, List<string> value)
+    {
+        var data = new List<List<string>>();
+        foreach (var v in value)
+        {
+            if (property.Options?.Data != null)
+            {
+                foreach (var d in property.Options.Data)
+                {
+                    var chain = d.FindLabel(v);
+                    if (chain != null)
+                    {
+                        data.Add(chain.ToList());
+                    }
+                }
+            }
+            else
+            {
+                data.Add([v]);
+            }
+        }
+
+        return data;
     }
 }

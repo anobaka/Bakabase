@@ -5,6 +5,8 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.CustomProperty;
+using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
@@ -32,7 +34,8 @@ using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class CustomPropertyService : FullMemoryCacheResourceService<InsideWorldDbContext, CustomProperty, int>, ICustomPropertyService
+    public class CustomPropertyService : FullMemoryCacheResourceService<InsideWorldDbContext, CustomProperty, int>,
+        ICustomPropertyService
     {
         protected CategoryCustomPropertyMappingService CategoryCustomPropertyMappingService =>
             GetRequiredService<CategoryCustomPropertyMappingService>();
@@ -41,8 +44,13 @@ namespace Bakabase.InsideWorld.Business.Services
             GetRequiredService<CustomPropertyValueService>();
 
         protected ConversionService ConversionService => GetRequiredService<ConversionService>();
-
         protected ResourceCategoryService ResourceCategoryService => GetRequiredService<ResourceCategoryService>();
+
+        protected Dictionary<CustomPropertyType, ICustomPropertyDescriptor> PropertyDescriptors =>
+            GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>().ToDictionary(d => d.Type, d => d);
+
+        protected Dictionary<StandardValueType, IStandardValueHandler> StdValueHandlers =>
+            GetRequiredService<IEnumerable<IStandardValueHandler>>().ToDictionary(d => d.Type, d => d);
 
         public CustomPropertyService(IServiceProvider serviceProvider) : base(serviceProvider)
         {
@@ -166,172 +174,10 @@ namespace Bakabase.InsideWorld.Business.Services
             var property = await GetByKey(id);
             var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == id,
                 CustomPropertyValueAdditionalItem.None, false);
+            var propertyDescriptor = PropertyDescriptors[property.Type];
+            var stdValueHandler = StdValueHandlers[property.Type.ToStandardValueType()];
 
-            List<object> typedValues;
-            Func<object, string> getDisplayStr = s => s.ToString()!;
-            switch (property.Type)
-            {
-                case CustomPropertyType.SingleLineText:
-                case CustomPropertyType.MultilineText:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<TextPropertyValue>().Select(s => s.TypedValue).Where(s => !string.IsNullOrEmpty(s))
-                            .Distinct()
-                    ];
-                    break;
-                }
-                case CustomPropertyType.SingleChoice:
-                {
-                    var typedProperty = (property as SingleChoiceProperty)!;
-                    var choiceMap = typedProperty.Options?.Choices?.ToDictionary(d => d.Id, d => d.Value);
-                    typedValues =
-                    [
-                        ..values.Cast<SingleChoicePropertyValue>()
-                            .Select(v => string.IsNullOrEmpty(v.TypedValue) ? null : choiceMap?.GetValueOrDefault(v.TypedValue))
-                            .Where(s => !string.IsNullOrEmpty(s)).Distinct()
-                    ];
-                    break;
-                }
-                case CustomPropertyType.MultipleChoice:
-                {
-                    var typedProperty = (property as MultipleChoiceProperty)!;
-                    var choiceMap = typedProperty.Options?.Choices?.ToDictionary(d => d.Id, d => d.Value);
-
-                    var arrList = values.Cast<MultipleChoicePropertyValue>()
-                        .Select(v =>
-                            v.TypedValue?.Any() == true
-                                ? v.TypedValue.Select(x => choiceMap?.GetValueOrDefault(x))
-                                    .Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(a => a).ToList()
-                                : null)
-                        .Where(s => s?.Any() == true).ToList();
-
-                    var uniqueArrList = new List<List<string>>();
-                    foreach (var list in arrList)
-                    {
-                        if (uniqueArrList.All(x => x.Count != list!.Count || !x.Any(y => list.Contains(y))))
-                        {
-                            uniqueArrList.Add(list!);
-                        }
-                    }
-
-                    typedValues = [..uniqueArrList];
-                    getDisplayStr = s => string.Join(InternalOptions.TextSeparator, (s as List<string>)!);
-                    break;
-                }
-                case CustomPropertyType.Number:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<NumberPropertyValue>().Select(s => s.TypedValue).Distinct()
-                    ];
-                    break;
-                }
-                case CustomPropertyType.Percentage:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<PercentagePropertyValue>().Select(s => s.TypedValue).Distinct()
-                    ];
-                    break;
-                }
-                case CustomPropertyType.Rating:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<RatingPropertyValue>().Select(s => s.TypedValue).Distinct()
-                    ];
-                    break;
-                }
-                case CustomPropertyType.Boolean:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<BooleanPropertyValue>().Select(s => s.TypedValue).Distinct()
-                    ];
-                    break;
-                }
-                case CustomPropertyType.Link:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<LinkPropertyValue>().Select(s => s.TypedValue).Distinct()
-                    ];
-                    break;
-                }
-                case CustomPropertyType.Attachment:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<AttachmentPropertyValue>()
-                            .Select(s => s.TypedValue?.Where(v => !string.IsNullOrEmpty(v)).ToList())
-                            .Where(s => s?.Any() == true).Distinct()
-                    ];
-                    getDisplayStr = s => string.Join(InternalOptions.TextSeparator, (s as List<string>)!);
-                    break;
-                }
-                case CustomPropertyType.Date:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<DatePropertyValue>().Select(s => s.TypedValue).Distinct()
-                    ];
-                    getDisplayStr = s => ((DateTime) s).ToString("yyyy-MM-dd");
-                    break;
-                }
-                case CustomPropertyType.DateTime:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<DateTimePropertyValue>().Select(s => s.TypedValue).Distinct()
-                    ];
-                    getDisplayStr = s => ((DateTime) s).ToString("yyyy-MM-dd HH:mm:ss");
-                    break;
-                }
-                case CustomPropertyType.Time:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<TimePropertyValue>().Select(s => s.TypedValue).Distinct()
-                    ];
-                    getDisplayStr = s => ((TimeSpan) s).ToString("g");
-                    break;
-                }
-                case CustomPropertyType.Formula:
-                {
-                    typedValues =
-                    [
-                        ..values.Cast<FormulaPropertyValue>().Select(s => s.TypedValue).Distinct()
-                    ];
-                    break;
-                }
-                case CustomPropertyType.Multilevel:
-                {
-                    var typedProperty = (property as MultilevelProperty)!;
-                    var allChains = new List<List<List<string>>>();
-                    foreach (var s in values.Cast<MultilevelPropertyValue>())
-                    {
-                        if (s.TypedValue?.Any() == true)
-                        {
-                            var chains = s.TypedValue
-                                .Select(item =>
-                                    typedProperty.Options?.Data?.Select(x => x.FindLabel(item))
-                                        .FirstOrDefault(x => x != null)?.ToList()).OfType<List<string>>().ToList();
-
-                            if (chains.Any())
-                            {
-                                allChains.Add(chains);
-                            }
-                        }
-                    }
-
-                    typedValues = [..allChains];
-                    getDisplayStr = s => string.Join(InternalOptions.TextSeparator, (s as string[])!);
-                    break;
-                }
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            var typedValues = values.Select(v => propertyDescriptor.BuildValueForDisplay(property, v)).ToList();
 
             var lossMap = new Dictionary<StandardValueConversionLoss, List<string>>();
             var result = new CustomPropertyTypeConversionLossViewModel
@@ -347,13 +193,16 @@ namespace Bakabase.InsideWorld.Business.Services
                     .ToList();
                 foreach (var l in list)
                 {
-                    var str = getDisplayStr(d);
-                    if (!lossMap.ContainsKey(l))
+                    var str = stdValueHandler.BuildDisplayValue(d);
+                    if (!string.IsNullOrEmpty(str))
                     {
-                        lossMap[l] = [];
-                    }
+                        if (!lossMap.ContainsKey(l))
+                        {
+                            lossMap[l] = [];
+                        }
 
-                    lossMap[l].Add(str);
+                        lossMap[l].Add(str);
+                    }
                 }
 
                 if (list.Any())

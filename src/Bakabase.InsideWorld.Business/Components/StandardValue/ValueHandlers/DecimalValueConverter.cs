@@ -2,34 +2,28 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
+using Bakabase.Abstractions.Components.StandardValue;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.ValueHandlers
 {
-    public class NumberValueConverter : AbstractStandardValueHandler<decimal>
+    public class DecimalValueConverter : AbstractStandardValueHandler<decimal>
     {
-        public override StandardValueType Type => StandardValueType.Number;
+        public override StandardValueType Type => StandardValueType.Decimal;
 
         public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
             new()
             {
-                {StandardValueType.SingleLineText, null},
-                {StandardValueType.MultilineText, null},
+                {StandardValueType.String, null},
+                {StandardValueType.ListString, null},
+                {StandardValueType.Decimal, null},
                 {StandardValueType.Link, StandardValueConversionLoss.All},
-                {StandardValueType.SingleTextChoice, null},
-                {StandardValueType.MultipleTextChoice, null},
-                {StandardValueType.Number, null},
-                {StandardValueType.Percentage, null},
-                {StandardValueType.Rating, null},
                 {StandardValueType.Boolean, StandardValueConversionLoss.NonZeroValueWillBeConvertedToTrue},
-                {StandardValueType.Attachment, StandardValueConversionLoss.All},
-                {StandardValueType.Date, StandardValueConversionLoss.All},
                 {StandardValueType.DateTime, StandardValueConversionLoss.All},
                 {StandardValueType.Time, StandardValueConversionLoss.All},
-                {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.MultipleTextTree, StandardValueConversionLoss.All},
+                {StandardValueType.ListListString, StandardValueConversionLoss.All},
 
             };
 

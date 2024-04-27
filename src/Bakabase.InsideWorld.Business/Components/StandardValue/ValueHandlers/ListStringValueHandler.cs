@@ -2,54 +2,31 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstractions
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.ValueHandlers
 {
-    public abstract class ListStringValueConverter : AbstractStandardValueHandler<List<string>>
+    public class ListStringValueHandler(SpecialTextService specialTextService)
+        : AbstractStandardValueHandler<List<string>>
     {
-        private readonly SpecialTextService _specialTextService;
-
-        protected ListStringValueConverter(SpecialTextService specialTextService)
-        {
-            _specialTextService = specialTextService;
-        }
+        public override StandardValueType Type => StandardValueType.ListString;
 
         public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
             new()
             {
-                {StandardValueType.SingleLineText, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.MultilineText, StandardValueConversionLoss.ValuesWillBeMerged},
+                {StandardValueType.String, StandardValueConversionLoss.ValuesWillBeMerged},
+                {StandardValueType.ListString, null},
+                {
+                    StandardValueType.Decimal, StandardValueConversionLoss.InconvertibleDataWillBeLost |
+                                               StandardValueConversionLoss.OnlyFirstNotEmptyValueWillBeRemained
+                },
                 {StandardValueType.Link, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.SingleTextChoice, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.MultipleTextChoice, null},
-                {
-                    StandardValueType.Number,
-                    StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                    StandardValueConversionLoss.OnlyFirstNotEmptyValueWillBeRemained
-                },
-                {
-                    StandardValueType.Percentage,
-                    StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                    StandardValueConversionLoss.OnlyFirstNotEmptyValueWillBeRemained
-                },
-                {
-                    StandardValueType.Rating,
-                    StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                    StandardValueConversionLoss.OnlyFirstNotEmptyValueWillBeRemained
-                },
                 {StandardValueType.Boolean, StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue},
-                {StandardValueType.Attachment, StandardValueConversionLoss.All},
-                {
-                    StandardValueType.Date,
-                    StandardValueConversionLoss.InconvertibleDataWillBeLost |
-                    StandardValueConversionLoss.OnlyFirstNotEmptyValueWillBeRemained
-                },
                 {
                     StandardValueType.DateTime,
                     StandardValueConversionLoss.InconvertibleDataWillBeLost |
@@ -60,9 +37,15 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstract
                     StandardValueConversionLoss.InconvertibleDataWillBeLost |
                     StandardValueConversionLoss.OnlyFirstNotEmptyValueWillBeRemained
                 },
-                {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.MultipleTextTree, null},
+                {
+                    StandardValueType.ListListString, null
+                }
             };
+
+        protected override string? BuildDisplayValue(List<string> value)
+        {
+            return string.Join(InternalOptions.TextSeparator, value);
+        }
 
         protected override List<string>? ConvertToTypedValue(object? currentValue)
         {
@@ -83,7 +66,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstract
         {
             if (currentValue.Count > 1)
             {
-                return (string.Join(BusinessConstants.TextSeparator, currentValue),
+                return (string.Join(InternalOptions.TextSeparator, currentValue),
                     StandardValueConversionLoss.ValuesWillBeMerged);
             }
 
@@ -111,7 +94,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstract
         public override (LinkData? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(
             List<string> currentValue)
         {
-            var text = string.Join(BusinessConstants.TextSeparator, currentValue);
+            var text = string.Join(InternalOptions.TextSeparator, currentValue);
             var ld = new LinkData { Text = text, Url = text };
             return (ld, currentValue.Count > 1 ? StandardValueConversionLoss.ValuesWillBeMerged : null);
         }
@@ -119,7 +102,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values.Abstract
         public override async Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(
             List<string> currentValue)
         {
-            var date = await _specialTextService.TryToParseDateTime(currentValue[0]);
+            var date = await specialTextService.TryToParseDateTime(currentValue[0]);
             return (date, date.HasValue ? null : StandardValueConversionLoss.All);
         }
 

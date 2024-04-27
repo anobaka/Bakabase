@@ -1,40 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
+using Bakabase.Abstractions.Components.StandardValue;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.ValueHandlers
 {
-    public class LinkValueConverter : AbstractStandardValueHandler<LinkData>
+    public class LinkValueHandler : AbstractStandardValueHandler<LinkData>
     {
         public override StandardValueType Type => StandardValueType.Link;
 
         public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
             new()
             {
-                {StandardValueType.SingleLineText, StandardValueConversionLoss.TextWillBeLost},
-                {StandardValueType.MultilineText, StandardValueConversionLoss.TextWillBeLost},
+                {StandardValueType.String, StandardValueConversionLoss.TextWillBeLost},
+                {StandardValueType.ListString, StandardValueConversionLoss.TextWillBeLost},
+                {StandardValueType.Decimal, StandardValueConversionLoss.All},
                 {StandardValueType.Link, null},
-                {StandardValueType.SingleTextChoice, StandardValueConversionLoss.TextWillBeLost},
-                {StandardValueType.MultipleTextChoice, StandardValueConversionLoss.TextWillBeLost},
-                {StandardValueType.Number, StandardValueConversionLoss.All},
-                {StandardValueType.Percentage, StandardValueConversionLoss.All},
-                {StandardValueType.Rating, StandardValueConversionLoss.All},
                 {StandardValueType.Boolean, StandardValueConversionLoss.All},
-                {StandardValueType.Attachment, StandardValueConversionLoss.TextWillBeLost},
-                {StandardValueType.Date, StandardValueConversionLoss.All},
                 {StandardValueType.DateTime, StandardValueConversionLoss.All},
                 {StandardValueType.Time, StandardValueConversionLoss.All},
-                {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.MultipleTextTree, StandardValueConversionLoss.All},
+                {StandardValueType.ListListString, StandardValueConversionLoss.All},
             };
 
         protected override LinkData? ConvertToTypedValue(object? currentValue)
         {
             var ld = currentValue as LinkData;
             return string.IsNullOrEmpty(ld?.Text) && string.IsNullOrEmpty(ld?.Url) ? null : ld;
+        }
+
+        protected override string? BuildDisplayValue(LinkData value)
+        {
+            return value.ToString();
         }
 
         public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(LinkData currentValue)

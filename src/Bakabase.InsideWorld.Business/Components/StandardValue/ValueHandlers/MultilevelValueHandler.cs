@@ -2,35 +2,36 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.StandardValue;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.ValueHandlers
 {
-    public class MultilevelValueConverter : AbstractStandardValueHandler<List<List<string>>>
+    public class MultilevelValueHandler : AbstractStandardValueHandler<List<List<string>>>
     {
-        public override StandardValueType Type => StandardValueType.MultipleTextTree;
+        public override StandardValueType Type => StandardValueType.ListListString;
 
         public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
             new()
             {
-                {StandardValueType.SingleLineText, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.MultilineText, StandardValueConversionLoss.ValuesWillBeMerged},
+                {StandardValueType.String, StandardValueConversionLoss.ValuesWillBeMerged},
+                {StandardValueType.ListString, StandardValueConversionLoss.ValuesWillBeMerged},
+                {StandardValueType.Decimal, StandardValueConversionLoss.All},
                 {StandardValueType.Link, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.SingleTextChoice, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.MultipleTextChoice, StandardValueConversionLoss.ValuesWillBeMerged},
-                {StandardValueType.Number, StandardValueConversionLoss.All},
-                {StandardValueType.Percentage, StandardValueConversionLoss.All},
-                {StandardValueType.Rating, StandardValueConversionLoss.All},
                 {StandardValueType.Boolean, StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue},
-                {StandardValueType.Attachment, StandardValueConversionLoss.All},
-                {StandardValueType.Date, StandardValueConversionLoss.All},
                 {StandardValueType.DateTime, StandardValueConversionLoss.All},
                 {StandardValueType.Time, StandardValueConversionLoss.All},
-                {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.MultipleTextTree, null},
+                {StandardValueType.ListListString, null},
             };
+
+        protected override string? BuildDisplayValue(List<List<string>> value)
+        {
+            return string.Join(InternalOptions.TextSeparator,
+                value.Select(s => string.Join(InternalOptions.LayerTextSeparator, s)));
+        }
 
         protected override List<List<string>>? ConvertToTypedValue(object? currentValue)
         {
@@ -41,8 +42,8 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
         public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(
             List<List<string>> currentValue)
         {
-            var nv = string.Join(BusinessConstants.LayerTextSeparator,
-                currentValue.Select(s => string.Join(BusinessConstants.TextSeparator, s)));
+            var nv = string.Join(InternalOptions.LayerTextSeparator,
+                currentValue.Select(s => string.Join(InternalOptions.TextSeparator, s)));
             return (nv, currentValue.Count > 1 || currentValue.Any(s => s.Count > 1)
                 ? StandardValueConversionLoss.ValuesWillBeMerged
                 : null);
@@ -51,7 +52,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
         public override (List<string>? NewValue, StandardValueConversionLoss? Loss) ConvertToListString(
             List<List<string>> currentValue)
         {
-            var nv = currentValue.Select(s => string.Join(BusinessConstants.TextSeparator, s)).ToList();
+            var nv = currentValue.Select(s => string.Join(InternalOptions.TextSeparator, s)).ToList();
             return (nv, currentValue.Any(s => s.Count > 1) ? StandardValueConversionLoss.ValuesWillBeMerged : null);
         }
 

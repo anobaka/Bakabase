@@ -20,7 +20,6 @@ public record SingleChoicePropertyValue : CustomPropertyValue<string>
 public class SingleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<SingleChoiceProperty,
     ChoicePropertyOptions<string>, SingleChoicePropertyValue, string>
 {
-    public override StandardValueType ValueType => StandardValueType.String;
     public override CustomPropertyType Type => CustomPropertyType.SingleChoice;
 
     public override SearchOperation[] SearchOperations { get; } =
@@ -73,5 +72,10 @@ public class SingleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<S
             default:
                 throw new ArgumentOutOfRangeException();
         }
+    }
+
+    protected override object? BuildValueForDisplay(SingleChoiceProperty property, string value)
+    {
+        return property.Options?.Choices?.FirstOrDefault(c => c.Id == value)?.Value;
     }
 }

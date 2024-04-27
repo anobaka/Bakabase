@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
@@ -68,6 +69,8 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Series, int>>();
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Original, int>>();
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Tag, int>>();
+            services.AddScoped<ISpecialTextService, SpecialTextService>(x =>
+                x.GetRequiredService<SpecialTextService>());
             services.AddScoped<SpecialTextService>();
             services.AddScoped<MediaLibraryService>();
             services.AddScoped<CustomResourcePropertyService>();

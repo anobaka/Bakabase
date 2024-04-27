@@ -12,7 +12,6 @@ public record FormulaPropertyValue() : CustomPropertyValue<string>;
 
 public class FormulaPropertyDescriptor : AbstractCustomPropertyDescriptor<FormulaProperty, FormulaPropertyValue, string>
 {
-    public override StandardValueType ValueType => StandardValueType.String;
     public override CustomPropertyType Type => CustomPropertyType.Formula;
 
     public override SearchOperation[] SearchOperations { get; } =

@@ -1,20 +1,22 @@
-﻿using Bakabase.Abstractions.Extensions;
+﻿using Bakabase.Abstractions.Components.CustomProperty;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Extensions;
 using Newtonsoft.Json;
 using CustomPropertyValue = Bakabase.Abstractions.Models.Domain.CustomPropertyValue;
 
-namespace Bakabase.Abstractions.Components.CustomProperty
+namespace Bakabase.Modules.CustomProperty.Properties
 {
     public abstract class
         AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TInnerValue> : ICustomPropertyDescriptor
         where TProperty : Abstractions.Models.Domain.CustomProperty, new()
         where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
     {
-        public abstract StandardValueType ValueType { get; }
+        public StandardValueType ValueType => Type.ToStandardValueType();
         public abstract CustomPropertyType Type { get; }
 
         public virtual Abstractions.Models.Domain.CustomProperty? BuildDomainProperty(
@@ -50,10 +52,10 @@ namespace Bakabase.Abstractions.Components.CustomProperty
                 Property = null,
                 PropertyId = value.PropertyId,
                 ResourceId = value.ResourceId,
-                TypedValue = innerValue == null ? default : (TInnerValue)innerValue,
+                TypedValue = innerValue == null ? default : (TInnerValue) innerValue,
                 Layer = value.Layer
             };
-            
+
             return dto;
         }
 
@@ -63,6 +65,16 @@ namespace Bakabase.Abstractions.Components.CustomProperty
         }
 
         public abstract SearchOperation[] SearchOperations { get; }
+
+        public object? BuildValueForDisplay(Abstractions.Models.Domain.CustomProperty property,
+            CustomPropertyValue value)
+        {
+            return value.Value == null
+                ? default
+                : BuildValueForDisplay((property as TProperty)!, (TInnerValue) value.Value);
+        }
+
+        protected virtual object? BuildValueForDisplay(TProperty property, TInnerValue value) => value;
 
         public bool IsMatch(CustomPropertyValue? value, CustomPropertyValueSearchRequestModel model)
         {

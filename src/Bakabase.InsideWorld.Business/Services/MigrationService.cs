@@ -50,7 +50,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IBOptionsManager<MigrationOptions> _migrationOptions;
         private readonly PropertyValueConverter _propertyValueConverter;
         private readonly V190Migrator _v190Migrator;
-        private readonly Dictionary<StandardValueType, IStandardValueHandler> _valueConverters;
+        private readonly Dictionary<StandardValueType, IStandardValueHandler> _stdValueHandlers;
 
         public MigrationService(CustomResourcePropertyService customResourcePropertyService,
             CustomPropertyService customPropertyService,
@@ -65,51 +65,42 @@ namespace Bakabase.InsideWorld.Business.Services
             _migrationOptions = migrationOptions;
             _propertyValueConverter = propertyValueConverter;
             _v190Migrator = v190Migrator;
-            _valueConverters = valueConverters.ToDictionary(d => d.Type, d => d);
+            _stdValueHandlers = valueConverters.ToDictionary(d => d.Type, d => d);
         }
 
         public async Task<List<MigrationTargetViewModel>> GetMigrationTargets()
         {
             var targets = new List<MigrationTargetViewModel>();
             var doneProperties = _migrationOptions.Value?.Properties;
-            var toStringForListString = (Func<object, string>?) (s => string.Join(InternalOptions.TextSeparator, (s as IEnumerable<string>)!));
             var propertyAndKeys =
-                new List<(ResourceProperty Property, string? PropertyKey, Func<object, string>? BuildValueLabel)>
+                new List<(ResourceProperty Property, string? PropertyKey)>
                 {
-                    (ResourceProperty.Publisher, null, toStringForListString),
-                    (ResourceProperty.Name, null, null),
-                    (ResourceProperty.Introduction, null, null),
-                    (ResourceProperty.Rate, null, null),
-                    (ResourceProperty.Language, null, null),
-                    (ResourceProperty.ReleaseDt, null, null),
-                    (ResourceProperty.Original, null, toStringForListString),
-                    (ResourceProperty.Volume, nameof(VolumeDto.Index), null),
-                    (ResourceProperty.Volume, nameof(VolumeDto.Title), null),
-                    (ResourceProperty.Volume, nameof(VolumeDto.Name), null),
-                    (ResourceProperty.Series, null, null),
-                    (ResourceProperty.Favorites, null, null),
-                    (ResourceProperty.Tag, null, s =>
-                    {
-                        var data = (s as List<List<string>>)!;
-                        return string.Join(InternalOptions.TextSeparator,
-                            data.Select(x => string.Join(InternalOptions.TagNameSeparator, x)));
-                    })
+                    (ResourceProperty.Publisher, null),
+                    (ResourceProperty.Name, null),
+                    (ResourceProperty.Introduction, null),
+                    (ResourceProperty.Rate, null),
+                    (ResourceProperty.Language, null),
+                    (ResourceProperty.ReleaseDt, null),
+                    (ResourceProperty.Original, null),
+                    (ResourceProperty.Volume, nameof(VolumeDto.Index)),
+                    (ResourceProperty.Volume, nameof(VolumeDto.Title)),
+                    (ResourceProperty.Volume, nameof(VolumeDto.Name)),
+                    (ResourceProperty.Series, null),
+                    (ResourceProperty.Favorites, null),
+                    (ResourceProperty.Tag, null)
                 };
 
             var customPropertyValueKeys = await _customResourcePropertyService.GetAllKeys();
             propertyAndKeys.AddRange(
-                customPropertyValueKeys.Select(k => (Property: ResourceProperty.CustomProperty, Key: (string?) k,
-                    BuildValueLabel: toStringForListString)));
+                customPropertyValueKeys.Select(k => (Property: ResourceProperty.CustomProperty, Key: (string?) k)));
 
-            foreach (var (property, propertyKey, buildValueLabel) in propertyAndKeys)
+            foreach (var (property, propertyKey) in propertyAndKeys)
             {
                 if (doneProperties?.Any(x => x.Property == property && x.PropertyKey == propertyKey) != true)
                 {
                     var (fromType, resourceRawValues) =
                         await _v190Migrator.PreparePropertyValuesForObsoleteProperties(property, propertyKey);
-                    var target = await _buildSimpleMigrationTargetViewModel(resourceRawValues.Values.ToList()!,
-                        property,
-                        propertyKey, buildValueLabel ?? (s => s.ToString()!));
+                    var target = await _buildSimpleMigrationTargetViewModel(resourceRawValues.Values.ToList()!, property, propertyKey, _stdValueHandlers[fromType].BuildDisplayValue);
                     targets.Add(target);
                 }
             }
@@ -140,20 +131,21 @@ namespace Bakabase.InsideWorld.Business.Services
         }
 
         private async Task<MigrationTargetViewModel> _buildSimpleMigrationTargetViewModel<T>(List<T> data,
-            ResourceProperty property, string? propertyKey, Func<T, string> toString)
+            ResourceProperty property, string? propertyKey, Func<T, string?> toString)
         {
             var distinctData = data.Distinct().ToArray();
             var model = new MigrationTargetViewModel
             {
                 Data = distinctData,
                 DataCount = distinctData.Length,
+                DataForDisplay = distinctData.Select(toString).Where(s => !string.IsNullOrEmpty(s)).OfType<string>().ToList(),
                 Property = property,
                 PropertyKey = propertyKey,
                 TargetCandidates = []
             };
 
             var valueType = V190Migrator.GetStandardValueTypeForObsoleteProperties(property, propertyKey);
-            var candidateTargetTypes = _valueConverters[valueType].DefaultConversionLoss
+            var candidateTargetTypes = _stdValueHandlers[valueType].DefaultConversionLoss
                 .Where(c => c.Value?.HasFlag(StandardValueConversionLoss.All) != true).Select(c => c.Key)
                 .ToArray();
 
@@ -167,18 +159,25 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         foreach (var f in loss.Value.GetFlags())
                         {
-                            lossData.GetOrAdd(f, () => []).Add(toString(d));
+                            var displayValue = toString(d);
+                            if (!string.IsNullOrEmpty(displayValue))
+                            {
+                                lossData.GetOrAdd(f, () => []).Add(displayValue);
+                            }
                         }
                     }
                 }
 
-                var candidate = new MigrationTargetViewModel.PropertyTypeCandidate
-                {
-                    Type = tc.ToCustomValueType(),
-                    LossData = lossData.ToDictionary(s => (int) s.Key, s => s.Value.Distinct().ToList())
-                };
+                var compatibleCustomPropertyTypes = tc.GetCompatibleCustomPropertyTypes();
 
-                model.TargetCandidates.Add(candidate);
+                var candidates = compatibleCustomPropertyTypes.Select(type =>
+                    new MigrationTargetViewModel.PropertyTypeCandidate
+                    {
+                        Type = type,
+                        LossData = lossData.ToDictionary(s => (int) s.Key, s => s.Value.Distinct().ToList())
+                    });
+
+                model.TargetCandidates.AddRange(candidates);
             }
 
             return model;

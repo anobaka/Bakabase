@@ -23,6 +23,8 @@ import Checkbox from './components/Checkbox';
 import Badge from './components/Badge';
 import Code from './components/Code';
 import Carousel from './components/Carousel';
+import Link from './components/Link';
+import Snippet from './components/Snippet';
 
 export {
   Button,
@@ -60,4 +62,6 @@ export {
   Badge,
   Code,
   Carousel,
+  Link,
+  Snippet,
 };

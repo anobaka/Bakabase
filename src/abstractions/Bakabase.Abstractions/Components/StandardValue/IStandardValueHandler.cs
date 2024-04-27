@@ -13,4 +13,5 @@ public interface IStandardValueHandler
     Task<(object? NewValue, StandardValueConversionLoss? Loss)> Convert(object? currentValue, StandardValueType toType);
     bool ValidateType(object? value);
     Type ExpectedType { get; }
+    string? BuildDisplayValue(object? value);
 }

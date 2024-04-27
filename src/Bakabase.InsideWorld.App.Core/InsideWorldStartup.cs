@@ -6,7 +6,6 @@ using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.App.Core.Components;
 using Bakabase.InsideWorld.App.Core.Extensions;
 using Bakabase.InsideWorld.Business;
-using Bakabase.InsideWorld.Business.Components.Caching;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.CookieValidation;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
@@ -127,8 +126,6 @@ namespace Bakabase.InsideWorld.App.Core
 
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();
             services.TryAddSingleton<CompressedFileService>();
-
-            services.TryAddSingleton<GlobalCacheContainer>();
 
             services.TryAddTransient<InsideWorldLocalizer>();
 

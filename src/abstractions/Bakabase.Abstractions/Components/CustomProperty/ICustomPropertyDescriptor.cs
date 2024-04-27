@@ -14,5 +14,6 @@ namespace Bakabase.Abstractions.Components.CustomProperty
         CustomPropertyValue? BuildDomainValue(Models.Db.CustomPropertyValue? value);
         bool IsMatch(CustomPropertyValue? value, ResourceSearchFilter filter);
         SearchOperation[] SearchOperations { get; }
+        object? BuildValueForDisplay(Models.Domain.CustomProperty property, CustomPropertyValue value);
     }
 }

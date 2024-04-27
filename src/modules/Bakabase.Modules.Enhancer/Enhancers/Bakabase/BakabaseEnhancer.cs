@@ -46,7 +46,7 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
                 var allWcs = MatchAllContentsWithWrappers(name);
 
                 var nameRef = new RefWrapper<string>(name);
-                var releaseDt = GetAndRemoveReleaseDt(nameRef, allWcs);
+                var releaseDt = await GetAndRemoveReleaseDt(nameRef, allWcs);
                 name = nameRef.Value;
 
                 var language = GetAndRemoveLanguageWithWrapper(ref name, allWcs);
@@ -125,12 +125,12 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
             return dict;
         }
 
-        private DateTime? GetAndRemoveReleaseDt(RefWrapper<string> name,
+        private async Task<DateTime?> GetAndRemoveReleaseDt(RefWrapper<string> name,
             IEnumerable<WrappedContent> wcs)
         {
             foreach (var wc in wcs)
             {
-                var dt = TryToParseDateTime(wc.Content);
+                var dt = await specialTextService.TryToParseDateTime(wc.Content);
                 if (dt.HasValue)
                 {
                     name.Value = $"{name.Value[..wc.Index]}{name.Value[(wc.Index + wc.ContentWithWrapper.Length)..]}";
@@ -141,48 +141,7 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
             return null;
         }
 
-        private DateTime? TryToParseDateTime(string? str)
-        {
-            if (string.IsNullOrEmpty(str))
-            {
-                return null;
-            }
 
-            var r = TryToParseDateTime([str]);
-            return r?.Any() == true ? r[0].DateTime : null;
-        }
-
-        private (int Index, DateTime DateTime)[]? TryToParseDateTime(string[] strings)
-        {
-            if (strings.Any())
-            {
-                var texts = specialTextService[SpecialTextType.DateTime];
-                var formats = texts.Select(a => a.Value1).Distinct().ToArray();
-
-                var list = new List<(int Index, DateTime DateTime)>();
-                for (var i = 0; i < strings.Length; i++)
-                {
-                    if (DateTime.TryParseExact(strings[i], formats, CultureInfo.InvariantCulture,
-                            DateTimeStyles.AssumeLocal,
-                            out var dt))
-                    {
-                        list.Add((i, dt));
-                    }
-                    else
-                    {
-                        // fallback
-                        if (DateTime.TryParse(strings[i], out var fallbackDt))
-                        {
-                            list.Add((i, fallbackDt));
-                        }
-                    }
-                }
-
-                return list.ToArray();
-            }
-
-            return null;
-        }
 
         private string? GetAndRemoveLanguageWithWrapper(ref string name, IEnumerable<WrappedContent> wcs)
         {

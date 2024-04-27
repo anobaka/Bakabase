@@ -1,5 +1,7 @@
-﻿using System.Reflection;
+﻿using System.Collections.Concurrent;
+using System.Reflection;
 using Bakabase.Abstractions.Components.CustomProperty;
+using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Properties.Attachment;
@@ -37,19 +39,27 @@ public static class CustomPropertyExtensions
         {CustomPropertyType.Multilevel, new MultilevelPropertyDescriptor()},
     };
 
+    private static readonly ConcurrentDictionary<CustomPropertyType, StandardValueType> StandardValueTypeMapCache =
+        new ConcurrentDictionary<CustomPropertyType, StandardValueType>(
+            SpecificEnumUtils<CustomPropertyType>.Values.ToDictionary(d => d,
+                d => d.GetAttribute<StandardValueAttribute>().ValueType));
+
+    private static readonly ConcurrentDictionary<StandardValueType, CustomPropertyType[]>
+        StandardValueTypeCustomPropertyTypesMapCache =
+            new ConcurrentDictionary<StandardValueType, CustomPropertyType[]>(StandardValueTypeMapCache
+                .GroupBy(d => d.Value).ToDictionary(c => c.Key, c => c.Select(d => d.Key).ToArray()));
+
     public static Abstractions.Models.Domain.CustomProperty? ToDomainModel(
         this Abstractions.Models.Db.CustomProperty? entity)
     {
-        if (entity == null)
-        {
-            return null;
-        }
-
-        return Descriptors[entity.Type].BuildDomainProperty(entity);
+        return entity == null ? null : Descriptors[entity.Type].BuildDomainProperty(entity);
     }
 
-    public static StandardValueType ToStandardValueType(this CustomPropertyType type) => (StandardValueType) type;
-    public static CustomPropertyType ToCustomValueType(this StandardValueType type) => (CustomPropertyType) type;
+    public static StandardValueType ToStandardValueType(this CustomPropertyType type) =>
+        StandardValueTypeMapCache[type];
+
+    public static CustomPropertyType[] GetCompatibleCustomPropertyTypes(this StandardValueType type) =>
+        StandardValueTypeCustomPropertyTypesMapCache[type];
 
     public static IServiceCollection AddCustomProperty(this IServiceCollection services)
     {

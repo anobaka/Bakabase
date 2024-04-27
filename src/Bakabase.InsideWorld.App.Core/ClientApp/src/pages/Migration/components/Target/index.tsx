@@ -14,6 +14,7 @@ export interface MigrationTarget {
   propertyKey?: string;
   dataCount: number;
   data?: any;
+  dataForDisplay?: string[];
   targetCandidates?: {
     type: CustomPropertyType;
     lossData?: Record<string, string[]>;
@@ -64,7 +65,7 @@ const Target = ({
           onClose={() => setDataDialogVisible(false)}
         >
           <div className={'flex flex-wrap gap-1'}>
-            {target.data.map(d => (
+            {target.dataForDisplay?.map(d => (
               <Chip>{d}</Chip>
             ))}
           </div>

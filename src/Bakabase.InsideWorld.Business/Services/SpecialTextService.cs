@@ -25,7 +25,8 @@ using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class SpecialTextService : FullMemoryCacheResourceService<InsideWorldDbContext, SpecialText, int>, ISpecialTextService
+    public class SpecialTextService : FullMemoryCacheResourceService<InsideWorldDbContext, SpecialText, int>,
+        ISpecialTextService
     {
         public static string Version { get; private set; }
 
@@ -61,6 +62,48 @@ namespace Bakabase.InsideWorld.Business.Services
             var r = await base.Add(t);
             await _onChange();
             return r;
+        }
+
+        public async Task<DateTime?> TryToParseDateTime(string? str)
+        {
+            if (string.IsNullOrEmpty(str))
+            {
+                return null;
+            }
+
+            var r = await TryToParseDateTime([str]);
+            return r?.Any() == true ? r[0].DateTime : null;
+        }
+
+        public async Task<List<(int Index, DateTime DateTime)>> TryToParseDateTime(string[] strings)
+        {
+            var list = new List<(int Index, DateTime DateTime)>();
+            if (strings.Any())
+            {
+                var texts = await GetAll(t => t.Type == SpecialTextType.DateTime);
+                var formats = texts.Select(a => a.Value1).Distinct().ToArray();
+                for (var i = 0; i < strings.Length; i++)
+                {
+                    if (DateTime.TryParseExact(strings[i], formats, CultureInfo.InvariantCulture,
+                            DateTimeStyles.AssumeLocal,
+                            out var dt))
+                    {
+                        list.Add((i, dt));
+                    }
+                    else
+                    {
+                        // fallback
+                        if (DateTime.TryParse(strings[i], out var fallbackDt))
+                        {
+                            list.Add((i, fallbackDt));
+                        }
+                    }
+                }
+
+                return list;
+            }
+
+            return list;
         }
 
         public async Task<Dictionary<SpecialTextType, List<SpecialText>>> GetAll()

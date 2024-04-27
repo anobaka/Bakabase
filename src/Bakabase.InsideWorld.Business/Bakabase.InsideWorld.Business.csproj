@@ -8,13 +8,10 @@
 
 	<ItemGroup>
 		<Compile Remove="Components\HttpClientProvider\**" />
-		<Compile Remove="Components\StandardValue\ValueHandlers\**" />
 		<Compile Remove="Components\Subscribers\**" />
 		<EmbeddedResource Remove="Components\HttpClientProvider\**" />
-		<EmbeddedResource Remove="Components\StandardValue\ValueHandlers\**" />
 		<EmbeddedResource Remove="Components\Subscribers\**" />
 		<None Remove="Components\HttpClientProvider\**" />
-		<None Remove="Components\StandardValue\ValueHandlers\**" />
 		<None Remove="Components\Subscribers\**" />
 	</ItemGroup>
 

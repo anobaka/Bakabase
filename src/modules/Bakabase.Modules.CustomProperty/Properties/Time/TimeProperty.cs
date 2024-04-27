@@ -12,7 +12,6 @@ public record TimePropertyValue : CustomPropertyValue<TimeSpan>;
 
 public class TimePropertyDescriptor : AbstractCustomPropertyDescriptor<TimeProperty, TimePropertyValue, TimeSpan>
 {
-    public override StandardValueType ValueType => StandardValueType.Time;
     public override CustomPropertyType Type => CustomPropertyType.Time;
 
     public override SearchOperation[] SearchOperations { get; } =

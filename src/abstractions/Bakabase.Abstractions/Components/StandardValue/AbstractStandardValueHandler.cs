@@ -43,6 +43,9 @@ namespace Bakabase.Abstractions.Components.StandardValue
 
         public Type ExpectedType => SpecificTypeUtils<TValue>.Type;
 
+        public string? BuildDisplayValue(object? value) => value == null ? null : BuildDisplayValue((TValue) value);
+        protected virtual string? BuildDisplayValue(TValue value) => value?.ToString();
+
         protected abstract TValue? ConvertToTypedValue(object? currentValue);
 
         public abstract (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(TValue currentValue);

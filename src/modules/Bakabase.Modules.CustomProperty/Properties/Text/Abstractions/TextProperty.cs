@@ -14,7 +14,6 @@ public record TextPropertyValue : CustomPropertyValue<string>;
 public abstract class
     TextPropertyDescriptor<TPropertyValue, TInnerValue> : AbstractCustomPropertyDescriptor<TextProperty, TPropertyValue, TInnerValue> where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
 {
-    public override StandardValueType ValueType => StandardValueType.String;
 
     public override SearchOperation[] SearchOperations { get; } =
     [

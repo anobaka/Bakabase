@@ -15,7 +15,6 @@ public record BooleanPropertyValue : CustomPropertyValue<bool>
 public class BooleanPropertyDescriptor : AbstractCustomPropertyDescriptor<BooleanProperty, BooleanPropertyValue,
     bool>
 {
-    public override StandardValueType ValueType => StandardValueType.Boolean;
     public override CustomPropertyType Type => CustomPropertyType.Boolean;
 
     public override SearchOperation[] SearchOperations { get; } =

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Gui;
@@ -12,7 +13,6 @@ using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.Business;
-using Bakabase.InsideWorld.Business.Components.Caching;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Tasks;
@@ -68,10 +68,6 @@ namespace Bakabase.InsideWorld.App.Core
         protected override async Task ExecuteCustomProgress(IServiceProvider serviceProvider)
         {
             using var scope = serviceProvider.CreateScope();
-            var textService = scope.ServiceProvider.GetRequiredService<SpecialTextService>();
-
-            var bcc = scope.ServiceProvider.GetRequiredService<GlobalCacheContainer>();
-            bcc.SpecialTextVersion = await textService.CalcVersion();
 
             var updaterOptionsManager =
                 scope.ServiceProvider.GetRequiredService<IBOptionsManager<UpdaterOptions>>();

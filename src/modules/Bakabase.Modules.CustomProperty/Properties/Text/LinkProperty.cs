@@ -13,7 +13,6 @@ public record LinkPropertyValue : CustomPropertyValue<LinkData>;
 
 public class LinkPropertyDescriptor : TextPropertyDescriptor<LinkPropertyValue, LinkData>
 {
-    public override StandardValueType ValueType => StandardValueType.Link;
     public override CustomPropertyType Type => CustomPropertyType.Link;
 
     protected override string[] GetMatchSources(LinkData? value)

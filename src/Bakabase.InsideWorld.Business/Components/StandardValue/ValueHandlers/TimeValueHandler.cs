@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.StandardValue.Abstractions;
+using Bakabase.Abstractions.Components.StandardValue;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.CustomProperty.Properties.Text;
 
-namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
+namespace Bakabase.InsideWorld.Business.Components.StandardValue.ValueHandlers
 {
-    public class TimeValueConverter : AbstractStandardValueHandler<TimeSpan>
+    public class TimeValueHandler : AbstractStandardValueHandler<TimeSpan>
     {
         private const string Template = "g";
 
@@ -16,22 +17,20 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
         public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
             new()
             {
-                {StandardValueType.SingleLineText, null},
-                {StandardValueType.MultilineText, null},
+                {StandardValueType.String, null},
+                {StandardValueType.ListString, null},
+                {StandardValueType.Decimal, StandardValueConversionLoss.All},
                 {StandardValueType.Link, null},
-                {StandardValueType.SingleTextChoice, null},
-                {StandardValueType.MultipleTextChoice, null},
-                {StandardValueType.Number, StandardValueConversionLoss.All},
-                {StandardValueType.Percentage, StandardValueConversionLoss.All},
-                {StandardValueType.Rating, StandardValueConversionLoss.All},
                 {StandardValueType.Boolean, StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue},
-                {StandardValueType.Attachment, StandardValueConversionLoss.All},
-                {StandardValueType.Date, StandardValueConversionLoss.TimeWillBeLost},
                 {StandardValueType.DateTime, null},
                 {StandardValueType.Time, StandardValueConversionLoss.DateWillBeLost},
-                {StandardValueType.Formula, StandardValueConversionLoss.All},
-                {StandardValueType.MultipleTextTree, StandardValueConversionLoss.All},
+                {StandardValueType.ListListString, StandardValueConversionLoss.All},
             };
+
+        protected override string BuildDisplayValue(TimeSpan value)
+        {
+            return value.ToString(Template);
+        }
 
         protected override TimeSpan ConvertToTypedValue(object? currentValue)
         {
@@ -40,13 +39,13 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 
         public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(TimeSpan currentValue)
         {
-            return (currentValue.ToString(Template), null);
+            return (BuildDisplayValue(currentValue), null);
         }
 
         public override (List<string>? NewValue, StandardValueConversionLoss? Loss) ConvertToListString(
             TimeSpan currentValue)
         {
-            return ([currentValue.ToString(Template)], null);
+            return ([BuildDisplayValue(currentValue)], null);
         }
 
         public override (decimal? NewValue, StandardValueConversionLoss? Loss) ConvertToNumber(TimeSpan currentValue)
@@ -61,7 +60,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
 
         public override (LinkData? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(TimeSpan currentValue)
         {
-            var str = currentValue.ToString(Template);
+            var str = BuildDisplayValue(currentValue);
             return (new LinkData { Url = str, Text = str }, null);
         }
 
@@ -85,7 +84,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue.Values
         public override (List<List<string>>? NewValue, StandardValueConversionLoss? Loss) ConvertToMultilevel(
             TimeSpan currentValue)
         {
-            return ([[currentValue.ToString(Template)]], null);
+            return ([[BuildDisplayValue(currentValue)]], null);
         }
     }
 }
