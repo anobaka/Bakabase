@@ -13,9 +13,11 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
+using Bakabase.Abstractions.Models.View.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Helpers;
 using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Business.Models.Dto;
 using Bakabase.InsideWorld.Business.Models.Input;
@@ -31,12 +33,15 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
+using CsQuery.ExtensionMethods;
+using CsQuery.ExtensionMethods.Internal;
 using CsQuery.Implementation;
 using CsQuery.Utility;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Namotion.Reflection;
 using Newtonsoft.Json;
 using IComponent = Bakabase.InsideWorld.Business.Components.Resource.Components.IComponent;
 
@@ -514,7 +519,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<List<CategoryResourceDisplayNameViewModel>> PreviewDisplayNameRule(int id, string textRule,
+        public async Task<List<CategoryResourceDisplayNameViewModel>> PreviewDisplayNameTemplate(int id, string template,
             int maxCount = 100)
         {
             var resourcesSearchResult = await ResourceService.SearchV2(new ResourceSearchDto
@@ -551,9 +556,9 @@ namespace Bakabase.InsideWorld.Business.Services
                 .GroupBy(d => d.Value1)
                 .Select(d => (Left: d.Key,
                     Rights: d.Select(c => c.Value2).Where(s => !string.IsNullOrEmpty(s)).Distinct().OfType<string>()
-                        .OrderByDescending(x => x.Length).ToList()))
+                        .First()))
                 .OrderByDescending(d => d.Left.Length)
-                .ToList();
+                .ToArray();
 
             var result = new List<CategoryResourceDisplayNameViewModel>();
 
@@ -573,66 +578,19 @@ namespace Bakabase.InsideWorld.Business.Services
 
                         return null;
                     });
-                var displayName = textRule;
-                foreach (var (find, replace) in replacements)
-                {
-                    while (true)
-                    {
-                        var idxOfFind = displayName.IndexOf(find, StringComparison.Ordinal);
-                        if (idxOfFind == -1)
-                        {
-                            break;
-                        }
 
-                        var cursorIdx = idxOfFind;
-                        displayName = displayName.Remove(cursorIdx, find.Length);
-                        if (string.IsNullOrEmpty(replace))
-                        {
-                            while (cursorIdx > 0)
-                            {
-                                var wrappersWithEmptyContentIsRemoved = false;
-                                foreach (var (left, rights) in wrapperPairs)
-                                {
-                                    var startIdx = cursorIdx - left.Length;
-                                    if (startIdx >= 0)
-                                    {
-                                        if (displayName.IndexOf(left, startIdx, StringComparison.Ordinal) == startIdx)
-                                        {
-                                            var firstMatchedRightWrapper = rights.FirstOrDefault(x =>
-                                                displayName.IndexOf(x, cursorIdx, StringComparison.Ordinal) ==
-                                                cursorIdx);
-                                            if (!string.IsNullOrEmpty(firstMatchedRightWrapper))
-                                            {
-                                                displayName = displayName.Remove(startIdx,
-                                                    left.Length + firstMatchedRightWrapper.Length);
-                                                cursorIdx = startIdx;
-                                                wrappersWithEmptyContentIsRemoved = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (!wrappersWithEmptyContentIsRemoved)
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            displayName = displayName.Insert(cursorIdx, replace);
-                        }
-                    }
-                }
+                var segments =
+                    CategoryHelpers.SplitDisplayNameTemplateIntoSegments(template, replacements, wrapperPairs);
 
                 result.Add(new CategoryResourceDisplayNameViewModel
                 {
                     ResourceId = r.Id,
                     ResourcePath = r.Path,
-                    Segments = 
+                    Segments = segments
                 });
             }
+
+            return result;
         }
     }
 }

@@ -104,11 +104,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return await _service.BindCustomProperties(id, model);
         }
 
-        [HttpPost("{id:int}/resource/display-name-rule/preview")]
-        [SwaggerOperation(OperationId = "PreviewCategoryDisplayNameRule")]
-        public async Task<List<CategoryResourceDisplayNameViewModel>> PreviewDisplayNameRule(int id, string textRule, int maxCount = 100)
+        [HttpGet("{id:int}/resource/display-name-template/preview")]
+        [SwaggerOperation(OperationId = "PreviewCategoryDisplayNameTemplate")]
+        public async Task<ListResponse<CategoryResourceDisplayNameViewModel>> PreviewDisplayNameTemplate(int id,
+            string template, int maxCount = 100)
         {
-            var resources = await _
+            var result = await _service.PreviewDisplayNameTemplate(id, template, maxCount);
+            return new ListResponse<CategoryResourceDisplayNameViewModel>(result);
         }
     }
 }

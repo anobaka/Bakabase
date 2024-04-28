@@ -1,17 +1,12 @@
-﻿using Bakabase.InsideWorld.Models.Constants;
-using System;
-using System.Collections.Generic;
-using System.Drawing.Imaging;
+﻿using System;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 
-namespace Bakabase.InsideWorld.Business.Extensions
+namespace Bakabase.InsideWorld.Business.Helpers
 {
-    public static class ImageUtils
+    public static class ImageHelpers
     {
         public static Stream OpenAsImage(string path)
         {

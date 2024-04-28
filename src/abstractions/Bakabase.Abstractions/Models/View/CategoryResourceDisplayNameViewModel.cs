@@ -6,11 +6,12 @@ public record CategoryResourceDisplayNameViewModel()
 {
     public int ResourceId { get; set; }
     public string ResourcePath { get; set; } = null!;
-    public List<Segment> Segments { get; set; } = [];
+    public Segment[] Segments { get; set; } = [];
 
     public record Segment
     {
         public CategoryResourceDisplayNameSegmentType Type { get; set; }
         public string Text { get; set; } = null!;
+        public string? WrapperPairId { get; set; }
     }
 }

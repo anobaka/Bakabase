@@ -47,6 +47,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg
 using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Helpers;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
 using Bootstrap.Models.Constants;
@@ -1215,7 +1216,7 @@ namespace Bakabase.InsideWorld.Business.Services
 				imageExtensions.Any(e => t.Name.Equals($"cover{e}", StringComparison.OrdinalIgnoreCase)));
 			if (coverImg != null)
 			{
-				return (ImageUtils.OpenAsImage(coverImg.FullName), Path.GetExtension(coverImg.FullName), false);
+				return (ImageHelpers.OpenAsImage(coverImg.FullName), Path.GetExtension(coverImg.FullName), false);
 			}
 
 			// Find first image
@@ -1223,7 +1224,7 @@ namespace Bakabase.InsideWorld.Business.Services
 				files.FirstOrDefault(a => imageExtensions.Contains(a.Extension));
 			if (firstImage != null)
 			{
-				return (ImageUtils.OpenAsImage(firstImage.FullName), Path.GetExtension(firstImage.FullName), false);
+				return (ImageHelpers.OpenAsImage(firstImage.FullName), Path.GetExtension(firstImage.FullName), false);
 			}
 
 			// additional sources
