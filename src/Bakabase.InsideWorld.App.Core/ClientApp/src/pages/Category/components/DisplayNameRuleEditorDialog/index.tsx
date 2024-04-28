@@ -232,9 +232,9 @@ const DisplayNameRuleEditorDialog = ({ categoryId }: IProps) => {
       {ruleTextRef.current.length > 0 && (
         <div>
           <Button
-            // variant={'light'}
-            // color={'primary'}
-            onClick={() => {}}
+            onClick={() => {
+              BApi.resourceCategory.previewCategoryDisplayNameTemplate(categoryId, { template: ruleTextRef.current });
+            }}
           >{t('Click to preview')}</Button>
         </div>
       )}

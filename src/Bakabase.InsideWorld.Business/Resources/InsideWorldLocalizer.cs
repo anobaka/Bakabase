@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Localization;
@@ -93,5 +94,25 @@ namespace Bakabase.InsideWorld.Business.Resources
 
         public string SpecialText_HistoricalLanguageValue2ShouldBeModified() =>
             this[nameof(SpecialText_HistoricalLanguageValue2ShouldBeModified)];
+
+        public string Enhancer_Name(EnhancerId enhancerId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Enhancer_Description(EnhancerId enhancerId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Enhancer_TargetName(EnhancerId enhancerId, int target)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Enhancer_TargetDescription(EnhancerId enhancerId, int target)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

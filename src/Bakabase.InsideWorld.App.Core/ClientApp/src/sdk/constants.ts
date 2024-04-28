@@ -88,8 +88,18 @@ export enum AdbExceptionCode {Error = 1, InvalidExitCode = 2}
 export const adbExceptionCodes = Object.keys(AdbExceptionCode).filter(k => typeof AdbExceptionCode[k] === 'number').map(t => ({label: t, value: AdbExceptionCode[t]}));
 export enum AdbInternalError {Error = 1, INSTALL_FAILED_ALREADY_EXISTS = 100, DELETE_FAILED_INTERNAL_ERROR = 101, FailedToConnectDevice = 200}
 export const adbInternalErrors = Object.keys(AdbInternalError).filter(k => typeof AdbInternalError[k] === 'number').map(t => ({label: t, value: AdbInternalError[t]}));
+export enum CategoryResourceDisplayNameSegmentType {Normal = 1, Property = 2, LeftWrapper = 3, RightWrapper = 4}
+export const categoryResourceDisplayNameSegmentTypes = Object.keys(CategoryResourceDisplayNameSegmentType).filter(k => typeof CategoryResourceDisplayNameSegmentType[k] === 'number').map(t => ({label: t, value: CategoryResourceDisplayNameSegmentType[t]}));
 export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15}
 export const customPropertyTypes = Object.keys(CustomPropertyType).filter(k => typeof CustomPropertyType[k] === 'number').map(t => ({label: t, value: CustomPropertyType[t]}));
+export enum CustomPropertyValueLayer {Manual = 0, BakabaseEnhancer = 1000}
+export const customPropertyValueLayers = Object.keys(CustomPropertyValueLayer).filter(k => typeof CustomPropertyValueLayer[k] === 'number').map(t => ({label: t, value: CustomPropertyValueLayer[t]}));
+export enum EnhancerId {Bakabase = 1, ExHentai = 2}
+export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
+export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
+export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
+export enum StandardValueType {String = 1, ListString = 2, Decimal = 3, Link = 4, Boolean = 5, DateTime = 6, Time = 7, ListListString = 8}
+export const standardValueTypes = Object.keys(StandardValueType).filter(k => typeof StandardValueType[k] === 'number').map(t => ({label: t, value: StandardValueType[t]}));
 export enum CoverDiscoverResultType {LocalFile = 1, FromAdditionalSource = 2, Icon = 3}
 export const coverDiscoverResultTypes = Object.keys(CoverDiscoverResultType).filter(k => typeof CoverDiscoverResultType[k] === 'number').map(t => ({label: t, value: CoverDiscoverResultType[t]}));
 export enum ResourceExistence {Exist = 1, Maybe = 2, New = 3}
@@ -128,8 +138,6 @@ export enum DownloadTaskStatus {InProgress = 100, Disabled = 200, Complete = 300
 export const downloadTaskStatuses = Object.keys(DownloadTaskStatus).filter(k => typeof DownloadTaskStatus[k] === 'number').map(t => ({label: t, value: DownloadTaskStatus[t]}));
 export enum ExHentaiDownloadTaskType {SingleWork = 1, Watched = 2, List = 3}
 export const exHentaiDownloadTaskTypes = Object.keys(ExHentaiDownloadTaskType).filter(k => typeof ExHentaiDownloadTaskType[k] === 'number').map(t => ({label: t, value: ExHentaiDownloadTaskType[t]}));
-export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
-export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
 export enum MatchResultType {Layer = 1, Regex = 2}
 export const matchResultTypes = Object.keys(MatchResultType).filter(k => typeof MatchResultType[k] === 'number').map(t => ({label: t, value: MatchResultType[t]}));
 export enum MediaLibraryFileSystemError {InvalidVolume = 1, FreeSpaceNotEnough = 2, Occupied = 3}
@@ -166,8 +174,6 @@ export enum SpecialTextType {Useless = 1, Language = 2, Wrapper = 3, Standardiza
 export const specialTextTypes = Object.keys(SpecialTextType).filter(k => typeof SpecialTextType[k] === 'number').map(t => ({label: t, value: SpecialTextType[t]}));
 export enum StandardValueConversionLoss {All = 1, InconvertibleDataWillBeLost = 2, NotEmptyValueWillBeConvertedToTrue = 4, ValuesWillBeMerged = 8, OnlyFirstNotEmptyValueWillBeRemained = 16, NonZeroValueWillBeConvertedToTrue = 32, TextWillBeLost = 64, TimeWillBeLost = 128, DateWillBeLost = 256}
 export const standardValueConversionLosses = Object.keys(StandardValueConversionLoss).filter(k => typeof StandardValueConversionLoss[k] === 'number').map(t => ({label: t, value: StandardValueConversionLoss[t]}));
-export enum StandardValueType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15}
-export const standardValueTypes = Object.keys(StandardValueType).filter(k => typeof StandardValueType[k] === 'number').map(t => ({label: t, value: StandardValueType[t]}));
 export enum StartupPage {Default = 0, Resource = 1}
 export const startupPages = Object.keys(StartupPage).filter(k => typeof StartupPage[k] === 'number').map(t => ({label: t, value: StartupPage[t]}));
 export enum SubscriptionType {ExHentai = 1, Jav = 2, SoulPlus = 4}
@@ -196,6 +202,12 @@ export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));
 export enum TagGroupAdditionalItem {Tags = 1, PreferredAlias = 2, TagNamePreferredAlias = 4}
 export const tagGroupAdditionalItems = Object.keys(TagGroupAdditionalItem).filter(k => typeof TagGroupAdditionalItem[k] === 'number').map(t => ({label: t, value: TagGroupAdditionalItem[t]}));
+export enum ExHentaiEnhancerTarget {Rating = 1, Tags = 2}
+export const exHentaiEnhancerTargets = Object.keys(ExHentaiEnhancerTarget).filter(k => typeof ExHentaiEnhancerTarget[k] === 'number').map(t => ({label: t, value: ExHentaiEnhancerTarget[t]}));
+export enum BangumiEnhancerTarget {Name = 1, Tag = 2, Original = 3, Rating = 4}
+export const bangumiEnhancerTargets = Object.keys(BangumiEnhancerTarget).filter(k => typeof BangumiEnhancerTarget[k] === 'number').map(t => ({label: t, value: BangumiEnhancerTarget[t]}));
+export enum BakabaseEnhancerTarget {Name = 1, Series = 2, Publisher = 3, ReleaseDt = 4, VolumeName = 5, VolumeTitle = 6, Originals = 7, Language = 8}
+export const bakabaseEnhancerTargets = Object.keys(BakabaseEnhancerTarget).filter(k => typeof BakabaseEnhancerTarget[k] === 'number').map(t => ({label: t, value: BakabaseEnhancerTarget[t]}));
 export enum LogLevel {Trace = 0, Debug = 1, Information = 2, Warning = 3, Error = 4, Critical = 5, None = 6}
 export const logLevels = Object.keys(LogLevel).filter(k => typeof LogLevel[k] === 'number').map(t => ({label: t, value: LogLevel[t]}));
 export enum OpenDialogProperty {openFile = 0, openDirectory = 1, multiSelections = 2, showHiddenFiles = 3, createDirectory = 4, promptToCreate = 5, noResolveAliases = 6, treatPackageAsDirectory = 7}

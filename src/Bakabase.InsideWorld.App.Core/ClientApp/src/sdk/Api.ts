@@ -85,6 +85,18 @@ export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyType =
   | 14
   | 15;
 
+/**
+ * [0: Manual, 1000: BakabaseEnhancer]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyValueLayer = 0 | 1000;
+
+/**
+ * [1: NotAcceptTerms, 2: NeedRestart]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsInitializationContentType = 1 | 2;
+
 export interface BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
   id?: number;
@@ -106,6 +118,8 @@ export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
   resourceId?: number;
   property?: BakabaseAbstractionsModelsDomainCustomProperty;
   value?: any;
+  /** [0: Manual, 1000: BakabaseEnhancer] */
+  layer?: BakabaseAbstractionsModelsDomainConstantsCustomPropertyValueLayer;
 }
 
 export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
@@ -135,6 +149,26 @@ export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
   property?: BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty;
   asc?: boolean;
 }
+
+export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
+  /** @format int32 */
+  resourceId?: number;
+  resourcePath?: string | null;
+  segments?: BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModelSegment[] | null;
+}
+
+export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModelSegment {
+  /** [1: Normal, 2: Property, 3: LeftWrapper, 4: RightWrapper] */
+  type?: BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType;
+  text?: string | null;
+  wrapperPairId?: string | null;
+}
+
+/**
+ * [1: Normal, 2: Property, 3: LeftWrapper, 4: RightWrapper]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType = 1 | 2 | 3 | 4;
 
 export interface BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel {
   /** @format int32 */
@@ -465,25 +499,25 @@ export interface BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFa
   mediaCount?: number;
 }
 
-export interface BakabaseInsideWorldBusinessConfigurationsModelsDbResourceOptionsCoverOptionsModel {
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
   /** [1: ResourceDirectory, 2: TempDirectory] */
   saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
   overwrite?: boolean | null;
 }
 
-export interface BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsDto {
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDtoResourceOptionsDto {
   /** @format date-time */
   lastSyncDt?: string;
   /** @format date-time */
   lastNfoGenerationDt?: string;
   lastSearchV2?: BakabaseAbstractionsModelsDtoResourceSearchDto;
-  coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDbResourceOptionsCoverOptionsModel;
+  coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel {
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
-  coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDbResourceOptionsCoverOptionsModel;
+  coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
 }
 
 export interface BakabaseInsideWorldBusinessModelsDomainMediaLibrary {
@@ -512,6 +546,7 @@ export interface BakabaseInsideWorldBusinessModelsDomainMigrationTarget {
   targetPropertyId?: number | null;
   subTargets?: BakabaseInsideWorldBusinessModelsDomainMigrationTarget[] | null;
   data?: any;
+  dataForDisplay?: string[] | null;
 }
 
 export interface BakabaseInsideWorldBusinessModelsDomainPathConfiguration {
@@ -850,12 +885,6 @@ export type BakabaseInsideWorldModelsConstantsDownloadTaskDtoStatus = 100 | 200 
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsDownloadTaskStatus = 100 | 200 | 300 | 400;
-
-/**
- * [1: NotAcceptTerms, 2: NeedRestart]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsInitializationContentType = 1 | 2;
 
 /**
  * [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied]
@@ -1737,6 +1766,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel[] | null;
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto {
   /** @format int32 */
   code?: number;
@@ -1979,6 +2015,14 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainComponentDescriptor;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainConstantsInitializationContentType {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  /** [1: NotAcceptTerms, 2: NeedRestart] */
+  data?: BakabaseAbstractionsModelsDomainConstantsInitializationContentType;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
   code?: number;
@@ -2063,11 +2107,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsDto {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDtoResourceOptionsDto {
   /** @format int32 */
   code?: number;
   message?: string | null;
-  data?: BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsDto;
+  data?: BakabaseInsideWorldBusinessConfigurationsModelsDtoResourceOptionsDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsBilibiliOptions {
@@ -2124,14 +2168,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsConfigsUIOptions;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConstantsInitializationContentType {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  /** [1: NotAcceptTerms, 2: NeedRestart] */
-  data?: BakabaseInsideWorldModelsConstantsInitializationContentType;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult {
@@ -2204,18 +2240,18 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatus;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2BakabaseInsideWorldModelsConstantsSpecialTextTypeSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesSpecialText {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, BakabaseInsideWorldModelsModelsEntitiesSpecialText[] | null>;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
   /** @format int32 */
   code?: number;
   message?: string | null;
   data?: Record<string, BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesSpecialText {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, BakabaseInsideWorldModelsModelsEntitiesSpecialText[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32 {
@@ -3349,7 +3385,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     checkAppInitialized: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConstantsInitializationContentType,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainConstantsInitializationContentType,
         any
       >({
         path: `/app/initialized`,
@@ -6158,7 +6194,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getResourceOptions: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsDto,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDtoResourceOptionsDto,
         any
       >({
         path: `/options/resource`,
@@ -6650,6 +6686,36 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name PreviewCategoryDisplayNameTemplate
+     * @request GET:/resource-category/{id}/resource/display-name-template/preview
+     */
+    previewCategoryDisplayNameTemplate: (
+      id: number,
+      query?: {
+        template?: string;
+        /**
+         * @format int32
+         * @default 100
+         */
+        maxCount?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel,
+        any
+      >({
+        path: `/resource-category/${id}/resource/display-name-template/preview`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
   };
   specialText = {
     /**
@@ -6661,7 +6727,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllSpecialText: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2BakabaseInsideWorldModelsConstantsSpecialTextTypeSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesSpecialText,
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesSpecialText,
         any
       >({
         path: `/special-text`,

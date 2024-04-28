@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 using Microsoft.Extensions.Localization;
 using System.Diagnostics.CodeAnalysis;
+using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Abstractions.Components.Localization;
 
@@ -23,4 +24,8 @@ public interface IBakabaseLocalizer
     string Tags();
     string Rating();
     string SpecialText_HistoricalLanguageValue2ShouldBeModified();
+    string Enhancer_Name(EnhancerId enhancerId);
+    string Enhancer_Description(EnhancerId enhancerId);
+    string Enhancer_TargetName(EnhancerId enhancerId, int target);
+    string Enhancer_TargetDescription(EnhancerId enhancerId, int target);
 }
