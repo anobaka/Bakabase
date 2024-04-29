@@ -27,7 +27,6 @@ namespace Bakabase.Abstractions.Models.Domain
         public bool GenerateNfo { get; set; }
 
         public List<CustomProperty>? CustomProperties { get; set; }
-
-        public int? ResourceDisplayNamePropertyId { get; set; }
+        public List<CategoryEnhancerOptions>? EnhancerOptions { get; set; }
     }
 }

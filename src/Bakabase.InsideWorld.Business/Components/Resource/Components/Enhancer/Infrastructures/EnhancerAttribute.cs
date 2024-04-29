@@ -8,6 +8,7 @@ using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bootstrap.Extensions;
+using EnhancerDescriptor = Bakabase.InsideWorld.Business.Models.Domain.EnhancerDescriptor;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures
 {
@@ -42,7 +43,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.
         public override ComponentDescriptor ToDescriptor(Type type)
         {
             var d = base.ToDescriptor(type);
-            var ed = new EnhancerDescriptor
+            var ed = new EnhancerDescriptor()
             {
                 Targets = Targets,
                 Name = d.Name,

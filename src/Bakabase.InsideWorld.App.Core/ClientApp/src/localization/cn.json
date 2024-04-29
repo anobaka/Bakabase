@@ -1204,5 +1204,9 @@
   "Try other features": "尝试其他功能",
   "Return to homepage": "返回首页",
   "Data not relative to resource will not be migrated.": "未与资源关联的数据将不会被迁移。",
-  "Click to preview": "点击预览"
+  "Click to preview": "点击预览",
+  "This enhancer can produce the following property values": "此增强器可以生成以下属性值",
+  "Save as property": "保存为属性",
+  "Other options": "其他选项",
+  "Configure enhancer:{{enhancerName}} for category:{{categoryName}}": "为分类:{{categoryName}}配置增强器:{{enhancerName}}"
 }

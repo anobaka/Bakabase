@@ -10,13 +10,13 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
+using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bootstrap.Extensions;
 using Bootstrap.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
 {
-    [Enhancer(CustomPropertyValueLayer.BakabaseEnhancer)]
     public class BakabaseEnhancer(
         IEnumerable<IStandardValueHandler> valueConverters,
         ILoggerFactory loggerFactory,
@@ -24,7 +24,7 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
         IBakabaseLocalizer localizer)
         : AbstractEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(valueConverters, loggerFactory)
     {
-        public override EnhancerId Id => EnhancerId.Bakabase;
+        protected override EnhancerId TypedId => EnhancerId.Bakabase;
         private readonly IBakabaseLocalizer _localizer = localizer;
 
         protected override async Task<BakabaseEnhancerContext> BuildContext(Resource resource)
@@ -106,7 +106,6 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
                 IStandardValueBuilder valueBuilder = target switch
                 {
                     BakabaseEnhancerTarget.Name => new StringValueBuilder(context.Name),
-                    BakabaseEnhancerTarget.Series => new StringValueBuilder(context.Series),
                     BakabaseEnhancerTarget.Publisher => new ListStringValueBuilder(context.Publishers),
                     BakabaseEnhancerTarget.ReleaseDt => new DateTimeValueBuilder(context.ReleaseDt),
                     BakabaseEnhancerTarget.VolumeName => new StringValueBuilder(context.VolumeName),

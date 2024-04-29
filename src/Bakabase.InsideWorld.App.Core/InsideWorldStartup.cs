@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.Infrastructures.Components.Jobs;
@@ -34,6 +35,7 @@ using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
@@ -127,13 +129,15 @@ namespace Bakabase.InsideWorld.App.Core
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();
             services.TryAddSingleton<CompressedFileService>();
 
-            services.TryAddTransient<InsideWorldLocalizer>();
+            services.AddTransient<IBakabaseLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
+            services.AddTransient<IEnhancerLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
+            services.AddTransient<InsideWorldLocalizer>();
 
             services.TryAddSingleton<IFileMover, FileMover>();
 
             services.TryAddSingleton<InsideWorldWebProxy>();
 
-            services.AddEnhancers<EnhancementService, EnhancerService, CategoryEnhancerOptionsService>();
+            services.AddEnhancers<EnhancementService, EnhancerService, CategoryEnhancerOptionsService, InsideWorldLocalizer>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

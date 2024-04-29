@@ -29,6 +29,7 @@ using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Extensions;
+using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
@@ -61,6 +62,9 @@ namespace Bakabase.InsideWorld.Business.Services
         protected CategoryComponentService CategoryComponentService => GetRequiredService<CategoryComponentService>();
         protected IStringLocalizer<SharedResource> Localizer => GetRequiredService<IStringLocalizer<SharedResource>>();
         protected CustomPropertyService CustomPropertyService => GetRequiredService<CustomPropertyService>();
+
+        protected ICategoryEnhancerOptionsService CategoryEnhancerOptionsService =>
+            GetRequiredService<ICategoryEnhancerOptionsService>();
 
         protected Dictionary<CustomPropertyType, ICustomPropertyDescriptor> CustomPropertyDescriptorMap =>
             GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>().ToDictionary(d => d.Type, d => d);
@@ -204,6 +208,18 @@ namespace Bakabase.InsideWorld.Business.Services
                                 d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id);
                             }
 
+                            break;
+                        }
+                        case ResourceCategoryAdditionalItem.EnhancerOptions:
+                        {
+                            var cIds = dtoList.Select(a => a.Id).ToArray();
+                            var enhancerOptionsMap =
+                                (await CategoryEnhancerOptionsService.GetAll(c => cIds.Contains(c.CategoryId)))
+                                .GroupBy(d => d.CategoryId).ToDictionary(d => d.Key, d => d.ToList());
+                            foreach (var d in dtoList)
+                            {
+                                d.EnhancerOptions = enhancerOptionsMap.GetValueOrDefault(d.Id);
+                            }
                             break;
                         }
                         default:

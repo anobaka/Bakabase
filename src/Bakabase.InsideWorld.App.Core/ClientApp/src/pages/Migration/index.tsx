@@ -5,7 +5,7 @@ import { ResourceProperty } from '@/sdk/constants';
 import type { MigrationTarget } from '@/pages/Migration/components/Target';
 import Target from '@/pages/Migration/components/Target';
 import BApi from '@/sdk/BApi';
-import ErrorLabel from '@/components/ErrorLabel';
+import { ErrorLabel } from '@/components/Error';
 
 export default () => {
   const { t } = useTranslation();

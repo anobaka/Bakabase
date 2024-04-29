@@ -12,6 +12,7 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
         None = 0,
         Components = 1 << 0,
         Validation = 1 << 1 | Components,
-        CustomProperties = 1 << 2
+        CustomProperties = 1 << 2,
+        EnhancerOptions = 1 << 3
     }
 }

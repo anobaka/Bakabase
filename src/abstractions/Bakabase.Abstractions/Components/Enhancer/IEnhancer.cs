@@ -1,10 +1,9 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Domain.Constants;
 
-namespace Bakabase.Modules.Enhancer.Abstractions;
+namespace Bakabase.Abstractions.Components.Enhancer;
 
 public interface IEnhancer
 {
-    EnhancerId Id { get; }
+    int Id { get; }
     Task<List<EnhancementRawValue>?> CreateEnhancements(Bakabase.Abstractions.Models.Domain.Resource resource);
 }

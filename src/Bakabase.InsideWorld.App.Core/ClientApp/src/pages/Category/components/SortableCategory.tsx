@@ -18,6 +18,7 @@ import SimpleLabel from '@/components/SimpleLabel';
 import CategoryCustomPropertyBinderDialog from '@/pages/Category/components/CustomPropertyBinder';
 import { Chip, Button, Spacer, Tooltip, Badge } from '@/components/bakaui';
 import DisplayNameRuleEditorDialog from '@/pages/Category/components/DisplayNameRuleEditorDialog';
+import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -474,29 +475,34 @@ export default (({
             }}
           />
         </div>
-        <div className={'setting enhancers col-span-3'}>
-          <Tooltip
-            content={t(ComponentTips[ComponentType.Enhancer])}
-          >
-            <Chip
-              size={'sm'}
-              radius={'sm'}
-            >{t('Enhancers')}</Chip>
-          </Tooltip>
-          <div
-            className="items"
-          >
-            {enhancers.map((e, i) => (
-              <div
-                className={'item'}
-                key={e.id}
+        <div className={'col-span-3'}>
+          <div className={'flex items-center gap-2'}>
+            <Tooltip
+              content={t(ComponentTips[ComponentType.Enhancer])}
+            >
+              <Chip
+                size={'sm'}
+                radius={'sm'}
+              >{t('Enhancers')}</Chip>
+            </Tooltip>
+            <div
+              className="flex flex-wrap gap-1"
+            >
+              <Button
+                variant={'light'}
+                color={'primary'}
+                size={'sm'}
                 onClick={() => {
-                  renderEnhancersSelector();
+                  EnhancerSelectorV2.show({
+                    categoryId: category.id,
+                    // category: category,
+                    // onSaved: loadAllCategories,
+                  });
                 }}
               >
-                {t(e.descriptor?.name)}
-              </div>
-            ))}
+                {t('Click to set')}
+              </Button>
+            </div>
           </div>
         </div>
         <div

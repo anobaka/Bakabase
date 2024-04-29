@@ -1,12 +1,11 @@
-﻿using Bakabase.Abstractions.Models.Domain.Constants;
-
-namespace Bakabase.Abstractions.Models.Domain
+﻿namespace Bakabase.Abstractions.Models.Domain
 {
     public record CategoryEnhancerOptions
     {
         public int Id { get; set; }
         public int CategoryId { get; set; }
-        public EnhancerId EnhancerId { get; set; }
-        public Dictionary<int, EnhancerTargetOptions>? TargetOptionsMap { get; set; }
+        public int EnhancerId { get; set; }
+        public bool Active { get; set; }
+        public EnhancerOptions? Options { get; set; }
     }
 }

@@ -7,11 +7,11 @@ const DefaultComponent = createFromIconfontCN({
   scriptUrl: '',
 });
 
-interface IProps extends IconFontProps {
+export interface CustomIconProps extends IconFontProps {
   type: string;
 }
 
-const CustomIconV2 = forwardRef<HTMLSpanElement, IProps>(({ type, ...otherProps }: IProps, ref) => {
+const CustomIconV2 = forwardRef<HTMLSpanElement, CustomIconProps>(({ type, ...otherProps }: CustomIconProps, ref) => {
   return (
     <DefaultComponent type={`icon-${type}`} {...otherProps} ref={ref} />
   );

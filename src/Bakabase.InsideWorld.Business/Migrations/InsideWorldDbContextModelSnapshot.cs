@@ -50,7 +50,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("EnhancerId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("TargetPropertyIdMap")
+                    b.Property<string>("Options")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

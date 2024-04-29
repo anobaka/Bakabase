@@ -6,7 +6,7 @@ namespace Bakabase.Abstractions.Models.Domain
     {
         public int Id { get; set; }
         public int ResourceId { get; set; }
-        public EnhancerId EnhancerId { get; set; }
+        public int EnhancerId { get; set; }
         public StandardValueType ValueType { get; set; }
 
         /// <summary>

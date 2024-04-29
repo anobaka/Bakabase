@@ -19,6 +19,14 @@ import { Listbox, ListboxItem, ListboxSection } from './components/Listbox';
 import Spinner from './components/Spinner';
 import { Breadcrumbs, BreadcrumbItem } from './components/Breadcumbs';
 import { Accordion, AccordionItem } from './components/Accordion';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableColumn,
+  TableRow,
+  TableCell,
+} from './components/Table';
 import Checkbox from './components/Checkbox';
 import Badge from './components/Badge';
 import Code from './components/Code';
@@ -64,4 +72,10 @@ export {
   Carousel,
   Link,
   Snippet,
+  Table,
+  TableHeader,
+  TableBody,
+  TableColumn,
+  TableRow,
+  TableCell,
 };

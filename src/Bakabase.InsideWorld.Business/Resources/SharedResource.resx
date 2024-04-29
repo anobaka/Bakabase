@@ -180,6 +180,54 @@
   <data name="Downloader_UnknownType" xml:space="preserve">
     <value>Unknown type: {0}</value>
   </data>
+  <data name="Enhancer_Bakabase_Description" xml:space="preserve">
+    <value>Analyze a filename similar to [(20)191202][Publisher1(Publisher2,Publisher3),Publisher4(Publisher5),Publisher6]Title Part 2(Original)[CN]</value>
+  </data>
+  <data name="Enhancer_Bakabase_Name" xml:space="preserve">
+    <value>Bakabase</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_Language_Description" xml:space="preserve">
+    <value>Main language of the resource</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_Language_Name" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_Name_Description" xml:space="preserve">
+    <value>Name of the resource</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_Name_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_Originals_Description" xml:space="preserve">
+    <value>Original works of the resource</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_Originals_Name" xml:space="preserve">
+    <value>Originals</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_Publisher_Description" xml:space="preserve">
+    <value>Publishers of the resource</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_Publisher_Name" xml:space="preserve">
+    <value>Publisher(s)</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_ReleaseDt_Description" xml:space="preserve">
+    <value>Release date of the resource</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_ReleaseDt_Name" xml:space="preserve">
+    <value>Release date</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_VolumeName_Description" xml:space="preserve">
+    <value>Volume name of the resource, such as 'episode 1'</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_VolumeName_Name" xml:space="preserve">
+    <value>Volume name</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_VolumeTitle_Description" xml:space="preserve">
+    <value>Volume title of the resource, such as 'The beginning of the story'</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_VolumeTitle_Name" xml:space="preserve">
+    <value>Volume title</value>
+  </data>
   <data name="FileDoesNotExistInPath" xml:space="preserve">
     <value>{0} does not exist in {1}</value>
   </data>

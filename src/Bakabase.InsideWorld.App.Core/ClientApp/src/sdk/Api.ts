@@ -9,6 +9,15 @@
  * ---------------------------------------------------------------
  */
 
+export interface BakabaseAbstractionsComponentsEnhancerEnhancerTargetDescriptor {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString] */
+  valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  description?: string | null;
+}
+
 export interface BakabaseAbstractionsModelsDbCategoryComponent {
   /** @format int32 */
   id?: number;
@@ -92,10 +101,22 @@ export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyType =
 export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyValueLayer = 0 | 1000;
 
 /**
+ * [1: Bakabase, 2: ExHentai]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsEnhancerId = 1 | 2;
+
+/**
  * [1: NotAcceptTerms, 2: NeedRestart]
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsInitializationContentType = 1 | 2;
+
+/**
+ * [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsStandardValueType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export interface BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
@@ -120,6 +141,14 @@ export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
   value?: any;
   /** [0: Manual, 1000: BakabaseEnhancer] */
   layer?: BakabaseAbstractionsModelsDomainConstantsCustomPropertyValueLayer;
+}
+
+export interface BakabaseAbstractionsModelsDomainEnhancerDescriptor {
+  /** [1: Bakabase, 2: ExHentai] */
+  id?: BakabaseAbstractionsModelsDomainConstantsEnhancerId;
+  name?: string | null;
+  description?: string | null;
+  targets?: BakabaseAbstractionsComponentsEnhancerEnhancerTargetDescriptor[] | null;
 }
 
 export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
@@ -1764,6 +1793,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code?: number;
   message?: string | null;
   data?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainEnhancerDescriptor {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainEnhancerDescriptor[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
@@ -5031,6 +5067,22 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/enhancement-record`,
         method: "GET",
         query: query,
+        format: "json",
+        ...params,
+      }),
+  };
+  enhancer = {
+    /**
+     * No description
+     *
+     * @tags Enhancer
+     * @name GetAllEnhancerDescriptors
+     * @request GET:/enhancer/descriptor
+     */
+    getAllEnhancerDescriptors: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainEnhancerDescriptor, any>({
+        path: `/enhancer/descriptor`,
+        method: "GET",
         format: "json",
         ...params,
       }),

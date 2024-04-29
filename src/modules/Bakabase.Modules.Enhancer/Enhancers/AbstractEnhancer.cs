@@ -1,8 +1,10 @@
-﻿using Bakabase.Abstractions.Components.StandardValue;
+﻿using Bakabase.Abstractions.Components.Enhancer;
+using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
+using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -29,7 +31,8 @@ namespace Bakabase.Modules.Enhancer.Enhancers
 
         protected abstract Task<TContext> BuildContext(Resource resource);
 
-        public abstract EnhancerId Id { get; }
+        public int Id => (int) TypedId;
+        protected abstract EnhancerId TypedId { get; }
 
         public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource)
         {

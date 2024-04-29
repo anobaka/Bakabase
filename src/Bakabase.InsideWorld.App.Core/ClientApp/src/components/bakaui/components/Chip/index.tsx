@@ -10,6 +10,7 @@ interface IProps {
   radius?: 'full' | 'sm' | 'md' | 'lg';
   isDisabled?: boolean;
   variant?: 'solid' | 'bordered' | 'light' | 'flat' | 'faded' | 'shadow' | 'dot';
+  color?: 'default' | 'primary' | 'secondary' | 'success' | 'danger' | 'warning';
 }
 
 const Chip = forwardRef<any, IProps>((props: IProps, ref) => {

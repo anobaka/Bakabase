@@ -7,7 +7,7 @@ import styles from './index.module.scss';
 import PageNav from './components/PageNav';
 import { InitializationContentType } from '@/sdk/constants';
 import FloatingAssistant from '@/components/FloatingAssistant';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import { ErrorBoundary } from '@/components/Error';
 import BApi from '@/sdk/BApi';
 export default function BasicLayout() {
   const { t } = useTranslation();

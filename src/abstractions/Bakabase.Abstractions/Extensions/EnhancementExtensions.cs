@@ -1,26 +1,12 @@
-﻿using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain;
 using Newtonsoft.Json;
+using Enhancement = Bakabase.Abstractions.Models.Domain.Enhancement;
 
 namespace Bakabase.Abstractions.Extensions
 {
     public static class EnhancementExtensions
     {
-        public static CategoryEnhancerOptions? ToDomainModel(this Models.Db.CategoryEnhancerOptions? ce)
-        {
-            if (ce == null)
-            {
-                return null;
-            }
-
-            return new CategoryEnhancerOptions
-            {
-                Id = ce.Id,
-                CategoryId = ce.CategoryId,
-                EnhancerId = ce.EnhancerId,
-                TargetOptionsMap = string.IsNullOrEmpty(ce.TargetPropertyIdMap) ? null : JsonConvert.DeserializeObject<Dictionary<int, EnhancerTargetOptions>>(ce.TargetPropertyIdMap)
-            };
-        }
-
         public static Enhancement? ToDomainModel(this Models.Db.Enhancement? dbModel)
         {
             if (dbModel == null)

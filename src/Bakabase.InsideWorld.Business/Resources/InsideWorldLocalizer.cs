@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
+using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Localization;
 
@@ -15,7 +16,7 @@ namespace Bakabase.InsideWorld.Business.Resources
     /// todo: Redirect raw <see cref="IStringLocalizer"/> callings to here
     /// </summary>
     public class InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
-        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer
+        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, IEnhancerLocalizer
     {
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
             localizer.GetAllStrings(includeParentCultures);
@@ -97,22 +98,22 @@ namespace Bakabase.InsideWorld.Business.Resources
 
         public string Enhancer_Name(EnhancerId enhancerId)
         {
-            throw new NotImplementedException();
+            return this[$"Enhancer_{enhancerId}_Name"];
         }
 
         public string Enhancer_Description(EnhancerId enhancerId)
         {
-            throw new NotImplementedException();
+            return this[$"Enhancer_{enhancerId}_Description"];
         }
 
-        public string Enhancer_TargetName(EnhancerId enhancerId, int target)
+        public string Enhancer_TargetName(EnhancerId enhancerId, Enum target)
         {
-            throw new NotImplementedException();
+            return this[$"Enhancer_{enhancerId}_Target_{target}_Name"];
         }
 
-        public string Enhancer_TargetDescription(EnhancerId enhancerId, int target)
+        public string Enhancer_TargetDescription(EnhancerId enhancerId, Enum target)
         {
-            throw new NotImplementedException();
+            return this[$"Enhancer_{enhancerId}_Target_{target}_Description"];
         }
     }
 }

@@ -9,7 +9,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.Enhancer;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components;
@@ -37,6 +36,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Enhancement = Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures.Enhancement;
+using EnhancerDescriptor = Bakabase.InsideWorld.Business.Models.Domain.EnhancerDescriptor;
 using Resource = Bakabase.Abstractions.Models.Db.Resource;
 
 namespace Bakabase.InsideWorld.Business.Services

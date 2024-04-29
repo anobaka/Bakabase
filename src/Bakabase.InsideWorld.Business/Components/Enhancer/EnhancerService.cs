@@ -11,8 +11,9 @@ using Bakabase.InsideWorld.Business.Components.StandardValue;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using EnhancerAttribute = Bakabase.Modules.Enhancer.Abstractions.Attributes.EnhancerAttribute;
-using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.IEnhancer;
+using IEnhancer = Bakabase.Abstractions.Components.Enhancer.IEnhancer;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancer
 {
@@ -22,7 +23,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
         private readonly PropertyValueConverter _propertyValueConverter;
         private readonly ResourceService _resourceService;
         private readonly CustomPropertyValueService _customPropertyValueService;
-        private readonly ConcurrentDictionary<EnhancerId, IEnhancer> _enhancers;
+        private readonly ConcurrentDictionary<int, IEnhancer> _enhancers;
         private readonly IEnhancementService _enhancementService;
         private readonly ICategoryEnhancerOptionsService _categoryEnhancerService;
         private readonly StandardValueService _standardValueService;
@@ -40,7 +41,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             _enhancementService = enhancementService;
             _categoryEnhancerService = categoryEnhancerService;
             _standardValueService = standardValueService;
-            _enhancers = new ConcurrentDictionary<EnhancerId, IEnhancer>(enhancers.ToDictionary(d => d.Id, d => d));
+            _enhancers = new ConcurrentDictionary<int, IEnhancer>(enhancers.ToDictionary(d => d.Id, d => d));
         }
 
         protected async Task ApplyEnhancementsToResources(List<Bakabase.Abstractions.Models.Domain.Enhancement> enhancements)
@@ -56,8 +57,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 .ToDictionary(d => d.Key,
                     d => d
                         .ToDictionary(c => c.EnhancerId, c => c));
-            var propertyIds = enhancerOptions.Where(o => o.TargetOptionsMap != null)
-                .SelectMany(o => o.TargetOptionsMap!.Select(c => c.Value.PropertyId)).ToHashSet();
+            var propertyIds = enhancerOptions.Where(o => o.Options?.TargetOptionsMap != null)
+                .SelectMany(o => o.Options?.TargetOptionsMap!.Select(c => c.Value.PropertyId)!).ToHashSet();
             var propertyMap =
                 (await _customPropertyService.GetByKeys(propertyIds, CustomPropertyAdditionalItem.None, false))
                 .ToDictionary(d => d.Id, d => d);
@@ -76,7 +77,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
                 var targetOptions = categoryEnhancerOptionsMap
                     .GetValueOrDefault(resource.CategoryId)
-                    ?.GetValueOrDefault(enhancement.EnhancerId)?.TargetOptionsMap
+                    ?.GetValueOrDefault(enhancement.EnhancerId)?.Options?.TargetOptionsMap
                     ?.GetValueOrDefault(enhancement.Target);
                 if (targetOptions == null)
                 {

@@ -2879,6 +2879,45 @@ export const SearchEnhancementRecordsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetAllEnhancerDescriptors
+ * url: GetAllEnhancerDescriptorsURL
+ * method: GetAllEnhancerDescriptors_TYPE
+ * raw_url: GetAllEnhancerDescriptors_RAW_URL
+ */
+export const GetAllEnhancerDescriptors = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/enhancer/descriptor'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllEnhancerDescriptors_RAW_URL = function() {
+  return '/enhancer/descriptor'
+}
+export const GetAllEnhancerDescriptors_TYPE = function() {
+  return 'get'
+}
+export const GetAllEnhancerDescriptorsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/enhancer/descriptor'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllFavorites
  * url: GetAllFavoritesURL
  * method: GetAllFavorites_TYPE

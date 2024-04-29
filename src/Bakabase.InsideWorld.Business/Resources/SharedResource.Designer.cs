@@ -250,6 +250,150 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Analyze a filename similar to [(20)191202][Publisher1(Publisher2,Publisher3),Publisher4(Publisher5),Publisher6]Title Part 2(Original)[CN].
+        /// </summary>
+        internal static string Enhancer_Bakabase_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Bakabase.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Main language of the resource.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_Language_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_Language_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Language.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_Language_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_Language_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name of the resource.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_Name_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_Name_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_Name_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_Name_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Original works of the resource.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_Originals_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_Originals_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Originals.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_Originals_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_Originals_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Publishers of the resource.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_Publisher_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_Publisher_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Publisher(s).
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_Publisher_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_Publisher_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Release date of the resource.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_ReleaseDt_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_ReleaseDt_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Release date.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_ReleaseDt_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_ReleaseDt_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Volume name of the resource, such as &apos;episode 1&apos;.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_VolumeName_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_VolumeName_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Volume name.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_VolumeName_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_VolumeName_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Volume title of the resource, such as &apos;The beginning of the story&apos;.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_VolumeTitle_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_VolumeTitle_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Volume title.
+        /// </summary>
+        internal static string Enhancer_Bakabase_Target_VolumeTitle_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_VolumeTitle_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to {0} does not exist in {1}.
         /// </summary>
         internal static string FileDoesNotExistInPath {
