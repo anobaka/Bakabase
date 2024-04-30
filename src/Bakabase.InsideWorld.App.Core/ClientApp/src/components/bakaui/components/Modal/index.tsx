@@ -22,6 +22,7 @@ interface IProps {
   onClose?: () => void;
   onOk?: () => any;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  afterClose?: any;
 }
 
 
@@ -58,6 +59,7 @@ const Modal = (props: IProps) => {
   const onClose = () => {
     setVisible(false);
     props.onClose?.();
+    props.afterClose?.();
   };
 
   const renderFooter = () => {

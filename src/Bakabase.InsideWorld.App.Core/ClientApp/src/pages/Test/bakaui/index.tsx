@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloseCircleFilled } from '@ant-design/icons';
-import { useDisclosure } from '@nextui-org/react';
+import { useHistory } from 'react-router-dom';
+import { history } from 'ice';
 import { Button, Icon, Modal, Tooltip } from '@/components/bakaui';
 import ClickableIcon from '@/components/ClickableIcon';
-import CustomIcon from '@/components/CustomIcon';
 
 export default () => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
+
+  console.log(history);
 
   return (
     <>
@@ -25,9 +26,15 @@ export default () => {
       <Modal
         title={'title'}
         visible={visible}
-        onClose={() => setVisible(false)}
+        onClose={() => {
+          console.log('12323112321');
+          setVisible(false);
+        }}
       >
-        children
+        <div onClick={() => {
+          history.push('/');
+        }}
+        >go</div>
       </Modal>
     </>
   );

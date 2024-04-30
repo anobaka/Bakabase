@@ -13,6 +13,9 @@ import hoistNonReactStatic from 'hoist-non-react-statics';
 import { reservedResourceFileTypes, reservedResourceProperties } from '@/sdk/constants';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
+import BakabaseContextProvider from '@/components/ContextProvider/BakabaseContextProvider';
+import type { CloseableProps } from '@/components/bakaui/types';
+
 
 export default { // 工具集
   formatDate(date) { // 标准化时间格式
@@ -409,9 +412,10 @@ export function extractEnhancerTargetDescription(target: string) {
   };
 }
 
-export function createPortalOfComponent(Component: React.ComponentType<any>, props: any) {
+export function createPortalOfComponent<IProps extends CloseableProps>(Component: React.ComponentType<IProps>, props: any) {
   const key = uuidv4();
   const node = document.createElement('div');
+  node.id = key;
   document.body.appendChild(node);
 
   const root = ReactDOM.createRoot(node);
@@ -420,26 +424,44 @@ export function createPortalOfComponent(Component: React.ComponentType<any>, pro
 
   const unmount = () => {
     console.log('Unmounting', key);
-    // console.trace(19282);
-    setTimeout(() => {
-      root.unmount();
-      node.remove();
-    }, 1);
+    root.unmount();
+    node.remove();
   };
 
   console.log('Mounting', key);
 
+  const WrappedComponent = (props: IProps) => {
+      console.log(history);
+
+      useEffect(() => {
+        console.log(666665);
+        // const unlisten = history!.listen(() => {
+        //   console.log(666666);
+        //   unmount();
+        // });
+        // return () => {
+        //   unlisten();
+        // };
+      }, []);
+
+      return (
+        <Component
+          {...props}
+          afterClose={() => {
+            if (props.afterClose) {
+              props.afterClose();
+            }
+            unmount();
+          }}
+        />
+      );
+  };
+
   root.render(
     <store.Provider>
-      <Component
-        {...props}
-        afterClose={() => {
-          if (props.afterClose) {
-            props.afterClose();
-          }
-          unmount();
-        }}
-      />
+      <BakabaseContextProvider>
+        <WrappedComponent {...props} />
+      </BakabaseContextProvider>
     </store.Provider>,
   );
 

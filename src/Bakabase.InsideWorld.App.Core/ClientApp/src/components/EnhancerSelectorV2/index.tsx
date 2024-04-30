@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Checkbox, Chip, Divider, Link, Modal, Tooltip } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
@@ -8,12 +8,17 @@ import CustomIcon from '@/components/CustomIcon';
 import { StandardValueIcon } from '@/components/StandardValue';
 import { StandardValueType } from '@/sdk/constants';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
+import { BakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { CloseableProps } from '@/components/bakaui/types';
 
-interface IProps {
+interface IProps extends CloseableProps{
   categoryId: number;
 }
 
-const EnhancerSelector = ({ categoryId }: IProps) => {
+const EnhancerSelector = ({
+                            categoryId,
+                            afterClose,
+}: IProps) => {
   const { t } = useTranslation();
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
 
@@ -30,6 +35,7 @@ const EnhancerSelector = ({ categoryId }: IProps) => {
       title={t('Enhancers')}
       defaultVisible
       size={'xl'}
+      afterClose={afterClose}
     >
       {enhancers.map(e => {
         return (

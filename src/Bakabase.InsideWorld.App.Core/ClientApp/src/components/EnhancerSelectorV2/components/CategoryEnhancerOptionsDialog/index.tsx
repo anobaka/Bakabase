@@ -16,9 +16,17 @@ import {
 import { createPortalOfComponent } from '@/components/utils';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { StandardValueIcon } from '@/components/StandardValue';
-import { StandardValueType } from '@/sdk/constants';
+import { SpecialTextType, StandardValueType } from '@/sdk/constants';
 import PropertySelector from '@/components/PropertySelector';
 import BApi from '@/sdk/BApi';
+import {
+  CommonTargetOptions,
+} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/TargetOptions';
+import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
+
+const StdValueSpecialTextIntegrationMap: { [key in StandardValueType]?: SpecialTextType } = {
+  [StandardValueType.DateTime]: SpecialTextType.DateTime,
+};
 
 interface IProps {
   enhancer: EnhancerDescriptor;
@@ -59,38 +67,44 @@ const CategoryEnhancerOptionsDialog = ({ enhancer, categoryId }: IProps) => {
             <TableColumn>{t('Other options')}</TableColumn>
           </TableHeader>
           <TableBody items={enhancer.targets}>
-            {(target) => (
-              <TableRow key={target.id}>
-                <TableCell>
-                  <div className={'flex flex-col gap-2'}>
-                    <div>{target.name}</div>
-                    <div className={'flex items-center gap-1 opacity-60'}>
-                      <StandardValueIcon valueType={target.valueType} className={'text-small'} />
-                      {t(`StandardValueType.${StandardValueType[target.valueType]}`)}
+            {(target) => {
+              const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[target.valueType];
+              return (
+                <TableRow key={target.id}>
+                  <TableCell>
+                    <div className={'flex flex-col gap-2'}>
+                      <div>
+                        {target.name}
+                        {integratedSpecialTextType && (
+                          <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
+                        )}
+                      </div>
+                      <div className={'flex items-center gap-1 opacity-60'}>
+                        <StandardValueIcon valueType={target.valueType} className={'text-small'} />
+                        {t(`StandardValueType.${StandardValueType[target.valueType]}`)}
+                      </div>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    size={'sm'}
-                    variant={'light'}
-                    color={'primary'}
-                    onClick={() => {
-                      PropertySelector.show({
-                        pool: 'custom',
-                      });
-                    }}
-                  >
-                    {t('Select a property')}
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <Checkbox size={'sm'}>
-                    {t('Integrate with alias')}
-                  </Checkbox>
-                </TableCell>
-              </TableRow>
-            )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      size={'sm'}
+                      variant={'light'}
+                      color={'primary'}
+                      onClick={() => {
+                        PropertySelector.show({
+                          pool: 'custom',
+                        });
+                      }}
+                    >
+                      {t('Select a property')}
+                    </Button>
+                  </TableCell>
+                  <TableCell>
+                    <CommonTargetOptions integrateWithAlias />
+                  </TableCell>
+                </TableRow>
+              );
+            }}
           </TableBody>
         </Table>
       </div>
