@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bakabase.InsideWorld.Business.Migrations
 {
     [DbContext(typeof(InsideWorldDbContext))]
-    [Migration("20240425144050_V190Beta1Enhancement")]
+    [Migration("20240506101949_V190Beta1Enhancement")]
     partial class V190Beta1Enhancement
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -46,13 +46,16 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Active")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("CategoryId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("EnhancerId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("TargetPropertyIdMap")
+                    b.Property<string>("Options")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

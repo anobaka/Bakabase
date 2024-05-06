@@ -1,13 +1,12 @@
 import React from 'react';
+import { closestCorners, DndContext, DragOverlay, MouseSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableMediaLibrary from '@/pages/Category/components/SortableMediaLibrary';
-import { closestCorners, DndContext, DragOverlay, MouseSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import SortableTagGroup from "@/pages/Tag/components/SortableTagGroup";
-import SortableTag from "@/pages/Tag/components/SortableTag";
-import { SortMediaLibrariesInCategory } from "@/sdk/apis";
+import SortableTagGroup from '@/pages/Tag/components/SortableTagGroup';
+import SortableTag from '@/pages/Tag/components/SortableTag';
+import { SortMediaLibrariesInCategory } from '@/sdk/apis';
 
 export default (({ libraries, loadAllMediaLibraries, forceUpdate }) => {
-
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -16,7 +15,7 @@ export default (({ libraries, loadAllMediaLibraries, forceUpdate }) => {
     }),
   );
 
-  console.log('[SortableMediaLibraryList]rendering')
+  // console.log('[SortableMediaLibraryList]rendering')
 
   function handleDragEnd(e) {
     const activeId = e.active.id;
@@ -28,7 +27,7 @@ export default (({ libraries, loadAllMediaLibraries, forceUpdate }) => {
     libraries.splice(oldIndex, 1);
     libraries.splice(newIndex, 0, ol);
     const newIds = libraries.map((t) => t.id);
-    for(let i=0; i<newIds.length; i++) {
+    for (let i = 0; i < newIds.length; i++) {
       const id = newIds[i];
       const l = libraries.find(a => a.id == id);
       if (l) {

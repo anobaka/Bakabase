@@ -1,4 +1,4 @@
-import type { EnhancerId, StandardValueType } from '@/sdk/constants';
+import type { EnhancerId, EnhancerTargetOptionsItem, StandardValueType } from '@/sdk/constants';
 
 export interface EnhancerDescriptor {
   id: EnhancerId;
@@ -9,5 +9,6 @@ export interface EnhancerDescriptor {
     name: string;
     description?: string;
     valueType: StandardValueType;
+    optionsItems?: EnhancerTargetOptionsItem[];
   }[];
 }

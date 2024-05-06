@@ -44,6 +44,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Namotion.Reflection;
 using Newtonsoft.Json;
+using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions;
 using IComponent = Bakabase.InsideWorld.Business.Components.Resource.Components.IComponent;
 
 namespace Bakabase.InsideWorld.Business.Services
@@ -218,7 +219,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                 .GroupBy(d => d.CategoryId).ToDictionary(d => d.Key, d => d.ToList());
                             foreach (var d in dtoList)
                             {
-                                d.EnhancerOptions = enhancerOptionsMap.GetValueOrDefault(d.Id);
+                                d.EnhancerOptions = enhancerOptionsMap.GetValueOrDefault(d.Id)
+                                    ?.Cast<CategoryEnhancerOptions>().ToList();
                             }
                             break;
                         }

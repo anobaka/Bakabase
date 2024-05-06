@@ -51,7 +51,8 @@ public static class ServiceCollectionExtensions
                     return new EnhancerTargetDescriptor(target,
                         localizer.Enhancer_TargetName(enhancerId, target),
                         targetAttr.ValueType,
-                        localizer.Enhancer_TargetDescription(enhancerId, target));
+                        localizer.Enhancer_TargetDescription(enhancerId, target),
+                        targetAttr.Options?.Cast<int>().ToArray());
                 }).ToArray();
 
                 return new EnhancerDescriptor((int) enhancerId, localizer.Enhancer_Name(enhancerId),

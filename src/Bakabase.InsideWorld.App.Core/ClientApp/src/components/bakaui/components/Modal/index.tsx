@@ -1,5 +1,5 @@
 import { Modal as NextUiModal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@nextui-org/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ModalProps as NextUIModalProps } from '@nextui-org/modal/dist/modal';
 import { useTranslation } from 'react-i18next';
 import type { ButtonProps } from '@/components/bakaui';
@@ -33,6 +33,12 @@ const Modal = (props: ModalProps) => {
   const [size, setSize] = useState<NextUIModalProps['size']>();
 
   const [okLoading, setOkLoading] = useState(false);
+  const domRef = useRef<HTMLElement | null>(null);
+  const isOpen = props.visible != undefined ? props.visible : visible;
+
+  useEffect(() => {
+    // console.log('modal initialized');
+  }, []);
 
   useEffect(() => {
     switch (props.size) {
@@ -59,7 +65,6 @@ const Modal = (props: ModalProps) => {
   const onClose = () => {
     setVisible(false);
     props.onClose?.();
-    props.afterClose?.();
   };
 
   const renderFooter = () => {
@@ -124,10 +129,21 @@ const Modal = (props: ModalProps) => {
 
   return (
     <NextUiModal
-      isOpen={props.visible != undefined ? props.visible : visible}
+      isOpen={isOpen}
+      onOpenChange={v => console.log('123456', v)}
       onClose={onClose}
       scrollBehavior={'inside'}
       size={size}
+      ref={r => {
+        // console.log(domRef.current, r);
+        if (domRef.current && !r && !isOpen) {
+          // closed
+          // there is no such a method likes afterClose in nextui v2.3.0
+          // console.log('after close');
+          props.afterClose?.();
+        }
+        domRef.current = r;
+      }}
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">{props.title}</ModalHeader>

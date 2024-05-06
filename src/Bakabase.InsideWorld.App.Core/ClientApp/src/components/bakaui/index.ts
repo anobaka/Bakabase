@@ -33,6 +33,7 @@ import Code from './components/Code';
 import Carousel from './components/Carousel';
 import Link from './components/Link';
 import Snippet from './components/Snippet';
+import Notification from './components/Notification';
 
 export {
   Button,
@@ -79,4 +80,5 @@ export {
   TableColumn,
   TableRow,
   TableCell,
+  Notification,
 };

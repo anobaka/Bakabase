@@ -20,6 +20,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     CategoryId = table.Column<int>(type: "INTEGER", nullable: false),
                     EnhancerId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Active = table.Column<bool>(type: "INTEGER", nullable: false),
                     Options = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>

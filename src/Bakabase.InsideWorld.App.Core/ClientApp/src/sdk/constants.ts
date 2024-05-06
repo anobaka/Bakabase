@@ -94,8 +94,6 @@ export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleCho
 export const customPropertyTypes = Object.keys(CustomPropertyType).filter(k => typeof CustomPropertyType[k] === 'number').map(t => ({label: t, value: CustomPropertyType[t]}));
 export enum CustomPropertyValueLayer {Manual = 0, BakabaseEnhancer = 1000}
 export const customPropertyValueLayers = Object.keys(CustomPropertyValueLayer).filter(k => typeof CustomPropertyValueLayer[k] === 'number').map(t => ({label: t, value: CustomPropertyValueLayer[t]}));
-export enum EnhancerId {Bakabase = 1, ExHentai = 2}
-export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
 export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
 export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
 export enum StandardValueType {String = 1, ListString = 2, Decimal = 3, Link = 4, Boolean = 5, DateTime = 6, Time = 7, ListListString = 8}
@@ -196,17 +194,21 @@ export enum MediaLibraryAdditionalItem {None = 0, Category = 1, FileSystemInfo =
 export const mediaLibraryAdditionalItems = Object.keys(MediaLibraryAdditionalItem).filter(k => typeof MediaLibraryAdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryAdditionalItem[t]}));
 export enum ResourceAdditionalItem {None = 0, Publishers = 1, Volume = 2, Serial = 6, Originals = 8, Tags = 16, CustomProperties = 32, Alias = 64, All = 127}
 export const resourceAdditionalItems = Object.keys(ResourceAdditionalItem).filter(k => typeof ResourceAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceAdditionalItem[t]}));
-export enum ResourceCategoryAdditionalItem {None = 0, Components = 1, Validation = 3, CustomProperties = 4}
+export enum ResourceCategoryAdditionalItem {None = 0, Components = 1, Validation = 3, CustomProperties = 4, EnhancerOptions = 8}
 export const resourceCategoryAdditionalItems = Object.keys(ResourceCategoryAdditionalItem).filter(k => typeof ResourceCategoryAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceCategoryAdditionalItem[t]}));
 export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));
 export enum TagGroupAdditionalItem {Tags = 1, PreferredAlias = 2, TagNamePreferredAlias = 4}
 export const tagGroupAdditionalItems = Object.keys(TagGroupAdditionalItem).filter(k => typeof TagGroupAdditionalItem[k] === 'number').map(t => ({label: t, value: TagGroupAdditionalItem[t]}));
+export enum EnhancerId {Bakabase = 1}
+export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
+export enum EnhancerTargetOptionsItem {IntegrateWithAlias = 1, AutoMatchMultilevelString = 2}
+export const enhancerTargetOptionsItems = Object.keys(EnhancerTargetOptionsItem).filter(k => typeof EnhancerTargetOptionsItem[k] === 'number').map(t => ({label: t, value: EnhancerTargetOptionsItem[t]}));
 export enum ExHentaiEnhancerTarget {Rating = 1, Tags = 2}
 export const exHentaiEnhancerTargets = Object.keys(ExHentaiEnhancerTarget).filter(k => typeof ExHentaiEnhancerTarget[k] === 'number').map(t => ({label: t, value: ExHentaiEnhancerTarget[t]}));
 export enum BangumiEnhancerTarget {Name = 1, Tag = 2, Original = 3, Rating = 4}
 export const bangumiEnhancerTargets = Object.keys(BangumiEnhancerTarget).filter(k => typeof BangumiEnhancerTarget[k] === 'number').map(t => ({label: t, value: BangumiEnhancerTarget[t]}));
-export enum BakabaseEnhancerTarget {Name = 1, Series = 2, Publisher = 3, ReleaseDt = 4, VolumeName = 5, VolumeTitle = 6, Originals = 7, Language = 8}
+export enum BakabaseEnhancerTarget {Name = 1, Publisher = 2, ReleaseDt = 3, VolumeName = 4, VolumeTitle = 5, Originals = 6, Language = 7}
 export const bakabaseEnhancerTargets = Object.keys(BakabaseEnhancerTarget).filter(k => typeof BakabaseEnhancerTarget[k] === 'number').map(t => ({label: t, value: BakabaseEnhancerTarget[t]}));
 export enum LogLevel {Trace = 0, Debug = 1, Information = 2, Warning = 3, Error = 4, Critical = 5, None = 6}
 export const logLevels = Object.keys(LogLevel).filter(k => typeof LogLevel[k] === 'number').map(t => ({label: t, value: LogLevel[t]}));

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import styles from './index.module.scss';
 import type { IProperty } from './models';
 import { PropertyTypeIconMap } from './models';
+import Label from './components/Label';
 import CustomIcon from '@/components/CustomIcon';
 import ClickableIcon from '@/components/ClickableIcon';
 import PropertyDialog from '@/components/PropertyDialog';
@@ -21,6 +22,10 @@ interface IProps {
   onSaved?: (property: IProperty) => any;
   onRemoved?: () => any;
 }
+
+export {
+  Label as PropertyLabel,
+};
 
 export default ({
                   property,

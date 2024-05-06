@@ -3,9 +3,10 @@ import { Checkbox, Tooltip } from '@/components/bakaui';
 
 interface IProps {
   integrateWithAlias: boolean;
+  onChange?: (integrateWithAlias: boolean) => void;
 }
 
-export default ({ integrateWithAlias }: IProps) => {
+export default ({ integrateWithAlias, onChange }: IProps) => {
   const { t } = useTranslation();
   return (
     <>
@@ -14,7 +15,8 @@ export default ({ integrateWithAlias }: IProps) => {
       >
         <Checkbox
           size={'sm'}
-          checked={integrateWithAlias}
+          isSelected={integrateWithAlias}
+          onValueChange={onChange}
         >
           {t('Integrate with alias')}
         </Checkbox>

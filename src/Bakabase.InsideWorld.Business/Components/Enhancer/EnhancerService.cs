@@ -11,6 +11,7 @@ using Bakabase.InsideWorld.Business.Components.StandardValue;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using EnhancerAttribute = Bakabase.Modules.Enhancer.Abstractions.Attributes.EnhancerAttribute;
 using IEnhancer = Bakabase.Abstractions.Components.Enhancer.IEnhancer;
@@ -57,8 +58,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 .ToDictionary(d => d.Key,
                     d => d
                         .ToDictionary(c => c.EnhancerId, c => c));
-            var propertyIds = enhancerOptions.Where(o => o.Options?.TargetOptionsMap != null)
-                .SelectMany(o => o.Options?.TargetOptionsMap!.Select(c => c.Value.PropertyId)!).ToHashSet();
+            var propertyIds = enhancerOptions.Where(o => o.FullOptions?.TargetFullOptionsMap != null)
+                .SelectMany(o => o.FullOptions?.TargetFullOptionsMap!.Select(c => c.Value.PropertyId)!).ToHashSet();
             var propertyMap =
                 (await _customPropertyService.GetByKeys(propertyIds, CustomPropertyAdditionalItem.None, false))
                 .ToDictionary(d => d.Id, d => d);
@@ -66,7 +67,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 await _customPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId),
                     CustomPropertyValueAdditionalItem.None, true);
 
-            var enhancementTargetOptionsMap = new Dictionary<Bakabase.Abstractions.Models.Domain.Enhancement, EnhancerTargetOptions>();
+            var enhancementTargetOptionsMap = new Dictionary<Bakabase.Abstractions.Models.Domain.Enhancement, EnhancerTargetFullOptions>();
             foreach (var enhancement in enhancements)
             {
                 var resource = resourceMap.GetValueOrDefault(enhancement.ResourceId);
@@ -77,7 +78,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
                 var targetOptions = categoryEnhancerOptionsMap
                     .GetValueOrDefault(resource.CategoryId)
-                    ?.GetValueOrDefault(enhancement.EnhancerId)?.Options?.TargetOptionsMap
+                    ?.GetValueOrDefault(enhancement.EnhancerId)?.FullOptions?.TargetFullOptionsMap
                     ?.GetValueOrDefault(enhancement.Target);
                 if (targetOptions == null)
                 {
@@ -88,7 +89,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             }
 
             var enhancementsIntegratedWithAlias = enhancementTargetOptionsMap
-                .Where(v => v.Value.IntegrateWithAlias && v.Key.Value != null)
+                .Where(v => v.Value.IntegrateWithAlias == true && v.Key.Value != null)
                 .Select(v => v.Key).ToList();
             if (enhancementsIntegratedWithAlias.Any())
             {

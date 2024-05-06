@@ -1,37 +1,36 @@
 import { ConfigProvider, theme } from 'antd';
-import { NextUIProvider } from '@nextui-org/react';
+import { NextUIProvider, useModal } from '@nextui-org/react';
+import type { FC } from 'react';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigation } from 'ice';
 import store from '@/store';
 import { UiTheme } from '@/sdk/constants';
 import { uuidv4 } from '@/components/utils';
+import type { DestroyableProps } from '@/components/bakaui/types';
+
+type CreatePortal = <P extends DestroyableProps>(C: FC<P>, props: P) => { remove: () => void };
 
 interface IContext {
   isDarkMode: boolean;
-  createPortal: <P>(C: any, props: P) => { remove: () => void };
+  createPortal: CreatePortal;
 }
 
 export const BakabaseContext = createContext<IContext>({
-  createPortal<P>(C: any, props: P): { remove: () => void } {
-    return {
-      remove: function () {
-      },
-    };
-  },
+  createPortal: () => ({ remove: () => {} }),
   isDarkMode: false,
 });
 
 export default ({ children }) => {
   const appOptions = store.useModelState('appOptions');
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
-  const [componentMap, setComponentMap] = useState<Record<string, { Component: any; props: any }>>({});
+  const [componentMap, setComponentMap] = useState<Record<string, { Component: any; props: any}>>({});
 
   function removePortal(key: string) {
     delete componentMap[key];
     setComponentMap({ ...componentMap });
   }
 
-  function createPortal<P>(C: any, props: P) {
+  const createPortal: CreatePortal = (C, props) => {
     console.log('creating portal');
     const key = uuidv4();
     componentMap[key] = {
@@ -44,7 +43,7 @@ export default ({ children }) => {
     return {
       remove: () => removePortal(key),
     };
-  }
+  };
 
   useEffect(() => {
     if (appOptions.initialized) {
@@ -59,6 +58,7 @@ export default ({ children }) => {
     };
   }, []);
 
+  console.log('current components', componentMap);
 
   return (
     <NextUIProvider>
@@ -81,9 +81,12 @@ export default ({ children }) => {
             } = componentMap[key];
             return (
               <Component
+                key={key}
                 {...props}
-                onDestroy={() => {
-                  props.onDestroy?.();
+                onDestroyed={() => {
+                  if (props.onDestroyed) {
+                    props.onDestroyed();
+                  }
                   removePortal(key);
                 }}
               />

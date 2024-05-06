@@ -50,7 +50,7 @@ export default (props: Props) => {
     if (newValue) {
       newValue.prevPath = newValue.path;
     }
-    log('Props value changed', newValue);
+    // log('Props value changed', newValue);
     setValue(newValue);
   }, [propsValue]);
 
@@ -70,7 +70,7 @@ export default (props: Props) => {
   }, []);
 
   useEffect(() => {
-    log('Initialize with', props);
+    // log('Initialize with', props);
   }, []);
 
   let error;

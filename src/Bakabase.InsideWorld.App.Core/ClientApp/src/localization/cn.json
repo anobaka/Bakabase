@@ -1232,5 +1232,6 @@
   "For example, assume we already have a multilevel data: a->b->c, then for the incoming data: ->->c, the values of 1st and 2nd layers of which are empty.": "比如，假设我们的数据库中已经有一个多级数据：a->b->c，然后我们遇到了一个新的数据：->->c，它的第一级和第二级的值为空。",
   "If this option is checked, we'll save ->->c as a->b->c, otherwise the incoming value ->->c will be saved.": "如果勾选了本选项，我们将会将该数据视为a->b->c；否则，我们将会原封不动地保存该数据：->->c。",
   "This option may cause unexpected behaviors, make sure you have enough confidence to merge the produced data into data in db before check it.": "该选项可能会导致不可预期的结果，在勾选之前请确保您有足够信心可以将产生的数据和当前数据库中的数据合并。",
-  "Auto match on empty values": "自动匹配空值"
+  "Auto match on empty values": "自动匹配空值",
+  "None of targets is mapped to a property, so no data will be enhanced.": "未检测到任何增强目标与属性值的关联，数据将不会被增强。"
 }

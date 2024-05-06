@@ -9,15 +9,6 @@
  * ---------------------------------------------------------------
  */
 
-export interface BakabaseAbstractionsComponentsEnhancerEnhancerTargetDescriptor {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString] */
-  valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
-  description?: string | null;
-}
-
 export interface BakabaseAbstractionsModelsDbCategoryComponent {
   /** @format int32 */
   id?: number;
@@ -48,8 +39,18 @@ export interface BakabaseAbstractionsModelsDomainCategory {
   enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
   generateNfo?: boolean;
   customProperties?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
+  enhancerOptions?: BakabaseAbstractionsModelsDomainCategoryEnhancerOptions[] | null;
+}
+
+export interface BakabaseAbstractionsModelsDomainCategoryEnhancerOptions {
   /** @format int32 */
-  resourceDisplayNamePropertyId?: number | null;
+  id?: number;
+  /** @format int32 */
+  categoryId?: number;
+  /** @format int32 */
+  enhancerId?: number;
+  active?: boolean;
+  options?: BakabaseAbstractionsModelsDomainEnhancerOptions;
 }
 
 export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
@@ -101,12 +102,6 @@ export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyType =
 export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyValueLayer = 0 | 1000;
 
 /**
- * [1: Bakabase, 2: ExHentai]
- * @format int32
- */
-export type BakabaseAbstractionsModelsDomainConstantsEnhancerId = 1 | 2;
-
-/**
  * [1: NotAcceptTerms, 2: NeedRestart]
  * @format int32
  */
@@ -144,11 +139,29 @@ export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
 }
 
 export interface BakabaseAbstractionsModelsDomainEnhancerDescriptor {
-  /** [1: Bakabase, 2: ExHentai] */
-  id?: BakabaseAbstractionsModelsDomainConstantsEnhancerId;
+  /** @format int32 */
+  id?: number;
   name?: string | null;
   description?: string | null;
-  targets?: BakabaseAbstractionsComponentsEnhancerEnhancerTargetDescriptor[] | null;
+  targets?: BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor[] | null;
+}
+
+export interface BakabaseAbstractionsModelsDomainEnhancerOptions {
+  targetOptionsMap?: Record<string, BakabaseAbstractionsModelsDomainEnhancerTargetOptions>;
+}
+
+export interface BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor {
+  id?: SystemEnum;
+  name?: string | null;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString] */
+  valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  description?: string | null;
+  optionsItems?: number[] | null;
+}
+
+export interface BakabaseAbstractionsModelsDomainEnhancerTargetOptions {
+  /** @format int32 */
+  propertyId?: number;
 }
 
 export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
@@ -814,10 +827,10 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAddit
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
- * [0: None, 1: Components, 3: Validation, 4: CustomProperties]
+ * [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem = 0 | 1 | 3 | 4;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem = 0 | 1 | 3 | 4 | 8;
 
 /**
  * [0: None, 1: GroupName, 2: PreferredAlias]
@@ -1755,6 +1768,23 @@ export interface BakabaseInsideWorldModelsResponseModelsEverythingExtractionStat
   error?: string | null;
 }
 
+export interface BakabaseModulesEnhancerModelsDomainEnhancerFullOptions {
+  targetOptionsMap?: Record<string, BakabaseAbstractionsModelsDomainEnhancerTargetOptions>;
+  targetFullOptionsMap?: Record<string, BakabaseModulesEnhancerModelsDomainEnhancerTargetFullOptions>;
+}
+
+export interface BakabaseModulesEnhancerModelsDomainEnhancerTargetFullOptions {
+  /** @format int32 */
+  propertyId?: number;
+  integrateWithAlias?: boolean | null;
+  autoMatchMultilevelString?: boolean | null;
+}
+
+export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
+  options?: BakabaseModulesEnhancerModelsDomainEnhancerFullOptions;
+  active?: boolean | null;
+}
+
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   /** @format int32 */
   id?: number;
@@ -2345,6 +2375,8 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
  * @format int32
  */
 export type MicrosoftExtensionsLoggingLogLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export type SystemEnum = object;
 
 export type SystemIntPtr = object;
 
@@ -6548,7 +6580,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourceCategory: (
       id: number,
       query?: {
-        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties] */
+        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
       },
       params: RequestParams = {},
@@ -6606,7 +6638,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllResourceCategories: (
       query?: {
-        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties] */
+        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
       },
       params: RequestParams = {},
@@ -6765,6 +6797,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/resource-category/${id}/resource/display-name-template/preview`,
         method: "GET",
         query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name PatchCategoryEnhancerOptions
+     * @request PATCH:/resource-category/{id}/enhancer/{enhancerId}/options
+     */
+    patchCategoryEnhancerOptions: (
+      id: number,
+      enhancerId: number,
+      data: BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}/enhancer/${enhancerId}/options`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

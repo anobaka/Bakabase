@@ -1,3 +1,5 @@
-﻿namespace Bakabase.Modules.Enhancer.Models.Input;
+﻿using Bakabase.Modules.Enhancer.Models.Domain;
 
-public record CategoryEnhancerOptionsPatchInputModel(string? JsonOptions, bool? Active);
+namespace Bakabase.Modules.Enhancer.Models.Input;
+
+public record CategoryEnhancerOptionsPatchInputModel(EnhancerFullOptions? Options, bool? Active);

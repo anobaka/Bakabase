@@ -8382,6 +8382,61 @@ export const PreviewCategoryDisplayNameTemplateURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: PatchCategoryEnhancerOptions
+ * url: PatchCategoryEnhancerOptionsURL
+ * method: PatchCategoryEnhancerOptions_TYPE
+ * raw_url: PatchCategoryEnhancerOptions_RAW_URL
+ * @param id - 
+ * @param enhancerId - 
+ * @param model - 
+ */
+export const PatchCategoryEnhancerOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource-category/{id}/enhancer/{enhancerId}/options'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('patch', domain + path, body, queryParameters, form, config)
+}
+export const PatchCategoryEnhancerOptions_RAW_URL = function() {
+  return '/resource-category/{id}/enhancer/{enhancerId}/options'
+}
+export const PatchCategoryEnhancerOptions_TYPE = function() {
+  return 'patch'
+}
+export const PatchCategoryEnhancerOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource-category/{id}/enhancer/{enhancerId}/options'
+  path = path.replace('{id}', `${parameters['id']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllSpecialText
  * url: GetAllSpecialTextURL
  * method: GetAllSpecialText_TYPE

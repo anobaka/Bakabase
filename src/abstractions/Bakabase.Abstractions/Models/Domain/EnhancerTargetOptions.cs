@@ -1,3 +1,6 @@
 ﻿namespace Bakabase.Abstractions.Models.Domain;
 
-public record EnhancerTargetOptions(int PropertyId, bool IntegrateWithAlias);
+public abstract record EnhancerTargetOptions()
+{
+    public int PropertyId { get; set; }
+}

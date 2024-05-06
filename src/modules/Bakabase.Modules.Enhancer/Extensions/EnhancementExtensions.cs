@@ -10,7 +10,7 @@ namespace Bakabase.Modules.Enhancer.Extensions;
 
 public static class EnhancementExtensions
 {
-    public static CategoryEnhancerOptions? ToDomainModel(
+    public static CategoryEnhancerFullOptions? ToDomainModel(
         this Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions? ce)
     {
         if (ce == null)
@@ -18,37 +18,38 @@ public static class EnhancementExtensions
             return null;
         }
 
-        var model = new CategoryEnhancerOptions
+        var model = new CategoryEnhancerFullOptions
         {
             Id = ce.Id,
             CategoryId = ce.CategoryId,
             EnhancerId = ce.EnhancerId,
+            Active = ce.Active
         };
 
         if (!string.IsNullOrEmpty(ce.Options))
         {
-            var enhancerId = (EnhancerId) ce.EnhancerId;
-            var enhancerAttr = enhancerId.GetAttribute<EnhancerAttribute>();
-            var optionsType = enhancerAttr.OptionsType;
-            var jo = JObject.Parse(ce.Options);
-            var targetOptionsMapJo = jo[nameof(EnhancerOptions.TargetOptionsMap)];
-            jo.Remove(nameof(EnhancerOptions.TargetOptionsMap));
-            var options = (jo.ToObject(optionsType) as EnhancerOptions)!;
-            options.TargetOptionsMap = [];
+            // var enhancerId = (EnhancerId) ce.EnhancerId;
+            // var enhancerAttr = enhancerId.GetAttribute<EnhancerAttribute>();
+            // var optionsType = enhancerAttr.OptionsType;
+            // var jo = JObject.Parse(ce.Options);
+            // var targetOptionsMapJo = jo[nameof(EnhancerOptions.TargetFullOptionsMap)];
+            // jo.Remove(nameof(EnhancerOptions.TargetFullOptionsMap));
+            // var options = (jo.ToObject(optionsType) as EnhancerOptions)!;
+            // options.TargetFullOptionsMap = [];
+            //
+            // var targetEnumType = enhancerAttr.TargetEnumType;
+            // var targetEnumValues = Enum.GetValues(targetEnumType);
+            // foreach (var target in targetEnumValues)
+            // {
+            //     var targetOptionsJo = targetOptionsMapJo?[(int) target];
+            //     if (targetOptionsJo != null)
+            //     {
+            //         var targetOptions = (targetOptionsJo.ToObject(enhancerAttr.OptionsType) as EnhancerTargetOptions)!;
+            //         options.TargetFullOptionsMap.Add((int) target, targetOptions);
+            //     }
+            // }
 
-            var targetEnumType = enhancerAttr.TargetEnumType;
-            var targetEnumValues = Enum.GetValues(targetEnumType);
-            foreach (var target in targetEnumValues)
-            {
-                var targetOptionsJo = targetOptionsMapJo?[(int) target];
-                if (targetOptionsJo != null)
-                {
-                    var targetOptions = (targetOptionsJo.ToObject(enhancerAttr.OptionsType) as EnhancerTargetOptions)!;
-                    options.TargetOptionsMap.Add((int) target, targetOptions);
-                }
-            }
-
-            model.Options = options;
+            model.FullOptions = JsonConvert.DeserializeObject<EnhancerFullOptions>(ce.Options);
         }
 
         return model;

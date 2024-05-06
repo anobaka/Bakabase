@@ -41,7 +41,7 @@ export default (({ categories, libraries,
     });
   }
 
-  console.log('[SortableCategoryList]rendering');
+  // console.log('[SortableCategoryList]rendering');
 
   return (
     <div className="categories">

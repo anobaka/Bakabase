@@ -2,4 +2,4 @@
 
 namespace Bakabase.Abstractions.Models.Domain;
 
-public record EnhancerTargetDescriptor(Enum Id, string Name, StandardValueType ValueType, string? Description);
+public record EnhancerTargetDescriptor(Enum Id, string Name, StandardValueType ValueType, string? Description, int[]? OptionsItems);

@@ -23,11 +23,11 @@ export default () => {
   const bbContext = useContext(BakabaseContext);
 
   useEffect(() => {
-    console.log('Basic layout initialized');
+    // console.log('Basic layout initialized');
   }, []);
 
-  console.log('Basic layout rendering');
-  console.trace();
+  // console.log('Basic layout rendering');
+  // console.trace();
 
 
   return (

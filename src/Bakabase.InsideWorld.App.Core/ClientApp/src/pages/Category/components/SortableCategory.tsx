@@ -50,7 +50,7 @@ export default (({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  console.log(createPortal, 1234567);
+  // console.log(createPortal, 1234567);
 
 
   const style = {
@@ -75,7 +75,7 @@ export default (({
 
   const componentKeys = components.map(a => a.componentKey);
 
-  console.log('[SortableCategory]rendering', category, enhancers, componentKeys);
+  // console.log('[SortableCategory]rendering', category, enhancers, componentKeys);
 
   const renderBasicComponentSelector = (componentType, componentKey = undefined) => {
     if (componentType == ComponentType.PlayableFileSelector || componentType == ComponentType.Player) {

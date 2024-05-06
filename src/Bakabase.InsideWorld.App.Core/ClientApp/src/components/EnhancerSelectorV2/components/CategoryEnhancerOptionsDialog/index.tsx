@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
+import { Message as Notification } from '@alifd/next';
 import {
   Button,
   Checkbox,
@@ -18,31 +19,52 @@ import { StandardValueIcon } from '@/components/StandardValue';
 import { SpecialTextType, StandardValueType } from '@/sdk/constants';
 import PropertySelector from '@/components/PropertySelector';
 import BApi from '@/sdk/BApi';
-import {
-  CommonTargetOptions, MultilevelDataTargetOptions,
-} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/TargetOptions';
 import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
+import type {
+  EnhancerFullOptions, EnhancerTargetFullOptions } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
+import { defaultCategoryEnhancerTargetOptions,
+} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
+import type { IProperty } from '@/components/Property/models';
+import { PropertyLabel } from '@/components/Property';
+import TargetOptions
+  from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/TargetOptions';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
 const StdValueSpecialTextIntegrationMap: { [key in StandardValueType]?: SpecialTextType } = {
   [StandardValueType.DateTime]: SpecialTextType.DateTime,
 };
 
-interface IProps {
+interface IProps extends DestroyableProps{
   enhancer: EnhancerDescriptor;
   categoryId: number;
+  options?: EnhancerFullOptions;
+  onChanged?: (options: EnhancerFullOptions) => void;
 }
 
 const CategoryEnhancerOptionsDialog = ({
                                          enhancer,
                                          categoryId,
+                                         options: propOptions,
+                                         onDestroyed,
+                                         onChanged,
                                        }: IProps) => {
   const { t } = useTranslation();
 
   const [categoryName, setCategoryName] = useState('');
 
+  const [options, setOptions] = useState<EnhancerFullOptions>(propOptions ?? {});
+  const [propertyMap, setPropertyMap] = useState<Record<number, IProperty>>({});
+
   useEffect(() => {
     BApi.resourceCategory.getResourceCategory(categoryId).then(r => {
       setCategoryName(r.data!.name!);
+    });
+
+    BApi.customProperty.getAllCustomPropertiesV2().then(r => {
+      setPropertyMap((r.data ?? []).reduce<Record<number, IProperty>>((s, t) => {
+        s[t.id!] = t as IProperty;
+        return s;
+      }, {}));
     });
   }, []);
 
@@ -54,13 +76,17 @@ const CategoryEnhancerOptionsDialog = ({
         categoryName,
       })}
       defaultVisible
+      afterClose={onDestroyed}
+      footer={{
+        actions: ['cancel'],
+      }}
     >
-      <div className={'font-bold text-large'}>
-        {t('Common options')}
-      </div>
-      <div>
-        1231321312
-      </div>
+      {/* <div className={'font-bold text-large'}> */}
+      {/*   {t('Common options')} */}
+      {/* </div> */}
+      {/* <div> */}
+      {/*   1231321312 */}
+      {/* </div> */}
       <div className={'font-bold text-large'}>
         {t('Targets of enhancer')}
       </div>
@@ -74,6 +100,8 @@ const CategoryEnhancerOptionsDialog = ({
           <TableBody items={enhancer.targets}>
             {(target) => {
               const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[target.valueType];
+              const targetOptions: EnhancerTargetFullOptions = options.targetOptionsMap?.[target.id] ?? defaultCategoryEnhancerTargetOptions();
+              const property = targetOptions.propertyId > 0 ? propertyMap[targetOptions.propertyId] : undefined;
               return (
                 <TableRow key={target.id}>
                   <TableCell>
@@ -97,19 +125,34 @@ const CategoryEnhancerOptionsDialog = ({
                       color={'primary'}
                       onClick={() => {
                         PropertySelector.show({
+                          addable: true,
+                          editable: true,
                           pool: 'custom',
                         });
                       }}
                     >
-                      {t('Select a property')}
+                      {property ? (
+                        <PropertyLabel property={property} />
+                      ) : t('Select a property')}
                     </Button>
                   </TableCell>
                   <TableCell>
                     <div className={'flex flex-col gap-1'}>
-                      <CommonTargetOptions integrateWithAlias />
-                      {target.valueType === StandardValueType.ListListString && (
-                        <MultilevelDataTargetOptions />
-                      )}
+                      <TargetOptions
+                        options={targetOptions}
+                        optionsItems={target.optionsItems}
+                        onChange={o => {
+                          const no = {
+                            ...options,
+                            targetOptionsMap: {
+                              ...options.targetOptionsMap,
+                              [target.id]: o,
+                            },
+                          };
+                          BApi.resourceCategory.patchCategoryEnhancerOptions(categoryId, enhancer.id, { options: no });
+                          setOptions(no);
+                        }}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

@@ -2,10 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Checkbox, Tooltip } from '@/components/bakaui';
 
-export default () => {
-  const { t } = useTranslation();
+interface IProps {
+  autoMatch?: boolean;
+  onChange?: (integrateWithAlias: boolean) => void;
+}
 
-  const [autoMatch, setAutoMatch] = useState<boolean>(false);
+export default ({ autoMatch, onChange }: IProps) => {
+  const { t } = useTranslation();
 
   return (
     <>
@@ -22,8 +25,10 @@ export default () => {
       >
         <Checkbox
           size={'sm'}
-          checked={autoMatch}
-          onValueChange={c => setAutoMatch(c)}
+          isSelected={autoMatch}
+          onValueChange={c => {
+            onChange?.(c);
+          }}
         >
           {t('Auto match on empty values')}
         </Checkbox>

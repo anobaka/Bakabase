@@ -3,10 +3,12 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Extensions;
+using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Input;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace Bakabase.Modules.Enhancer.Services
 {
@@ -14,7 +16,7 @@ namespace Bakabase.Modules.Enhancer.Services
         : ResourceService<TDbContext, CategoryEnhancerOptions, int>(serviceProvider),
             ICategoryEnhancerOptionsService where TDbContext : DbContext
     {
-        public async Task<List<Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions>> GetAll(
+        public async Task<List<CategoryEnhancerFullOptions>> GetAll(
             Expression<Func<CategoryEnhancerOptions, bool>>? exp)
         {
             var data = await base.GetAll(exp, false);
@@ -37,9 +39,9 @@ namespace Bakabase.Modules.Enhancer.Services
                 data.Active = model.Active.Value;
             }
 
-            if (!string.IsNullOrEmpty(model.JsonOptions))
+            if (model.Options != null)
             {
-                data.Options = model.JsonOptions;
+                data.Options = JsonConvert.SerializeObject(model.Options);
             }
 
             if (dataExists)
