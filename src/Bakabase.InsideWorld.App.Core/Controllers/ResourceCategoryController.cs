@@ -13,6 +13,8 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Models.Input;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -23,10 +25,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     public class ResourceCategoryController : Controller
     {
         private readonly ResourceCategoryService _service;
+        private readonly ICategoryEnhancerOptionsService _categoryEnhancerOptionsService;
 
-        public ResourceCategoryController(ResourceCategoryService service)
+        public ResourceCategoryController(ResourceCategoryService service,
+            ICategoryEnhancerOptionsService categoryEnhancerOptionsService)
         {
             _service = service;
+            _categoryEnhancerOptionsService = categoryEnhancerOptionsService;
         }
 
         [HttpGet("{id:int}")]
@@ -111,6 +116,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             var result = await _service.PreviewDisplayNameTemplate(id, template, maxCount);
             return new ListResponse<CategoryResourceDisplayNameViewModel>(result);
+        }
+
+        [HttpPatch("{id:int}/enhancer/{enhancerId:int}/options")]
+        [SwaggerOperation(OperationId = "PatchCategoryEnhancerOptions")]
+        public async Task<BaseResponse> PatchEnhancerOptions(int id, int enhancerId,
+            [FromBody] CategoryEnhancerOptionsPatchInputModel model)
+        {
+            return await _categoryEnhancerOptionsService.Patch(id, enhancerId, model);
         }
     }
 }

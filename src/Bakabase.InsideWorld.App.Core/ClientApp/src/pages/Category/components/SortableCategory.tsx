@@ -19,6 +19,7 @@ import CategoryCustomPropertyBinderDialog from '@/pages/Category/components/Cust
 import { Chip, Button, Spacer, Tooltip, Badge } from '@/components/bakaui';
 import DisplayNameRuleEditorDialog from '@/pages/Category/components/DisplayNameRuleEditorDialog';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -47,6 +48,10 @@ export default (({
     transition,
   } = useSortable({ id: category.id });
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
+
+  console.log(createPortal, 1234567);
+
 
   const style = {
     transform: CSS.Translate.toString({
@@ -493,7 +498,7 @@ export default (({
                 color={'primary'}
                 size={'sm'}
                 onClick={() => {
-                  EnhancerSelectorV2.show({
+                  createPortal(EnhancerSelectorV2, {
                     categoryId: category.id,
                     // category: category,
                     // onSaved: loadAllCategories,

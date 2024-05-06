@@ -1,6 +1,6 @@
 import { Modal as NextUiModal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@nextui-org/react';
 import { useEffect, useState } from 'react';
-import type { ModalProps } from '@nextui-org/modal/dist/modal';
+import type { ModalProps as NextUIModalProps } from '@nextui-org/modal/dist/modal';
 import { useTranslation } from 'react-i18next';
 import type { ButtonProps } from '@/components/bakaui';
 import { Button } from '@/components/bakaui';
@@ -13,7 +13,7 @@ interface ISimpleFooter {
   cancelProps?: ButtonProps;
 }
 
-interface IProps {
+export interface ModalProps {
   title?: any;
   children?: any;
   defaultVisible?: boolean;
@@ -26,11 +26,11 @@ interface IProps {
 }
 
 
-const Modal = (props: IProps) => {
+const Modal = (props: ModalProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(props.defaultVisible ?? props.visible);
 
-  const [size, setSize] = useState<ModalProps['size']>();
+  const [size, setSize] = useState<NextUIModalProps['size']>();
 
   const [okLoading, setOkLoading] = useState(false);
 
@@ -140,6 +140,6 @@ const Modal = (props: IProps) => {
   );
 };
 
-Modal.show = (props: IProps) => createPortalOfComponent(Modal, { ...props, defaultVisible: true });
+Modal.show = (props: ModalProps) => createPortalOfComponent(Modal, { ...props, defaultVisible: true });
 
 export default Modal;

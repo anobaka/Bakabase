@@ -41,8 +41,8 @@ export default () => {
   const loadAllMediaLibraries = (cb: () => void = () => {
   }): Promise<any> => {
     return BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category | MediaLibraryAdditionalItem.FileSystemInfo | MediaLibraryAdditionalItem.FixedTags }).then((x) => {
-      x.data.sort((a, b) => a.order - b.order);
-      setLibraries(x.data);
+      x.data?.sort((a, b) => a.order - b.order);
+      setLibraries(x.data || []);
     });
   };
 

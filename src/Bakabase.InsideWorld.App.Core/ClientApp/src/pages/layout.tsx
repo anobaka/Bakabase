@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { useLocation } from 'ice';
 import BasicLayout from '@/layouts/BasicLayout';
 import BlankLayout from '@/layouts/BlankLayout';
@@ -19,10 +19,19 @@ const Layout = () => {
 };
 
 export default () => {
+  const location = useLocation();
   const bbContext = useContext(BakabaseContext);
 
+  useEffect(() => {
+    console.log('Basic layout initialized');
+  }, []);
+
+  console.log('Basic layout rendering');
+  console.trace();
+
+
   return (
-    <BakabaseContextProvider>
+    <BakabaseContextProvider key={location.key}>
       <div className={`${bbContext.isDarkMode ? 'dark' : 'light'}`}>
         <Layout />
       </div>

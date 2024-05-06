@@ -58,7 +58,7 @@ export default () => {
         week: r.offset == 0 ? t('This week') : r.offset == -1 ? t('Last week') : `${t('{{count}} weeks ago', { count: -(r.offset!) })}`,
         count: r.count,
       }));
-      console.log(chartData, trendingContentDomRef.current.clientHeight);
+      // console.log(chartData, trendingContentDomRef.current.clientHeight);
       return (
         <Chart
           padding={[10, 20, 50, 40]}

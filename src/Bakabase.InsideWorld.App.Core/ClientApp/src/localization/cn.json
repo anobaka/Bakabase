@@ -1218,5 +1218,19 @@
   "StandardValueType.Time": "时间",
   "StandardValueType.ListListString": "多级文本",
   "Integrate with alias": "使用别名机制",
-  "If checked, the value produced will be replaced with the preferred alias.": "如果选中，生成的值将会被替换为首选别名。"
+  "If checked, the value produced will be replaced with the preferred alias.": "如果选中，生成的值将会被替换为首选别名。",
+  "We are leaving current page": "即将离开当前页面",
+  "Are you sure?": "确定吗？",
+  "Data will be attempted to be converted into date&time data according to relevant conversions.": "数据将会尝试根据相关转换规则转换为日期时间数据。",
+  "Data will be processed with special texts.": "数据将会被特殊字符处理。",
+  "Click to check special texts": "点击查看特殊字符",
+  "Integrate with special text": "应用特殊字符",
+  "Common options": "通用选项",
+  "Targets of enhancer": "增强目标",
+  "By default, an empty layer will be created if we meet an empty value in multilevel data.": "默认情况下，如果多级数据有空值，那么我们会创建对应的空的层级。",
+  "If checked, this kind of data will be matched with the most similar multilevel value in the database.": "如果勾选了本选项，这类的数据将会自动尝试去与数据库中最接近的数据匹配。",
+  "For example, assume we already have a multilevel data: a->b->c, then for the incoming data: ->->c, the values of 1st and 2nd layers of which are empty.": "比如，假设我们的数据库中已经有一个多级数据：a->b->c，然后我们遇到了一个新的数据：->->c，它的第一级和第二级的值为空。",
+  "If this option is checked, we'll save ->->c as a->b->c, otherwise the incoming value ->->c will be saved.": "如果勾选了本选项，我们将会将该数据视为a->b->c；否则，我们将会原封不动地保存该数据：->->c。",
+  "This option may cause unexpected behaviors, make sure you have enough confidence to merge the produced data into data in db before check it.": "该选项可能会导致不可预期的结果，在勾选之前请确保您有足够信心可以将产生的数据和当前数据库中的数据合并。",
+  "Auto match on empty values": "自动匹配空值"
 }

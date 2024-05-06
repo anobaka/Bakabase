@@ -113,13 +113,6 @@ export default () => {
 
   return (
     <div className={'test-page'}>
-      <Modal
-        isOpen
-        defaultOpen
-        size={'md'}
-      >
-        1`312232
-      </Modal>
       <Tooltip content="I am a tooltip">
         <Chip>123456</Chip>
       </Tooltip>

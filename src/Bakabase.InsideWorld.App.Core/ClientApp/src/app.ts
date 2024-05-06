@@ -23,7 +23,7 @@ export default defineAppConfig(() => ({
   },
   app: {
     // errorBoundary: true,
-    strict: true,
+    // strict: true,
   },
 }));
 

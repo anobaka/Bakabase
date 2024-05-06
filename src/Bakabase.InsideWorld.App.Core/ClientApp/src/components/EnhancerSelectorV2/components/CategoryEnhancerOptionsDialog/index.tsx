@@ -12,7 +12,6 @@ import {
   TableRow,
 } from '@/components/bakaui';
 // import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Modal } from '@nextui-org/react';
-
 import { createPortalOfComponent } from '@/components/utils';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { StandardValueIcon } from '@/components/StandardValue';
@@ -20,7 +19,7 @@ import { SpecialTextType, StandardValueType } from '@/sdk/constants';
 import PropertySelector from '@/components/PropertySelector';
 import BApi from '@/sdk/BApi';
 import {
-  CommonTargetOptions,
+  CommonTargetOptions, MultilevelDataTargetOptions,
 } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/TargetOptions';
 import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
 
@@ -33,7 +32,10 @@ interface IProps {
   categoryId: number;
 }
 
-const CategoryEnhancerOptionsDialog = ({ enhancer, categoryId }: IProps) => {
+const CategoryEnhancerOptionsDialog = ({
+                                         enhancer,
+                                         categoryId,
+                                       }: IProps) => {
   const { t } = useTranslation();
 
   const [categoryName, setCategoryName] = useState('');
@@ -47,7 +49,10 @@ const CategoryEnhancerOptionsDialog = ({ enhancer, categoryId }: IProps) => {
   return (
     <Modal
       size={'xl'}
-      title={t('Configure enhancer:{{enhancerName}} for category:{{categoryName}}', { enhancerName: enhancer.name, categoryName })}
+      title={t('Configure enhancer:{{enhancerName}} for category:{{categoryName}}', {
+        enhancerName: enhancer.name,
+        categoryName,
+      })}
       defaultVisible
     >
       <div className={'font-bold text-large'}>
@@ -57,7 +62,7 @@ const CategoryEnhancerOptionsDialog = ({ enhancer, categoryId }: IProps) => {
         1231321312
       </div>
       <div className={'font-bold text-large'}>
-        {t('Options for targets')}
+        {t('Targets of enhancer')}
       </div>
       <div>
         <Table>
@@ -73,7 +78,7 @@ const CategoryEnhancerOptionsDialog = ({ enhancer, categoryId }: IProps) => {
                 <TableRow key={target.id}>
                   <TableCell>
                     <div className={'flex flex-col gap-2'}>
-                      <div>
+                      <div className={'flex items-center gap-1'}>
                         {target.name}
                         {integratedSpecialTextType && (
                           <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
@@ -100,7 +105,12 @@ const CategoryEnhancerOptionsDialog = ({ enhancer, categoryId }: IProps) => {
                     </Button>
                   </TableCell>
                   <TableCell>
-                    <CommonTargetOptions integrateWithAlias />
+                    <div className={'flex flex-col gap-1'}>
+                      <CommonTargetOptions integrateWithAlias />
+                      {target.valueType === StandardValueType.ListListString && (
+                        <MultilevelDataTargetOptions />
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );

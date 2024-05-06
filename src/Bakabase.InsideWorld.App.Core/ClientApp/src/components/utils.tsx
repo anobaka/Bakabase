@@ -412,10 +412,9 @@ export function extractEnhancerTargetDescription(target: string) {
   };
 }
 
-export function createPortalOfComponent<IProps extends CloseableProps>(Component: React.ComponentType<IProps>, props: any) {
+export function createPortalOfComponent(Component: React.ComponentType<any>, props: any) {
   const key = uuidv4();
   const node = document.createElement('div');
-  node.id = key;
   document.body.appendChild(node);
 
   const root = ReactDOM.createRoot(node);
@@ -424,44 +423,26 @@ export function createPortalOfComponent<IProps extends CloseableProps>(Component
 
   const unmount = () => {
     console.log('Unmounting', key);
-    root.unmount();
-    node.remove();
+    // console.trace(19282);
+    setTimeout(() => {
+      root.unmount();
+      node.remove();
+    }, 1);
   };
 
   console.log('Mounting', key);
 
-  const WrappedComponent = (props: IProps) => {
-      console.log(history);
-
-      useEffect(() => {
-        console.log(666665);
-        // const unlisten = history!.listen(() => {
-        //   console.log(666666);
-        //   unmount();
-        // });
-        // return () => {
-        //   unlisten();
-        // };
-      }, []);
-
-      return (
-        <Component
-          {...props}
-          afterClose={() => {
-            if (props.afterClose) {
-              props.afterClose();
-            }
-            unmount();
-          }}
-        />
-      );
-  };
-
   root.render(
     <store.Provider>
-      <BakabaseContextProvider>
-        <WrappedComponent {...props} />
-      </BakabaseContextProvider>
+      <Component
+        {...props}
+        afterClose={() => {
+          if (props.afterClose) {
+            props.afterClose();
+          }
+          unmount();
+        }}
+      />
     </store.Provider>,
   );
 

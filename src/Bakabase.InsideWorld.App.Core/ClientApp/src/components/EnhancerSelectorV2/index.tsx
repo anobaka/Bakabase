@@ -8,18 +8,19 @@ import CustomIcon from '@/components/CustomIcon';
 import { StandardValueIcon } from '@/components/StandardValue';
 import { StandardValueType } from '@/sdk/constants';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
-import { BakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import type { CloseableProps } from '@/components/bakaui/types';
+import { BakabaseContext, useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
-interface IProps extends CloseableProps{
+interface IProps extends DestroyableProps{
   categoryId: number;
 }
 
 const EnhancerSelector = ({
                             categoryId,
-                            afterClose,
+                            onDestroy,
 }: IProps) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
 
   useEffect(() => {
@@ -30,12 +31,14 @@ const EnhancerSelector = ({
     });
   }, []);
 
+  // console.log(createPortal, 1234567);
+
   return (
     <Modal
       title={t('Enhancers')}
       defaultVisible
       size={'xl'}
-      afterClose={afterClose}
+      afterClose={onDestroy}
     >
       {enhancers.map(e => {
         return (
@@ -90,7 +93,9 @@ const EnhancerSelector = ({
                 variant={'light'}
                 color={'primary'}
                 onClick={() => {
-                  CategoryEnhancerOptionsDialog.show({ enhancer: e, categoryId });
+                  console.log(132456, createPortal);
+                  createPortal(CategoryEnhancerOptionsDialog, { enhancer: e, categoryId });
+                  // CategoryEnhancerOptionsDialog.show({ enhancer: e, categoryId });
                 }}
               >
                 {t('Setup')}

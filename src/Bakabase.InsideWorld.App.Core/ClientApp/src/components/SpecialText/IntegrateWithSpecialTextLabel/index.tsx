@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { history, useLocation } from 'ice';
-import { Chip, Link, Tooltip } from '@/components/bakaui';
+import { Chip, Link, Modal, Tooltip } from '@/components/bakaui';
 import { SpecialTextType } from '@/sdk/constants';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 interface IProps {
   type: SpecialTextType;
@@ -9,6 +10,7 @@ interface IProps {
 
 export default ({ type }: IProps) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   let tooltipContent = '';
   switch (type) {
@@ -30,20 +32,28 @@ export default ({ type }: IProps) => {
   return (
     <Tooltip
       content={(
-        <span>
+        <div className={'flex items-center gap-1'}>
           {tooltipContent}
           <Link
-            className={'active:no-underline'}
+            className={'active:no-underline cursor-pointer'}
             // href={'#'}
             size={'sm'}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
 
-              history?.push('/');
+              createPortal(Modal, {
+                title: t('We are leaving current page'),
+                children: t('Are you sure?'),
+                defaultVisible: true,
+                onOk: () => {
+                  history?.push('/text');
+                },
+                },
+              );
             }}
-          >{t('Click to check')}</Link>
-        </span>
+          >{t('Click to check special texts')}</Link>
+        </div>
       )}
     >
       <Chip
