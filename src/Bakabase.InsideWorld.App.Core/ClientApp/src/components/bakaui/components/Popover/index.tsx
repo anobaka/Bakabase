@@ -19,7 +19,7 @@ export default ({ trigger, children, visible, closeMode, ...otherProps }: Popove
       shouldCloseOnBlur={closeMode?.includes('esc')}
       shouldCloseOnInteractOutside={() => closeMode?.includes('mask') == true}
       onOpenChange={o => {
-        console.log(o, 555);
+        // console.log(o, 555);
         otherProps.onVisibleChange?.(o);
       }}
       {...otherProps}

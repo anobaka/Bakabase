@@ -1,5 +1,4 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Properties.Text.Abstractions;
@@ -7,13 +6,13 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Text;
 
-public record LinkProperty() : Bakabase.Abstractions.Models.Domain.CustomProperty;
+public record LinkProperty() : Models.CustomProperty;
 
 public record LinkPropertyValue : CustomPropertyValue<LinkData>;
 
 public class LinkPropertyDescriptor : TextPropertyDescriptor<LinkPropertyValue, LinkData>
 {
-    public override CustomPropertyType Type => CustomPropertyType.Link;
+    public override CustomPropertyType EnumType => CustomPropertyType.Link;
 
     protected override string[] GetMatchSources(LinkData? value)
     {

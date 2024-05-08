@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bootstrap.Extensions;

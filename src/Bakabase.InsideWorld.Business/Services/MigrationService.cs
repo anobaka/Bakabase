@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
-using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;

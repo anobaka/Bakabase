@@ -4,11 +4,12 @@ import { CustomPropertyType } from '@/sdk/constants';
 
 export interface IProperty {
   id: number;
-  type: StandardValueType;
+  valueType: StandardValueType;
   name: string;
   categories?: {id: number; name: string}[];
   options?: any;
   isReserved: boolean;
+  type?: CustomPropertyType;
 }
 export interface IChoice {
   id: string;
@@ -22,7 +23,7 @@ export const PropertyTypeIconMap: {[key in CustomPropertyType]?: string} = {
   [CustomPropertyType.MultilineText]: 'multiline-text',
   [CustomPropertyType.SingleChoice]: 'radiobox',
   [CustomPropertyType.MultipleChoice]: 'multiple-select',
-  // [CustomPropertyType.Multilevel]: 'multi_level',
+  [CustomPropertyType.Multilevel]: 'multi_level',
   [CustomPropertyType.Number]: 'number',
   [CustomPropertyType.Percentage]: 'percentage',
   [CustomPropertyType.Rating]: 'star',
@@ -37,7 +38,7 @@ export const PropertyTypeIconMap: {[key in CustomPropertyType]?: string} = {
 
 export interface IChoicePropertyOptions {
   choices: IChoice[];
-  allowAddingNewOptionsWhileChoosing: boolean;
+  allowAddingNewDataDynamically: boolean;
   defaultValue?: string;
 }
 

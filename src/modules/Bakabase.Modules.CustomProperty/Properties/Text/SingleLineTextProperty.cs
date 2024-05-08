@@ -9,7 +9,7 @@ namespace Bakabase.Modules.CustomProperty.Properties.Text
 
     public class SingleLineTextPropertyDescriptor : TextPropertyDescriptor<SingleLineTextPropertyValue, string>
     {
-        public override CustomPropertyType Type => CustomPropertyType.SingleLineText;
+        public override CustomPropertyType EnumType => CustomPropertyType.SingleLineText;
         protected override string[] GetMatchSources(string? value)
         {
             return string.IsNullOrEmpty(value) ? [] : [value];

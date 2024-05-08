@@ -1217,7 +1217,7 @@
   "StandardValueType.DateTime": "日期时间",
   "StandardValueType.Time": "时间",
   "StandardValueType.ListListString": "多级文本",
-  "Integrate with alias": "使用别名机制",
+  "Integrate with alias": "使用别名",
   "If checked, the value produced will be replaced with the preferred alias.": "如果选中，生成的值将会被替换为首选别名。",
   "We are leaving current page": "即将离开当前页面",
   "Are you sure?": "确定吗？",
@@ -1233,5 +1233,14 @@
   "If this option is checked, we'll save ->->c as a->b->c, otherwise the incoming value ->->c will be saved.": "如果勾选了本选项，我们将会将该数据视为a->b->c；否则，我们将会原封不动地保存该数据：->->c。",
   "This option may cause unexpected behaviors, make sure you have enough confidence to merge the produced data into data in db before check it.": "该选项可能会导致不可预期的结果，在勾选之前请确保您有足够信心可以将产生的数据和当前数据库中的数据合并。",
   "Auto match on empty values": "自动匹配空值",
-  "None of targets is mapped to a property, so no data will be enhanced.": "未检测到任何增强目标与属性值的关联，数据将不会被增强。"
+  "None of targets is mapped to a property, so no data will be enhanced.": "未检测到任何增强目标与属性值的关联，数据将不会被增强。",
+  "Adding new data dynamically is disabled for this property, new data will not be saved.": "该属性被禁止动态添加新数据，新的数据将不会被保存。",
+  "Allow adding new data dynamically": "允许动态添加数据",
+  "Click to enable": "点击启用",
+  "Some of targets are not mapped to a property, corresponding data will not be enhanced.": "部分增强目标未与属性值关联，对应的数据将不会被增强。",
+  "This property is not bound to the category, its data will not be displayed.": "该属性未被绑定至分类，数据将不会被展示。",
+  "Bind property {{propertyName}} to category {{categoryName}}": "将属性{{propertyName}}綁定至分类{{categoryName}}",
+  "Bind now": "立即绑定",
+  "Delete category": "删除分类",
+  "This operation cannot be undone. Would you like to proceed?": "此操作无法撤销。您确定要继续吗？"
 }

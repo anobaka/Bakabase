@@ -5,7 +5,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
-using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -28,6 +27,7 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Abstractions;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -45,6 +45,7 @@ using Microsoft.Extensions.Logging;
 using Namotion.Reflection;
 using Newtonsoft.Json;
 using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions;
+using CustomProperty = Bakabase.Abstractions.Models.Domain.CustomProperty;
 using IComponent = Bakabase.InsideWorld.Business.Components.Resource.Components.IComponent;
 
 namespace Bakabase.InsideWorld.Business.Services
@@ -67,7 +68,7 @@ namespace Bakabase.InsideWorld.Business.Services
         protected ICategoryEnhancerOptionsService CategoryEnhancerOptionsService =>
             GetRequiredService<ICategoryEnhancerOptionsService>();
 
-        protected Dictionary<CustomPropertyType, ICustomPropertyDescriptor> CustomPropertyDescriptorMap =>
+        protected Dictionary<int, ICustomPropertyDescriptor> CustomPropertyDescriptorMap =>
             GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>().ToDictionary(d => d.Type, d => d);
 
         protected Dictionary<StandardValueType, IStandardValueHandler> StandardValueHandlerMap =>
@@ -206,7 +207,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             var customPropertiesMap = await CustomPropertyService.GetByCategoryIds(cIds);
                             foreach (var d in dtoList)
                             {
-                                d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id);
+                                d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id)?.OfType<CustomProperty>().ToList();
                             }
 
                             break;
@@ -529,6 +530,15 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
+        public async Task<BaseResponse> BindCustomProperty(int categoryId, int propertyId)
+        {
+            var category = await GetByKey(categoryId, ResourceCategoryAdditionalItem.CustomProperties);
+            var pIds = category.CustomProperties?.Select(a => a.Id).ToHashSet() ?? [];
+            pIds.Add(propertyId);
+            return await BindCustomProperties(categoryId,
+                new ResourceCategoryCustomPropertyBindRequestModel {CustomPropertyIds = pIds.ToArray()});
+        }
+
         public async Task<BaseResponse> BindCustomProperties(int id,
             ResourceCategoryCustomPropertyBindRequestModel model)
         {
@@ -590,7 +600,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         {
                             var displayValue = CustomPropertyDescriptorMap[d.Value.Type]
                                 .BuildValueForDisplay(d.Value, value);
-                            var stdValueHandler = StandardValueHandlerMap[d.Value.Type.ToStandardValueType()];
+                            var stdValueHandler = StandardValueHandlerMap[d.Value.ValueType];
                             return stdValueHandler.BuildDisplayValue(displayValue);
                         }
 

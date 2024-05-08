@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Extensions;
@@ -41,7 +42,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     CustomPropertyAdditionalItem.None, returnCopy);
             var propertyMap = properties.ToDictionary(x => x.Id);
             var dtoList = values
-                .Select(v => CustomPropertyExtensions.Descriptors[propertyMap[v.PropertyId].Type].BuildDomainValue(v)!)
+                .Select(v => CustomPropertyExtensions.Descriptors[(CustomPropertyType)propertyMap[v.PropertyId].Type].BuildDomainValue(v)!)
                 .ToList();
 
             foreach (var dto in dtoList)

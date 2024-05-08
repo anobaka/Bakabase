@@ -32,10 +32,10 @@ public static class EnhancementExtensions
             // var enhancerAttr = enhancerId.GetAttribute<EnhancerAttribute>();
             // var optionsType = enhancerAttr.OptionsType;
             // var jo = JObject.Parse(ce.Options);
-            // var targetOptionsMapJo = jo[nameof(EnhancerOptions.TargetFullOptionsMap)];
-            // jo.Remove(nameof(EnhancerOptions.TargetFullOptionsMap));
+            // var targetOptionsMapJo = jo[nameof(EnhancerOptions.TargetOptionsMap)];
+            // jo.Remove(nameof(EnhancerOptions.TargetOptionsMap));
             // var options = (jo.ToObject(optionsType) as EnhancerOptions)!;
-            // options.TargetFullOptionsMap = [];
+            // options.TargetOptionsMap = [];
             //
             // var targetEnumType = enhancerAttr.TargetEnumType;
             // var targetEnumValues = Enum.GetValues(targetEnumType);
@@ -45,11 +45,11 @@ public static class EnhancementExtensions
             //     if (targetOptionsJo != null)
             //     {
             //         var targetOptions = (targetOptionsJo.ToObject(enhancerAttr.OptionsType) as EnhancerTargetOptions)!;
-            //         options.TargetFullOptionsMap.Add((int) target, targetOptions);
+            //         options.TargetOptionsMap.Add((int) target, targetOptions);
             //     }
             // }
 
-            model.FullOptions = JsonConvert.DeserializeObject<EnhancerFullOptions>(ce.Options);
+            model.Options = JsonConvert.DeserializeObject<EnhancerFullOptions>(ce.Options);
         }
 
         return model;

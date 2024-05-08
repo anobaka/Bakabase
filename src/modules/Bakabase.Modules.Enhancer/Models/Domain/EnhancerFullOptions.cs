@@ -2,14 +2,7 @@
 
 namespace Bakabase.Modules.Enhancer.Models.Domain;
 
-public record EnhancerFullOptions : EnhancerOptions
+public record EnhancerFullOptions
 {
-    private Dictionary<int, EnhancerTargetFullOptions>? _targetFullOptionsMap;
-
-    public Dictionary<int, EnhancerTargetFullOptions>? TargetFullOptionsMap
-    {
-        get => _targetFullOptionsMap;
-        set => TargetOptionsMap =
-            (_targetFullOptionsMap = value)?.ToDictionary(d => d.Key, d => (EnhancerTargetOptions) d.Value);
-    }
+    public Dictionary<int, EnhancerTargetFullOptions>? TargetOptionsMap { get; set; }
 }

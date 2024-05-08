@@ -530,11 +530,6 @@ namespace Bakabase.InsideWorld.Business.Extensions
             };
         }
 
-        public static bool HasAppliedAliases(this ResourceProperty rp)
-        {
-            return InternalOptions.PropertiesAppliedAliases.Contains(rp);
-        }
-
         public static string BuildPath(this Abstractions.Models.Db.Resource r)
         {
             return Path

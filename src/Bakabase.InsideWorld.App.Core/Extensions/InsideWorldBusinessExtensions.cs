@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
@@ -32,6 +31,7 @@ using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.CustomProperty.Abstractions;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;

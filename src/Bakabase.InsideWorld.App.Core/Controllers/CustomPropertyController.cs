@@ -66,5 +66,12 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return new SingletonResponse<CustomPropertyTypeConversionLossViewModel>(
                 await _service.CalculateTypeConversionLoss(id, type));
         }
+
+        [HttpPut("{id:int}/options/adding-new-data-dynamically")]
+        [SwaggerOperation(OperationId = "EnableAddingNewDataDynamicallyForCustomProperty")]
+        public async Task<BaseResponse> EnableAddingNewDataDynamically(int id)
+        {
+            return await _service.EnableAddingNewDataDynamically(id);
+        }
     }
 }

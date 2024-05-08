@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
-using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -16,10 +15,13 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Abstractions;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Properties.Attachment;
 using Bakabase.Modules.CustomProperty.Properties.Boolean;
 using Bakabase.Modules.CustomProperty.Properties.Choice;
+using Bakabase.Modules.CustomProperty.Properties.Choice.Abstractions;
 using Bakabase.Modules.CustomProperty.Properties.DateTime;
 using Bakabase.Modules.CustomProperty.Properties.Formula;
 using Bakabase.Modules.CustomProperty.Properties.Multilevel;
@@ -28,9 +30,11 @@ using Bakabase.Modules.CustomProperty.Properties.Number.Abstractions;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 using Bakabase.Modules.CustomProperty.Properties.Text.Abstractions;
 using Bakabase.Modules.CustomProperty.Properties.Time;
+using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
+using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -46,7 +50,7 @@ namespace Bakabase.InsideWorld.Business.Services
         protected ConversionService ConversionService => GetRequiredService<ConversionService>();
         protected ResourceCategoryService ResourceCategoryService => GetRequiredService<ResourceCategoryService>();
 
-        protected Dictionary<CustomPropertyType, ICustomPropertyDescriptor> PropertyDescriptors =>
+        protected Dictionary<int, ICustomPropertyDescriptor> PropertyDescriptors =>
             GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>().ToDictionary(d => d.Type, d => d);
 
         protected Dictionary<StandardValueType, IStandardValueHandler> StdValueHandlers =>
@@ -56,7 +60,7 @@ namespace Bakabase.InsideWorld.Business.Services
         {
         }
 
-        public async Task<List<Abstractions.Models.Domain.CustomProperty>> GetAll(
+        public async Task<List<Modules.CustomProperty.Models.CustomProperty>> GetAll(
             Expression<Func<CustomProperty, bool>>? selector = null,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
             bool returnCopy = true)
@@ -66,7 +70,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return dtoList;
         }
 
-        public async Task<Abstractions.Models.Domain.CustomProperty> GetByKey(int id,
+        public async Task<Modules.CustomProperty.Models.CustomProperty> GetByKey(int id,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
             bool returnCopy = true)
         {
@@ -75,7 +79,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return dtoList.First();
         }
 
-        public async Task<List<Abstractions.Models.Domain.CustomProperty>> GetByKeys(IEnumerable<int> ids,
+        public async Task<List<Modules.CustomProperty.Models.CustomProperty>> GetByKeys(IEnumerable<int> ids,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
             bool returnCopy = true)
         {
@@ -84,7 +88,8 @@ namespace Bakabase.InsideWorld.Business.Services
             return dtoList;
         }
 
-        public async Task<Dictionary<int, List<Abstractions.Models.Domain.CustomProperty>>> GetByCategoryIds(int[] ids)
+        public async Task<Dictionary<int, List<Modules.CustomProperty.Models.CustomProperty>>>
+            GetByCategoryIds(int[] ids)
         {
             var mappings = await CategoryCustomPropertyMappingService.GetAll(x => ids.Contains(x.CategoryId));
             var propertyIds = mappings.Select(x => x.PropertyId).ToHashSet();
@@ -95,7 +100,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 x => x.Select(y => propertyMap.GetValueOrDefault(y.PropertyId)).Where(y => y != null).ToList())!;
         }
 
-        private async Task<List<Abstractions.Models.Domain.CustomProperty>> ToDtoList(List<CustomProperty> properties,
+        private async Task<List<Modules.CustomProperty.Models.CustomProperty>> ToDtoList(
+            List<CustomProperty> properties,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
         {
             var dtoList = properties.Select(p => p.ToDomainModel()!).ToList();
@@ -136,7 +142,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return dtoList;
         }
 
-        public async Task<Abstractions.Models.Domain.CustomProperty> Add(CustomPropertyAddOrPutDto model)
+        public async Task<Modules.CustomProperty.Models.CustomProperty> Add(CustomPropertyAddOrPutDto model)
         {
             var data = await Add(new CustomProperty
             {
@@ -149,7 +155,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return data.Data.ToDomainModel()!;
         }
 
-        public async Task<Abstractions.Models.Domain.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model)
+        public async Task<Modules.CustomProperty.Models.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model)
         {
             var rsp = await UpdateByKey(id, cp =>
             {
@@ -175,7 +181,7 @@ namespace Bakabase.InsideWorld.Business.Services
             var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == id,
                 CustomPropertyValueAdditionalItem.None, false);
             var propertyDescriptor = PropertyDescriptors[property.Type];
-            var stdValueHandler = StdValueHandlers[property.Type.ToStandardValueType()];
+            var stdValueHandler = StdValueHandlers[property.ValueType];
 
             var typedValues = values.Select(v => propertyDescriptor.BuildValueForDisplay(property, v)).ToList();
 
@@ -187,8 +193,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
             foreach (var d in typedValues)
             {
-                var (nv, loss) = await ConversionService.CheckConversionLoss(d, property.Type.ToStandardValueType(),
-                    type.ToStandardValueType());
+                var (nv, loss) =
+                    await ConversionService.CheckConversionLoss(d, property.ValueType, type.ToStandardValueType());
                 var list = SpecificEnumUtils<StandardValueConversionLoss>.Values.Where(s => loss?.HasFlag(s) == true)
                     .ToList();
                 foreach (var l in list)
@@ -214,6 +220,47 @@ namespace Bakabase.InsideWorld.Business.Services
             result.LossData = lossMap.Any() ? lossMap.ToDictionary(x => (int) x.Key, x => x.Value.ToArray()) : null;
 
             return result;
+        }
+
+        public async Task<BaseResponse> EnableAddingNewDataDynamically(int id)
+        {
+            var property = await GetByKey(id, CustomPropertyAdditionalItem.None);
+            object newOptions;
+            switch (property.EnumType)
+            {
+                case CustomPropertyType.SingleChoice:
+                {
+                    var options = (property as SingleChoiceProperty)?.Options ?? new ChoicePropertyOptions<string>();
+                    options.AllowAddingNewDataDynamically = true;
+                    newOptions = options;
+                    break;
+                }
+                case CustomPropertyType.MultipleChoice:
+                {
+                    var options = (property as MultipleChoiceProperty)?.Options ??
+                                  new ChoicePropertyOptions<List<string>>();
+                    options.AllowAddingNewDataDynamically = true;
+                    newOptions = options;
+                    break;
+                }
+                case CustomPropertyType.Multilevel:
+                {
+                    var options = (property as MultilevelProperty)?.Options ?? new MultilevelPropertyOptions();
+                    options.AllowAddingNewDataDynamically = true;
+                    newOptions = options;
+                    break;
+                }
+                default:
+                    return BaseResponseBuilder.BuildBadRequest($"Bad type for current property: {property.EnumType}");
+            }
+
+            await Put(id, new CustomPropertyAddOrPutDto
+            {
+                Name = property.Name,
+                Options = JsonConvert.SerializeObject(newOptions),
+                Type = property.Type
+            });
+            return BaseResponseBuilder.Ok;
         }
     }
 }

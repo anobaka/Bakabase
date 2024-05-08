@@ -71,7 +71,7 @@ const PropertySelector = ({
           return {
             id: p,
             name: t(EnumResourceProperty[p]),
-            type: map[p],
+            valueType: map[p],
             isReserved: true,
           };
         }),
@@ -101,6 +101,7 @@ const PropertySelector = ({
     // console.log(id, isReserved, reservedProperties, customProperties);
     return (
       <Property
+        key={`${property.id}-${property.isReserved}`}
         property={property}
         onClick={async () => {
           if (multiple) {
@@ -146,12 +147,18 @@ const PropertySelector = ({
     const filters: any[] = [];
     if (pool != 'all') {
       filters.push(
-        <Chip size={'sm'}>{t(pool == 'reserved' ? 'Reserved properties' : 'Custom properties')}</Chip>,
+        <Chip
+          key={'pool'}
+          size={'sm'}
+        >{t(pool == 'reserved' ? 'Reserved properties' : 'Custom properties')}</Chip>,
       );
     }
     if (valueTypes) {
       filters.push(
-        ...valueTypes.map(vt => <Chip size={'sm'}>{t(StandardValueType[vt])}</Chip>),
+        ...valueTypes.map(vt => (<Chip
+          key={vt}
+          size={'sm'}
+        >{t(StandardValueType[vt])}</Chip>)),
       );
     }
 
@@ -170,7 +177,7 @@ const PropertySelector = ({
 
   const filteredProperties = properties.filter(p => {
     if (valueTypes) {
-      return valueTypes.includes(p.type);
+      return valueTypes.includes(p.valueType);
     }
     return true;
   });

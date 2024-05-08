@@ -7,20 +7,10 @@ namespace Bakabase.Abstractions.Models.Domain
     {
         public int Id { get; set; }
         public string Name { get; set; } = null!;
-        public CustomPropertyType Type { get; set; }
+        public int Type { get; set; }
+        public StandardValueType ValueType { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<Category>? Categories { get; set; }
         public object? Options { get; set; }
-    }
-
-    public record CustomProperty<T> : CustomProperty
-    {
-        private T? _options;
-
-        public new T? Options
-        {
-            get => _options;
-            set => base.Options = _options = value;
-        }
     }
 }

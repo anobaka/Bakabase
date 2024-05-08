@@ -48,7 +48,7 @@ export default ({
         </Menu>
       );
     }
-    const operations = standardValueTypeSearchOperationsMap[propertyMap?.[filter.propertyId!]?.type] || [];
+    const operations = standardValueTypeSearchOperationsMap[propertyMap?.[filter.propertyId!]?.valueType] || [];
     if (operations.length == 0) {
       return (
         <Menu>
@@ -135,7 +135,7 @@ export default ({
       {noValue ? null : (
         <FilterValue
           operation={filter.operation}
-          valueType={propertyMap?.[filter.propertyId!]?.type}
+          valueType={propertyMap?.[filter.propertyId!]?.valueType}
           value={filter.value}
           onChange={value => {
             setFilter({

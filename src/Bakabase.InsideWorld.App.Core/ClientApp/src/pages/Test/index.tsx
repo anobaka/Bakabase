@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
 
 import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf/utils';
@@ -7,6 +7,7 @@ import { useTour } from '@reactour/tour';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, Button, Chip, Modal } from '@nextui-org/react';
 import { CloseCircleFilled } from '@ant-design/icons';
+import { createPortal } from 'react-dom';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelector from '@/components/FileSystemSelector';
@@ -110,6 +111,9 @@ export default () => {
   const [previewerVisible, setPreviewerVisible] = useState(false);
 
   const [filter, setFilter] = useState<IFilter>({});
+
+  useEffect(() => {
+  }, []);
 
   return (
     <div className={'test-page'}>

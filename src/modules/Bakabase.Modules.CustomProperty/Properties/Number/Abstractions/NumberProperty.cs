@@ -1,8 +1,8 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Number.Abstractions;
 

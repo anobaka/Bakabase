@@ -6,6 +6,7 @@ import type { ButtonProps } from '@/components/bakaui';
 import { Button } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
 import PropertyDialog from '@/components/PropertyDialog';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface ISimpleFooter {
   actions: ('ok' | 'cancel')[];
@@ -13,7 +14,7 @@ interface ISimpleFooter {
   cancelProps?: ButtonProps;
 }
 
-export interface ModalProps {
+export interface ModalProps extends DestroyableProps{
   title?: any;
   children?: any;
   defaultVisible?: boolean;
@@ -22,7 +23,6 @@ export interface ModalProps {
   onClose?: () => void;
   onOk?: () => any;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
-  afterClose?: any;
 }
 
 
@@ -130,7 +130,7 @@ const Modal = (props: ModalProps) => {
   return (
     <NextUiModal
       isOpen={isOpen}
-      onOpenChange={v => console.log('123456', v)}
+      // onOpenChange={v => console.log('123456', v)}
       onClose={onClose}
       scrollBehavior={'inside'}
       size={size}
@@ -138,9 +138,9 @@ const Modal = (props: ModalProps) => {
         // console.log(domRef.current, r);
         if (domRef.current && !r && !isOpen) {
           // closed
-          // there is no such a method likes afterClose in nextui v2.3.0
-          // console.log('after close');
-          props.afterClose?.();
+          // there is no such a method likes onDestroyed in nextui v2.3.0
+          // console.log('after close', props.onDestroyed);
+          props.onDestroyed?.();
         }
         domRef.current = r;
       }}

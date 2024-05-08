@@ -41,7 +41,7 @@ export default ({
   const editable = !property.isReserved && props.editable;
   const removable = !property.isReserved && props.removable;
 
-  const icon = property.type == undefined ? undefined : PropertyTypeIconMap[property.type];
+  const icon = property.valueType == undefined ? undefined : PropertyTypeIconMap[property.valueType];
 
   return (
     <div
@@ -66,7 +66,7 @@ export default ({
           {icon != undefined && (
             <Tooltip
               color={'foreground'}
-              content={t(StandardValueType[property.type])}
+              content={t(StandardValueType[property.valueType])}
             >
               <div className={styles.type}>
                 <CustomIcon
@@ -93,7 +93,7 @@ export default ({
                   },
                   onSaved: p => onSaved?.({
                     ...p,
-                    type: property.type as unknown as StandardValueType,
+                    valueType: property.valueType as unknown as StandardValueType,
                     isReserved: property.isReserved,
                   }),
                 });

@@ -3,7 +3,7 @@
     public record ChoicePropertyOptions<TValue>
     {
         public List<ChoiceOptions>? Choices { get; set; }
-        public bool AllowAddingNewOptionsDynamically { get; set; }
+        public bool AllowAddingNewDataDynamically { get; set; }
         public TValue? DefaultValue { get; set; }
 
         public record ChoiceOptions

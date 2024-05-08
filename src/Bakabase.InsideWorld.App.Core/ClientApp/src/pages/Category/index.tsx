@@ -11,6 +11,7 @@ import store from '@/store';
 import BApi from '@/sdk/BApi';
 import { MediaLibraryAdditionalItem, ResourceCategoryAdditionalItem } from '@/sdk/constants';
 import SimpleOneStepDialog from '@/components/SimpleOneStepDialog';
+import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 
 export default () => {
   const { t } = useTranslation();
@@ -21,6 +22,9 @@ export default () => {
   // const [enhancers, setEnhancers] = useState([]);
   const resourceOptions = store.useModelState('resourceOptions');
   const [allComponents, setAllComponents] = useState([]);
+
+  const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
@@ -30,7 +34,11 @@ export default () => {
 
   const loadAllCategories = (cb: () => void = () => {
   }): Promise<any> => {
-    return BApi.resourceCategory.getAllResourceCategories({ additionalItems: ResourceCategoryAdditionalItem.Validation | ResourceCategoryAdditionalItem.CustomProperties }).then((rsp) => {
+    return BApi.resourceCategory.getAllResourceCategories({ additionalItems:
+        ResourceCategoryAdditionalItem.Validation |
+        ResourceCategoryAdditionalItem.CustomProperties |
+      ResourceCategoryAdditionalItem.EnhancerOptions,
+    }).then((rsp) => {
       categoriesLoadedRef.current = true;
       rsp.data?.sort((a, b) => a.order! - b.order!);
       setCategories(rsp.data || []);
@@ -54,6 +62,10 @@ export default () => {
       await GetComponentDescriptors().invoke(a => {
         setAllComponents(a.data || []);
       });
+      const er = await BApi.enhancer.getAllEnhancerDescriptors();
+      const enhancerData = er.data || [];
+      // @ts-ignore
+      setEnhancers(enhancerData);
     } finally {
       setLoading(false);
     }
@@ -142,6 +154,7 @@ export default () => {
         loadAllMediaLibraries={loadAllMediaLibraries}
         categories={categories}
         libraries={libraries}
+        enhancers={enhancers}
       />
     </div>
   );

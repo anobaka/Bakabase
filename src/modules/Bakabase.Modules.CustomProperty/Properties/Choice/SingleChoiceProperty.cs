@@ -1,5 +1,4 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
@@ -20,7 +19,7 @@ public record SingleChoicePropertyValue : CustomPropertyValue<string>
 public class SingleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<SingleChoiceProperty,
     ChoicePropertyOptions<string>, SingleChoicePropertyValue, string>
 {
-    public override CustomPropertyType Type => CustomPropertyType.SingleChoice;
+    public override CustomPropertyType EnumType => CustomPropertyType.SingleChoice;
 
     public override SearchOperation[] SearchOperations { get; } =
     [

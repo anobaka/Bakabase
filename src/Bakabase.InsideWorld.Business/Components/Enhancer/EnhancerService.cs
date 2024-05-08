@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business.Components.Conversion;
 using Bakabase.InsideWorld.Business.Components.StandardValue;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
@@ -58,8 +59,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 .ToDictionary(d => d.Key,
                     d => d
                         .ToDictionary(c => c.EnhancerId, c => c));
-            var propertyIds = enhancerOptions.Where(o => o.FullOptions?.TargetFullOptionsMap != null)
-                .SelectMany(o => o.FullOptions?.TargetFullOptionsMap!.Select(c => c.Value.PropertyId)!).ToHashSet();
+            var propertyIds = enhancerOptions.Where(o => o.Options?.TargetOptionsMap != null)
+                .SelectMany(o => o.Options?.TargetOptionsMap!.Select(c => c.Value.PropertyId)!).ToHashSet();
             var propertyMap =
                 (await _customPropertyService.GetByKeys(propertyIds, CustomPropertyAdditionalItem.None, false))
                 .ToDictionary(d => d.Id, d => d);
@@ -78,7 +79,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
                 var targetOptions = categoryEnhancerOptionsMap
                     .GetValueOrDefault(resource.CategoryId)
-                    ?.GetValueOrDefault(enhancement.EnhancerId)?.FullOptions?.TargetFullOptionsMap
+                    ?.GetValueOrDefault(enhancement.EnhancerId)?.Options?.TargetOptionsMap
                     ?.GetValueOrDefault(enhancement.Target);
                 if (targetOptions == null)
                 {

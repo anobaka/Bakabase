@@ -33,7 +33,7 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
           return {
             id: p,
             name: t(EnumResourceProperty[p]),
-            type: map[p],
+            valueType: map[p],
             isReserved: true,
           };
         }),

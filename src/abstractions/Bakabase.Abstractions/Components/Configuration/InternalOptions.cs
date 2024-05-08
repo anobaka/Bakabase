@@ -131,25 +131,17 @@ namespace Bakabase.Abstractions.Components.Configuration
         public const string TempDirectoryName = "temp";
         public const string ComponentInfoFileName = "i.json";
 
-        public static readonly HashSet<ResourceProperty> PropertiesAppliedAliases =
-        [
-            ResourceProperty.Name,
-            ResourceProperty.Tag
-        ];
-
-
-        public static readonly ConcurrentDictionary<SearchableReservedProperty, CustomPropertyType>
+        public static readonly ConcurrentDictionary<SearchableReservedProperty, StandardValueType>
             ReservedResourcePropertyAndValueTypeMap =
-                new(new Dictionary<SearchableReservedProperty, CustomPropertyType>()
+                new(new Dictionary<SearchableReservedProperty, StandardValueType>
                 {
-                    {SearchableReservedProperty.FileName, CustomPropertyType.SingleLineText},
-                    {SearchableReservedProperty.DirectoryPath, CustomPropertyType.SingleLineText},
-                    {SearchableReservedProperty.CreatedAt, CustomPropertyType.DateTime},
-                    {SearchableReservedProperty.FileCreatedAt, CustomPropertyType.DateTime},
-                    {SearchableReservedProperty.FileModifiedAt, CustomPropertyType.DateTime},
-                    {SearchableReservedProperty.Tag, CustomPropertyType.MultipleChoice},
-                    {SearchableReservedProperty.Category, CustomPropertyType.SingleChoice},
-                    {SearchableReservedProperty.MediaLibrary, CustomPropertyType.SingleChoice},
+                    {SearchableReservedProperty.FileName, StandardValueType.String},
+                    {SearchableReservedProperty.DirectoryPath, StandardValueType.String},
+                    {SearchableReservedProperty.CreatedAt, StandardValueType.DateTime},
+                    {SearchableReservedProperty.FileCreatedAt, StandardValueType.DateTime},
+                    {SearchableReservedProperty.FileModifiedAt, StandardValueType.DateTime},
+                    {SearchableReservedProperty.Category, StandardValueType.Decimal},
+                    {SearchableReservedProperty.MediaLibrary, StandardValueType.Decimal},
                 });
     }
 }

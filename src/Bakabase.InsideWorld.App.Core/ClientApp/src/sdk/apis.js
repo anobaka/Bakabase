@@ -2145,6 +2145,51 @@ export const CalculateCustomPropertyTypeConversionLossURL = function(parameters 
 }
 /**
  * 
+ * request: EnableAddingNewDataDynamicallyForCustomProperty
+ * url: EnableAddingNewDataDynamicallyForCustomPropertyURL
+ * method: EnableAddingNewDataDynamicallyForCustomProperty_TYPE
+ * raw_url: EnableAddingNewDataDynamicallyForCustomProperty_RAW_URL
+ * @param id - 
+ */
+export const EnableAddingNewDataDynamicallyForCustomProperty = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property/{id}/options/adding-new-data-dynamically'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const EnableAddingNewDataDynamicallyForCustomProperty_RAW_URL = function() {
+  return '/custom-property/{id}/options/adding-new-data-dynamically'
+}
+export const EnableAddingNewDataDynamicallyForCustomProperty_TYPE = function() {
+  return 'put'
+}
+export const EnableAddingNewDataDynamicallyForCustomPropertyURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property/{id}/options/adding-new-data-dynamically'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetStatistics
  * url: GetStatisticsURL
  * method: GetStatistics_TYPE
@@ -8313,6 +8358,57 @@ export const BindCustomPropertiesToCategoryURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource-category/{id}/custom-properties'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: BindCustomPropertyToCategory
+ * url: BindCustomPropertyToCategoryURL
+ * method: BindCustomPropertyToCategory_TYPE
+ * raw_url: BindCustomPropertyToCategory_RAW_URL
+ * @param categoryId - 
+ * @param customPropertyId - 
+ */
+export const BindCustomPropertyToCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource-category/{categoryId}/custom-property/{customPropertyId}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  if (parameters['categoryId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: categoryId'))
+  }
+  path = path.replace('{customPropertyId}', `${parameters['customPropertyId']}`)
+  if (parameters['customPropertyId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: customPropertyId'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const BindCustomPropertyToCategory_RAW_URL = function() {
+  return '/resource-category/{categoryId}/custom-property/{customPropertyId}'
+}
+export const BindCustomPropertyToCategory_TYPE = function() {
+  return 'post'
+}
+export const BindCustomPropertyToCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource-category/{categoryId}/custom-property/{customPropertyId}'
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  path = path.replace('{customPropertyId}', `${parameters['customPropertyId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

@@ -1,7 +1,7 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models;
 using Bakabase.Modules.CustomProperty.Properties.Number.Abstractions;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Number;
@@ -18,5 +18,5 @@ public record RatingPropertyValue : CustomPropertyValue<decimal>;
 public class RatingPropertyDescriptor : NumberPropertyDescriptor<RatingProperty, RatingPropertyOptions,
     RatingPropertyValue>
 {
-    public override CustomPropertyType Type => CustomPropertyType.Rating;
+    public override CustomPropertyType EnumType => CustomPropertyType.Rating;
 }

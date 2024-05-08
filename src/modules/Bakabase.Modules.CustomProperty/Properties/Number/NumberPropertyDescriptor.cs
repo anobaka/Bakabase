@@ -5,5 +5,5 @@ namespace Bakabase.Modules.CustomProperty.Properties.Number;
 
 public class NumberPropertyDescriptor : NumberPropertyDescriptor<NumberProperty, NumberPropertyOptions, NumberPropertyValue>
 {
-    public override CustomPropertyType Type => CustomPropertyType.Number;
+    public override CustomPropertyType EnumType => CustomPropertyType.Number;
 }

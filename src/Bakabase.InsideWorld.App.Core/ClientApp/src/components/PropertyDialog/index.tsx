@@ -104,7 +104,7 @@ const PropertyDialog = ({
                 className={'mt-4'}
                 label={t('Allow adding new options while choosing')}
                 size={'sm'}
-                isSelected={options?.allowAddingNewOptionsWhileChoosing}
+                isSelected={options?.allowAddingNewDataDynamically}
                 onValueChange={c => {
                   setProperty({
                     ...property,
@@ -306,6 +306,7 @@ const PropertyDialog = ({
           onSaved?.({
             id: rsp.data!.id!,
             name: rsp.data!.name!,
+            valueType: rsp.data!.valueType!,
             type: rsp.data!.type!,
           });
           close();

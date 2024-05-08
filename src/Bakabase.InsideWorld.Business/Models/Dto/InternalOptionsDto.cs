@@ -12,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Models.Dto
 
 		public record ResourceOptions
 		{
-			public IDictionary<int, CustomPropertyType> ReservedResourcePropertyAndValueTypeMap { get; set; } =
+			public IDictionary<int, StandardValueType> ReservedResourcePropertyAndValueTypeMap { get; set; } =
 				InternalOptions.ReservedResourcePropertyAndValueTypeMap.ToDictionary(x => (int) x.Key, x => x.Value);
 
             public Dictionary<int, SearchOperation[]> CustomPropertyValueSearchOperationsMap { get; set; } = new();

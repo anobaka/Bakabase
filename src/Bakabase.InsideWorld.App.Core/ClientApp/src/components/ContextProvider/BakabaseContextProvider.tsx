@@ -1,14 +1,15 @@
 import { ConfigProvider, theme } from 'antd';
 import { NextUIProvider, useModal } from '@nextui-org/react';
-import type { FC } from 'react';
+import type { ComponentType, FC } from 'react';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigation } from 'ice';
+import { createPortal } from './helpers';
 import store from '@/store';
 import { UiTheme } from '@/sdk/constants';
 import { uuidv4 } from '@/components/utils';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
-type CreatePortal = <P extends DestroyableProps>(C: FC<P>, props: P) => { remove: () => void };
+type CreatePortal = <P extends DestroyableProps>(C: ComponentType<P>, props: P) => {destroy: () => void; key: string} ;
 
 interface IContext {
   isDarkMode: boolean;
@@ -16,34 +17,34 @@ interface IContext {
 }
 
 export const BakabaseContext = createContext<IContext>({
-  createPortal: () => ({ remove: () => {} }),
+  createPortal,
   isDarkMode: false,
 });
 
 export default ({ children }) => {
   const appOptions = store.useModelState('appOptions');
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
-  const [componentMap, setComponentMap] = useState<Record<string, { Component: any; props: any}>>({});
+  // const [componentMap, setComponentMap] = useState<Record<string, { Component: any; props: any}>>({});
 
-  function removePortal(key: string) {
-    delete componentMap[key];
-    setComponentMap({ ...componentMap });
-  }
+  // function removePortal(key: string) {
+  //   delete componentMap[key];
+  //   setComponentMap({ ...componentMap });
+  // }
 
-  const createPortal: CreatePortal = (C, props) => {
-    console.log('creating portal');
-    const key = uuidv4();
-    componentMap[key] = {
-      Component: C,
-      props,
-    };
-
-    setComponentMap({ ...componentMap });
-
-    return {
-      remove: () => removePortal(key),
-    };
-  };
+  // const createPortal: CreatePortal = (C, props) => {
+  //   console.log('creating portal');
+  //   const key = uuidv4();
+  //   componentMap[key] = {
+  //     Component: C,
+  //     props,
+  //   };
+  //
+  //   setComponentMap({ ...componentMap });
+  //
+  //   return {
+  //     remove: () => removePortal(key),
+  //   };
+  // };
 
   useEffect(() => {
     if (appOptions.initialized) {
@@ -58,7 +59,8 @@ export default ({ children }) => {
     };
   }, []);
 
-  console.log('current components', componentMap);
+  // console.log('current components', componentMap);
+  // console.log(appOptions, isDarkMode);
 
   return (
     <NextUIProvider>
@@ -73,25 +75,27 @@ export default ({ children }) => {
             createPortal,
           }}
         >
-          {children}
-          {Object.keys(componentMap).map(key => {
-            const {
-              Component,
-              props,
-            } = componentMap[key];
-            return (
-              <Component
-                key={key}
-                {...props}
-                onDestroyed={() => {
-                  if (props.onDestroyed) {
-                    props.onDestroyed();
-                  }
-                  removePortal(key);
-                }}
-              />
-            );
-          })}
+          <div className={`${isDarkMode ? 'dark' : 'light'} text-foreground bg-background`}>
+            {children}
+          </div>
+          {/* {Object.keys(componentMap).map(key => { */}
+          {/*   const { */}
+          {/*     Component, */}
+          {/*     props, */}
+          {/*   } = componentMap[key]; */}
+          {/*   return ( */}
+          {/*     <Component */}
+          {/*       key={key} */}
+          {/*       {...props} */}
+          {/*       onDestroyed={() => { */}
+          {/*         if (props.onDestroyed) { */}
+          {/*           props.onDestroyed(); */}
+          {/*         } */}
+          {/*         removePortal(key); */}
+          {/*       }} */}
+          {/*     /> */}
+          {/*   ); */}
+          {/* })} */}
         </BakabaseContext.Provider>
       </ConfigProvider>
     </NextUIProvider>

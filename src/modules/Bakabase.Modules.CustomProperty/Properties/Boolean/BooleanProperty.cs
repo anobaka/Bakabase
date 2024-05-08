@@ -1,5 +1,4 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
@@ -7,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Boolean;
 
-public record BooleanProperty(): Abstractions.Models.Domain.CustomProperty;
+public record BooleanProperty(): Models.CustomProperty;
 public record BooleanPropertyValue : CustomPropertyValue<bool>
 {
 }
@@ -15,7 +14,7 @@ public record BooleanPropertyValue : CustomPropertyValue<bool>
 public class BooleanPropertyDescriptor : AbstractCustomPropertyDescriptor<BooleanProperty, BooleanPropertyValue,
     bool>
 {
-    public override CustomPropertyType Type => CustomPropertyType.Boolean;
+    public override CustomPropertyType EnumType => CustomPropertyType.Boolean;
 
     public override SearchOperation[] SearchOperations { get; } =
     [

@@ -1,7 +1,7 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Models;
 using Bakabase.Modules.CustomProperty.Properties.Number.Abstractions;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Number;
@@ -19,5 +19,5 @@ public record PercentagePropertyValue : CustomPropertyValue<decimal>;
 public class PercentagePropertyDescriptor : NumberPropertyDescriptor<PercentageProperty, PercentagePropertyOptions,
     PercentagePropertyValue>
 {
-    public override CustomPropertyType Type => CustomPropertyType.Percentage;
+    public override CustomPropertyType EnumType => CustomPropertyType.Percentage;
 }

@@ -16,7 +16,7 @@ interface IProps {
 export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
   const [options, setOptions] = useState<EnhancerTargetFullOptions>(propsOptions ?? {} as EnhancerTargetFullOptions);
 
-  console.log(propsOptions);
+  // console.log(propsOptions);
 
   const patchOptions = (changes: Partial<EnhancerTargetFullOptions>, triggerChange: boolean = true) => {
     const no = {
@@ -29,6 +29,8 @@ export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
     }
   };
 
+  const finalOptions = propsOptions ?? options;
+
   return (
     <>
       {optionsItems?.map((item, index) => {
@@ -36,14 +38,16 @@ export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
           case EnhancerTargetOptionsItem.IntegrateWithAlias:
             return (
               <IntegrateWithAlias
-                integrateWithAlias={options.integrateWithAlias ?? false}
+                key={item}
+                integrateWithAlias={finalOptions.integrateWithAlias ?? false}
                 onChange={o => patchOptions({ integrateWithAlias: o })}
               />
             );
           case EnhancerTargetOptionsItem.AutoMatchMultilevelString:
             return (
               <AutoMatchMultilevelString
-                autoMatch={options.autoMatchMultilevelString ?? false}
+                key={item}
+                autoMatch={finalOptions.autoMatchMultilevelString ?? false}
                 onChange={o => patchOptions({ autoMatchMultilevelString: o })}
               />
             );

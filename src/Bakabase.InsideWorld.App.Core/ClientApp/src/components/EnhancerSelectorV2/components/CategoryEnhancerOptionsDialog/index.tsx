@@ -1,34 +1,46 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import { Message as Notification } from '@alifd/next';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { useUpdate } from 'react-use';
 import {
   Button,
-  Checkbox,
-  Modal,
+  Modal, Popover,
   Table,
   TableBody,
   TableCell,
   TableColumn,
   TableHeader,
   TableRow,
+  Tooltip,
 } from '@/components/bakaui';
 // import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Modal } from '@nextui-org/react';
 import { createPortalOfComponent } from '@/components/utils';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { StandardValueIcon } from '@/components/StandardValue';
-import { SpecialTextType, StandardValueType } from '@/sdk/constants';
+import {
+  CustomPropertyType,
+  ResourceCategoryAdditionalItem,
+  SpecialTextType,
+  StandardValueType,
+} from '@/sdk/constants';
 import PropertySelector from '@/components/PropertySelector';
 import BApi from '@/sdk/BApi';
 import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
 import type {
-  EnhancerFullOptions, EnhancerTargetFullOptions } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
-import { defaultCategoryEnhancerTargetOptions,
+  EnhancerFullOptions,
+  EnhancerTargetFullOptions,
 } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
-import type { IProperty } from '@/components/Property/models';
+import {
+  defaultCategoryEnhancerTargetOptions,
+} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
+import type { IChoicePropertyOptions, IProperty } from '@/components/Property/models';
 import { PropertyLabel } from '@/components/Property';
 import TargetOptions
   from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/TargetOptions';
 import type { DestroyableProps } from '@/components/bakaui/types';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import PropertyTip
+  from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/PropertyTip';
 
 const StdValueSpecialTextIntegrationMap: { [key in StandardValueType]?: SpecialTextType } = {
   [StandardValueType.DateTime]: SpecialTextType.DateTime,
@@ -38,45 +50,80 @@ interface IProps extends DestroyableProps{
   enhancer: EnhancerDescriptor;
   categoryId: number;
   options?: EnhancerFullOptions;
-  onChanged?: (options: EnhancerFullOptions) => void;
 }
+
+const patchTargetOptions = (options: EnhancerFullOptions, targetId: number, changes: Partial<EnhancerTargetFullOptions>): EnhancerFullOptions => {
+    return {
+    ...options,
+    targetOptionsMap: {
+      ...options.targetOptionsMap,
+      [targetId]: {
+        ...options.targetOptionsMap?.[targetId],
+        ...changes,
+      },
+    },
+  };
+};
 
 const CategoryEnhancerOptionsDialog = ({
                                          enhancer,
                                          categoryId,
-                                         options: propOptions,
                                          onDestroyed,
-                                         onChanged,
                                        }: IProps) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
+  const forceUpdate = useUpdate();
 
-  const [categoryName, setCategoryName] = useState('');
+  const [category, setCategory] = useState<{id: number; name: string; customPropertyIds: number[]}>({
+    id: 0,
+    name: '',
+    customPropertyIds: [],
+  });
 
-  const [options, setOptions] = useState<EnhancerFullOptions>(propOptions ?? {});
+  const [options, setOptions] = useState<EnhancerFullOptions>({});
   const [propertyMap, setPropertyMap] = useState<Record<number, IProperty>>({});
 
   useEffect(() => {
-    BApi.resourceCategory.getResourceCategory(categoryId).then(r => {
-      setCategoryName(r.data!.name!);
-    });
-
-    BApi.customProperty.getAllCustomPropertiesV2().then(r => {
-      setPropertyMap((r.data ?? []).reduce<Record<number, IProperty>>((s, t) => {
-        s[t.id!] = t as IProperty;
-        return s;
-      }, {}));
-    });
+    loadCategory();
+    loadAllProperties();
   }, []);
+
+  const loadCategory = async () => {
+    const r = await BApi.resourceCategory.getResourceCategory(categoryId,
+      // @ts-ignore
+      { additionalItems: ResourceCategoryAdditionalItem.EnhancerOptions | ResourceCategoryAdditionalItem.CustomProperties });
+    setCategory({
+      id: r.data?.id ?? 0,
+      name: r.data?.name ?? '',
+      customPropertyIds: (r.data?.customProperties ?? []).map(p => p.id!),
+    });
+    // @ts-ignore
+    const ceo = (r.data?.enhancerOptions?.find(x => x.enhancerId == enhancer.id)?.options ?? {}) as EnhancerFullOptions;
+    setOptions(ceo);
+  };
+
+  const loadAllProperties = async () => {
+    const r = await BApi.customProperty.getAllCustomPropertiesV2();
+    const pm = (r.data ?? []).reduce<Record<number, IProperty>>((s, t) => {
+      s[t.id!] = t as IProperty;
+      return s;
+    }, {});
+    // console.log(pm, r.data ?? []);
+    setPropertyMap(pm);
+    console.log('loadAllProperties', pm);
+  };
+
+  console.log(options);
 
   return (
     <Modal
       size={'xl'}
       title={t('Configure enhancer:{{enhancerName}} for category:{{categoryName}}', {
         enhancerName: enhancer.name,
-        categoryName,
+        categoryName: category.name,
       })}
       defaultVisible
-      afterClose={onDestroyed}
+      onDestroyed={onDestroyed}
       footer={{
         actions: ['cancel'],
       }}
@@ -97,11 +144,15 @@ const CategoryEnhancerOptionsDialog = ({
             <TableColumn>{t('Save as property')}</TableColumn>
             <TableColumn>{t('Other options')}</TableColumn>
           </TableHeader>
-          <TableBody items={enhancer.targets}>
-            {(target) => {
+          <TableBody>
+            {enhancer.targets.map((target) => {
               const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[target.valueType];
-              const targetOptions: EnhancerTargetFullOptions = options.targetOptionsMap?.[target.id] ?? defaultCategoryEnhancerTargetOptions();
-              const property = targetOptions.propertyId > 0 ? propertyMap[targetOptions.propertyId] : undefined;
+              options.targetOptionsMap ??= {};
+              let targetOptions: EnhancerTargetFullOptions = options.targetOptionsMap[target.id];
+              if (targetOptions == undefined) {
+                targetOptions = options.targetOptionsMap[target.id] = defaultCategoryEnhancerTargetOptions(target.optionsItems);
+              }
+              const property = targetOptions.propertyId != undefined ? propertyMap[targetOptions.propertyId] : undefined;
               return (
                 <TableRow key={target.id}>
                   <TableCell>
@@ -119,22 +170,40 @@ const CategoryEnhancerOptionsDialog = ({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size={'sm'}
-                      variant={'light'}
-                      color={'primary'}
-                      onClick={() => {
-                        PropertySelector.show({
-                          addable: true,
-                          editable: true,
-                          pool: 'custom',
-                        });
-                      }}
-                    >
-                      {property ? (
-                        <PropertyLabel property={property} />
-                      ) : t('Select a property')}
-                    </Button>
+                    <div className={'flex items-center gap-1'}>
+                      <Button
+                        // size={'sm'}
+                        variant={'light'}
+                        color={property ? 'success' : 'primary'}
+                        onClick={() => {
+                          PropertySelector.show({
+                            addable: true,
+                            editable: true,
+                            pool: 'custom',
+                            multiple: false,
+                            onSubmit: async properties => {
+                              const no = patchTargetOptions(options, target.id, { propertyId: properties[0].id });
+                              // console.log(no);
+                              await BApi.resourceCategory.patchCategoryEnhancerOptions(categoryId, enhancer.id, { options: no });
+                              await loadAllProperties();
+                              setOptions(no);
+                            },
+                          });
+                        }}
+                      >
+                        {property ? (
+                          <PropertyLabel property={property} />
+                        ) : t('Select a property')}
+                      </Button>
+                      {property && (
+                        <PropertyTip
+                          property={property}
+                          category={category}
+                          onAllowAddingNewDataDynamicallyEnabled={loadAllProperties}
+                          onPropertyBoundToCategory={loadCategory}
+                        />
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className={'flex flex-col gap-1'}>
@@ -142,13 +211,9 @@ const CategoryEnhancerOptionsDialog = ({
                         options={targetOptions}
                         optionsItems={target.optionsItems}
                         onChange={o => {
-                          const no = {
-                            ...options,
-                            targetOptionsMap: {
-                              ...options.targetOptionsMap,
-                              [target.id]: o,
-                            },
-                          };
+                          delete o.propertyId;
+                          const no = patchTargetOptions(options, target.id, o);
+                          // console.log(options, target.id, o, no);
                           BApi.resourceCategory.patchCategoryEnhancerOptions(categoryId, enhancer.id, { options: no });
                           setOptions(no);
                         }}
@@ -157,7 +222,7 @@ const CategoryEnhancerOptionsDialog = ({
                   </TableCell>
                 </TableRow>
               );
-            }}
+            })}
           </TableBody>
         </Table>
       </div>

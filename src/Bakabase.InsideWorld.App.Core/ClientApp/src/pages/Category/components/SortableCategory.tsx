@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Balloon, Checkbox, Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
+import { Balloon, Checkbox, Dialog, Input, Menu, Message } from '@alifd/next';
 import { SketchPicker } from 'react-color';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
+import { UnorderedListOutlined } from '@ant-design/icons';
 import AddMediaLibraryInBulkDialog from './AddMediaLibraryInBulkDialog';
 import { AddMediaLibrary, RemoveCategoryEnhancementRecords, UpdateResourceCategory } from '@/sdk/apis';
 import CustomIcon from '@/components/CustomIcon';
@@ -16,7 +17,18 @@ import BApi from '@/sdk/BApi';
 import ClickableIcon from '@/components/ClickableIcon';
 import SimpleLabel from '@/components/SimpleLabel';
 import CategoryCustomPropertyBinderDialog from '@/pages/Category/components/CustomPropertyBinder';
-import { Chip, Button, Spacer, Tooltip, Badge } from '@/components/bakaui';
+import {
+  Chip,
+  Button,
+  Spacer,
+  Tooltip,
+  Badge,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Modal,
+} from '@/components/bakaui';
 import DisplayNameRuleEditorDialog from '@/pages/Category/components/DisplayNameRuleEditorDialog';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -39,6 +51,7 @@ export default (({
                    libraries,
                    forceUpdate,
                    allComponents,
+                   enhancers,
                  }) => {
   const {
     attributes,
@@ -71,10 +84,6 @@ export default (({
   };
 
   const components = (category.componentsData || []);
-  const enhancers = components.filter((e) => e.componentType == ComponentType.Enhancer);
-
-  const componentKeys = components.map(a => a.componentKey);
-
   // console.log('[SortableCategory]rendering', category, enhancers, componentKeys);
 
   const renderBasicComponentSelector = (componentType, componentKey = undefined) => {
@@ -116,43 +125,6 @@ export default (({
         }),
       });
     }
-  };
-
-  const renderEnhancersSelector = () => {
-    let eo = {
-      ...(category.enhancementOptions || {}),
-      enhancerKeys: category.componentsData?.filter(d => d.componentType == ComponentType.Enhancer).map(d => d.componentKey),
-    };
-    Dialog.show({
-      v2: true,
-      style: { minWidth: 1000 },
-      closeMode: ['esc', 'close', 'mask'],
-      title: t('Enhancers'),
-      width: 'auto',
-      // height: 'auto',
-      content: (
-        <EnhancerSelector
-          defaultValue={eo}
-          onChange={v => {
-            eo = v;
-          }}
-        />
-      ),
-      onOk: () => new Promise((resolve, reject) => {
-        return BApi.resourceCategory.configureResourceCategoryComponents(category.id, {
-          componentKeys: eo.enhancerKeys,
-          type: ComponentType.Enhancer,
-          enhancementOptions: eo,
-        }).then(a => {
-          if (!a.code) {
-            loadAllCategories();
-            resolve(a);
-          } else {
-            reject();
-          }
-        });
-      }),
-    });
   };
 
   return (
@@ -279,47 +251,42 @@ export default (({
               </span>
             )}
           </div>
-          <Dropdown
-            trigger={(
-              <ClickableIcon
-                type={'ellipsis-circle'}
-                colorType={'normal'}
-                className={'text-large'}
-              />
-            )}
-            className={'category-page-category-more-operations-popup'}
-            triggerType={['click']}
-          >
-            <Menu>
-              <Menu.Item
-                className={'warning'}
-                onClick={() => {
-                  Dialog.confirm({
-                    title: `${t('Removing all enhancement records of resources under this category')}`,
-                    closeable: true,
-                    onOk: () => new Promise(((resolve, reject) => {
-                      RemoveCategoryEnhancementRecords({
-                        id: category.id,
-                      })
-                        .invoke((a) => {
-                          if (!a.code || a.code == 304) {
-                            resolve();
-                          }
-                        });
-                    })),
-                  });
-                }}
+          <Dropdown placement={'bottom-start'}>
+            <DropdownTrigger>
+              <Button
+                size={'sm'}
+                isIconOnly
               >
-                <CustomIcon type="flashlight" />
-                {t('Remove all enhancement records')}
-              </Menu.Item>
-              <Menu.Item
-                className={'warning'}
-                onClick={() => {
-                  Dialog.confirm({
+                <UnorderedListOutlined className={'text-medium'} />
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              aria-label={'static actions'}
+              onAction={key => {
+              switch (key) {
+                case 'enhance-manually': {
+                  break;
+                }
+                case 'delete-enhancements': {
+                  createPortal(Modal, {
+                    defaultVisible: true,
+                    title: t('Removing all enhancement records of resources under this category'),
+                    children: t('This operation cannot be undone. Would you like to proceed?'),
+                    onOk: async () => {
+
+                    },
+                  });
+                  break;
+                }
+                case 'delete-category':
+                {
+                  createPortal(Modal, {
+                    defaultVisible: true,
                     title: `${t('Deleting')} ${category.name}`,
-                    content: t('All related data will be deleted too, are you sure?'),
-                    closeable: true,
+                    children: (<>
+                      <div>{t('All related data will be deleted too, are you sure?')}</div>
+                      <div>{t('This operation cannot be undone. Would you like to proceed?')}</div>
+                    </>),
                     onOk: async () => {
                       const rsp = await BApi.resourceCategory.deleteResourceCategoryAndClearAllRelatedData(category.id);
                       if (!rsp.code) {
@@ -327,14 +294,26 @@ export default (({
                       }
                     },
                   });
-                }}
+                  break;
+                }
+              }
+            }}
+            >
+              <DropdownItem
+                className="text-danger"
+                color="danger"
+                key={'delete-enhancements'}
               >
-                <CustomIcon
-                  type="delete"
-                />
-                {t('Remove')}
-              </Menu.Item>
-            </Menu>
+                {t('Remove all enhancement records')}
+              </DropdownItem>
+              <DropdownItem
+                className="text-danger"
+                color="danger"
+                key={'delete-category'}
+              >
+                {t('Delete category')}
+              </DropdownItem>
+            </DropdownMenu>
           </Dropdown>
           <Spacer x={2} />
           <Tooltip
@@ -350,6 +329,7 @@ export default (({
         <div className="right">
           <Button
             variant={'bordered'}
+            color={'default'}
             size={'sm'}
             onClick={() => {
               let name;
@@ -415,7 +395,7 @@ export default (({
                       renderBasicComponentSelector(type.value);
                     }}
                     type="edit-square"
-                    size={'small'}
+                    className={'text-small'}
                   />
                 )}
               </div>
@@ -448,7 +428,10 @@ export default (({
             >
               <span>{t(CoverSelectOrder[category.coverSelectionOrder] ?? CoverSelectOrder[CoverSelectOrder.FilenameAscending])}</span>
               &nbsp;
-              <CustomIcon type="sorting" size={'small'} />
+              <CustomIcon
+                type="sorting"
+                className={'text-small'}
+              />
             </span>
           </span>
         </div>
@@ -493,20 +476,51 @@ export default (({
             <div
               className="flex flex-wrap gap-1"
             >
-              <Button
-                variant={'light'}
-                color={'primary'}
-                size={'sm'}
-                onClick={() => {
-                  createPortal(EnhancerSelectorV2, {
-                    categoryId: category.id,
-                    // category: category,
-                    // onSaved: loadAllCategories,
-                  });
-                }}
-              >
-                {t('Click to set')}
-              </Button>
+              {
+                category.enhancerOptions?.filter(eo => eo.active).length > 0 ? (
+                  <div
+                    className="flex flex-wrap gap-1"
+                  >
+                    {category.enhancerOptions?.filter(eo => eo.active).map((e, i) => {
+                      const enhancer = enhancers?.find(eh => eh.id == e.enhancerId);
+                      return (
+                        <Button
+                          size={'sm'}
+                          variant={'flat'}
+                          key={e.id}
+                          onClick={() => {
+                            // createPortal(EnhancerSelectorV2, {
+                            //   categoryId: category.id,
+                            //   onClose: loadAllCategories,
+                            // });
+                            createPortal(EnhancerSelectorV2, {
+                              categoryId: category.id,
+                              onClose: loadAllCategories,
+                            });
+                          }}
+                        >
+                          {enhancer?.name}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <Button
+                    variant={'light'}
+                    color={'primary'}
+                    size={'sm'}
+                    onClick={() => {
+                      createPortal(EnhancerSelectorV2, {
+                        categoryId: category.id,
+                        onClose: loadAllCategories,
+                      });
+                    }}
+                  >
+                    {t('Click to set')}
+                  </Button>
+                )
+              }
+
             </div>
           </div>
         </div>
@@ -528,6 +542,7 @@ export default (({
                   {category.customProperties?.map((e, i) => (
                     <Button
                       size={'sm'}
+                      variant={'flat'}
                       key={e.id}
                       onClick={() => {
                         CategoryCustomPropertyBinderDialog.show({
@@ -598,71 +613,80 @@ export default (({
             >
               <CustomIcon type="warning-circle" />
             </Tooltip>
-            <Dropdown
-              trigger={(
-                <ClickableIcon
-                  colorType={'normal'}
-                  type={'plus-circle'}
-                  onClick={() => {
-                    let n;
-                    Dialog.show({
-                      title: t('Add media library'),
-                      content: (
-                        <Input
-                          size={'large'}
-                          placeholder={t('Name of media library')}
-                          style={{ width: 600 }}
-                          defaultValue={n}
-                          onChange={(v) => {
-                            n = v;
-                          }}
-                        />
-                      ),
-                      closeable: true,
-                      onOk: () => new Promise(((resolve, reject) => {
-                        if (n?.length > 0) {
-                          AddMediaLibrary({
-                            model: {
-                              categoryId: category.id,
-                              name: n,
-                            },
-                          })
-                            .invoke((t) => {
-                              if (!t.code) {
-                                loadAllMediaLibraries();
-                                resolve();
-                              } else {
-                                reject();
-                              }
-                            })
-                            .catch(() => {
-                              reject();
-                            });
-                        } else {
-                          reject();
-                          Message.error(t('Invalid data'));
-                        }
-                      })),
-                    });
-                  }}
-                />
-              )}
-              triggerType={['hover']}
-            >
-              <Menu>
-                <Menu.Item
-                  className={'warning'}
-                  onClick={() => {
-                    AddMediaLibraryInBulkDialog.show({
-                      categoryId: category.id,
-                      onSubmitted: loadAllMediaLibraries,
-                    });
-                  }}
+            <Dropdown placement={'bottom-start'}>
+              <DropdownTrigger>
+                <Button
+                  size={'sm'}
+                  isIconOnly
                 >
-                  <CustomIcon type="playlist_add" />
+                  <UnorderedListOutlined className={'text-medium'} />
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                aria-label={'static actions'}
+                onAction={key => {
+                  switch (key) {
+                    case 'add': {
+                      let n;
+                      createPortal(Modal, {
+                        defaultVisible: true,
+                        title: t('Add a media library'),
+                        children: (
+                          <Input
+                            size={'large'}
+                            placeholder={t('Name of media library')}
+                            style={{ width: '100%' }}
+                            defaultValue={n}
+                            onChange={(v) => {
+                              n = v;
+                            }}
+                          />
+                        ),
+                        onOk: async () => {
+                          if (n?.length > 0) {
+                            const r = await BApi.mediaLibrary.addMediaLibrary({
+                                categoryId: category.id,
+                                name: n,
+                            });
+                            if (!r.code) {
+                              loadAllMediaLibraries();
+                            } else {
+                              throw new Error(r.message!);
+                            }
+                          } else {
+                            Message.error(t('Invalid data'));
+                            throw new Error('Invalid data');
+                          }
+                        },
+                      });
+                      break;
+                    }
+                    case 'add-in-bulk':
+                    {
+                      AddMediaLibraryInBulkDialog.show({
+                        categoryId: category.id,
+                        onSubmitted: loadAllMediaLibraries,
+                      });
+                      break;
+                    }
+                  }
+                }}
+              >
+                <DropdownItem
+                  // className="text-danger"
+                  // color="danger"
+                  key={'add'}
+                >
+                  {t('Add a media library')}
+                </DropdownItem>
+                <DropdownItem
+                  // className="text-danger"
+                  // color="danger"
+                  key={'add-in-bulk'}
+                >
                   {t('Add in bulk')}
-                </Menu.Item>
-              </Menu>
+                </DropdownItem>
+              </DropdownMenu>
             </Dropdown>
           </div>
           <div className="path-configuration header">

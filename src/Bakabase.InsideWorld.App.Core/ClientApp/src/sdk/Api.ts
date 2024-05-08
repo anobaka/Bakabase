@@ -50,7 +50,6 @@ export interface BakabaseAbstractionsModelsDomainCategoryEnhancerOptions {
   /** @format int32 */
   enhancerId?: number;
   active?: boolean;
-  options?: BakabaseAbstractionsModelsDomainEnhancerOptions;
 }
 
 export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
@@ -117,8 +116,10 @@ export interface BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
   id?: number;
   name?: string | null;
-  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel] */
-  type?: BakabaseAbstractionsModelsDomainConstantsCustomPropertyType;
+  /** @format int32 */
+  type?: number;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString] */
+  valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** @format date-time */
   createdAt?: string;
   categories?: BakabaseAbstractionsModelsDomainCategory[] | null;
@@ -146,10 +147,6 @@ export interface BakabaseAbstractionsModelsDomainEnhancerDescriptor {
   targets?: BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor[] | null;
 }
 
-export interface BakabaseAbstractionsModelsDomainEnhancerOptions {
-  targetOptionsMap?: Record<string, BakabaseAbstractionsModelsDomainEnhancerTargetOptions>;
-}
-
 export interface BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor {
   id?: SystemEnum;
   name?: string | null;
@@ -159,15 +156,10 @@ export interface BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor {
   optionsItems?: number[] | null;
 }
 
-export interface BakabaseAbstractionsModelsDomainEnhancerTargetOptions {
-  /** @format int32 */
-  propertyId?: number;
-}
-
 export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
   name?: string | null;
-  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel] */
-  type?: BakabaseAbstractionsModelsDomainConstantsCustomPropertyType;
+  /** @format int32 */
+  type?: number;
   options?: string | null;
 }
 
@@ -1769,8 +1761,7 @@ export interface BakabaseInsideWorldModelsResponseModelsEverythingExtractionStat
 }
 
 export interface BakabaseModulesEnhancerModelsDomainEnhancerFullOptions {
-  targetOptionsMap?: Record<string, BakabaseAbstractionsModelsDomainEnhancerTargetOptions>;
-  targetFullOptionsMap?: Record<string, BakabaseModulesEnhancerModelsDomainEnhancerTargetFullOptions>;
+  targetOptionsMap?: Record<string, BakabaseModulesEnhancerModelsDomainEnhancerTargetFullOptions>;
 }
 
 export interface BakabaseModulesEnhancerModelsDomainEnhancerTargetFullOptions {
@@ -4149,6 +4140,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/custom-property/${id}/${type}/loss`,
         method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name EnableAddingNewDataDynamicallyForCustomProperty
+     * @request PUT:/custom-property/{id}/options/adding-new-data-dynamically
+     */
+    enableAddingNewDataDynamicallyForCustomProperty: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/custom-property/${id}/options/adding-new-data-dynamically`,
+        method: "PUT",
         format: "json",
         ...params,
       }),
@@ -6767,6 +6773,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name BindCustomPropertyToCategory
+     * @request POST:/resource-category/{categoryId}/custom-property/{customPropertyId}
+     */
+    bindCustomPropertyToCategory: (categoryId: number, customPropertyId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${categoryId}/custom-property/${customPropertyId}`,
+        method: "POST",
         format: "json",
         ...params,
       }),

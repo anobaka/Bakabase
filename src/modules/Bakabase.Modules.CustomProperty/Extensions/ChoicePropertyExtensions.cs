@@ -12,7 +12,7 @@ namespace Bakabase.Modules.CustomProperty.Extensions
     {
         public static void AddChoices<T>(this ChoicePropertyOptions<T> options, bool ignoreSameValue, params string[] values)
         {
-            if (options.AllowAddingNewOptionsDynamically)
+            if (options.AllowAddingNewDataDynamically)
             {
                 options.Choices ??= new List<ChoicePropertyOptions<T>.ChoiceOptions>();
                 if (ignoreSameValue)

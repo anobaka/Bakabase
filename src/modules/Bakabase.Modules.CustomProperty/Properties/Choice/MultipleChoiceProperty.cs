@@ -1,5 +1,4 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
@@ -14,7 +13,7 @@ public record MultipleChoicePropertyValue : CustomPropertyValue<List<string>>;
 public class MultipleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<MultipleChoiceProperty,
     ChoicePropertyOptions<List<string>>, MultipleChoicePropertyValue, List<string>>
 {
-    public override CustomPropertyType Type => CustomPropertyType.MultipleChoice;
+    public override CustomPropertyType EnumType => CustomPropertyType.MultipleChoice;
 
     public override SearchOperation[] SearchOperations { get; } =
     [

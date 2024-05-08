@@ -1,9 +1,9 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Extensions;
+using Bakabase.Modules.CustomProperty.Models;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Multilevel;
 
@@ -14,7 +14,7 @@ public record MultilevelPropertyValue : CustomPropertyValue<List<string>>;
 public class MultilevelPropertyDescriptor : AbstractCustomPropertyDescriptor<MultilevelProperty,
     MultilevelPropertyOptions, MultilevelPropertyValue, List<string>>
 {
-    public override CustomPropertyType Type => CustomPropertyType.Multilevel;
+    public override CustomPropertyType EnumType => CustomPropertyType.Multilevel;
 
     public override SearchOperation[] SearchOperations { get; } =
     [

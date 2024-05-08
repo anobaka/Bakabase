@@ -10,7 +10,7 @@ export default ({ property }: IProps) => {
 const { t } = useTranslation();
   return (
     <>
-      <StandardValueIcon valueType={property.type} className={'text-small'} />
+      <StandardValueIcon valueType={property.valueType} className={'text-small'} />
       <span>{property.name}</span>
     </>
   );

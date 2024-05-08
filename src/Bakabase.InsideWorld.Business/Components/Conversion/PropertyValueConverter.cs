@@ -38,8 +38,8 @@ public class PropertyValueConverter
     public async Task<CustomPropertyValue> Convert(StandardValueType currentValueType,
         object? currentValue, CustomProperty toProperty)
     {
-        var (nv, _) = await _converters[currentValueType].Convert(currentValue, toProperty.Type.ToStandardValueType());
-        switch (toProperty.Type)
+        var (nv, _) = await _converters[currentValueType].Convert(currentValue, toProperty.ValueType);
+        switch ((CustomPropertyType)toProperty.Type)
         {
             case CustomPropertyType.SingleLineText:
             case CustomPropertyType.MultilineText:
@@ -107,6 +107,6 @@ public class PropertyValueConverter
         }
 
 
-        return CustomPropertyValueHelper.CreateFromImplicitValue(nv, toProperty.Type);
+        return CustomPropertyValueHelper.CreateFromImplicitValue(nv, (CustomPropertyType)toProperty.Type);
     }
 }

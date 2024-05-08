@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Extensions;
@@ -14,6 +13,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Abstractions;
 using Newtonsoft.Json;
 using SQLitePCL;
 
@@ -26,7 +26,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 		private readonly CustomPropertyService _customPropertyService;
 		private readonly FavoritesResourceMappingService _favoritesResourceMappingService;
 		private readonly ResourceTagMappingService _resourceTagMappingService;
-        private readonly Dictionary<CustomPropertyType, ICustomPropertyDescriptor> _propertyDescriptors;
+        private readonly Dictionary<int, ICustomPropertyDescriptor> _propertyDescriptors;
 
 		public DefaultResourceSearchContextProcessor(CustomPropertyValueService customPropertyValueService,
 			AliasService aliasService, CustomPropertyService customPropertyService, FavoritesResourceMappingService favoritesResourceMappingService, ResourceTagMappingService resourceTagMappingService, IEnumerable<ICustomPropertyDescriptor> propertyDescriptors)
@@ -40,14 +40,10 @@ namespace Bakabase.InsideWorld.Business.Components.Search
         }
 
 		private async Task PrepareAliases(ResourceSearchFilter filter, ResourceSearchContext context)
-		{
-			if (filter.IsReservedProperty && ((SearchableReservedProperty) filter.PropertyId).ToResourceProperty()
-			    .HasAppliedAliases() ||
-			    !filter.IsReservedProperty)
-			{
-				context.Aliases ??= await _aliasService.GetFullMap();
-			}
-		}
+        {
+            throw new NotImplementedException();
+            // context.Aliases ??= await _aliasService.GetFullMap();
+        }
 
 		private async Task PrepareCustomProperties(ResourceSearchContext context)
 		{
@@ -468,156 +464,6 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 											throw new ArgumentOutOfRangeException();
 									}
 
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case SearchableReservedProperty.Favorites:
-						{
-							switch (filter.Operation)
-							{
-								case SearchOperation.Contains:
-								case SearchOperation.NotContains:
-								{
-									var filterValue = string.IsNullOrEmpty(filter.Value)
-										? null
-										: JsonConvert.DeserializeObject<int?>(filter.Value);
-									switch (filter.Operation)
-									{
-										case SearchOperation.Contains:
-										{
-											if (filterValue.HasValue)
-											{
-												return context.FavoritesResourceDataPool?.TryGetValue(filterValue.Value,
-													out var rIds) == true
-													? rIds
-													: [];
-											}
-
-											break;
-										}
-										case SearchOperation.NotContains:
-										{
-											if (filterValue.HasValue)
-											{
-												var ids = context.FavoritesResourceDataPool?.GetValueOrDefault(
-													filterValue.Value);
-												if (ids?.Any() == true)
-												{
-													set = context.AllResourceIds.Except(ids).ToHashSet();
-												}
-											}
-
-											break;
-										}
-										default:
-											throw new ArgumentOutOfRangeException();
-									}
-
-									break;
-								}
-								case SearchOperation.IsNull:
-								case SearchOperation.IsNotNull:
-								{
-									switch (filter.Operation)
-									{
-										case SearchOperation.IsNull:
-										{
-											var badIds = context.FavoritesResourceDataPool?.SelectMany(x => x.Value).ToHashSet();
-											if (badIds?.Any() == true)
-											{
-												set = context.AllResourceIds.Except(badIds).ToHashSet();
-											}
-
-											break;
-										}
-										case SearchOperation.IsNotNull:
-										{
-											return context.FavoritesResourceDataPool?.SelectMany(x => x.Value)
-												.ToHashSet() ?? [];
-										}
-										default:
-											throw new ArgumentOutOfRangeException();
-									}
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
-
-							break;
-						}
-						case SearchableReservedProperty.Tag:
-						{
-							switch (filter.Operation)
-							{
-								case SearchOperation.Contains:
-								case SearchOperation.NotContains:
-								{
-									var filterValue = string.IsNullOrEmpty(filter.Value)
-										? null
-										: JsonConvert.DeserializeObject<int?>(filter.Value);
-									switch (filter.Operation)
-									{
-										case SearchOperation.Contains:
-										{
-											if (filterValue.HasValue)
-											{
-												return context.TagResourceDataPool?.TryGetValue(filterValue.Value,
-													out var rIds) == true
-													? rIds
-													: [];
-											}
-
-											break;
-										}
-										case SearchOperation.NotContains:
-										{
-											if (filterValue.HasValue)
-											{
-												var ids = context.TagResourceDataPool?.GetValueOrDefault(
-													filterValue.Value);
-												if (ids?.Any() == true)
-												{
-													set = context.AllResourceIds.Except(ids).ToHashSet();
-												}
-											}
-
-											break;
-										}
-										default:
-											throw new ArgumentOutOfRangeException();
-									}
-
-									break;
-								}
-								case SearchOperation.IsNull:
-								case SearchOperation.IsNotNull:
-								{
-									switch (filter.Operation)
-									{
-										case SearchOperation.IsNull:
-										{
-											var badIds = context.TagResourceDataPool?.SelectMany(x => x.Value).ToHashSet();
-											if (badIds?.Any() == true)
-											{
-												set = context.AllResourceIds.Except(badIds).ToHashSet();
-											}
-
-											break;
-										}
-										case SearchOperation.IsNotNull:
-										{
-											return context.TagResourceDataPool?.SelectMany(x => x.Value)
-												.ToHashSet() ?? [];
-										}
-										default:
-											throw new ArgumentOutOfRangeException();
-									}
 									break;
 								}
 								default:

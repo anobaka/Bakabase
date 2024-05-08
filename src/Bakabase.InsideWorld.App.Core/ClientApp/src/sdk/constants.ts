@@ -90,14 +90,14 @@ export enum AdbInternalError {Error = 1, INSTALL_FAILED_ALREADY_EXISTS = 100, DE
 export const adbInternalErrors = Object.keys(AdbInternalError).filter(k => typeof AdbInternalError[k] === 'number').map(t => ({label: t, value: AdbInternalError[t]}));
 export enum CategoryResourceDisplayNameSegmentType {Normal = 1, Property = 2, LeftWrapper = 3, RightWrapper = 4}
 export const categoryResourceDisplayNameSegmentTypes = Object.keys(CategoryResourceDisplayNameSegmentType).filter(k => typeof CategoryResourceDisplayNameSegmentType[k] === 'number').map(t => ({label: t, value: CategoryResourceDisplayNameSegmentType[t]}));
-export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15}
-export const customPropertyTypes = Object.keys(CustomPropertyType).filter(k => typeof CustomPropertyType[k] === 'number').map(t => ({label: t, value: CustomPropertyType[t]}));
 export enum CustomPropertyValueLayer {Manual = 0, BakabaseEnhancer = 1000}
 export const customPropertyValueLayers = Object.keys(CustomPropertyValueLayer).filter(k => typeof CustomPropertyValueLayer[k] === 'number').map(t => ({label: t, value: CustomPropertyValueLayer[t]}));
 export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
 export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
 export enum StandardValueType {String = 1, ListString = 2, Decimal = 3, Link = 4, Boolean = 5, DateTime = 6, Time = 7, ListListString = 8}
 export const standardValueTypes = Object.keys(StandardValueType).filter(k => typeof StandardValueType[k] === 'number').map(t => ({label: t, value: StandardValueType[t]}));
+export enum CustomPropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15}
+export const customPropertyTypes = Object.keys(CustomPropertyType).filter(k => typeof CustomPropertyType[k] === 'number').map(t => ({label: t, value: CustomPropertyType[t]}));
 export enum CoverDiscoverResultType {LocalFile = 1, FromAdditionalSource = 2, Icon = 3}
 export const coverDiscoverResultTypes = Object.keys(CoverDiscoverResultType).filter(k => typeof CoverDiscoverResultType[k] === 'number').map(t => ({label: t, value: CoverDiscoverResultType[t]}));
 export enum ResourceExistence {Exist = 1, Maybe = 2, New = 3}
@@ -164,7 +164,7 @@ export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, Re
 export const resourceProperties = Object.keys(ResourceProperty).filter(k => typeof ResourceProperty[k] === 'number').map(t => ({label: t, value: ResourceProperty[t]}));
 export enum ResourceTaskType {Moving = 1}
 export const resourceTaskTypes = Object.keys(ResourceTaskType).filter(k => typeof ResourceTaskType[k] === 'number').map(t => ({label: t, value: ResourceTaskType[t]}));
-export enum SearchableReservedProperty {Tag = 11, FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21, Favorites = 22}
+export enum SearchableReservedProperty {FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21}
 export const searchableReservedProperties = Object.keys(SearchableReservedProperty).filter(k => typeof SearchableReservedProperty[k] === 'number').map(t => ({label: t, value: SearchableReservedProperty[t]}));
 export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
 export const searchOperations = Object.keys(SearchOperation).filter(k => typeof SearchOperation[k] === 'number').map(t => ({label: t, value: SearchOperation[t]}));

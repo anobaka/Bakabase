@@ -9,7 +9,7 @@ namespace Bakabase.Modules.CustomProperty.Properties.Text
 
     public class MultilineTextPropertyDescriptor : TextPropertyDescriptor<MultilineTextPropertyValue, string>
     {
-        public override CustomPropertyType Type => CustomPropertyType.MultilineText;
+        public override CustomPropertyType EnumType => CustomPropertyType.MultilineText;
         protected override string[] GetMatchSources(string? value)
         {
             return string.IsNullOrEmpty(value) ? [] : [value];

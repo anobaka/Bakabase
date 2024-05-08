@@ -1,19 +1,18 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Attachment;
 
-public record AttachmentProperty() : Abstractions.Models.Domain.CustomProperty;
+public record AttachmentProperty() : Models.CustomProperty;
 public record AttachmentPropertyValue : CustomPropertyValue<List<string>>;
 
 public class
     AttachmentPropertyDescriptor : AbstractCustomPropertyDescriptor<AttachmentProperty, AttachmentPropertyValue,
     List<string>>
 {
-    public override CustomPropertyType Type => CustomPropertyType.Attachment;
+    public override CustomPropertyType EnumType => CustomPropertyType.Attachment;
 
     public override SearchOperation[] SearchOperations { get; } = [SearchOperation.IsNotNull, SearchOperation.IsNull];
 

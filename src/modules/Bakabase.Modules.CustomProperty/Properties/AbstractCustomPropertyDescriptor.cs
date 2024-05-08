@@ -1,26 +1,28 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Extensions;
+﻿using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Abstractions;
 using Bakabase.Modules.CustomProperty.Extensions;
+using Bakabase.Modules.CustomProperty.Models;
 using Newtonsoft.Json;
-using CustomPropertyValue = Bakabase.Abstractions.Models.Domain.CustomPropertyValue;
 
 namespace Bakabase.Modules.CustomProperty.Properties
 {
     public abstract class
         AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TInnerValue> : ICustomPropertyDescriptor
-        where TProperty : Abstractions.Models.Domain.CustomProperty, new()
+        where TProperty : Models.CustomProperty, new()
         where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
     {
-        public StandardValueType ValueType => Type.ToStandardValueType();
-        public abstract CustomPropertyType Type { get; }
+        public StandardValueType ValueType => EnumType.ToStandardValueType();
+        public abstract CustomPropertyType EnumType { get; }
 
-        public virtual Abstractions.Models.Domain.CustomProperty? BuildDomainProperty(
-            Abstractions.Models.Db.CustomProperty? customProperty)
+        public int Type => (int) EnumType;
+
+        public virtual Models.CustomProperty? BuildDomainProperty(
+            Bakabase.Abstractions.Models.Db.CustomProperty? customProperty)
         {
             if (customProperty == null)
             {
@@ -33,11 +35,13 @@ namespace Bakabase.Modules.CustomProperty.Properties
                 CreatedAt = customProperty.CreatedAt,
                 Id = customProperty.Id,
                 Name = customProperty.Name,
-                Type = customProperty.Type,
+                Type = (int) EnumType,
+                ValueType = ValueType,
+                EnumType = EnumType
             };
         }
 
-        public virtual CustomPropertyValue? BuildDomainValue(Abstractions.Models.Db.CustomPropertyValue? value)
+        public virtual CustomPropertyValue? BuildDomainValue(Bakabase.Abstractions.Models.Db.CustomPropertyValue? value)
         {
             if (value == null)
             {
@@ -66,8 +70,7 @@ namespace Bakabase.Modules.CustomProperty.Properties
 
         public abstract SearchOperation[] SearchOperations { get; }
 
-        public object? BuildValueForDisplay(Abstractions.Models.Domain.CustomProperty property,
-            CustomPropertyValue value)
+        public object? BuildValueForDisplay(Bakabase.Abstractions.Models.Domain.CustomProperty property, CustomPropertyValue value)
         {
             return value.Value == null
                 ? default
@@ -102,8 +105,8 @@ namespace Bakabase.Modules.CustomProperty.Properties
         where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
         where TPropertyOptions : new()
     {
-        public override Abstractions.Models.Domain.CustomProperty? BuildDomainProperty(
-            Abstractions.Models.Db.CustomProperty? customProperty)
+        public override Models.CustomProperty? BuildDomainProperty(
+            Bakabase.Abstractions.Models.Db.CustomProperty? customProperty)
         {
             var p = base.BuildDomainProperty(customProperty);
             if (p is TProperty sp)

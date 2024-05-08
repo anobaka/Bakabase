@@ -20,21 +20,10 @@ const Layout = () => {
 
 export default () => {
   const location = useLocation();
-  const bbContext = useContext(BakabaseContext);
-
-  useEffect(() => {
-    // console.log('Basic layout initialized');
-  }, []);
-
-  // console.log('Basic layout rendering');
-  // console.trace();
-
 
   return (
     <BakabaseContextProvider key={location.key}>
-      <div className={`${bbContext.isDarkMode ? 'dark' : 'light'}`}>
-        <Layout />
-      </div>
+      <Layout />
     </BakabaseContextProvider>
   );
 };

@@ -6,6 +6,5 @@
         public int CategoryId { get; set; }
         public int EnhancerId { get; set; }
         public bool Active { get; set; }
-        public EnhancerOptions? Options { get; set; }
     }
 }

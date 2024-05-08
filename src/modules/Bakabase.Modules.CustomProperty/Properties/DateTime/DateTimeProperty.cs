@@ -1,18 +1,17 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 
 namespace Bakabase.Modules.CustomProperty.Properties.DateTime;
-public record DateTimeProperty : Abstractions.Models.Domain.CustomProperty;
+public record DateTimeProperty : Models.CustomProperty;
 public record DateTimePropertyValue : CustomPropertyValue<System.DateTime>;
 
 public class
     DateTimePropertyDescriptor : AbstractCustomPropertyDescriptor<DateTimeProperty, DateTimePropertyValue,
     System.DateTime>
 {
-    public override CustomPropertyType Type => CustomPropertyType.DateTime;
+    public override CustomPropertyType EnumType => CustomPropertyType.DateTime;
 
     public override SearchOperation[] SearchOperations { get; } =
     [

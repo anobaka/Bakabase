@@ -1,18 +1,17 @@
-﻿using Bakabase.Abstractions.Components.CustomProperty;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 
 namespace Bakabase.Modules.CustomProperty.Properties.Formula;
 
-public record FormulaProperty(): Abstractions.Models.Domain.CustomProperty;
+public record FormulaProperty(): Models.CustomProperty;
 
 public record FormulaPropertyValue() : CustomPropertyValue<string>;
 
 public class FormulaPropertyDescriptor : AbstractCustomPropertyDescriptor<FormulaProperty, FormulaPropertyValue, string>
 {
-    public override CustomPropertyType Type => CustomPropertyType.Formula;
+    public override CustomPropertyType EnumType => CustomPropertyType.Formula;
 
     public override SearchOperation[] SearchOperations { get; } =
     [

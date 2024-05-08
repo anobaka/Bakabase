@@ -461,7 +461,7 @@ namespace Bakabase.InsideWorld.Business.Services
 							{
 								var currentPropertiesAndValues = customPropertiesValues.GetValueOrDefault(x.Id);
 								var allProperties = categoryProperties.GetValueOrDefault(x.CategoryId);
-								return allProperties?.ToDictionary(a => a,
+								return allProperties?.ToDictionary(a => a as CustomProperty,
 									a => currentPropertiesAndValues?.GetValueOrDefault(a.Id));
 							});
 

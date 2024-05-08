@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Bakabase.Abstractions.Models.Domain;
+using CustomProperty = Bakabase.Modules.CustomProperty.Models.CustomProperty;
 
 namespace Bakabase.InsideWorld.Business.Components.Search
 {

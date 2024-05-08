@@ -1,9 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
-using Bakabase.Abstractions.Components.CustomProperty;
 using Bakabase.Abstractions.Components.StandardValue;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.CustomProperty.Abstractions;
 using Bakabase.Modules.CustomProperty.Properties.Attachment;
 using Bakabase.Modules.CustomProperty.Properties.Boolean;
 using Bakabase.Modules.CustomProperty.Properties.Choice;
@@ -49,10 +49,10 @@ public static class CustomPropertyExtensions
             new ConcurrentDictionary<StandardValueType, CustomPropertyType[]>(StandardValueTypeMapCache
                 .GroupBy(d => d.Value).ToDictionary(c => c.Key, c => c.Select(d => d.Key).ToArray()));
 
-    public static Abstractions.Models.Domain.CustomProperty? ToDomainModel(
-        this Abstractions.Models.Db.CustomProperty? entity)
+    public static Models.CustomProperty? ToDomainModel(
+        this Bakabase.Abstractions.Models.Db.CustomProperty? entity)
     {
-        return entity == null ? null : Descriptors[entity.Type].BuildDomainProperty(entity);
+        return entity == null ? null : Descriptors[(CustomPropertyType)entity.Type].BuildDomainProperty(entity);
     }
 
     public static StandardValueType ToStandardValueType(this CustomPropertyType type) =>

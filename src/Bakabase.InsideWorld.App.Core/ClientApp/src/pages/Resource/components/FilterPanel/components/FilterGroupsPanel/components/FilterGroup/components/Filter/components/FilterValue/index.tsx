@@ -48,18 +48,11 @@ export default ({
   const renderValue = () => {
     let innerValue: any;
     switch (valueType!) {
-      case StandardValueType.SingleLineText:
-      case StandardValueType.MultilineText:
-      case StandardValueType.Link:
-        innerValue = value;
-        break;
-      case StandardValueType.SingleChoice:
-      case StandardValueType.MultipleChoice:
-      case StandardValueType.Multilevel: {
-        const v = value as number;
-        let values: number[];
+      case StandardValueType.ListString: {
+        const v = value as string;
+        let values: string[];
         if (v == undefined) {
-          values = value as number[] ?? [];
+          values = value as string[] ?? [];
         } else {
           values = [v];
         }
@@ -68,25 +61,19 @@ export default ({
         }
         break;
       }
-      case StandardValueType.Number:
-      case StandardValueType.Percentage:
-      case StandardValueType.Rating:
+      case StandardValueType.ListListString:
+        break;
+      case StandardValueType.String:
+      case StandardValueType.Link:
+        innerValue = value;
+        break;
+      case StandardValueType.Decimal:
         innerValue = value;
         break;
       case StandardValueType.Boolean: {
         const v = value as boolean;
         if (v != undefined) {
           innerValue = t(v ? 'Yes' : 'No');
-        }
-        break;
-      }
-      case StandardValueType.Attachment:
-      case StandardValueType.Formula:
-        return;
-      case StandardValueType.Date: {
-        const v = value as string;
-        if (v != undefined) {
-          innerValue = moment(v).format('YYYY-MM-DD');
         }
         break;
       }
