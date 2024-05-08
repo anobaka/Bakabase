@@ -1,9 +1,12 @@
 import type { FilterValueContext } from './models';
+import ValueRenderer
+  from './components/ValueRenderer';
 import type { IProperty } from '@/components/Property/models';
 import { CustomPropertyType, ResourceProperty } from '@/sdk/constants';
+import StringValueEditor
+  from '@/pages/Resource/components/FilterPanel/components/FilterGroupsPanel/components/FilterGroup/components/Filter/components/FilterValue/components/ValueEditor/StringValueEditor';
 
 export function buildFilterValueContext(property: IProperty, value?: any): FilterValueContext {
-
   const jo = value === null || value === undefined ? null : JSON.parse(value);
 
   if (property.isReserved) {
@@ -17,8 +20,10 @@ export function buildFilterValueContext(property: IProperty, value?: any): Filte
       {
         const typedValue = jo as string;
         return {
-          value:
-        }
+          displayValue: typedValue,
+          ValueComponent: ValueRenderer,
+          EditorComponent: StringValueEditor,
+        };
       }
       case ResourceProperty.Category:
         break;

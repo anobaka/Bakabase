@@ -1,3 +1,7 @@
+import type React from 'react';
+import type { ValueRendererProps } from './components/ValueRenderer';
+import type { ValueEditorProps } from './components/ValueEditor/models';
+
 export interface FilterValueProps<V> {
   editing: boolean;
   value?: V;
@@ -5,7 +9,8 @@ export interface FilterValueProps<V> {
 }
 
 export interface FilterValueContext {
-  value: any;
-  renderValue: () => any;
-  renderEditor: (multiple: boolean, onChange: (value: any) => any) => any;
+  value?: any;
+  displayValue?: ValueRendererProps['value'];
+  ValueComponent: React.ComponentType<ValueRendererProps>;
+  EditorComponent: React.ComponentType<ValueEditorProps>;
 }

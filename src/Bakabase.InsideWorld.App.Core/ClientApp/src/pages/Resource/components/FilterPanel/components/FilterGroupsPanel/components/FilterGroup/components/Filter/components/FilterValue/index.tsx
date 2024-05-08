@@ -6,6 +6,10 @@ import moment from 'moment';
 import { toast } from 'react-toastify';
 import styles from './index.module.scss';
 import { SearchOperation, StandardValueType } from '@/sdk/constants';
+import {
+  buildFilterValueContext,
+} from '@/pages/Resource/components/FilterPanel/components/FilterGroupsPanel/components/FilterGroup/components/Filter/components/FilterValue/helpers';
+import type { IProperty } from '@/components/Property/models';
 
 interface IProps {
   operation?: SearchOperation;
@@ -44,6 +48,20 @@ export default ({
   useUpdateEffect(() => {
     onChange?.(value);
   }, [value]);
+
+  const renderContext = buildFilterValueContext({} as IProperty, value);
+
+  const rv = () => {
+    return (
+      <renderContext.ValueComponent value={renderContext.displayValue} onClick={() => {}} />
+    );
+  };
+
+  const re = () => {
+    return (
+      <renderContext.EditorComponent value={renderContext.value} />
+    );
+  };
 
   const renderValue = () => {
     let innerValue: any;

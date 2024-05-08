@@ -4,15 +4,15 @@ import { Chip } from '@/components/bakaui';
 
 type AtomValue = string | number | boolean | null | undefined;
 
-interface Props {
+export interface ValueRendererProps {
   value: AtomValue | AtomValue[] | null | undefined;
   onClick?: () => any;
 }
 
-export default ({ value, onClick }: Props) => {
+export default ({ value, onClick }: ValueRendererProps) => {
   const { t } = useTranslation();
 
-  const renderValue = useCallback((v: Props['value']) => {
+  const renderValue = useCallback((v: ValueRendererProps['value']) => {
     const arr = v as AtomValue[];
     if (arr) {
       const validArr = arr.filter((v) => v !== null && v !== undefined);
