@@ -8,8 +8,8 @@
 
         public record ChoiceOptions
         {
-            public string Id { get; set; } = null!;
             public string Value { get; set; } = null!;
+            public string Label { get; set; } = null!;
             public string Color { get; set; } = null!;
         }
     }

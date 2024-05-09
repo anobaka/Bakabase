@@ -13,6 +13,8 @@
 @tailwind utilities;
 
 @import '@/components/bakaui/index.scss';
+@import '@/components/bakaui/index.dark.scss';
+@import '@/components/bakaui/index.light.scss';
 
 @font-face {
   font-family: 'Artypa-Regular';

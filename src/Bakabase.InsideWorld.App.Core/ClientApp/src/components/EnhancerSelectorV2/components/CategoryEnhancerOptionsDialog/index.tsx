@@ -33,7 +33,7 @@ import type {
 import {
   defaultCategoryEnhancerTargetOptions,
 } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
-import type { IChoicePropertyOptions, IProperty } from '@/components/Property/models';
+import type { ChoicePropertyOptions, IProperty } from '@/components/Property/models';
 import { PropertyLabel } from '@/components/Property';
 import TargetOptions
   from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/TargetOptions';

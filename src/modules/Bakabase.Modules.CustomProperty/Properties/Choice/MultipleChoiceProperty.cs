@@ -54,6 +54,6 @@ public class MultipleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor
 
     protected override object? BuildValueForDisplay(MultipleChoiceProperty property, List<string> value)
     {
-        return value.Select(v => property.Options?.Choices?.FirstOrDefault(c => c.Id == v)?.Value ?? v).ToList();
+        return value.Select(v => property.Options?.Choices?.FirstOrDefault(c => c.Value == v)?.Label ?? v).ToList();
     }
 }

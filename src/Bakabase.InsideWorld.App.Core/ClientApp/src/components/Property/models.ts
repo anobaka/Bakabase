@@ -1,6 +1,7 @@
 import type { StandardValueType } from '@/sdk/constants';
 
 import { CustomPropertyType } from '@/sdk/constants';
+import type { MultilevelData } from '@/components/StandardValue/models';
 
 export interface IProperty {
   id: number;
@@ -36,21 +37,27 @@ export const PropertyTypeIconMap: {[key in CustomPropertyType]?: string} = {
   [CustomPropertyType.DateTime]: 'date-time',
 };
 
-export interface IChoicePropertyOptions {
+export interface ChoicePropertyOptions {
   choices: IChoice[];
   allowAddingNewDataDynamically: boolean;
   defaultValue?: string;
 }
 
-export interface INumberPropertyOptions {
+export interface NumberPropertyOptions {
   precision: number;
 }
 
-export interface IPercentagePropertyOptions {
+export interface PercentagePropertyOptions {
   precision: number;
   showProgressbar: boolean;
 }
 
-export interface IRatingPropertyOptions {
+export interface RatingPropertyOptions {
   maxValue: number;
+}
+
+export interface MultilevelPropertyOptions {
+  data?: MultilevelData<string>[];
+  allowAddingNewDataDynamically: boolean;
+  defaultValue?: string;
 }

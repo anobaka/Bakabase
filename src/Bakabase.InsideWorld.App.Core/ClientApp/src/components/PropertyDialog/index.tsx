@@ -10,11 +10,11 @@ import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
 import { Button, Chip, Input, Modal, Popover, Progress, Select, Switch, Tab, Tabs } from '@/components/bakaui';
 import type {
-  IChoicePropertyOptions,
-  INumberPropertyOptions,
-  IPercentagePropertyOptions,
+  ChoicePropertyOptions,
+  NumberPropertyOptions,
+  PercentagePropertyOptions,
   IProperty,
-  IRatingPropertyOptions,
+  RatingPropertyOptions,
 } from '@/components/Property/models';
 import { PropertyTypeIconMap } from '@/components/Property/models';
 import 'ace-builds/src-noconflict/mode-javascript';
@@ -83,7 +83,7 @@ const PropertyDialog = ({
           break;
         case CustomPropertyType.SingleChoice:
         case CustomPropertyType.MultipleChoice: {
-          const options = property.options as IChoicePropertyOptions;
+          const options = property.options as ChoicePropertyOptions;
           const multiple = property.type === CustomPropertyType.MultipleChoice;
           return (
             <>
@@ -140,7 +140,7 @@ const PropertyDialog = ({
           );
         }
         case CustomPropertyType.Number: {
-          const options = property.options as INumberPropertyOptions ?? {};
+          const options = property.options as NumberPropertyOptions ?? {};
           const previewValue = 80;
           const previewValueStr = Number(previewValue).toFixed(options?.precision || 0);
           // console.log(previewValue, options?.precision, previewValueStr);
@@ -170,7 +170,7 @@ const PropertyDialog = ({
           );
         }
         case CustomPropertyType.Percentage: {
-          const options = property.options as IPercentagePropertyOptions ?? {};
+          const options = property.options as PercentagePropertyOptions ?? {};
           const previewValue = 80;
           const previewValueStr = `${Number(previewValue).toFixed(options?.precision || 0)}%`;
           options.precision ??= 0;
@@ -226,7 +226,7 @@ const PropertyDialog = ({
           );
         }
         case CustomPropertyType.Rating: {
-          const options = property.options as IRatingPropertyOptions ?? {};
+          const options = property.options as RatingPropertyOptions ?? {};
           options.maxValue ??= 5;
           return (
             <>

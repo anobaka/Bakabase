@@ -1,4 +1,4 @@
-import type { IGroup } from '@/pages/Resource/components/FilterPanel/components/FilterGroupsPanel/models';
+import type { IGroup } from './components/FilterPanel/FilterGroupsPanel/models';
 import type { ResourceSearchSortableProperty } from '@/sdk/constants';
 
 export interface ISearchForm {

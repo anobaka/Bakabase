@@ -1,6 +1,6 @@
-import type { IGroup } from '@/pages/Resource/components/FilterPanel/components/FilterGroupsPanel/models';
+import type { IFilter, IGroup } from './components/FilterPanel/FilterGroupsPanel/models';
 import type {
-  BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsV2,
+  BakabaseAbstractionsModelsDtoResourceSearchDto,
   BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup,
 } from '@/sdk/Api';
 import type { ISearchForm } from '@/pages/Resource/models';
@@ -11,17 +11,12 @@ export const convertFilterGroupToDto = (group?: IGroup): BakabaseInsideWorldMode
   }
   return {
     ...group,
-    filters: group.filters?.map((filter) => {
-      return {
-        ...filter,
-        value: JSON.stringify(filter.value),
-      };
-    }),
+    filters: group.filters,
     groups: group.groups?.map(g => convertFilterGroupToDto(g)!),
   };
 };
 
-export const convertSearchFormFromDto = (sf: BakabaseInsideWorldModelsConfigsResourceResourceSearchOptionsV2): ISearchForm => {
+export const convertSearchFormFromDto = (sf: BakabaseAbstractionsModelsDtoResourceSearchDto): ISearchForm => {
   return {
     group: convertFilterGroupFromDto(sf.group),
     orders: sf.orders?.map((order) => {
@@ -40,12 +35,7 @@ export const convertFilterGroupFromDto = (group?: BakabaseInsideWorldModelsModel
     return undefined;
   }
   return {
-    filters: group.filters?.map((filter) => {
-      return {
-        ...filter,
-        value: filter.value == undefined ? undefined : JSON.parse(filter.value),
-      };
-    }),
+    filters: group.filters?.filter(f => f) as IFilter[],
     groups: group.groups?.map(g => convertFilterGroupFromDto(g)!),
     combinator: group.combinator!,
   };

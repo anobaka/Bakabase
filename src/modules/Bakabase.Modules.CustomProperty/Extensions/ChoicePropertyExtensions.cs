@@ -17,14 +17,14 @@ namespace Bakabase.Modules.CustomProperty.Extensions
                 options.Choices ??= new List<ChoicePropertyOptions<T>.ChoiceOptions>();
                 if (ignoreSameValue)
                 {
-                    var current = options.Choices.Select(c => c.Value).ToHashSet();
+                    var current = options.Choices.Select(c => c.Label).ToHashSet();
                     values = values.ToHashSet().Except(current).ToArray();
                 }
 
                 options.Choices.AddRange(values.Select(v => new ChoicePropertyOptions<T>.ChoiceOptions
                 {
-                    Id = Guid.NewGuid().ToString(),
-                    Value = v
+                    Value = Guid.NewGuid().ToString(),
+                    Label = v
                 }));
             }
         }

@@ -51,7 +51,7 @@ public class PropertyValueConverter
                 if (!string.IsNullOrEmpty(typedValue))
                 {
                     (typedProperty.Options ??= new ChoicePropertyOptions<string>()).AddChoices(true, typedValue);
-                    nv = new StringValueBuilder(typedProperty.Options.Choices!.First(x => x.Value == typedValue).Id);
+                    nv = new StringValueBuilder(typedProperty.Options.Choices!.First(x => x.Label == typedValue).Value);
                 }
 
                 break;
@@ -65,7 +65,7 @@ public class PropertyValueConverter
                 {
                     (typedProperty.Options ??= new ChoicePropertyOptions<List<string>>()).AddChoices(true, typedValue);
                     nv = typedValue
-                        .Select(v => typedProperty.Options.Choices!.First(x => x.Value == v).Id).ToArray();
+                        .Select(v => typedProperty.Options.Choices!.First(x => x.Label == v).Value).ToArray();
                 }
 
                 break;
@@ -93,8 +93,8 @@ public class PropertyValueConverter
                     foreach (var tv in typedValue)
                     {
                         var children = parent == null ? options.Data : (parent.Children ??= []);
-                        var child = children.FirstOrDefault(x => x.Value == tv) ??
-                                    new MultilevelDataOptions {Value = tv};
+                        var child = children.FirstOrDefault(x => x.Label == tv) ??
+                                    new MultilevelDataOptions {Label = tv};
                         children.Add(child);
                         parent = child;
                     }

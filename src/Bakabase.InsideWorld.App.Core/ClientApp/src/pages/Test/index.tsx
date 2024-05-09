@@ -5,19 +5,20 @@ import type { FieldProps, RegistryFieldsType, RJSFSchema, UiSchema } from '@rjsf
 import { Nav } from '@alifd/next';
 import { useTour } from '@reactour/tour';
 import { useTranslation } from 'react-i18next';
-import { Tooltip, Button, Chip, Modal } from '@nextui-org/react';
-import { CloseCircleFilled } from '@ant-design/icons';
+import { CloseCircleFilled, DoubleRightOutlined } from '@ant-design/icons';
 import { createPortal } from 'react-dom';
+import { Tooltip, Button, Chip, Modal } from '@/components/bakaui';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelector from '@/components/FileSystemSelector';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import Sortable from '@/pages/Test/components/Sortable';
 import PropertySelector from '@/components/PropertySelector';
-import type { ICustomProperty } from '@/pages/CustomProperty/models';
-import type { IFilter } from '@/pages/Resource/components/FilterPanel/components/FilterGroupsPanel/models';
 import AntdMenu from '@/layouts/BasicLayout/components/PageNav/components/AntdMenu';
-import OrderSelector from '@/pages/Resource/components/FilterPanel/components/OrderSelector';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { IFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
+import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector';
+import { generateTrees } from '@/pages/Test/data/tree';
 
 const schema: RJSFSchema = {
   type: 'object',
@@ -95,13 +96,6 @@ class GeoPosition extends React.Component<FieldProps> {
 // Define the custom field component to use for the root object
 const uiSchema: UiSchema = { 'ui:field': 'geo' };
 
-// Define the custom field components to register; here our "geo"
-// custom field component
-const fields: RegistryFieldsType = { geo: GeoPosition };
-
-class A {
-
-}
 
 // Render the form with all the properties we just defined passed
 // as props
@@ -111,6 +105,7 @@ export default () => {
   const [previewerVisible, setPreviewerVisible] = useState(false);
 
   const [filter, setFilter] = useState<IFilter>({});
+  const { createPortal } = useBakabaseContext();
 
   useEffect(() => {
   }, []);
@@ -121,6 +116,20 @@ export default () => {
         <Chip>123456</Chip>
       </Tooltip>
 
+      <Button
+        size={'sm'}
+        color={'primary'}
+        onClick={() => {
+          const trees = generateTrees();
+          createPortal(Modal, {
+            defaultVisible: true,
+            // children: renderTreeNodes(trees),
+            size: 'xl',
+          });
+              }}
+      >
+        Open multilevel value editor
+      </Button>
 
       <OrderSelector />
 

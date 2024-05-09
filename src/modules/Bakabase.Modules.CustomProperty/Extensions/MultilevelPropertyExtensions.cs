@@ -11,13 +11,13 @@ namespace Bakabase.Modules.CustomProperty.Extensions
     {
         public static string[]? FindLabel(this MultilevelDataOptions options, string id)
         {
-            if (options.Id == id)
+            if (options.Value == id)
             {
-                return [options.Value];
+                return [options.Label];
             }
 
             return options.Children?.Select(child => child.FindLabel(id)).OfType<string[]>()
-                .Select(result => new[] {options.Value}.Concat(result).ToArray()).FirstOrDefault();
+                .Select(result => new[] {options.Label}.Concat(result).ToArray()).FirstOrDefault();
         }
     }
 }

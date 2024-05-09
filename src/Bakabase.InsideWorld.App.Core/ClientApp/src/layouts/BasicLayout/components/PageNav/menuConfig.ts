@@ -134,7 +134,7 @@ const asideMenuConfig: IMenuItem[] = [
     children: [
       {
         name: 'common',
-        path: '/test/common',
+        path: '/test',
         icon: 'CodepenCircleOutlined',
       },
       {

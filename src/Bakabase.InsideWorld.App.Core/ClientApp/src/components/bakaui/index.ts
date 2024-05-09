@@ -9,7 +9,6 @@ import Popover from './components/Popover';
 import Progress from './components/Progress';
 import Switch from './components/Switch';
 import TextArea from './components/TextArea';
-import DatePicker from './components/DatePicker';
 import ColorPicker from './components/ColorPicker';
 import { Tab, Tabs } from './components/Tabs';
 import { Card, CardBody, CardFooter, CardHeader } from './components/Card';
@@ -35,6 +34,8 @@ import Link from './components/Link';
 import Snippet from './components/Snippet';
 import Notification from './components/Notification';
 import { Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from './components/Dropdown';
+import { DateInput, DatePicker } from './components/Date';
+import { TimeInput } from './components/Time';
 
 export {
   Button,
@@ -51,7 +52,9 @@ export {
   Progress,
   Switch,
   TextArea,
+  DateInput,
   DatePicker,
+  TimeInput,
   ColorPicker,
   Tabs,
   Tab,

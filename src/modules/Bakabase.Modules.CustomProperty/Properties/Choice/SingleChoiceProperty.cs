@@ -75,6 +75,6 @@ public class SingleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<S
 
     protected override object? BuildValueForDisplay(SingleChoiceProperty property, string value)
     {
-        return property.Options?.Choices?.FirstOrDefault(c => c.Id == value)?.Value;
+        return property.Options?.Choices?.FirstOrDefault(c => c.Value == value)?.Label;
     }
 }

@@ -1242,5 +1242,7 @@
   "Bind property {{propertyName}} to category {{categoryName}}": "将属性{{propertyName}}綁定至分类{{categoryName}}",
   "Bind now": "立即绑定",
   "Delete category": "删除分类",
-  "This operation cannot be undone. Would you like to proceed?": "此操作无法撤销。您确定要继续吗？"
+  "This operation cannot be undone. Would you like to proceed?": "此操作无法撤销。您确定要继续吗？",
+  "Boolean.True": "是",
+  "Boolean.False": "否"
 }
