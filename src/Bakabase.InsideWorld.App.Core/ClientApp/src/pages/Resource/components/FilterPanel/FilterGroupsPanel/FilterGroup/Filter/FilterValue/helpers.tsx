@@ -24,18 +24,16 @@ export function getRenderType(property?: IProperty): RenderType | undefined {
   if (!property) {
     return;
   }
-  let rt: RenderType | undefined;
   if (property.isReserved) {
     const type = property.id as ResourceProperty;
     switch (type) {
       case ResourceProperty.FileName:
       case ResourceProperty.DirectoryPath:
+        return RenderType.StringValue;
       case ResourceProperty.CreatedAt:
       case ResourceProperty.FileCreatedAt:
       case ResourceProperty.FileModifiedAt:
-      {
-        return RenderType.StringValue;
-      }
+        return RenderType.DateTimeValue;
       case ResourceProperty.Category:
         break;
       case ResourceProperty.MediaLibrary:
@@ -73,29 +71,32 @@ export function getRenderType(property?: IProperty): RenderType | undefined {
         return RenderType.MultilevelValue;
     }
   }
-  return rt;
+  return;
 }
 
 
-export function buildFilterValueContext(property?: IProperty, value?: string, dataPool?: DataPool): FilterValueContext | undefined {
+export function buildFilterValueContext(property: IProperty, value?: string, dataPool?: DataPool): FilterValueContext | undefined {
+  const rt = getRenderType(property);
+  console.log(value);
   const jo = value === null || value === undefined ? null : JSON.parse(value);
 
+  console.log(rt);
 
   const serialize = (v: any) => (v == undefined ? undefined : JSON.stringify(v));
 
-  switch (ctxType) {
+  switch (rt) {
     case RenderType.StringValue: {
       const typedValue = jo as string;
       return {
-        ValueRenderer: (props) => (<StringValueRenderer
+        renderValueRenderer: (props) => (<StringValueRenderer
           value={typedValue}
           {...props}
         />),
-        ValueEditor: React.memo(({ onChange, ...props }) => (<StringValueEditor
+        renderValueEditor: ({ onChange, ...props }) => (<StringValueEditor
           initValue={typedValue}
           onChange={v => onChange?.(serialize(v))}
           {...props}
-        />)),
+        />),
       };
     }
     case RenderType.MediaLibrary:
@@ -115,8 +116,8 @@ export function buildFilterValueContext(property?: IProperty, value?: string, da
       }
 
       return {
-        ValueRenderer: (props) => <ListStringValueRenderer value={displayValue} {...props} />,
-        ValueEditor: ({ onChange, ...props }) => (<MultilevelValueEditor
+        renderValueRenderer: (props) => <ListStringValueRenderer value={displayValue} {...props} />,
+        renderValueEditor: ({ onChange, ...props }) => (<MultilevelValueEditor
           initValue={typedValue.map(v => v.toString())}
           getDataSource={async () => {
             const multilevelData: MultilevelData<string>[] = [];
@@ -145,8 +146,8 @@ export function buildFilterValueContext(property?: IProperty, value?: string, da
       const typedValue = jo as string;
       const displayValue = property.options?.choices?.find((c) => c.value === typedValue)?.label;
       return {
-        ValueRenderer: () => (<StringValueRenderer value={displayValue} />),
-        ValueEditor: () => (<ChoiceValueEditor
+        renderValueRenderer: () => (<StringValueRenderer value={displayValue} />),
+        renderValueEditor: () => (<ChoiceValueEditor
           initValue={typedValue == undefined || typedValue.length == 0 ? undefined : [typedValue]}
           multiple={false}
           getDataSource={async () => {
@@ -162,11 +163,11 @@ export function buildFilterValueContext(property?: IProperty, value?: string, da
         .map(v => property.options?.choices?.find((c) => c.value === v)?.label)
         .filter(x => x !== undefined && x?.length > 0);
       return {
-        ValueRenderer: (props) => (<ListStringValueRenderer
+        renderValueRenderer: (props) => (<ListStringValueRenderer
           value={displayValue}
           {...props}
         />),
-        ValueEditor: ({ onChange, ...props }) => (<ChoiceValueEditor
+        renderValueEditor: ({ onChange, ...props }) => (<ChoiceValueEditor
           initValue={typedValue}
           multiple
           getDataSource={async () => {
@@ -185,11 +186,11 @@ export function buildFilterValueContext(property?: IProperty, value?: string, da
         .map(v => findNodeChainInMultilevelData(options.data || [], v)?.map(n => n.label).join(':'))
         .filter(x => x !== undefined && x?.length > 0) as string[];
       return {
-        ValueRenderer: (props) => (<ListStringValueRenderer
+        renderValueRenderer: (props) => (<ListStringValueRenderer
           value={displayValue}
           {...props}
         />),
-        ValueEditor: ({ onChange, ...props }) => (<MultilevelValueEditor
+        renderValueEditor: ({ onChange, ...props }) => (<MultilevelValueEditor
           initValue={typedValue}
           getDataSource={async () => { return options.data; }}
           onChange={v => onChange?.(serialize(v))}
@@ -199,11 +200,11 @@ export function buildFilterValueContext(property?: IProperty, value?: string, da
     case RenderType.NumberValue: {
       const typedValue = jo as number;
       return {
-        ValueRenderer: (props) => (<NumberValueRenderer
+        renderValueRenderer: (props) => (<NumberValueRenderer
           value={typedValue}
           {...props}
         />),
-        ValueEditor: ({ onChange, ...props }) => (<NumberValueEditor
+        renderValueEditor: ({ onChange, ...props }) => (<NumberValueEditor
           initValue={typedValue}
           onChange={v => onChange?.(serialize(v))}
           {...props}
@@ -213,11 +214,11 @@ export function buildFilterValueContext(property?: IProperty, value?: string, da
     case RenderType.BooleanValue: {
       const typedValue = jo as boolean;
       return {
-        ValueRenderer: (props) => (<BooleanValueRenderer
+        renderValueRenderer: (props) => (<BooleanValueRenderer
           value={typedValue}
           {...props}
         />),
-        ValueEditor: ({ onChange, ...props }) => (<BooleanValueEditor
+        renderValueEditor: ({ onChange, ...props }) => (<BooleanValueEditor
           initValue={typedValue}
           onChange={v => onChange?.(serialize(v))}
           {...props}
@@ -232,12 +233,12 @@ export function buildFilterValueContext(property?: IProperty, value?: string, da
         date = dayjs(stringDateTime);
       }
       return {
-        ValueRenderer: (props) => (<DateTimeValueRenderer
+        renderValueRenderer: (props) => (<DateTimeValueRenderer
           value={date}
           format={'YYYY-MM-DD'}
           {...props}
         />),
-        ValueEditor: ({ onChange, ...props }) => (<DateTimeValueEditor initValue={date} mode={'date'} onChange={v => onChange?.(v?.format('YYYY-MM-DD'))} />),
+        renderValueEditor: ({ onChange, ...props }) => (<DateTimeValueEditor initValue={date} mode={'date'} onChange={v => onChange?.(v?.format('YYYY-MM-DD'))} />),
       };
     }
     case RenderType.DateTimeValue:
@@ -248,12 +249,12 @@ export function buildFilterValueContext(property?: IProperty, value?: string, da
         date = dayjs(stringDateTime);
       }
       return {
-        ValueRenderer: (props) => (<DateTimeValueRenderer
+        renderValueRenderer: (props) => (<DateTimeValueRenderer
           value={date}
           format={'YYYY-MM-DD HH:mm:ss'}
           {...props}
         />),
-        ValueEditor: ({ onChange, ...props }) => (<DateTimeValueEditor initValue={date} mode={'datetime'} onChange={v => onChange?.(v?.format('YYYY-MM-DD HH:mm:ss'))} />),
+        renderValueEditor: ({ onChange, ...props }) => (<DateTimeValueEditor initValue={date} mode={'datetime'} onChange={v => onChange?.(v?.format('YYYY-MM-DD HH:mm:ss'))} />),
       };
     }
     case RenderType.TimeValue:
@@ -264,12 +265,12 @@ export function buildFilterValueContext(property?: IProperty, value?: string, da
         time = dayjs.duration(stringTime);
       }
       return {
-        ValueRenderer: (props) => (<DateTimeValueRenderer
+        renderValueRenderer: (props) => (<DateTimeValueRenderer
           value={time}
           format={'HH:mm:ss'}
           {...props}
         />),
-        ValueEditor: ({ onChange, ...props }) => (<TimeValueEditor initValue={time} onChange={v => onChange?.(v?.format('HH:mm:ss'))} />),
+        renderValueEditor: ({ onChange, ...props }) => (<TimeValueEditor initValue={time} onChange={v => onChange?.(v?.format('HH:mm:ss'))} />),
       };
     }
   }

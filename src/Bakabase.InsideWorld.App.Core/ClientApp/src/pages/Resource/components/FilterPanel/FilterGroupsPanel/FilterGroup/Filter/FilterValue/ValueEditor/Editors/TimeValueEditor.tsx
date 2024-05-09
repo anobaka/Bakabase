@@ -8,7 +8,7 @@ export default ({ initValue, onChange, ...props }: TimeValueEditorProps) => {
     return (
       <TimeInput
         size={'sm'}
-        value={initValue}
+        defaultValue={initValue}
         onChange={onChange}
       />
   );

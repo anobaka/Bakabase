@@ -6,9 +6,6 @@ import type { FilterValueContext } from './models';
 import { buildFilterValueContext } from './helpers';
 import type { SearchOperation, StandardValueType } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
-import ValueEditor, {
-  StringValueEditor,
-} from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/FilterValue/ValueEditor';
 
 interface IProps {
   operation?: SearchOperation;
@@ -21,46 +18,42 @@ interface IProps {
 }
 
 export default ({
-                  value: propsValue,
+                  value,
                   onChange,
                   property,
                   dataPool,
                 }: IProps) => {
   const { t } = useTranslation();
-  const [value, setValue] = useState(propsValue);
-
-  const [tmpValue, setTmpValue] = useState(value);
-
   const [editing, setEditing] = useState(false);
+  const ctx = buildFilterValueContext(property, value, dataPool);
 
-  useUpdateEffect(() => {
-    setValue(propsValue);
-    setTmpValue(propsValue);
-  }, [propsValue]);
 
-  useUpdateEffect(() => {
-    onChange?.(value);
-  }, [value]);
+  if (!ctx) {
+    return (
+      <>
+        {t('Unsupported type')}
+      </>
+    );
+  }
 
   return (
     <div className={''}>
       {editing ? (
-        <ValueEditor
-          property={property}
-          value={value}
-          dataPool={dataPool}
-          onChange={v => {
-            setValue(v);
+        ctx.renderValueEditor({
+          key: value,
+          onChange: v => {
+            console.log(v);
+            onChange?.(v);
             setEditing(false);
-          }}
-        />
-        // <StringValueEditor value={value == undefined ? undefined : JSON.parse(value)} onChange={v => { setValue(JSON.stringify(v)); }} />
+          },
+        })
       ) : (
-        <div
-          onClick={() => {
+        ctx.renderValueRenderer({
+          key: value,
+          onClick: () => {
             setEditing(true);
-          }}
-        >1234565</div>
+          },
+        })
       )}
     </div>
   );

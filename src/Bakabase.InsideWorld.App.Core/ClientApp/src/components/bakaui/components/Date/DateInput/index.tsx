@@ -7,7 +7,7 @@ import { parseDateTime } from '@internationalized/date';
 interface DateInputProps extends Omit<NextUIDateInputProps, 'value' | 'onChange' | 'defaultValue'> {
   value?: Dayjs;
   defaultValue?: Dayjs;
-  onChange?: (value: Dayjs) => void;
+  onChange?: (value?: Dayjs) => void;
 }
 
 export default ({ value, onChange, defaultValue, ...props }: DateInputProps) => {
@@ -19,7 +19,7 @@ export default ({ value, onChange, defaultValue, ...props }: DateInputProps) => 
       defaultValue={dv}
       value={v}
       onChange={v => {
-        onChange?.(dayjs(v.toString()));
+        onChange?.(v ? dayjs(v.toString()) : undefined);
       }}
       {...props}
     />
