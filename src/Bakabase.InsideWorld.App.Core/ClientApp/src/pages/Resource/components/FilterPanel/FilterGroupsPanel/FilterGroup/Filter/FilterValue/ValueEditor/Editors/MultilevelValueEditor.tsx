@@ -10,15 +10,20 @@ interface MultilevelValueEditorProps<V> extends ValueEditorProps<V[]>{
   getDataSource: () => Promise<MultilevelData<V>[] | undefined>;
 }
 
-export default <V = string>({ getDataSource, initValue, onChange }: MultilevelValueEditorProps<V>) => {
+export default <V = string>({ getDataSource, initValue, onChange, onCancel }: MultilevelValueEditorProps<V>) => {
   const { t } = useTranslation();
 
   const [dataSource, setDataSource] = useState<MultilevelData<V>[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [value, setValue] = useState<V[]>(initValue ?? []);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    setValue(initValue ?? []);
+  }, [initValue]);
 
   const loadData = async () => {
     const data = await getDataSource() ?? [];
@@ -32,19 +37,19 @@ export default <V = string>({ getDataSource, initValue, onChange }: MultilevelVa
     const branches = data.filter(d => d.children && d.children.length > 0);
 
     return (
-      <div className={'flex flex-col gap-1 rounded p-2'} style={{ background: 'var(--bakaui-overlap-background)' }}>
+      <div className={'flex flex-col gap-1 rounded p-2 grow'} style={{ background: 'var(--bakaui-overlap-background)' }}>
         {leaves.length > 0 && (
           <div className={'flex flex-wrap gap-1'}>
             {leaves.map(({ value: nodeValue, label }, idx) => (
               <Button
                 size={'sm'}
                 key={idx}
-                color={initValue?.includes(nodeValue) ? 'primary' : 'default'}
+                color={value.includes(nodeValue) ? 'primary' : 'default'}
                 onClick={() => {
-                  if (initValue?.includes(nodeValue)) {
-                    onChange?.(initValue.filter(v => v !== nodeValue));
+                  if (value.includes(nodeValue)) {
+                    setValue(value.filter(v => v !== nodeValue));
                   } else {
-                    onChange?.([...(initValue || []), nodeValue]);
+                    setValue([...value, nodeValue]);
                   }
                 }}
               >{label}</Button>
@@ -53,13 +58,13 @@ export default <V = string>({ getDataSource, initValue, onChange }: MultilevelVa
         )}
         {branches.length > 0 && (
           <div
-            className={'grid items-center gap-1'}
-            style={{ gridTemplateColumns: 'auto auto 1fr' }}
+            className={'grid items-center gap-1 grow'}
+            style={{ gridTemplateColumns: 'auto auto minmax(0, 1fr)' }}
           >
             {branches.map(({ value, label, children }, idx) => {
               return (
                 <React.Fragment key={idx}>
-                  <div>{label}</div>
+                  <div className={'flex justify-end'}>{label}</div>
                   <DoubleRightOutlined className={'text-small'} />
                   {renderTreeNodes(children!)}
                 </React.Fragment>
@@ -69,25 +74,32 @@ export default <V = string>({ getDataSource, initValue, onChange }: MultilevelVa
         )}
       </div>
     );
-  }, []);
+  }, [value]);
 
   return (
     <Modal
       defaultVisible
       size={dataSource.length > 10 ? 'xl' : 'lg'}
       title={t('Select data')}
-      onOk={async () => {}}
+      onOk={async () => {
+        onChange?.(value);
+      }}
+      onClose={onCancel}
     >
-      <div>
-        <Input
-          size={'sm'}
-          value={keyword}
-          startContent={<SearchOutlined className={'text-small'} />}
-          onValueChange={v => { setKeyword(v); }}
-        />
-      </div>
-      <div className={'flex flex-wrap gap-1'}>
-        {renderTreeNodes(filterMultilevelData(dataSource, keyword))}
+      <div className={'flex flex-col gap-1 max-h-full min-h-0'}>
+        <div>
+          <Input
+            size={'sm'}
+            value={keyword}
+            startContent={<SearchOutlined className={'text-small'} />}
+            onValueChange={v => {
+              setKeyword(v);
+            }}
+          />
+        </div>
+        <div className={'flex flex-wrap gap-1 w-full min-h-0 overflow-y-auto'}>
+          {renderTreeNodes(filterMultilevelData(dataSource, keyword))}
+        </div>
       </div>
     </Modal>
   );

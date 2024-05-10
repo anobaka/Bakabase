@@ -142,6 +142,11 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/test/bakaui',
         icon: 'SketchOutlined',
       },
+      {
+        name: 'nextui',
+        path: '/test/nextui',
+        icon: 'SketchOutlined',
+      },
     ],
   }] : []),
 ];

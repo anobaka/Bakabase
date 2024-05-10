@@ -17,8 +17,11 @@ const StandardValueTypeIconMap: Record<StandardValueType, string> = {
   [StandardValueType.ListListString]: 'multi_level',
 };
 
-export default ({ valueType }: IProps) => {
+export default ({ valueType, ...props }: IProps) => {
   return (
-    <CustomIcon type={StandardValueTypeIconMap[valueType]} />
+    <CustomIcon
+      type={StandardValueTypeIconMap[valueType]}
+      {...props}
+    />
   );
 };

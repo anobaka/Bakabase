@@ -1,22 +1,26 @@
-import { Button, Dropdown, Menu } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useUpdateEffect } from 'react-use';
+import { DropdownItem, DropdownMenu, DropdownTrigger } from '@nextui-org/react';
 import groupStyles from '../index.module.scss';
-import type { IFilter } from '../../models';
-import styles from './index.module.scss';
+import type { DataPool, IFilter } from '../../models';
 import FilterValue from './FilterValue';
 import PropertySelector from '@/components/PropertySelector';
 import ClickableIcon from '@/components/ClickableIcon';
 import { ResourceProperty, SearchOperation } from '@/sdk/constants';
 import store from '@/store';
 import type { IProperty } from '@/components/Property/models';
+import { Button, Dropdown, Tooltip } from '@/components/bakaui';
+import {
+  SearchableReservedPropertySearchOperationsMap,
+} from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/models';
 
 interface IProps {
   filter: IFilter;
   onRemove?: () => any;
   onChange?: (filter: IFilter) => any;
   propertyMap: Record<number, IProperty>;
+  dataPool?: DataPool;
 }
 
 export default ({
@@ -24,6 +28,7 @@ export default ({
                   onRemove,
                   onChange,
                   propertyMap,
+                  dataPool,
                 }: IProps) => {
   const { t } = useTranslation();
 
@@ -43,37 +48,73 @@ export default ({
   const renderOperations = () => {
     if (filter.propertyId == undefined) {
       return (
-        <Menu>
-          <Menu.Item disabled>{t('Please select a property first')}</Menu.Item>
-        </Menu>
+        <Tooltip
+          content={t('Please select a property first')}
+        >
+          <Button
+            className={'min-w-fit pl-2 pr-2 cursor-not-allowed'}
+            variant={'light'}
+            color={'secondary'}
+            size={'sm'}
+          >
+            {filter.operation == undefined ? t('Filter.Operation') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
+          </Button>
+        </Tooltip>
       );
     }
-    const operations = standardValueTypeSearchOperationsMap[propertyMap?.[filter.propertyId!]?.valueType] || [];
+
+    let operations: SearchOperation[] | undefined;
+    const property = propertyMap?.[filter.propertyId!];
+    if (property) {
+      operations = property.isReserved ? SearchableReservedPropertySearchOperationsMap[property.id] : standardValueTypeSearchOperationsMap[property.valueType];
+    }
+    operations ??= [];
     if (operations.length == 0) {
       return (
-        <Menu>
-          <Menu.Item disabled>{t('Can not operate on this property')}</Menu.Item>
-        </Menu>
+        <Tooltip
+          content={t('Can not operate on this property')}
+        >
+          <Button
+            className={'min-w-fit pl-2 pr-2 cursor-not-allowed'}
+            variant={'light'}
+            color={'secondary'}
+            size={'sm'}
+          >
+            {filter.operation == undefined ? t('Filter.Operation') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
+          </Button>
+        </Tooltip>
       );
     } else {
       return (
-        <Menu>
-          {operations.map((operation) => {
-            return (
-              <Menu.Item
-                key={operation}
-                onClick={() => {
-                  setFilter({
-                    ...filter,
-                    operation: operation,
-                  });
-                }}
-              >
-                {t(`SearchOperation.${SearchOperation[operation]}`)}
-              </Menu.Item>
-            );
-          })}
-        </Menu>
+        <Dropdown placement={'bottom-start'}>
+          <DropdownTrigger>
+            <Button
+              className={'min-w-fit pl-2 pr-2'}
+              variant={'light'}
+              color={'secondary'}
+              size={'sm'}
+            >
+              {filter.operation == undefined ? t('Filter.Operation') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu>
+            {operations.map((operation) => {
+              return (
+                <DropdownItem
+                  key={operation}
+                  onClick={() => {
+                    setFilter({
+                      ...filter,
+                      operation: operation,
+                    });
+                  }}
+                >
+                  {t(`SearchOperation.${SearchOperation[operation]}`)}
+                </DropdownItem>
+              );
+            })}
+          </DropdownMenu>
+        </Dropdown>
       );
     }
   };
@@ -82,7 +123,10 @@ export default ({
   const property = propertyMap[filter.propertyId!];
 
   return (
-    <div className={`${styles.filter} ${groupStyles.removable}`}>
+    <div
+      className={`flex rounded p-1 items-center ${groupStyles.removable}`}
+      style={{ backgroundColor: 'var(--bakaui-overlap-background)' }}
+    >
       <ClickableIcon
         colorType={'danger'}
         className={groupStyles.remove}
@@ -90,10 +134,12 @@ export default ({
         size={'small'}
         onClick={onRemove}
       />
-      <div className={styles.property}>
+      <div className={''}>
         <Button
-          type={'primary'}
-          text
+          className={'min-w-fit pl-2 pr-2'}
+          color={'primary'}
+          variant={'light'}
+          size={'sm'}
           onClick={() => {
             PropertySelector.show({
               selection: filter.propertyId == undefined
@@ -109,32 +155,20 @@ export default ({
               },
               multiple: false,
               pool: 'all',
+              addable: false,
+              editable: false,
             });
           }}
-          size={'small'}
         >
           {(filter.propertyId ? filter.isReservedProperty ? t(ResourceProperty[filter.propertyId]) : propertyMap[filter.propertyId]?.name : t('Property')) ?? t('Unknown property')}
         </Button>
       </div>
-      <div className={styles.operation}>
-        <Dropdown
-          trigger={(
-            <Button
-              type={'primary'}
-              text
-              size={'small'}
-              disabled={filter.propertyId == undefined}
-            >
-              {filter.operation == undefined ? t('Operation') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
-            </Button>
-          )}
-          triggerType={'click'}
-        >
-          {renderOperations()}
-        </Dropdown>
+      <div className={''}>
+        {renderOperations()}
       </div>
-      {noValue ? null : property ? (
+      {noValue ? null : (filter.operation && property) ? (
         <FilterValue
+          dataPool={dataPool}
           value={filter.value}
           property={property}
           onChange={value => {

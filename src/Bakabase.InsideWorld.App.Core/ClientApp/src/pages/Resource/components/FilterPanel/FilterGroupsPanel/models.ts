@@ -1,9 +1,12 @@
 import type { SearchOperation, StandardValueType } from '@/sdk/constants';
 
+export type DataPoolCategory = {id: number; name: string};
+export type DataPoolMediaLibrary = {id: number; name: string; categoryId: number; resourceCount: number};
+
 
 export interface DataPool {
-  categoryMap: Record<number, any>;
-  mediaLibraryMap: Record<number, any>;
+  categoryMap: Record<number, DataPoolCategory>;
+  mediaLibraryMap: Record<number, DataPoolMediaLibrary>;
 }
 
 export enum GroupCombinator {

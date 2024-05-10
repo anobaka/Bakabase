@@ -140,7 +140,6 @@ namespace Bakabase.Abstractions.Components.Configuration
                     {SearchableReservedProperty.CreatedAt, StandardValueType.DateTime},
                     {SearchableReservedProperty.FileCreatedAt, StandardValueType.DateTime},
                     {SearchableReservedProperty.FileModifiedAt, StandardValueType.DateTime},
-                    {SearchableReservedProperty.Category, StandardValueType.Decimal},
                     {SearchableReservedProperty.MediaLibrary, StandardValueType.Decimal},
                 });
     }

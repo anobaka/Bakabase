@@ -1,54 +1,10 @@
 {
   "combinator": 1,
-  "groups": [
-    {
-      "combinator": 2,
-      "filters": [
-        {
-          "propertyId": 11,
-          "propertyName": "标签",
-          "isReservedProperty": true,
-          "valueType": 4,
-          "operation": 13
-        },
-        {
-          "propertyId": 15,
-          "propertyName": "文件名",
-          "isReservedProperty": true,
-          "valueType": 1,
-          "operation": 3,
-          "value": "xxxx"
-        }
-      ]
-    },
-    {
-      "combinator": 1
-    },
-    {
-      "combinator": 1
-    },
-    {
-      "combinator": 1
-    },
-    {
-      "combinator": 1
-    }
-  ],
   "filters": [
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {},
-    {}
+    {
+      "propertyId": 20,
+      "isReservedProperty": true,
+      "operation": 1
+    }
   ]
 }

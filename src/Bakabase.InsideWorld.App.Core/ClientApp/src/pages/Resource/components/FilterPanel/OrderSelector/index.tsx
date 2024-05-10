@@ -58,37 +58,39 @@ export default ({
   }, []));
 
   return (
-    <Select
-      selectionMode={'multiple'}
-      style={{
-        maxWidth: 500,
-        minWidth: 200,
-      }}
-      placeholder={t('Select orders')}
-      label={t('Order')}
-      dataSource={orderDataSourceRef.current}
-      selectedKeys={(value || []).map((a) => `${a.property}-${a.asc}`)}
-      size={'sm'}
-      onSelectionChange={(arr) => {
-        const orderAscMap: {[key in ResourceSearchSortableProperty]?: boolean} = {};
-        for (const v of arr.values()) {
-          const vl = (v as string).split('-');
-          orderAscMap[parseInt(vl[0], 10)] = vl[1] === 'true';
-        }
+    <div>
+      <Select
+        selectionMode={'multiple'}
+        style={{
+          maxWidth: 500,
+          minWidth: 200,
+        }}
+        placeholder={t('Select orders')}
+        // label={t('Order')}
+        dataSource={orderDataSourceRef.current}
+        selectedKeys={(value || []).map((a) => `${a.property}-${a.asc}`)}
+        size={'sm'}
+        onSelectionChange={(arr) => {
+          const orderAscMap: {[key in ResourceSearchSortableProperty]?: boolean} = {};
+          for (const v of arr.values()) {
+            const vl = (v as string).split('-');
+            orderAscMap[parseInt(vl[0], 10)] = vl[1] === 'true';
+          }
 
-        const orders: ISearchFormOrderModel[] = [];
-        for (const k in orderAscMap) {
-          orders.push({
-            property: parseInt(k, 10),
-            asc: orderAscMap[k],
-          });
-        }
+          const orders: ISearchFormOrderModel[] = [];
+          for (const k in orderAscMap) {
+            orders.push({
+              property: parseInt(k, 10),
+              asc: orderAscMap[k],
+            });
+          }
 
-        setValue(orders);
-        onChange?.(orders);
-      }}
-      {...otherProps}
+          setValue(orders);
+          onChange?.(orders);
+        }}
+        {...otherProps}
 
-    />
+      />
+    </div>
   );
 };

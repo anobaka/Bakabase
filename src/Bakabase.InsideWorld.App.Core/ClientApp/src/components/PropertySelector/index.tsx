@@ -4,10 +4,10 @@ import PropertyDialog from '../PropertyDialog';
 import type { IProperty } from '@/components/Property/models';
 import Property from '@/components/Property';
 import { createPortalOfComponent } from '@/components/utils';
-import type { CustomPropertyType } from '@/sdk/constants';
+import type { CustomPropertyType,
+  ResourceProperty as EnumResourceProperty } from '@/sdk/constants';
 import {
   CustomPropertyAdditionalItem,
-  ResourceProperty as EnumResourceProperty,
   StandardValueType,
 } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
@@ -50,7 +50,7 @@ const PropertySelector = ({
   const initializedRef = useRef(false);
   const [selection, setSelection] = useState<IKey[]>(propsSelection || []);
 
-  console.log('props selection', propsSelection, properties);
+  console.log('props selection', propsSelection, properties, addable, editable, removable);
 
   useEffect(() => {
     console.log(internalOptions.initialized, initializedRef.current);
@@ -70,7 +70,6 @@ const PropertySelector = ({
           const p = parseInt(pStr, 10) as EnumResourceProperty;
           return {
             id: p,
-            name: t(EnumResourceProperty[p]),
             valueType: map[p],
             isReserved: true,
           };
@@ -210,19 +209,21 @@ const PropertySelector = ({
 
     return (
       <>
-        <Button
-          color={'primary'}
-          size={'sm'}
-          className={'mb-2'}
-          onClick={() => {
-            PropertyDialog.show({
-              onSaved: loadProperties,
-              validValueTypes: valueTypes?.map(v => v as unknown as CustomPropertyType),
-            });
-          }}
-        >
-          {t('Add a property')}
-        </Button>
+        {addable && (
+          <Button
+            color={'primary'}
+            size={'sm'}
+            className={'mb-2'}
+            onClick={() => {
+              PropertyDialog.show({
+                onSaved: loadProperties,
+                validValueTypes: valueTypes?.map(v => v as unknown as CustomPropertyType),
+              });
+            }}
+          >
+            {t('Add a property')}
+          </Button>
+        )}
         <div className={'flex gap-2'}>
           <div className={'border-1 rounded p-2'}>
             <div className={'font-bold'}>{t('Selected')}</div>

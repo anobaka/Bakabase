@@ -6,7 +6,7 @@ import type { MultilevelData } from '@/components/StandardValue/models';
 export interface IProperty {
   id: number;
   valueType: StandardValueType;
-  name: string;
+  name?: string;
   categories?: {id: number; name: string}[];
   options?: any;
   isReserved: boolean;

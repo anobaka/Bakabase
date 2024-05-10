@@ -14,6 +14,7 @@ export interface SelectProps<T> extends Omit<CollectionBase<T>, 'children'>, Omi
   dataSource?: { label: any; value: Key }[];
   selectedKeys?: 'all' | Iterable<Key>;
   renderValue?: (items: SelectedItems<T>) => ReactNode;
+  placeholder?: string;
 }
 
 export default <T = object>({

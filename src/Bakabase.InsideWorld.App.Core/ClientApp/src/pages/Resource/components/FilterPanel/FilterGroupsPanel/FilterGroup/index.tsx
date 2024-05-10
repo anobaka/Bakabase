@@ -1,15 +1,16 @@
 import { useTranslation } from 'react-i18next';
-import { Button, Dropdown, Menu } from '@alifd/next';
 import React, { useEffect, useRef } from 'react';
 import { useUpdateEffect } from 'react-use';
-import ReactDOM from 'react-dom';
-import type { IGroup } from '../models';
+import type { Root } from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
+import type { DataPool, IGroup } from '../models';
 import { GroupCombinator } from '../models';
 import styles from './index.module.scss';
 import Filter from './Filter';
 import ClickableIcon from '@/components/ClickableIcon';
 import CustomIcon from '@/components/CustomIcon';
 import type { IProperty } from '@/components/Property/models';
+import { Button, Chip, Dropdown, Popover } from '@/components/bakaui';
 
 interface IProps {
   group: IGroup;
@@ -18,6 +19,7 @@ interface IProps {
   isRoot?: boolean;
   portalContainer?: any;
   propertyMap: Record<number, IProperty>;
+  dataPool?: DataPool;
 }
 
 const FilterGroup = ({
@@ -27,20 +29,21 @@ const FilterGroup = ({
                        isRoot = false,
                        portalContainer,
                        propertyMap,
+                       dataPool,
                      }: IProps) => {
   const { t } = useTranslation();
   const [group, setGroup] = React.useState<IGroup>(propsGroup);
   const groupRef = useRef(group);
 
   useEffect(() => {
+    let root: Root;
     if (portalContainer) {
-      ReactDOM.render(renderAddHandler(), portalContainer);
+      root = createRoot(portalContainer);
+      root.render(renderAddHandler());
     }
 
     return () => {
-      if (portalContainer) {
-        ReactDOM.unmountComponentAtNode(portalContainer);
-      }
+      root?.unmount();
     };
   }, []);
 
@@ -62,6 +65,7 @@ const FilterGroup = ({
 
   const conditionElements: any[] = (filters || []).map((f, i) => (
     <Filter
+      dataPool={dataPool}
       propertyMap={propertyMap}
       key={`f-${i}`}
       filter={f}
@@ -84,6 +88,7 @@ const FilterGroup = ({
     />
   )).concat((groups || []).map((g, i) => (
     <FilterGroup
+      dataPool={dataPool}
       propertyMap={propertyMap}
       key={`g-${i}`}
       group={g}
@@ -108,16 +113,19 @@ const FilterGroup = ({
       acc.push(
         <Button
           key={`c-${i}`}
-          type={'primary'}
-          text
-          className={styles.combinator}
+          className={'min-w-fit pl-2 pr-2'}
+          color={'default'}
+          variant={'light'}
+          size={'sm'}
           onClick={() => {
             setGroup({
               ...group,
               combinator: GroupCombinator.And == group.combinator ? GroupCombinator.Or : GroupCombinator.And,
             });
           }}
-        >{t(GroupCombinator[combinator])}</Button>,
+        >
+          {t(`Combinator.${GroupCombinator[combinator]}`)}
+        </Button>,
       );
     }
     return acc;
@@ -125,20 +133,25 @@ const FilterGroup = ({
 
   const renderAddHandler = () => {
     return (
-      <Dropdown
+      <Popover
+        showArrow
         trigger={(
-          <ClickableIcon
-            colorType={'normal'}
-            type={'add-filter'}
-            className={'text-xl'}
-          />
+          <Button
+            size={'sm'}
+            isIconOnly
+          >
+            <ClickableIcon
+              colorType={'normal'}
+              type={'add-filter'}
+              className={'text-xl'}
+            />
+          </Button>
         )}
-        align={'tl tr'}
-        triggerType={'click'}
+        placement={'bottom'}
       >
-        <Menu>
-          <Menu.Item
-            className={styles.addMenuItem}
+        <div className={'flex items-center gap-2'}>
+          <Button
+            size={'sm'}
             onClick={() => {
               setGroup({
                 ...groupRef.current,
@@ -151,13 +164,14 @@ const FilterGroup = ({
           >
             <div className={styles.text}>
               <CustomIcon
+                className={'text-small'}
                 type={'filter-records'}
               />
               {t('Filter')}
             </div>
-          </Menu.Item>
-          <Menu.Item
-            className={styles.addMenuItem}
+          </Button>
+          <Button
+            size={'sm'}
             onClick={() => {
               setGroup({
                 ...groupRef.current,
@@ -170,18 +184,19 @@ const FilterGroup = ({
           >
             <div className={styles.text}>
               <CustomIcon
+                className={'text-small'}
                 type={'unorderedlist'}
               />
               {t('Filter group')}
             </div>
-          </Menu.Item>
-        </Menu>
-      </Dropdown>
+          </Button>
+        </div>
+      </Popover>
     );
   };
 
   return (
-    <div className={`${styles.filterGroup} ${isRoot ? styles.root : ''} ${styles.removable}`}>
+    <div className={`${styles.filterGroup} p-1 ${isRoot ? styles.root : ''} ${styles.removable}`}>
       <ClickableIcon
         colorType={'danger'}
         className={styles.remove}

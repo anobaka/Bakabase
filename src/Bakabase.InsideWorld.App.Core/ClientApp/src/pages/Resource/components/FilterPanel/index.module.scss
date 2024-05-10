@@ -19,20 +19,6 @@
   }
 }
 
-.columnCounts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
-  background: var(--theme-block-background);
-  border: 1px solid var(--theme-border-color);
-  border-radius: 4px;
-  padding: 5px;
-
-  button {
-    padding: 2px 5px !important;
-  }
-}
-
 .switch {
   @apply opacity-20;
   @apply text-base;

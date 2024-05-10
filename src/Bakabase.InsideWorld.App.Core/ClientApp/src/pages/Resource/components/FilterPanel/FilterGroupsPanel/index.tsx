@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
-import type { IGroup } from './models';
+import type { DataPool, DataPoolCategory, DataPoolMediaLibrary, IGroup } from './models';
 import { GroupCombinator } from './models';
 import FilterGroup from './FilterGroup';
 import type { IProperty } from '@/components/Property/models';
@@ -20,6 +20,7 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
 
   const [group, setGroup] = useState<IGroup>(propsGroup ?? { combinator: GroupCombinator.And });
   const [propertyMap, setPropertyMap] = useState<Record<number, IProperty>>({});
+  const [dataPool, setDataPool] = useState<DataPool>();
   const internalOptions = store.useModelState('internalOptions');
   const initializedRef = useRef(false);
 
@@ -50,10 +51,34 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
     }, {} as Record<number, IProperty>));
   };
 
+  const prepareDataPool = async () => {
+    const categorties = (await BApi.resourceCategory.getAllResourceCategories()).data ?? [];
+    const mediaLibraries = (await BApi.mediaLibrary.getAllMediaLibraries()).data ?? [];
+    const categoryMap = categorties.reduce<Record<number, DataPoolCategory>>((s, c) => {
+      s[c.id!] = {
+        id: c.id!,
+        name: c.name!,
+      };
+      return s;
+    }, {});
+    const mediaLibraryMap = mediaLibraries.reduce<Record<number, DataPoolMediaLibrary>>((s, m) => {
+      s[m.id!] = {
+        id: m.id!,
+        name: m.name!,
+        categoryId: m.categoryId,
+        resourceCount: m.resourceCount ?? 0,
+      };
+      return s;
+    }, {});
+    const dataPool: DataPool = { categoryMap, mediaLibraryMap };
+    setDataPool(dataPool);
+  };
+
   useEffect(() => {
     if (internalOptions.initialized && !initializedRef.current) {
       initializedRef.current = true;
       loadProperties();
+      prepareDataPool();
     }
   }, [internalOptions]);
 
@@ -67,6 +92,7 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
   return (
     <div className={'group flex flex-wrap gap-2 item-center mt-2'}>
       <FilterGroup
+        dataPool={dataPool}
         propertyMap={propertyMap}
         group={group}
         isRoot

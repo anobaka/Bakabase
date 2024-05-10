@@ -36,6 +36,7 @@ import Notification from './components/Notification';
 import { Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from './components/Dropdown';
 import { DateInput, DatePicker } from './components/Date';
 import { TimeInput } from './components/Time';
+import Pagination from './components/Pagination';
 
 export {
   Button,
@@ -89,4 +90,5 @@ export {
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
+  Pagination,
 };

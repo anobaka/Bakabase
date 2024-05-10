@@ -14,6 +14,7 @@ using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions;
+using Bakabase.Modules.CustomProperty.Extensions;
 using Newtonsoft.Json;
 using SQLitePCL;
 
@@ -41,8 +42,17 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 
 		private async Task PrepareAliases(ResourceSearchFilter filter, ResourceSearchContext context)
         {
-            throw new NotImplementedException();
-            // context.Aliases ??= await _aliasService.GetFullMap();
+            if (!filter.IsReservedProperty)
+            {
+                var property = context.PropertiesDataPool?.GetValueOrDefault(filter.PropertyId);
+                if (property != null)
+                {
+                    if (property.EnumType.IntegratedWithAlias())
+                    {
+                        context.Aliases ??= await _aliasService.GetFullMap();
+                    }
+                }
+            }
         }
 
 		private async Task PrepareCustomProperties(ResourceSearchContext context)
@@ -100,8 +110,6 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 			HashSet<int>? set = null;
 			if (filter.PropertyId != 0 && filter.Operation != 0)
 			{
-				await PrepareAliases(filter, context);
-
 				if (filter.IsReservedProperty)
 				{
 					var property = (SearchableReservedProperty) filter.PropertyId;
@@ -377,18 +385,11 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 
 							break;
 						}
-						case SearchableReservedProperty.Category:
 						case SearchableReservedProperty.MediaLibrary:
-						{
-							var getValue = property switch
-							{
-								SearchableReservedProperty.Category =>
-									(Func<Abstractions.Models.Db.Resource, int>) (x => x.CategoryId),
-								SearchableReservedProperty.MediaLibrary => x => x.MediaLibraryId,
-								_ => null!
-							};
+                        {
+                            var getValue = (Func<Abstractions.Models.Db.Resource, int>) (x => x.MediaLibraryId);
 
-							switch (filter.Operation)
+                            switch (filter.Operation)
 							{
 								case SearchOperation.Equals:
 								case SearchOperation.NotEquals:
@@ -479,7 +480,10 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 				else
 				{
 					await PrepareCustomProperties(context);
-					var property = context.PropertiesDataPool![filter.PropertyId];
+
+                    await PrepareAliases(filter, context);
+
+                    var property = context.PropertiesDataPool![filter.PropertyId];
                     var propertyValues = await PrepareAndGetCustomPropertyValues(filter, context);
 
                     var descriptor = _propertyDescriptors.GetValueOrDefault(property.Type);

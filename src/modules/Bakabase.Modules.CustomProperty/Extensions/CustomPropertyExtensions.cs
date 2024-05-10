@@ -74,4 +74,8 @@ public static class CustomPropertyExtensions
 
         return services;
     }
+
+    public static bool IntegratedWithAlias(this CustomPropertyType type) =>
+        type is CustomPropertyType.SingleChoice or CustomPropertyType.MultipleChoice or CustomPropertyType.Multilevel
+            or CustomPropertyType.SingleLineText;
 }

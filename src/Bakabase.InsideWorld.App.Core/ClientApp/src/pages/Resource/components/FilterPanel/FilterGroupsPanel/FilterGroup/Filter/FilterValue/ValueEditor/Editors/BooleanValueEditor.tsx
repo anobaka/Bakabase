@@ -1,15 +1,20 @@
+import { useRef } from 'react';
 import type { ValueEditorProps } from '../models';
 import { Checkbox } from '@/components/bakaui';
 
 type BooleanValueEditorProps = ValueEditorProps<boolean>;
 
-export default (props: BooleanValueEditorProps) => {
+export default ({ initValue, onChange }: BooleanValueEditorProps) => {
+  const valueRef = useRef(initValue);
   return (
     <Checkbox
       size={'sm'}
-      isSelected={props.initValue}
+      isSelected={valueRef.current}
       onValueChange={v => {
-        props.onChange?.(v);
+        valueRef.current = v;
+      }}
+      onBlur={() => {
+        onChange?.(valueRef.current);
       }}
     />
   );

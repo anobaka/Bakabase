@@ -7,7 +7,7 @@ export interface ButtonProps extends React.ComponentPropsWithoutRef<'button'>{
   size?: 'sm' | 'md' | 'lg';
   color?: 'default' | 'primary' | 'secondary' | 'success' | 'danger' | 'warning';
   variant?: 'solid' | 'faded' | 'bordered' | 'light' | 'flat' | 'shadow';
-  children: ReactNode;
+  children?: ReactNode;
   isIconOnly?: boolean;
   startContent?: any;
   endContent?: any;

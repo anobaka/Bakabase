@@ -74,15 +74,68 @@ export function getRenderType(property?: IProperty): RenderType | undefined {
   return;
 }
 
+function serializeValue(renderType: RenderType, value?: any): string | undefined {
+  if (value === null || value === undefined) {
+    return;
+  }
+  try {
+    switch (renderType) {
+      case RenderType.StringValue:
+      case RenderType.MediaLibrary:
+      case RenderType.ChoiceValue:
+      case RenderType.MultipleChoiceValue:
+      case RenderType.MultilevelValue:
+      case RenderType.NumberValue:
+      case RenderType.BooleanValue:
+        return JSON.stringify(value);
+      case RenderType.DateValue:
+        return (value as Dayjs)?.format('YYYY-MM-DD');
+      case RenderType.DateTimeValue:
+        return (value as Dayjs)?.format('YYYY-MM-DD HH:mm:ss');
+      case RenderType.TimeValue:
+        return (value as Duration)?.format('HH:mm:ss');
+    }
+  } catch (e) {
+    console.error(e);
+    return;
+  }
+}
+
+function deserializeValue(renderType: RenderType, value?: string): any {
+  if (value === null || value === undefined || value.length == 0) {
+    return;
+  }
+  try {
+    switch (renderType) {
+      case RenderType.StringValue:
+      case RenderType.MediaLibrary:
+      case RenderType.ChoiceValue:
+      case RenderType.MultipleChoiceValue:
+      case RenderType.MultilevelValue:
+      case RenderType.NumberValue:
+      case RenderType.BooleanValue:
+        return JSON.parse(value);
+      case RenderType.DateValue:
+        return dayjs(value);
+      case RenderType.DateTimeValue:
+        return dayjs(value);
+      case RenderType.TimeValue:
+        return dayjs.duration(value);
+    }
+  } catch (e) {
+    console.error(e);
+    return;
+  }
+}
+
 
 export function buildFilterValueContext(property: IProperty, value?: string, dataPool?: DataPool): FilterValueContext | undefined {
   const rt = getRenderType(property);
-  console.log(value);
-  const jo = value === null || value === undefined ? null : JSON.parse(value);
-
-  console.log(rt);
-
-  const serialize = (v: any) => (v == undefined ? undefined : JSON.stringify(v));
+  if (!rt) {
+    return;
+  }
+  const jo = deserializeValue(rt, value);
+  const serialize = (v: any) => serializeValue(rt, v);
 
   switch (rt) {
     case RenderType.StringValue: {
@@ -101,7 +154,7 @@ export function buildFilterValueContext(property: IProperty, value?: string, dat
     }
     case RenderType.MediaLibrary:
     {
-      const typedValue = jo as number[];
+      const typedValue = jo as number[] ?? [];
 
       const categoryMap = dataPool?.categoryMap || {};
       const mediaLibraryMap = dataPool?.mediaLibraryMap || {};
@@ -125,10 +178,12 @@ export function buildFilterValueContext(property: IProperty, value?: string, dat
               const md: MultilevelData<string> = {
                 value: `c-${c.id}`,
                 label: c.name,
-                children: Object.values(mediaLibraryMap).map<MultilevelData<string>>(x => ({
-                  value: x.id.toString(),
-                  label: x.name,
-                })),
+                children: Object.values(mediaLibraryMap)
+                  .filter(l => l.categoryId == c.id)
+                  .map<MultilevelData<string>>(x => ({
+                    value: x.id.toString(),
+                    label: x.name,
+                  })),
               };
 
               multilevelData.push(md);
@@ -158,7 +213,7 @@ export function buildFilterValueContext(property: IProperty, value?: string, dat
       };
     }
     case RenderType.MultipleChoiceValue: {
-      const typedValue = jo as string[];
+      const typedValue = jo as string[] ?? [];
       const displayValue = typedValue
         .map(v => property.options?.choices?.find((c) => c.value === v)?.label)
         .filter(x => x !== undefined && x?.length > 0);
@@ -180,7 +235,7 @@ export function buildFilterValueContext(property: IProperty, value?: string, dat
     }
     case RenderType.MultilevelValue:
     {
-      const typedValue = jo as string[];
+      const typedValue = jo as string[] ?? [];
       const options = property.options as MultilevelPropertyOptions;
       const displayValue = typedValue
         .map(v => findNodeChainInMultilevelData(options.data || [], v)?.map(n => n.label).join(':'))
@@ -238,7 +293,11 @@ export function buildFilterValueContext(property: IProperty, value?: string, dat
           format={'YYYY-MM-DD'}
           {...props}
         />),
-        renderValueEditor: ({ onChange, ...props }) => (<DateTimeValueEditor initValue={date} mode={'date'} onChange={v => onChange?.(v?.format('YYYY-MM-DD'))} />),
+        renderValueEditor: ({ onChange, ...props }) => (<DateTimeValueEditor
+          initValue={date}
+          mode={'date'}
+          onChange={v => onChange?.(serialize(v))}
+        />),
       };
     }
     case RenderType.DateTimeValue:
@@ -254,7 +313,11 @@ export function buildFilterValueContext(property: IProperty, value?: string, dat
           format={'YYYY-MM-DD HH:mm:ss'}
           {...props}
         />),
-        renderValueEditor: ({ onChange, ...props }) => (<DateTimeValueEditor initValue={date} mode={'datetime'} onChange={v => onChange?.(v?.format('YYYY-MM-DD HH:mm:ss'))} />),
+        renderValueEditor: ({ onChange, ...props }) => (<DateTimeValueEditor
+          initValue={date}
+          mode={'datetime'}
+          onChange={v => onChange?.(serialize(v))}
+        />),
       };
     }
     case RenderType.TimeValue:
@@ -270,7 +333,10 @@ export function buildFilterValueContext(property: IProperty, value?: string, dat
           format={'HH:mm:ss'}
           {...props}
         />),
-        renderValueEditor: ({ onChange, ...props }) => (<TimeValueEditor initValue={time} onChange={v => onChange?.(v?.format('HH:mm:ss'))} />),
+        renderValueEditor: ({ onChange, ...props }) => (<TimeValueEditor
+          initValue={time}
+          onChange={v => onChange?.(serialize(v))}
+        />),
       };
     }
   }

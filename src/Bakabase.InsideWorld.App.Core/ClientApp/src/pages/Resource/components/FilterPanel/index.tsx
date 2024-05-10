@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useUpdateEffect } from 'react-use';
 import { OrderedListOutlined, SearchOutlined } from '@ant-design/icons';
+import { PopoverContent, PopoverTrigger } from '@nextui-org/react';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './FilterGroupsPanel';
 import OrderSelector from './OrderSelector';
@@ -14,7 +15,7 @@ import store from '@/store';
 import ClickableIcon from '@/components/ClickableIcon';
 import { PlaylistCollection } from '@/components/Playlist';
 import type { ISearchForm } from '@/pages/Resource/models';
-import { Button, Icon, Input, Tooltip } from '@/components/bakaui';
+import { Button, Icon, Input, Popover, Tooltip } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
 
 const { Popup } = Overlay;
@@ -52,7 +53,7 @@ export default ({
 
   const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>(propsSearchForm || {});
 
-  const filterGroupPortalRef = React.useRef<HTMLDivElement>(null);
+  const filterGroupPortalRef = React.useRef<HTMLButtonElement>(null);
 
   useUpdateEffect(() => {
     setSearchForm(propsSearchForm || {});
@@ -143,24 +144,10 @@ export default ({
           className={'w-1/4'}
           placeholder={t('Search everything')}
         />
-        <div ref={filterGroupPortalRef} />
-        <Dropdown
-          triggerType={'click'}
-          trigger={(
-            <Button
-              color={'default'}
-              size={'sm'}
-              startContent={<CustomIcon
-                type={'playlistplay'}
-                className={'text-xl'}
-              />}
-            >
-              {t('Playlist')}
-            </Button>
-          )}
-        >
-          <PlaylistCollection className={'resource-page'} />
-        </Dropdown>
+        <Button
+          ref={filterGroupPortalRef}
+          isIconOnly
+        />
       </div>
       {filterGroupPortalRef.current && (
         <FilterGroupsPanel
@@ -201,6 +188,61 @@ export default ({
               onSearch?.(nf);
             }}
           />
+          <Dropdown
+            triggerType={'click'}
+            trigger={(
+              <Button
+                color={'default'}
+                size={'sm'}
+                startContent={<CustomIcon
+                  type={'playlistplay'}
+                  className={'text-xl'}
+                />}
+              >
+                {t('Playlist')}
+              </Button>
+            )}
+          >
+            <PlaylistCollection className={'resource-page'} />
+          </Dropdown>
+          <Popover
+            placement={'bottom-end'}
+            trigger={(
+              <Button
+                startContent={<OrderedListOutlined />}
+                color={'default'}
+                size={'sm'}
+              >
+                {t('Column count')}
+                &nbsp;
+                {colCount}
+              </Button>
+            )}
+          >
+            <div className={'grid grid-cols-4 gap-1 p-1 rounded'}>
+              {colCountsDataSource.map((cc, i) => {
+                return (
+                  <Button
+                    key={i}
+                    color={'default'}
+                    size={'sm'}
+                    className={'min-w-0 pl-2 pr-2'}
+                    onClick={async () => {
+                      const patches = {
+                        resource: {
+                          ...(uiOptions?.resource || {}),
+                          colCount: cc.value,
+                        },
+                      };
+                      await BApi.options.patchUiOptions(patches);
+                    }}
+                  >
+                    {cc.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </Popover>
           <Tooltip content={t('Show larger cover on mouse hover')}>
             <Icon
               type={'ZoomInOutlined'}
@@ -243,47 +285,6 @@ export default ({
               }}
             />
           </Tooltip>
-          <div>
-            <Popup
-              v2
-              trigger={(
-                <Button
-                  startContent={<OrderedListOutlined />}
-                  color={'default'}
-                  size={'sm'}
-                  className={'ml-2'}
-                >
-                  {t('Column count')}
-                  &nbsp;
-                  {colCount}
-                </Button>
-              )}
-              triggerType={'click'}
-            >
-              <div className={styles.columnCounts}>
-                {colCountsDataSource.map((cc, i) => {
-                  return (
-                    <Button
-                      key={i}
-                      color={'default'}
-                      size={'sm'}
-                      onClick={async () => {
-                        const patches = {
-                          resource: {
-                            ...(uiOptions?.resource || {}),
-                            colCount: cc.value,
-                          },
-                        };
-                        await BApi.options.patchUiOptions(patches);
-                      }}
-                    >
-                      {cc.label}
-                    </Button>
-                  );
-                })}
-              </div>
-            </Popup>
-          </div>
           <div className={'flex gap-2 items-center'}>
             {renderBulkOperations()}
             <Tooltip

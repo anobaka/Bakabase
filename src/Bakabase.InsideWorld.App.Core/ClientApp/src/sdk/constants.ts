@@ -164,7 +164,7 @@ export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, Re
 export const resourceProperties = Object.keys(ResourceProperty).filter(k => typeof ResourceProperty[k] === 'number').map(t => ({label: t, value: ResourceProperty[t]}));
 export enum ResourceTaskType {Moving = 1}
 export const resourceTaskTypes = Object.keys(ResourceTaskType).filter(k => typeof ResourceTaskType[k] === 'number').map(t => ({label: t, value: ResourceTaskType[t]}));
-export enum SearchableReservedProperty {FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21}
+export enum SearchableReservedProperty {FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, MediaLibrary = 21}
 export const searchableReservedProperties = Object.keys(SearchableReservedProperty).filter(k => typeof SearchableReservedProperty[k] === 'number').map(t => ({label: t, value: SearchableReservedProperty[t]}));
 export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
 export const searchOperations = Object.keys(SearchOperation).filter(k => typeof SearchOperation[k] === 'number').map(t => ({label: t, value: SearchOperation[t]}));

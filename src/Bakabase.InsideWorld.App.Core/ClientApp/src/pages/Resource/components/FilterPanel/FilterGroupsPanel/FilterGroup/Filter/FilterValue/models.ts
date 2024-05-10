@@ -9,6 +9,7 @@ export type ValueRendererPortalProps = {
 export type ValueEditorPortalProps = {
   key?: Key;
   onChange: (value?: string) => any;
+  onCancel?: () => any;
 };
 
 export interface FilterValueContext {

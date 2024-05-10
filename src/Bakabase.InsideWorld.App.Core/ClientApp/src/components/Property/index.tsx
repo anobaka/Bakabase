@@ -10,8 +10,9 @@ import PropertyDialog from '@/components/PropertyDialog';
 import { Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import SimpleLabel from '@/components/SimpleLabel';
-import type { CustomPropertyType } from '@/sdk/constants';
-import { StandardValueType } from '@/sdk/constants';
+import { CustomPropertyType, ResourceProperty } from '@/sdk/constants';
+import type { StandardValueType } from '@/sdk/constants';
+import { StandardValueIcon } from '@/components/StandardValue';
 
 interface IProps {
   property: IProperty;
@@ -62,19 +63,28 @@ export default ({
       </Modal>
       <div className={styles.line1}>
         <div className={`${styles.left} mr-2`}>
-          <div className={styles.name}>{property.name}</div>
-          {icon != undefined && (
-            <Tooltip
-              color={'foreground'}
-              content={t(StandardValueType[property.valueType])}
-            >
-              <div className={styles.type}>
-                <CustomIcon
-                  type={icon}
-                  className={'text-small'}
-                />
-              </div>
-            </Tooltip>
+          <div className={styles.name}>{
+            property.isReserved ? t(ResourceProperty[property.id]) : property.name
+          }</div>
+          {property.isReserved ? (
+            <StandardValueIcon
+              valueType={property.valueType}
+              style={{ color: 'var(--bakaui-color)' }}
+            />
+          ) : (
+            icon != undefined && (
+              <Tooltip
+                color={'foreground'}
+                content={t(CustomPropertyType[property.type!])}
+              >
+                <div className={styles.type}>
+                  <CustomIcon
+                    type={icon}
+                    className={'text-small'}
+                  />
+                </div>
+              </Tooltip>
+            )
           )}
         </div>
         <div className={'flex gap-0.5 items-center invisible group-hover:visible'}>

@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pagination } from '@alifd/next';
 
 import { useUpdate } from 'react-use';
 import { CheckCircleOutlined, CheckCircleTwoTone } from '@ant-design/icons';
@@ -13,6 +12,7 @@ import Resource from '@/components/Resource';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
 import ResourceMasonry from '@/pages/Resource/components/ResourceMasonry';
+import { Pagination } from '@/components/bakaui';
 
 const PageSize = 100;
 const MinResourceWidth = 100;
@@ -127,9 +127,11 @@ export default () => {
       {pageable && (
         <div className={styles.pagination}>
           <Pagination
-            pageSize={pageable.pageSize}
-            total={pageable.totalCount}
-            current={pageable.page}
+            boundaries={3}
+            showControls
+            size={'sm'}
+            total={pageable.pageSize == undefined ? 0 : Math.ceil(pageable.totalCount / pageable.pageSize)}
+            page={pageable.page}
             onChange={p => {
               search({
                 pageIndex: p,

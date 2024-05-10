@@ -16,6 +16,7 @@ export default ({ multiple, getDataSource, initValue, onChange }: ChoiceValueEdi
 
   const [dataSource, setDataSource] = useState<Data[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [value, setValue] = useState<string[]>(initValue ?? []);
 
   useEffect(() => {
     loadData();
@@ -33,7 +34,9 @@ export default ({ multiple, getDataSource, initValue, onChange }: ChoiceValueEdi
       defaultVisible
       size={dataSource.length > 10 ? 'xl' : 'lg'}
       title={t('Select data')}
-      onOk={async () => {}}
+      onOk={async () => {
+        onChange?.(value);
+      }}
     >
       <div>
         <Input
@@ -49,16 +52,16 @@ export default ({ multiple, getDataSource, initValue, onChange }: ChoiceValueEdi
           return (
             <Button
               size={'sm'}
-              color={initValue?.includes(id) ? 'primary' : 'default'}
+              color={value.includes(id) ? 'primary' : 'default'}
               onClick={() => {
                 if (multiple) {
-                  if (initValue?.includes(id)) {
-                    onChange?.(initValue.filter(v => v !== id));
+                  if (value.includes(id)) {
+                    setValue(value.filter(v => v !== id));
                   } else {
-                    onChange?.([...(initValue || []), id]);
+                    setValue([...(value || []), id]);
                   }
                 } else {
-                  onChange?.([id]);
+                  setValue([id]);
                 }
               }}
             >

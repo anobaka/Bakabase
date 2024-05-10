@@ -6,6 +6,7 @@ import type { FilterValueContext } from './models';
 import { buildFilterValueContext } from './helpers';
 import type { SearchOperation, StandardValueType } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
+import { Button } from '@/components/bakaui';
 
 interface IProps {
   operation?: SearchOperation;
@@ -30,9 +31,15 @@ export default ({
 
   if (!ctx) {
     return (
-      <>
+      <Button
+        size={'sm'}
+        disabled
+        variant={'light'}
+        color={'success'}
+        className={'min-w-fit pl-2 pr-2'}
+      >
         {t('Unsupported type')}
-      </>
+      </Button>
     );
   }
 
@@ -44,6 +51,9 @@ export default ({
           onChange: v => {
             console.log(v);
             onChange?.(v);
+            setEditing(false);
+          },
+          onCancel: () => {
             setEditing(false);
           },
         })

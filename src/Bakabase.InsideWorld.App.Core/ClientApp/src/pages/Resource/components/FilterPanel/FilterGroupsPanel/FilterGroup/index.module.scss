@@ -5,10 +5,9 @@
   flex-wrap: wrap;
   gap: 5px;
   border-radius: 4px;
-  border: 1px solid var(--theme-border-color-accent);
+  //border: 1px solid var(--theme-border-color-accent);
   font-size: 14px;
-  padding: 2px;
-  background: var(--theme-overlap-background-color);
+  background: var(--bakaui-overlap-background);
 
   .rootGroupAddButton {
     padding: 3px 3px;

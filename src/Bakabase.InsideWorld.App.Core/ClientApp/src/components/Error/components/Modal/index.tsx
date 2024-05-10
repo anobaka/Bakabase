@@ -27,7 +27,7 @@ const ErrorModal = ({}: IProps) => {
   return (
     <Modal
       defaultVisible
-      title={t('We have encountered some problems.')}
+      title={t('We have encountered some problems. You could try the following steps:')}
       size={'lg'}
       footer={{
           actions: ['cancel'],
@@ -83,17 +83,17 @@ const ErrorModal = ({}: IProps) => {
             </div>
             <div className={''}>
               <span className={'font-bold'}>
-                {t('I don\'t have programming experience')}
+                {t('If you have programming experience,')}
               </span>
-                &nbsp;
-              {t('Please provide the latest log file to the support team.')}
+              &nbsp;
+              {t('please provide the latest log file to the support team.')}
             </div>
             <div className={''}>
               <span className={'font-bold'}>
-                {t('I have programming experience')}
+                {t('Otherwise,')}
               </span>
-                &nbsp;
-              {t('You can locate and collect the error messages in the log file, and provide they to the support team. (open an issue on github, or send to developer directly)')}
+              &nbsp;
+              {t('you can locate and collect the error messages in the log file, and provide they to the support team. (open an issue on github, or send to developer directly)')}
             </div>
             <div className={'mt-2'}>
               <Trans
