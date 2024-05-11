@@ -61,20 +61,6 @@ public static class CustomPropertyExtensions
     public static CustomPropertyType[] GetCompatibleCustomPropertyTypes(this StandardValueType type) =>
         StandardValueTypeCustomPropertyTypesMapCache[type];
 
-    public static IServiceCollection AddCustomProperty(this IServiceCollection services)
-    {
-        var types = Assembly.GetExecutingAssembly().GetTypes()
-            .Where(t => t is {IsClass: true, IsAbstract: false, IsPublic: true} &&
-                        t.IsAssignableTo(SpecificTypeUtils<ICustomPropertyDescriptor>.Type))
-            .ToList();
-        foreach (var t in types)
-        {
-            services.AddSingleton(SpecificTypeUtils<ICustomPropertyDescriptor>.Type, t);
-        }
-
-        return services;
-    }
-
     public static bool IntegratedWithAlias(this CustomPropertyType type) =>
         type is CustomPropertyType.SingleChoice or CustomPropertyType.MultipleChoice or CustomPropertyType.Multilevel
             or CustomPropertyType.SingleLineText;

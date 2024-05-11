@@ -32,6 +32,7 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
@@ -79,7 +80,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 		private readonly ILogger<ResourceController> _logger;
 		private readonly OriginalService _originalService;
 		private readonly SeriesService _seriesService;
-		private readonly CustomPropertyValueService _customPropertyValueService;
+		private readonly ICustomPropertyValueService _customPropertyValueService;
 
 		public ResourceController(ResourceService service,
 			ResourceTagMappingService resourceTagMappingService,
@@ -91,7 +92,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 			FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions,
 			Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
 			ILogger<ResourceController> logger, OriginalService originalService, SeriesService seriesService,
-			CustomPropertyValueService customPropertyValueService)
+			ICustomPropertyValueService customPropertyValueService)
 		{
 			_service = service;
 			_resourceTagMappingService = resourceTagMappingService;

@@ -11,7 +11,7 @@ namespace Bakabase.Abstractions.Models.Domain
         public int ResourceId { get; set; }
         public CustomProperty? Property { get; set; }
         public virtual object? Value => null;
-        public CustomPropertyValueLayer Layer { get; set; }
+        public int Scope { get; set; }
 
         private sealed class CustomPropertyValueBizKeyComparer : IEqualityComparer<CustomPropertyValue>
         {
@@ -21,12 +21,12 @@ namespace Bakabase.Abstractions.Models.Domain
                 if (ReferenceEquals(x, null)) return false;
                 if (ReferenceEquals(y, null)) return false;
                 return (x.Id > 0 && x.Id == y.Id) ||
-                       (x.PropertyId == y.PropertyId && x.ResourceId == y.ResourceId && x.Layer == y.Layer);
+                       (x.PropertyId == y.PropertyId && x.ResourceId == y.ResourceId && x.Scope == y.Scope);
             }
 
             public int GetHashCode(CustomPropertyValue obj)
             {
-                return obj.Id > 0 ? obj.Id : HashCode.Combine(obj.PropertyId, obj.ResourceId, (int) obj.Layer);
+                return obj.Id > 0 ? obj.Id : HashCode.Combine(obj.PropertyId, obj.ResourceId, (int) obj.Scope);
             }
         }
 

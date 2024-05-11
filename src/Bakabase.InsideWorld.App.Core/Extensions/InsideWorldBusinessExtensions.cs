@@ -138,9 +138,6 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddScoped<BmMediaLibraryProcessor>();
             services.AddScoped<BmTagProcessor>();
 
-
-            services.AddScoped<CustomPropertyService>();
-            services.AddScoped<CustomPropertyValueService>();
             services.AddScoped<CategoryCustomPropertyMappingService>();
 
             services.AddSingleton<InternalOptionsDto>(t =>
@@ -160,9 +157,6 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddValueConversion();
             services.AddScoped<PropertyValueConverter>();
             services.AddScoped<V190Migrator>();
-
-            services.AddCustomProperty();
-
             return services;
         }
 

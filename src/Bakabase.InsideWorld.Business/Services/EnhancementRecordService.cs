@@ -41,6 +41,7 @@ using Resource = Bakabase.Abstractions.Models.Db.Resource;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+    [Obsolete]
     public class EnhancementRecordService : ResourceService<InsideWorldDbContext, EnhancementRecord, int>
     {
         protected ResourceCategoryService ResourceCategoryService => GetRequiredService<ResourceCategoryService>();

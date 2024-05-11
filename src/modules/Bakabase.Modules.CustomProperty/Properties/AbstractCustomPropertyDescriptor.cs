@@ -57,7 +57,7 @@ namespace Bakabase.Modules.CustomProperty.Properties
                 PropertyId = value.PropertyId,
                 ResourceId = value.ResourceId,
                 TypedValue = innerValue == null ? default : (TInnerValue) innerValue,
-                Layer = value.Layer
+                Scope = value.Scope
             };
 
             return dto;

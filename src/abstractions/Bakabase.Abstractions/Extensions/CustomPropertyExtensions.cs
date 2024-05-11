@@ -39,7 +39,7 @@ public static class CustomPropertyExtensions
             PropertyId = domain.PropertyId,
             ResourceId = domain.ResourceId,
             Value = domain.Value == null ? null : JsonConvert.SerializeObject(domain.Value),
-            Layer = domain.Layer
+            Scope = domain.Scope
         };
     }
 }

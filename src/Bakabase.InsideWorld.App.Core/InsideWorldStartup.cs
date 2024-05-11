@@ -34,7 +34,9 @@ using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
+using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Extensions;
 using Bootstrap.Components.DependencyInjection;
@@ -137,6 +139,7 @@ namespace Bakabase.InsideWorld.App.Core
 
             services.TryAddSingleton<InsideWorldWebProxy>();
 
+            services.AddCustomProperty<CustomPropertyService, CustomPropertyValueService>();
             services.AddEnhancers<EnhancementService, EnhancerService, CategoryEnhancerOptionsService, InsideWorldLocalizer>();
         }
 

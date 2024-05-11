@@ -56,7 +56,7 @@ public static class ServiceCollectionExtensions
                 }).ToArray();
 
                 return new EnhancerDescriptor((int) enhancerId, localizer.Enhancer_Name(enhancerId),
-                    localizer.Enhancer_Description(enhancerId), targetDescriptors);
+                    localizer.Enhancer_Description(enhancerId), targetDescriptors, attr.CustomPropertyValueLayer);
             });
             return enhancerDescriptors;
         });

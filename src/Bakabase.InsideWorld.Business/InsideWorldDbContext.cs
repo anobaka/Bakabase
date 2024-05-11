@@ -163,7 +163,7 @@ namespace Bakabase.InsideWorld.Business
             {
 	            t.HasIndex(x => new {x.ResourceId});
 	            t.HasIndex(x => x.PropertyId);
-                t.HasIndex(x => new {x.ResourceId, x.PropertyId, x.Layer});
+                t.HasIndex(x => new {x.ResourceId, x.PropertyId, x.Scope});
             });
         }
     }

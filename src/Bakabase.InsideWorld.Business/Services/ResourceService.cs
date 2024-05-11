@@ -50,6 +50,7 @@ using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Helpers;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bootstrap.Models.Constants;
 using CliWrap;
 using Microsoft.AspNetCore.Http;
@@ -90,8 +91,8 @@ namespace Bakabase.InsideWorld.Business.Services
 		private readonly TempFileManager _tempFileManager;
 		private readonly FfMpegService _ffMpegService;
 		private readonly InsideWorldLocalizer _localizer;
-		private readonly CustomPropertyService _customPropertyService;
-		private readonly CustomPropertyValueService _customPropertyValueService;
+		private readonly ICustomPropertyService _customPropertyService;
+		private readonly ICustomPropertyValueService _customPropertyValueService;
 		private readonly IResourceSearchContextProcessor _resourceSearchContextProcessor;
 
 		public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
@@ -105,8 +106,8 @@ namespace Bakabase.InsideWorld.Business.Services
 			BackgroundTaskHelper backgroundTaskHelper, FavoritesResourceMappingService favoritesResourceMappingService,
 			TagGroupService tagGroupService, IBOptionsManager<ResourceOptions> optionsManager,
 			IBOptions<ThirdPartyOptions> thirdPartyOptions, TempFileManager tempFileManager,
-			FfMpegService ffMpegService, InsideWorldLocalizer localizer, CustomPropertyService customPropertyService,
-			CustomPropertyValueService customPropertyValueService, IResourceSearchContextProcessor resourceSearchContextProcessor)
+			FfMpegService ffMpegService, InsideWorldLocalizer localizer, ICustomPropertyService customPropertyService,
+			ICustomPropertyValueService customPropertyValueService, IResourceSearchContextProcessor resourceSearchContextProcessor)
 		{
 			_specialTextService = specialTextService;
 			_publisherService = publisherService;

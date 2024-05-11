@@ -7,33 +7,32 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Models.ResponseModels;
-using CustomPropertyValue = Bakabase.Abstractions.Models.Db.CustomPropertyValue;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
     public class
-        CustomPropertyValueService : FullMemoryCacheResourceService<InsideWorldDbContext, CustomPropertyValue, int>
+        CustomPropertyValueService(IServiceProvider serviceProvider)
+        : FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.CustomPropertyValue, int>(serviceProvider), ICustomPropertyValueService
     {
-        protected CustomPropertyService CustomPropertyService => GetRequiredService<CustomPropertyService>();
+        protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
 
-        public CustomPropertyValueService(IServiceProvider serviceProvider) : base(serviceProvider)
-        {
-        }
-
-        public async Task<List<Abstractions.Models.Domain.CustomPropertyValue>> GetAll(
-            Expression<Func<CustomPropertyValue, bool>>? exp,
-            CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
+        public async Task<List<CustomPropertyValue>> GetAll(Expression<Func<Abstractions.Models.Db.CustomPropertyValue, bool>>? exp, CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
         {
             var data = await GetAll(exp, returnCopy);
             return await ToDomainModels(data, additionalItems, returnCopy);
         }
 
-        protected async Task<List<Abstractions.Models.Domain.CustomPropertyValue>> ToDomainModels(
-            List<CustomPropertyValue> values,
+        public Task<List<Abstractions.Models.Db.CustomPropertyValue>> GetAllDbModels(
+            Expression<Func<Abstractions.Models.Db.CustomPropertyValue, bool>>? selector = null, bool returnCopy = true) =>
+            base.GetAll(selector, returnCopy);
+
+        protected async Task<List<CustomPropertyValue>> ToDomainModels(
+            List<Abstractions.Models.Db.CustomPropertyValue> values,
             CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
         {
             var propertyIds = values.Select(v => v.PropertyId).ToHashSet();
@@ -59,7 +58,7 @@ namespace Bakabase.InsideWorld.Business.Services
             var value = await GetFirst(x => x.ResourceId == resourceId && x.PropertyId == propertyId);
             if (value == null)
             {
-                value = new CustomPropertyValue
+                value = new Abstractions.Models.Db.CustomPropertyValue()
                 {
                     ResourceId = resourceId,
                     PropertyId = propertyId,

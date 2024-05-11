@@ -28,6 +28,7 @@ using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -63,7 +64,7 @@ namespace Bakabase.InsideWorld.Business.Services
         protected ComponentService ComponentService => GetRequiredService<ComponentService>();
         protected CategoryComponentService CategoryComponentService => GetRequiredService<CategoryComponentService>();
         protected IStringLocalizer<SharedResource> Localizer => GetRequiredService<IStringLocalizer<SharedResource>>();
-        protected CustomPropertyService CustomPropertyService => GetRequiredService<CustomPropertyService>();
+        protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
 
         protected ICategoryEnhancerOptionsService CategoryEnhancerOptionsService =>
             GetRequiredService<ICategoryEnhancerOptionsService>();

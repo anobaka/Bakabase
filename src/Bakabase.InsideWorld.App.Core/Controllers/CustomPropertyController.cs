@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -19,10 +20,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     [Route("~/custom-property")]
     public class CustomPropertyController : Controller
     {
-        private readonly CustomPropertyService _service;
-        private readonly CustomPropertyValueService _propertyValueService;
+        private readonly ICustomPropertyService _service;
+        private readonly ICustomPropertyValueService _propertyValueService;
 
-        public CustomPropertyController(CustomPropertyService service, CustomPropertyValueService propertyValueService)
+        public CustomPropertyController(ICustomPropertyService service, ICustomPropertyValueService propertyValueService)
         {
             _service = service;
             _propertyValueService = propertyValueService;

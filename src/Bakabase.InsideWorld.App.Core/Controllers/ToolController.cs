@@ -216,5 +216,95 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         //{
         //    return new SingletonResponse<ExHentaiImageLimits>(await _exHentaiService.GetImageLimits());
         //}
+
+        public record FileMoverPaddingBugFixResult
+        {
+            public int BadFileCount { get; set; }
+            public decimal SizeDiffInGb { get; set; }
+        }
+
+        [HttpPut("file-mover/padding-bug/fix")]
+        [SwaggerOperation(OperationId = "FixFileMoverPaddingBug")]
+        public async Task<SingletonResponse<FileMoverPaddingBugFixResult>> FixFileMoverPaddingBug(string dir)
+        {
+            var files = Directory.GetFiles(dir, "*", SearchOption.AllDirectories);
+            var result = new FileMoverPaddingBugFixResult();
+
+            foreach (var file in files)
+            {
+                var ext = Path.GetExtension(file);
+                var filenameWithoutExt = Path.GetFileNameWithoutExtension(file);
+                var bakFilename = Path.Combine(Path.GetDirectoryName(file)!, $"{filenameWithoutExt}.bak{ext}");
+                if (System.IO.File.Exists(bakFilename))
+                {
+                    // do not try to fix fixed files.
+                    continue;
+                }
+
+                var fs = System.IO.File.OpenRead(file);
+                var ms = new MemoryStream();
+                await fs.CopyToAsync(ms);
+                var data = ms.ToArray().ToList();
+                await ms.DisposeAsync();
+                await fs.DisposeAsync();
+
+                const int segmentLength = 1024 * 1024;
+                if (data.Count % segmentLength == 0)
+                {
+                    byte[] newData;
+                    var segmentCount = data.Count / segmentLength;
+                    if (segmentCount > 1)
+                    {
+                        var lastSegment = data.Skip((segmentCount - 1) * segmentLength).ToList();
+                        var segmentBeforeLast = data.SkipLast((segmentCount - 2) * segmentLength).Take(segmentLength)
+                            .ToList();
+                        var idx = -1;
+                        for (var i = segmentLength - 1; i >= 0; i--)
+                        {
+                            if (lastSegment[i] != segmentBeforeLast[i])
+                            {
+                                idx = i;
+                                break;
+                            }
+                        }
+
+                        if (idx == -1)
+                        {
+                            break;
+                        }
+
+                        newData = data.Take(idx + 1 + (segmentCount - 1) * segmentLength).ToArray();
+                    }
+                    else
+                    {
+                        var idx = -1;
+                        for (var i = data.Count - 1; i >= 0; i--)
+                        {
+                            if (data[i] != 0)
+                            {
+                                idx = i;
+                                break;
+                            }
+                        }
+
+                        if (idx == -1)
+                        {
+                            break;
+                        }
+
+                        newData = data.Take(idx + 1).ToArray();
+                    }
+
+                    // System.IO.File.Move(file, bakFilename);
+                    // await System.IO.File.WriteAllBytesAsync(file, newData);
+
+                    result.BadFileCount++;
+                    result.SizeDiffInGb += data.Count - newData.Length;
+                }
+            }
+
+            result.SizeDiffInGb = Math.Round(result.SizeDiffInGb / 1024 / 1024 / 1024, 2);
+            return new SingletonResponse<FileMoverPaddingBugFixResult>(result);
+        }
     }
 }

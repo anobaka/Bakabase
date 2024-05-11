@@ -38,14 +38,15 @@ using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class CustomPropertyService : FullMemoryCacheResourceService<InsideWorldDbContext, CustomProperty, int>,
-        ICustomPropertyService
+    public class CustomPropertyService(IServiceProvider serviceProvider)
+        : FullMemoryCacheResourceService<InsideWorldDbContext, CustomProperty, int>(serviceProvider),
+            ICustomPropertyService
     {
         protected CategoryCustomPropertyMappingService CategoryCustomPropertyMappingService =>
             GetRequiredService<CategoryCustomPropertyMappingService>();
 
-        protected CustomPropertyValueService CustomPropertyValueService =>
-            GetRequiredService<CustomPropertyValueService>();
+        protected ICustomPropertyValueService CustomPropertyValueService =>
+            GetRequiredService<ICustomPropertyValueService>();
 
         protected ConversionService ConversionService => GetRequiredService<ConversionService>();
         protected ResourceCategoryService ResourceCategoryService => GetRequiredService<ResourceCategoryService>();
@@ -55,10 +56,6 @@ namespace Bakabase.InsideWorld.Business.Services
 
         protected Dictionary<StandardValueType, IStandardValueHandler> StdValueHandlers =>
             GetRequiredService<IEnumerable<IStandardValueHandler>>().ToDictionary(d => d.Type, d => d);
-
-        public CustomPropertyService(IServiceProvider serviceProvider) : base(serviceProvider)
-        {
-        }
 
         public async Task<List<Modules.CustomProperty.Models.CustomProperty>> GetAll(
             Expression<Func<CustomProperty, bool>>? selector = null,

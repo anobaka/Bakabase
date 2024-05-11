@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 
 namespace Bakabase.InsideWorld.Business.Components.Migration
 {
@@ -27,8 +28,8 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
         private readonly FavoritesService _favoritesService;
         private readonly FavoritesResourceMappingService _favoritesResourceMappingService;
         private readonly ResourceService _resourceService;
-        private readonly CustomPropertyService _customPropertyService;
-        private readonly CustomPropertyValueService _customPropertyValueService;
+        private readonly ICustomPropertyService _customPropertyService;
+        private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly TagGroupService _tagGroupService;
         private readonly ResourceTagMappingService _resourceTagMappingService;
 
@@ -36,7 +37,7 @@ namespace Bakabase.InsideWorld.Business.Components.Migration
             OriginalService originalService, OriginalResourceMappingService originalResourceMappingService,
             CustomResourcePropertyService customResourcePropertyService, FavoritesService favoritesService,
             FavoritesResourceMappingService favoritesResourceMappingService, ResourceService resourceService,
-            CustomPropertyService customPropertyService, CustomPropertyValueService customPropertyValueService,
+            ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             TagGroupService tagGroupService, ResourceTagMappingService resourceTagMappingService)
         {
             _publisherService = publisherService;

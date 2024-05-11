@@ -9,6 +9,7 @@ using Bootstrap.Components.Orm.Infrastructures;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+    [Obsolete]
     public class
         CustomResourcePropertyService : FullMemoryCacheResourceService<InsideWorldDbContext, CustomResourceProperty,
             int>

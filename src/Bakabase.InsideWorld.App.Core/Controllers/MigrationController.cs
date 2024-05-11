@@ -7,6 +7,7 @@ using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -25,13 +26,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly CustomResourcePropertyService _customResourcePropertyService;
         private readonly FavoritesService _favoritesService;
         private readonly ResourceService _resourceService;
-        private readonly CustomPropertyService _customPropertyService;
+        private readonly ICustomPropertyService _customPropertyService;
         private readonly MigrationService _migrationService;
 
         public MigrationController(PublisherService publisherService, VolumeService volumeService,
             SeriesService seriesService, OriginalService originalService,
             CustomResourcePropertyService customResourcePropertyService, FavoritesService favoritesService,
-            ResourceService resourceService, CustomPropertyService customPropertyService,
+            ResourceService resourceService, ICustomPropertyService customPropertyService,
             MigrationService migrationService)
         {
             _publisherService = publisherService;

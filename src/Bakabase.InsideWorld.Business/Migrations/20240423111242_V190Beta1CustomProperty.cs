@@ -48,7 +48,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     ResourceId = table.Column<int>(type: "INTEGER", nullable: false),
                     PropertyId = table.Column<int>(type: "INTEGER", nullable: false),
                     Value = table.Column<string>(type: "TEXT", nullable: true),
-                    Layer = table.Column<int>(type: "INTEGER", nullable: false)
+                    Scope = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -72,9 +72,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                 column: "ResourceId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CustomPropertyValues_ResourceId_PropertyId_Layer",
+                name: "IX_CustomPropertyValues_ResourceId_PropertyId_Scope",
                 table: "CustomPropertyValues",
-                columns: new[] { "ResourceId", "PropertyId", "Layer" });
+                columns: new[] { "ResourceId", "PropertyId", "Scope" });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

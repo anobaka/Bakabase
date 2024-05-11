@@ -1,10 +1,12 @@
 ﻿using System.Linq.Expressions;
+using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Modules.Enhancer.Abstractions.Services;
 
 public interface IEnhancementService
 {
-    Task<List<Bakabase.Abstractions.Models.Domain.Enhancement>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>>? exp);
+    Task<List<Bakabase.Abstractions.Models.Domain.Enhancement>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>>? exp, EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None);
 
     // /// <summary>
     // /// 获取全部默认资源
@@ -63,6 +65,7 @@ public interface IEnhancementService
     // /// <param name="selector"></param>
     // /// <returns></returns>
     // Task<BaseResponse> RemoveAll(Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>> selector);
+    Task<BaseResponse> RemoveAll(Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>> selector, bool removeGeneratedCustomPropertyValues);
     //
     // /// <summary>
     // /// 创建默认资源

@@ -17,9 +17,11 @@ using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Business.Models.View;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.CustomProperty.Properties.Boolean;
@@ -43,8 +45,8 @@ namespace Bakabase.InsideWorld.Business.Services
     public class MigrationService
     {
         private readonly CustomResourcePropertyService _customResourcePropertyService;
-        private readonly CustomPropertyService _customPropertyService;
-        private readonly CustomPropertyValueService _customPropertyValueService;
+        private readonly ICustomPropertyService _customPropertyService;
+        private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly ConversionService _conversionService;
         private readonly IBOptionsManager<MigrationOptions> _migrationOptions;
         private readonly PropertyValueConverter _propertyValueConverter;
@@ -52,8 +54,8 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly Dictionary<StandardValueType, IStandardValueHandler> _stdValueHandlers;
 
         public MigrationService(CustomResourcePropertyService customResourcePropertyService,
-            CustomPropertyService customPropertyService,
-            CustomPropertyValueService customPropertyValueService,
+            ICustomPropertyService customPropertyService,
+            ICustomPropertyValueService customPropertyValueService,
             ConversionService conversionService, IBOptionsManager<MigrationOptions> migrationOptions,
             PropertyValueConverter propertyValueConverter, V190Migrator v190Migrator, IEnumerable<IStandardValueHandler> valueConverters)
         {
@@ -196,7 +198,7 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             var targetProperty = await _customPropertyService.GetByKey(target.TargetPropertyId!.Value);
             var currentPropertyValues =
-                (await _customPropertyValueService.GetAll(x => x.PropertyId == targetProperty.Id))
+                (await _customPropertyValueService.GetAllDbModels(x => x.PropertyId == targetProperty.Id))
                 .Where(x => !string.IsNullOrEmpty(x.Value)).ToDictionary(x => x.ResourceId, x => x);
 
             var (fromType, resourceRawValues) =

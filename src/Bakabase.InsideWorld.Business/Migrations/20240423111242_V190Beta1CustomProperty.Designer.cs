@@ -70,7 +70,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Layer")
+                    b.Property<int>("Scope")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("PropertyId")
@@ -88,7 +88,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("ResourceId");
 
-                    b.HasIndex("ResourceId", "PropertyId", "Layer");
+                    b.HasIndex("ResourceId", "PropertyId", "Scope");
 
                     b.ToTable("CustomPropertyValues");
                 });

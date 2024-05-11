@@ -8,6 +8,6 @@ namespace Bakabase.Abstractions.Models.Db
 		public int ResourceId { get; set; }
 		public int PropertyId { get; set; }
 		public string? Value { get; set; }
-		public CustomPropertyValueLayer Layer { get; set; }
+		public int Scope { get; set; }
 	}
 }

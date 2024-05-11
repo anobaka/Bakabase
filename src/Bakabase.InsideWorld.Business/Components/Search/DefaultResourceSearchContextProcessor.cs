@@ -14,6 +14,7 @@ using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Newtonsoft.Json;
 using SQLitePCL;
@@ -22,15 +23,15 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 {
 	public class DefaultResourceSearchContextProcessor : IResourceSearchContextProcessor
 	{
-		private readonly CustomPropertyValueService _customPropertyValueService;
+		private readonly ICustomPropertyValueService _customPropertyValueService;
 		private readonly AliasService _aliasService;
-		private readonly CustomPropertyService _customPropertyService;
+		private readonly ICustomPropertyService _customPropertyService;
 		private readonly FavoritesResourceMappingService _favoritesResourceMappingService;
 		private readonly ResourceTagMappingService _resourceTagMappingService;
         private readonly Dictionary<int, ICustomPropertyDescriptor> _propertyDescriptors;
 
-		public DefaultResourceSearchContextProcessor(CustomPropertyValueService customPropertyValueService,
-			AliasService aliasService, CustomPropertyService customPropertyService, FavoritesResourceMappingService favoritesResourceMappingService, ResourceTagMappingService resourceTagMappingService, IEnumerable<ICustomPropertyDescriptor> propertyDescriptors)
+		public DefaultResourceSearchContextProcessor(ICustomPropertyValueService customPropertyValueService,
+			AliasService aliasService, ICustomPropertyService customPropertyService, FavoritesResourceMappingService favoritesResourceMappingService, ResourceTagMappingService resourceTagMappingService, IEnumerable<ICustomPropertyDescriptor> propertyDescriptors)
 		{
 			_customPropertyValueService = customPropertyValueService;
 			_aliasService = aliasService;
@@ -60,26 +61,6 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 			context.PropertiesDataPool ??=
 				(await _customPropertyService.GetAll(null, CustomPropertyAdditionalItem.None, false))
 				.ToDictionary(x => x.Id, x => x);
-		}
-
-		private async Task PrepareFavorites(ResourceSearchContext context)
-		{
-			if (context.FavoritesResourceDataPool == null)
-			{
-				var favoritesMappings = await _favoritesResourceMappingService.GetAll(null, false);
-				context.FavoritesResourceDataPool = favoritesMappings.GroupBy(x => x.FavoritesId)
-					.ToDictionary(x => x.Key, x => x.Select(y => y.ResourceId).ToHashSet());
-			}
-		}
-
-		private async Task PrepareTags(ResourceSearchContext context)
-		{
-			if (context.TagResourceDataPool == null)
-			{
-				var tagMappings = await _resourceTagMappingService.GetAll(null, false);
-				context.TagResourceDataPool = tagMappings.GroupBy(x => x.TagId)
-					.ToDictionary(x => x.Key, x => x.Select(y => y.ResourceId).ToHashSet());
-			}
 		}
 
         private async Task<Dictionary<int, CustomPropertyValue?>?> PrepareAndGetCustomPropertyValues(
