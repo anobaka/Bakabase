@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.StandardValue
 {
     public static class StandardValueExtensions
     {
-
-
-        public static HashSet<string>? ExtractTextsForAlias(this object value, StandardValueType valueType)
+        public static (HashSet<string> StringValues, Func<Dictionary<string, string>, object> ReplaceWithAlias)?
+            BuildContextForReplaceValueWithAlias(this object value, StandardValueType valueType)
         {
             switch (valueType)
             {
@@ -22,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue
                 {
                     if (value is string tv)
                     {
-                        return [tv];
+                        return ([tv], aMap => aMap[tv]);
                     }
 
                     break;
@@ -31,7 +31,8 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue
                 {
                     if (value is List<string> tv)
                     {
-                        return tv.ToHashSet();
+                        var set = tv.ToHashSet();
+                        return (set, aMap => tv.Select(s => aMap[s]).ToList());
                     }
 
                     break;
@@ -48,16 +49,24 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue
                 {
                     if (value is List<List<string>> tv)
                     {
-                        return tv.SelectMany(v => v).ToHashSet();
+                        var set = tv.SelectMany(v => v).ToHashSet();
+                        return (set, aMap => tv.Select(vl => vl.Select(v => aMap[v]).ToList()).ToList());
                     }
 
                     break;
                 }
+                case StandardValueType.Decimal:
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
 
             return null;
+        }
+
+        public static IServiceCollection AddStandardValue<TStandardValueService>(this IServiceCollection services) where TStandardValueService: class, IStandardValueService
+        {
+            return services.AddScoped<IStandardValueService, TStandardValueService>();
         }
     }
 }

@@ -13,6 +13,8 @@ namespace Bakabase.Abstractions.Models.Domain
         public virtual object? Value => null;
         public int Scope { get; set; }
 
+        public string BizKey => $"{ResourceId}-{PropertyId}-{Scope}";
+
         private sealed class CustomPropertyValueBizKeyComparer : IEqualityComparer<CustomPropertyValue>
         {
             public bool Equals(CustomPropertyValue? x, CustomPropertyValue? y)
@@ -20,13 +22,12 @@ namespace Bakabase.Abstractions.Models.Domain
                 if (ReferenceEquals(x, y)) return true;
                 if (ReferenceEquals(x, null)) return false;
                 if (ReferenceEquals(y, null)) return false;
-                return (x.Id > 0 && x.Id == y.Id) ||
-                       (x.PropertyId == y.PropertyId && x.ResourceId == y.ResourceId && x.Scope == y.Scope);
+                return (x.Id > 0 && x.Id == y.Id) || x.BizKey == y.BizKey;
             }
 
             public int GetHashCode(CustomPropertyValue obj)
             {
-                return obj.Id > 0 ? obj.Id : HashCode.Combine(obj.PropertyId, obj.ResourceId, (int) obj.Scope);
+                return obj.Id > 0 ? obj.Id : HashCode.Combine(obj.PropertyId, obj.ResourceId, obj.Scope);
             }
         }
 

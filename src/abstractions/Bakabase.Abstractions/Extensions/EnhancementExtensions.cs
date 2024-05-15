@@ -22,7 +22,8 @@ namespace Bakabase.Abstractions.Extensions
                 ResourceId = dbModel.ResourceId,
                 Target = dbModel.Target,
                 Value = dbModel.Value?.DeserializeAsStandardValue(dbModel.ValueType),
-                ValueType = dbModel.ValueType
+                ValueType = dbModel.ValueType,
+                CustomPropertyValueId = dbModel.CustomPropertyValueId
             };
         }
 
@@ -41,7 +42,8 @@ namespace Bakabase.Abstractions.Extensions
                 ResourceId = domainModel.ResourceId,
                 Target = domainModel.Target,
                 Value = domainModel.Value.Serialize(),
-                ValueType = domainModel.ValueType
+                ValueType = domainModel.ValueType,
+                CustomPropertyValueId = domainModel.CustomPropertyValueId
             };
         }
     }

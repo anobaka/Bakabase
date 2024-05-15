@@ -1,106 +1,124 @@
-import { Button, Dialog, Icon, Table } from '@alifd/next';
 import dayjs from 'dayjs';
-import React, { useCallback, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import BApi from '@/sdk/BApi';
 import { createPortalOfComponent } from '@/components/utils';
+import type { DestroyableProps } from '@/components/bakaui/types';
+import { Button, Modal, Tab, Table, Tabs, TableBody, TableCell, TableColumn, TableHeader, TableRow, Snippet } from '@/components/bakaui';
+import type { Enhancement } from '@/components/Enhancer/models';
+import { EnhancementAdditionalItem } from '@/sdk/constants';
 
-interface IProps {
-  enhancements: any[];
+interface Props extends DestroyableProps{
   resourceId: number;
 }
 
-function ResourceEnhancementsDialog(props: IProps) {
-  const { enhancements: propsEnhancements = [], resourceId } = props;
-  const [enhancements, setEnhancements] = useState<any[]>(propsEnhancements);
-  const [visible, setVisible] = useState(true);
+type ResourceEnhancements = {
+  enhancerId: number;
+  enhancerName: string;
+  enhancedAt: string;
+  targets: {
+    target: number;
+    targetName: string;
+    enhancement: Enhancement;
+  }[];
+};
+
+function ResourceEnhancementsDialog({ resourceId, ...props }: Props) {
+  const [enhancements, setEnhancements] = useState<ResourceEnhancements[]>([]);
+  const [resource, setResource] = useState<{
+    path: string;
+  }>({ path: '' });
   const { t } = useTranslation();
   const [enhancing, setEnhancing] = useState(false);
 
-  const close = useCallback(() => {
-    setVisible(false);
+  useEffect(() => {
+    loadEnhancements();
+
+    BApi.resource.getResourcesByKeys({ ids: [resourceId] }).then((r) => {
+      const data = r.data || [];
+      setResource({
+        path: data[0]?.path || '',
+      });
+    });
+  }, []);
+
+  const loadEnhancements = useCallback(async () => {
+    const r = await BApi.resource.getResourceEnhancements(resourceId, { additionalItem: EnhancementAdditionalItem.GeneratedCustomPropertyValue });
+    const data = r.data || [];
+    // @ts-ignore
+    setEnhancements(data);
   }, []);
 
   return (
-    <Dialog
+    <Modal
+      size={'xl'}
       title={t('Enhancement records')}
-      visible={visible}
-      closeable
-      footerActions={['ok']}
-      onOk={close}
-      onClose={close}
-      onCancel={close}
+      defaultVisible
+      footer={{
+        actions: ['ok'],
+      }}
+      onDestroyed={props.onDestroyed}
     >
-      <Table dataSource={enhancements || []}>
-        <Table.Column
-          title={t('Enhancer')}
-          dataIndex={'enhancerName'}
-          width={200}
-        />
-        <Table.Column
-          title={t('Status')}
-          dataIndex={'success'}
-          cell={(c) => (c ? (<Icon style={{ color: 'green' }} type="success" />) : (<Icon style={{ color: 'red' }} type="error" />))}
-          width={80}
-        />
-        <Table.Column
-          title={t('Enhancement')}
-          dataIndex={'enhancement'}
-          width={800}
-          cell={(c, i, r) => (<>
-            <pre>{c}</pre>
-            <pre>{r.message}</pre>
-          </>)}
-        />
-        <Table.Column
-          title={t('Enhance Dt')}
-          dataIndex={'createDt'}
-          width={200}
-          cell={(c) => dayjs(c)
-            .format('YYYY-MM-DD HH:mm:ss')}
-        />
-      </Table>
-      <div
-        className="opt"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 5,
+      <div className={'flex items-center gap-2'}>
+        <div>
+          {t('Path of resource')}
+        </div>
+        <Snippet size={'sm'} symbol={''}>{resource.path}</Snippet>
+      </div>
+      <Tabs
+        aria-label="Enhancers"
+        isVertical
+        variant={'bordered'}
+        classNames={{
+          panel: 'grow',
         }}
       >
-        {enhancements?.length > 0 && (
-          <Button
-            style={{ marginTop: 10 }}
-            onClick={async () => {
-              await BApi.resource.removeResourceEnhancementRecords(resourceId);
-              setEnhancements([]);
-            }}
-            warning
-          >{t('Remove all records')}
-          </Button>
-        )}
-
-        <Button
-          style={{ marginTop: 10 }}
-          loading={enhancing}
-          onClick={async () => {
-            setEnhancing(true);
-            try {
-              await BApi.resource.enhanceResource(resourceId);
-              const eRsp = await BApi.resource.getResourceEnhancementRecords(resourceId);
-              setEnhancements(eRsp.data || []);
-            } finally {
-              setEnhancing(false);
-            }
-          }}
-          type={'primary'}
-        >{t('Enhance now')}
-        </Button>
-      </div>
-    </Dialog>
+        {enhancements.map(e => {
+            const { targets } = e;
+            return (
+              <Tab key={e.enhancerId} title={e.enhancerName}>
+                <div className={'flex items-center gap-2'}>
+                  <div>{e.enhancedAt ? t('This enhancer enhanced this resource at {{enhancedAt}}.', { enhancedAt: e.enhancedAt }) : t('This enhancer has not enhance this resource yet.')}</div>
+                  <Button
+                    size={'sm'}
+                    variant={'light'}
+                    isLoading={enhancing}
+                    color={e.enhancedAt ? 'secondary' : 'primary'}
+                    onClick={() => {
+                      setEnhancing(true);
+                      BApi.resource.createEnhancementForResourceByEnhancer(resourceId, e.enhancerId).then(() => {
+                        loadEnhancements();
+                        setEnhancing(false);
+                      });
+                    }}
+                  >
+                    {t(e.enhancedAt ? 'Re-enhance now' : 'Enhance now')}
+                  </Button>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableColumn>{t('Target')}</TableColumn>
+                    <TableColumn>{t('Raw data')}</TableColumn>
+                    <TableColumn>{t('Generated custom property value')}</TableColumn>
+                  </TableHeader>
+                  <TableBody>
+                    {targets.map((e) => (
+                      <TableRow>
+                        <TableCell>{e.targetName}</TableCell>
+                        <TableCell>{JSON.stringify(e.enhancement?.value)}</TableCell>
+                        <TableCell>{JSON.stringify(e.enhancement?.customPropertyValue?.value)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Tab>
+            );
+          })}
+      </Tabs>
+    </Modal>
   );
 }
 
-ResourceEnhancementsDialog.show = (props: IProps) => createPortalOfComponent(ResourceEnhancementsDialog, props);
+ResourceEnhancementsDialog.show = (props: Props) => createPortalOfComponent(ResourceEnhancementsDialog, props);
 
 export default ResourceEnhancementsDialog;

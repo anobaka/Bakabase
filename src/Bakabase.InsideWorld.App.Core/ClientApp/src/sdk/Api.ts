@@ -95,12 +95,6 @@ export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyType =
   | 15;
 
 /**
- * [0: Manual, 1000: BakabaseEnhancer]
- * @format int32
- */
-export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyValueLayer = 0 | 1000;
-
-/**
  * [1: NotAcceptTerms, 2: NeedRestart]
  * @format int32
  */
@@ -135,8 +129,25 @@ export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
   resourceId?: number;
   property?: BakabaseAbstractionsModelsDomainCustomProperty;
   value?: any;
-  /** [0: Manual, 1000: BakabaseEnhancer] */
-  layer?: BakabaseAbstractionsModelsDomainConstantsCustomPropertyValueLayer;
+  /** @format int32 */
+  scope?: number;
+}
+
+export interface BakabaseAbstractionsModelsDomainEnhancement {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  resourceId?: number;
+  /** @format int32 */
+  enhancerId?: number;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString] */
+  valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** @format int32 */
+  target?: number;
+  value?: any;
+  /** @format date-time */
+  createdAt?: string;
+  customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
 }
 
 export interface BakabaseAbstractionsModelsDomainEnhancerDescriptor {
@@ -145,6 +156,8 @@ export interface BakabaseAbstractionsModelsDomainEnhancerDescriptor {
   name?: string | null;
   description?: string | null;
   targets?: BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor[] | null;
+  /** @format int32 */
+  customPropertyScope?: number;
 }
 
 export interface BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor {
@@ -1028,10 +1041,10 @@ export type BakabaseInsideWorldModelsConstantsSearchOperation =
   | 18;
 
 /**
- * [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime]
+ * [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsSpecialTextType = 1 | 2 | 3 | 4 | 6 | 7 | 8;
+export type BakabaseInsideWorldModelsConstantsSpecialTextType = 1 | 3 | 4 | 6 | 7 | 8 | 9;
 
 /**
  * [0: Default, 1: Resource]
@@ -1473,7 +1486,7 @@ export interface BakabaseInsideWorldModelsModelsEntitiesSpecialText {
   value1: string;
   /** @maxLength 64 */
   value2?: string | null;
-  /** [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime] */
+  /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
   type?: BakabaseInsideWorldModelsConstantsSpecialTextType;
 }
 
@@ -1687,7 +1700,7 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceUpdateRequestMode
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsSpecialTextCreateRequestModel {
-  /** [1: Useless, 2: Language, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime] */
+  /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
   type?: BakabaseInsideWorldModelsConstantsSpecialTextType;
   value1?: string | null;
   value2?: string | null;
@@ -1760,6 +1773,12 @@ export interface BakabaseInsideWorldModelsResponseModelsEverythingExtractionStat
   error?: string | null;
 }
 
+/**
+ * [0: None, 1: GeneratedCustomPropertyValue]
+ * @format int32
+ */
+export type BakabaseModulesEnhancerModelsDomainConstantsEnhancementAdditionalItem = 0 | 1;
+
 export interface BakabaseModulesEnhancerModelsDomainEnhancerFullOptions {
   targetOptionsMap?: Record<string, BakabaseModulesEnhancerModelsDomainEnhancerTargetFullOptions>;
 }
@@ -1774,6 +1793,22 @@ export interface BakabaseModulesEnhancerModelsDomainEnhancerTargetFullOptions {
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
   options?: BakabaseModulesEnhancerModelsDomainEnhancerFullOptions;
   active?: boolean | null;
+}
+
+export interface BakabaseModulesEnhancerModelsViewResourceEnhancements {
+  /** @format int32 */
+  enhancerId?: number;
+  enhancerName?: string | null;
+  /** @format date-time */
+  enhancedAt?: string | null;
+  targets?: BakabaseModulesEnhancerModelsViewResourceEnhancementsTargetEnhancement[] | null;
+}
+
+export interface BakabaseModulesEnhancerModelsViewResourceEnhancementsTargetEnhancement {
+  /** @format int32 */
+  target?: number;
+  targetName?: string | null;
+  enhancement?: BakabaseAbstractionsModelsDomainEnhancement;
 }
 
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -1902,13 +1937,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   data?: BakabaseInsideWorldModelsModelsDtosDownloadTaskDto[] | null;
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto[] | null;
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosFavoritesDto {
   /** @format int32 */
   code?: number;
@@ -1963,6 +1991,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsEntitiesPassword[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhancerModelsViewResourceEnhancements {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseModulesEnhancerModelsViewResourceEnhancements[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -2560,9 +2595,9 @@ export type SystemReflectionICustomAttributeProvider = object;
 export interface SystemReflectionMemberInfo {
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
+  name?: string | null;
   declaringType?: SystemType;
   reflectedType?: SystemType;
-  name?: string | null;
   module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
@@ -4345,16 +4380,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
-     * @name GetResourceEnhancementRecords
-     * @request GET:/resource/{id}/enhancement
+     * @name GetResourceEnhancements
+     * @request GET:/resource/{resourceId}/enhancement
      */
-    getResourceEnhancementRecords: (id: number, params: RequestParams = {}) =>
+    getResourceEnhancements: (
+      resourceId: number,
+      query?: {
+        /** [0: None, 1: GeneratedCustomPropertyValue] */
+        additionalItem?: BakabaseModulesEnhancerModelsDomainConstantsEnhancementAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto,
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhancerModelsViewResourceEnhancements,
         any
       >({
-        path: `/resource/${id}/enhancement`,
+        path: `/resource/${resourceId}/enhancement`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -4363,28 +4406,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
-     * @name EnhanceResource
-     * @request POST:/resource/{id}/enhancement
+     * @name DeleteResourceEnhancement
+     * @request DELETE:/resource/{resourceId}/enhancer/{enhancerId}/enhancement
      */
-    enhanceResource: (id: number, params: RequestParams = {}) =>
+    deleteResourceEnhancement: (resourceId: number, enhancerId: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/enhancement`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name RemoveResourceEnhancementRecords
-     * @request DELETE:/resource/{id}/enhancement
-     */
-    removeResourceEnhancementRecords: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/enhancement`,
+        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name CreateEnhancementForResourceByEnhancer
+     * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement
+     */
+    createEnhancementForResourceByEnhancer: (resourceId: number, enhancerId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement`,
+        method: "POST",
         format: "json",
         ...params,
       }),
@@ -4770,12 +4813,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
-     * @name RemoveMediaLibraryEnhancementRecords
-     * @request DELETE:/media-library/{id}/enhancement
+     * @name RemoveMediaLibraryEnhancements
+     * @request DELETE:/media-library/{mediaLibraryId}/enhancement
      */
-    removeMediaLibraryEnhancementRecords: (id: number, params: RequestParams = {}) =>
+    removeMediaLibraryEnhancements: (mediaLibraryId: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library/${id}/enhancement`,
+        path: `/media-library/${mediaLibraryId}/enhancement`,
         method: "DELETE",
         format: "json",
         ...params,
@@ -5060,12 +5103,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
-     * @name RemoveCategoryEnhancementRecords
-     * @request DELETE:/category/{id}/enhancement
+     * @name RemoveCategoryEnhancements
+     * @request DELETE:/category/{categoryId}/enhancement
      */
-    removeCategoryEnhancementRecords: (id: number, params: RequestParams = {}) =>
+    removeCategoryEnhancements: (categoryId: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/category/${id}/enhancement`,
+        path: `/category/${categoryId}/enhancement`,
         method: "DELETE",
         format: "json",
         ...params,

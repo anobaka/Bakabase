@@ -1251,5 +1251,12 @@
   "Filter.Operation": "规则",
   "Unsupported type": "不支持的类型",
   "Combinator.And": "并且",
-  "Combinator.Or": "或者"
+  "Combinator.Or": "或者",
+  "Clear all": "清除全部",
+  "Raw data": "原始数据",
+  "Generated custom property value": "创建的自定义属性值",
+  "This enhancer enhanced this resource at {{enhancedAt}}.": "此增强器于{{enhancedAt}}增强了该资源。",
+  "This enhancer has not enhance this resource yet.": "此增强器尚未增强该资源。",
+  "Re-enhance now": "重新增强",
+  "Path of resource": "资源路径"
 }

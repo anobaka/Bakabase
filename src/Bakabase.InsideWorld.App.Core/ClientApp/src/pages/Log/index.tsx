@@ -184,7 +184,8 @@ export default () => {
             size={'small'}
             onClick={() => ClearAllLog()
               .invoke((a) => setLogs([]))}
-          >Clear All
+          >
+            {i18n.t('Clear all')}
           </Button>
         </div>
       </div>

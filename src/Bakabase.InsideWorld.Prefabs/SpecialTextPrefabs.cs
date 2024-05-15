@@ -29,17 +29,16 @@ namespace Bakabase.InsideWorld.Prefabs
                     },
                     {
                         SpecialTextType.Language,
-                        new List<(string Value1, ResourceLanguage Value2)>
-                            {
-                                ("汉化", ResourceLanguage.Chinese),
-                                ("中文", ResourceLanguage.Chinese),
-                                ("中国翻訳", ResourceLanguage.Chinese),
-                                ("CE家族社", ResourceLanguage.Chinese),
-                                ("漢化", ResourceLanguage.Chinese),
-                                ("阿提斯整個車頭的", ResourceLanguage.Chinese),
-                                ("CN", ResourceLanguage.Chinese)
-                            }
-                            .Select(a => (a.Value1, ((int) a.Value2).ToString())).ToList()
+                        new List<(string Value1, string Value2)>
+                        {
+                            ("汉化", "中文"),
+                            ("中文", "中文"),
+                            ("中国翻訳", "中文"),
+                            ("CE家族社", "中文"),
+                            ("漢化", "中文"),
+                            ("阿提斯整個車頭的", "中文"),
+                            ("CN", "中文")
+                        }
                     },
                     {
                         SpecialTextType.Wrapper, new List<(string Value1, string Value2)>

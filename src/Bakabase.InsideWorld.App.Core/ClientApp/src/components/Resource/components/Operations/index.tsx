@@ -8,6 +8,7 @@ import BApi from '@/sdk/BApi';
 import ResourceEnhancementsDialog from '@/components/Resource/components/ResourceEnhancementsDialog';
 import ShowResourceMediaPlayer from '@/components/Resource/components/ShowResourceMediaPlayer';
 import type { CoverSaveLocation } from '@/sdk/constants';
+import { EnhancementAdditionalItem } from '@/sdk/constants';
 import { PlaylistItemType } from '@/sdk/constants';
 import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
 import FavoritesSelector from '@/pages/Resource/components/FavoritesSelector';
@@ -15,6 +16,7 @@ import { PlaylistCollection } from '@/components/Playlist';
 import TagSelector from '@/components/TagSelector';
 import store from '@/store';
 import type { IResourceCoverRef } from '@/components/Resource/components/ResourceCover';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 const { Popup } = Overlay;
 
@@ -31,6 +33,7 @@ export default ({
                 }: IProps) => {
   const { t } = useTranslation();
 
+  const { createPortal } = useBakabaseContext();
   const searchEngines = store.useModelState('thirdPartyOptions').simpleSearchEngines || [];
 
   return (
@@ -210,9 +213,9 @@ export default ({
             colorType={'normal'}
             type={'flashlight'}
             onClick={() => {
-              BApi.resource.getResourceEnhancementRecords(resource.id)
+              BApi.resource.getResourceEnhancements(resource.id, { additionalItem: EnhancementAdditionalItem.GeneratedCustomPropertyValue })
                 .then((t) => {
-                  ResourceEnhancementsDialog.show({
+                  createPortal(ResourceEnhancementsDialog, {
                     resourceId: resource.id,
                     enhancements: t.data || [],
                   });

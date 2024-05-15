@@ -42,7 +42,7 @@ namespace Bakabase.Modules.Enhancer.Enhancers
                 return null;
             }
 
-            Logger.LogInformation($"Got context: {resource.ToJson()}");
+            Logger.LogInformation($"Got context: {context.ToJson()}");
 
             var targetValues = await ConvertContextByTargets(context);
             if (targetValues?.Any(x => x.Value.Value != null) != true)

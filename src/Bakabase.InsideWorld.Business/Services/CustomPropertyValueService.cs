@@ -17,18 +17,22 @@ namespace Bakabase.InsideWorld.Business.Services
 {
     public class
         CustomPropertyValueService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.CustomPropertyValue, int>(serviceProvider), ICustomPropertyValueService
+        : FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.CustomPropertyValue, int>(
+            serviceProvider), ICustomPropertyValueService
     {
         protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
 
-        public async Task<List<CustomPropertyValue>> GetAll(Expression<Func<Abstractions.Models.Db.CustomPropertyValue, bool>>? exp, CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
+        public async Task<List<CustomPropertyValue>> GetAll(
+            Expression<Func<Abstractions.Models.Db.CustomPropertyValue, bool>>? exp,
+            CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
         {
             var data = await GetAll(exp, returnCopy);
             return await ToDomainModels(data, additionalItems, returnCopy);
         }
 
         public Task<List<Abstractions.Models.Db.CustomPropertyValue>> GetAllDbModels(
-            Expression<Func<Abstractions.Models.Db.CustomPropertyValue, bool>>? selector = null, bool returnCopy = true) =>
+            Expression<Func<Abstractions.Models.Db.CustomPropertyValue, bool>>? selector = null,
+            bool returnCopy = true) =>
             base.GetAll(selector, returnCopy);
 
         protected async Task<List<CustomPropertyValue>> ToDomainModels(
@@ -41,7 +45,9 @@ namespace Bakabase.InsideWorld.Business.Services
                     CustomPropertyAdditionalItem.None, returnCopy);
             var propertyMap = properties.ToDictionary(x => x.Id);
             var dtoList = values
-                .Select(v => CustomPropertyExtensions.Descriptors[(CustomPropertyType)propertyMap[v.PropertyId].Type].BuildDomainValue(v)!)
+                .Select(v =>
+                    CustomPropertyExtensions.Descriptors[(CustomPropertyType) propertyMap[v.PropertyId].Type]
+                        .BuildDomainValue(v)!)
                 .ToList();
 
             foreach (var dto in dtoList)
@@ -73,14 +79,20 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<BaseResponse> AddRange(IEnumerable<Abstractions.Models.Domain.CustomPropertyValue> values)
+        public async Task<BaseResponse> AddRange(IEnumerable<CustomPropertyValue> values)
         {
-            var dbModels = values.Select(v => Abstractions.Extensions.CustomPropertyExtensions.ToDbModel(v)!).ToList();
-            await AddRange(dbModels);
+            var dbModelsMap = values.ToDictionary(v => Abstractions.Extensions.CustomPropertyExtensions.ToDbModel(v)!,
+                v => v);
+            await AddRange(dbModelsMap.Keys.ToList());
+            foreach (var (k, v) in dbModelsMap)
+            {
+                v.Id = k.Id;
+            }
+
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> UpdateRange(IEnumerable<Abstractions.Models.Domain.CustomPropertyValue> values)
+        public async Task<BaseResponse> UpdateRange(IEnumerable<CustomPropertyValue> values)
         {
             var dbModels = values.Select(v => Abstractions.Extensions.CustomPropertyExtensions.ToDbModel(v)!).ToList();
             await UpdateRange(dbModels);

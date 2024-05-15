@@ -39,6 +39,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     Target = table.Column<int>(type: "INTEGER", nullable: false),
                     ValueType = table.Column<int>(type: "INTEGER", nullable: false),
                     Value = table.Column<string>(type: "TEXT", nullable: true),
+                    CustomPropertyValueId = table.Column<int>(type: "INTEGER", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

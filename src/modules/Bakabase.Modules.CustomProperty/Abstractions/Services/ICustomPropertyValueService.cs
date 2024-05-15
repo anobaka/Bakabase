@@ -47,7 +47,7 @@ public interface ICustomPropertyValueService
     Task<BaseResponse> RemoveRange(IEnumerable<Bakabase.Abstractions.Models.Db.CustomPropertyValue> resources);
     Task<BaseResponse> RemoveAll(Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>> selector);
     // Task<BaseResponse> RemoveByKey(Int32 key);
-    // Task<BaseResponse> RemoveByKeys(IEnumerable<Int32> keys);
+    Task<BaseResponse> RemoveByKeys(IEnumerable<Int32> keys);
     // Task<SingletonResponse<CustomPropertyValue>> Add(CustomPropertyValue resource);
     // Task<SingletonResponse<CustomPropertyValue>> UpdateByKey(Int32 key, Action<CustomPropertyValue> modify);
     // Task<BaseResponse> Update(CustomPropertyValue resource);

@@ -23,6 +23,9 @@ namespace Bakabase.Modules.Enhancer.Services
             return data.Select(d => d.ToDomainModel()!).ToList();
         }
 
+        public async Task<List<CategoryEnhancerFullOptions>> GetByCategory(int categoryId) =>
+            await GetAll(x => x.CategoryId == categoryId);
+
         public async Task<BaseResponse> Patch(int categoryId, int enhancerId,
             CategoryEnhancerOptionsPatchInputModel model)
         {

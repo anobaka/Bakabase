@@ -140,6 +140,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("ValueType")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("CustomPropertyValueId")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.ToTable("Enhancements");

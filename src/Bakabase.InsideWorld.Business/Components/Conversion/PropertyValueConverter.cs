@@ -107,6 +107,9 @@ public class PropertyValueConverter
         }
 
 
-        return CustomPropertyValueHelper.CreateFromImplicitValue(nv, (CustomPropertyType)toProperty.Type);
+        var pv = CustomPropertyValueHelper.CreateFromImplicitValue(nv, (CustomPropertyType)toProperty.Type);
+        pv.PropertyId = toProperty.Id;
+
+        return pv;
     }
 }

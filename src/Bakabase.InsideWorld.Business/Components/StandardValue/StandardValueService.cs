@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Services;
@@ -8,31 +9,30 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.StandardValue;
 
-public class StandardValueService
+public class StandardValueService(AliasService aliasService) : IStandardValueService
 {
-    private readonly AliasService _aliasService;
-
-    public StandardValueService(AliasService aliasService)
-    {
-        _aliasService = aliasService;
-    }
-
-    public async Task IntegrateWithAlias(Dictionary<object, StandardValueType> values)
+    public async Task<Dictionary<object, object>> IntegrateWithAlias(Dictionary<object, StandardValueType> values)
     {
         var texts = new HashSet<string>();
+        var valueReplacer = new Dictionary<object, Func<Dictionary<string, string>, object>>();
         foreach (var (v, t) in values)
         {
-            var tmpTexts = v.ExtractTextsForAlias(t);
-            if (tmpTexts != null)
+            var ctx = v.BuildContextForReplaceValueWithAlias(t);
+            if (ctx.HasValue)
             {
-                foreach (var tt in tmpTexts)
+                foreach (var tt in ctx.Value.StringValues)
                 {
                     texts.Add(tt);
                 }
+
+                valueReplacer[v] = ctx.Value.ReplaceWithAlias;
             }
         }
 
-        var aliasMap = _aliasService.GetPreferredNames(texts);
+        var aliasMap = await aliasService.GetPreferredNames(texts);
 
+        var replacedValues =
+            values.Keys.ToDictionary(d => d, d => valueReplacer.GetValueOrDefault(d)?.Invoke(aliasMap) ?? d);
+        return replacedValues;
     }
 }

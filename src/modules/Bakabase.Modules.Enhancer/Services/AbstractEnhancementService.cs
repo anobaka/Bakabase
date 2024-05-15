@@ -24,7 +24,8 @@ namespace Bakabase.Modules.Enhancer.Services
             GetRequiredService<IEnumerable<EnhancerDescriptor>>();
 
         public async Task<List<Enhancement>> GetAll(
-            Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>>? exp, EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None)
+            Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>>? exp,
+            EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None)
         {
             var data = await base.GetAll(exp);
             var doModels = data.Select(d => d.ToDomainModel()!).ToList();
@@ -45,29 +46,14 @@ namespace Bakabase.Modules.Enhancer.Services
                             break;
                         case EnhancementAdditionalItem.GeneratedCustomPropertyValue:
                         {
-                            var enhancerDescriptorMap = EnhancerDescriptors.ToDictionary(d => d.Id, d => d);
-                            var dataMap = data
-                                .ToDictionary(e => (
-                                    Scope: enhancerDescriptorMap.GetValueOrDefault(e.EnhancerId)?.CustomPropertyScope,
-                                    e.ResourceId), d => d).Where(x => x.Key.Scope.HasValue)
-                                .ToDictionary(d => d.Key, d => d.Value);
-                            var keys = dataMap.Keys;
-                            var scopes = keys.Select(d => d.Scope).ToHashSet();
-                            var resourceIds = keys.Select(d => d.ResourceId).ToHashSet();
-                            // avoid query entire table
-                            var cpValues = await CustomPropertyValueService.GetAll(
-                                x => scopes.Contains(x.Scope) && resourceIds.Contains(x.ResourceId),
-                                CustomPropertyValueAdditionalItem.None, false);
-                            var cpValueMap = keys.ToDictionary(d => d,
-                                key => cpValues.FirstOrDefault(x =>
-                                    x.ResourceId == key.ResourceId && x.Scope == key.Scope));
-                            foreach (var (key, cpv) in cpValueMap)
+                            var cpvIds = data.Select(d => d.CustomPropertyValueId).ToHashSet();
+                            var cpValuesMap = (await CustomPropertyValueService.GetAll(x => cpvIds.Contains(x.Id),
+                                CustomPropertyValueAdditionalItem.None, false)).ToDictionary(d => d.Id, d => d);
+                            foreach (var d in data)
                             {
-                                if (cpv != null)
-                                {
-                                    dataMap[key].CustomPropertyValue = cpv;
-                                }
+                                d.CustomPropertyValue = cpValuesMap.GetValueOrDefault(d.CustomPropertyValueId);
                             }
+
                             break;
                         }
                         default:
@@ -79,8 +65,12 @@ namespace Bakabase.Modules.Enhancer.Services
 
         public async Task AddRange(List<Enhancement> enhancements)
         {
-            var dbValues = enhancements.Select(e => e.ToDbModel()!);
-            await base.AddRange(dbValues);
+            var dbValuesMap = enhancements.ToDictionary(e => e.ToDbModel()!, e => e);
+            await base.AddRange(dbValuesMap.Keys.ToList());
+            foreach (var (k, v) in dbValuesMap)
+            {
+                v.Id = k.Id;
+            }
         }
 
         public async Task UpdateRange(List<Enhancement> enhancements)
@@ -89,7 +79,8 @@ namespace Bakabase.Modules.Enhancer.Services
             await base.UpdateRange(dbValues);
         }
 
-        public async Task<BaseResponse> RemoveAll(Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>> selector,
+        public async Task<BaseResponse> RemoveAll(
+            Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>> selector,
             bool removeGeneratedCustomPropertyValues)
         {
             var enhancements = await base.GetAll(selector);
@@ -111,6 +102,7 @@ namespace Bakabase.Modules.Enhancer.Services
                 await CustomPropertyValueService.RemoveRange(cpValues);
             }
 
+            tran.CommitAsync();
             return BaseResponseBuilder.Ok;
         }
     }

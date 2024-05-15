@@ -9,6 +9,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bootstrap.Extensions;
@@ -49,11 +50,12 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
                 var releaseDt = await GetAndRemoveReleaseDt(nameRef, allWcs);
                 name = nameRef.Value;
 
-                var language = GetAndRemoveLanguageWithWrapper(ref name, allWcs);
+                var (language, restName) = await GetAndRemoveLanguageWithWrapper(name, allWcs);
+                name = restName;
 
                 var publishers = GetAndRemovePublishers(ref name);
                 var originals = GetAndRemoveOriginals(ref name);
-                var volume = TryToParseVolume(name);
+                var volume = await TryToParseVolume(name);
                 if (volume != null)
                 {
                     name = name[..volume.Value.Index];
@@ -142,18 +144,11 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
 
 
 
-        private string? GetAndRemoveLanguageWithWrapper(ref string name, IEnumerable<WrappedContent> wcs)
+        private async Task<(string? Language, string RestName)> GetAndRemoveLanguageWithWrapper(string name, IEnumerable<WrappedContent> wcs)
         {
-            var languageWords = specialTextService[SpecialTextType.Language]
-                .ToDictionary(t => t.Value1, t =>
-                {
-                    if (Enum.TryParse<ResourceLanguage>(t.Value2!, out var r))
-                    {
-                        throw new Exception(localizer.SpecialText_HistoricalLanguageValue2ShouldBeModified());
-                    }
-
-                    return t.Value2!;
-                });
+            var languageWords =
+                (await specialTextService.GetAll(SpecialTextType.Language, false)).ToDictionary(t => t.Value1,
+                    t => t.Value2!);
 
             foreach (var wc in wcs)
             {
@@ -162,12 +157,12 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
                     if (Regex.IsMatch(wc.Content, reg))
                     {
                         name = $"{name[..wc.Index]}{name[(wc.Index + wc.ContentWithWrapper.Length)..]}";
-                        return languageValue;
+                        return (languageValue, name);
                     }
                 }
             }
 
-            return null;
+            return (null, name);
         }
 
         private static List<string>? GetAndRemovePublishers(ref string name)
@@ -252,10 +247,10 @@ namespace Bakabase.Modules.Enhancer.Enhancers.Bakabase
             return true;
         }
 
-        private (string VolumeName, string VolumeTitle, string Match, int Index)? TryToParseVolume(
+        private async Task<(string VolumeName, string VolumeTitle, string Match, int Index)?> TryToParseVolume(
             string str)
         {
-            var volumeTexts = specialTextService[SpecialTextType.Volume];
+            var volumeTexts = await specialTextService.GetAll(SpecialTextType.Volume, false);
             foreach (var v in volumeTexts)
             {
                 var reg = new Regex($"(?<volumeIndexName>{v.Value1})(?<volumeTitle>.*)$");

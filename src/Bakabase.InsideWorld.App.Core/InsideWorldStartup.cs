@@ -25,6 +25,7 @@ using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
 using Bakabase.InsideWorld.Business.Components.Jobs;
 using Bakabase.InsideWorld.Business.Components.Network;
+using Bakabase.InsideWorld.Business.Components.StandardValue;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai;
@@ -141,6 +142,7 @@ namespace Bakabase.InsideWorld.App.Core
 
             services.AddCustomProperty<CustomPropertyService, CustomPropertyValueService>();
             services.AddEnhancers<EnhancementService, EnhancerService, CategoryEnhancerOptionsService, InsideWorldLocalizer>();
+            services.AddStandardValue<StandardValueService>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

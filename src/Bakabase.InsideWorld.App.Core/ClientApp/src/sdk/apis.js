@@ -2618,22 +2618,26 @@ export const StopDownloadTasksURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetResourceEnhancementRecords
- * url: GetResourceEnhancementRecordsURL
- * method: GetResourceEnhancementRecords_TYPE
- * raw_url: GetResourceEnhancementRecords_RAW_URL
- * @param id - 
+ * request: GetResourceEnhancements
+ * url: GetResourceEnhancementsURL
+ * method: GetResourceEnhancements_TYPE
+ * raw_url: GetResourceEnhancements_RAW_URL
+ * @param resourceId - 
+ * @param additionalItem - 
  */
-export const GetResourceEnhancementRecords = function(parameters = {}) {
+export const GetResourceEnhancements = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/resource/{id}/enhancement'
+  let path = '/resource/{resourceId}/enhancement'
   let body
   let queryParameters = {}
   let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  if (parameters['resourceId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: resourceId'))
+  }
+  if (parameters['additionalItem'] !== undefined) {
+    queryParameters['additionalItem'] = parameters['additionalItem']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -2642,17 +2646,20 @@ export const GetResourceEnhancementRecords = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetResourceEnhancementRecords_RAW_URL = function() {
-  return '/resource/{id}/enhancement'
+export const GetResourceEnhancements_RAW_URL = function() {
+  return '/resource/{resourceId}/enhancement'
 }
-export const GetResourceEnhancementRecords_TYPE = function() {
+export const GetResourceEnhancements_TYPE = function() {
   return 'get'
 }
-export const GetResourceEnhancementRecordsURL = function(parameters = {}) {
+export const GetResourceEnhancementsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/enhancement'
-  path = path.replace('{id}', `${parameters['id']}`)
+  let path = '/resource/{resourceId}/enhancement'
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  if (parameters['additionalItem'] !== undefined) {
+    queryParameters['additionalItem'] = parameters['additionalItem']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -2663,22 +2670,78 @@ export const GetResourceEnhancementRecordsURL = function(parameters = {}) {
 }
 /**
  * 
- * request: EnhanceResource
- * url: EnhanceResourceURL
- * method: EnhanceResource_TYPE
- * raw_url: EnhanceResource_RAW_URL
- * @param id - 
+ * request: DeleteResourceEnhancement
+ * url: DeleteResourceEnhancementURL
+ * method: DeleteResourceEnhancement_TYPE
+ * raw_url: DeleteResourceEnhancement_RAW_URL
+ * @param resourceId - 
+ * @param enhancerId - 
  */
-export const EnhanceResource = function(parameters = {}) {
+export const DeleteResourceEnhancement = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/resource/{id}/enhancement'
+  let path = '/resource/{resourceId}/enhancer/{enhancerId}/enhancement'
   let body
   let queryParameters = {}
   let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  if (parameters['resourceId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: resourceId'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteResourceEnhancement_RAW_URL = function() {
+  return '/resource/{resourceId}/enhancer/{enhancerId}/enhancement'
+}
+export const DeleteResourceEnhancement_TYPE = function() {
+  return 'delete'
+}
+export const DeleteResourceEnhancementURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/{resourceId}/enhancer/{enhancerId}/enhancement'
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: CreateEnhancementForResourceByEnhancer
+ * url: CreateEnhancementForResourceByEnhancerURL
+ * method: CreateEnhancementForResourceByEnhancer_TYPE
+ * raw_url: CreateEnhancementForResourceByEnhancer_RAW_URL
+ * @param resourceId - 
+ * @param enhancerId - 
+ */
+export const CreateEnhancementForResourceByEnhancer = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/{resourceId}/enhancer/{enhancerId}/enhancement'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  if (parameters['resourceId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: resourceId'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -2687,17 +2750,18 @@ export const EnhanceResource = function(parameters = {}) {
   }
   return request('post', domain + path, body, queryParameters, form, config)
 }
-export const EnhanceResource_RAW_URL = function() {
-  return '/resource/{id}/enhancement'
+export const CreateEnhancementForResourceByEnhancer_RAW_URL = function() {
+  return '/resource/{resourceId}/enhancer/{enhancerId}/enhancement'
 }
-export const EnhanceResource_TYPE = function() {
+export const CreateEnhancementForResourceByEnhancer_TYPE = function() {
   return 'post'
 }
-export const EnhanceResourceURL = function(parameters = {}) {
+export const CreateEnhancementForResourceByEnhancerURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/enhancement'
-  path = path.replace('{id}', `${parameters['id']}`)
+  let path = '/resource/{resourceId}/enhancer/{enhancerId}/enhancement'
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -2708,22 +2772,22 @@ export const EnhanceResourceURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveResourceEnhancementRecords
- * url: RemoveResourceEnhancementRecordsURL
- * method: RemoveResourceEnhancementRecords_TYPE
- * raw_url: RemoveResourceEnhancementRecords_RAW_URL
- * @param id - 
+ * request: RemoveMediaLibraryEnhancements
+ * url: RemoveMediaLibraryEnhancementsURL
+ * method: RemoveMediaLibraryEnhancements_TYPE
+ * raw_url: RemoveMediaLibraryEnhancements_RAW_URL
+ * @param mediaLibraryId - 
  */
-export const RemoveResourceEnhancementRecords = function(parameters = {}) {
+export const RemoveMediaLibraryEnhancements = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/resource/{id}/enhancement'
+  let path = '/media-library/{mediaLibraryId}/enhancement'
   let body
   let queryParameters = {}
   let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
+  path = path.replace('{mediaLibraryId}', `${parameters['mediaLibraryId']}`)
+  if (parameters['mediaLibraryId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: mediaLibraryId'))
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -2732,17 +2796,17 @@ export const RemoveResourceEnhancementRecords = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const RemoveResourceEnhancementRecords_RAW_URL = function() {
-  return '/resource/{id}/enhancement'
+export const RemoveMediaLibraryEnhancements_RAW_URL = function() {
+  return '/media-library/{mediaLibraryId}/enhancement'
 }
-export const RemoveResourceEnhancementRecords_TYPE = function() {
+export const RemoveMediaLibraryEnhancements_TYPE = function() {
   return 'delete'
 }
-export const RemoveResourceEnhancementRecordsURL = function(parameters = {}) {
+export const RemoveMediaLibraryEnhancementsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/enhancement'
-  path = path.replace('{id}', `${parameters['id']}`)
+  let path = '/media-library/{mediaLibraryId}/enhancement'
+  path = path.replace('{mediaLibraryId}', `${parameters['mediaLibraryId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -2753,22 +2817,22 @@ export const RemoveResourceEnhancementRecordsURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveMediaLibraryEnhancementRecords
- * url: RemoveMediaLibraryEnhancementRecordsURL
- * method: RemoveMediaLibraryEnhancementRecords_TYPE
- * raw_url: RemoveMediaLibraryEnhancementRecords_RAW_URL
- * @param id - 
+ * request: RemoveCategoryEnhancements
+ * url: RemoveCategoryEnhancementsURL
+ * method: RemoveCategoryEnhancements_TYPE
+ * raw_url: RemoveCategoryEnhancements_RAW_URL
+ * @param categoryId - 
  */
-export const RemoveMediaLibraryEnhancementRecords = function(parameters = {}) {
+export const RemoveCategoryEnhancements = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/media-library/{id}/enhancement'
+  let path = '/category/{categoryId}/enhancement'
   let body
   let queryParameters = {}
   let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  if (parameters['categoryId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: categoryId'))
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -2777,62 +2841,17 @@ export const RemoveMediaLibraryEnhancementRecords = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const RemoveMediaLibraryEnhancementRecords_RAW_URL = function() {
-  return '/media-library/{id}/enhancement'
+export const RemoveCategoryEnhancements_RAW_URL = function() {
+  return '/category/{categoryId}/enhancement'
 }
-export const RemoveMediaLibraryEnhancementRecords_TYPE = function() {
+export const RemoveCategoryEnhancements_TYPE = function() {
   return 'delete'
 }
-export const RemoveMediaLibraryEnhancementRecordsURL = function(parameters = {}) {
+export const RemoveCategoryEnhancementsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/media-library/{id}/enhancement'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: RemoveCategoryEnhancementRecords
- * url: RemoveCategoryEnhancementRecordsURL
- * method: RemoveCategoryEnhancementRecords_TYPE
- * raw_url: RemoveCategoryEnhancementRecords_RAW_URL
- * @param id - 
- */
-export const RemoveCategoryEnhancementRecords = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/category/{id}/enhancement'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const RemoveCategoryEnhancementRecords_RAW_URL = function() {
-  return '/category/{id}/enhancement'
-}
-export const RemoveCategoryEnhancementRecords_TYPE = function() {
-  return 'delete'
-}
-export const RemoveCategoryEnhancementRecordsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/category/{id}/enhancement'
-  path = path.replace('{id}', `${parameters['id']}`)
+  let path = '/category/{categoryId}/enhancement'
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

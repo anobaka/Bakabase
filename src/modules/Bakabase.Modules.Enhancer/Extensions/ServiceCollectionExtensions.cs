@@ -30,8 +30,7 @@ public static class ServiceCollectionExtensions
         var currentAssemblyTypes = Assembly.GetExecutingAssembly().GetTypes();
         var enhancerTypes = currentAssemblyTypes.Where(s =>
                 s.IsAssignableTo(SpecificTypeUtils<IEnhancer>.Type) &&
-                s is {IsPublic: true, IsAbstract: false} &&
-                s.GetCustomAttribute<EnhancerAttribute>() != null)
+                s is {IsPublic: true, IsAbstract: false})
             .ToList();
         foreach (var et in enhancerTypes)
         {

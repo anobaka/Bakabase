@@ -7,7 +7,7 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
 {
     public enum EnhancerId
     {
-        [Enhancer(CustomPropertyValueScope.BakabaseEnhancer, typeof(BakabaseEnhancerTarget))]
+        [Enhancer(typeof(BakabaseEnhancer), CustomPropertyValueScope.BakabaseEnhancer, typeof(BakabaseEnhancerTarget))]
         Bakabase = 1,
         // ExHentai
     }

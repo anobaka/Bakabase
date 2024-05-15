@@ -1,8 +1,9 @@
+import type { ChipProps } from '@nextui-org/react';
 import { Chip as NextUIChip } from '@nextui-org/react';
 import React, { forwardRef } from 'react';
 
 
-interface IProps {
+interface IProps extends ChipProps{
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
