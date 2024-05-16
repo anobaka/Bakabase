@@ -33,10 +33,11 @@ import { createPortalOfComponent } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import CustomPropertyValue from '@/components/Resource/components/DetailDialog/CustomPropertyValue';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
-import { ButtonGroup, Button } from '@/components/bakaui';
+import { ButtonGroup, Button, Chip, Modal, Divider } from '@/components/bakaui';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
 
-interface IProps {
+interface Props extends DestroyableProps{
   dialogProps?: any;
   resource: ResourceModel;
   onReloaded: (resource: any) => any;
@@ -48,23 +49,22 @@ interface IProps {
   ct: AbortSignal;
 }
 
-const ResourceDetailDialog = (props: IProps) => {
-  const {
-    resource: propsResource,
-    onReloaded = (resource: any) => {
-    },
-    onPlay = () => {
-    },
-    onOpen = () => {
-    },
-    onRemove = () => {
-    },
-    noPlayableFile = false,
-    onTagSearch = (tagId: number, append: boolean) => {
-    },
-    ct,
-  } = props;
-
+const ResourceDetailDialog = ({
+                                resource: propsResource,
+                                onReloaded = (resource: any) => {
+                                },
+                                onPlay = () => {
+                                },
+                                onOpen = () => {
+                                },
+                                onRemove = () => {
+                                },
+                                noPlayableFile = false,
+                                onTagSearch = (tagId: number, append: boolean) => {
+                                },
+                                ct,
+  ...props
+                              }: Props) => {
   const { t } = useTranslation();
 
   const [filesystemEntries, setFilesystemEntries] = useState<Entry[]>([]);
@@ -135,150 +135,24 @@ const ResourceDetailDialog = (props: IProps) => {
     previewCurrentPath();
   }, [previewingPath]);
 
-  const renderOtherProperties = () => {
-    // const reservedPropertyComponentMap = {
-    //   'Release Date': (
-    //     <Property
-    //       requestKey={'releaseDt'}
-    //       renderValue={() => (resource.releaseDt ? dayjs(resource.releaseDt)
-    //         .format('YYYY-MM-DD') : '')}
-    //       initValue={resource.releaseDt ? dayjs(resource.releaseDt) : undefined}
-    //       editable
-    //       EditComponent={DatePicker2}
-    //       editComponentProps={{
-    //         showTime: false,
-    //         popupProps: { v2: true },
-    //         hasClear: true,
-    //       }}
-    //       convertToRequesting={(dj) => dj.format('YYYY-MM-DD')}
-    //       resourceId={resource.id}
-    //       reloadResource={reload}
-    //     />
-    //   ),
-    //   Publishers: (
-    //     <PublisherProperty
-    //       resource={resource}
-    //       reloadResource={reload}
-    //     />),
-    //   Series: (
-    //     <Property
-    //       renderValue={() =>
-    //         resource.series?.name && (
-    //           <span
-    //             className={'series'}
-    //             onClick={() => {
-    //               Message.notice(i18n.t('Under developing'));
-    //             }}
-    //           >{resource.series?.name}
-    //           </span>
-    //         )}
-    //       resourceId={resource.id}
-    //       reloadResource={reload}
-    //       initValue={resource.series?.name}
-    //       requestKey={'series'}
-    //       EditComponent={Input}
-    //       editComponentProps={{
-    //         hasClear: true,
-    //       }}
-    //       editable
-    //     />),
-    //   Language: (
-    //     <Property
-    //       renderValue={() => i18n.t(ResourceLanguage[resource.language])}
-    //       resourceId={resource.id}
-    //       reloadResource={reload}
-    //       initValue={resource.language}
-    //       requestKey={'language'}
-    //       EditComponent={Select}
-    //       editComponentProps={{
-    //         autoWidth: true,
-    //         style: { width: 180 },
-    //         dataSource: resourceLanguages.map((t) => ({
-    //           label: i18n.t(t.label),
-    //           value: t.value,
-    //         })),
-    //       }}
-    //       editable
-    //     />
-    //   ),
-    //   Original: (
-    //     <Property
-    //       renderValue={() => resource.originals?.map((o) => (
-    //         <span
-    //           className={'original'}
-    //           onClick={() => {
-    //             Message.notice(i18n.t('Under developing'));
-    //           }}
-    //         >{o.name}
-    //         </span>
-    //       ))}
-    //       resourceId={resource.id}
-    //       reloadResource={reload}
-    //       initValue={resource.originals?.map((t, i) => t.name) || []}
-    //       requestKey={'originals'}
-    //       EditComponent={Select}
-    //       editComponentProps={{
-    //         mode: 'tag',
-    //         placeholder: i18n.t('Add a original'),
-    //       }}
-    //       defaultValueKeyOfEditComponent={'value'}
-    //       editable
-    //     />
-    //   ),
-    //   Rate: (
-    //     <Property
-    //       renderValue={() => resource.rate}
-    //       resourceId={resource.id}
-    //       reloadResource={reload}
-    //       initValue={resource.rate}
-    //       requestKey={'rate'}
-    //       EditComponent={NumberPicker}
-    //       editComponentProps={{
-    //         max: 5,
-    //         precision: 2,
-    //       }}
-    //       editable
-    //     />
-    //   ),
-    //   // Tags: (
-    //   //   <TagPropertyValue resource={resource} reload={reload} />
-    //   // ),
-    // };
-    //
-    // const propertyComponents: {
-    //   label: string;
-    //   component: any;
-    // }[] = Object.keys(reservedPropertyComponentMap).map(x => ({ label: x, component: reservedPropertyComponentMap[x] }));
-    //
-    // if (resource.customProperties) {
-    //   const keys = Object.keys(resource.customProperties);
-    //   if (keys.length > 0) {
-    //     keys.forEach((k) => {
-    //       propertyComponents.push({
-    //         label: k,
-    //         component: (
-    //           <Property
-    //             renderValue={() => JSON.stringify(resource.customProperties[k])}
-    //             resourceId={resource.id}
-    //             reloadResource={reload}
-    //             requestKey={k}
-    //             isCustomProperty
-    //           />
-    //         ),
-    //       });
-    //     });
-    //   }
-    // }
+  const renderProperties = () => {
+    const propertyComponents: {
+      label: string;
+      component?: React.ReactNode;
+    }[] = [];
 
-    if (resource.customPropertiesV2?.length > 0) {
-      resource.customPropertiesV2.forEach((property, idx) => {
+    const cps = resource.customPropertiesV2 ?? [];
+    const cpvs = resource.customPropertyValues ?? [];
+
+    if (cps.length > 0) {
+      cps.forEach((property, idx) => {
         propertyComponents.push({
-          label: property.name,
+          label: property.name!,
           component: (
             <CustomPropertyValue
               resourceId={resource.id}
               property={property}
-              value={resource.customPropertyValues?.[idx]?.value}
+              value={cpvs[idx]?.value}
               onSaved={reload}
             />
           ),
@@ -286,7 +160,7 @@ const ResourceDetailDialog = (props: IProps) => {
       });
     }
 
-    const times = [
+    const dateTimes = [
       {
         key: 'fileCreateDt',
         label: 'File Add Date',
@@ -305,22 +179,28 @@ const ResourceDetailDialog = (props: IProps) => {
       },
     ];
 
-    times.forEach((t) => {
-      propertyComponents[t.label] = (
-        <Property
-          renderValue={() => dayjs(resource[t.key])
-            .format('YYYY-MM-DD HH:mm:ss')}
-        />
-      );
+    dateTimes.forEach((dateTime) => {
+      propertyComponents.push({
+        label: t(dateTime.label),
+        component: (
+          <Property
+            renderValue={() => dayjs(resource[dateTime.key])
+              .format('YYYY-MM-DD HH:mm:ss')}
+          />
+        ),
+      });
     });
     return propertyComponents
       .map((a) => (
-        <div className={'property'}>
-          <div className={'label'}>{t(a.label)}</div>
-          <div className="value-container">
-            {a.component}
-          </div>
-        </div>
+        <>
+          <Chip
+            size={'sm'}
+            radius={'sm'}
+          >
+            {a.label}
+          </Chip>
+          <div>{a.component}</div>
+        </>
       ));
   };
 
@@ -339,8 +219,8 @@ const ResourceDetailDialog = (props: IProps) => {
     };
 
     let relativePathSegments;
-    if (!resource.isSingleFile && previewingPath) {
-      relativePathSegments = previewingPath.replace(resource.rawFullname, '')
+    if (!resource.isFile && previewingPath) {
+      relativePathSegments = previewingPath.replace(resource.path, '')
         .replace(/\\/g, '/')
         .split('/')
         .filter((a) => a);
@@ -368,7 +248,7 @@ const ResourceDetailDialog = (props: IProps) => {
                             if (i == relativePathSegments.length - 1) {
                               return;
                             }
-                            let segments = [resource.rawFullname];
+                            let segments = [resource.path];
                             if (i > 0) {
                               segments = segments.concat(relativePathSegments.slice(1, i + 1));
                             }
@@ -409,8 +289,8 @@ const ResourceDetailDialog = (props: IProps) => {
             />
           )}
           <div
-            className="entries"
-            style={{ gridTemplateColumns: `repeat(${fsEntriesColumnCount}, minmax(0, 1fr))` }}
+            className={`grid grid-cols-${fsEntriesColumnCount} gap-1`}
+            // style={{ gridTemplateColumns: `repeat(${fsEntriesColumnCount}, minmax(0, 1fr))` }}
           >
             {currentPageEntries.map((e) => {
               let comp;
@@ -506,7 +386,7 @@ const ResourceDetailDialog = (props: IProps) => {
 
       return (
         <div className={'children'}>
-          <div className="label">
+          <div className="text-lg">
             {t('Children resources')}
           </div>
           {hasPagination && (
@@ -518,33 +398,13 @@ const ResourceDetailDialog = (props: IProps) => {
               onChange={onPageChange}
             />
           )}
-          <div className="resources">
+          <div className={`grid grid-cols-${fsEntriesColumnCount}`} style={{}}>
             {currentChildrenResources.map((a) => {
-              // resource,
-              //   coverHash: propCoverHash,
-              //   category = {},
-              //   mediaLibrary = {},
-              //   openTagsDialog = (id) => {
-              //   },
-              //   onRemove = (id) => {
-              //   },
-              //   showCoverOnHover = true,
-              //   onRequested = (resource) => {
-              //   },
-              //   onMove = (resource) => {},
-              //   onAddToFavorites = (resource) => {},
-              //   searchEngines = [],
-              //   index,
               return (
                 <Resource
                   resource={a}
                   ct={ct}
                 />
-
-                // <div className={'item'}>
-                //   <div className="square">
-                //   </div>
-                // </div>
               );
             })}
           </div>
@@ -569,28 +429,29 @@ const ResourceDetailDialog = (props: IProps) => {
   }, []);
 
   return (
-    <Dialog
-      closeMode={['close', 'mask', 'esc']}
-      footerActions={['cancel']}
-      onKeyDown={(e) => {
-        // e.preventDefault();
-        e.stopPropagation();
+    <Modal
+      size={'xl'}
+      footer={{
+        actions: ['ok'],
       }}
-      className={'resource-component-detail-dialog'}
-      visible={visible}
-      onClose={close}
-      onCancel={close}
-      cancelProps={{ children: t('Close') }}
+      defaultVisible
+      onDestroyed={props.onDestroyed}
+      title={resource.displayName}
     >
-      <div className="top">
+      <div className="flex items-start gap-5">
         <div className="rounded flex items-center justify-center w-[400px] h-[400px] max-w-[400px] max-h-[400px] overflow-hidden">
           <ResourceCover resourceId={resource.id} />
         </div>
         <div className="right">
-          <div className={'text-xl'}>{resource.displayName}</div>
-          {renderOtherProperties()}
-          <div>
-            <ButtonGroup>
+          <div
+            className={'grid gap-2'}
+            style={{ gridTemplateColumns: 'auto 1fr' }}
+          >
+            {renderProperties()}
+          </div>
+
+          <div className={'mt-5'}>
+            <ButtonGroup size={'sm'}>
               <Button
                 color="primary"
                 onClick={() => !noPlayableFile && onPlay()}
@@ -617,31 +478,13 @@ const ResourceDetailDialog = (props: IProps) => {
           </div>
         </div>
       </div>
-      <div className="introduction-container">
-        <div className="label">{t('Introduction')}</div>
-        <Property
-          initValue={resource.introduction}
-          resourceId={resource.id}
-          reloadResource={reload}
-          renderValue={() => resource.introduction && (
-            <pre className={'introduction'}>{resource.introduction}</pre>
-          )}
-          EditComponent={Input.TextArea}
-          editComponentProps={{
-            autoHeight: true,
-            style: { width: '100%' },
-          }}
-          editable
-          requestKey={'introduction'}
-          className={'introduction'}
-        />
-      </div>
+      <Divider />
       {renderChildren()}
       {renderFileEntries()}
-    </Dialog>
+    </Modal>
   );
 };
 
-ResourceDetailDialog.show = (props: IProps) => createPortalOfComponent(ResourceDetailDialog, props);
+ResourceDetailDialog.show = (props: Props) => createPortalOfComponent(ResourceDetailDialog, props);
 
 export default ResourceDetailDialog;

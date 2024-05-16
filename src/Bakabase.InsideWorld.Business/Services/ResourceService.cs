@@ -429,7 +429,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             foreach (var r in doList)
                             {
-                                if (resourceIdPropertiesAndValuesMap.TryGetValue(r.Id, out var pvm))
+                                if (resourceIdPropertiesAndValuesMap.TryGetValue(r.Id, out var pvm) && pvm != null)
                                 {
                                     r.CustomPropertiesV2 = pvm.Keys.ToList();
                                     r.CustomPropertyValues = pvm.Values.ToList();
