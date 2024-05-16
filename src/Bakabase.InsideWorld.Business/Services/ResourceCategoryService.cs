@@ -48,6 +48,7 @@ using Newtonsoft.Json;
 using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions;
 using CustomProperty = Bakabase.Abstractions.Models.Domain.CustomProperty;
 using IComponent = Bakabase.InsideWorld.Business.Components.Resource.Components.IComponent;
+using Resource = Bakabase.InsideWorld.Business.Models.Domain.Resource;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -208,7 +209,8 @@ namespace Bakabase.InsideWorld.Business.Services
                             var customPropertiesMap = await CustomPropertyService.GetByCategoryIds(cIds);
                             foreach (var d in dtoList)
                             {
-                                d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id)?.OfType<CustomProperty>().ToList();
+                                d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id)
+                                    ?.OfType<CustomProperty>().ToList();
                             }
 
                             break;
@@ -224,6 +226,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 d.EnhancerOptions = enhancerOptionsMap.GetValueOrDefault(d.Id)
                                     ?.Cast<CategoryEnhancerOptions>().ToList();
                             }
+
                             break;
                         }
                         default:
@@ -391,6 +394,11 @@ namespace Bakabase.InsideWorld.Business.Services
                 category.GenerateNfo = model.GenerateNfo.Value;
             }
 
+            if (!string.IsNullOrEmpty(model.ResourceDisplayNameTemplate))
+            {
+                category.ResourceDisplayNameTemplate = model.ResourceDisplayNameTemplate;
+            }
+
             await DbContext.SaveChangesAsync();
             return BaseResponseBuilder.Ok;
         }
@@ -548,7 +556,34 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<List<CategoryResourceDisplayNameViewModel>> PreviewDisplayNameTemplate(int id, string template,
+        public string BuildDisplayNameForResource(Resource resource, string template, (string Left, string Right)[] wrappers)
+        {
+            var matcherPropertyMap = (resource.CustomPropertiesV2 ?? []).GroupBy(d => d.Name)
+                .ToDictionary(d => $"{{{d.Key}}}", d => d.First());
+
+            var replacements = matcherPropertyMap.ToDictionary(d => d.Key,
+                d =>
+                {
+                    var value = resource.CustomPropertyValues?.FirstOrDefault(a => a?.PropertyId == d.Value.Id);
+                    if (value != null)
+                    {
+                        var displayValue = CustomPropertyDescriptorMap[d.Value.Type]
+                            .BuildValueForDisplay(d.Value, value);
+                        var stdValueHandler = StandardValueHandlerMap[d.Value.ValueType];
+                        return stdValueHandler.BuildDisplayValue(displayValue);
+                    }
+
+                    return null;
+                });
+
+            var segments =
+                CategoryHelpers.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
+
+            return string.Join("", segments.Select(a => a.Text));
+        }
+
+        public async Task<List<CategoryResourceDisplayNameViewModel>> PreviewResourceDisplayNameTemplate(int id,
+            string template,
             int maxCount = 100)
         {
             var resourcesSearchResult = await ResourceService.SearchV2(new ResourceSearchDto
@@ -560,9 +595,9 @@ namespace Bakabase.InsideWorld.Business.Services
                         new ResourceSearchFilter
                         {
                             IsReservedProperty = true,
-                            Operation = SearchOperation.Equals,
+                            Operation = SearchOperation.In,
                             PropertyId = (int) ResourceProperty.Category,
-                            Value = id.ToJson()
+                            Value = new[]{id}.ToJson()
                         }
                     ]
                 },

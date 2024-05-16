@@ -25,6 +25,7 @@ namespace Bakabase.Abstractions.Models.Domain
         public CoverSelectOrder CoverSelectionOrder { get; set; }
         public ResourceCategoryEnhancementOptions? EnhancementOptions { get; set; }
         public bool GenerateNfo { get; set; }
+        public string? ResourceDisplayNameTemplate { get; set; }
 
         public List<CustomProperty>? CustomProperties { get; set; }
         public List<CategoryEnhancerOptions>? EnhancerOptions { get; set; }

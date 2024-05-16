@@ -95,7 +95,7 @@ function ResourceEnhancementsDialog({ resourceId, ...props }: Props) {
                     {t(e.enhancedAt ? 'Re-enhance now' : 'Enhance now')}
                   </Button>
                 </div>
-                <Table>
+                <Table isStriped>
                   <TableHeader>
                     <TableColumn>{t('Target')}</TableColumn>
                     <TableColumn>{t('Raw data')}</TableColumn>

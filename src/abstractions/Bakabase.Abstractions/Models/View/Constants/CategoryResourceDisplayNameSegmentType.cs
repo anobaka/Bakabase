@@ -2,7 +2,7 @@
 
 public enum CategoryResourceDisplayNameSegmentType
 {
-    Normal = 1,
+    StaticText = 1,
     Property = 2,
     LeftWrapper = 3,
     RightWrapper = 4

@@ -16,11 +16,12 @@ namespace Bakabase.InsideWorld.Business.Models.Domain
 {
     public record Resource : Abstractions.Models.Domain.Resource
     {
-        public List<TagDto>? Tags { get; set; }
         public Resource? Parent { get; set; }
         public List<CustomProperty>? CustomPropertiesV2 { get; set; }
         public List<CustomPropertyValue?>? CustomPropertyValues { get; set; }
+        public Category? Category { get; set; }
 
+        [Obsolete] public List<TagDto>? Tags { get; set; }
         [Obsolete] public Dictionary<string, List<CustomResourceProperty>>? CustomProperties { get; set; }
         [Obsolete] public string? Introduction { get; set; }
         [Obsolete] public SeriesDto? Series { get; set; }

@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
 {
     public static class CategoryExtensions
     {
-        public static Category ToDomainModel(this ResourceCategory c)
+        public static Category? ToDomainModel(this ResourceCategory? c)
         {
             if (c == null)
             {
@@ -28,7 +28,8 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 Name = c.Name,
                 CoverSelectionOrder = c.CoverSelectionOrder,
                 Order = c.Order,
-                GenerateNfo = c.GenerateNfo
+                GenerateNfo = c.GenerateNfo,
+                ResourceDisplayNameTemplate = c.ResourceDisplayNameTemplate
             };
 
             if (!string.IsNullOrEmpty(c.EnhancementOptionsJson))

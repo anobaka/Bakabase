@@ -55,6 +55,12 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     table.PrimaryKey("PK_CustomPropertyValues", x => x.Id);
                 });
 
+            migrationBuilder.AddColumn<string>(
+                name: "ResourceDisplayNameTemplate",
+                table: "ResourceCategories",
+                type: "TEXT",
+                nullable: true);
+
             migrationBuilder.CreateIndex(
                 name: "IX_CategoryCustomPropertyMappings_CategoryId_PropertyId",
                 table: "CategoryCustomPropertyMappings",
@@ -79,14 +85,34 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropIndex(
+                name: "IX_CustomPropertyValues_ResourceId_PropertyId_Scope",
+                table: "CustomPropertyValues");
+
+            migrationBuilder.DropIndex(
+                name: "IX_CustomPropertyValues_ResourceId",
+                table: "CustomPropertyValues");
+
+            migrationBuilder.DropIndex(
+                name: "IX_CustomPropertyValues_PropertyId",
+                table: "CustomPropertyValues");
+
+            migrationBuilder.DropIndex(
+                name: "IX_CategoryCustomPropertyMappings_CategoryId_PropertyId",
+                table: "CategoryCustomPropertyMappings");
+
+            migrationBuilder.DropColumn(
+                name: "ResourceDisplayNameTemplate",
+                table: "ResourceCategories");
+
             migrationBuilder.DropTable(
-                name: "CategoryCustomPropertyMappings");
+                name: "CustomPropertyValues");
 
             migrationBuilder.DropTable(
                 name: "CustomProperties");
 
             migrationBuilder.DropTable(
-                name: "CustomPropertyValues");
+                name: "CategoryCustomPropertyMappings");
         }
     }
 }

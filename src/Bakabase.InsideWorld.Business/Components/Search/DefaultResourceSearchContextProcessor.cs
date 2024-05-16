@@ -366,95 +366,102 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 
 							break;
 						}
-						case SearchableReservedProperty.MediaLibrary:
+                        case SearchableReservedProperty.MediaLibrary:
+                        case SearchableReservedProperty.Category:
                         {
-                            var getValue = (Func<Abstractions.Models.Db.Resource, int>) (x => x.MediaLibraryId);
+                            var getValue = property switch
+                            {
+                                SearchableReservedProperty.MediaLibrary => (Func<Abstractions.Models.Db.Resource, int>)
+                                    (x => x.MediaLibraryId),
+                                SearchableReservedProperty.Category => x => x.CategoryId,
+                                _ => null!
+                            };
 
                             switch (filter.Operation)
-							{
-								case SearchOperation.Equals:
-								case SearchOperation.NotEquals:
-								{
-									var filterValue = string.IsNullOrEmpty(filter.Value)
-										? null
-										: JsonConvert.DeserializeObject<int?>(filter.Value);
-									switch (filter.Operation)
-									{
-										case SearchOperation.Equals:
-										{
-											if (filterValue.HasValue)
-											{
-												set = context.ResourcesPool
-													?.Where(x => filterValue == getValue(x.Value))
-													.Select(x => x.Key).ToHashSet() ?? [];
-											}
+                            {
+                                case SearchOperation.Equals:
+                                case SearchOperation.NotEquals:
+                                {
+                                    var filterValue = string.IsNullOrEmpty(filter.Value)
+                                        ? null
+                                        : JsonConvert.DeserializeObject<int?>(filter.Value);
+                                    switch (filter.Operation)
+                                    {
+                                        case SearchOperation.Equals:
+                                        {
+                                            if (filterValue.HasValue)
+                                            {
+                                                set = context.ResourcesPool
+                                                    ?.Where(x => filterValue == getValue(x.Value))
+                                                    .Select(x => x.Key).ToHashSet() ?? [];
+                                            }
 
-											break;
-										}
-										case SearchOperation.NotEquals:
-										{
-											if (filterValue.HasValue)
-											{
-												var ids = context.ResourcesPool
-													?.Where(x => filterValue == getValue(x.Value))
-													.Select(x => x.Key).ToHashSet();
-												if (ids?.Any() == true)
-												{
-													set = context.AllResourceIds.Except(ids).ToHashSet();
-												}
-											}
+                                            break;
+                                        }
+                                        case SearchOperation.NotEquals:
+                                        {
+                                            if (filterValue.HasValue)
+                                            {
+                                                var ids = context.ResourcesPool
+                                                    ?.Where(x => filterValue == getValue(x.Value))
+                                                    .Select(x => x.Key).ToHashSet();
+                                                if (ids?.Any() == true)
+                                                {
+                                                    set = context.AllResourceIds.Except(ids).ToHashSet();
+                                                }
+                                            }
 
-											break;
-										}
-										default:
-											throw new ArgumentOutOfRangeException();
-									}
+                                            break;
+                                        }
+                                        default:
+                                            throw new ArgumentOutOfRangeException();
+                                    }
 
-									break;
-								}
-								case SearchOperation.In:
-								case SearchOperation.NotIn:
-								{
-									var filterValue = string.IsNullOrEmpty(filter.Value)
-										? null
-										: JsonConvert.DeserializeObject<HashSet<int>>(filter.Value);
-									switch (filter.Operation)
-									{
-										case SearchOperation.In:
-										{
-											if (filterValue?.Any() == true)
-											{
-												return context.ResourcesPool
-													?.Where(x => filterValue.Contains(getValue(x.Value)))
-													.Select(x => x.Key).ToHashSet();
-											}
+                                    break;
+                                }
+                                case SearchOperation.In:
+                                case SearchOperation.NotIn:
+                                {
+                                    var filterValue = string.IsNullOrEmpty(filter.Value)
+                                        ? null
+                                        : JsonConvert.DeserializeObject<HashSet<int>>(filter.Value);
+                                    switch (filter.Operation)
+                                    {
+                                        case SearchOperation.In:
+                                        {
+                                            if (filterValue?.Any() == true)
+                                            {
+                                                return context.ResourcesPool
+                                                    ?.Where(x => filterValue.Contains(getValue(x.Value)))
+                                                    .Select(x => x.Key).ToHashSet();
+                                            }
 
-											break;
-										}
-										case SearchOperation.NotIn:
-										{
-											if (filterValue?.Any() == true)
-											{
-												return context.ResourcesPool
-													?.Where(x => !filterValue.Contains(getValue(x.Value)))
-													.Select(x => x.Key).ToHashSet();
-											}
+                                            break;
+                                        }
+                                        case SearchOperation.NotIn:
+                                        {
+                                            if (filterValue?.Any() == true)
+                                            {
+                                                return context.ResourcesPool
+                                                    ?.Where(x => !filterValue.Contains(getValue(x.Value)))
+                                                    .Select(x => x.Key).ToHashSet();
+                                            }
 
-											break;
-										}
-										default:
-											throw new ArgumentOutOfRangeException();
-									}
+                                            break;
+                                        }
+                                        default:
+                                            throw new ArgumentOutOfRangeException();
+                                    }
 
-									break;
-								}
-								default:
-									throw new ArgumentOutOfRangeException();
-							}
+                                    break;
+                                }
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
 
-							break;
-						}
-						default:
+                            break;
+                        }
+                        default:
 							throw new ArgumentOutOfRangeException();
 					}
 				}

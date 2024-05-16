@@ -1,9 +1,9 @@
-import { Button as NextUiButton } from '@nextui-org/react';
+import { Button as NextUiButton, ButtonGroup } from '@nextui-org/react';
 import type { ReactNode } from 'react';
 import { forwardRef } from 'react';
 import type * as react from 'react';
 
-export interface ButtonProps extends React.ComponentPropsWithoutRef<'button'>{
+interface ButtonProps extends React.ComponentPropsWithoutRef<'button'>{
   size?: 'sm' | 'md' | 'lg';
   color?: 'default' | 'primary' | 'secondary' | 'success' | 'danger' | 'warning';
   variant?: 'solid' | 'faded' | 'bordered' | 'light' | 'flat' | 'shadow';
@@ -24,4 +24,8 @@ const Button = forwardRef((props: ButtonProps, ref: react.Ref<HTMLButtonElement>
   );
 });
 
-export default Button;
+export {
+  Button,
+  ButtonGroup,
+  ButtonProps,
+};

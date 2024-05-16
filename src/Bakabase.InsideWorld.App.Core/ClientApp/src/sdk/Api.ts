@@ -38,6 +38,7 @@ export interface BakabaseAbstractionsModelsDomainCategory {
   coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
   enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
   generateNfo?: boolean;
+  resourceDisplayNameTemplate?: string | null;
   customProperties?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
   enhancerOptions?: BakabaseAbstractionsModelsDomainCategoryEnhancerOptions[] | null;
 }
@@ -131,6 +132,7 @@ export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
   value?: any;
   /** @format int32 */
   scope?: number;
+  bizKey?: string | null;
 }
 
 export interface BakabaseAbstractionsModelsDomainEnhancement {
@@ -147,6 +149,8 @@ export interface BakabaseAbstractionsModelsDomainEnhancement {
   value?: any;
   /** @format date-time */
   createdAt?: string;
+  /** @format int32 */
+  customPropertyValueId?: number;
   customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
 }
 
@@ -205,14 +209,14 @@ export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewMo
 }
 
 export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModelSegment {
-  /** [1: Normal, 2: Property, 3: LeftWrapper, 4: RightWrapper] */
+  /** [1: StaticText, 2: Property, 3: LeftWrapper, 4: RightWrapper] */
   type?: BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType;
   text?: string | null;
   wrapperPairId?: string | null;
 }
 
 /**
- * [1: Normal, 2: Property, 3: LeftWrapper, 4: RightWrapper]
+ * [1: StaticText, 2: Property, 3: LeftWrapper, 4: RightWrapper]
  * @format int32
  */
 export type BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType = 1 | 2 | 3 | 4;
@@ -613,6 +617,7 @@ export interface BakabaseInsideWorldBusinessModelsDomainResource {
   fileName?: string | null;
   directory?: string | null;
   path?: string | null;
+  displayName?: string | null;
   /** @format int32 */
   parentId?: number | null;
   hasChildren?: boolean;
@@ -625,10 +630,12 @@ export interface BakabaseInsideWorldBusinessModelsDomainResource {
   fileCreateDt?: string;
   /** @format date-time */
   fileModifyDt?: string;
-  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
   parent?: BakabaseInsideWorldBusinessModelsDomainResource;
   customPropertiesV2?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
   customPropertyValues?: BakabaseAbstractionsModelsDomainCustomPropertyValue[] | null;
+  category?: BakabaseAbstractionsModelsDomainCategory;
+  /** @deprecated */
+  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
   /** @deprecated */
   customProperties?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
   /** @deprecated */
@@ -1628,6 +1635,7 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryAddReques
   /** @format int32 */
   order?: number | null;
   generateNfo?: boolean | null;
+  resourceDisplayNameTemplate?: string | null;
   componentsData?:
     | BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModelSimpleCategoryComponent[]
     | null;
@@ -1666,6 +1674,7 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateReq
   /** @format int32 */
   order?: number | null;
   generateNfo?: boolean | null;
+  resourceDisplayNameTemplate?: string | null;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsResourceCustomPropertyValuePutRequestModel {
@@ -2595,9 +2604,9 @@ export type SystemReflectionICustomAttributeProvider = object;
 export interface SystemReflectionMemberInfo {
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
-  name?: string | null;
   declaringType?: SystemType;
   reflectedType?: SystemType;
+  name?: string | null;
   module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
@@ -5098,18 +5107,286 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
-  category = {
+  resourceCategory = {
     /**
      * No description
      *
      * @tags Enhancement
      * @name RemoveCategoryEnhancements
-     * @request DELETE:/category/{categoryId}/enhancement
+     * @request DELETE:/resource-category/{categoryId}/enhancement
      */
     removeCategoryEnhancements: (categoryId: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/category/${categoryId}/enhancement`,
+        path: `/resource-category/${categoryId}/enhancement`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name GetResourceCategory
+     * @request GET:/resource-category/{id}
+     */
+    getResourceCategory: (
+      id: number,
+      query?: {
+        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory, any>({
+        path: `/resource-category/${id}`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name UpdateResourceCategory
+     * @request PUT:/resource-category/{id}
+     */
+    updateResourceCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name DeleteResourceCategoryAndClearAllRelatedData
+     * @request DELETE:/resource-category/{id}
+     */
+    deleteResourceCategoryAndClearAllRelatedData: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name GetAllResourceCategories
+     * @request GET:/resource-category
+     */
+    getAllResourceCategories: (
+      query?: {
+        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory, any>({
+        path: `/resource-category`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name AddResourceCategory
+     * @request POST:/resource-category
+     */
+    addResourceCategory: (
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name DuplicateResourceCategory
+     * @request POST:/resource-category/{id}/duplication
+     */
+    duplicateResourceCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryDuplicateRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}/duplication`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name ConfigureResourceCategoryComponents
+     * @request PUT:/resource-category/{id}/component
+     */
+    configureResourceCategoryComponents: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryComponentConfigureRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}/component`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name SortCategories
+     * @request PUT:/resource-category/orders
+     */
+    sortCategories: (data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/orders`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name SaveDataFromSetupWizard
+     * @request POST:/resource-category/setup-wizard
+     */
+    saveDataFromSetupWizard: (
+      data: BakabaseInsideWorldBusinessModelsInputCategorySetupWizardInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/setup-wizard`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name BindCustomPropertiesToCategory
+     * @request PUT:/resource-category/{id}/custom-properties
+     */
+    bindCustomPropertiesToCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryCustomPropertyBindRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}/custom-properties`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name BindCustomPropertyToCategory
+     * @request POST:/resource-category/{categoryId}/custom-property/{customPropertyId}
+     */
+    bindCustomPropertyToCategory: (categoryId: number, customPropertyId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${categoryId}/custom-property/${customPropertyId}`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name PreviewCategoryDisplayNameTemplate
+     * @request GET:/resource-category/{id}/resource/resource-display-name-template/preview
+     */
+    previewCategoryDisplayNameTemplate: (
+      id: number,
+      query?: {
+        template?: string;
+        /**
+         * @format int32
+         * @default 100
+         */
+        maxCount?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel,
+        any
+      >({
+        path: `/resource-category/${id}/resource/resource-display-name-template/preview`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceCategory
+     * @name PatchCategoryEnhancerOptions
+     * @request PATCH:/resource-category/{id}/enhancer/{enhancerId}/options
+     */
+    patchCategoryEnhancerOptions: (
+      id: number,
+      enhancerId: number,
+      data: BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-category/${id}/enhancer/${enhancerId}/options`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -6614,275 +6891,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPublisherDto, any>({
         path: `/publisher/all`,
         method: "GET",
-        format: "json",
-        ...params,
-      }),
-  };
-  resourceCategory = {
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name GetResourceCategory
-     * @request GET:/resource-category/{id}
-     */
-    getResourceCategory: (
-      id: number,
-      query?: {
-        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory, any>({
-        path: `/resource-category/${id}`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name UpdateResourceCategory
-     * @request PUT:/resource-category/{id}
-     */
-    updateResourceCategory: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name DeleteResourceCategoryAndClearAllRelatedData
-     * @request DELETE:/resource-category/{id}
-     */
-    deleteResourceCategoryAndClearAllRelatedData: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name GetAllResourceCategories
-     * @request GET:/resource-category
-     */
-    getAllResourceCategories: (
-      query?: {
-        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory, any>({
-        path: `/resource-category`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name AddResourceCategory
-     * @request POST:/resource-category
-     */
-    addResourceCategory: (
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name DuplicateResourceCategory
-     * @request POST:/resource-category/{id}/duplication
-     */
-    duplicateResourceCategory: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryDuplicateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}/duplication`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name ConfigureResourceCategoryComponents
-     * @request PUT:/resource-category/{id}/component
-     */
-    configureResourceCategoryComponents: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryComponentConfigureRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}/component`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name SortCategories
-     * @request PUT:/resource-category/orders
-     */
-    sortCategories: (data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/orders`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name SaveDataFromSetupWizard
-     * @request POST:/resource-category/setup-wizard
-     */
-    saveDataFromSetupWizard: (
-      data: BakabaseInsideWorldBusinessModelsInputCategorySetupWizardInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/setup-wizard`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name BindCustomPropertiesToCategory
-     * @request PUT:/resource-category/{id}/custom-properties
-     */
-    bindCustomPropertiesToCategory: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryCustomPropertyBindRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}/custom-properties`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name BindCustomPropertyToCategory
-     * @request POST:/resource-category/{categoryId}/custom-property/{customPropertyId}
-     */
-    bindCustomPropertyToCategory: (categoryId: number, customPropertyId: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${categoryId}/custom-property/${customPropertyId}`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name PreviewCategoryDisplayNameTemplate
-     * @request GET:/resource-category/{id}/resource/display-name-template/preview
-     */
-    previewCategoryDisplayNameTemplate: (
-      id: number,
-      query?: {
-        template?: string;
-        /**
-         * @format int32
-         * @default 100
-         */
-        maxCount?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel,
-        any
-      >({
-        path: `/resource-category/${id}/resource/display-name-template/preview`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name PatchCategoryEnhancerOptions
-     * @request PATCH:/resource-category/{id}/enhancer/{enhancerId}/options
-     */
-    patchCategoryEnhancerOptions: (
-      id: number,
-      enhancerId: number,
-      data: BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}/enhancer/${enhancerId}/options`,
-        method: "PATCH",
-        body: data,
-        type: ContentType.Json,
         format: "json",
         ...params,
       }),

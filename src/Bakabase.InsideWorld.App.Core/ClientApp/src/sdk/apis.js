@@ -2826,7 +2826,7 @@ export const RemoveMediaLibraryEnhancementsURL = function(parameters = {}) {
 export const RemoveCategoryEnhancements = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/category/{categoryId}/enhancement'
+  let path = '/resource-category/{categoryId}/enhancement'
   let body
   let queryParameters = {}
   let form = {}
@@ -2842,7 +2842,7 @@ export const RemoveCategoryEnhancements = function(parameters = {}) {
   return request('delete', domain + path, body, queryParameters, form, config)
 }
 export const RemoveCategoryEnhancements_RAW_URL = function() {
-  return '/category/{categoryId}/enhancement'
+  return '/resource-category/{categoryId}/enhancement'
 }
 export const RemoveCategoryEnhancements_TYPE = function() {
   return 'delete'
@@ -2850,7 +2850,7 @@ export const RemoveCategoryEnhancements_TYPE = function() {
 export const RemoveCategoryEnhancementsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/category/{categoryId}/enhancement'
+  let path = '/resource-category/{categoryId}/enhancement'
   path = path.replace('{categoryId}', `${parameters['categoryId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -8449,7 +8449,7 @@ export const BindCustomPropertyToCategoryURL = function(parameters = {}) {
 export const PreviewCategoryDisplayNameTemplate = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/resource-category/{id}/resource/display-name-template/preview'
+  let path = '/resource-category/{id}/resource/resource-display-name-template/preview'
   let body
   let queryParameters = {}
   let form = {}
@@ -8471,7 +8471,7 @@ export const PreviewCategoryDisplayNameTemplate = function(parameters = {}) {
   return request('get', domain + path, body, queryParameters, form, config)
 }
 export const PreviewCategoryDisplayNameTemplate_RAW_URL = function() {
-  return '/resource-category/{id}/resource/display-name-template/preview'
+  return '/resource-category/{id}/resource/resource-display-name-template/preview'
 }
 export const PreviewCategoryDisplayNameTemplate_TYPE = function() {
   return 'get'
@@ -8479,7 +8479,7 @@ export const PreviewCategoryDisplayNameTemplate_TYPE = function() {
 export const PreviewCategoryDisplayNameTemplateURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{id}/resource/display-name-template/preview'
+  let path = '/resource-category/{id}/resource/resource-display-name-template/preview'
   path = path.replace('{id}', `${parameters['id']}`)
   if (parameters['template'] !== undefined) {
     queryParameters['template'] = parameters['template']

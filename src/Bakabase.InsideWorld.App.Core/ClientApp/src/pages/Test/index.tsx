@@ -19,6 +19,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import type { IFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
 import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector';
 import { generateTrees } from '@/pages/Test/data/tree';
+import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
 
 const schema: RJSFSchema = {
   type: 'object',

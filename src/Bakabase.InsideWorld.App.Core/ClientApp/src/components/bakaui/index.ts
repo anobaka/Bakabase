@@ -1,6 +1,6 @@
-import Button, { ButtonProps } from './components/Button';
+import { Button, ButtonGroup, ButtonProps } from './components/Button';
 import Select, { SelectProps } from './components/Select';
-import Icon from './components/Icon';
+import Icon, { IconProps } from './components/Icon';
 import Input from './components/Input';
 import Chip from './components/Chip';
 import Tooltip from './components/Tooltip';
@@ -41,7 +41,9 @@ import Pagination from './components/Pagination';
 export {
   Button,
   ButtonProps,
+  ButtonGroup,
   Icon,
+  IconProps,
   Input,
   Select,
   SelectProps,

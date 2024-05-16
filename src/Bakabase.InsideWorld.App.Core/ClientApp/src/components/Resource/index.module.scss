@@ -3,12 +3,6 @@
   //border: 1px solid #ccc;
   //background: $color-brand1-9;
   //box-shadow: rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, var(--theme-border-color) 0px 0px 0px 1px;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  padding: 5px;
-  border: 1px solid var(--theme-border-color);
-  border-radius: 8px;
 
   .taskCover {
     position: absolute;
@@ -50,7 +44,6 @@
     padding-bottom: 100%;
     position: relative;
     //border: 1px solid #E7E7E7;
-    background: var(--theme-body-background);
     border-radius: 3px;
 
     .absoluteRectangle {
@@ -148,19 +141,12 @@
         -webkit-line-clamp: unset; /* number of lines to show */
         line-clamp: unset;
         -webkit-box-orient: unset;
+        background-color: var(--bakaui-background);
 
         word-break: break-all;
         z-index: 1;
 
       }
-    }
-
-    .title {
-      margin-bottom: 5px;
-      user-select: text;
-    }
-
-    .tags {
     }
   }
 

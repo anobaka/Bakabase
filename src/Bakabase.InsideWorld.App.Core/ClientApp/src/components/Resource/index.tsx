@@ -18,6 +18,7 @@ import type SimpleSearchEngine from '@/core/models/SimpleSearchEngine';
 import type { RequestParams } from '@/sdk/Api';
 import Operations from '@/components/Resource/components/Operations';
 import TaskCover from '@/components/Resource/components/TaskCover';
+import type { Resource as ResourceModel } from '@/core/models/Resource';
 
 export interface IResourceHandler {
   id: number;
@@ -25,7 +26,7 @@ export interface IResourceHandler {
 }
 
 interface Props {
-  resource: any;
+  resource: ResourceModel;
   coverHash?: string;
   queue?: Queue;
   onRemove?: (id: number) => any;
@@ -55,7 +56,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   } = props;
 
   const { t } = useTranslation();
-  const log = buildLogger(`Resource:${resource.id}|${resource.rawFullname}`);
+  const log = buildLogger(`Resource:${resource.id}|${resource.path}`);
 
   const forceUpdate = useUpdate();
   const [playableFiles, setPlayableFiles] = useState<string[]>([]);
@@ -73,7 +74,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     };
   }, []);
 
-  useTraceUpdate(props, `[${resource.rawName}]`);
+  useTraceUpdate(props, `[${resource.fileName}]`);
 
   // log('Rendering');
 
@@ -240,7 +241,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
   };
 
   return (
-    <div className={`${styles.resource} ${props.className}`} key={resource.id} style={style}>
+    <div
+      className={`flex flex-col p-1 rounded relative border-1 border-default-200 group ${styles.resource} ${props.className}`}
+      key={resource.id}
+      style={style}
+    >
       <Operations
         resource={resource}
         coverRef={coverRef.current}
@@ -251,24 +256,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
       />
       {renderCover()}
       <div className={styles.info}>
-        <div className={`${styles.title} ${styles.limitedContent}`}>
+        <div
+          className={`select-text mb-2 ${styles.limitedContent}`}
+        >
           {resource.displayName}
-        </div>
-        <div className={`${styles.tags} ${styles.limitedContent}`}>
-          {(resource.tags || []).map((t) => {
-            const tag = new TagDto({ ...t });
-            return (
-              <Button
-                key={t.id}
-                // className={'tag'}
-                text
-                style={{ color: t.color }}
-                size={'small'}
-                onClick={() => onTagSearch(t.id, true)}
-              >#{tag.displayName}&nbsp;
-              </Button>
-            );
-          })}
         </div>
       </div>
     </div>

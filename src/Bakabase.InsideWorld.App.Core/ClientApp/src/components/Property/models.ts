@@ -12,6 +12,15 @@ export interface IProperty {
   isReserved: boolean;
   type?: CustomPropertyType;
 }
+
+export type PropertyValue = {
+  id: number;
+  propertyId: number;
+  resourceId: number;
+  value?: any;
+  scope: number;
+};
+
 export interface IChoice {
   id: string;
   value?: string;

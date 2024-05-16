@@ -2,7 +2,13 @@ import { Dialog, Dropdown, Menu, Overlay } from '@alifd/next';
 import { Trans, useTranslation } from 'react-i18next';
 import React from 'react';
 import { Link } from '@ice/runtime/router';
-import styles from './index.module.scss';
+import {
+  FireOutlined,
+  FolderOpenOutlined,
+  ProductOutlined,
+  SearchOutlined,
+  VideoCameraAddOutlined,
+} from '@ant-design/icons';
 import ClickableIcon from '@/components/ClickableIcon';
 import BApi from '@/sdk/BApi';
 import ResourceEnhancementsDialog from '@/components/Resource/components/ResourceEnhancementsDialog';
@@ -17,11 +23,12 @@ import TagSelector from '@/components/TagSelector';
 import store from '@/store';
 import type { IResourceCoverRef } from '@/components/Resource/components/ResourceCover';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-
-const { Popup } = Overlay;
+import type { IconProps } from '@/components/bakaui';
+import { Button, Popover } from '@/components/bakaui';
+import type { Resource } from '@/core/models/Resource';
 
 interface IProps {
-  resource: any;
+  resource: Resource;
   coverRef?: IResourceCoverRef;
   reload?: (ct?: AbortSignal) => Promise<any>;
 }
@@ -34,83 +41,41 @@ export default ({
   const { t } = useTranslation();
 
   const { createPortal } = useBakabaseContext();
-  const searchEngines = store.useModelState('thirdPartyOptions').simpleSearchEngines || [];
+  // const searchEngines = store.useModelState('thirdPartyOptions').simpleSearchEngines || [];
 
   return (
-    <Popup
+    <Popover
       trigger={(
-        <ClickableIcon
-          className={'absolute top-1 right-1 z-10 text-xl'}
-          type={'ellipsis'}
-          colorType={'normal'}
-          onMouseEnter={e => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-        />
+        <ProductOutlined className={'text-base absolute top-1 right-1 z-10 hidden group-hover:block'} />
       )}
-      // triggerType={'click'}
     >
-      <div className={styles.operations}>
-        <div className={styles.opt} title={t('Preview')}>
-          <ClickableIcon
-            colorType={'normal'}
-            type={'eye'}
-            className={'text-xl'}
-            onClick={() => {
-              ShowResourceMediaPlayer(resource.id, resource.rawFullname, (base64String: string, saveTarget?: CoverSaveLocation) => {
-                coverRef?.save(base64String, saveTarget);
-                // @ts-ignore
-              }, t, resource.isSingleFile, resourceOptions.coverOptions?.target);
-            }}
-          />
-        </div>
-        <div className={styles.opt} title={t('Open folder')}>
-          <ClickableIcon
-            className={'text-xl'}
-            colorType={'normal'}
-            type={'folder-open'}
-            onClick={() => open()}
-          />
-        </div>
-        <div
-          className={styles.opt}
-          title={t('Move')}
+      <div className={'grid grid-cols-2 gap-1 rounded'}>
+        <Button
+          size={'sm'}
+          title={t('Preview')}
+          isIconOnly
           onClick={() => {
-            MediaLibraryPathSelector.show({
-              onSelect: path => BApi.resource.moveResources({
-                ids: [resource.id],
-                path,
-              }),
-            });
+            ShowResourceMediaPlayer(resource.id, resource.path, (base64String: string, saveTarget?: CoverSaveLocation) => {
+              coverRef?.save(base64String, saveTarget);
+              // @ts-ignore
+            }, t, resource.isSingleFile, resourceOptions.coverOptions?.target);
           }}
         >
-          <ClickableIcon
-            className={'text-xl'}
-            colorType={'normal'}
-            type={'move'}
-            size={'small'}
-          />
-        </div>
-        <div
-          className={styles.opt}
-          title={t('Add to favorites')}
-          onClick={() => {
-            FavoritesSelector.show({
-              resourceIds: [resource.id],
-            });
-          }}
+          <SearchOutlined className={'text-base'} />
+        </Button>
+        <Button
+          size={'sm'}
+          title={t('Open folder')}
+          isIconOnly
+          onClick={() => BApi.tool.openFileOrDirectory({ path: resource.path, openInDirectory: resource.isFile })}
+
         >
-          <ClickableIcon
-            className={'text-xl'}
-            colorType={'normal'}
-            type={'star'}
-            size={'small'}
-          />
-        </div>
-        <div
-          className={styles.opt}
+          <FolderOpenOutlined className={'text-base'} />
+        </Button>
+        <Button
+          size={'sm'}
           title={t('Add to playlist')}
+          isIconOnly
           onClick={() => {
             Dialog.show({
               title: t('Add to playlist'),
@@ -127,103 +92,26 @@ export default ({
             });
           }}
         >
-          <ClickableIcon
-            className={'text-xl'}
-            colorType={'normal'}
-            type={'playlistadd'}
-            size={'small'}
-          />
-        </div>
-        <div
-          className={styles.opt}
-          title={t('Set tags')}
+          <VideoCameraAddOutlined className={'text-base'} />
+        </Button>
+        <Button
+          size={'sm'}
+          title={t('Enhancements')}
+          isIconOnly
           onClick={() => {
-            let tagIds = (resource.tags || []).map(t => t.id);
-            Dialog.show({
-              title: t('Setting tags'),
-              width: 'auto',
-              content: (
-                <TagSelector defaultValue={{ tagIds }} onChange={value => tagIds = value.tagIds} />
-              ),
-              v2: true,
-              closeMode: ['close', 'mask', 'esc'],
-              onOk: () => BApi.resource.updateResourceTags({
-                resourceTagIds: {
-                  [resource.id]: tagIds,
-                },
-              })
-                .then(t => {
-                  if (!t.code) {
-                    reload?.();
-                  }
-                }),
-            });
+            BApi.resource.getResourceEnhancements(resource.id, { additionalItem: EnhancementAdditionalItem.GeneratedCustomPropertyValue })
+              .then((t) => {
+                createPortal(ResourceEnhancementsDialog, {
+                  resourceId: resource.id,
+                  // @ts-ignore
+                  enhancements: t.data || [],
+                });
+              });
           }}
         >
-          <ClickableIcon
-            className={'text-xl'}
-            colorType={'normal'}
-            type={'tags'}
-            size={'small'}
-          />
-        </div>
-        <div className={styles.opt} title={t('Search')}>
-          <Dropdown
-            autoFocus={false}
-            trigger={
-              <ClickableIcon
-                className={'text-xl'}
-                colorType={'normal'}
-                type={'search'}
-              />
-            }
-            triggerType={'click'}
-          >
-            {(searchEngines && searchEngines.length > 0) ? (
-              <Menu className={'resource-component-search-dropdown-menu'}>
-                {searchEngines?.filter(e => e.urlTemplate)
-                  .map((e, i) => {
-                    return (
-                      <Menu.Item
-                        key={i}
-                        onClick={() => {
-                          BApi.gui.openUrlInDefaultBrowser({
-                            url: e.urlTemplate!.replace('{keyword}', encodeURIComponent(resource.rawName)),
-                          });
-                        }}
-                      >
-                        <Trans i18nKey={'resource.search-engine.tip'}>
-                          Use <span>{{ name: e.name } as any}</span> to
-                          search <span>{{ keyword: resource.rawName } as any}</span>
-                        </Trans>
-                      </Menu.Item>
-                    );
-                  })}
-              </Menu>
-            ) : (
-              <Link to={'/configuration'}>
-                {t('Set external search engines')}
-              </Link>
-            )}
-          </Dropdown>
-        </div>
-        <div className={styles.opt} title={t('Enhancements')}>
-          <ClickableIcon
-            className={'text-xl'}
-            colorType={'normal'}
-            type={'flashlight'}
-            onClick={() => {
-              BApi.resource.getResourceEnhancements(resource.id, { additionalItem: EnhancementAdditionalItem.GeneratedCustomPropertyValue })
-                .then((t) => {
-                  createPortal(ResourceEnhancementsDialog, {
-                    resourceId: resource.id,
-                    enhancements: t.data || [],
-                  });
-                });
-            }}
-          />
-        </div>
+          <FireOutlined className={'text-base'} />
+        </Button>
       </div>
-    </Popup>
+    </Popover>
   );
 };

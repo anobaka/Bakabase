@@ -102,7 +102,7 @@ namespace Bakabase.Modules.Enhancer.Services
                 await CustomPropertyValueService.RemoveRange(cpValues);
             }
 
-            tran.CommitAsync();
+            await tran.CommitAsync();
             return BaseResponseBuilder.Ok;
         }
     }

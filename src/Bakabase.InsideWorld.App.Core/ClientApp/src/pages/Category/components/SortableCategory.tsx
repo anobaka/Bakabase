@@ -6,6 +6,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
 import { UnorderedListOutlined } from '@ant-design/icons';
 import AddMediaLibraryInBulkDialog from './AddMediaLibraryInBulkDialog';
+import DisplayNameTemplateEditorDialog from './DisplayNameTemplateEditorDialog';
 import { AddMediaLibrary, RemoveCategoryEnhancementRecords, UpdateResourceCategory } from '@/sdk/apis';
 import CustomIcon from '@/components/CustomIcon';
 import { ComponentType, componentTypes, CoverSelectOrder, coverSelectOrders } from '@/sdk/constants';
@@ -29,7 +30,6 @@ import {
   DropdownItem,
   Modal,
 } from '@/components/bakaui';
-import DisplayNameRuleEditorDialog from '@/pages/Category/components/DisplayNameRuleEditorDialog';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
@@ -273,7 +273,7 @@ export default (({
                     title: t('Removing all enhancement records of resources under this category'),
                     children: t('This operation cannot be undone. Would you like to proceed?'),
                     onOk: async () => {
-
+                      await BApi.resourceCategory.removeCategoryEnhancements(category.id);
                     },
                   });
                   break;
@@ -577,26 +577,25 @@ export default (({
         <div className={'col-span-3'}>
           <div className={'flex flex-wrap items-center gap-2'}>
             <Tooltip
-              content={t('You can set a rule to display name of resources. By default, file name will be used as display name')}
+              content={t('You can set a display name template for resources. By default, file name will be used as display name')}
             >
               <Chip
                 size={'sm'}
                 radius={'sm'}
               >
-                {t('Display name rule')}
+                {t('Display name template')}
               </Chip>
             </Tooltip>
             <Button
               variant={'light'}
               size={'sm'}
-              color={'primary'}
               onClick={() => {
-                DisplayNameRuleEditorDialog.show({
+                createPortal(DisplayNameTemplateEditorDialog, {
                   categoryId: category.id,
                 });
               }}
             >
-              {t('Click to set')}
+              {category.resourceDisplayNameTemplate ?? t('Click to set')}
             </Button>
           </div>
         </div>

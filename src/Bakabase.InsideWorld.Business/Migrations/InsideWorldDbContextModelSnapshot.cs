@@ -35,7 +35,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoryComponents", (string)null);
+                    b.ToTable("CategoryComponents");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions", b =>
@@ -58,7 +58,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoryEnhancerOptions", (string)null);
+                    b.ToTable("CategoryEnhancerOptions");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.CustomProperty", b =>
@@ -82,7 +82,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CustomProperties", (string)null);
+                    b.ToTable("CustomProperties");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.CustomPropertyValue", b =>
@@ -91,13 +91,13 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Layer")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("PropertyId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Scope")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Value")
@@ -109,9 +109,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("ResourceId");
 
-                    b.HasIndex("ResourceId", "PropertyId", "Layer");
+                    b.HasIndex("ResourceId", "PropertyId", "Scope");
 
-                    b.ToTable("CustomPropertyValues", (string)null);
+                    b.ToTable("CustomPropertyValues");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.Enhancement", b =>
@@ -122,6 +122,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("CustomPropertyValueId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("EnhancerId")
                         .HasColumnType("INTEGER");
@@ -138,12 +141,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("ValueType")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("CustomPropertyValueId")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
-                    b.ToTable("Enhancements", (string)null);
+                    b.ToTable("Enhancements");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.Resource", b =>
@@ -222,7 +222,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("UpdateDt");
 
-                    b.ToTable("Resources", (string)null);
+                    b.ToTable("Resources");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModification", b =>
@@ -264,7 +264,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BulkModifications", (string)null);
+                    b.ToTable("BulkModifications");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModificationDiff", b =>
@@ -303,7 +303,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BulkModificationDiffs", (string)null);
+                    b.ToTable("BulkModificationDiffs");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModificationTempData", b =>
@@ -318,7 +318,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("BulkModificationId");
 
-                    b.ToTable("BulkModificationTempData", (string)null);
+                    b.ToTable("BulkModificationTempData");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Alias", b =>
@@ -347,7 +347,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Aliases", (string)null);
+                    b.ToTable("Aliases");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.AliasGroup", b =>
@@ -358,7 +358,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AliasGroups", (string)null);
+                    b.ToTable("AliasGroups");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.CategoryCustomPropertyMapping", b =>
@@ -378,7 +378,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("CategoryId", "PropertyId")
                         .IsUnique();
 
-                    b.ToTable("CategoryCustomPropertyMappings", (string)null);
+                    b.ToTable("CategoryCustomPropertyMappings");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions", b =>
@@ -407,7 +407,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ComponentOptions", (string)null);
+                    b.ToTable("ComponentOptions");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.CustomPlayableFileSelectorOptions", b =>
@@ -429,7 +429,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CustomPlayableFileSelectorOptionsList", (string)null);
+                    b.ToTable("CustomPlayableFileSelectorOptionsList");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.CustomPlayerOptions", b =>
@@ -456,7 +456,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CustomPlayerOptionsList", (string)null);
+                    b.ToTable("CustomPlayerOptionsList");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.CustomResourceProperty", b =>
@@ -484,7 +484,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CustomResourceProperties", (string)null);
+                    b.ToTable("CustomResourceProperties");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.DownloadTask", b =>
@@ -542,7 +542,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("ThirdPartyId", "Type");
 
-                    b.ToTable("DownloadTasks", (string)null);
+                    b.ToTable("DownloadTasks");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Favorites", b =>
@@ -563,7 +563,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Favorites", (string)null);
+                    b.ToTable("Favorites");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.FavoritesResourceMapping", b =>
@@ -580,7 +580,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FavoritesResourceMappings", (string)null);
+                    b.ToTable("FavoritesResourceMappings");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.MediaLibrary", b =>
@@ -611,7 +611,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("MediaLibraries", (string)null);
+                    b.ToTable("MediaLibraries");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Original", b =>
@@ -628,7 +628,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Originals", (string)null);
+                    b.ToTable("Originals");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.OriginalResourceMapping", b =>
@@ -648,7 +648,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("OriginalId", "ResourceId")
                         .IsUnique();
 
-                    b.ToTable("OriginalResourceMappings", (string)null);
+                    b.ToTable("OriginalResourceMappings");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Password", b =>
@@ -669,7 +669,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("UsedTimes");
 
-                    b.ToTable("Passwords", (string)null);
+                    b.ToTable("Passwords");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Playlist", b =>
@@ -693,7 +693,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Playlists", (string)null);
+                    b.ToTable("Playlists");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Publisher", b =>
@@ -716,7 +716,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Publishers", (string)null);
+                    b.ToTable("Publishers");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.PublisherResourceMapping", b =>
@@ -739,7 +739,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("PublisherId", "ResourceId", "ParentPublisherId")
                         .IsUnique();
 
-                    b.ToTable("OrganizationResourceMappings", (string)null);
+                    b.ToTable("OrganizationResourceMappings");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.PublisherTagMapping", b =>
@@ -759,7 +759,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("TagId", "PublisherId")
                         .IsUnique();
 
-                    b.ToTable("PublisherTagMappings", (string)null);
+                    b.ToTable("PublisherTagMappings");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.ResourceCategory", b =>
@@ -793,12 +793,15 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("Order")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ResourceDisplayNameTemplate")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("TryCompressedFilesOnCoverSelection")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.ToTable("ResourceCategories", (string)null);
+                    b.ToTable("ResourceCategories");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.ResourceTagMapping", b =>
@@ -818,7 +821,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("TagId", "ResourceId")
                         .IsUnique();
 
-                    b.ToTable("ResourceTagMappings", (string)null);
+                    b.ToTable("ResourceTagMappings");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Series", b =>
@@ -835,7 +838,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Series", (string)null);
+                    b.ToTable("Series");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.SpecialText", b =>
@@ -858,7 +861,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SpecialTexts", (string)null);
+                    b.ToTable("SpecialTexts");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Tag", b =>
@@ -890,7 +893,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("Name", "GroupId")
                         .IsUnique();
 
-                    b.ToTable("Tags", (string)null);
+                    b.ToTable("Tags");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.TagGroup", b =>
@@ -911,7 +914,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("TagGroups", (string)null);
+                    b.ToTable("TagGroups");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Volume", b =>
@@ -942,7 +945,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("Title");
 
-                    b.ToTable("Volumes", (string)null);
+                    b.ToTable("Volumes");
                 });
 
             modelBuilder.Entity("Bootstrap.Components.Logging.LogService.Models.Entities.Log", b =>
@@ -971,7 +974,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Logs", (string)null);
+                    b.ToTable("Logs");
                 });
 #pragma warning restore 612, 618
         }

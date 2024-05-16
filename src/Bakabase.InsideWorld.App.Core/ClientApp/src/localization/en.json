@@ -43,9 +43,13 @@
   "BulkModification.Processor.Demonstrator.Operation.Filter.FilteredData": "Data filtered by <0/> <1>{{find}}</1>",
   "TextOperation.Backward": "backward",
   "TextOperation.Forward": "forward",
-  "category.displayNameRule.propertyExample": "To add a property value as a variable in the rule, you can use the following format: <1>{name of property}</1>. For example, <3>{{{samplePropertyName}}}</3> will be replaced with the value of the property named <5>{{samplePropertyName}}</5>",
+  "category.displayNameTemplate.propertyExample": "To add a property value as a variable in the template, you can use the following format: <1>{name of property}</1>. For example, <3>{{{samplePropertyName}}}</3> will be replaced with the value of the property named <5>{{samplePropertyName}}</5>",
   "ErrorHandlingModal.FindContactInConfigurationPage": "You can find the concat at the bottom of <1>Configuration page</1>",
   "Filter.Operation": "Rule",
   "Combinator.And": "and",
-  "Combinator.Or": "or"
+  "Combinator.Or": "or",
+  "CategoryResourceDisplayNameSegmentType.StaticText": "static text",
+  "CategoryResourceDisplayNameSegmentType.Property": "property",
+  "CategoryResourceDisplayNameSegmentType.LeftWrapper": "left wrapper",
+  "CategoryResourceDisplayNameSegmentType.RightWrapper": "right wrapper"
 }

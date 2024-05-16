@@ -82,6 +82,14 @@ public record Resource
         }
     }
 
+    private string? _displayName;
+
+    public string DisplayName
+    {
+        get => _displayName ?? FileName;
+        set => _displayName = value;
+    }
+
     public int? ParentId { get; set; }
     public bool HasChildren { get; set; }
     public bool IsFile { get; set; }

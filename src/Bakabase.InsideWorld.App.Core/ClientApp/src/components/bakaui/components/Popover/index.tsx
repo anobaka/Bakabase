@@ -22,6 +22,9 @@ export default ({ trigger, children, visible, closeMode = ['esc', 'mask'], ...ot
         // console.log(o, 555);
         otherProps.onVisibleChange?.(o);
       }}
+      style={{
+        zIndex: 0,
+      }}
       {...otherProps}
     >
       <PopoverTrigger>

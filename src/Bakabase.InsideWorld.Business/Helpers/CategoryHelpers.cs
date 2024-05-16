@@ -148,7 +148,7 @@ public class CategoryHelpers
                     // whole subTemplate is one part
                     tmpSegments.Add(new CategoryResourceDisplayNameViewModel.Segment
                     {
-                        Type = CategoryResourceDisplayNameSegmentType.Normal,
+                        Type = CategoryResourceDisplayNameSegmentType.StaticText,
                         Text = tpl.Substring(startIdx, endIdx - startIdx + 1)
                     });
                 }

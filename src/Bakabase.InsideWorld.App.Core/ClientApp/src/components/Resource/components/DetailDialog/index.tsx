@@ -1,7 +1,6 @@
 import path from 'path';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Button,
   DatePicker2,
   Dialog,
   Input,
@@ -18,6 +17,7 @@ import './index.scss';
 import dayjs from 'dayjs';
 import { useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
+import { DeleteOutlined, FolderOpenOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { IwFsType, ResourceLanguage, resourceLanguages } from '@/sdk/constants';
 import Property from '@/components/Resource/components/DetailDialog/PropertyValue';
 import PublisherProperty from '@/components/Resource/components/DetailDialog/PublisherPropertyValue';
@@ -32,10 +32,13 @@ import ResourceCover from '@/components/Resource/components/ResourceCover';
 import { createPortalOfComponent } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import CustomPropertyValue from '@/components/Resource/components/DetailDialog/CustomPropertyValue';
+import type { Resource as ResourceModel } from '@/core/models/Resource';
+import { ButtonGroup, Button } from '@/components/bakaui';
+
 
 interface IProps {
   dialogProps?: any;
-  resource: any;
+  resource: ResourceModel;
   onReloaded: (resource: any) => any;
   onPlay?: () => void;
   onOpen?: () => void;
@@ -94,7 +97,7 @@ const ResourceDetailDialog = (props: IProps) => {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    setPreviewingPath(resource.rawFullname);
+    setPreviewingPath(resource.path);
 
     console.log(resource);
 
@@ -120,7 +123,8 @@ const ResourceDetailDialog = (props: IProps) => {
       root: previewingPath,
     })
       .then((a) => {
-        setFilesystemEntries(a.data.entries);
+        // @ts-ignore
+        setFilesystemEntries(a.data?.entries ?? []);
       })
       .finally(() => {
         setLoadingFiles(false);
@@ -132,139 +136,139 @@ const ResourceDetailDialog = (props: IProps) => {
   }, [previewingPath]);
 
   const renderOtherProperties = () => {
-    const reservedPropertyComponentMap = {
-      'Release Date': (
-        <Property
-          requestKey={'releaseDt'}
-          renderValue={() => (resource.releaseDt ? dayjs(resource.releaseDt)
-            .format('YYYY-MM-DD') : '')}
-          initValue={resource.releaseDt ? dayjs(resource.releaseDt) : undefined}
-          editable
-          EditComponent={DatePicker2}
-          editComponentProps={{
-            showTime: false,
-            popupProps: { v2: true },
-            hasClear: true,
-          }}
-          convertToRequesting={(dj) => dj.format('YYYY-MM-DD')}
-          resourceId={resource.id}
-          reloadResource={reload}
-        />
-      ),
-      Publishers: (
-        <PublisherProperty
-          resource={resource}
-          reloadResource={reload}
-        />),
-      Series: (
-        <Property
-          renderValue={() =>
-            resource.series?.name && (
-              <span
-                className={'series'}
-                onClick={() => {
-                  Message.notice(i18n.t('Under developing'));
-                }}
-              >{resource.series?.name}
-              </span>
-            )}
-          resourceId={resource.id}
-          reloadResource={reload}
-          initValue={resource.series?.name}
-          requestKey={'series'}
-          EditComponent={Input}
-          editComponentProps={{
-            hasClear: true,
-          }}
-          editable
-        />),
-      Language: (
-        <Property
-          renderValue={() => i18n.t(ResourceLanguage[resource.language])}
-          resourceId={resource.id}
-          reloadResource={reload}
-          initValue={resource.language}
-          requestKey={'language'}
-          EditComponent={Select}
-          editComponentProps={{
-            autoWidth: true,
-            style: { width: 180 },
-            dataSource: resourceLanguages.map((t) => ({
-              label: i18n.t(t.label),
-              value: t.value,
-            })),
-          }}
-          editable
-        />
-      ),
-      Original: (
-        <Property
-          renderValue={() => resource.originals?.map((o) => (
-            <span
-              className={'original'}
-              onClick={() => {
-                Message.notice(i18n.t('Under developing'));
-              }}
-            >{o.name}
-            </span>
-          ))}
-          resourceId={resource.id}
-          reloadResource={reload}
-          initValue={resource.originals?.map((t, i) => t.name) || []}
-          requestKey={'originals'}
-          EditComponent={Select}
-          editComponentProps={{
-            mode: 'tag',
-            placeholder: i18n.t('Add a original'),
-          }}
-          defaultValueKeyOfEditComponent={'value'}
-          editable
-        />
-      ),
-      Rate: (
-        <Property
-          renderValue={() => resource.rate}
-          resourceId={resource.id}
-          reloadResource={reload}
-          initValue={resource.rate}
-          requestKey={'rate'}
-          EditComponent={NumberPicker}
-          editComponentProps={{
-            max: 5,
-            precision: 2,
-          }}
-          editable
-        />
-      ),
-      // Tags: (
-      //   <TagPropertyValue resource={resource} reload={reload} />
-      // ),
-    };
-
-    const propertyComponents: {
-      label: string;
-      component: any;
-    }[] = Object.keys(reservedPropertyComponentMap).map(x => ({ label: x, component: reservedPropertyComponentMap[x] }));
-
-    if (resource.customProperties) {
-      const keys = Object.keys(resource.customProperties);
-      if (keys.length > 0) {
-        keys.forEach((k) => {
-          propertyComponents.push({
-            label: k,
-            component: (
-              <Property
-                renderValue={() => JSON.stringify(resource.customProperties[k])}
-                resourceId={resource.id}
-                reloadResource={reload}
-                requestKey={k}
-                isCustomProperty
-              />
-            ),
-          });
-        });
-      }
-    }
+    // const reservedPropertyComponentMap = {
+    //   'Release Date': (
+    //     <Property
+    //       requestKey={'releaseDt'}
+    //       renderValue={() => (resource.releaseDt ? dayjs(resource.releaseDt)
+    //         .format('YYYY-MM-DD') : '')}
+    //       initValue={resource.releaseDt ? dayjs(resource.releaseDt) : undefined}
+    //       editable
+    //       EditComponent={DatePicker2}
+    //       editComponentProps={{
+    //         showTime: false,
+    //         popupProps: { v2: true },
+    //         hasClear: true,
+    //       }}
+    //       convertToRequesting={(dj) => dj.format('YYYY-MM-DD')}
+    //       resourceId={resource.id}
+    //       reloadResource={reload}
+    //     />
+    //   ),
+    //   Publishers: (
+    //     <PublisherProperty
+    //       resource={resource}
+    //       reloadResource={reload}
+    //     />),
+    //   Series: (
+    //     <Property
+    //       renderValue={() =>
+    //         resource.series?.name && (
+    //           <span
+    //             className={'series'}
+    //             onClick={() => {
+    //               Message.notice(i18n.t('Under developing'));
+    //             }}
+    //           >{resource.series?.name}
+    //           </span>
+    //         )}
+    //       resourceId={resource.id}
+    //       reloadResource={reload}
+    //       initValue={resource.series?.name}
+    //       requestKey={'series'}
+    //       EditComponent={Input}
+    //       editComponentProps={{
+    //         hasClear: true,
+    //       }}
+    //       editable
+    //     />),
+    //   Language: (
+    //     <Property
+    //       renderValue={() => i18n.t(ResourceLanguage[resource.language])}
+    //       resourceId={resource.id}
+    //       reloadResource={reload}
+    //       initValue={resource.language}
+    //       requestKey={'language'}
+    //       EditComponent={Select}
+    //       editComponentProps={{
+    //         autoWidth: true,
+    //         style: { width: 180 },
+    //         dataSource: resourceLanguages.map((t) => ({
+    //           label: i18n.t(t.label),
+    //           value: t.value,
+    //         })),
+    //       }}
+    //       editable
+    //     />
+    //   ),
+    //   Original: (
+    //     <Property
+    //       renderValue={() => resource.originals?.map((o) => (
+    //         <span
+    //           className={'original'}
+    //           onClick={() => {
+    //             Message.notice(i18n.t('Under developing'));
+    //           }}
+    //         >{o.name}
+    //         </span>
+    //       ))}
+    //       resourceId={resource.id}
+    //       reloadResource={reload}
+    //       initValue={resource.originals?.map((t, i) => t.name) || []}
+    //       requestKey={'originals'}
+    //       EditComponent={Select}
+    //       editComponentProps={{
+    //         mode: 'tag',
+    //         placeholder: i18n.t('Add a original'),
+    //       }}
+    //       defaultValueKeyOfEditComponent={'value'}
+    //       editable
+    //     />
+    //   ),
+    //   Rate: (
+    //     <Property
+    //       renderValue={() => resource.rate}
+    //       resourceId={resource.id}
+    //       reloadResource={reload}
+    //       initValue={resource.rate}
+    //       requestKey={'rate'}
+    //       EditComponent={NumberPicker}
+    //       editComponentProps={{
+    //         max: 5,
+    //         precision: 2,
+    //       }}
+    //       editable
+    //     />
+    //   ),
+    //   // Tags: (
+    //   //   <TagPropertyValue resource={resource} reload={reload} />
+    //   // ),
+    // };
+    //
+    // const propertyComponents: {
+    //   label: string;
+    //   component: any;
+    // }[] = Object.keys(reservedPropertyComponentMap).map(x => ({ label: x, component: reservedPropertyComponentMap[x] }));
+    //
+    // if (resource.customProperties) {
+    //   const keys = Object.keys(resource.customProperties);
+    //   if (keys.length > 0) {
+    //     keys.forEach((k) => {
+    //       propertyComponents.push({
+    //         label: k,
+    //         component: (
+    //           <Property
+    //             renderValue={() => JSON.stringify(resource.customProperties[k])}
+    //             resourceId={resource.id}
+    //             reloadResource={reload}
+    //             requestKey={k}
+    //             isCustomProperty
+    //           />
+    //         ),
+    //       });
+    //     });
+    //   }
+    // }
 
     if (resource.customPropertiesV2?.length > 0) {
       resource.customPropertiesV2.forEach((property, idx) => {
@@ -579,65 +583,37 @@ const ResourceDetailDialog = (props: IProps) => {
       cancelProps={{ children: t('Close') }}
     >
       <div className="top">
-        <div className="left">
-          <ResourceCover
-            resourceId={resource.id}
-            loadImmediately
-          />
+        <div className="rounded flex items-center justify-center w-[400px] h-[400px] max-w-[400px] max-h-[400px] overflow-hidden">
+          <ResourceCover resourceId={resource.id} />
         </div>
         <div className="right">
-          <div className="property">
-            <div className="value-container name">
-              <Property
-                initValue={resource.name || resource.rawName}
-                resourceId={resource.id}
-                reloadResource={reload}
-                renderValue={() => (
-                  resource.name || resource.rawName
-                )}
-                EditComponent={Input}
-                editComponentProps={{
-                  size: 'large',
-                  style: { width: 600 },
-                }}
-                editable
-                requestKey={'name'}
-              />
-            </div>
-          </div>
+          <div className={'text-xl'}>{resource.displayName}</div>
           {renderOtherProperties()}
-          <div className="property">
-            <div className="label">{t('Tags')}</div>
-            <div className="value-container">
-              <TagList
-                resource={resource}
-                reloadResource={reload}
-                onSearch={(tagId, append) => {
-                  onTagSearch(tagId, append);
-                  setVisible(false);
-                }}
-              />
-            </div>
-          </div>
-          <div className="opt">
-            <Button.Group>
+          <div>
+            <ButtonGroup>
               <Button
-                type="primary"
+                color="primary"
                 onClick={() => !noPlayableFile && onPlay()}
                 disabled={noPlayableFile}
-              >{t('Play')}
+              >
+                <PlayCircleOutlined />
+                {t('Play')}
               </Button>
               <Button
-                type="secondary"
+                color="default"
                 onClick={() => onOpen()}
-              >{t('Open')}
+              >
+                <FolderOpenOutlined />
+                {t('Open')}
               </Button>
               <Button
-                warning
+                color={'danger'}
                 onClick={() => onRemove()}
-              >{t('Remove')}
+              >
+                <DeleteOutlined />
+                {t('Remove')}
               </Button>
-            </Button.Group>
+            </ButtonGroup>
           </div>
         </div>
       </div>

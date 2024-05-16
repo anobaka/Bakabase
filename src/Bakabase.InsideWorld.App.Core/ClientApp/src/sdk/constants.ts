@@ -88,7 +88,7 @@ export enum AdbExceptionCode {Error = 1, InvalidExitCode = 2}
 export const adbExceptionCodes = Object.keys(AdbExceptionCode).filter(k => typeof AdbExceptionCode[k] === 'number').map(t => ({label: t, value: AdbExceptionCode[t]}));
 export enum AdbInternalError {Error = 1, INSTALL_FAILED_ALREADY_EXISTS = 100, DELETE_FAILED_INTERNAL_ERROR = 101, FailedToConnectDevice = 200}
 export const adbInternalErrors = Object.keys(AdbInternalError).filter(k => typeof AdbInternalError[k] === 'number').map(t => ({label: t, value: AdbInternalError[t]}));
-export enum CategoryResourceDisplayNameSegmentType {Normal = 1, Property = 2, LeftWrapper = 3, RightWrapper = 4}
+export enum CategoryResourceDisplayNameSegmentType {StaticText = 1, Property = 2, LeftWrapper = 3, RightWrapper = 4}
 export const categoryResourceDisplayNameSegmentTypes = Object.keys(CategoryResourceDisplayNameSegmentType).filter(k => typeof CategoryResourceDisplayNameSegmentType[k] === 'number').map(t => ({label: t, value: CategoryResourceDisplayNameSegmentType[t]}));
 export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
 export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
@@ -164,7 +164,7 @@ export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, Re
 export const resourceProperties = Object.keys(ResourceProperty).filter(k => typeof ResourceProperty[k] === 'number').map(t => ({label: t, value: ResourceProperty[t]}));
 export enum ResourceTaskType {Moving = 1}
 export const resourceTaskTypes = Object.keys(ResourceTaskType).filter(k => typeof ResourceTaskType[k] === 'number').map(t => ({label: t, value: ResourceTaskType[t]}));
-export enum SearchableReservedProperty {FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, MediaLibrary = 21}
+export enum SearchableReservedProperty {FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21}
 export const searchableReservedProperties = Object.keys(SearchableReservedProperty).filter(k => typeof SearchableReservedProperty[k] === 'number').map(t => ({label: t, value: SearchableReservedProperty[t]}));
 export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
 export const searchOperations = Object.keys(SearchOperation).filter(k => typeof SearchOperation[k] === 'number').map(t => ({label: t, value: SearchOperation[t]}));
@@ -192,7 +192,7 @@ export enum CustomPropertyValueAdditionalItem {None = 0}
 export const customPropertyValueAdditionalItems = Object.keys(CustomPropertyValueAdditionalItem).filter(k => typeof CustomPropertyValueAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyValueAdditionalItem[t]}));
 export enum MediaLibraryAdditionalItem {None = 0, Category = 1, FileSystemInfo = 2, FixedTags = 4}
 export const mediaLibraryAdditionalItems = Object.keys(MediaLibraryAdditionalItem).filter(k => typeof MediaLibraryAdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryAdditionalItem[t]}));
-export enum ResourceAdditionalItem {None = 0, Publishers = 1, Volume = 2, Serial = 6, Originals = 8, Tags = 16, CustomProperties = 32, Alias = 64, All = 127}
+export enum ResourceAdditionalItem {None = 0, Publishers = 1, Volume = 2, Serial = 6, Originals = 8, Tags = 16, CustomProperties = 32, Alias = 64, Category = 128, DisplayName = 416, HasChildren = 512, All = 992}
 export const resourceAdditionalItems = Object.keys(ResourceAdditionalItem).filter(k => typeof ResourceAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceAdditionalItem[t]}));
 export enum ResourceCategoryAdditionalItem {None = 0, Components = 1, Validation = 3, CustomProperties = 4, EnhancerOptions = 8}
 export const resourceCategoryAdditionalItems = Object.keys(ResourceCategoryAdditionalItem).filter(k => typeof ResourceCategoryAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceCategoryAdditionalItem[t]}));

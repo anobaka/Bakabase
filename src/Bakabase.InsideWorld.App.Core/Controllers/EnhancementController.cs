@@ -112,13 +112,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return await _enhancementService.RemoveAll(t => resourceIds.Contains(t.Id), true);
         }
 
-        [HttpDelete("~/category/{categoryId:int}/enhancement")]
+        [HttpDelete("~/resource-category/{categoryId:int}/enhancement")]
         [SwaggerOperation(OperationId = "RemoveCategoryEnhancements")]
         public async Task<BaseResponse> RemoveCategoryEnhancementRecords(int categoryId)
         {
             var resourceIds = (await _resourceService.GetAllEntities(t => t.CategoryId == categoryId))
                 .Select(t => t.Id).ToArray();
-            return await _enhancementService.RemoveAll(t => resourceIds.Contains(t.Id), true);
+            return await _enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
         }
     }
 }

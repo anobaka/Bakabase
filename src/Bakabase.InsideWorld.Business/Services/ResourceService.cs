@@ -402,63 +402,24 @@ namespace Bakabase.InsideWorld.Business.Services
 
 		public async Task<List<Models.Domain.Resource>> ToDomainModel(Abstractions.Models.Db.Resource[] resources,
 			ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
-		{
-			var resourceIds = resources.Select(a => a.Id).ToList();
-
-			Dictionary<int, List<PublisherDto>> publisherPool = null;
-			Dictionary<int, VolumeDto> volumePool = null;
-			Dictionary<int, SeriesDto> seriesPool = null;
-			Dictionary<int, List<OriginalDto>> originalPool = null;
-			Dictionary<int, List<TagDto>> tagPool = null;
-			Dictionary<int, List<CustomResourceProperty>> customPropertyPool = null;
-			Dictionary<int, Dictionary<CustomProperty, CustomPropertyValue?>?>? customPropertiesPoolV2 = null;
-
+        {
+            var doList = resources.Select(r => r.ToDomainModel()!).ToList();
+            var resourceIds = resources.Select(a => a.Id).ToList();
 			foreach (var i in SpecificEnumUtils<ResourceAdditionalItem>.Values)
 			{
 				if (additionalItems.HasFlag(i))
 				{
 					switch (i)
 					{
-						case ResourceAdditionalItem.Publishers:
-							publisherPool = await _publisherService.GetByResourceIds(resourceIds);
-							break;
-						case ResourceAdditionalItem.Volume:
-							volumePool = await _volumeService.GetByResourceKeys(resourceIds);
-							break;
-						case ResourceAdditionalItem.Serial:
-							if (volumePool != null)
-							{
-								var serialIds = volumePool?.Values.Where(a => a != null).Select(a => a.SerialId)
-									.Distinct()
-									.ToList();
-								var serials = await _serialService.GetByKeys(serialIds);
-								seriesPool = resourceIds.ToDictionary(a => a,
-									a => volumePool.TryGetValue(a, out var v) && v != null &&
-									     serials.TryGetValue(v.SerialId, out var s)
-										? s
-										: null);
-							}
-
-							break;
-						case ResourceAdditionalItem.Originals:
-							originalPool = await _originalService.GetByResourceIds(resourceIds);
-							break;
-						case ResourceAdditionalItem.Tags:
-							tagPool = await _tagService.GetByResourceIds(resourceIds);
-							break;
 						case ResourceAdditionalItem.CustomProperties:
 						{
-							customPropertyPool =
-								(await _customResourcePropertyService.GetAll(t => resourceIds.Contains(t.ResourceId)))
-								.GroupBy(t => t.ResourceId).ToDictionary(t => t.Key, t => t.ToList());
-
 							var categoryIds = resources.Select(r => r.CategoryId).Distinct().ToArray();
 							var categoryProperties = await _customPropertyService.GetByCategoryIds(categoryIds);
 							var customPropertiesValues = (await _customPropertyValueService.GetAll(
 								x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
 								true)).GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
 								x => x.ToDictionary(y => y.PropertyId, y => y));
-							customPropertiesPoolV2 = resources.ToDictionary(x => x.Id, x =>
+							var resourceIdPropertiesAndValuesMap = resources.ToDictionary(x => x.Id, x =>
 							{
 								var currentPropertiesAndValues = customPropertiesValues.GetValueOrDefault(x.Id);
 								var allProperties = categoryProperties.GetValueOrDefault(x.CategoryId);
@@ -466,77 +427,81 @@ namespace Bakabase.InsideWorld.Business.Services
 									a => currentPropertiesAndValues?.GetValueOrDefault(a.Id));
 							});
 
-							break;
-						}
+                            foreach (var r in doList)
+                            {
+                                if (resourceIdPropertiesAndValuesMap.TryGetValue(r.Id, out var pvm))
+                                {
+                                    r.CustomPropertiesV2 = pvm.Keys.ToList();
+                                    r.CustomPropertyValues = pvm.Values.ToList();
+                                }
+                            }
+
+                            break;
+                        }
 						case ResourceAdditionalItem.Alias:
 							break;
 						case ResourceAdditionalItem.None:
-						case ResourceAdditionalItem.All:
-							break;
-						default:
+                            break;
+                        case ResourceAdditionalItem.Category:
+                        {
+                            var categoryIds = resources.Select(r => r.CategoryId).Distinct().ToArray();
+                            var categoryMap = (await _categoryService.GetAllDto(x => categoryIds.Contains(x.Id),
+                                ResourceCategoryAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
+                            foreach (var r in doList)
+                            {
+                                r.Category = categoryMap.GetValueOrDefault(r.CategoryId);
+                            }
+
+                            break;
+                        }
+                        case ResourceAdditionalItem.HasChildren:
+                        {
+                            var children = await _orm.GetAll(a =>
+                                a.ParentId.HasValue && resourceIds.Contains(a.ParentId.Value));
+                            var parentIds = children.Select(a => a.ParentId!.Value).ToHashSet();
+                            foreach (var r in doList)
+                            {
+                                r.HasChildren = parentIds.Contains(r.Id);
+                            }
+
+                            break;
+                        }
+						case ResourceAdditionalItem.DisplayName:
+                        {
+                            var wrappers = (await _specialTextService.GetAll(SpecialTextType.Wrapper))
+                                .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
+                            foreach (var resource in doList)
+                            {
+                                var tpl = resource.Category?.ResourceDisplayNameTemplate;
+                                if (!string.IsNullOrEmpty(tpl))
+                                {
+                                    resource.DisplayName =
+                                        _categoryService.BuildDisplayNameForResource(resource, tpl, wrappers);
+                                }
+                            }
+
+                            break;
+                        }
+                        case ResourceAdditionalItem.Publishers:
+                        case ResourceAdditionalItem.Volume:
+                        case ResourceAdditionalItem.Serial:
+                        case ResourceAdditionalItem.Originals:
+                        case ResourceAdditionalItem.Tags:
+                        case ResourceAdditionalItem.All:
+                            break;
+                        default:
 							throw new ArgumentOutOfRangeException();
 					}
 				}
 			}
 
-			// HasChildren
-			var children = await _orm.GetAll(a => a.ParentId.HasValue && resourceIds.Contains(a.ParentId.Value));
-			var parentIds = children.Select(a => a.ParentId.Value).ToHashSet();
-
-			var dtoList = resources.Select(a =>
-			{
-				var dto = a.ToDomainModel()!;
-				if (publisherPool?.TryGetValue(dto.Id, out var ps) == true)
-				{
-					dto.Publishers = ps;
-				}
-
-				if (originalPool?.TryGetValue(dto.Id, out var os) == true)
-				{
-					dto.Originals = os;
-				}
-
-				if (seriesPool?.TryGetValue(dto.Id, out var s) == true)
-				{
-					dto.Series = s;
-				}
-
-				if (volumePool?.TryGetValue(dto.Id, out var v) == true)
-				{
-					dto.Volume = v;
-				}
-
-				if (tagPool?.TryGetValue(dto.Id, out var ts) == true)
-				{
-					dto.Tags = ts;
-				}
-
-				if (customPropertyPool?.TryGetValue(dto.Id, out var cps) == true)
-				{
-					dto.CustomProperties = cps.GroupBy(t => t.Key).ToDictionary(t => t.Key, t => t.ToList());
-				}
-
-				if (customPropertiesPoolV2?.TryGetValue(dto.Id, out var cps2) == true)
-				{
-					if (cps2 != null)
-					{
-						dto.CustomPropertiesV2 = cps2.Keys.ToList();
-						dto.CustomPropertyValues = cps2.Values.ToList();
-					}
-				}
-
-				dto.HasChildren = parentIds.Contains(dto.Id);
-
-				return dto;
-			}).ToList();
-
 			if (additionalItems.HasFlag(ResourceAdditionalItem.Alias))
 			{
-				await ReplaceWithPreferredAlias(dtoList);
+				await ReplaceWithPreferredAlias(doList);
 			}
 
-			return dtoList;
-		}
+            return doList;
+        }
 
 		public async Task<List<Abstractions.Models.Db.Resource>> GetAllEntities(Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
 			bool returnCopy = true)

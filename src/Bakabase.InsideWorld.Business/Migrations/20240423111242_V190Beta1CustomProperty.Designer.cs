@@ -783,6 +783,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<bool>("TryCompressedFilesOnCoverSelection")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ResourceDisplayNameTemplate")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("ResourceCategories");
