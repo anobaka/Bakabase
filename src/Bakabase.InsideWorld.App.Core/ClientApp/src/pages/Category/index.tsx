@@ -1,9 +1,10 @@
 import React, { useEffect, useReducer, useRef, useState } from 'react';
-import { Button, Dropdown, Loading, Menu } from '@alifd/next';
+import { Dropdown, Loading, Menu } from '@alifd/next';
 import './index.scss';
 import { history } from 'ice';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
+import FeatureStatusTip from '@/components/FeatureStatusTip';
 import { GetComponentDescriptors } from '@/sdk/apis';
 import SortableCategoryList from '@/pages/Category/components/SortableCategoryList';
 import MediaLibrarySynchronization from '@/pages/Category/components/MediaLibrarySynchronization';
@@ -12,9 +13,12 @@ import BApi from '@/sdk/BApi';
 import { MediaLibraryAdditionalItem, ResourceCategoryAdditionalItem } from '@/sdk/constants';
 import SimpleOneStepDialog from '@/components/SimpleOneStepDialog';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { Button, Input, Modal } from '@/components/bakaui';
 
 export default () => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   const [categories, setCategories] = useState<any[]>([]);
   const [libraries, setLibraries] = useState([]);
@@ -89,9 +93,42 @@ export default () => {
       <div className="header">
         <div className="left">
           <Button
-            type={'primary'}
+            color={'primary'}
             size={'small'}
-            onClick={() => gotoNewCategoryPage(false)}
+            onClick={() => {
+              let name = '';
+              createPortal(Modal, {
+                defaultVisible: true,
+                size: 'md',
+                title: t('Create a category'),
+                children: (
+                  <div>
+                    <Input
+                      size={'md'}
+                      className={'w-full'}
+                      placeholder={t('Please enter the name of the category')}
+                      onValueChange={(v) => {
+                        name = v;
+                      }}
+                    />
+                    <FeatureStatusTip
+                      className={'mt-2'}
+                      name={t('Setup wizard')}
+                      status={'deprecated'}
+                    />
+                  </div>
+                ),
+                onOk: async () => {
+                  if (name == undefined || name.length == 0) {
+                    throw new Error('Name is required');
+                  }
+                  await BApi.resourceCategory.addResourceCategory({
+                    name,
+                  });
+                  loadAllCategories();
+                },
+              });
+            }}
           >
             {t('Add')}
           </Button>
@@ -121,10 +158,13 @@ export default () => {
         </div>
         <div className="right">
           <Button
-            type={'secondary'}
+            color={'default'}
             size={'small'}
             onClick={() => {
-              SimpleOneStepDialog.show({
+              createPortal(Modal, {
+                defaultVisible: true,
+                title: t('Sort by name'),
+                children: t('We\'ll sort categories by name'),
                 onOk: async () => {
                   const orderedCategoryIds = categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(a => a.id);
                   const rsp = await BApi.resourceCategory.sortCategories({
@@ -132,11 +172,8 @@ export default () => {
                   });
                   if (!rsp.code) {
                     loadAllCategories();
-                    return true;
                   }
-                  return false;
                 },
-                title: t('Sort by name'),
               });
             }}
           >{t('Sort by name')}</Button>

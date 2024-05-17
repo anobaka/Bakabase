@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
-import { SyncMediaLibrary } from '@/sdk/apis';
-import { Balloon, Button, Progress } from '@alifd/next';
-import { BackgroundTaskStatus } from '@/sdk/constants';
+import { Balloon, Progress } from '@alifd/next';
 import i18n from 'i18next';
+import { SyncMediaLibrary } from '@/sdk/apis';
+import { BackgroundTaskStatus } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import store from '@/store';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/bakaui';
 
 const testData = {
   status: BackgroundTaskStatus.Running,
@@ -18,6 +20,7 @@ export default ({
   onChange = (status) => {
   },
 } = {}) => {
+  const { t } = useTranslation();
   const backgroundTasks = store.useModelState('backgroundTasks');
   const sortedTasks = backgroundTasks.slice().sort((a, b) => b.startDt.localeCompare(a.startDt));
   const taskInfo = sortedTasks.find((t) => t.name == 'MediaLibraryService:Sync');
@@ -39,16 +42,16 @@ export default ({
         <div className="top">
           {isSyncing ? (
             <div className="process">
-              {i18n.t(taskInfo?.currentProcess)}({taskInfo?.percentage}%)
+              {t(taskInfo?.currentProcess)}({taskInfo?.percentage}%)
             </div>
           ) : (
             <Button
-              type={'secondary'}
+              color={'secondary'}
               size={'small'}
               onClick={() => {
                 SyncMediaLibrary().invoke();
               }}
-            >{i18n.t('Sync now')}
+            >{t('Sync now')}
             </Button>
           )}
           {(failed || isComplete) && (
@@ -57,7 +60,7 @@ export default ({
                 <Balloon
                   trigger={(
                     <div className={'failed'}>
-                      {i18n.t('Failed')}
+                      {t('Failed')}
                       &nbsp;
                       <CustomIcon type={'question-circle'} size={'xs'} />
                     </div>
@@ -74,7 +77,7 @@ export default ({
                   <div className={'complete'}>
                     <CustomIcon type={'check-circle'} size={'xs'} />
                     &nbsp;
-                    {i18n.t('Complete')}
+                    {t('Complete')}
                   </div>
                 )
               }

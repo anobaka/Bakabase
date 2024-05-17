@@ -1263,5 +1263,13 @@
   "CategoryResourceDisplayNameSegmentType.Property": "属性",
   "CategoryResourceDisplayNameSegmentType.LeftWrapper": "左包裹符",
   "CategoryResourceDisplayNameSegmentType.RightWrapper": "右包裹符",
-  "Preview display names of resources": "预览资源展示名称"
+  "Preview display names of resources": "预览资源展示名称",
+  "There is no property bound yet, you can bind properties to category first.": "尚未绑定任何属性，您可以先将属性绑定至分类。",
+  "FeatureRequestTip.Developing": "功能<1>{{name}}</1>正在开发中。您可以在<3>GitHub</3>或<5>QQ群</5>中催促作者或提出建议。",
+  "FeatureRequestTip.Deprecated": "原功能<1>{{name}}</1>已被移除。如果您需要此功能，请在<3>GitHub</3>或<5>QQ群</5>中提出。",
+  "FeatureRequestTip.Deprecating": "功能<1>{{name}}</1>将被移除。如果您需要此功能，请在<3>GitHub</3>或<5>QQ群</5>中提出。",
+  "Setup wizard": "设置向导",
+  "Create a category": "创建一个分类",
+  "Please enter the name of the category": "请输入分类的名称",
+  "We'll sort categories by name": "我们将按照名称排序分类"
 }

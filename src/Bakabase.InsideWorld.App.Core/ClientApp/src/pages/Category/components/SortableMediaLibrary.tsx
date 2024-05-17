@@ -22,6 +22,7 @@ import ClickableIcon from '@/components/ClickableIcon';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsInBulkDialog';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 export default (({
                    library,
@@ -38,6 +39,7 @@ export default (({
   const log = buildLogger('SortableMediaLibrary');
 
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   const style = {
     transform: CSS.Translate.toString({
@@ -110,14 +112,6 @@ export default (({
       ref={setNodeRef}
       style={style}
     >
-      <PathConfigurationDialog
-        onSaved={() => loadAllMediaLibraries()}
-        library={library}
-        afterClose={() => {
-          setPathConfiguration(undefined);
-        }}
-        value={pathConfiguration}
-      />
       <div className="library">
         <DragHandle {...listeners} {...attributes} />
         <div className="name">
@@ -284,8 +278,12 @@ export default (({
               className={'path-configuration item'}
               key={i}
               onClick={() => {
-                setPathConfiguration(p);
-              }}
+                createPortal(PathConfigurationDialog, {
+                  onSaved: () => loadAllMediaLibraries(),
+                  library,
+                  value: pathConfiguration,
+                });
+                }}
             >
               <div className="path">
                 <span>

@@ -1,3 +1,4 @@
+import type { TooltipProps as NextUITooltipProps } from '@nextui-org/react';
 import { Tooltip } from '@nextui-org/react';
 import type { ReactNode } from 'react';
 import React from 'react';
@@ -24,7 +25,7 @@ type Color = 'default' |
   'warning' |
   'danger';
 
-interface IProps {
+interface IProps extends NextUITooltipProps{
   content: ReactNode;
   children: React.ReactNode;
   placement?: TooltipPlacement;

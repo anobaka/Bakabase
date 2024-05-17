@@ -19,6 +19,7 @@ import type { RequestParams } from '@/sdk/Api';
 import Operations from '@/components/Resource/components/Operations';
 import TaskCover from '@/components/Resource/components/TaskCover';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 export interface IResourceHandler {
   id: number;
@@ -54,6 +55,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
     disableMediaPreviewer = false,
     style,
   } = props;
+
+  const { createPortal } = useBakabaseContext();
 
   const { t } = useTranslation();
   const log = buildLogger(`Resource:${resource.id}|${resource.path}`);
@@ -205,14 +208,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
             disableCache={disableCache}
             disableMediaPreviewer={disableMediaPreviewer}
             onClick={() => {
-              ResourceDetailDialog.show({
-                onTagSearch,
-                onReloaded: () => reload(new AbortController().signal),
+              createPortal(ResourceDetailDialog, {
                 resource,
                 onPlay: clickPlayButton,
-                onOpen: open,
                 noPlayableFile: !(playableFiles?.length > 0),
-                ct,
               });
             }}
             resourceId={resource.id}

@@ -76,12 +76,9 @@ const EnhancerSelector = ({
     >
       {enhancers.map(e => {
         const ceo = categoryEnhancerOptionsList.find(x => x.enhancerId == e.id);
-        if (!ceo) {
-          return;
-        }
         return (
           <div
-            key={ceo?.enhancerId}
+            key={e.id}
             className={'max-w-[280px] rounded border-1 pl-3 pr-3 pt-2 pb-2'}
           >
             <div className={'text-medium font-bold'}>

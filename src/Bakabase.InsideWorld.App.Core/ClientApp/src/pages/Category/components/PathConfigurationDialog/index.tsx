@@ -1,6 +1,7 @@
-import { Balloon, Button, Dialog, Icon, Message } from '@alifd/next';
+import { Balloon, Dialog, Icon, Message } from '@alifd/next';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FolderOpenOutlined } from '@ant-design/icons';
 import BApi from '@/sdk/BApi';
 import {
   buildLogger,
@@ -20,28 +21,21 @@ import { MatcherValue } from '@/components/PathSegmentsConfiguration/models/Matc
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import BusinessConstants from '@/components/BusinessConstants';
+import { Button, Divider, Modal } from '@/components/bakaui';
+import type { DestroyableProps } from '@/components/bakaui/types';
+import FeatureStatusTip from '@/components/FeatureStatusTip';
 
 const log = buildLogger('PathConfigurationDialog');
 
-interface Props {
+interface Props extends DestroyableProps{
   library: { id: number; pathConfigurations: any[]; name: string };
   value?: any;
-  afterClose: () => void;
   onSaved: () => Promise<any>;
 }
 
-export default (props: Props) => {
-  const {
-    library,
-    value: propsValue,
-    afterClose = () => {
-    },
-    onSaved,
-  } = props;
+export default ({ library, value: propsValue, onSaved, ...props }: Props) => {
   const { t } = useTranslation();
   const [value, setValue] = useState(structuredClone(propsValue));
-  const [checkingPathRelations, setCheckingPathRelations] = useState(false);
-  const [relativeLibraries, setRelativeLibraries] = useState<any[]>([]);
   const [pscData, setPscData] = useState<{ value: IPscValue; segments: string[]; isDirectory: boolean }>();
 
 
@@ -53,21 +47,6 @@ export default (props: Props) => {
     // log('Props value changed', newValue);
     setValue(newValue);
   }, [propsValue]);
-
-  const checkPathRelations = useCallback((pc) => {
-    setCheckingPathRelations(true);
-    BApi.mediaLibrary.getPathRelatedLibraries({
-      libraryId: library.id,
-      currentPath: pc.prevPath,
-      newPath: pc.path,
-    })
-      .then((a) => {
-        setRelativeLibraries(a.data || []);
-      })
-      .finally(() => {
-        setCheckingPathRelations(false);
-      });
-  }, []);
 
   useEffect(() => {
     // log('Initialize with', props);
@@ -240,28 +219,30 @@ export default (props: Props) => {
     );
   };
 
+  const rootPathIsSet = !!value?.path;
+
   return (
     <>
       {renderPsc()}
-      <Dialog
-        visible={value != undefined}
+      <Modal
+        size={'xl'}
+        defaultVisible
         onClose={close}
-        onCancel={close}
-        afterClose={afterClose}
-        footer={false}
-        closeable
-        className={'pc-dialog'}
+        onDestroyed={props.onDestroyed}
+        footer={{
+          actions: ['cancel'],
+        }}
         title={t('Path configuration')}
       >
         <div className="path-configuration-validator">
-          <div className="main">
-            <section className="root">
-              <div className="title">{t('Root path')}</div>
+          <div className="flex flex-col gap-2 shadow">
+            <section>
+              <div className="text-base font-bold mb-1">{t('Root path')}</div>
               <div className="items">
                 <div className="path-container">
                   <Button
-                    text
-                    type={'primary'}
+                    size={'sm'}
+                    color={'primary'}
                     onClick={() => {
                       let startPath: string | undefined;
                       if (value.path) {
@@ -277,36 +258,28 @@ export default (props: Props) => {
                             path: e.path,
                           };
                           setValue(newPc);
-                          checkPathRelations(newPc);
                         },
                         defaultSelectedPath: value.path,
                       });
                     }}
-                  >{value?.path}
+                  >{value?.path ?? t('Setup')}
                   </Button>
-                  <ClickableIcon
-                    colorType={'normal'}
-                    type="folder-open"
-                    onClick={(e) => {
+                  {rootPathIsSet && (
+                    <FolderOpenOutlined
+                      className={'text-base cursor-pointer'}
+                      onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       BApi.tool.openFileOrDirectory({ path: value.path });
                     }}
-                  />
-                  {checkingPathRelations && (
-                    <Icon type={'loading'} />
+                    />
                   )}
                 </div>
-                {relativeLibraries?.length > 0 && (
-                  <div className={'conflict'}>
-                    {t('Warning: path may be conflict with other media libraries:')} {relativeLibraries.map((a) => `${a.categoryName}:${a.name}`)
-                    .join(', ')}
-                  </div>
-                )}
               </div>
             </section>
-            <section className="resource-locator">
-              <div className="title">
+            <Divider />
+            <section className="">
+              <div className="text-base font-bold">
                 {t('Setup how to find resources and properties')}
                 &emsp;
                 <Balloon.Tooltip
@@ -385,74 +358,39 @@ export default (props: Props) => {
                   {t('If you want to populate properties as many as possible, you should pick up a file with more layers in path.')}
                 </Balloon.Tooltip>
               </div>
-              {renderRpmValues()}
-            </section>
-            <section className="tag-indicator">
-              <div className="title">
-                {t('Add fixed tags for resources')}
-                &emsp;
+              <div>
                 <Button
-                  type={'primary'}
-                  size={'small'}
-                  text
-                  onClick={() => {
-                    let tmpTags: any;
-                    Dialog.show({
-                      content: (
-                        <TagSelector
-                          onChange={(value, tags) => {
-                            tmpTags = value.tagIds.map(id => tags[id]);
-                          }}
-                          defaultValue={{ tagIds: value?.fixedTagIds }}
-                        />
-                      ),
-                      onOk: () => new Promise((resolve, reject) => {
-                        value.fixedTagIds = tmpTags?.map((a) => a.id);
-                        value.fixedTags = tmpTags;
-                        setValue({
-                          ...value,
-                        });
-                        resolve(undefined);
-                      }),
-                      closeable: true,
-                    });
-                  }}
+                  size={'sm'}
+                  color={'primary'}
+                  disabled={!!value?.path}
                 >
                   {t('Setup')}
                 </Button>
               </div>
-              <div className="items">
-                {value?.fixedTags?.length > 0 && (
-                  <div className="tags">
-                    {value.fixedTags.map((t) => {
-                      return (
-                        <SimpleLabel
-                          status={'default'}
-                        >{(t.groupNamePreferredAlias ?? t.groupName)}:{(t.namePreferredAlias ?? t.name)}
-                        </SimpleLabel>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              {renderRpmValues()}
             </section>
-            <div className="opt">
-              {error ? (
-                <Balloon.Tooltip
-                  trigger={renderSubmitButton()}
-                  align={'t'}
-                >
-                  {error}
-                </Balloon.Tooltip>
-              ) : (
-                <>
-                  {renderSubmitButton()}
-                </>
+            <Divider />
+            <section>
+              <div className="text-base font-bold">
+                {t('Add fixed tags for resources')}
+              </div>
+              {value?.fixedTags?.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {value.fixedTags.map((t) => {
+                  return (
+                    <SimpleLabel
+                      status={'default'}
+                    >{(t.groupNamePreferredAlias ?? t.groupName)}:{(t.namePreferredAlias ?? t.name)}
+                    </SimpleLabel>
+                  );
+                })}
+              </div>
               )}
-            </div>
+              <FeatureStatusTip status={'deprecating'} className={'mt-1'} name={t('Fixed tags')} />
+            </section>
           </div>
         </div>
-      </Dialog>
+      </Modal>
     </>
   );
 };
