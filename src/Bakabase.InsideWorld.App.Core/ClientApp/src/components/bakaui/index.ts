@@ -2,7 +2,7 @@ import { Button, ButtonGroup, ButtonProps } from './components/Button';
 import Select, { SelectProps } from './components/Select';
 import Icon, { IconProps } from './components/Icon';
 import Input from './components/Input';
-import Chip from './components/Chip';
+import Chip, { ChipProps } from './components/Chip';
 import Tooltip from './components/Tooltip';
 import Modal, { ModalProps } from './components/Modal';
 import Popover from './components/Popover';
@@ -48,6 +48,7 @@ export {
   Select,
   SelectProps,
   Chip,
+  ChipProps,
   Tooltip,
   Modal,
   ModalProps,

@@ -791,8 +791,8 @@
   "Resource matcher can not have a regex result(make sure you are not setting groups in regex)": "资源匹配器不能有正则结果(请确保您没有在正则表达式中设置捕获组)",
   "Test": "测试",
   "Setup how to find resources and properties": "设置如何查找资源和属性",
-  "To setup this item, you should pick up a file first in your root path.": "设置该项前您需要先选择一个根目录下的文件",
-  "If you want to populate properties as many as possible, you should pick up a file with more layers in path.": "如果您想设置更多属性，请选择尽量深层的文件",
+  "To setup this item, you should pick up a file first within your root path.": "设置该项前您需要先选择一个根目录下的文件。",
+  "If you want to populate properties as many as possible, you should pick up a file with more layers in path.": "如果您想设置更多属性，请选择尽量深层的文件。",
   "I need choose files with specific types as resources": "我需要选择特定类型的文件作为资源",
   "Test then save": "先验证再保存",
   "Layer": "层级",
@@ -1271,5 +1271,8 @@
   "Setup wizard": "设置向导",
   "Create a category": "创建一个分类",
   "Please enter the name of the category": "请输入分类的名称",
-  "We'll sort categories by name": "我们将按照名称排序分类"
+  "We'll sort categories by name": "我们将按照名称排序分类",
+  "You need to set up root path before configuring this item": "设置本项之前您需要先配置根目录",
+  "{{mode}} mode is available": "{{mode}}模式可用",
+  "{{mode}} mode is unavailable": "{{mode}}模式不可用"
 }

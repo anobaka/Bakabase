@@ -1,6 +1,6 @@
+import type { ModalProps as NextUIModalProps } from '@nextui-org/react';
 import { Modal as NextUiModal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@nextui-org/react';
 import { useEffect, useRef, useState } from 'react';
-import type { ModalProps as NextUIModalProps } from '@nextui-org/modal/dist/modal';
 import { useTranslation } from 'react-i18next';
 import type { ButtonProps } from '@/components/bakaui';
 import { Button } from '@/components/bakaui';
@@ -14,7 +14,7 @@ interface ISimpleFooter {
   cancelProps?: ButtonProps;
 }
 
-export interface ModalProps extends DestroyableProps{
+export interface ModalProps extends DestroyableProps, Omit<NextUIModalProps, 'children'>{
   title?: any;
   children?: any;
   defaultVisible?: boolean;

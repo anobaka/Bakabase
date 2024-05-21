@@ -225,7 +225,7 @@ export default (props: IFileSystemSelectorProps) => {
         </div>
       )}
       {
-        selectionIsAvailable && (
+        selectionIsAvailable && selectedEntryRef.current!.path && (
           <div className="selected">
             {t('Selected')}: {selectedEntryRef.current!.path}
           </div>

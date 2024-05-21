@@ -1,21 +1,17 @@
 import React, { useCallback, useEffect, useReducer, useState } from 'react';
-import i18n from 'i18next';
 import { Badge, Balloon, Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
-import IceLabel from '@icedesign/label';
 import CustomIcon from '@/components/CustomIcon';
 import {
   AddMediaLibraryPathConfiguration,
-  OpenFolderSelector,
   RemoveMediaLibrary,
   RemoveMediaLibraryEnhancementRecords,
-  RemoveMediaLibraryPathConfiguration,
 } from '@/sdk/apis';
 import DragHandle from '@/components/DragHandle';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
-import { buildLogger, parseLayerCountFromLayerBasedPathRegexString } from '@/components/utils';
+import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import PathConfigurationDialog from '@/pages/Category/components/PathConfigurationDialog';
 import ClickableIcon from '@/components/ClickableIcon';
@@ -202,7 +198,10 @@ export default (({
               <Menu>
                 <Menu.Item
                   onClick={() => {
-                    AddRootPathsInBulkDialog.show({ libraryId: library.id, onSubmitted: () => loadAllMediaLibraries() });
+                    AddRootPathsInBulkDialog.show({
+                      libraryId: library.id,
+                      onSubmitted: () => loadAllMediaLibraries(),
+                    });
                   }}
                 >
                   <CustomIcon type="playlist_add" />
@@ -281,9 +280,9 @@ export default (({
                 createPortal(PathConfigurationDialog, {
                   onSaved: () => loadAllMediaLibraries(),
                   library,
-                  value: pathConfiguration,
+                  pcIdx: i,
                 });
-                }}
+              }}
             >
               <div className="path">
                 <span>

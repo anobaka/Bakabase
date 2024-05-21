@@ -1,9 +1,9 @@
-import type { ChipProps } from '@nextui-org/react';
+import type { ChipProps as NextUIChipProps } from '@nextui-org/react';
 import { Chip as NextUIChip } from '@nextui-org/react';
 import React, { forwardRef } from 'react';
 
 
-interface IProps extends ChipProps{
+export interface ChipProps extends NextUIChipProps{
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -14,7 +14,7 @@ interface IProps extends ChipProps{
   color?: 'default' | 'primary' | 'secondary' | 'success' | 'danger' | 'warning';
 }
 
-const Chip = forwardRef<any, IProps>((props: IProps, ref) => {
+const Chip = forwardRef<any, ChipProps>((props: ChipProps, ref) => {
   return (
     <NextUIChip ref={ref} {...props} />
   );

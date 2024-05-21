@@ -1,142 +1,59 @@
-import { Balloon, Dialog, Icon, Message } from '@alifd/next';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FolderOpenOutlined } from '@ant-design/icons';
+import { useUpdate } from 'react-use';
 import BApi from '@/sdk/BApi';
-import {
-  buildLogger,
-  parseLayerCountFromLayerBasedPathRegexString,
-  splitPathIntoSegments,
-  standardizePath,
-} from '@/components/utils';
-import type { IPscMatcherValue, IPscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
-import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
-import TagSelector from '@/components/TagSelector';
-import './index.scss';
-import PathSegmentsConfiguration, {
-  PathSegmentConfigurationPropsMatcherOptions,
-} from '@/components/PathSegmentsConfiguration';
-import ClickableIcon from '@/components/ClickableIcon';
+import { buildLogger, splitPathIntoSegments, standardizePath } from '@/components/utils';
+import type { IPscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
+import { ResourceProperty } from '@/sdk/constants';
+import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
 import { MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import BusinessConstants from '@/components/BusinessConstants';
-import { Button, Divider, Modal } from '@/components/bakaui';
+import { Button, Chip, Divider, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import FeatureStatusTip from '@/components/FeatureStatusTip';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 const log = buildLogger('PathConfigurationDialog');
 
 interface Props extends DestroyableProps{
-  library: { id: number; pathConfigurations: any[]; name: string };
-  value?: any;
+  library: { id: number; pathConfigurations: Pc[]; name: string };
+  pcIdx: number;
   onSaved: () => Promise<any>;
 }
 
-export default ({ library, value: propsValue, onSaved, ...props }: Props) => {
+type Pc = {
+  path: string;
+  rpmValues: any[];
+};
+
+export default ({ library, pcIdx, ...props }: Props) => {
   const { t } = useTranslation();
-  const [value, setValue] = useState(structuredClone(propsValue));
-  const [pscData, setPscData] = useState<{ value: IPscValue; segments: string[]; isDirectory: boolean }>();
+  const forceUpdate = useUpdate();
+  const { createPortal } = useBakabaseContext();
 
-
-  useEffect(() => {
-    const newValue = structuredClone(propsValue);
-    if (newValue) {
-      newValue.prevPath = newValue.path;
-    }
-    // log('Props value changed', newValue);
-    setValue(newValue);
-  }, [propsValue]);
+  const pc = library.pathConfigurations[pcIdx];
 
   useEffect(() => {
-    // log('Initialize with', props);
+    log('Initialize with', props);
   }, []);
 
-  let error;
-  if (!value?.path) {
-    error = 'Root path is not set';
-  } else if (value?.rpmValues?.length > 0) {
-
-  }
-  if (error) {
-    error = t(error);
-  }
-
-  const renderSubmitButton = () => {
-    return (
-      <Button
-        type={'primary'}
-        disabled={!!error}
-        onClick={() => {
-          const save = (onSuccess?, onFail?) => {
-            log(library.pathConfigurations, value);
-            const pcIdx = library.pathConfigurations.findIndex((p) => p.path == value.prevPath);
-            if (pcIdx > -1) {
-              const newPcs = library.pathConfigurations.slice();
-              newPcs.splice(pcIdx, 1, value);
-              log(`Saving ${pcIdx} of ${library.pathConfigurations.length} in ${library.name}`, value, newPcs);
-              BApi.mediaLibrary.patchMediaLibrary(library.id, {
-                pathConfigurations: newPcs,
-              })
-                .then((t) => {
-                  if (!t.code) {
-                    onSaved();
-                    setValue(undefined);
-                    onSuccess && onSuccess();
-                  } else {
-                    onFail && onFail();
-                  }
-                })
-                .catch(() => {
-                  onFail && onFail();
-                });
-            } else {
-              return Message.error(t('Unable to locate prev value in media library path configurations'));
-            }
-          };
-          if (error) {
-            Dialog.confirm({
-              title: t('Potential risks have been detected'),
-              content: (
-                <>
-                  <div>{error}</div>
-                  <div>{t('Sure to continue?')}</div>
-                </>
-              ),
-              onOk: () => new Promise((resolve, reject) => {
-                save(resolve, reject);
-              }),
-              closeable: true,
-            });
-          } else {
-            save();
-          }
-        }}
-      >{t('Save')}
-      </Button>
-    );
+  const save = async (patches: any) => {
+    const newPcs = library.pathConfigurations.slice();
+    newPcs.splice(pcIdx, 1, { ...pc, ...patches });
+    log(`Saving ${pcIdx} of ${library.pathConfigurations.length} in ${library.name}`, pc, newPcs);
+    await BApi.mediaLibrary.patchMediaLibrary(library.id, {
+      pathConfigurations: newPcs,
+    });
+    forceUpdate();
   };
 
-  const close = useCallback(() => {
-    setValue(undefined);
-  }, []);
-
-  const renderPsc = () => {
+  const showPsc = (segments: string[], pscValue: IPscValue, isDirectory: boolean) => {
     const simpleMatchers = {
       [ResourceProperty.RootPath]: true,
       [ResourceProperty.Resource]: false,
       [ResourceProperty.ParentResource]: false,
-      [ResourceProperty.ReleaseDt]: false,
-      [ResourceProperty.Publisher]: false,
-      [ResourceProperty.Name]: false,
-      // [ResourceProperty.Language]: false,
-      [ResourceProperty.Volume]: false,
-      [ResourceProperty.Original]: false,
-      [ResourceProperty.Series]: false,
-      [ResourceProperty.Tag]: false,
-      // [MatcherType.Introduction]: false,
-      [ResourceProperty.Rate]: false,
-      [ResourceProperty.CustomProperty]: false,
     };
     const matchers = Object.keys(simpleMatchers)
       .reduce<PathSegmentConfigurationPropsMatcherOptions[]>((ts, t) => {
@@ -147,51 +64,34 @@ export default ({ library, value: propsValue, onSaved, ...props }: Props) => {
         return ts;
       }, []);
 
-    const onClose = () => {
-      setPscData(undefined);
-    };
+    let tmpValue = pscValue;
 
-    // todo: if close mode includes mask, the click in inner balloon will trigger onClose of this dialog.
-    // tried: set popupContainer of inner Balloon, but the balloon be the wrong position (V2 enabled) or shrinked by container (V2 disabled)
-    return (
-      <Dialog
-        v2
-        width={1200}
-        visible={!!pscData}
-        closeMode={['close', 'esc']}
-        onClose={onClose}
-        onCancel={onClose}
-        top={20}
-        onOk={() => {
-          const newValue = {
-            ...value,
-            ...pscData?.value,
-            // todo: legacy
-            regex: undefined,
-          };
-          setValue(newValue);
-          setPscData(undefined);
-        }}
-      >
+    createPortal(Modal, {
+      defaultVisible: true,
+      size: 'xl',
+      children: (
         <PathSegmentsConfiguration
-          isDirectory={pscData?.isDirectory || false}
-          segments={pscData?.segments!}
+          isDirectory={isDirectory || false}
+          segments={segments!}
           onChange={value => {
-            pscData!.value = value;
+            tmpValue = value;
           }}
           matchers={matchers}
-          defaultValue={pscData?.value}
+          defaultValue={pscValue}
         />
-      </Dialog>
-    );
+      ),
+      onOk: async () => {
+        await save({
+          rpmValues: tmpValue.rpmValues,
+        });
+      },
+    });
   };
 
   const renderRpmValues = () => {
-    const values = value?.rpmValues || [];
+    const values = pc?.rpmValues || [];
     if (values.length == 0) {
-      return (
-        <div className={'not-set'}>{t('You have to set this to discover resources')}</div>
-      );
+      return null;
     }
 
     console.log(values);
@@ -219,11 +119,10 @@ export default ({ library, value: propsValue, onSaved, ...props }: Props) => {
     );
   };
 
-  const rootPathIsSet = !!value?.path;
+  const rootPathIsSet = !!pc?.path;
 
   return (
     <>
-      {renderPsc()}
       <Modal
         size={'xl'}
         defaultVisible
@@ -234,161 +133,103 @@ export default ({ library, value: propsValue, onSaved, ...props }: Props) => {
         }}
         title={t('Path configuration')}
       >
-        <div className="path-configuration-validator">
-          <div className="flex flex-col gap-2 shadow">
-            <section>
-              <div className="text-base font-bold mb-1">{t('Root path')}</div>
-              <div className="items">
-                <div className="path-container">
-                  <Button
-                    size={'sm'}
-                    color={'primary'}
-                    onClick={() => {
-                      let startPath: string | undefined;
-                      if (value.path) {
-                        const segments = splitPathIntoSegments(value.path);
-                        startPath = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
-                      }
-                      FileSystemSelectorDialog.show({
-                        startPath: startPath,
-                        targetType: 'folder',
-                        onSelected: e => {
-                          const newPc = {
-                            ...value,
-                            path: e.path,
-                          };
-                          setValue(newPc);
-                        },
-                        defaultSelectedPath: value.path,
-                      });
-                    }}
-                  >{value?.path ?? t('Setup')}
-                  </Button>
-                  {rootPathIsSet && (
-                    <FolderOpenOutlined
-                      className={'text-base cursor-pointer'}
-                      onClick={(e) => {
+        <div className="flex flex-col gap-2 shadow">
+          <section>
+            <div className="text-base font-bold mb-1">{t('Root path')}</div>
+            <div>
+              <Button
+                variant={'light'}
+                  // size={'sm'}
+                color={'primary'}
+                onClick={() => {
+                    let startPath: string | undefined;
+                    if (pc?.path) {
+                      const segments = splitPathIntoSegments(pc.path);
+                      startPath = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
+                    }
+                    createPortal(FileSystemSelectorDialog, {
+                      startPath: startPath,
+                      targetType: 'folder',
+                      onSelected: e => {
+                        save({ path: e.path });
+                      },
+                      defaultSelectedPath: pc?.path,
+                    });
+                  }}
+              >{pc?.path ?? t('Setup')}
+              </Button>
+              {rootPathIsSet && (
+              <FolderOpenOutlined
+                className={'text-base cursor-pointer ml-1'}
+                onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      BApi.tool.openFileOrDirectory({ path: value.path });
+                      BApi.tool.openFileOrDirectory({ path: pc.path });
                     }}
-                    />
-                  )}
-                </div>
-              </div>
-            </section>
-            <Divider />
-            <section className="">
-              <div className="text-base font-bold">
-                {t('Setup how to find resources and properties')}
-                &emsp;
-                <Balloon.Tooltip
-                  trigger={
-                    (
-                      <Button
-                        type={'primary'}
-                        size={'small'}
-                        text
-                        onClick={() => {
-                          FileSystemSelectorDialog.show({
-                            // targetType: 'folder',
-                            startPath: value.path,
-                            // targetType: 'file',
-                            onSelected: (e) => {
-                              const std = standardizePath(e.path)!;
-                              const stdPrev = standardizePath(value.path);
-                              if (stdPrev && std.startsWith(stdPrev)) {
-                                const segments = splitPathIntoSegments(e.path);
-                                const pscValue: IPscValue = {};
-
-                                // todo: 修复数据前临时调整数据，后端修复后移除
-                                if (value) {
-                                  pscValue.rpmValues = JSON.parse(JSON.stringify(value.rpmValues ?? []));
-                                  pscValue.path = value.path;
-                                  const resourceSegment = value.rpmValues?.find((s) => s.property == ResourceProperty.Resource);
-                                  if (!resourceSegment && value.regex) {
-                                    const layer = parseLayerCountFromLayerBasedPathRegexString(value.regex!, true);
-                                    const rv: IPscMatcherValue = {
-                                      property: ResourceProperty.Resource,
-                                      valueType: layer > 0 ? ResourceMatcherValueType.Layer : ResourceMatcherValueType.Regex,
-                                    };
-                                    if (layer > 0) {
-                                      rv.layer = layer;
-                                      rv.valueType = ResourceMatcherValueType.Layer;
-                                    } else {
-                                      rv.regex = value.regex;
-                                      rv.valueType = ResourceMatcherValueType.Regex;
-                                    }
-
-                                    (pscValue.rpmValues)!.push(rv);
-                                  }
-                                }
-                                setPscData({
-                                  segments,
-                                  value: pscValue,
-                                  isDirectory: e.isDirectory,
-                                });
-                              } else {
-                                Dialog.error({
-                                  title: t('Error'),
-                                  content: t('You can select a file out of root path. If you want to change the root path of your library, you should click on your root path.'),
-                                  closeable: true,
-                                });
-                              }
-                            },
-                          });
-
-                          // BApi.gui.openFileSelector({ initialDirectory: value.path })
-                          //   .then((a) => {
-                          //     if (a.data) {
-                          //
-                          //     }
-                          //   });
-                        }}
-                      >
-                        {t('Setup')}
-                      </Button>
-                    )
-                  }
-                  align={'t'}
-                  triggerType={'hover'}
-                >
-                  {t('To setup this item, you should pick up a file first in your root path.')}
-                  <br />
-                  {t('If you want to populate properties as many as possible, you should pick up a file with more layers in path.')}
-                </Balloon.Tooltip>
-              </div>
-              <div>
+              />
+                )}
+            </div>
+          </section>
+          <Divider />
+          <section className="">
+            <div className="text-base font-bold">
+              {t('Setup how to find resources and properties')}
+            </div>
+            {pc?.path && (
+            <div className={'opacity-60 italic'}>
+              {t('To setup this item, you should pick up a file first within your root path.')}
+              <br />
+              {t('If you want to populate properties as many as possible, you should pick up a file with more layers in path.')}
+            </div>
+              )}
+            {renderRpmValues()}
+            <div>
+              {pc?.path ? (
                 <Button
-                  size={'sm'}
+                      // size={'sm'}
+                  variant={'light'}
                   color={'primary'}
-                  disabled={!!value?.path}
+                  onClick={() => {
+                      createPortal(FileSystemSelectorDialog, {
+                        // targetType: 'folder',
+                        startPath: pc.path,
+                        // targetType: 'file',
+                        onSelected: (e) => {
+                          const std = standardizePath(e.path)!;
+                          const stdPrev = standardizePath(pc.path);
+                          if (stdPrev && std.startsWith(stdPrev)) {
+                            const segments = splitPathIntoSegments(e.path);
+                            const pscValue: IPscValue = {};
+                            if (pc) {
+                              pscValue.rpmValues = JSON.parse(JSON.stringify(pc.rpmValues ?? []));
+                              pscValue.path = pc.path;
+                            }
+
+                            showPsc(segments, pscValue, e.isDirectory);
+                          } else {
+                            createPortal(Modal, {
+                              defaultVisible: true,
+                              title: t('Error'),
+                              children: t('You can select a file out of root path. If you want to change the root path of your library, you should click on your root path.'),
+                            });
+                          }
+                        },
+                      });
+                    }}
                 >
                   {t('Setup')}
                 </Button>
-              </div>
-              {renderRpmValues()}
-            </section>
-            <Divider />
-            <section>
-              <div className="text-base font-bold">
-                {t('Add fixed tags for resources')}
-              </div>
-              {value?.fixedTags?.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {value.fixedTags.map((t) => {
-                  return (
-                    <SimpleLabel
-                      status={'default'}
-                    >{(t.groupNamePreferredAlias ?? t.groupName)}:{(t.namePreferredAlias ?? t.name)}
-                    </SimpleLabel>
-                  );
-                })}
-              </div>
-              )}
-              <FeatureStatusTip status={'deprecating'} className={'mt-1'} name={t('Fixed tags')} />
-            </section>
-          </div>
+                ) : (
+                  <Chip
+                    size={'sm'}
+                    variant={'light'}
+                    color={'warning'}
+                  >
+                    {t('You need to set up root path before configuring this item')}
+                  </Chip>
+                )}
+            </div>
+          </section>
         </div>
       </Modal>
     </>

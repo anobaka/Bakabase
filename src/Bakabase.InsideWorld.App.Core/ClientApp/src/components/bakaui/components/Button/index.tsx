@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { forwardRef } from 'react';
 import type * as react from 'react';
 
-interface ButtonProps extends React.ComponentPropsWithoutRef<'button'>{
+interface ButtonProps extends Omit<NextUIButtonProps, 'size'>{
   size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large';
   color?: 'default' | 'primary' | 'secondary' | 'success' | 'danger' | 'warning';
   variant?: 'solid' | 'faded' | 'bordered' | 'light' | 'flat' | 'shadow';

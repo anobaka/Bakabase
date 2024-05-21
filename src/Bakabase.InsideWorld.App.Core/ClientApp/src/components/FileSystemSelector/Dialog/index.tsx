@@ -1,4 +1,3 @@
-import { Dialog } from '@alifd/next';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { IFileSystemSelectorProps } from '@/components/FileSystemSelector';
@@ -6,15 +5,15 @@ import FileSystemSelector from '@/components/FileSystemSelector';
 import { createPortalOfComponent } from '@/components/utils';
 import CustomIcon from '@/components/CustomIcon';
 import './index.scss';
+import { Modal } from '@/components/bakaui';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
-interface IProps extends IFileSystemSelectorProps {
-  afterClose?: () => any;
+interface IProps extends IFileSystemSelectorProps, DestroyableProps {
 }
 
 const FileSystemSelectorDialog = (props: IProps) => {
   const { t } = useTranslation();
   const {
-    afterClose,
     ...fsProps
   } = props;
 
@@ -37,23 +36,14 @@ const FileSystemSelectorDialog = (props: IProps) => {
   }
 
   return (
-    <Dialog
-      v2
-      width={700}
-      closeMode={['close', 'esc', 'mask']}
-      title={(
-        <>
-          <CustomIcon type={'search'} />
-          {t(title)}
-        </>
-      )}
+    <Modal
+      size={'xl'}
+      title={t(title)}
       visible={visible}
       footer={false}
-      closeIcon={false}
-      afterClose={afterClose}
-      onCancel={close}
+      onDestroyed={props.onDestroyed}
       onClose={close}
-      className={'file-system-selector-dialog'}
+      className={''}
     >
       <FileSystemSelector
         {...fsProps}
@@ -70,7 +60,7 @@ const FileSystemSelectorDialog = (props: IProps) => {
           }
         }}
       />
-    </Dialog>
+    </Modal>
   );
 };
 
