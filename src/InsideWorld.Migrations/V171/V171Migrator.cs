@@ -49,7 +49,7 @@ namespace InsideWorld.Migrations.V171
 				        {
 					        if (pc is {Segments: not null, RpmValues: null})
 					        {
-						        pc.RpmValues = pc.Segments.Select(s => new MatcherValue
+						        pc.RpmValues = pc.Segments.Select(s => new PropertyPathSegmentMatcherValue
 						        {
 							        Key = s.Key,
 							        Layer = s.IsReverse ? -s.Layer : s.Layer,
@@ -62,13 +62,13 @@ namespace InsideWorld.Migrations.V171
 						        changed = true;
 					        }
 
-					        pc.RpmValues ??= new List<MatcherValue>();
+					        pc.RpmValues ??= new List<PropertyPathSegmentMatcherValue>();
 
 					        if (pc.Regex.IsNotEmpty())
 					        {
 						        if (pc.RpmValues.All(m => m.Property != ResourceProperty.Resource))
 						        {
-							        var matcher = new MatcherValue()
+							        var matcher = new PropertyPathSegmentMatcherValue()
 							        {
 								        Property = ResourceProperty.Resource,
 							        };

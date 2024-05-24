@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import type { ButtonProps } from '@/components/bakaui';
 import { Button } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
-import PropertyDialog from '@/components/PropertyDialog';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface ISimpleFooter {
@@ -86,13 +85,21 @@ const Modal = (props: ModalProps) => {
 
     const elements: any[] = [];
     if (simpleFooter.actions.includes('cancel')) {
+      const { children, ref, ...otherProps } = simpleFooter.cancelProps || {};
       elements.push(
-        <Button color="danger" variant="light" onClick={onClose} key={'cancel'}>
-          {simpleFooter.cancelProps?.children ?? t('Close')}
+        <Button
+          color="danger"
+          variant="light"
+          onClick={onClose}
+          key={'cancel'}
+          {...otherProps}
+        >
+          {children ?? t('Close')}
         </Button>,
       );
     }
     if (simpleFooter.actions.includes('ok')) {
+      const { children, ref, ...otherProps } = simpleFooter.okProps || {};
       elements.push(
         <Button
           isLoading={okLoading}
@@ -115,8 +122,9 @@ const Modal = (props: ModalProps) => {
             // console.log('onok sync finish');
           }}
           key={'ok'}
+          {...otherProps}
         >
-          {simpleFooter.okProps?.children ?? t('Confirm')}
+          {children ?? t('Confirm')}
         </Button>,
       );
     }

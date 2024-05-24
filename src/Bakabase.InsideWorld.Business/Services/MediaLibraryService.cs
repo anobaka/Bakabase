@@ -270,7 +270,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
 		public const string SyncTaskBackgroundTaskName = $"MediaLibraryService:Sync";
 
-		private static string[] DiscoverAllResourceFullnameList(string rootPath, MatcherValue resourceMatcherValue,
+		private static string[] DiscoverAllResourceFullnameList(string rootPath, PropertyPathSegmentMatcherValue resourceMatcherValue,
 			int maxCount = int.MaxValue)
 		{
 			rootPath = rootPath.StandardizePath()!;

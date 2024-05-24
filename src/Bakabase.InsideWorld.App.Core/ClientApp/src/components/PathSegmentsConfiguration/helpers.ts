@@ -1,4 +1,8 @@
+import type PscProperty from './models/PscProperty';
+import { PscPropertyType } from './models/PscPropertyType';
 import { execAll } from '@/components/utils';
+import { ResourceProperty } from '@/sdk/constants';
+
 
 export function getResultFromExecAll(regex: RegExp | string, str: string): {
   groups?: string[];

@@ -1,10 +1,12 @@
 import i18n from 'i18next';
+import type { TFunction } from 'react-i18next';
 import { ResourceProperty } from '@/sdk/constants';
 import {
   SegmentMatcherConfigurationModesData,
 } from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
 import { allMatchers } from '@/components/PathSegmentsConfiguration/models/instances';
-import type { IMatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
+import PscProperty from '@/components/PathSegmentsConfiguration/models/PscProperty';
+import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
 
 class PscCoreData {
   segments: PscCoreData.Segment[] = [];
@@ -18,17 +20,17 @@ class PscCoreData {
       return true;
     }
     const missingProperties = allMatchers.filter(a => a.isRequired &&
-      !this.segments.some(e => e.matchResults.some(r => r.property == a.property)));
+      !this.segments.some(e => e.matchResults.some(r => r.property.type == a.propertyType)));
     return missingProperties.length > 0;
   }
 }
 
 namespace PscCoreData {
   class SimplePscCoreDataItem {
-    property: ResourceProperty;
+    property: PscProperty;
     valueIndex?: number;
 
-    constructor(property: ResourceProperty, valueIndex: number | undefined) {
+    constructor(property: PscProperty, valueIndex: number | undefined) {
       this.property = property;
       this.valueIndex = valueIndex;
     }
@@ -59,7 +61,7 @@ namespace PscCoreData {
   }
 
   export class SelectiveMatcher {
-    property: ResourceProperty;
+    propertyType: PscPropertyType;
     readonly: boolean;
     replaceCurrent: boolean;
     errors: string[] = [];
@@ -83,6 +85,19 @@ namespace PscCoreData {
 
     get useSmc(): boolean {
       return this.isConfigurable && !this.matchModes.oneClick.available;
+    }
+
+    buildProperty(property?: { id: number; name: string }, t: TFunction<'translation', undefined>): PscProperty {
+      switch (this.propertyType) {
+        case PscPropertyType.RootPath:
+          return new PscProperty(ResourceProperty.RootPath, true, t(ResourceProperty.RootPath));
+        case PscPropertyType.Resource:
+          return new PscProperty(ResourceProperty.Resource, true, t(ResourceProperty.Resource));
+        case PscPropertyType.ParentResource:
+          return new PscProperty(ResourceProperty.ParentResource, true, t(ResourceProperty.ParentResource));
+        case PscPropertyType.CustomProperty:
+          return new PscProperty(property!.id, false, property!.name);
+      }
     }
 
     buildModesData(): SegmentMatcherConfigurationModesData {
@@ -115,7 +130,7 @@ namespace PscCoreData {
   export class SimpleGlobalMatch extends SimplePscCoreDataItem {
     matches: string[];
 
-    constructor(property: ResourceProperty, valueIndex: number | undefined, matches: string[]) {
+    constructor(property: PscProperty, valueIndex: number | undefined, matches: string[]) {
       super(property, valueIndex);
       this.matches = matches;
     }
@@ -125,7 +140,7 @@ namespace PscCoreData {
     message: string;
     deletable: boolean;
 
-    constructor(property: ResourceProperty, valueIndex: number | undefined, message: string, deletable: boolean) {
+    constructor(property: PscProperty, valueIndex: number | undefined, message: string, deletable: boolean) {
       super(property, valueIndex);
       this.message = message;
       this.deletable = deletable;
@@ -137,15 +152,15 @@ namespace PscCoreData {
     errors: string[] = [];
     readonly: boolean = false;
 
-    constructor(property: ResourceProperty, valueIndex: number | undefined, errors?: string[]) {
+    constructor(property: PscProperty, valueIndex: number | undefined, errors?: string[]) {
       super(property, valueIndex);
       this.errors = errors || [];
     }
   }
 }
 
-function BuildMatchResultLabel(property: ResourceProperty, valueIndex: number | undefined): string {
-  return `${i18n.t(ResourceProperty[property])}${valueIndex == undefined ? '' : valueIndex + 1}`;
+function BuildMatchResultLabel(property: PscProperty, valueIndex: number | undefined): string {
+  return `${property.isReserved ? i18n.t(ResourceProperty[property.id]) : property.name}${valueIndex == undefined ? '' : valueIndex + 1}`;
 }
 
 

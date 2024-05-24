@@ -1274,5 +1274,9 @@
   "We'll sort categories by name": "我们将按照名称排序分类",
   "You need to set up root path before configuring this item": "设置本项之前您需要先配置根目录",
   "{{mode}} mode is available": "{{mode}}模式可用",
-  "{{mode}} mode is unavailable": "{{mode}}模式不可用"
+  "{{mode}} mode is unavailable": "{{mode}}模式不可用",
+  "Mark this path segment as": "将当前路径片段标记为",
+  "Sure to delete this property?": "确定删除当前属性吗？",
+  "Configure [{{property}}] property for path segment": "为路径片段配置属性[{{property}}]",
+  "Path segment": "路径片段"
 }

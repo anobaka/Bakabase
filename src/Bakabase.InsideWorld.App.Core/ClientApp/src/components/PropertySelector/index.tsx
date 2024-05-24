@@ -13,13 +13,14 @@ import {
 import BApi from '@/sdk/BApi';
 import store from '@/store';
 import { Button, Chip, Modal, Spacer } from '@/components/bakaui';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface IKey {
   id: number;
   isReserved: boolean;
 }
 
-interface IProps {
+interface IProps extends DestroyableProps{
   selection?: IKey[];
   onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
   multiple?: boolean;
@@ -41,6 +42,7 @@ const PropertySelector = ({
                             editable,
                             removable,
                             title,
+                            ...props
                           }: IProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
@@ -251,6 +253,7 @@ const PropertySelector = ({
         await onSubmit(selection);
         close();
       }}
+      onDestroyed={props.onDestroyed}
       title={title ?? t(multiple ? 'Select properties' : 'Select a property')}
       footer={(multiple === true && propertyCount > 0) ? true : (<Spacer />)}
     >

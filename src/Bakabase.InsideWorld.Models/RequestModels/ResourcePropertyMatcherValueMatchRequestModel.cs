@@ -11,7 +11,7 @@ namespace Bakabase.InsideWorld.Models.RequestModels
     {
         public string[] Segments { get; set; } = Segments;
 
-        public MatcherValue? Value { get; set; }
+        public PropertyPathSegmentMatcherValue? Value { get; set; }
 
         /// <summary>
         /// Starts from -1

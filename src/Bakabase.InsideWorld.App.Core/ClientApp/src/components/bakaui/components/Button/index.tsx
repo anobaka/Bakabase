@@ -1,21 +1,14 @@
 import type { ButtonProps as NextUIButtonProps } from '@nextui-org/react';
 import { Button as NextUiButton, ButtonGroup } from '@nextui-org/react';
-import type { ReactNode } from 'react';
 import { forwardRef } from 'react';
 import type * as react from 'react';
+import type { ReactRef } from '@nextui-org/react-utils';
 
 interface ButtonProps extends Omit<NextUIButtonProps, 'size'>{
   size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large';
-  color?: 'default' | 'primary' | 'secondary' | 'success' | 'danger' | 'warning';
-  variant?: 'solid' | 'faded' | 'bordered' | 'light' | 'flat' | 'shadow';
-  children?: ReactNode;
-  isIconOnly?: boolean;
-  startContent?: any;
-  endContent?: any;
-  isLoading?: boolean;
 }
 
-const Button = forwardRef((props: ButtonProps, ref: react.Ref<HTMLButtonElement>) => {
+const Button = forwardRef((props: ButtonProps, ref: ReactRef<HTMLButtonElement>) => {
   let nSize: NextUIButtonProps['size'];
 
   if (props.size) {

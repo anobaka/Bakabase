@@ -2,26 +2,32 @@ import { FieldBinaryOutlined, RetweetOutlined, SisternodeOutlined, WarningOutlin
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OnDeleteMatcherValue } from '../models';
-import type { PscCoreData } from '@/components/PathSegmentsConfiguration/models/PscCoreData';
+import type { IMatcherValue, PropertyMatcherValues } from '../models/MatcherValue';
+import { MatcherValue } from '../models/MatcherValue';
+import { PscCoreData } from '@/components/PathSegmentsConfiguration/models/PscCoreData';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
 import type { ChipProps } from '@/components/bakaui';
 import { Chip, Listbox, ListboxItem, Modal, Popover, Tooltip } from '@/components/bakaui';
-import { type IMatcherValue, MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 import BusinessConstants from '@/components/BusinessConstants';
+import type { SegmentMatcherConfigurationProps } from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
 import SegmentMatcherConfiguration from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
 import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
-import type PathSegmentMatcher from '@/components/PathSegmentsConfiguration/models/PathSegmentMatcher';
+import type PscMatcher from '@/components/PathSegmentsConfiguration/models/PscMatcher';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import SelectiveMatcher = PscCoreData.SelectiveMatcher;
+import PropertySelector from '@/components/PropertySelector';
+import type PscProperty from '@/components/PathSegmentsConfiguration/models/PscProperty';
 
 type Props = {
   segments: PscCoreData.Segment[];
   isDirectory: boolean;
-  value: { [type in ResourceProperty]?: MatcherValue[]; };
-  onChange: (value: { [type in ResourceProperty]?: MatcherValue[]; }) => any;
+  value: PropertyMatcherValues[];
+  onChange: (value: PropertyMatcherValues[]) => any;
   onDeleteMatcherValue: OnDeleteMatcherValue;
+  visibleMatchers: PscMatcher[];
 };
 
-export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue }: Props) => {
+export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, visibleMatchers }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -92,24 +98,26 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue }
     return firstLineNodes;
   };
 
-  const selectMatcher = (c: PathSegmentMatcher, newValue: IMatcherValue) => {
-    const currentValues = value[c.property] || [];
+  const selectMatcher = (c: PscMatcher, property: PscProperty, newValue: IMatcherValue) => {
+    let pvs = value.find(v => v.property.equals(property));
+    if (!pvs) {
+      pvs = {
+        property,
+        values: [],
+      };
+      value.push(pvs);
+    }
     if (!c.multiple) {
-      currentValues.splice(0, currentValues.length);
+      pvs.values.splice(0, pvs.values.length);
     }
 
-    const sameValue = currentValues.find(v => v.equals(newValue));
-    if (sameValue) {
-      return;
+    const sameValue = pvs.values.find(v => v.equals(newValue));
+    if (!sameValue) {
+      pvs.values.push(new MatcherValue(newValue));
     }
-    currentValues.push(new MatcherValue(newValue));
 
-    const newAllValue = {
-      ...value,
-      [c.property]: currentValues,
-    };
-    console.log('Changing value', newAllValue);
-    onChange(newAllValue);
+    console.log('Changing value', value);
+    onChange([...value]);
   };
 
   const renderSegments = (): any => {
@@ -140,9 +148,10 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue }
                     errors = [],
                   } = mr;
                   const hasError = errors.length > 0;
-                  const v = mr.valueIndex == undefined ? value[mr.property]?.[0] : value[mr.property]?.[mr.valueIndex];
+                  const values = value.find(v => v.property.equals(mr.property))?.values || [];
+                  const v = mr.valueIndex == undefined ? values[0] : values[mr.valueIndex];
                   let colorKey: ChipProps['color'] = 'primary';
-                  if (mr.property == ResourceProperty.Resource || mr.property == ResourceProperty.RootPath) {
+                  if (mr.property.isReserved && (mr.property.id == ResourceProperty.Resource || mr.property.id == ResourceProperty.RootPath)) {
                     colorKey = 'success';
                   }
                   if (hasError) {
@@ -162,6 +171,7 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue }
                     >
                       {hasError && (<WarningOutlined className={'text-sm'} />)}
                       {label}
+                      &nbsp;
                       {v && (<span>{MatcherValue.ToString(v)}</span>)}
                     </Chip>
                   );
@@ -203,51 +213,69 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue }
               )}
             >
               <div className="p-4">
-                <div className={'mb-4'}>
-                  <div className={'font-bold text-xl'}>{t('Setting a Resource property to segment')}</div>
-                  <div
-                    className={'italic opacity-60 mt-1'}
-                  >{t('Some properties may not able to set by layer, but you still can set it by regex.')}</div>
+                <div className={'mb-2'}>
+                  <div className={'font-bold text-xl'}>{t('Mark this path segment as')}</div>
                 </div>
                 <div>
                   <Listbox
                     variant={'bordered'}
                     onAction={k => {
-                      const m = selectiveMatchers[k];
-                      const o = m.matchModes.oneClick;
-                      if (o.available) {
-                        selectMatcher(visibleMatchers.find(t => t.property == m.property)!, {
-                          type: ResourceMatcherValueType.FixedText,
-                          fixedText: segments.slice(0, i + 1).join(BusinessConstants.pathSeparator),
-                        });
-                      } else {
-                        if (m.useSmc) {
-                          switch (m.property) {
-                            case ResourceProperty.RootPath:
-                            case ResourceProperty.ParentResource:
-                            case ResourceProperty.Resource: {
-                              createPortal(Modal, {
-                                defaultVisible: true,
-                                size: 'lg',
-                                children: (
-                                  <SegmentMatcherConfiguration
-                                    property={m.property}
-                                    modesData={m.buildModesData()}
-                                    isCustomProperty={m.property == ResourceProperty.CustomProperty}
-                                    onSubmit={value => {
-                                      selectMatcher(visibleMatchers.find(t => t.property == m.property)!, value);
-                                    }}
-                                  />
-                                ),
-                              });
-                              break;
+                      console.log('on action', k);
+                      const m: SelectiveMatcher = selectiveMatchers[k];
+                      if (m.isConfigurable) {
+                        const o = m.matchModes.oneClick;
+                        if (o.available) {
+                          selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, {
+                            id: m.property,
+                          }, {
+                            type: ResourceMatcherValueType.FixedText,
+                            fixedText: segments.map(s => s.text).slice(0, i + 1).join(BusinessConstants.pathSeparator),
+                          });
+                        } else {
+                          if (m.useSmc) {
+                            const props: SegmentMatcherConfigurationProps = {
+                              property: {
+                                isReserved: true,
+                                id: m.property,
+                                name: t(ResourceProperty[m.property]),
+                              },
+                              segments: segments.map(s => s.text),
+                              segmentIndex: i,
+                              modesData: m.buildModesData(),
+                              onSubmit: value => {
+                                selectMatcher(visibleMatchers.find(t => t.propertyType == m.property)!, value);
+                              },
+                            };
+                            switch (m.property) {
+                              case ResourceProperty.RootPath:
+                              case ResourceProperty.ParentResource:
+                              case ResourceProperty.Resource: {
+                                createPortal(SegmentMatcherConfiguration, props);
+                                break;
+                              }
+                              case ResourceProperty.CustomProperty: {
+                                createPortal(PropertySelector, {
+                                  pool: 'custom',
+                                  multiple: false,
+                                  addable: true,
+                                  onSubmit: async (selection) => {
+                                    const p = selection[0];
+                                    props.property = {
+                                      id: p.id,
+                                      isReserved: false,
+                                      name: p.name!,
+                                    };
+                                    createPortal(SegmentMatcherConfiguration, props);
+                                  },
+                                });
+                                break;
+                              }
                             }
-                            case ResourceProperty.CustomProperty:
-                              break;
                           }
                         }
                       }
                     }}
+                    disabledKeys={selectiveMatchers.filter(m => !m.isConfigurable).map(m => selectiveMatchers.indexOf(m)).map(x => x.toString())}
                   >
                     {selectiveMatchers.map((m, i) => {
                       const rightContents = buildSelectiveMatcherRightContent(m);
@@ -270,6 +298,9 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue }
                     })}
                   </Listbox>
                 </div>
+                <div
+                  className={'italic opacity-60 mt-1'}
+                >{t('Some properties may not able to set by layer, but you still can set it by regex.')}</div>
               </div>
             </Popover>
           </div>

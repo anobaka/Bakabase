@@ -21,7 +21,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyM
         /// <param name="endIndex">Ends to <see cref="segments.Length"/></param>
         /// <returns></returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public static MatchResult? Match(string[] segments, MatcherValue? value, int? startIndex, int? endIndex)
+        public static MatchResult? Match(string[] segments, PropertyPathSegmentMatcherValue? value, int? startIndex, int? endIndex)
         {
             if (value is not {IsValid: true})
             {

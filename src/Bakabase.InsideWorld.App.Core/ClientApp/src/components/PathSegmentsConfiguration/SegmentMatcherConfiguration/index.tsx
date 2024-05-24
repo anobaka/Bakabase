@@ -1,19 +1,16 @@
-import { Balloon, Button, Input, Message, Radio, Tag } from '@alifd/next';
 import React, { useState } from 'react';
-import './index.scss';
 import { useUpdateEffect } from 'react-use';
-import IceLabel from '@icedesign/label';
 import { useTranslation } from 'react-i18next';
+import ByLayer from './ByLayer';
 import type { IMatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 import { ResourceMatcherValueType } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
-import { getResultFromExecAll } from '@/components/PathSegmentsConfiguration/utils';
-import CustomIcon from '@/components/CustomIcon';
 import { ResourceProperty } from '@/sdk/constants';
-import { splitPathIntoSegments } from '@/components/utils';
+import { Chip, Modal } from '@/components/bakaui';
+import ByRegex from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration/ByRegex';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface IValue {
   layer?: number;
-  key?: string;
   regex?: string;
 }
 
@@ -36,16 +33,20 @@ export class SegmentMatcherConfigurationModesData {
   }
 }
 
-interface ISegmentMatcherConfiguration {
+export type SegmentMatcherConfigurationProps = DestroyableProps & {
   defaultValue?: IValue;
-  isCustomProperty: boolean;
   modesData?: SegmentMatcherConfigurationModesData;
   onSubmit: (value: IMatcherValue) => void;
-  property: ResourceProperty;
-  // onClose?: () => void;
-}
+  property: {
+    isReserved: boolean;
+    id: number;
+    name: string;
+  };
+  segments: string[];
+  segmentIndex: number;
+};
 
-const getDefaultValue = (modesData: ISegmentMatcherConfiguration['modesData']): IValue | undefined => {
+const getDefaultValue = (modesData: SegmentMatcherConfigurationProps['modesData']): IValue | undefined => {
   if (modesData) {
     if (modesData.layers.length == 1) {
       return {
@@ -56,29 +57,21 @@ const getDefaultValue = (modesData: ISegmentMatcherConfiguration['modesData']): 
   return;
 };
 
-const SegmentMatcherConfiguration = (props: ISegmentMatcherConfiguration) => {
+const SegmentMatcherConfiguration = (props: SegmentMatcherConfigurationProps) => {
   const {
     defaultValue,
     modesData = new SegmentMatcherConfigurationModesData(),
     onSubmit,
-    isCustomProperty,
     property,
-    // onClose,
+    segments,
+    segmentIndex,
   } = props;
   const { t } = useTranslation();
   const defaultMode = modesData.layers.length > 0 ? 'layer' : Object.keys(modesData)[0] as ('layer' | 'regex');
   const [mode, setMode] = useState(defaultMode);
   const [value, setValue] = useState<IValue | undefined>(defaultValue ?? getDefaultValue(modesData));
-  const [testResult, setTestResult] = useState<{
-    success: boolean;
-    error?: string;
-    groups?: string[];
-    text?: string;
-    tip?: string;
-    index?: number;
-  }>();
 
-  console.log(props);
+  // console.log(props);
 
   useUpdateEffect(() => {
     switch (mode) {
@@ -93,237 +86,80 @@ const SegmentMatcherConfiguration = (props: ISegmentMatcherConfiguration) => {
     }
   }, [mode]);
 
-  const renderLayerMode = () => {
-    if (modesData.layers && modesData.layers.length > 0) {
-      return (
-        <div
-          className={`by-layer mode ${mode == 'layer' ? 'active' : ''}`}
-          onClick={() => {
+  return (
+    <Modal
+      onDestroyed={props.onDestroyed}
+      size={'lg'}
+      defaultVisible
+      title={t('Configure [{{property}}] property for path segment', { property: property.name })}
+      onOk={async () => {
+        onSubmit?.({
+          ...value,
+          type: mode == 'layer' ? ResourceMatcherValueType.Layer : ResourceMatcherValueType.Regex,
+        });
+      }}
+      footer={{
+        actions: ['ok', 'cancel'],
+        okProps: {
+          isDisabled: !value || (mode == 'layer' && !value.layer) || (mode == 'regex' && (!value.regex)),
+        },
+      }}
+    >
+      <div className={''}>
+        <div className={'font-bold'}>{t('Path segment')}</div>
+        <div className={'flex items-center gap-1 mb-2'}>
+          {segments.map((segment, index) => {
+            return (
+              <>
+                {index == segmentIndex ? (
+                  <Chip
+                    variant={'light'}
+                    color={index == segmentIndex ? 'primary' : 'default'}
+                  >
+                    {segment}
+                  </Chip>
+                ) : (
+                  <span>{segment}</span>
+                )}
+                {index != segments.length - 1 && <span className={''}>/</span>}
+              </>
+            );
+          })}
+        </div>
+        <ByLayer
+          layers={modesData.layers}
+          onSelectLayer={layer => {
+            if (mode != 'layer') {
+              setMode('layer');
+            }
+            setValue({
+              ...value,
+              layer,
+            });
+          }}
+          selectedLayer={value?.layer}
+          modeIsSelected={mode == 'layer'}
+          onSelectMode={() => {
             setMode('layer');
           }}
-        >
-          <div className="title">
-            <Radio
-              label={t('Set by {{thing}}', { thing: t('layer') })}
-              checked={mode == 'layer'}
-            />
-          </div>
-          <Tag.Group className="value">
-            {modesData.layers.map(layer => {
-              return (
-                <Tag.Selectable
-                  key={layer}
-                  checked={value?.layer == layer}
-                  onChange={c => {
-                    if (c) {
-                      setValue({
-                        ...(value || {}),
-                        layer,
-                      });
-                    }
-                  }}
-                >
-                  {layer < 0 ? t('The {{layer}} layer to the resource', { layer: -layer }) : t('The {{layer}} layer after root path', { layer: layer })}
-                </Tag.Selectable>
-              );
-            })}
-          </Tag.Group>
-        </div>
-      );
-    }
-    return;
-  };
-
-  const renderTestResult = () => {
-    // console.log(testResult);
-    if (testResult) {
-      if (!testResult.success) {
-        return (
-          <div className="test-result error">
-            {testResult.error && <>{testResult.error}<br /></>}
-            {t('Test failed, please check your regex')}
-          </div>
-        );
-      } else {
-        let tip: string | undefined;
-        if (testResult.groups && testResult.groups.length > 0) {
-          tip = t('Capturing groups are used, only matched text will be applied');
-        } else {
-          if (testResult.text != undefined && testResult.text.length > 0) {
-            tip = t('Whole segment will be applied if capturing group is not used');
-          }
-        }
-
-        let values: string[] | undefined;
-
-        if (testResult.groups != undefined) {
-          values = testResult.groups;
-        } else {
-            const sub = modesData.regex!.text.substring(0, testResult.index! + testResult.text!.length);
-            const segments = splitPathIntoSegments(sub);
-            const match = splitPathIntoSegments(modesData.regex!.text)[segments.length - 1];
-            values = [match];
-        }
-
-        return (
-          <div className="test-result">
-            {tip && (
-              <div className={'tip'}>
-                <CustomIcon type={'question-circle'} size={'small'} />
-                {tip}
-              </div>
-            )}
-            <div className="values">
-              <div className="label">
-                {t('Match result')}
-              </div>
-              {(values)!.map(v => (
-                <IceLabel inverse={false} status={'default'}>
-                  {v}
-                </IceLabel>
-              ))}
-            </div>
-          </div>
-        );
-      }
-    }
-    return;
-  };
-  const renderRegexMode = () => {
-    if (modesData.regex) {
-      return (
-        <div
-          className={`by-regex mode ${mode == 'regex' ? 'active' : ''}`}
-          onClick={() => {
+        />
+        <ByRegex
+          regex={value?.regex}
+          modeIsSelected={mode == 'regex'}
+          onSelectMode={() => {
             setMode('regex');
           }}
-        >
-          <div className="title">
-            <Radio
-              label={t('Set by {{thing}}', { thing: t('regex') })}
-              checked={mode == 'regex'}
-            />
-            <Balloon.Tooltip
-              trigger={(
-                <CustomIcon type={'question-circle'} />
-              )}
-              triggerType={'hover'}
-              align={'t'}
-              v2
-            >
-              {t('/ is the directory separator always, not \\')}
-              <br />
-              <br />
-              {t('The whole matched text will be ignored if capturing groups are used')}
-              {t('You should not use capturing groups on Resource property due to partial path is not available to match a file system entry')}
-            </Balloon.Tooltip>
-          </div>
-          <div className="value">
-            <div className="text">
-              <span>{t('Text to be matched')}:</span>
-              &nbsp;
-              <IceLabel inverse={false} status={'default'}>
-                {modesData.regex.text}
-              </IceLabel>
-            </div>
-            <Input.Group addonAfter={(
-              <Button
-                disabled={value?.regex == undefined}
-                type={'normal'}
-                onClick={() => {
-                  if (value?.regex) {
-                    try {
-                      const regex = new RegExp(value.regex);
-                      const v = getResultFromExecAll(regex, modesData.regex!.text);
-                      console.log(v, property);
-                      if (v && v.groups && v.groups.length > 0 && property == ResourceProperty.Resource) {
-                        throw new Error(t('Capturing groups are not allowed on Resource property'));
-                      }
-                      if (v) {
-                        setTestResult({
-                          success: true,
-                          ...v,
-                        });
-                      } else {
-                        setTestResult({
-                          success: false,
-                        });
-                      }
-                    } catch (e) {
-                      setTestResult({
-                        success: false,
-                        error: e.message,
-                      });
-                    }
-                  }
-                }}
-              >{t('Test')}</Button>
-            )}
-            >
-              <Input
-                hasClear
-                value={value?.regex}
-                style={{ width: '100%' }}
-                aria-label="please input"
-                onChange={v => {
-                  setValue({
-                    ...(value || {}),
-                    regex: v,
-                  });
-                }}
-              />
-            </Input.Group>
-            {renderTestResult()}
-          </div>
-        </div>
-      );
-    }
-    return;
-  };
-
-  return (
-    <div className={'psc-smc'}>
-      {isCustomProperty && (
-        <div className="custom-property">
-          <Input
-            placeholder={t('Type here')}
-            value={value?.key}
-            state={value?.key ? 'success' : 'error'}
-            label={`${t('Custom property key')}:`}
-            onChange={v => {
-              setValue({
-                ...value,
-                key: v,
-              });
-            }}
-          />
-        </div>
-      )}
-      {renderLayerMode()}
-      {renderRegexMode()}
-      <div className="opts">
-        <Button
-          type={'primary'}
-          disabled={!value || (mode == 'layer' && !value.layer) || (mode == 'regex' && (!value.regex || !testResult?.success)) || (isCustomProperty && !value.key)}
-          onClick={() => {
-            if (onSubmit) {
-              onSubmit({
-                ...value,
-                type: mode == 'layer' ? ResourceMatcherValueType.Layer : ResourceMatcherValueType.Regex,
-              });
-            }
+          textToBeMatched={modesData.regex?.text}
+          onRegexChange={v => {
+            setValue({
+              ...value,
+              regex: v,
+            });
           }}
-        >
-          {t('Submit')}
-        </Button>
-        {/* <Button */}
-        {/*   type={'normal'} */}
-        {/*   onClick={onClose} */}
-        {/* > */}
-        {/*   {t('Close')} */}
-        {/* </Button> */}
+          isResourceProperty={property.id == ResourceProperty.Resource && property.isReserved}
+        />
       </div>
-    </div>
+    </Modal>
   );
 };
 

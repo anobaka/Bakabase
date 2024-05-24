@@ -17,7 +17,7 @@ export default ({ errors, value, onDeleteMatcherValue }: Props) => {
   const { t } = useTranslation();
   if (errors && errors.length > 0) {
     return (
-      <div className={'px-2 py-1 border-small rounded-small border-default-200 flex text-sm relative'}>
+      <div className={'px-2 py-1 border-small rounded-small border-default-200 flex flex-col gap-1 text-sm relative'}>
         {errors.map(e => {
           const v = e.valueIndex == undefined ? value[e.property]?.[0] : value[e.property]?.[e.valueIndex];
           return (

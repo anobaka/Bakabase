@@ -15,9 +15,9 @@ import BApi from '@/sdk/BApi';
 import { MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 import type { IPscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
 import { PscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
-import PathSegmentMatcher from '@/components/PathSegmentsConfiguration/models/PathSegmentMatcher';
-import type { MatchResult } from '@/components/PathSegmentsConfiguration/models/MatchResult';
-import { MatchResultType } from '@/components/PathSegmentsConfiguration/models/MatchResult';
+import PscMatcher from '@/components/PathSegmentsConfiguration/models/PscMatcher';
+import type { PscMatchResult } from '@/components/PathSegmentsConfiguration/models/PscMatchResult';
+import { MatchResultType } from '@/components/PathSegmentsConfiguration/models/PscMatchResult';
 import { allMatchers, matchersAfter, matchersBefore } from '@/components/PathSegmentsConfiguration/models/instances';
 import BusinessConstants from '@/components/BusinessConstants';
 import ValidationResult from '@/components/PathSegmentsConfiguration/ValidationResult';
@@ -76,10 +76,10 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
   const smcAlignRef = useRef<BalloonProps['align']>();
 
   const valueRef = useRef(value);
-  const visibleMatchers = matchers.map((a) => allMatchers.find((b) => b.property == a.property)!)
+  const visibleMatchers = matchers.map((a) => allMatchers.find((b) => b.propertyType == a.property)!)
     .sort((a, b) => a.checkOrder - b.checkOrder);
   const configurableMatchers = matchers.filter((a) => !a.readonly)
-    .map((a) => visibleMatchers.find((b) => b.property == a.property)!);
+    .map((a) => visibleMatchers.find((b) => b.propertyType == a.property)!);
 
   const [fileResourceExtensions, setFileResourceExtensions] = useState<{
     ext: string;
@@ -100,10 +100,10 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
       if (matchers.some(a => a.property == ResourceProperty.Resource && !a.readonly)) {
         const resourceMatcherValue = value[ResourceProperty.Resource]?.[0];
         if (resourceMatcherValue) {
-          const rootMatch = PathSegmentMatcher.matchFirst(segments, value[ResourceProperty.RootPath]);
+          const rootMatch = PscMatcher.matchFirst(segments, value[ResourceProperty.RootPath]);
           const rootSegmentIndex = rootMatch?.index ?? -1;
 
-          const resourceSegmentIndex = PathSegmentMatcher
+          const resourceSegmentIndex = PscMatcher
             .match(segments, resourceMatcherValue, rootSegmentIndex, segments.length)?.index ?? -1;
           if (resourceSegmentIndex > -1) {
             const resourceMatcherMatchesLastLayer = resourceSegmentIndex == segments.length - 1;
@@ -140,17 +140,17 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
 
     let rootSegmentIndex: number | undefined;
     const rootMatcherValue = value[ResourceProperty.RootPath]?.[0];
-    let rootMatchResult: MatchResult | undefined;
+    let rootMatchResult: PscMatchResult | undefined;
     if (rootMatcherValue) {
-      rootMatchResult = PathSegmentMatcher.match(segments, rootMatcherValue, -1, undefined);
+      rootMatchResult = PscMatcher.match(segments, rootMatcherValue, -1, undefined);
       rootSegmentIndex = rootMatchResult?.index;
     }
 
     const resourceMatcherValue = value[ResourceProperty.Resource]?.[0];
     let resourceSegmentIndex: number | undefined;
-    let resourceMatchResult: MatchResult | undefined;
+    let resourceMatchResult: PscMatchResult | undefined;
     if (resourceMatcherValue && rootSegmentIndex != undefined) {
-      resourceMatchResult = PathSegmentMatcher
+      resourceMatchResult = PscMatcher
         .match(segments, resourceMatcherValue, rootSegmentIndex, segments.length);
       if (resourceMatchResult) {
         switch (resourceMatchResult.type) {
@@ -184,7 +184,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
     log(`Resource regex target: [${resourceRegexTargetText}], Common regex target: [${commonRegexTargetText}]`);
 
 
-    const allMatchResults: { [property in ResourceProperty]?: (MatchResult | undefined)[] } = {};
+    const allMatchResults: { [property in ResourceProperty]?: (PscMatchResult | undefined)[] } = {};
     Object.keys(value)
       .forEach((key) => {
         const matcherType = parseInt(key, 10) as ResourceProperty;
@@ -203,7 +203,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
           default: {
             const values = value[matcherType] || [];
             for (let i = 0; i < values.length; i++) {
-              const result = PathSegmentMatcher.match(segments, values[i], rootSegmentIndex, resourceSegmentIndex);
+              const result = PscMatcher.match(segments, values[i], rootSegmentIndex, resourceSegmentIndex);
               results.push(result);
             }
             break;
@@ -219,14 +219,14 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
     // 4. Mismatched matchers under segments block.
     // So we need iterate all matchers, not segments
     for (const vm of visibleMatchers) {
-      const values = value[vm.property] || [];
-      const results = allMatchResults[vm.property] || [];
+      const values = value[vm.propertyType] || [];
+      const results = allMatchResults[vm.propertyType] || [];
       const readonly = !configurableMatchers.includes(vm);
 
       // check required
       if (vm.isRequired) {
         if (values.length == 0) {
-          data.globalErrors.push(new SimpleGlobalError(vm.property, undefined, t('Missing'), false));
+          data.globalErrors.push(new SimpleGlobalError(vm.propertyType, undefined, t('Missing'), false));
         }
       }
 
@@ -240,16 +240,16 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
             .join(','),
         });
         if (results.length > 0) {
-          data.globalErrors.push(new SimpleGlobalError(vm.property, undefined, missingPrerequisitesTip!, false));
+          data.globalErrors.push(new SimpleGlobalError(vm.propertyType, undefined, missingPrerequisitesTip!, false));
         }
       }
 
       const orderCheckList = [
-        matchersAfter[vm.property]!.map(m => m.property),
-        matchersBefore[vm.property]!.map(m => m.property),
+        matchersAfter[vm.propertyType]!.map(m => m.property),
+        matchersBefore[vm.propertyType]!.map(m => m.property),
       ];
 
-      log(`Checking order for ${ResourceProperty[vm.property]} with list`, orderCheckList);
+      log(`Checking order for ${ResourceProperty[vm.propertyType]} with list`, orderCheckList);
 
       const getInvalidOrderMatcherTips = (segmentIndex: number): string[] => {
         const errors: string[] = [];
@@ -268,7 +268,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
           }
           if (invalidOrderResultLabels.length > 0) {
             errors.push(t(`{{target}} should come ${j == 1 ? 'after' : 'before'} {{invalidMatchers}}`, {
-              target: t(ResourceProperty[vm.property]),
+              target: t(ResourceProperty[vm.propertyType]),
               invalidMatchers: invalidOrderResultLabels.join(','),
             }));
           }
@@ -278,18 +278,18 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
 
       for (let i = 0; i < results.length; i++) {
         const r = results[i];
-        log(`Checking result ${i} of ${ResourceProperty[vm.property]}`, r);
+        log(`Checking result ${i} of ${ResourceProperty[vm.propertyType]}`, r);
         // check mismatched values
         if (r == undefined) {
-          data.globalErrors.push(new SimpleGlobalError(vm.property, results.length > 1 ? i : undefined, t('Match failed'), true));
+          data.globalErrors.push(new SimpleGlobalError(vm.propertyType, results.length > 1 ? i : undefined, t('Match failed'), true));
         } else {
           if (r.type == MatchResultType.Layer) {
             if (r.index != undefined) {
               const segmentIndex = r.index!;
               const ds = data.segments[segmentIndex];
-              let mr = ds.matchResults.find(a => a.property == vm.property && a.valueIndex == i);
+              let mr = ds.matchResults.find(a => a.property == vm.propertyType && a.valueIndex == i);
               if (!mr) {
-                mr = new PscCoreData.SimpleMatchResult(vm.property, results.length > 1 ? i : undefined);
+                mr = new PscCoreData.SimpleMatchResult(vm.propertyType, results.length > 1 ? i : undefined);
                 mr.readonly = readonly;
                 ds.matchResults.push(mr);
               }
@@ -300,7 +300,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
             }
           } else {
             if (r.type == MatchResultType.Regex) {
-              data.globalMatches.push(new SimpleGlobalMatch(vm.property, i, r.matches!));
+              data.globalMatches.push(new SimpleGlobalMatch(vm.propertyType, i, r.matches!));
             }
           }
         }
@@ -311,25 +311,25 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
         const ds = data.segments[i];
 
         const sm = new PscCoreData.SelectiveMatcher({
-          property: vm.property,
+          property: vm.propertyType,
           readonly: readonly,
           replaceCurrent: !vm.multiple && results.length > 0,
         });
 
         if (!readonly) {
           if (missingPrerequisites.length == 0) {
-            if (vm.property != ResourceProperty.RootPath) {
+            if (vm.propertyType != ResourceProperty.RootPath) {
               const r = sm.matchModes.regex;
               if (commonRegexTargetText?.length > 0 ||
-                (vm.property == ResourceProperty.Resource && resourceRegexTargetText?.length > 0)) {
-                r.text = vm.property == ResourceProperty.Resource ? resourceRegexTargetText : commonRegexTargetText;
+                (vm.propertyType == ResourceProperty.Resource && resourceRegexTargetText?.length > 0)) {
+                r.text = vm.propertyType == ResourceProperty.Resource ? resourceRegexTargetText : commonRegexTargetText;
                 r.available = true;
               } else {
                 r.errors.push(t('Match target is not found'));
               }
             }
             const errors = getInvalidOrderMatcherTips(i);
-            if (vm.property == ResourceProperty.RootPath) {
+            if (vm.propertyType == ResourceProperty.RootPath) {
               const oc = sm.matchModes.oneClick;
               if (errors.length == 0) {
                 oc.available = true;
@@ -345,7 +345,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
                 if (rootSegmentIndex != undefined && rootSegmentIndex > -1) {
                   layers.push(i - rootSegmentIndex);
                   if (resourceSegmentIndex != undefined && resourceSegmentIndex > -1 &&
-                    vm.property != ResourceProperty.Resource) {
+                    vm.propertyType != ResourceProperty.Resource) {
                     layers.push(i - resourceSegmentIndex);
                   }
                 }
@@ -409,10 +409,10 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
     return;
   };
 
-  const onDeleteMatcherValue = (property: ResourceProperty, valueIndex: number = 0) => {
+  const onDeleteMatcherValue = (property: ResourceProperty, valueIndex: number | undefined = 0) => {
     createPortal(Modal, {
       defaultVisible: true,
-      title: t('Sure to delete?'),
+      title: t('Sure to delete this property?'),
       onOk: () => {
         value[property]!.splice(valueIndex ?? 0, 1);
         setValue({
@@ -454,6 +454,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
         value={value}
         onChange={setValue}
         onDeleteMatcherValue={onDeleteMatcherValue}
+        visibleMatchers={visibleMatchers}
       />
       {renderFileExtensionLoader()}
       {renderGlobalMatches(coreData.globalMatches)}

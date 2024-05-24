@@ -1,20 +1,19 @@
-import { ResourceProperty } from '@/sdk/constants';
+import { getResultFromExecAll } from '../helpers';
+import { PscPropertyType } from './PscPropertyType';
 import type { MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 import { ResourceMatcherValueType } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
-import { MatchResult } from '@/components/PathSegmentsConfiguration/models/MatchResult';
-import { execAll } from '@/components/utils';
-import { getResultFromExecAll } from '@/components/PathSegmentsConfiguration/utils';
+import { PscMatchResult } from '@/components/PathSegmentsConfiguration/models/PscMatchResult';
 
-class PathSegmentMatcher {
-  property: ResourceProperty;
+class PscMatcher {
+  propertyType: PscPropertyType;
   multiple: boolean;
   valueType: ResourceMatcherValueType;
   isRequired: boolean;
   order: number;
-  prerequisites: ResourceProperty[] = [ResourceProperty.Resource, ResourceProperty.RootPath];
+  prerequisites: PscPropertyType[] = [PscPropertyType.Resource, PscPropertyType.RootPath];
   checkOrder: number;
 
-  constructor(init?: Partial<PathSegmentMatcher>) {
+  constructor(init?: Partial<PscMatcher>) {
     Object.assign(this, init);
   }
 
@@ -26,8 +25,8 @@ class PathSegmentMatcher {
    * @param startIndex starts from -1
    * @param endIndex ends to {@link segments.length}
    */
-  static match(segments: string[], value: MatcherValue | undefined, startIndex: number | undefined, endIndex: number | undefined): MatchResult | undefined {
-    let result: MatchResult | undefined;
+  static match(segments: string[], value: MatcherValue | undefined, startIndex: number | undefined, endIndex: number | undefined): PscMatchResult | undefined {
+    let result: PscMatchResult | undefined;
     if (value !== undefined) {
       switch (value.type) {
         case ResourceMatcherValueType.FixedText: {
@@ -38,7 +37,7 @@ class PathSegmentMatcher {
               str += subSegments[i];
               if (str == value.fixedText) {
                 const layer = i + 1;
-                result = MatchResult.OfLayer(layer, startIndex + layer);
+                result = PscMatchResult.OfLayer(layer, startIndex + layer);
                 break;
               }
               str += '/';
@@ -52,12 +51,12 @@ class PathSegmentMatcher {
               if (startIndex != undefined && startIndex >= -1) {
                 const idx = startIndex + value.layer;
                 if (idx < segments.length) {
-                  result = MatchResult.OfLayer(value.layer, value.layer + startIndex);
+                  result = PscMatchResult.OfLayer(value.layer, value.layer + startIndex);
                 }
               }
             } else {
               if (endIndex != undefined && endIndex <= segments.length && endIndex + value.layer >= 0) {
-                result = MatchResult.OfLayer(value.layer, value.layer + endIndex);
+                result = PscMatchResult.OfLayer(value.layer, value.layer + endIndex);
               }
             }
           }
@@ -70,12 +69,12 @@ class PathSegmentMatcher {
             const rr = getResultFromExecAll(value.regex!, subPath);
             if (rr) {
               if (rr.groups) {
-                result = MatchResult.OfRegex(rr.groups);
+                result = PscMatchResult.OfRegex(rr.groups);
               } else {
                 const length = subPath.indexOf(rr.text!) + rr.text!.length;
                 const matchedText = subPath.substring(0, length);
                 const layer = matchedText.split('/').length;
-                result = MatchResult.OfLayer(layer, layer + startIndex);
+                result = PscMatchResult.OfLayer(layer, layer + startIndex);
               }
             }
           }
@@ -89,11 +88,11 @@ class PathSegmentMatcher {
     return result;
   }
 
-  static matchAll(segments: string[], values?: MatcherValue[], rootIndex: number = -1, resourceIndex: number = -1, stopAtFirstMatch: boolean = false): ((MatchResult | undefined)[]) {
+  static matchAll(segments: string[], values?: MatcherValue[], rootIndex: number = -1, resourceIndex: number = -1, stopAtFirstMatch: boolean = false): ((PscMatchResult | undefined)[]) {
     if (!values) {
       return [];
     }
-    const results: (MatchResult | undefined)[] = [];
+    const results: (PscMatchResult | undefined)[] = [];
     for (let i = 0; i < values.length; i++) {
       const value = values[i];
       const result = this.match(segments, value, rootIndex, resourceIndex);
@@ -109,9 +108,9 @@ class PathSegmentMatcher {
     return results;
   }
 
-  static matchFirst(segments: string[], values?: MatcherValue[], rootIndex: number = -1, resourceIndex: number = -1): MatchResult | undefined {
+  static matchFirst(segments: string[], values?: MatcherValue[], rootIndex: number = -1, resourceIndex: number = -1): PscMatchResult | undefined {
     return this.matchAll(segments, values, rootIndex, resourceIndex, true)?.[0];
   }
 }
 
-export default PathSegmentMatcher;
+export default PscMatcher;

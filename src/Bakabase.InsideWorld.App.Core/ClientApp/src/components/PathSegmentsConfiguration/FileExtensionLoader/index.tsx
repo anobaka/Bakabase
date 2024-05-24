@@ -1,7 +1,7 @@
 import { Badge, Balloon, Dialog, Message, Tag } from '@alifd/next';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import PathSegmentMatcher from '@/components/PathSegmentsConfiguration/models/PathSegmentMatcher';
+import PscMatcher from '@/components/PathSegmentsConfiguration/models/PscMatcher';
 import { ResourceProperty } from '@/sdk/constants';
 import { Button } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
@@ -12,7 +12,7 @@ import { MatcherValue } from '@/components/PathSegmentsConfiguration/models/Matc
 export default () => {
   const { t } = useTranslation();
   if (fileResource) {
-    const rootSegmentIndex = (PathSegmentMatcher?.match(segments, value[ResourceProperty.RootPath]?.[0],
+    const rootSegmentIndex = (PscMatcher?.match(segments, value[ResourceProperty.RootPath]?.[0],
       -1, undefined))?.index ?? -1;
     const rootPathIsSelected = rootSegmentIndex > -1;
     const loaderBtn = (

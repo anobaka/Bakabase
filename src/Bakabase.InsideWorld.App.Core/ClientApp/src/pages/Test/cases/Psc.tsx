@@ -1,12 +1,20 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { IPscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
 import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
+import SegmentMatcherConfiguration, {
+  SegmentMatcherConfigurationModesData,
+} from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
+import { Button, Modal } from '@/components/bakaui';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 export default () => {
+  const { t } = useTranslation();
   const [samplePath, setSamplePath] = useState('D:\\test\\new-media-library-path-configuration\\a\\bc\\New Text Document.txt');
   const [value, setValue] = useState<IPscValue>({});
   const segmentsRef = useRef(samplePath.split('\\'));
+  const { createPortal } = useBakabaseContext();
 
   const simpleMatchers = {
     [ResourceProperty.Resource]: false,
@@ -81,6 +89,35 @@ export default () => {
           })}
         </div>
       </div>
+      <Button
+        size={'sm'}
+        onClick={() => {
+          createPortal(SegmentMatcherConfiguration, {
+            segments: samplePath.split('\\'),
+            segmentIndex: 2,
+            property: {
+              id: 1,
+              isReserved: true,
+              name: t('Resource'),
+            },
+            modesData: new SegmentMatcherConfigurationModesData(
+              {
+                layers: [
+                  1,
+                ],
+                regex: {
+                  text: 'new-media-library-path-configuration/a/bc/New Text Document.txt',
+                },
+              },
+            ),
+            onSubmit: value => {
+              // selectMatcher(visibleMatchers.find(t => t.property == m.property)!, value);
+            },
+          });
+      }}
+      >
+        SMC
+      </Button>
     </div>
   );
 };
