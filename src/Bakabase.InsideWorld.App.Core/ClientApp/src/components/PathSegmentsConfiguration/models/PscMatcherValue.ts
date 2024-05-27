@@ -29,7 +29,7 @@ export class PscMatcherValue implements IPscMatcherValue {
     });
   }
 
-  static Regex(regex: string): IPscMatcherValue {
+  static Regex(regex: string): PscMatcherValue {
     return new PscMatcherValue({
       valueType: ResourceMatcherValueType.Regex,
       regex,

@@ -602,8 +602,10 @@ export interface BakabaseInsideWorldBusinessModelsDomainMigrationTarget {
 
 export interface BakabaseInsideWorldBusinessModelsDomainPathConfiguration {
   path?: string | null;
+  rpmValues?: BakabaseInsideWorldModelsModelsAosPropertyPathSegmentMatcherValue[] | null;
+  /** @deprecated */
   fixedTagIds?: number[] | null;
-  rpmValues?: BakabaseInsideWorldModelsModelsAosMatcherValue[] | null;
+  /** @deprecated */
   fixedTags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
 }
 
@@ -1082,19 +1084,6 @@ export interface BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult {
   mergeResult?: Record<string, string[]>;
 }
 
-export interface BakabaseInsideWorldModelsModelsAosMatcherValue {
-  fixedText?: string | null;
-  /** @format int32 */
-  layer?: number | null;
-  regex?: string | null;
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
-  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
-  /** [1: Layer, 2: Regex, 3: FixedText] */
-  valueType?: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
-  key?: string | null;
-  isValid?: boolean;
-}
-
 export interface BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation {
   /** @format int64 */
   totalSize?: number;
@@ -1152,6 +1141,23 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   type?: BakabaseInsideWorldModelsConstantsMediaType;
   /** @format int32 */
   duration?: number;
+}
+
+export interface BakabaseInsideWorldModelsModelsAosPropertyPathSegmentMatcherValue {
+  fixedText?: string | null;
+  /** @format int32 */
+  layer?: number | null;
+  regex?: string | null;
+  /** @format int32 */
+  propertyId?: number;
+  isReservedProperty?: boolean;
+  /** [1: Layer, 2: Regex, 3: FixedText] */
+  valueType?: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
+  /** @deprecated */
+  key?: string | null;
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
+  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  isValid?: boolean;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosResourceDiff {

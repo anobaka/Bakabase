@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
+import { PscMatcherValue } from '../models/PscMatcherValue';
+import type { IPscProperty } from '../models/PscProperty';
 import ByLayer from './ByLayer';
-import type { IMatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
-import { ResourceMatcherValueType } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
-import { ResourceProperty } from '@/sdk/constants';
+import ByRegex from './ByRegex';
+import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
+import type { ChipProps } from '@/components/bakaui';
+import { Tooltip } from '@/components/bakaui';
 import { Chip, Modal } from '@/components/bakaui';
-import ByRegex from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration/ByRegex';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface IValue {
@@ -36,15 +38,13 @@ export class SegmentMatcherConfigurationModesData {
 export type SegmentMatcherConfigurationProps = DestroyableProps & {
   defaultValue?: IValue;
   modesData?: SegmentMatcherConfigurationModesData;
-  onSubmit: (value: IMatcherValue) => void;
-  property: {
-    isReserved: boolean;
-    id: number;
-    name: string;
-  };
+  onSubmit: (value: PscMatcherValue) => void;
+  property: IPscProperty;
   segments: string[];
-  segmentIndex: number;
+  segmentMarkers: Record<number, SegmentIndexMarker>;
 };
+
+type SegmentIndexMarker = 'root' | 'resource' | 'current';
 
 const getDefaultValue = (modesData: SegmentMatcherConfigurationProps['modesData']): IValue | undefined => {
   if (modesData) {
@@ -57,15 +57,30 @@ const getDefaultValue = (modesData: SegmentMatcherConfigurationProps['modesData'
   return;
 };
 
-const SegmentMatcherConfiguration = (props: SegmentMatcherConfigurationProps) => {
-  const {
-    defaultValue,
-    modesData = new SegmentMatcherConfigurationModesData(),
-    onSubmit,
-    property,
-    segments,
-    segmentIndex,
-  } = props;
+const PathSegmentRenderOptions: Record<SegmentIndexMarker, { color: ChipProps['color']; tip: string }> = {
+  root: {
+    color: 'warning',
+    tip: 'Segment of root path',
+  },
+  resource: {
+    color: 'warning',
+    tip: 'Segment of resource',
+  },
+  current: {
+    color: 'primary',
+    tip: 'Current segment',
+  },
+};
+
+const SegmentMatcherConfiguration = ({
+                                       defaultValue,
+                                       modesData = new SegmentMatcherConfigurationModesData(),
+                                       onSubmit,
+                                       property,
+                                       segments,
+                                       segmentMarkers,
+                                       ...props
+                                     }: SegmentMatcherConfigurationProps) => {
   const { t } = useTranslation();
   const defaultMode = modesData.layers.length > 0 ? 'layer' : Object.keys(modesData)[0] as ('layer' | 'regex');
   const [mode, setMode] = useState(defaultMode);
@@ -93,10 +108,10 @@ const SegmentMatcherConfiguration = (props: SegmentMatcherConfigurationProps) =>
       defaultVisible
       title={t('Configure [{{property}}] property for path segment', { property: property.name })}
       onOk={async () => {
-        onSubmit?.({
+        onSubmit?.(new PscMatcherValue({
           ...value,
-          type: mode == 'layer' ? ResourceMatcherValueType.Layer : ResourceMatcherValueType.Regex,
-        });
+          valueType: mode == 'layer' ? ResourceMatcherValueType.Layer : ResourceMatcherValueType.Regex,
+        }));
       }}
       footer={{
         actions: ['ok', 'cancel'],
@@ -109,15 +124,21 @@ const SegmentMatcherConfiguration = (props: SegmentMatcherConfigurationProps) =>
         <div className={'font-bold'}>{t('Path segment')}</div>
         <div className={'flex items-center gap-1 mb-2'}>
           {segments.map((segment, index) => {
+            const marker: SegmentIndexMarker | undefined = segmentMarkers[index];
+            const options = PathSegmentRenderOptions[marker];
             return (
               <>
-                {index == segmentIndex ? (
-                  <Chip
-                    variant={'light'}
-                    color={index == segmentIndex ? 'primary' : 'default'}
+                {options != undefined ? (
+                  <Tooltip
+                    content={t(options.tip)}
                   >
-                    {segment}
-                  </Chip>
+                    <Chip
+                      variant={'light'}
+                      color={options.color}
+                    >
+                      {segment}
+                    </Chip>
+                  </Tooltip>
                 ) : (
                   <span>{segment}</span>
                 )}

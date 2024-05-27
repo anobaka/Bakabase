@@ -636,7 +636,7 @@ export default ({ categoryId }: { categoryId?: number }) => {
                 </>
               );
 
-              const pscData = psc1Ref.current?.coreData;
+              const pscData = psc1Ref.current?.context;
               const isValid = pscData && !pscData.hasError;
 
               data.operations.push(

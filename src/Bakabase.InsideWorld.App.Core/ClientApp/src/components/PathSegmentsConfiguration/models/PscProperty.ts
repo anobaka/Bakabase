@@ -1,5 +1,5 @@
+import { PscPropertyType } from './PscPropertyType';
 import { ResourceProperty } from '@/sdk/constants';
-import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
 
 export interface IPscProperty {
   id: number;
@@ -16,7 +16,7 @@ class PscProperty implements IPscProperty {
     Object.assign(this, p);
   }
 
-  equals: (other: PscProperty) => boolean = (other: PscProperty) => {
+  equals: (other: IPscProperty) => boolean = (other: IPscProperty) => {
     return this.id === other.id && this.isReserved == other.isReserved;
   };
 
@@ -41,6 +41,48 @@ class PscProperty implements IPscProperty {
       return PscPropertyType.CustomProperty;
     }
   }
+
+  get isRootPath(): boolean {
+    return this.isReserved && this.id == ResourceProperty.RootPath;
+  }
+
+  get isResource(): boolean {
+    return this.isReserved && this.id == ResourceProperty.Resource;
+  }
+
+  static fromPscType(type: PscPropertyType): PscProperty {
+    switch (type) {
+      case PscPropertyType.RootPath:
+        return this.RootPath;
+      case PscPropertyType.Resource:
+        return this.Resource;
+      case PscPropertyType.ParentResource:
+        return this.ParentResource;
+      case PscPropertyType.CustomProperty:
+        return this.CustomProperty;
+    }
+  }
+
+  static Resource = new PscProperty({
+    id: ResourceProperty.Resource,
+    isReserved: true,
+    name: ResourceProperty[ResourceProperty.Resource],
+  });
+  static RootPath = new PscProperty({
+    id: ResourceProperty.RootPath,
+    isReserved: true,
+    name: ResourceProperty[ResourceProperty.RootPath],
+  });
+  static ParentResource = new PscProperty({
+    id: ResourceProperty.ParentResource,
+    isReserved: true,
+    name: ResourceProperty[ResourceProperty.ParentResource],
+  });
+  static CustomProperty = new PscProperty({
+    id: ResourceProperty.CustomProperty,
+    isReserved: true,
+    name: ResourceProperty[ResourceProperty.CustomProperty],
+  });
 }
 
 export default PscProperty;

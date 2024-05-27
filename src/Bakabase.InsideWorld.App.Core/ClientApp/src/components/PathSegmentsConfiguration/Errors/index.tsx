@@ -2,14 +2,14 @@ import { WarningOutlined } from '@ant-design/icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OnDeleteMatcherValue } from '../models';
-import type { PscCoreData } from '@/components/PathSegmentsConfiguration/models/PscCoreData';
+import type { PscContext } from '../models/PscContext';
+import type { IPscPropertyMatcherValue } from '../models/PscPropertyMatcherValue';
+import { PscMatcherValue } from '../models/PscMatcherValue';
 import { Chip } from '@/components/bakaui';
-import { MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
-import type { ResourceProperty } from '@/sdk/constants';
 
 type Props = {
-  errors?: PscCoreData.SimpleGlobalError[];
-  value: { [type in ResourceProperty]?: MatcherValue[]; };
+  errors?: PscContext.SimpleGlobalError[];
+  value?: IPscPropertyMatcherValue[];
   onDeleteMatcherValue: OnDeleteMatcherValue;
 };
 
@@ -19,7 +19,7 @@ export default ({ errors, value, onDeleteMatcherValue }: Props) => {
     return (
       <div className={'px-2 py-1 border-small rounded-small border-default-200 flex flex-col gap-1 text-sm relative'}>
         {errors.map(e => {
-          const v = e.valueIndex == undefined ? value[e.property]?.[0] : value[e.property]?.[e.valueIndex];
+          const v = value?.filter(v => v.property.equals(e.property))?.[e.valueIndex ?? 0]?.value;
           return (
             <div className={'flex items-center gap-1'}>
               <Chip
@@ -44,7 +44,7 @@ export default ({ errors, value, onDeleteMatcherValue }: Props) => {
                 )}
               >
                 {v && (
-                  <span className={'font-bold mr-2'}>{MatcherValue.ToString(v)}</span>
+                  <span className={'font-bold mr-2'}>{PscMatcherValue.ToString(t, v)}</span>
                 )}
                 {e.message}
               </Chip>

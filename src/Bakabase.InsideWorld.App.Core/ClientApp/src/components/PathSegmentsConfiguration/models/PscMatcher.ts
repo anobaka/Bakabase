@@ -1,8 +1,8 @@
 import { getResultFromExecAll } from '../helpers';
 import { PscPropertyType } from './PscPropertyType';
-import type { MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
-import { ResourceMatcherValueType } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
-import { PscMatchResult } from '@/components/PathSegmentsConfiguration/models/PscMatchResult';
+import type { IPscMatcherValue } from './PscMatcherValue';
+import { PscMatchResult } from './PscMatchResult';
+import { ResourceMatcherValueType } from '@/sdk/constants';
 
 class PscMatcher {
   propertyType: PscPropertyType;
@@ -25,10 +25,10 @@ class PscMatcher {
    * @param startIndex starts from -1
    * @param endIndex ends to {@link segments.length}
    */
-  static match(segments: string[], value: MatcherValue | undefined, startIndex: number | undefined, endIndex: number | undefined): PscMatchResult | undefined {
+  static match(segments: string[], value: IPscMatcherValue | undefined, startIndex: number | undefined, endIndex: number | undefined): PscMatchResult | undefined {
     let result: PscMatchResult | undefined;
     if (value !== undefined) {
-      switch (value.type) {
+      switch (value.valueType) {
         case ResourceMatcherValueType.FixedText: {
           if (startIndex != undefined && startIndex >= -1) {
             const subSegments = segments.slice(startIndex + 1);
@@ -88,7 +88,7 @@ class PscMatcher {
     return result;
   }
 
-  static matchAll(segments: string[], values?: MatcherValue[], rootIndex: number = -1, resourceIndex: number = -1, stopAtFirstMatch: boolean = false): ((PscMatchResult | undefined)[]) {
+  static matchAll(segments: string[], values?: IPscMatcherValue[], rootIndex: number = -1, resourceIndex: number = -1, stopAtFirstMatch: boolean = false): ((PscMatchResult | undefined)[]) {
     if (!values) {
       return [];
     }
@@ -108,7 +108,7 @@ class PscMatcher {
     return results;
   }
 
-  static matchFirst(segments: string[], values?: MatcherValue[], rootIndex: number = -1, resourceIndex: number = -1): PscMatchResult | undefined {
+  static matchFirst(segments: string[], values?: IPscMatcherValue[], rootIndex: number = -1, resourceIndex: number = -1): PscMatchResult | undefined {
     return this.matchAll(segments, values, rootIndex, resourceIndex, true)?.[0];
   }
 }

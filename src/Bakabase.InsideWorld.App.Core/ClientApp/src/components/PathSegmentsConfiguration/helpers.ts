@@ -1,8 +1,51 @@
-import type PscProperty from './models/PscProperty';
-import { PscPropertyType } from './models/PscPropertyType';
+import type { TFunction } from 'react-i18next';
+import PscProperty from './models/PscProperty';
+import type { IPscPropertyMatcherValue } from './models/PscPropertyMatcherValue';
+import { PscMatcherValue } from './models/PscMatcherValue';
 import { execAll } from '@/components/utils';
-import { ResourceProperty } from '@/sdk/constants';
+import { MatchResultType, ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
+import type { BakabaseInsideWorldBusinessModelsDomainPathConfiguration } from '@/sdk/Api';
+import { BuildMatchResultLabel, PscContext } from '@/components/PathSegmentsConfiguration/models/PscContext';
+import type { PscMatchResult } from '@/components/PathSegmentsConfiguration/models/PscMatchResult';
+import PscMatcher from '@/components/PathSegmentsConfiguration/models/PscMatcher';
+import type { IPscPropertyMatcherResult } from '@/components/PathSegmentsConfiguration/models/PscPropertyMatcherResult';
+import { matchersAfter, matchersBefore } from '@/components/PathSegmentsConfiguration/matchers';
+import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
+import SimpleGlobalError = PscContext.SimpleGlobalError;
+import SimpleGlobalMatch = PscContext.SimpleGlobalMatch;
 
+export function convertToPscValueFromPathConfigurationDto(pc: BakabaseInsideWorldBusinessModelsDomainPathConfiguration): IPscPropertyMatcherValue[] {
+  const value: IPscPropertyMatcherValue[] = [];
+  if (pc.path) {
+    value.push({
+      value: new PscMatcherValue({
+        valueType: ResourceMatcherValueType.FixedText,
+        fixedText: pc.path,
+      }),
+      property: PscProperty.RootPath,
+    });
+  }
+
+  if (pc.rpmValues) {
+    for (const segment of pc.rpmValues) {
+      value.push({
+        value: new PscMatcherValue({
+          valueType: segment.valueType!,
+          fixedText: segment.fixedText ?? undefined,
+          regex: segment.regex ?? undefined,
+          layer: segment.layer ?? undefined,
+        }),
+        property: new PscProperty({
+          isReserved: segment.isReservedProperty!,
+          id: segment.propertyId!,
+        }),
+      });
+    }
+  }
+
+  console.log('Convert dto value to component value', pc, value);
+  return value;
+}
 
 export function getResultFromExecAll(regex: RegExp | string, str: string): {
   groups?: string[];
@@ -52,3 +95,265 @@ export function getResultFromExecAll(regex: RegExp | string, str: string): {
   }
   return null;
 }
+
+export function convertToPathConfigurationDtoFromPscValue(value: IPscPropertyMatcherValue[]): BakabaseInsideWorldBusinessModelsDomainPathConfiguration {
+  const rootPath = (value.filter(v => v.property.isRootPath))[0]?.value?.fixedText;
+  const dto = {
+    path: rootPath,
+    // regex: resourceRegex,
+    rpmValues: value.filter(v => !v.property.isRootPath),
+  };
+
+  console.log('Convert component value to dto value', value, dto);
+  // @ts-ignore
+  return dto;
+}
+
+export const BuildPscContext = (segments: string[], value: IPscPropertyMatcherValue[],
+                                visibleMatchers: PscMatcher[], configurableMatchers: PscMatcher[],
+                                t: TFunction<'translation', undefined>, log = console.log): PscContext => {
+  const data = new PscContext();
+  data.segments = segments.map(s => new PscContext.Segment({ text: s }));
+
+  const allPropertyMatchResults: IPscPropertyMatcherResult[] = [];
+
+  let rootSegmentIndex: number | undefined;
+  const rootPmv = value.find(x => x.property.isRootPath);
+  const rootMatcherValue = rootPmv?.value;
+  let rootMatchResult: PscMatchResult | undefined;
+  if (rootMatcherValue) {
+    rootMatchResult = PscMatcher.match(segments, rootMatcherValue, -1, undefined);
+    if (rootMatchResult) {
+      rootSegmentIndex = rootMatchResult?.index;
+    }
+  }
+
+  allPropertyMatchResults.push({
+    property: rootPmv!.property,
+    results: [rootMatchResult],
+  });
+
+  const resourcePmv = value.find(x => x.property.isResource);
+  const resourceMatcherValue = resourcePmv?.value;
+  let resourceSegmentIndex: number | undefined;
+  let resourceMatchResult: PscMatchResult | undefined;
+  if (resourceMatcherValue && rootSegmentIndex != undefined) {
+    resourceMatchResult = PscMatcher
+      .match(segments, resourceMatcherValue, rootSegmentIndex, segments.length);
+    if (resourceMatchResult) {
+      switch (resourceMatchResult.type) {
+        // Regex value may produce layer match result
+        case MatchResultType.Layer:
+          resourceSegmentIndex = resourceMatchResult.index;
+          allPropertyMatchResults.push({
+            property: resourcePmv!.property,
+            results: [resourceMatchResult],
+          });
+          break;
+        case MatchResultType.Regex:
+          data.globalErrors.push(new SimpleGlobalError(PscProperty.Resource, undefined,
+            t('Resource matcher can not have a regex result(make sure you are not setting groups in regex)'), true));
+          break;
+      }
+    }
+  }
+  log(`Root index: ${rootSegmentIndex}, resource index: ${resourceSegmentIndex}`);
+
+  // 用于资源或其他属性正则匹配，从根路径右侧到资源路径左侧
+  let resourceRegexTargetText = '';
+  let commonRegexTargetText = '';
+  if (rootSegmentIndex != undefined) {
+    resourceRegexTargetText = segments.slice(rootSegmentIndex + 1)
+      .join('/');
+
+    if (resourceSegmentIndex != undefined) {
+      commonRegexTargetText = segments.slice(rootSegmentIndex + 1, resourceSegmentIndex)
+        .join('/');
+    }
+  }
+  log(`Resource regex target: [${resourceRegexTargetText}], Common regex target: [${commonRegexTargetText}]`);
+
+  value!.filter(v => !v.property.isResource && !v.property.isRootPath).forEach((pmv) => {
+    const result = PscMatcher.match(segments, pmv.value, rootSegmentIndex, resourceSegmentIndex);
+    if (result) {
+      let list = allPropertyMatchResults.find(x => x.property.equals(pmv.property));
+      if (!list) {
+        list = {
+          property: pmv.property,
+          results: [],
+        };
+        allPropertyMatchResults.push(list);
+      }
+      list.results!.push(result);
+    }
+  });
+  log('All match results:', allPropertyMatchResults);
+
+  // We should render:
+  // 1. Segments.
+  // 2. Matchers with layer match results upon each segment.
+  // 3. Matchers with regex match results under segments block.
+  // 4. Mismatched matchers under segments block.
+  // So we need iterate all matchers, not segments
+  for (const vm of visibleMatchers) {
+    const currentPropertyTypeValues = value?.filter(x => x.property.type == vm.propertyType) || [];
+    const results = allPropertyMatchResults.filter(r => r.property.type == vm.propertyType) || [];
+    const readonly = !configurableMatchers.includes(vm);
+
+    // check required
+    if (vm.isRequired) {
+      if (currentPropertyTypeValues.length == 0) {
+        data.globalErrors.push(new SimpleGlobalError(PscProperty.fromPscType(vm.propertyType), undefined, t('Missing'), false));
+      }
+    }
+
+    // check prerequisites
+    const missingPrerequisites = vm.prerequisites.filter(p => allPropertyMatchResults.every(m => m.property.type != p));
+    let missingPrerequisitesTip: string | undefined;
+    if (missingPrerequisites.length > 0) {
+      missingPrerequisitesTip = t('[{{matchers}}] (is)are required to set this property', {
+        matchers: missingPrerequisites.map(p => t(PscPropertyType[p])).join(','),
+      });
+      if (results.length > 0) {
+        results.forEach(r => {
+          data.globalErrors.push(new SimpleGlobalError(r.property, undefined, missingPrerequisitesTip!, false));
+        });
+      }
+    }
+
+    const orderCheckList = [
+      matchersAfter[vm.propertyType]!.map(m => m.propertyType),
+      matchersBefore[vm.propertyType]!.map(m => m.propertyType),
+    ];
+
+    log(`Checking order for ${PscPropertyType[vm.propertyType]} with list`, orderCheckList);
+
+    const getInvalidOrderMatcherTips = (segmentIndex: number): string[] => {
+      const errors: string[] = [];
+      // check orders
+      for (let j = 0; j < orderCheckList.length; j++) {
+        const list = orderCheckList[j];
+        const invalidOrderResultLabels: string[] = [];
+        for (const t of list) {
+          const pmrs = (allPropertyMatchResults.filter(r => r.property.type == t) || []);
+          for (const pmr of pmrs) {
+            if (pmr.results) {
+              for (let k = 0; k < pmr.results.length; k++) {
+                const mr = pmr.results[k];
+                const si = mr?.index;
+                if (si != undefined && ((j == 0 && si <= segmentIndex) || (j == 1 && si >= segmentIndex))) {
+                  invalidOrderResultLabels.push(BuildMatchResultLabel(pmr.property, pmr.results.length > 1 ? k : undefined));
+                }
+              }
+            }
+          }
+        }
+        if (invalidOrderResultLabels.length > 0) {
+          errors.push(t(`{{target}} should come ${j == 1 ? 'after' : 'before'} {{invalidMatchers}}`, {
+            target: t(PscPropertyType[vm.propertyType]),
+            invalidMatchers: invalidOrderResultLabels.join(','),
+          }));
+        }
+      }
+      return errors;
+    };
+
+    for (let i = 0; i < results.length; i++) {
+      const { property, results: r } = results[i];
+      log(`Checking result ${i} of ${PscPropertyType[vm.propertyType]}`, r);
+      // check mismatched values
+      if (r == undefined) {
+        data.globalErrors.push(new SimpleGlobalError(property, results.length > 1 ? i : undefined, t('Match failed'), true));
+      } else {
+        if (r.type == MatchResultType.Layer) {
+          if (r.index != undefined) {
+            const segmentIndex = r.index!;
+            const ds = data.segments[segmentIndex];
+            let mr = ds.matchResults.find(a => a.property.type == vm.propertyType && a.valueIndex == i);
+            if (!mr) {
+              mr = new PscContext.SimpleMatchResult(property, results.length > 1 ? i : undefined);
+              mr.readonly = readonly;
+              ds.matchResults.push(mr);
+            }
+            const errors = getInvalidOrderMatcherTips(segmentIndex);
+            for (const t of errors) {
+              mr.errors.push(t);
+            }
+          }
+        } else {
+          if (r.type == MatchResultType.Regex) {
+            data.globalMatches.push(new SimpleGlobalMatch(property, i, r.matches!));
+          }
+        }
+      }
+    }
+
+    // selective
+    for (let i = 0; i < segments.length; i++) {
+      const ds = data.segments[i];
+
+      const sm = new PscContext.SelectiveMatcher({
+        propertyType: vm.propertyType,
+        readonly: readonly,
+        replaceCurrent: !vm.multiple && results.length > 0,
+      });
+
+      if (!readonly) {
+        if (missingPrerequisites.length == 0) {
+          if (vm.propertyType != PscPropertyType.RootPath) {
+            const r = sm.matchModes.regex;
+            if (commonRegexTargetText?.length > 0 ||
+              (vm.propertyType == PscPropertyType.Resource && resourceRegexTargetText?.length > 0)) {
+              r.text = vm.propertyType == PscPropertyType.Resource ? resourceRegexTargetText : commonRegexTargetText;
+              r.available = true;
+            } else {
+              r.errors.push(t('Match target is not found'));
+            }
+          }
+          const errors = getInvalidOrderMatcherTips(i);
+          if (vm.propertyType == PscPropertyType.RootPath) {
+            const oc = sm.matchModes.oneClick;
+            if (errors.length == 0) {
+              oc.available = true;
+            } else {
+              for (const t of errors) {
+                sm.errors.push(t);
+              }
+            }
+          } else {
+            const l = sm.matchModes.layer;
+            if (errors.length == 0) {
+              const layers: number[] = [];
+              if (rootSegmentIndex != undefined && rootSegmentIndex > -1) {
+                layers.push(i - rootSegmentIndex);
+                if (resourceSegmentIndex != undefined && resourceSegmentIndex > -1 &&
+                  vm.propertyType != PscPropertyType.Resource) {
+                  layers.push(i - resourceSegmentIndex);
+                }
+              }
+              l.layers = layers;
+              l.available = true;
+            } else {
+              for (const t of errors) {
+                l.errors.push(t);
+              }
+            }
+          }
+        } else {
+          sm.errors.push(missingPrerequisitesTip!);
+        }
+      } else {
+        sm.errors.push(t('Readonly'));
+      }
+
+      ds.selectiveMatchers.push(sm);
+    }
+  }
+
+  data.segments.forEach(s => {
+    s.disabled = s.selectiveMatchers.length == 0 || s.selectiveMatchers.every(e => !e.isConfigurable);
+  });
+
+  log('Context', data);
+  return data;
+};

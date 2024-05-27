@@ -8,5 +8,7 @@ html, body {
 
   --bakaui-color: var(--bakaui-foreground);
 
+  --bakaui-default: hsl(var(--nextui-default));
+
   --bakaui-background: hsl(var(--nextui-background));
 }

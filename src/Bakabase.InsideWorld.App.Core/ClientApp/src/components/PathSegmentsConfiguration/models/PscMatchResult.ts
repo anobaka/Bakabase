@@ -27,6 +27,5 @@ class PscMatchResult {
 }
 
 export {
-  MatchResultType,
   PscMatchResult,
 };

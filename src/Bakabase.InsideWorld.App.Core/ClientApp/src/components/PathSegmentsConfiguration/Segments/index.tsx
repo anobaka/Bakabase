@@ -2,32 +2,40 @@ import { FieldBinaryOutlined, RetweetOutlined, SisternodeOutlined, WarningOutlin
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OnDeleteMatcherValue } from '../models';
-import type { IMatcherValue, PropertyMatcherValues } from '../models/MatcherValue';
-import { MatcherValue } from '../models/MatcherValue';
-import { PscCoreData } from '@/components/PathSegmentsConfiguration/models/PscCoreData';
+import type PscMatcher from '../models/PscMatcher';
+import type { IPscPropertyMatcherValue } from '../models/PscPropertyMatcherValue';
+import { PscContext } from '../models/PscContext';
+import PscProperty from '../models/PscProperty';
+import { PscMatcherValue } from '../models/PscMatcherValue';
+import type { SegmentMatcherConfigurationProps } from '../SegmentMatcherConfiguration';
+import SegmentMatcherConfiguration from '../SegmentMatcherConfiguration';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
 import type { ChipProps } from '@/components/bakaui';
-import { Chip, Listbox, ListboxItem, Modal, Popover, Tooltip } from '@/components/bakaui';
+import { Chip, Listbox, ListboxItem, Popover, Tooltip } from '@/components/bakaui';
 import BusinessConstants from '@/components/BusinessConstants';
-import type { SegmentMatcherConfigurationProps } from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
-import SegmentMatcherConfiguration from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
 import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
-import type PscMatcher from '@/components/PathSegmentsConfiguration/models/PscMatcher';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import SelectiveMatcher = PscCoreData.SelectiveMatcher;
 import PropertySelector from '@/components/PropertySelector';
-import type PscProperty from '@/components/PathSegmentsConfiguration/models/PscProperty';
+import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
+import SelectiveMatcher = PscContext.SelectiveMatcher;
 
 type Props = {
-  segments: PscCoreData.Segment[];
+  segments: PscContext.Segment[];
   isDirectory: boolean;
-  value: PropertyMatcherValues[];
-  onChange: (value: PropertyMatcherValues[]) => any;
+  value: IPscPropertyMatcherValue[];
+  onChange: (value: IPscPropertyMatcherValue[]) => any;
   onDeleteMatcherValue: OnDeleteMatcherValue;
   visibleMatchers: PscMatcher[];
 };
 
-export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, visibleMatchers }: Props) => {
+export default ({
+                  segments,
+                  isDirectory,
+                  value,
+                  onChange,
+                  onDeleteMatcherValue,
+                  visibleMatchers,
+                }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -67,7 +75,7 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, 
     );
   };
 
-  const buildSelectiveMatcherRightContent = (m: PscCoreData.SelectiveMatcher): React.ReactNode[] => {
+  const buildSelectiveMatcherRightContent = (m: PscContext.SelectiveMatcher): React.ReactNode[] => {
     const {
       layer: l,
       regex: r,
@@ -98,31 +106,32 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, 
     return firstLineNodes;
   };
 
-  const selectMatcher = (c: PscMatcher, property: PscProperty, newValue: IMatcherValue) => {
-    let pvs = value.find(v => v.property.equals(property));
-    if (!pvs) {
-      pvs = {
-        property,
-        values: [],
-      };
-      value.push(pvs);
-    }
+  const selectMatcher = (c: PscMatcher, property: PscProperty, newValue: PscMatcherValue) => {
+    let pvs = value.filter(v => v.property.equals(property));
+    const nv = value.filter(v => !pvs.includes(v));
     if (!c.multiple) {
-      pvs.values.splice(0, pvs.values.length);
+      pvs.splice(0, pvs.length);
     }
 
-    const sameValue = pvs.values.find(v => v.equals(newValue));
+    const sameValue = pvs.find(v => v.property.equals(property) && v.value?.equals(newValue));
     if (!sameValue) {
-      pvs.values.push(new MatcherValue(newValue));
+      pvs.push({
+        property,
+        value: newValue,
+      });
     }
 
-    console.log('Changing value', value);
-    onChange([...value]);
+    nv.push(...pvs);
+    console.log('Changing value', nv, c, property, newValue, sameValue);
+    onChange([...nv]);
   };
 
   const renderSegments = (): any => {
     if (segments.length > 0) {
       const elements: any[] = [];
+
+      const rootPathSegmentIndex = segments.findIndex(s => s.matchResults.some(b => b.property.isRootPath));
+      const resourceSegmentIndex = segments.findIndex(s => s.matchResults.some(b => b.property.isResource));
 
       for (let i = 0; i < segments.length; i++) {
         if (i > 0) {
@@ -139,7 +148,7 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, 
         } = segments[i];
 
         const sc = (
-          <div className={`segment-container ${disabled ? 'disabled' : ''} rounded`} key={i}>
+          <div className={`${disabled ? 'cursor-default opacity-60' : 'cursor-pointer'} px-2 py-1 hover:bg-[var(--bakaui-default)] rounded`} key={i}>
             {matchResults.length > 0 && (
               <div className={'flex items-start gap-1 flex-wrap'}>
                 {matchResults.map(mr => {
@@ -148,8 +157,8 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, 
                     errors = [],
                   } = mr;
                   const hasError = errors.length > 0;
-                  const values = value.find(v => v.property.equals(mr.property))?.values || [];
-                  const v = mr.valueIndex == undefined ? values[0] : values[mr.valueIndex];
+                  const values = value.filter(v => v.property.equals(mr.property));
+                  const v = values[mr.valueIndex ?? 0]?.value;
                   let colorKey: ChipProps['color'] = 'primary';
                   if (mr.property.isReserved && (mr.property.id == ResourceProperty.Resource || mr.property.id == ResourceProperty.RootPath)) {
                     colorKey = 'success';
@@ -172,7 +181,7 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, 
                       {hasError && (<WarningOutlined className={'text-sm'} />)}
                       {label}
                       &nbsp;
-                      {v && (<span>{MatcherValue.ToString(v)}</span>)}
+                      {v && (<span>{PscMatcherValue.ToString(t, v)}</span>)}
                     </Chip>
                   );
                   if (hasError) {
@@ -225,47 +234,54 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, 
                       if (m.isConfigurable) {
                         const o = m.matchModes.oneClick;
                         if (o.available) {
-                          selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, {
-                            id: m.property,
-                          }, {
-                            type: ResourceMatcherValueType.FixedText,
+                          selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, PscProperty.fromPscType(m.propertyType), new PscMatcherValue({
+                            valueType: ResourceMatcherValueType.FixedText,
                             fixedText: segments.map(s => s.text).slice(0, i + 1).join(BusinessConstants.pathSeparator),
-                          });
+                          }));
                         } else {
                           if (m.useSmc) {
-                            const props: SegmentMatcherConfigurationProps = {
-                              property: {
-                                isReserved: true,
-                                id: m.property,
-                                name: t(ResourceProperty[m.property]),
-                              },
+                            const props: Omit<SegmentMatcherConfigurationProps, 'property' | 'onSubmit'> = {
                               segments: segments.map(s => s.text),
-                              segmentIndex: i,
-                              modesData: m.buildModesData(),
-                              onSubmit: value => {
-                                selectMatcher(visibleMatchers.find(t => t.propertyType == m.property)!, value);
+                              segmentMarkers: {
+                                [rootPathSegmentIndex]: 'root',
+                                [resourceSegmentIndex]: 'resource',
+                                [i]: 'current',
                               },
+                              modesData: m.buildModesData(),
                             };
-                            switch (m.property) {
-                              case ResourceProperty.RootPath:
-                              case ResourceProperty.ParentResource:
-                              case ResourceProperty.Resource: {
-                                createPortal(SegmentMatcherConfiguration, props);
+                            switch (m.propertyType) {
+                              case PscPropertyType.RootPath:
+                              case PscPropertyType.ParentResource:
+                              case PscPropertyType.Resource: {
+                                const property = PscProperty.fromPscType(m.propertyType);
+                                createPortal(SegmentMatcherConfiguration, {
+                                  ...props,
+                                  property,
+                                  onSubmit: value => {
+                                    selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, property, value);
+                                  },
+                                });
                                 break;
                               }
-                              case ResourceProperty.CustomProperty: {
+                              case PscPropertyType.CustomProperty: {
                                 createPortal(PropertySelector, {
                                   pool: 'custom',
                                   multiple: false,
                                   addable: true,
                                   onSubmit: async (selection) => {
                                     const p = selection[0];
-                                    props.property = {
+                                    const property = new PscProperty({
                                       id: p.id,
                                       isReserved: false,
                                       name: p.name!,
-                                    };
-                                    createPortal(SegmentMatcherConfiguration, props);
+                                    });
+                                    createPortal(SegmentMatcherConfiguration, {
+                                      ...props,
+                                      property,
+                                      onSubmit: value => {
+                                        selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, property, value);
+                                      },
+                                    });
                                   },
                                 });
                                 break;
@@ -290,7 +306,7 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, 
                             </ul>)}
                         >
                           <div className={'flex items-center gap-4'}>
-                            <span className={'text-base'}>{t(ResourceProperty[m.property])}</span>
+                            <span className={'text-base'}>{t(PscPropertyType[m.propertyType])}</span>
                             <div className={'flex items-center gap-2'}>{rightContents}</div>
                           </div>
                         </ListboxItem>
@@ -310,7 +326,7 @@ export default ({ segments, isDirectory, value, onChange, onDeleteMatcherValue, 
       }
 
       return (
-        <div className={'path-segments'}>
+        <div className={'flex flex-wrap items-center gap-1'}>
           {elements}
         </div>
       );

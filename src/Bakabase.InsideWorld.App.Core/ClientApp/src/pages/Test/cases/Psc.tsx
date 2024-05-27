@@ -1,6 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { IPscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
 import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
 import SegmentMatcherConfiguration, {
@@ -8,52 +7,47 @@ import SegmentMatcherConfiguration, {
 } from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
 import { Button, Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { IPscPropertyMatcherValue } from '@/components/PathSegmentsConfiguration/models/PscPropertyMatcherValue';
+import { convertToPscValueFromPathConfigurationDto } from '@/components/PathSegmentsConfiguration/helpers';
+import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
+
+const testData = {
+  path: 'D:/test',
+  rpmValues: [
+    { layer: 3, propertyId: ResourceProperty.Resource, isReservedProperty: true, valueType: ResourceMatcherValueType.Layer },
+    { regex: '^[^\\/]+\\/[^\\/]+\\/[^\\/]+\\/[^\\/]+$', propertyId: ResourceProperty.ParentResource, isReservedProperty: true, valueType: ResourceMatcherValueType.Regex },
+  ],
+};
 
 export default () => {
   const { t } = useTranslation();
   const [samplePath, setSamplePath] = useState('D:\\test\\new-media-library-path-configuration\\a\\bc\\New Text Document.txt');
-  const [value, setValue] = useState<IPscValue>({});
+  const [value, setValue] = useState<IPscPropertyMatcherValue[]>(convertToPscValueFromPathConfigurationDto(testData));
   const segmentsRef = useRef(samplePath.split('\\'));
   const { createPortal } = useBakabaseContext();
 
   const simpleMatchers = {
-    [ResourceProperty.Resource]: false,
-    [ResourceProperty.RootPath]: false,
-    [ResourceProperty.ParentResource]: false,
-    // [ResourceProperty.ReleaseDt]: false,
-    // [ResourceProperty.Publisher]: false,
-    // [ResourceProperty.Name]: false,
-    // [ResourceProperty.Language]: false,
-    // [ResourceProperty.Volume]: false,
-    // [ResourceProperty.Original]: false,
-    // [ResourceProperty.Series]: false,
-    // [ResourceProperty.Tag]: false,
-    // [MatcherType.Introduction]: false,
-    // [ResourceProperty.Rate]: false,
-    [ResourceProperty.CustomProperty]: false,
+    [PscPropertyType.Resource]: false,
+    [PscPropertyType.RootPath]: false,
+    [PscPropertyType.ParentResource]: false,
+    [PscPropertyType.CustomProperty]: false,
   };
   const matchers = Object.keys(simpleMatchers)
     .reduce<PathSegmentConfigurationPropsMatcherOptions[]>((ts, t) => {
       ts.push(new PathSegmentConfigurationPropsMatcherOptions({
-        property: parseInt(t, 10),
+        propertyType: parseInt(t, 10),
         readonly: simpleMatchers[t],
       }));
       return ts;
     }, []);
 
-  console.log(matchers);
+  console.log(matchers, value);
 
   const matchersRef = useRef(matchers);
   const onChangeCallback = useCallback(v => {
     setValue(v);
   }, []);
-  const valueRef = useRef<IPscValue>({
-    path: 'D:/test',
-    rpmValues: [
-      { layer: 3, property: ResourceProperty.Resource, valueType: ResourceMatcherValueType.Layer },
-      { regex: '^[^\\/]+\\/[^\\/]+\\/[^\\/]+\\/[^\\/]+$', property: ResourceProperty.ParentResource, valueType: ResourceMatcherValueType.Regex },
-    ],
-  });
+  const valueRef = useRef(value);
 
   return (
     <div className={'test-page'}>

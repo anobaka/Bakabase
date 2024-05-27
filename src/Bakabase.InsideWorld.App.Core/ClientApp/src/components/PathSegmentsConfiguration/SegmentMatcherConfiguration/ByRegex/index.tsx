@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { InfoCircleOutlined, QuestionCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { getResultFromExecAll } from '../../helpers';
 import { Button, Card, CardBody, CardHeader, Chip, Input, Radio, RadioGroup, Tooltip } from '@/components/bakaui';
-import { getResultFromExecAll } from '@/components/PathSegmentsConfiguration/utils';
 import { splitPathIntoSegments } from '@/components/utils';
 
 type Props = {

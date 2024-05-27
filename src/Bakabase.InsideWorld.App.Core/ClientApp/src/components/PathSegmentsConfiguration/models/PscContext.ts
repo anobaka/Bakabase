@@ -1,17 +1,14 @@
 import i18n from 'i18next';
-import type { TFunction } from 'react-i18next';
+import { allMatchers } from '../matchers';
+import { SegmentMatcherConfigurationModesData } from '../SegmentMatcherConfiguration';
+import type PscProperty from './PscProperty';
+import type { PscPropertyType } from './PscPropertyType';
 import { ResourceProperty } from '@/sdk/constants';
-import {
-  SegmentMatcherConfigurationModesData,
-} from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
-import { allMatchers } from '@/components/PathSegmentsConfiguration/models/instances';
-import PscProperty from '@/components/PathSegmentsConfiguration/models/PscProperty';
-import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
 
-class PscCoreData {
-  segments: PscCoreData.Segment[] = [];
-  globalErrors: PscCoreData.SimpleGlobalError[] = [];
-  globalMatches: PscCoreData.SimpleGlobalMatch[] = [];
+class PscContext {
+  segments: PscContext.Segment[] = [];
+  globalErrors: PscContext.SimpleGlobalError[] = [];
+  globalMatches: PscContext.SimpleGlobalMatch[] = [];
 
   get hasError(): boolean {
     const error = this.globalErrors?.length > 0 ||
@@ -25,7 +22,7 @@ class PscCoreData {
   }
 }
 
-namespace PscCoreData {
+namespace PscContext {
   class SimplePscCoreDataItem {
     property: PscProperty;
     valueIndex?: number;
@@ -42,7 +39,7 @@ namespace PscCoreData {
 
   export class Segment {
     text: string;
-    matchResults: PscCoreData.SimpleMatchResult[] = [];
+    matchResults: PscContext.SimpleMatchResult[] = [];
     selectiveMatchers: SelectiveMatcher[] = [];
     /**
      * Not truly disabled, it displays as disabled
@@ -85,19 +82,6 @@ namespace PscCoreData {
 
     get useSmc(): boolean {
       return this.isConfigurable && !this.matchModes.oneClick.available;
-    }
-
-    buildProperty(property?: { id: number; name: string }, t: TFunction<'translation', undefined>): PscProperty {
-      switch (this.propertyType) {
-        case PscPropertyType.RootPath:
-          return new PscProperty(ResourceProperty.RootPath, true, t(ResourceProperty.RootPath));
-        case PscPropertyType.Resource:
-          return new PscProperty(ResourceProperty.Resource, true, t(ResourceProperty.Resource));
-        case PscPropertyType.ParentResource:
-          return new PscProperty(ResourceProperty.ParentResource, true, t(ResourceProperty.ParentResource));
-        case PscPropertyType.CustomProperty:
-          return new PscProperty(property!.id, false, property!.name);
-      }
     }
 
     buildModesData(): SegmentMatcherConfigurationModesData {
@@ -165,6 +149,6 @@ function BuildMatchResultLabel(property: PscProperty, valueIndex: number | undef
 
 
 export {
-  PscCoreData,
+  PscContext,
   BuildMatchResultLabel,
 };

@@ -4,16 +4,21 @@ import { FolderOpenOutlined } from '@ant-design/icons';
 import { useUpdate } from 'react-use';
 import BApi from '@/sdk/BApi';
 import { buildLogger, splitPathIntoSegments, standardizePath } from '@/components/utils';
-import type { IPscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
 import { ResourceProperty } from '@/sdk/constants';
 import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
-import { MatcherValue } from '@/components/PathSegmentsConfiguration/models/MatcherValue';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import BusinessConstants from '@/components/BusinessConstants';
 import { Button, Chip, Divider, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { IPscPropertyMatcherValue } from '@/components/PathSegmentsConfiguration/models/PscPropertyMatcherValue';
+import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
+import { PscMatcherValue } from '@/components/PathSegmentsConfiguration/models/PscMatcherValue';
+import {
+  convertToPathConfigurationDtoFromPscValue,
+  convertToPscValueFromPathConfigurationDto,
+} from '@/components/PathSegmentsConfiguration/helpers';
 
 const log = buildLogger('PathConfigurationDialog');
 
@@ -24,7 +29,7 @@ interface Props extends DestroyableProps{
 }
 
 type Pc = {
-  path: string;
+  path?: string;
   rpmValues: any[];
 };
 
@@ -39,7 +44,7 @@ export default ({ library, pcIdx, ...props }: Props) => {
     log('Initialize with', props);
   }, []);
 
-  const save = async (patches: any) => {
+  const save = async (patches: Partial<Pc>) => {
     const newPcs = library.pathConfigurations.slice();
     newPcs.splice(pcIdx, 1, { ...pc, ...patches });
     log(`Saving ${pcIdx} of ${library.pathConfigurations.length} in ${library.name}`, pc, newPcs);
@@ -49,22 +54,23 @@ export default ({ library, pcIdx, ...props }: Props) => {
     forceUpdate();
   };
 
-  const showPsc = (segments: string[], pscValue: IPscValue, isDirectory: boolean) => {
+  const showPsc = (segments: string[], pc: Pc, isDirectory: boolean) => {
     const simpleMatchers = {
-      [ResourceProperty.RootPath]: true,
-      [ResourceProperty.Resource]: false,
-      [ResourceProperty.ParentResource]: false,
+      [PscPropertyType.RootPath]: true,
+      [PscPropertyType.Resource]: false,
+      [PscPropertyType.ParentResource]: false,
+      [PscPropertyType.CustomProperty]: false,
     };
     const matchers = Object.keys(simpleMatchers)
       .reduce<PathSegmentConfigurationPropsMatcherOptions[]>((ts, t) => {
         ts.push(new PathSegmentConfigurationPropsMatcherOptions({
-          property: parseInt(t, 10),
+          propertyType: parseInt(t, 10),
           readonly: simpleMatchers[t],
         }));
         return ts;
       }, []);
 
-    let tmpValue = pscValue;
+    let tmpValue = convertToPscValueFromPathConfigurationDto(pc);
 
     createPortal(Modal, {
       defaultVisible: true,
@@ -77,12 +83,14 @@ export default ({ library, pcIdx, ...props }: Props) => {
             tmpValue = value;
           }}
           matchers={matchers}
-          defaultValue={pscValue}
+          defaultValue={tmpValue}
         />
       ),
       onOk: async () => {
+        const dto = convertToPathConfigurationDtoFromPscValue(tmpValue);
         await save({
-          rpmValues: tmpValue.rpmValues,
+          rpmValues: dto.rpmValues ?? undefined,
+          path: dto.path ?? undefined,
         });
       },
     });
@@ -107,7 +115,7 @@ export default ({ library, pcIdx, ...props }: Props) => {
                 >{t(ResourceProperty[s.property])}{s.property == ResourceProperty.CustomProperty ? `:${s.key}` : ''}</SimpleLabel>
               </div>
               <div className="value">
-                {MatcherValue.ToString({
+                {PscMatcherValue.ToString(t, {
                   ...s,
                   type: s.valueType,
                 })}
@@ -199,13 +207,7 @@ export default ({ library, pcIdx, ...props }: Props) => {
                           const stdPrev = standardizePath(pc.path);
                           if (stdPrev && std.startsWith(stdPrev)) {
                             const segments = splitPathIntoSegments(e.path);
-                            const pscValue: IPscValue = {};
-                            if (pc) {
-                              pscValue.rpmValues = JSON.parse(JSON.stringify(pc.rpmValues ?? []));
-                              pscValue.path = pc.path;
-                            }
-
-                            showPsc(segments, pscValue, e.isDirectory);
+                            showPsc(segments, pc, e.isDirectory);
                           } else {
                             createPortal(Modal, {
                               defaultVisible: true,
