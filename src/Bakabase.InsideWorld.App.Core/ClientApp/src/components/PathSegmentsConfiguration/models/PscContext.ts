@@ -1,4 +1,5 @@
 import i18n from 'i18next';
+import type { TFunction } from 'react-i18next';
 import { allMatchers } from '../matchers';
 import { SegmentMatcherConfigurationModesData } from '../SegmentMatcherConfiguration';
 import type PscProperty from './PscProperty';
@@ -8,7 +9,7 @@ import { ResourceProperty } from '@/sdk/constants';
 class PscContext {
   segments: PscContext.Segment[] = [];
   globalErrors: PscContext.SimpleGlobalError[] = [];
-  globalMatches: PscContext.SimpleGlobalMatch[] = [];
+  globalMatches: PscContext.SimpleGlobalMatchResult[] = [];
 
   get hasError(): boolean {
     const error = this.globalErrors?.length > 0 ||
@@ -23,7 +24,7 @@ class PscContext {
 }
 
 namespace PscContext {
-  class SimplePscCoreDataItem {
+  class SimplePscContextItem {
     property: PscProperty;
     valueIndex?: number;
 
@@ -32,8 +33,8 @@ namespace PscContext {
       this.valueIndex = valueIndex;
     }
 
-    get label(): string {
-      return BuildMatchResultLabel(this.property, this.valueIndex);
+    toString(t: TFunction<'translation', undefined>): string {
+      return this.property.toString(t, this.valueIndex);
     }
   }
 
@@ -111,7 +112,7 @@ namespace PscContext {
     layers: number[] = [];
   }
 
-  export class SimpleGlobalMatch extends SimplePscCoreDataItem {
+  export class SimpleGlobalMatchResult extends SimplePscContextItem {
     matches: string[];
 
     constructor(property: PscProperty, valueIndex: number | undefined, matches: string[]) {
@@ -120,19 +121,7 @@ namespace PscContext {
     }
   }
 
-  export class SimpleGlobalError extends SimplePscCoreDataItem {
-    message: string;
-    deletable: boolean;
-
-    constructor(property: PscProperty, valueIndex: number | undefined, message: string, deletable: boolean) {
-      super(property, valueIndex);
-      this.message = message;
-      this.deletable = deletable;
-    }
-  }
-
-
-  export class SimpleMatchResult extends SimplePscCoreDataItem {
+  export class SimpleMatchResult extends SimplePscContextItem {
     errors: string[] = [];
     readonly: boolean = false;
 
@@ -141,14 +130,24 @@ namespace PscContext {
       this.errors = errors || [];
     }
   }
-}
 
-function BuildMatchResultLabel(property: PscProperty, valueIndex: number | undefined): string {
-  return `${property.isReserved ? i18n.t(ResourceProperty[property.id]) : property.name}${valueIndex == undefined ? '' : valueIndex + 1}`;
+  export class SimpleGlobalError extends SimplePscContextItem {
+    message: string;
+    deletable: boolean;
+
+    constructor(property: PscProperty, valueIndex: number | undefined, message: string, deletable: boolean) {
+      super(property, valueIndex);
+      this.message = message;
+      this.deletable = deletable;
+    }
+
+    equals(other: SimpleGlobalError): boolean {
+      return this.property.equals(other.property) && this.valueIndex == other.valueIndex && this.message == other.message;
+    }
+  }
 }
 
 
 export {
   PscContext,
-  BuildMatchResultLabel,
 };

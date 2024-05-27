@@ -1,7 +1,9 @@
 import type { PscMatchResult } from './PscMatchResult';
 import type PscProperty from './PscProperty';
+import type { IPscPropertyMatcherValue } from '@/components/PathSegmentsConfiguration/models/PscPropertyMatcherValue';
 
 export type IPscPropertyMatcherResult = {
-  property: PscProperty;
-  results?: (PscMatchResult | undefined)[];
+  pmv: IPscPropertyMatcherValue;
+  result?: PscMatchResult;
+  indexByProperty?: number;
 };

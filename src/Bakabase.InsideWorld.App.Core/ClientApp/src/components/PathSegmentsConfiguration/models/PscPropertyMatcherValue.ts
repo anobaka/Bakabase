@@ -3,5 +3,5 @@ import type PscProperty from './PscProperty';
 
 export type IPscPropertyMatcherValue = {
   property: PscProperty;
-  value?: PscMatcherValue;
+  value: PscMatcherValue;
 };

@@ -8,7 +8,7 @@ import CustomIcon from '@/components/CustomIcon';
 import SimpleLabel from '@/components/SimpleLabel';
 
 type Props = {
-  matches: PscContext.SimpleGlobalMatch[];
+  matches: PscContext.SimpleGlobalMatchResult[];
   value: IPscPropertyMatcherValue[];
   onDeleteMatcherValue: OnDeleteMatcherValue;
 };

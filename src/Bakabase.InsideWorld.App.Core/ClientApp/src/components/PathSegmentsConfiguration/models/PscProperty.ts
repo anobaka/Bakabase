@@ -1,3 +1,4 @@
+import type { TFunction } from 'react-i18next';
 import { PscPropertyType } from './PscPropertyType';
 import { ResourceProperty } from '@/sdk/constants';
 
@@ -48,6 +49,10 @@ class PscProperty implements IPscProperty {
 
   get isResource(): boolean {
     return this.isReserved && this.id == ResourceProperty.Resource;
+  }
+
+  toString(t: TFunction<'translation', undefined>, index?: number): string {
+    return `${this.isReserved ? t(ResourceProperty[this.id]) : this.name}${index == undefined ? '' : index + 1}`;
   }
 
   static fromPscType(type: PscPropertyType): PscProperty {
