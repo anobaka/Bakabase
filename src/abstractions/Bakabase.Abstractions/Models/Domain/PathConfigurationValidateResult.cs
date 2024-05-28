@@ -1,11 +1,13 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using static Bakabase.Abstractions.Models.Domain.PathConfigurationValidateResult.Entry;
 
 namespace Bakabase.Abstractions.Models.Domain
 {
-    public record PathConfigurationValidateResult(string RootPath, List<PathConfigurationValidateResult.Entry> Entries)
+    public record PathConfigurationValidateResult(string RootPath, List<PathConfigurationValidateResult.Entry> Entries, Dictionary<int, CustomProperty> CustomPropertyMap)
     {
         public string RootPath { get; set; } = RootPath;
         public List<Entry> Entries { get; set; } = Entries;
+        public Dictionary<int, CustomProperty> CustomPropertyMap { get; set; } = CustomPropertyMap;
 
         public record Entry(bool IsDirectory, string RelativePath)
         {
@@ -19,31 +21,25 @@ namespace Bakabase.Abstractions.Models.Domain
 
             public List<GlobalMatchedValue> GlobalMatchedValues { get; set; } = new();
 
-            public record SegmentMatchResult(string SegmentText, List<SegmentPropertyResult> Properties)
+            public record SegmentMatchResult(string SegmentText, List<SegmentPropertyKey> PropertyKeys)
             {
                 public string SegmentText { get; set; } = SegmentText;
-                public List<SegmentPropertyResult> Properties { get; set; } = Properties;
+                public List<SegmentPropertyKey> PropertyKeys { get; set; } = PropertyKeys;
             }
 
-            public record GlobalMatchedValue(SegmentPropertyResult Property, List<string> TextValues)
+            public record GlobalMatchedValue(SegmentPropertyKey PropertyKey, HashSet<string> TextValues)
             {
-                public SegmentPropertyResult Property { get; set; } = Property;
-                public List<string> TextValues { get; set; } = TextValues.Distinct().ToList();
+                public SegmentPropertyKey PropertyKey { get; set; } = PropertyKey;
+                public HashSet<string> TextValues { get; set; } = TextValues;
             }
 
-            public record SegmentPropertyResult(
-                bool IsReserved,
-                int Id,
-                string? Name,
-                object? PropertyValue,
-                StandardValueType ValueType)
+            public record SegmentPropertyKey(bool IsReserved, int Id)
             {
                 public int Id { get; set; } = Id;
                 public bool IsReserved { get; set; } = IsReserved;
-                public string? Name { get; set; } = Name;
-                public object? PropertyValue { get; set; } = PropertyValue;
-                public StandardValueType ValueType { get; set; } = ValueType;
             }
+
+            public Dictionary<int, object?> CustomPropertyIdValueMap { get; set; } = [];
         }
     }
 }

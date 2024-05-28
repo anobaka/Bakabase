@@ -2,7 +2,8 @@
 {
     public enum CustomPropertyValueScope
     {
-        Default = 0,
+        Manual = 0,
+        Synchronization = 1,
 
         BakabaseEnhancer = 1000
     }

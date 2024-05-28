@@ -18,10 +18,7 @@ namespace Bakabase.InsideWorld.Business.Models.Domain
     {
         public Resource? Parent { get; set; }
         public List<CustomProperty>? CustomPropertiesV2 { get; set; }
-        /// <summary>
-        /// Scoped values
-        /// </summary>
-        public List<List<CustomPropertyValue>>? CustomPropertyValues { get; set; }
+        public List<CustomPropertyValue>? CustomPropertyValues { get; set; }
         public Category? Category { get; set; }
 
         [Obsolete] public List<TagDto>? Tags { get; set; }

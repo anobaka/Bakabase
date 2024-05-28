@@ -13,11 +13,12 @@ using System.Xml;
 using System.Xml.Serialization;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Extensions;
-using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Business.Models.Dto;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
@@ -46,9 +47,10 @@ using NPOI.SS.Formula.Functions;
 using SharpCompress.Readers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using static Bakabase.InsideWorld.Models.Models.Aos.PathConfigurationValidateResult.Entry;
+using static Bakabase.Abstractions.Models.Domain.PathConfigurationValidateResult.Entry;
 using MediaLibrary = Bakabase.InsideWorld.Business.Models.Domain.MediaLibrary;
 using PathConfiguration = Bakabase.InsideWorld.Business.Models.Domain.PathConfiguration;
+using Resource = Bakabase.InsideWorld.Business.Models.Domain.Resource;
 using SearchOption = System.IO.SearchOption;
 
 namespace Bakabase.InsideWorld.Business.Services
@@ -65,6 +67,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private InsideWorldLocalizer _localizer;
         protected LogService LogService => GetRequiredService<LogService>();
         protected CustomPropertyService CustomPropertyService => GetRequiredService<CustomPropertyService>();
+        protected ConversionService ConversionService => GetRequiredService<ConversionService>();
 
         protected InsideWorldOptionsManagerPool InsideWorldAppService =>
             GetRequiredService<InsideWorldOptionsManagerPool>();
@@ -377,86 +380,92 @@ namespace Bakabase.InsideWorld.Business.Services
         }
 
         private void SetPropertiesByMatchers(string rootPath, PathConfigurationValidateResult.Entry e, Resource pr,
-            Dictionary<string, Resource> parentResources)
+            Dictionary<string, Resource> parentResources, Dictionary<int, CustomProperty> customPropertyMap)
         {
             if (parentResources == null) throw new ArgumentNullException(nameof(parentResources));
             // property - custom key/string.empty - values
-            // IsReservedProperty - PropertyId - Values
+            // PropertyId - Values
             // For Property=ParentResource, value will be an absolute path.
-            var matchedValues = new Dictionary<bool, Dictionary<int, List<string>>>();
-
+            var reservedPropertyValues = new Dictionary<ResourceProperty, List<string>>();
             for (var i = 0; i < e.SegmentAndMatchedValues.Count; i++)
             {
                 var t = e.SegmentAndMatchedValues[i];
-                if (t.Properties.Any())
+                if (t.PropertyKeys.Any())
                 {
-                    foreach (var p in t.Properties)
+                    foreach (var p in t.PropertyKeys.Where(x => x.IsReserved))
                     {
-                        var propertyIdAndValues = matchedValues.GetOrAdd(p.IsReserved, () => new());
-                        var v = t.Value;
-                        if (p is {IsReserved: true, Id: (int) ResourceProperty.Resource})
+                        var propertyIdAndValues = reservedPropertyValues.GetOrAdd((ResourceProperty) p.Id, () => new());
+                        var v = t.SegmentText;
+                        if (p is {IsReserved: true, Id: (int) ResourceProperty.ParentResource})
                         {
                             v = Path.Combine(rootPath,
-                                string.Join(InternalOptions.DirSeparator,
-                                    e.SegmentAndMatchedValues.Take(i + 1).Select(a => a.Value))).StandardizePath()!;
+                                    string.Join(InternalOptions.DirSeparator,
+                                        e.SegmentAndMatchedValues.Take(i + 1).Select(a => a.SegmentText)))
+                                .StandardizePath()!;
                         }
 
-                        propertyIdAndValues.GetOrAdd(p.Id, () => new()).Add(v);
+                        propertyIdAndValues.Add(v);
                     }
                 }
             }
 
-
-            foreach (var t in e.GlobalMatchedValues)
+            foreach (var t in e.GlobalMatchedValues.Where(p => p.PropertyKey.IsReserved))
             {
-                var propertyIdScopeValueMap = matchedValues.GetOrAdd(t.IsReservedProperty, () => new());
-                var values = propertyIdScopeValueMap.GetOrAdd(t.PropertyId, () => new());
-                values.AddRange(t.Values);
+                var values = reservedPropertyValues.GetOrAdd((ResourceProperty) t.PropertyKey.Id, () => new());
+                values.AddRange(t.TextValues);
             }
 
+            if (reservedPropertyValues.Any())
             {
-                if (matchedValues.TryGetValue(true, out var propertyIdAndValues))
+                foreach (var (propertyId, values) in reservedPropertyValues)
                 {
-                    foreach (var (propertyId, values) in propertyIdAndValues)
+                    var firstValue = values.First();
+                    switch (propertyId)
                     {
-                        var firstValue = values.First();
-                        switch ((ResourceProperty) propertyId)
+                        case ResourceProperty.ParentResource:
                         {
-                            case ResourceProperty.ParentResource:
+                            if (firstValue != pr.Path)
                             {
-                                if (firstValue != pr.Path)
+                                if (!parentResources.TryGetValue(firstValue, out var parent))
                                 {
-                                    if (!parentResources.TryGetValue(firstValue, out var parent))
+                                    parentResources[firstValue] = parent = new Resource()
                                     {
-                                        parentResources[firstValue] = parent = new Resource()
-                                        {
-                                            CategoryId = pr.CategoryId,
-                                            MediaLibraryId = pr.MediaLibraryId,
-                                            IsFile = false
-                                        };
-                                    }
-
-                                    pr.Parent = parent;
+                                        CategoryId = pr.CategoryId,
+                                        MediaLibraryId = pr.MediaLibraryId,
+                                        IsFile = false
+                                    };
                                 }
 
-                                break;
+                                pr.Parent = parent;
                             }
-                            case ResourceProperty.RootPath:
-                            case ResourceProperty.Resource:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
+
+                            break;
                         }
+                        case ResourceProperty.RootPath:
+                        case ResourceProperty.Resource:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
                 }
             }
 
+            if (e.CustomPropertyIdValueMap.Any())
             {
-                if (matchedValues.TryGetValue(false, out var propertyIdAndValues))
+                foreach (var (pId, rawValue) in e.CustomPropertyIdValueMap)
                 {
-                    var propertyIds = propertyIdAndValues.Keys.ToArray();
-                    var propertyMap = (await CustomPropertyService
-                        .GetByKeys(propertyIds, CustomPropertyAdditionalItem.None)).ToDictionary(t => t.Id, t => t);
+                    var property = customPropertyMap.GetValueOrDefault(pId);
+                    if (property != null)
+                    {
+                        var pv = new CustomPropertyValue
+                        {
+                            PropertyId = pId,
+                            ResourceId = pr.Id,
+                            Scope = (int) CustomPropertyValueScope.Synchronization,
+                            Value = rawValue
+                        };
+                        (pr.CustomPropertyValues ??= []).Add(pv);
+                    }
                 }
             }
         }
@@ -557,7 +566,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                         if (pathConfiguration.RpmValues?.Any() ==
                                             true)
                                         {
-                                            SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr, parentResources);
+                                            SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr, parentResources, pscResult.Data.CustomPropertyMap);
                                         }
 
                                         patchingResources.TryAdd(pr.Path, pr);
@@ -773,6 +782,11 @@ namespace Bakabase.InsideWorld.Business.Services
             var entries = new List<PathConfigurationValidateResult.Entry>();
             if (dir.Exists)
             {
+                var customPropertyIds =
+                    pc.RpmValues?.Where(r => !r.IsReservedProperty).Select(r => r.PropertyId).ToHashSet() ?? [];
+                var customPropertyMap =
+                    (await CustomPropertyService.GetByKeys(customPropertyIds, CustomPropertyAdditionalItem.None))
+                    .ToDictionary(d => d.Id, d => d);
                 var resourceFullnameList =
                     DiscoverAllResourceFullnameList(pc.Path, resourceMatcherValue, maxResourceCount);
 
@@ -834,24 +848,64 @@ namespace Bakabase.InsideWorld.Business.Services
                         var segment = relativeSegments[i];
                         var segmentProperties = tmpSegmentProperties.TryGetValue(i, out var t)
                             ? t.SelectMany(a =>
-                                a.Value.Select(b =>
-                                    new SegmentMatchResult.SegmentPropertyResult(a.Key, b))).ToList()
-                            : new List<SegmentMatchResult.SegmentPropertyResult>();
+                            {
+                                var (isReserved, pIds) = a;
+                                return pIds.Select(b => new SegmentPropertyKey(isReserved, b));
+                            }).ToList()
+                            : [];
 
                         var r = new SegmentMatchResult(segment, segmentProperties);
                         list.Add(r);
                     }
 
-                    var globalValues = tmpGlobalMatchedValues.SelectMany(a => a.Value.Select(b =>
-                            new GlobalMatchedValue(a.Key, b.Key, b.Value)))
+                    var globalValues = tmpGlobalMatchedValues.SelectMany(a =>
+                        {
+                            var (isReserved, pIdAndValues) = a;
+                            return pIdAndValues.Select(b =>
+                            {
+                                var (pId, textValues) = b;
+                                return new GlobalMatchedValue(new SegmentPropertyKey(isReserved, pId), textValues);
+                            });
+                        })
                         .ToList();
+
+                    var propertyIdRawValueMap = new Dictionary<int, HashSet<string>>();
+                    foreach (var segment in list)
+                    {
+                        foreach (var p in segment.PropertyKeys.Where(p => !p.IsReserved))
+                        {
+                            propertyIdRawValueMap.GetOrAdd(p.Id, () => []).Add(segment.SegmentText);
+                        }
+                    }
+
+                    foreach (var gv in globalValues.Where(x => !x.PropertyKey.IsReserved))
+                    {
+                        var set = propertyIdRawValueMap.GetOrAdd(gv.PropertyKey.Id, () => []);
+                        foreach (var x in gv.TextValues)
+                        {
+                            set.Add(x);
+                        }
+                    }
+
+                    var customPropertyIdValueMap = new Dictionary<int, object?>();
+                    foreach (var (pId, listString) in propertyIdRawValueMap)
+                    {
+                        var property = customPropertyMap.GetValueOrDefault(pId);
+                        if (property != null)
+                        {
+                            customPropertyIdValueMap[property.Id] =
+                                (await ConversionService.CheckConversionLoss(listString.ToList(),
+                                    StandardValueType.ListString, property.ValueType)).NewValue;
+                        }
+                    }
 
                     var entry = new PathConfigurationValidateResult.Entry(Directory.Exists(f), relativePath)
                     {
                         SegmentAndMatchedValues = list,
                         IsDirectory = Directory.Exists(f),
                         RelativePath = relativePath,
-                        GlobalMatchedValues = globalValues
+                        GlobalMatchedValues = globalValues,
+                        CustomPropertyIdValueMap = customPropertyIdValueMap
                     };
 
                     entries.Add(entry);
@@ -862,8 +916,12 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                 }
 
+                var relativeCustomPropertyIds = entries.SelectMany(x => x.CustomPropertyIdValueMap.Keys).ToHashSet();
+
                 return new SingletonResponse<PathConfigurationValidateResult>(
-                    new PathConfigurationValidateResult(dir.FullName.StandardizePath()!, entries));
+                    new PathConfigurationValidateResult(dir.FullName.StandardizePath()!, entries,
+                        customPropertyMap.Where(c => relativeCustomPropertyIds.Contains(c.Key))
+                            .ToDictionary(d => d.Key, d => (CustomProperty) d.Value)));
             }
 
             return SingletonResponseBuilder<PathConfigurationValidateResult>.NotFound;
