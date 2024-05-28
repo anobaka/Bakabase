@@ -8,7 +8,6 @@ import type { BakabaseInsideWorldBusinessModelsDomainPathConfiguration } from '@
 import { PscContext } from '@/components/PathSegmentsConfiguration/models/PscContext';
 import type { PscMatchResult } from '@/components/PathSegmentsConfiguration/models/PscMatchResult';
 import PscMatcher from '@/components/PathSegmentsConfiguration/models/PscMatcher';
-import type { IPscPropertyMatcherResult } from '@/components/PathSegmentsConfiguration/models/PscPropertyMatcherResult';
 import { matchersAfter, matchersBefore } from '@/components/PathSegmentsConfiguration/matchers';
 import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
 import SimpleGlobalError = PscContext.SimpleGlobalError;
@@ -98,16 +97,32 @@ export function getResultFromExecAll(regex: RegExp | string, str: string): {
 
 export function convertToPathConfigurationDtoFromPscValue(pmvs: IPscPropertyMatcherValue[]): BakabaseInsideWorldBusinessModelsDomainPathConfiguration {
   const rootPath = (pmvs.filter(v => v.property.isRootPath))[0]?.value?.fixedText;
-  const dto = {
+  const dto: BakabaseInsideWorldBusinessModelsDomainPathConfiguration = {
     path: rootPath,
     // regex: resourceRegex,
-    rpmValues: pmvs.filter(v => !v.property.isRootPath),
+    rpmValues: pmvs.filter(v => !v.property.isRootPath).map(v => {
+      return {
+        propertyId: v.property.id,
+        isReservedProperty: v.property.isReserved,
+        fixedText: v.value.fixedText,
+        layer: v.value.layer,
+        regex: v.value.regex,
+        valueType: v.value.valueType,
+      };
+    }),
   };
 
   console.log('Convert component value to dto value', pmvs, dto);
   // @ts-ignore
   return dto;
 }
+
+type IPscPropertyMatcherResult = {
+  pmv: IPscPropertyMatcherValue;
+  result?: PscMatchResult;
+  indexByProperty?: number;
+};
+
 
 export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherValue[],
                                 visibleMatchers: PscMatcher[], configurableMatchers: PscMatcher[],
@@ -175,6 +190,14 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
       }
       pmvIndexByPropertyKeyMapCounter[key] = index + 1;
       pmvIndexByPropertyMap.set(pmv, index);
+    }
+
+    for (const pmv of pmvs) {
+      const { key } = pmv.property;
+      const count = pmvIndexByPropertyKeyMapCounter[key];
+      if (count == 1) {
+        pmvIndexByPropertyMap.delete(pmv);
+      }
     }
 
     pmvs!.filter(v => !v.property.isResource && !v.property.isRootPath).forEach((pmv) => {

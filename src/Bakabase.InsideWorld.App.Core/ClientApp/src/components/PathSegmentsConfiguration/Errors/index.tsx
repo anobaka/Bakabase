@@ -30,7 +30,7 @@ export default ({ errors, value, onDeleteMatcherValue }: Props) => {
                   <WarningOutlined className={'text-sm'} />
                 )}
               >
-                {e.label}
+                {e.property.toString(t, e.valueIndex)}
               </Chip>
               <Chip
                 radius={'sm'}

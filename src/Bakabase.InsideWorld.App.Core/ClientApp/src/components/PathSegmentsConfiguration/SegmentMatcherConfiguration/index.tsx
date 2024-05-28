@@ -48,7 +48,7 @@ type SegmentIndexMarker = 'root' | 'resource' | 'current';
 
 const getDefaultValue = (modesData: SegmentMatcherConfigurationProps['modesData']): IValue | undefined => {
   if (modesData) {
-    if (modesData.layers.length == 1) {
+    if (modesData.layers.length > 0) {
       return {
         layer: modesData.layers[0],
       };
@@ -72,7 +72,7 @@ const PathSegmentRenderOptions: Record<SegmentIndexMarker, { color: ChipProps['c
   },
 };
 
-const SegmentMatcherConfiguration = ({
+export default ({
                                        defaultValue,
                                        modesData = new SegmentMatcherConfigurationModesData(),
                                        onSubmit,
@@ -86,7 +86,7 @@ const SegmentMatcherConfiguration = ({
   const [mode, setMode] = useState(defaultMode);
   const [value, setValue] = useState<IValue | undefined>(defaultValue ?? getDefaultValue(modesData));
 
-  // console.log(props);
+  // console.log(modesData);
 
   useUpdateEffect(() => {
     switch (mode) {
@@ -183,5 +183,3 @@ const SegmentMatcherConfiguration = ({
     </Modal>
   );
 };
-
-export default SegmentMatcherConfiguration;

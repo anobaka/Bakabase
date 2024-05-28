@@ -1,5 +1,5 @@
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { useUpdate } from 'react-use';
+import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
 import Tips from './Tips';
 import Errors from './Errors';
@@ -16,6 +16,7 @@ import BottomOperations from './BottomOperations';
 import { buildLogger, useTraceUpdate } from '@/components/utils';
 import { Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import BApi from '@/sdk/BApi';
 
 export class PathSegmentConfigurationPropsMatcherOptions {
   propertyType: PscPropertyType;
@@ -61,12 +62,13 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
   const { createPortal } = useBakabaseContext();
 
   const [value, setValue] = useState<IPscPropertyMatcherValue[]>(defaultValue ?? []);
-
   const valueRef = useRef(value);
   const visibleMatchers = matchers.map((a) => allMatchers.find((b) => b.propertyType == a.propertyType)!)
     .sort((a, b) => a.checkOrder - b.checkOrder);
   const configurableMatchers = matchers.filter((a) => !a.readonly)
     .map((a) => visibleMatchers.find((b) => b.propertyType == a.propertyType)!);
+
+  const [customPropertyNameMap, setCustomPropertyNameMap] = useState<Record<number, string>>({});
 
   useEffect(() => {
     valueRef.current = value;
@@ -74,6 +76,25 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
     onChange(value);
   }, [value]);
 
+  useUpdateEffect(() => {
+    value.forEach(v => {
+      if (!v.property.isReserved) {
+        v.property.name ??= customPropertyNameMap[v.property.id];
+      }
+    });
+    forceUpdate();
+  }, [customPropertyNameMap]);
+
+  useEffect(() => {
+    BApi.customProperty.getAllCustomPropertiesV2().then(x => {
+      const data = x.data ?? [];
+      const pnMap = data.reduce<Record<number, string>>((s, t) => {
+        s[t.id!] = t.name!;
+        return s;
+      }, {});
+      setCustomPropertyNameMap(pnMap);
+    });
+  }, []);
 
   useImperativeHandle(ref, (): IPathSegmentConfigurationRef => ({
     get context(): PscContext {

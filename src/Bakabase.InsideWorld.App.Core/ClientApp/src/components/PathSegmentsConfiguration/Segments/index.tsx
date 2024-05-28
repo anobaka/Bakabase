@@ -1,5 +1,5 @@
 import { FieldBinaryOutlined, RetweetOutlined, SisternodeOutlined, WarningOutlined } from '@ant-design/icons';
-import React from 'react';
+import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OnDeleteMatcherValue } from '../models';
 import type PscMatcher from '../models/PscMatcher';
@@ -38,6 +38,7 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const rootDomRef = useRef<HTMLDivElement>(null);
 
   const buildMatchModeTip = (name: string, icon: React.ReactNode, available: boolean, errors: string[]) => {
     const inner = (
@@ -153,7 +154,7 @@ export default ({
               <div className={'flex items-start gap-1 flex-wrap'}>
                 {matchResults.map(mr => {
                   const {
-                    label,
+                    property,
                     errors = [],
                   } = mr;
                   const hasError = errors.length > 0;
@@ -179,7 +180,7 @@ export default ({
                       } : undefined}
                     >
                       {hasError && (<WarningOutlined className={'text-sm'} />)}
-                      {label}
+                      {property.toString(t, mr.valueIndex)}
                       &nbsp;
                       {v && (<span>{PscMatcherValue.ToString(t, v)}</span>)}
                     </Chip>
@@ -214,111 +215,114 @@ export default ({
                 })}
               </div>
             )}
-            <Popover
-              trigger={(
-                <div className="text-lg">
-                  {text}
-                </div>
-              )}
-            >
-              <div className="p-4">
-                <div className={'mb-2'}>
-                  <div className={'font-bold text-xl'}>{t('Mark this path segment as')}</div>
-                </div>
-                <div>
-                  <Listbox
-                    variant={'bordered'}
-                    onAction={k => {
-                      console.log('on action', k);
-                      const m: SelectiveMatcher = selectiveMatchers[k];
-                      if (m.isConfigurable) {
-                        const o = m.matchModes.oneClick;
-                        if (o.available) {
-                          selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, PscProperty.fromPscType(m.propertyType), new PscMatcherValue({
-                            valueType: ResourceMatcherValueType.FixedText,
-                            fixedText: segments.map(s => s.text).slice(0, i + 1).join(BusinessConstants.pathSeparator),
-                          }));
-                        } else {
-                          if (m.useSmc) {
-                            const props: Omit<SegmentMatcherConfigurationProps, 'property' | 'onSubmit'> = {
-                              segments: segments.map(s => s.text),
-                              segmentMarkers: {
-                                [rootPathSegmentIndex]: 'root',
-                                [resourceSegmentIndex]: 'resource',
-                                [i]: 'current',
-                              },
-                              modesData: m.buildModesData(),
-                            };
-                            switch (m.propertyType) {
-                              case PscPropertyType.RootPath:
-                              case PscPropertyType.ParentResource:
-                              case PscPropertyType.Resource: {
-                                const property = PscProperty.fromPscType(m.propertyType);
-                                createPortal(SegmentMatcherConfiguration, {
-                                  ...props,
-                                  property,
-                                  onSubmit: value => {
-                                    selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, property, value);
-                                  },
-                                });
-                                break;
-                              }
-                              case PscPropertyType.CustomProperty: {
-                                createPortal(PropertySelector, {
-                                  pool: 'custom',
-                                  multiple: false,
-                                  addable: true,
-                                  onSubmit: async (selection) => {
-                                    const p = selection[0];
-                                    const property = new PscProperty({
-                                      id: p.id,
-                                      isReserved: false,
-                                      name: p.name!,
-                                    });
-                                    createPortal(SegmentMatcherConfiguration, {
-                                      ...props,
-                                      property,
-                                      onSubmit: value => {
-                                        selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, property, value);
-                                      },
-                                    });
-                                  },
-                                });
-                                break;
+            {rootDomRef.current && (
+              <Popover
+                trigger={(
+                  <div className="text-lg">
+                    {text}
+                  </div>
+                )}
+                portalContainer={rootDomRef.current}
+              >
+                <div className="p-4">
+                  <div className={'mb-2'}>
+                    <div className={'font-bold text-xl'}>{t('Mark this path segment as')}</div>
+                  </div>
+                  <div>
+                    <Listbox
+                      variant={'bordered'}
+                      onAction={k => {
+                        console.log('on action', k);
+                        const m: SelectiveMatcher = selectiveMatchers[k];
+                        if (m.isConfigurable) {
+                          const o = m.matchModes.oneClick;
+                          if (o.available) {
+                            selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, PscProperty.fromPscType(m.propertyType), new PscMatcherValue({
+                              valueType: ResourceMatcherValueType.FixedText,
+                              fixedText: segments.map(s => s.text).slice(0, i + 1).join(BusinessConstants.pathSeparator),
+                            }));
+                          } else {
+                            if (m.useSmc) {
+                              const props: Omit<SegmentMatcherConfigurationProps, 'property' | 'onSubmit'> = {
+                                segments: segments.map(s => s.text),
+                                segmentMarkers: {
+                                  [rootPathSegmentIndex]: 'root',
+                                  [resourceSegmentIndex]: 'resource',
+                                  [i]: 'current',
+                                },
+                                modesData: m.buildModesData(),
+                              };
+                              switch (m.propertyType) {
+                                case PscPropertyType.RootPath:
+                                case PscPropertyType.ParentResource:
+                                case PscPropertyType.Resource: {
+                                  const property = PscProperty.fromPscType(m.propertyType);
+                                  createPortal(SegmentMatcherConfiguration, {
+                                    ...props,
+                                    property,
+                                    onSubmit: value => {
+                                      selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, property, value);
+                                    },
+                                  });
+                                  break;
+                                }
+                                case PscPropertyType.CustomProperty: {
+                                  createPortal(PropertySelector, {
+                                    pool: 'custom',
+                                    multiple: false,
+                                    addable: true,
+                                    onSubmit: async (selection) => {
+                                      const p = selection[0];
+                                      const property = new PscProperty({
+                                        id: p.id,
+                                        isReserved: false,
+                                        name: p.name!,
+                                      });
+                                      createPortal(SegmentMatcherConfiguration, {
+                                        ...props,
+                                        property,
+                                        onSubmit: value => {
+                                          selectMatcher(visibleMatchers.find(t => t.propertyType == m.propertyType)!, property, value);
+                                        },
+                                      });
+                                    },
+                                  });
+                                  break;
+                                }
                               }
                             }
                           }
                         }
-                      }
-                    }}
-                    disabledKeys={selectiveMatchers.filter(m => !m.isConfigurable).map(m => selectiveMatchers.indexOf(m)).map(x => x.toString())}
-                  >
-                    {selectiveMatchers.map((m, i) => {
-                      const rightContents = buildSelectiveMatcherRightContent(m);
-                      return (
-                        <ListboxItem
-                          key={i}
-                          description={m.errors.length > 0 && (
-                            <ul style={{ color: 'var(--bakaui-danger)' }} className={'mt-1 flex flex-wrap gap-1'}>
-                              {m.errors.map(e => (
-                                <li>{e}</li>
-                              ))}
-                            </ul>)}
-                        >
-                          <div className={'flex items-center gap-4'}>
-                            <span className={'text-base'}>{t(PscPropertyType[m.propertyType])}</span>
-                            <div className={'flex items-center gap-2'}>{rightContents}</div>
-                          </div>
-                        </ListboxItem>
-                      );
-                    })}
-                  </Listbox>
+                      }}
+                      disabledKeys={selectiveMatchers.filter(m => !m.isConfigurable).map(m => selectiveMatchers.indexOf(m)).map(x => x.toString())}
+                    >
+                      {selectiveMatchers.map((m, i) => {
+                        const rightContents = buildSelectiveMatcherRightContent(m);
+                        return (
+                          <ListboxItem
+                            key={i}
+                            description={m.errors.length > 0 && (
+                              <ul style={{ color: 'var(--bakaui-danger)' }} className={'mt-1 flex flex-wrap gap-1'}>
+                                {m.errors.map(e => (
+                                  <li>{e}</li>
+                                ))}
+                              </ul>)}
+                          >
+                            <div className={'flex items-center gap-4'}>
+                              <span className={'text-base'}>{t(PscPropertyType[m.propertyType])}</span>
+                              <div className={'flex items-center gap-2'}>{rightContents}</div>
+                            </div>
+                          </ListboxItem>
+                        );
+                      })}
+                    </Listbox>
+                  </div>
+                  <div
+                    className={'italic opacity-60 mt-1'}
+                  >{t('Some properties may not able to set by layer, but you still can set it by regex.')}</div>
                 </div>
-                <div
-                  className={'italic opacity-60 mt-1'}
-                >{t('Some properties may not able to set by layer, but you still can set it by regex.')}</div>
-              </div>
-            </Popover>
+              </Popover>
+            )}
           </div>
         );
 
@@ -340,6 +344,7 @@ export default ({
   return (
     <div
       className="path-segments-container flex items-center gap-2 border-small px-2 py-1 rounded-small border-default-200"
+      ref={rootDomRef}
     >
       <div className="w-[24px] h-[24px] flex items-center justify-center">
         <FileSystemEntryIcon

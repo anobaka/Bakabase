@@ -4,13 +4,13 @@ using Newtonsoft.Json;
 
 namespace Bakabase.Abstractions.Models.Domain
 {
-    public abstract record CustomPropertyValue
+    public record CustomPropertyValue
     {
         public int Id { get; set; }
         public int PropertyId { get; set; }
         public int ResourceId { get; set; }
         public CustomProperty? Property { get; set; }
-        public virtual object? Value => null;
+        public virtual object? Value { get; set; }
         public int Scope { get; set; }
 
         public string BizKey => $"{ResourceId}-{PropertyId}-{Scope}";
@@ -38,7 +38,18 @@ namespace Bakabase.Abstractions.Models.Domain
 
     public abstract record CustomPropertyValue<TValue> : CustomPropertyValue
     {
-        public TValue? TypedValue { get; set; }
+        private TValue? _typedValue;
+
+        public TValue? TypedValue
+        {
+            get => _typedValue;
+            set
+            {
+                _typedValue = value;
+                Value = value;
+            }
+        }
+
         public override object? Value => TypedValue;
     }
 }

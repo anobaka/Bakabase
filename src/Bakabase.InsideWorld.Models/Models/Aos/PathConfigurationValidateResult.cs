@@ -30,23 +30,26 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
                 public string Value { get; set; } = Value;
                 public List<SegmentPropertyResult> Properties { get; set; } = Properties;
 
-                public record SegmentPropertyResult(ResourceProperty Property, List<string> Keys)
+                public record SegmentPropertyResult(bool IsReserved, int Id, string? Name)
                 {
-                    public ResourceProperty Property { get; set; } = Property;
-                    public List<string> Keys { get; set; } = Keys.Distinct().ToList();
+                    public int Id { get; set; } = Id;
+                    public bool IsReserved { get; set; } = IsReserved;
+                    public string? Name { get; set; } = Name;
+                    public object? Value { get; set; }
+                    public StandardvalueType
                 }
             }
 
-            public record GlobalMatchedValue(ResourceProperty Property, List<string> Values, string? Key)
+            public record GlobalMatchedValue(
+                bool IsReservedProperty,
+                int PropertyId,
+                string? PropertyName,
+                HashSet<string> V)
             {
-                public ResourceProperty Property { get; set; } = Property;
-
-                /// <summary>
-                ///  Custom Key
-                /// </summary>
-                public string? Key { get; set; } = Key;
-
-                public List<string> Values { get; set; } = Values.Distinct().ToList();
+                public int PropertyId { get; set; } = PropertyId;
+                public bool IsReservedProperty { get; set; } = IsReservedProperty;
+                public string? PropertyName { get; set; } = PropertyName;
+                public List<string> Values { get; set; } = V.Distinct().ToList();
             }
         }
     }

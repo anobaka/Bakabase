@@ -1,21 +1,37 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
-import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
+import ReactJson from 'react-json-view';
+import { ResourceMatcherValueType } from '@/sdk/constants';
+import PathSegmentsConfiguration, {
+  PathSegmentConfigurationPropsMatcherOptions,
+} from '@/components/PathSegmentsConfiguration';
 import SegmentMatcherConfiguration, {
   SegmentMatcherConfigurationModesData,
 } from '@/components/PathSegmentsConfiguration/SegmentMatcherConfiguration';
-import { Button, Modal } from '@/components/bakaui';
+import { Button } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IPscPropertyMatcherValue } from '@/components/PathSegmentsConfiguration/models/PscPropertyMatcherValue';
-import { convertToPscValueFromPathConfigurationDto } from '@/components/PathSegmentsConfiguration/helpers';
+import {
+  convertToPathConfigurationDtoFromPscValue,
+  convertToPscValueFromPathConfigurationDto,
+} from '@/components/PathSegmentsConfiguration/helpers';
 import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
 
 const testData = {
   path: 'D:/test',
   rpmValues: [
-    { layer: 3, propertyId: ResourceProperty.Resource, isReservedProperty: true, valueType: ResourceMatcherValueType.Layer },
-    { regex: '^[^\\/]+\\/[^\\/]+\\/[^\\/]+\\/[^\\/]+$', propertyId: ResourceProperty.ParentResource, isReservedProperty: true, valueType: ResourceMatcherValueType.Regex },
+    {
+      layer: 3,
+      propertyId: 3,
+      isReservedProperty: true,
+      valueType: ResourceMatcherValueType.Layer,
+    },
+    {
+      regex: '^[^\\/]+\\/[^\\/]+\\/[^\\/]+\\/[^\\/]+$',
+      propertyId: 2,
+      isReservedProperty: true,
+      valueType: ResourceMatcherValueType.Regex,
+    },
   ],
 };
 
@@ -59,59 +75,67 @@ export default () => {
           defaultValue={valueRef.current}
           onChange={onChangeCallback}
         />
-        <div className="values">
-          <div className="matcher">
-            <div className="label">Raw</div>
-            <div className="value">
-              {JSON.stringify(value)}
-            </div>
+        <Button
+          size={'sm'}
+          onClick={() => {
+            createPortal(SegmentMatcherConfiguration, {
+              segments: samplePath.split('\\'),
+              segmentMarkers: {
+
+              },
+              property: {
+                id: 1,
+                isReserved: true,
+                name: t('Resource'),
+              },
+              modesData: new SegmentMatcherConfigurationModesData(
+                {
+                  layers: [
+                    1,
+                  ],
+                  regex: {
+                    text: 'new-media-library-path-configuration/a/bc/New Text Document.txt',
+                  },
+                },
+              ),
+              onSubmit: value => {
+                // selectMatcher(visibleMatchers.find(t => t.property == m.property)!, value);
+              },
+            });
+          }}
+        >
+          Simple SMC
+        </Button>
+        <div className={'flex items-start'}>
+          <div className={''}>
+            <ReactJson
+              name={'Raw'}
+              src={value}
+              theme={'monokai'}
+            />
           </div>
-          {Object.keys(value).map(m => {
-            const t = parseInt(m);
-            let v;
-            if (t == ResourceProperty.RootPath || t == ResourceProperty.Resource) {
-              v = value[t][0];
-            } else {
-              v = JSON.stringify(value[m]);
-            }
+          <div>
+            <ReactJson
+              name={'Dto'}
+              theme={'monokai'}
+              src={convertToPathConfigurationDtoFromPscValue(value)}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2">
+          {value.map(m => {
             return (
-              <div className={'matcher'}>
-                <div className="label">{ResourceProperty[m]}</div>
-                <div className="value">{v}</div>
+              <div className={''}>
+                <ReactJson
+                  name={m.property.toString(t, undefined)}
+                  theme={'monokai'}
+                  src={m.value}
+                />
               </div>
             );
           })}
         </div>
       </div>
-      <Button
-        size={'sm'}
-        onClick={() => {
-          createPortal(SegmentMatcherConfiguration, {
-            segments: samplePath.split('\\'),
-            segmentIndex: 2,
-            property: {
-              id: 1,
-              isReserved: true,
-              name: t('Resource'),
-            },
-            modesData: new SegmentMatcherConfigurationModesData(
-              {
-                layers: [
-                  1,
-                ],
-                regex: {
-                  text: 'new-media-library-path-configuration/a/bc/New Text Document.txt',
-                },
-              },
-            ),
-            onSubmit: value => {
-              // selectMatcher(visibleMatchers.find(t => t.property == m.property)!, value);
-            },
-          });
-      }}
-      >
-        SMC
-      </Button>
     </div>
   );
 };

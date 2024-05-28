@@ -1,9 +1,7 @@
+import type { PopoverProps as NextUIPopoverProps } from '@nextui-org/react';
 import { Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
-import type { OverlayPlacement } from '@/components/bakaui/types';
 
-interface PopoverProps {
-  placement?: OverlayPlacement;
-  showArrow?: boolean;
+interface PopoverProps extends NextUIPopoverProps{
   trigger: any;
   children: any;
   visible?: boolean;

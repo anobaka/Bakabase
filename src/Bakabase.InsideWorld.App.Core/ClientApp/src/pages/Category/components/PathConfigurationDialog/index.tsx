@@ -19,6 +19,7 @@ import {
   convertToPathConfigurationDtoFromPscValue,
   convertToPscValueFromPathConfigurationDto,
 } from '@/components/PathSegmentsConfiguration/helpers';
+import type { BakabaseInsideWorldModelsModelsAosPropertyPathSegmentMatcherValue } from '@/sdk/Api';
 
 const log = buildLogger('PathConfigurationDialog');
 
@@ -28,9 +29,10 @@ interface Props extends DestroyableProps{
   onSaved: () => Promise<any>;
 }
 
+
 type Pc = {
   path?: string;
-  rpmValues: any[];
+  rpmValues: BakabaseInsideWorldModelsModelsAosPropertyPathSegmentMatcherValue[];
 };
 
 export default ({ library, pcIdx, ...props }: Props) => {
@@ -88,10 +90,11 @@ export default ({ library, pcIdx, ...props }: Props) => {
       ),
       onOk: async () => {
         const dto = convertToPathConfigurationDtoFromPscValue(tmpValue);
-        await save({
-          rpmValues: dto.rpmValues ?? undefined,
-          path: dto.path ?? undefined,
-        });
+        console.log(5555, dto);
+        // await save({
+        //   rpmValues: dto.rpmValues ?? undefined,
+        //   path: dto.path ?? undefined,
+        // });
       },
     });
   };
@@ -102,7 +105,7 @@ export default ({ library, pcIdx, ...props }: Props) => {
       return null;
     }
 
-    console.log(values);
+    // console.log(values);
 
     return (
       <div className="items">
@@ -110,14 +113,16 @@ export default ({ library, pcIdx, ...props }: Props) => {
           return (
             <div className={'segment'}>
               <div className="label">
-                <SimpleLabel
-                  status={s.property == ResourceProperty.Resource ? 'primary' : 'default'}
-                >{t(ResourceProperty[s.property])}{s.property == ResourceProperty.CustomProperty ? `:${s.key}` : ''}</SimpleLabel>
+                <Chip
+                  color={s.property == ResourceProperty.Resource ? 'primary' : 'default'}
+                >{t(ResourceProperty[s.property])}{s.property == ResourceProperty.CustomProperty ? `:${s.key}` : ''}</Chip>
               </div>
               <div className="value">
                 {PscMatcherValue.ToString(t, {
-                  ...s,
-                  type: s.valueType,
+                  fixedText: s.fixedText ?? undefined,
+                  layer: s.layer ?? undefined,
+                  regex: s.regex ?? undefined,
+                  valueType: s.valueType!,
                 })}
               </div>
             </div>
@@ -134,7 +139,6 @@ export default ({ library, pcIdx, ...props }: Props) => {
       <Modal
         size={'xl'}
         defaultVisible
-        onClose={close}
         onDestroyed={props.onDestroyed}
         footer={{
           actions: ['cancel'],
