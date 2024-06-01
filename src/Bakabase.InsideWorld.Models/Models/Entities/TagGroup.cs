@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
+    [Obsolete]
     public class TagGroup
     {
         public int Id { get; set; }

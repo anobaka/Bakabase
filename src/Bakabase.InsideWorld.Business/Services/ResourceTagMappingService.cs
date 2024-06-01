@@ -2,15 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.Extensions.Logging;
+using ResourceTagMapping = Bakabase.InsideWorld.Models.Models.Entities.ResourceTagMapping;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+    [Obsolete]
     public class ResourceTagMappingService : FullMemoryCacheResourceService<InsideWorldDbContext,
         ResourceTagMapping, int>
     {

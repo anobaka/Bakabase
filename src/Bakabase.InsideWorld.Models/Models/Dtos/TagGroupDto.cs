@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
+    [Obsolete]
     public class TagGroupDto
     {
         public const int DefaultGroupId = 0;

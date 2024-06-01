@@ -4,6 +4,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
@@ -18,6 +20,8 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.Extensions.Logging;
 using NPOI.SS.Formula.Functions;
+using Resource = Bakabase.InsideWorld.Business.Models.Domain.Resource;
+using Tag = Bakabase.InsideWorld.Models.Models.Entities.Tag;
 
 namespace Bakabase.InsideWorld.Business.Services
 {

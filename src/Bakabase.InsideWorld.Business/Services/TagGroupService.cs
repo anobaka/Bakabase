@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
@@ -15,6 +16,7 @@ using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+    [Obsolete]
     public class TagGroupService : BootstrapService
     {
         private readonly FullMemoryCacheResourceService<InsideWorldDbContext, TagGroup, int> _orm;

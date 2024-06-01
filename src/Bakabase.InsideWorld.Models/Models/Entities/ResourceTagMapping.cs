@@ -2,6 +2,7 @@
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
+    [Obsolete]
     public class ResourceTagMapping : IEquatable<ResourceTagMapping>
     {
         public int Id { get; set; }

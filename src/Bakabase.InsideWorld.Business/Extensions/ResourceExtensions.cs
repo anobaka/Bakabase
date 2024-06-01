@@ -16,6 +16,7 @@ using System.IO;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Models.Components;
+using Bakabase.InsideWorld.Business.Components.Tag;
 
 namespace Bakabase.InsideWorld.Business.Extensions
 {
@@ -170,137 +171,80 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 ? getter
                 : throw new InvalidOperationException($"Can\'t get getter of property [{(int)property}:{property}]");
 
-        [Obsolete]
-		public static bool MergeOnSynchronization(this Resource source, Resource target)
+		public static bool MergeOnSynchronization(this Resource prev, Resource @new)
         {
             var changed = false;
 
-            if (target.IsFile != source.IsFile)
+            if (@new.IsFile != prev.IsFile)
             {
-                source.IsFile = target.IsFile;
+                prev.IsFile = @new.IsFile;
                 changed = true;
             }
 
-            if (source.FileCreateDt != target.FileCreateDt ||
-                source.FileModifyDt != target.FileModifyDt)
+            if (prev.FileCreateDt != @new.FileCreateDt ||
+                prev.FileModifyDt != @new.FileModifyDt)
             {
-                source.FileCreateDt = target.FileCreateDt;
+                prev.FileCreateDt = @new.FileCreateDt;
                 changed = true;
             }
 
-            if (source.FileModifyDt != target.FileModifyDt)
+            if (prev.FileModifyDt != @new.FileModifyDt)
             {
-                source.FileModifyDt = target.FileModifyDt;
+                prev.FileModifyDt = @new.FileModifyDt;
                 changed = true;
             }
 
-            if (source.Name.IsNullOrEmpty() && source.Name != target.Name && target.Name.IsNotEmpty())
+            if (@new.CustomPropertyValues?.Any() == true)
             {
-                source.Name = target.Name;
-                changed = true;
-            }
+                prev.CustomPropertyValues ??= [];
+                var prevBizKeyIndexMap = prev.CustomPropertyValues.Select((v, i) => (v.BizKey, Index: i))
+                    .ToDictionary(d => d.BizKey, d => d.Index);
 
-            if (target.Language != ResourceLanguage.NotSet && source.Language == ResourceLanguage.NotSet)
-            {
-                source.Language = target.Language;
-                changed = true;
-            }
-
-            if (target.Rate > 0 && source.Rate == 0)
-            {
-                source.Rate = target.Rate;
-                changed = true;
-            }
-
-            if (target.ReleaseDt.HasValue && !source.ReleaseDt.HasValue)
-            {
-                source.ReleaseDt = target.ReleaseDt.Value;
-                changed = true;
-            }
-
-            if (source.Publishers?.Any() != true && target.Publishers?.Any() == true)
-            {
-                source.Publishers = target.Publishers;
-                changed = true;
-            }
-
-            if (source.Series == null && target.Series != null)
-            {
-                source.Series = target.Series;
-                changed = true;
-            }
-
-            if (source.Volume == null && target.Volume != null)
-            {
-                source.Volume = target.Volume;
-                changed = true;
-            }
-
-            if (source.Originals?.Any() != true && target.Originals?.Any() == true)
-            {
-                source.Originals = target.Originals;
-                changed = true;
-            }
-
-            if (target.Tags?.Any() == true)
-            {
-                source.Tags ??= new List<TagDto>();
-
-                foreach (var t in target.Tags.Where(t =>
-                             !source.Tags.Contains(t, TagDto.BizComparer)))
+                foreach (var v in @new.CustomPropertyValues)
                 {
-                    source.Tags.Add(t);
-                    changed = true;
+                    var prevIndex = prevBizKeyIndexMap.GetValueOrDefault(v.BizKey, -1);
+                    if (prevIndex > -1)
+                    {
+                        var prevValue = prev.CustomPropertyValues[prevIndex];
+                        v.Id = prevValue.Id;
+                        prev.CustomPropertyValues[prevIndex] = v;
+                    }
+                    else
+                    {
+                        prev.CustomPropertyValues.Add(v);
+                    }
+
+                    v.ResourceId = prev.Id;
                 }
             }
 
-            if (target.CustomProperties?.Any() == true)
+            if (prev.Parent?.Path != @new.Parent?.Path)
             {
-                source.CustomProperties ??= new Dictionary<string, List<CustomResourceProperty>>();
-
-                foreach (var (k, cps) in target.CustomProperties)
-                {
-                    if (!source.CustomProperties.TryGetValue(k, out var pps))
-                    {
-                        source.CustomProperties[k] = pps = new List<CustomResourceProperty>();
-                    }
-
-                    foreach (var cp in cps.Where(cp =>
-                                 !pps.Contains(cp, CustomResourceProperty.CustomResourcePropertyComparer)))
-                    {
-                        pps.Add(cp);
-                        changed = true;
-                    }
-                }
-            }
-
-            if (source.Parent?.Path != target.Parent?.Path)
-            {
-                source.Parent = target.Parent;
+                prev.Parent = @new.Parent;
                 changed = true;
             }
             else
             {
-                if (string.IsNullOrEmpty(source.Parent?.Path) &&
-                    string.IsNullOrEmpty(target.Parent?.Path))
+                if (string.IsNullOrEmpty(prev.Parent?.Path) &&
+                    string.IsNullOrEmpty(@new.Parent?.Path))
                 {
-                    if (source.ParentId.HasValue)
+                    if (prev.ParentId.HasValue)
                     {
-                        source.ParentId = null;
+                        prev.ParentId = null;
                         changed = true;
                     }
                 }
             }
 
-            if (source.MediaLibraryId != target.MediaLibraryId && target.MediaLibraryId > 0)
+            if (prev.MediaLibraryId != @new.MediaLibraryId && @new.MediaLibraryId > 0)
             {
-                source.MediaLibraryId = target.MediaLibraryId;
+                prev.MediaLibraryId = @new.MediaLibraryId;
                 changed = true;
             }
 
-            if (source.CategoryId != target.CategoryId && target.CategoryId > 0)
+            if (prev.CategoryId != @new.CategoryId && @new.CategoryId > 0)
             {
-                source.CategoryId = target.CategoryId;
+                prev.CategoryId = @new.CategoryId;
                 changed = true;
             }
 

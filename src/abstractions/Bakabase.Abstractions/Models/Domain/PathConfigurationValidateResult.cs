@@ -1,15 +1,15 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
-using static Bakabase.Abstractions.Models.Domain.PathConfigurationValidateResult.Entry;
+using static Bakabase.Abstractions.Models.Domain.PathConfigurationValidateResult.Resource;
 
 namespace Bakabase.Abstractions.Models.Domain
 {
-    public record PathConfigurationValidateResult(string RootPath, List<PathConfigurationValidateResult.Entry> Entries, Dictionary<int, CustomProperty> CustomPropertyMap)
+    public record PathConfigurationValidateResult(string RootPath, List<PathConfigurationValidateResult.Resource> Resources, Dictionary<int, CustomProperty> CustomPropertyMap)
     {
         public string RootPath { get; set; } = RootPath;
-        public List<Entry> Entries { get; set; } = Entries;
+        public List<Resource> Resources { get; set; } = Resources;
         public Dictionary<int, CustomProperty> CustomPropertyMap { get; set; } = CustomPropertyMap;
 
-        public record Entry(bool IsDirectory, string RelativePath)
+        public record Resource(bool IsDirectory, string RelativePath)
         {
             public bool IsDirectory { get; set; } = IsDirectory;
             public string RelativePath { get; set; } = RelativePath;

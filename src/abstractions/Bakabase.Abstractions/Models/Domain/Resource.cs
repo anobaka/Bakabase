@@ -99,6 +99,7 @@ public record Resource
     public DateTime FileCreateDt { get; set; }
     public DateTime FileModifyDt { get; set; }
 
+
     private void RebuildPath()
     {
         if (!string.IsNullOrEmpty(_fileName) || !string.IsNullOrEmpty(_directory))

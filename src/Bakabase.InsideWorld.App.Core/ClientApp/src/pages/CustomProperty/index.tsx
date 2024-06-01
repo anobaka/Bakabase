@@ -25,7 +25,7 @@ export default () => {
     loadProperties();
   }, []);
 
-  const filteredProperties = properties.filter(p => keyword == undefined || keyword.length == 0 || p.name.toLowerCase().includes(keyword.toLowerCase()));
+  const filteredProperties = properties.filter(p => keyword == undefined || keyword.length == 0 || p.name!.toLowerCase().includes(keyword.toLowerCase()));
   const groupedFilteredProperties = filteredProperties.reduce<{[key in StandardValueType]?: IProperty[]}>((s, t) => {
     (s[t.valueType] ??= []).push(t);
     return s;

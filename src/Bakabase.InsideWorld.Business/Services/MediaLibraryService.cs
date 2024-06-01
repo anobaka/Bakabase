@@ -16,6 +16,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
+using Bakabase.InsideWorld.Business.Components.Tag;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Extensions;
@@ -47,7 +48,7 @@ using NPOI.SS.Formula.Functions;
 using SharpCompress.Readers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using static Bakabase.Abstractions.Models.Domain.PathConfigurationValidateResult.Entry;
+using static Bakabase.Abstractions.Models.Domain.PathConfigurationValidateResult.Resource;
 using MediaLibrary = Bakabase.InsideWorld.Business.Models.Domain.MediaLibrary;
 using PathConfiguration = Bakabase.InsideWorld.Business.Models.Domain.PathConfiguration;
 using Resource = Bakabase.InsideWorld.Business.Models.Domain.Resource;
@@ -68,7 +69,7 @@ namespace Bakabase.InsideWorld.Business.Services
         protected LogService LogService => GetRequiredService<LogService>();
         protected CustomPropertyService CustomPropertyService => GetRequiredService<CustomPropertyService>();
         protected ConversionService ConversionService => GetRequiredService<ConversionService>();
-
+        protected ITagService TagServiceV2 => GetRequiredService<ITagService>();
         protected InsideWorldOptionsManagerPool InsideWorldAppService =>
             GetRequiredService<InsideWorldOptionsManagerPool>();
 
@@ -379,7 +380,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 async (service, task) => await service.Sync(task));
         }
 
-        private void SetPropertiesByMatchers(string rootPath, PathConfigurationValidateResult.Entry e, Resource pr,
+        private void SetPropertiesByMatchers(string rootPath, PathConfigurationValidateResult.Resource e, Resource pr,
             Dictionary<string, Resource> parentResources, Dictionary<int, CustomProperty> customPropertyMap)
         {
             if (parentResources == null) throw new ArgumentNullException(nameof(parentResources));
@@ -457,14 +458,12 @@ namespace Bakabase.InsideWorld.Business.Services
                     var property = customPropertyMap.GetValueOrDefault(pId);
                     if (property != null)
                     {
-                        var pv = new CustomPropertyValue
-                        {
-                            PropertyId = pId,
-                            ResourceId = pr.Id,
-                            Scope = (int) CustomPropertyValueScope.Synchronization,
-                            Value = rawValue
-                        };
-                        (pr.CustomPropertyValues ??= []).Add(pv);
+                        var propertyMap = (pr.Properties ??= []).GetOrAdd(ResourcePropertyType.Custom, () => [])!;
+                        var rp = propertyMap.GetOrAdd(property.Id,
+                            () => new Resource.Property(property.Name, property.ValueType, property.ValueType, null));
+                        rp.Values ??= [];
+                        rp.Values.Add(new Resource.Property.PropertyValue(CustomPropertyValueScope.Synchronization,
+                            rawValue, rawValue, rawValue));
                     }
                 }
             }
@@ -550,9 +549,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                 if (pscResult.Code == (int) ResponseCode.Success)
                                 {
                                     var percentagePerItem =
-                                        (decimal) 1 / pscResult.Data.Entries.Count * percentagePerPathConfiguration;
+                                        (decimal) 1 / pscResult.Data.Resources.Count * percentagePerPathConfiguration;
                                     var count = 0;
-                                    foreach (var e in pscResult.Data.Entries)
+                                    foreach (var e in pscResult.Data.Resources)
                                     {
                                         var resourcePath =
                                             $"{pscResult.Data.RootPath}{InternalOptions.DirSeparator}{e.RelativePath}";
@@ -609,7 +608,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         var prevResources = await ResourceService.GetAll(ResourceAdditionalItem.All);
 
                         var prevRawFullnameResourcesList = prevResources
-                            .GroupBy(a => a.Path.StandardizePath(), StringComparer.OrdinalIgnoreCase)
+                            .GroupBy(a => a.Path.StandardizePath()!, StringComparer.OrdinalIgnoreCase)
                             .ToDictionary(t => t.Key, t => t.ToArray());
 
                         var duplicatedResources = prevRawFullnameResourcesList.Values.Where(t => t.Length > 0)
@@ -675,62 +674,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         var resourcesToBeSaved = changedResources.Values.ToList();
                         var newResources = resourcesToBeSaved.Where(a => a.Id == 0).ToArray();
-                        await ResourceService.AddOrPatchRange(resourcesToBeSaved);
-
-                        // #region Tags
-                        //
-                        // var resourcePathIds = newResources.ToDictionary(t => t.RawFullname, t => t.Id);
-                        // foreach (var p in prevRawFullnameResourcesMap.Where(
-                        //              p => !resourcePathIds.ContainsKey(p.Key)))
-                        // {
-                        //     resourcePathIds[p.Key] = p.Value.Id;
-                        // }
-                        //
-                        // var newTagNames = patchingResources.Where(t => t.Value.DynamicTagNames != null)
-                        //     .SelectMany(t => t.Value.DynamicTagNames).Where(a => a.IsNotEmpty()).ToHashSet();
-                        // var newTagNameIdMap = new Dictionary<string, int>();
-                        // if (newTagNames.Any())
-                        // {
-                        //     newTagNameIdMap = (await TagService.AddRange(new Dictionary<string, string[]>
-                        //     {
-                        //         {
-                        //             string.Empty, newTagNames.ToArray()
-                        //         }
-                        //     }, true)).GroupBy(t => t.Name).ToDictionary(t => t.Key, t => t.FirstOrDefault()!.Id);
-                        // }
-                        //
-                        // var prevResourceIds = prevRawFullnameResourcesMap.Select(a => a.Value.Id).Where(a => a > 0)
-                        //     .Distinct()
-                        //     .ToArray();
-                        // var prevResourceTagMappings =
-                        //     (await ResourceTagMappingService.GetAll(a => prevResourceIds.Contains(a.ResourceId), false))
-                        //     .GroupBy(a => a.ResourceId).ToDictionary(a => a.Key,
-                        //         a => a.Select(b => b.TagId).Distinct().ToArray());
-                        //
-                        // var resourceIdTagIdsMap = new Dictionary<int, int[]>();
-                        // foreach (var (key, pr) in patchingResources.Where(t =>
-                        //              t.Value.DynamicTagNames != null || t.Value.FixedTagIds != null))
-                        // {
-                        //     var allTagIds = (pr.FixedTagIds ?? new int[] { })
-                        //         .Concat((pr.DynamicTagNames ?? new string[] { }).Select(t => newTagNameIdMap[t]))
-                        //         .Distinct()
-                        //         .ToArray();
-                        //     var resourceId = resourcePathIds[key];
-                        //     if (prevResourceTagMappings.TryGetValue(resourceId, out var prevTagIds))
-                        //     {
-                        //         allTagIds = allTagIds.Concat(prevTagIds).ToArray();
-                        //     }
-                        //
-                        //     if (allTagIds.Any())
-                        //     {
-                        //         resourceIdTagIdsMap[resourceId] = allTagIds.Distinct().ToArray();
-                        //     }
-                        // }
-                        //
-                        // await ResourceTagMappingService.UpdateRange(resourceIdTagIdsMap);
-                        //
-                        // #endregion
-
+                        await ResourceService.AddOrPutRange(resourcesToBeSaved);
                         // Update sync result
                         var libraryResourceCount = patchingResources.GroupBy(a => a.Value.MediaLibraryId)
                             .ToDictionary(a => a.Key, a => a.Count());
@@ -779,7 +723,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             pc.Path = pc.Path?.StandardizePath()!;
             var dir = new DirectoryInfo(pc.Path!);
-            var entries = new List<PathConfigurationValidateResult.Entry>();
+            var entries = new List<PathConfigurationValidateResult.Resource>();
             if (dir.Exists)
             {
                 var customPropertyIds =
@@ -899,7 +843,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
                     }
 
-                    var entry = new PathConfigurationValidateResult.Entry(Directory.Exists(f), relativePath)
+                    var entry = new PathConfigurationValidateResult.Resource(Directory.Exists(f), relativePath)
                     {
                         SegmentAndMatchedValues = list,
                         IsDirectory = Directory.Exists(f),

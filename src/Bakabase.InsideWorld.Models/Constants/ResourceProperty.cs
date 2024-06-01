@@ -18,7 +18,7 @@ namespace Bakabase.InsideWorld.Models.Constants
         [Obsolete] Volume,
         [Obsolete] Original,
         [Obsolete] Series,
-        [Obsolete] Tag,
+        Tag,
         [Obsolete] Introduction,
         [Obsolete] Rate,
         CustomProperty,

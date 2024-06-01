@@ -5,6 +5,7 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Models.Models.Entities
 {
+    [Obsolete]
     public class Tag
     {
         public int Id { get; set; }

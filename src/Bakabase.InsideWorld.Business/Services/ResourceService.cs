@@ -45,6 +45,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Search;
+using Bakabase.InsideWorld.Business.Components.Tag;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Helpers;
@@ -94,6 +95,7 @@ namespace Bakabase.InsideWorld.Business.Services
 		private readonly ICustomPropertyService _customPropertyService;
 		private readonly ICustomPropertyValueService _customPropertyValueService;
 		private readonly IResourceSearchContextProcessor _resourceSearchContextProcessor;
+        private readonly ITagService _tagServiceV2;
 
 		public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
 			PublisherService publisherService, AliasService aliasService,
@@ -107,7 +109,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			TagGroupService tagGroupService, IBOptionsManager<ResourceOptions> optionsManager,
 			IBOptions<ThirdPartyOptions> thirdPartyOptions, TempFileManager tempFileManager,
 			FfMpegService ffMpegService, InsideWorldLocalizer localizer, ICustomPropertyService customPropertyService,
-			ICustomPropertyValueService customPropertyValueService, IResourceSearchContextProcessor resourceSearchContextProcessor)
+			ICustomPropertyValueService customPropertyValueService, IResourceSearchContextProcessor resourceSearchContextProcessor, ITagService tagServiceV2)
 		{
 			_specialTextService = specialTextService;
 			_publisherService = publisherService;
@@ -135,7 +137,8 @@ namespace Bakabase.InsideWorld.Business.Services
 			_customPropertyService = customPropertyService;
 			_customPropertyValueService = customPropertyValueService;
 			_resourceSearchContextProcessor = resourceSearchContextProcessor;
-			_orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(serviceProvider);
+            _tagServiceV2 = tagServiceV2;
+            _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(serviceProvider);
 		}
 
 		public InsideWorldDbContext DbContext => _orm.DbContext;
@@ -736,14 +739,9 @@ namespace Bakabase.InsideWorld.Business.Services
 		/// </summary>
 		/// <param name="resourceDtoList"></param>
 		/// <returns></returns>
-		public async Task<ResourceRangeAddOrUpdateResult> AddOrPutRange(List<Models.Domain.Resource> resourceDtoList)
-		{
-			var resourceDtoMap = new Dictionary<string, Models.Domain.Resource>();
-			foreach (var s in resourceDtoList)
-			{
-				s.Clean();
-				resourceDtoMap.TryAdd(s.Path, s);
-			}
+		public async Task<ResourceRangeAddOrUpdateResult> AddOrPutRange(List<Resource> resourceDtoList)
+        {
+            var resourceDtoMap = resourceDtoList.GroupBy(d => d.Path).ToDictionary(d => d.Key, d => d.First());
 
 			var parents = resourceDtoList.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a!.Path)
 				.Select(a => a.FirstOrDefault()).ToList();
@@ -777,117 +775,13 @@ namespace Bakabase.InsideWorld.Business.Services
 				resources = (await _orm.AddRange(newResources)).Data.Concat(existedResources).ToList();
 				resources.ForEach(a => { resourceDtoMap[a.BuildPath()].Id = a.Id; });
 
-				#endregion
+                #endregion
 
-				#region Publishers
+                await _tagServiceV2.SaveByResources(resourceDtoList);
 
-				var resourcesWithPublishers = resourceDtoList.Where(a => a.Publishers != null).ToList();
-				var publisherRangeAddResult =
-					await _publisherService.GetOrAddRangeByNames(resourcesWithPublishers.SelectMany(a => a.Publishers!)
-						.ToList());
-				var publisherIds = publisherRangeAddResult.Data.ToDictionary(a => a.Key, a => a.Value.Id);
-				foreach (var r in resourcesWithPublishers)
-				{
-					r.Publishers!.PopulateId(publisherIds);
-				}
+                #region Custom Properties
 
-				await _publisherMappingService.PutRange(resourceDtoList.ToDictionary(x => x.Id, x => x.Publishers));
-
-				#endregion
-
-				#region Series
-
-				var allSeries = resourceDtoList.Select(a => a.Series).Where(a => a != null).ToArray();
-				var seriesNames = allSeries.Select(t => t!.Name).Where(t => t.IsNotEmpty()).ToList();
-				if (seriesNames.Any())
-				{
-					var seriesRangeAddResult = await _serialService.GetOrAddRangeByNames(seriesNames);
-					foreach (var s in allSeries)
-					{
-						s!.Id = seriesRangeAddResult.Data[s.Name].Id;
-					}
-				}
-
-				#endregion
-
-				#region Volumes
-
-				var allVolumes = new Dictionary<int, Volume?>();
-				foreach (var r in resourceDtoList)
-				{
-					if (r.Volume != null || r.Series != null)
-					{
-						r.Volume ??= new VolumeDto();
-						r.Volume.ResourceId = r.Id;
-						if (r.Series != null)
-						{
-							r.Volume.SerialId = r.Series.Id;
-						}
-
-
-					}
-
-					allVolumes[r.Id] = r.Volume.ToEntity();
-				}
-
-				var volumeRangeAddResult = await _volumeService.PutRange(allVolumes);
-
-				#endregion
-
-				#region Originals
-
-				var originalRangeAddResult = await _originalService.GetOrAddRangeByNames(originalNames);
-				foreach (var r in resourceDtoList)
-				{
-					if (r.Originals?.Any() == true)
-					{
-						foreach (var o in r.Originals)
-						{
-							if (o.Id == 0)
-							{
-								o.Id = originalRangeAddResult.Data.GetValueOrDefault(o.Name)?.Id ?? default;
-							}
-						}
-					}
-				}
-
-				await _originalMappingService.PutRange(resourceDtoList.ToDictionary(x => x.Id, x => x.Originals));
-
-				#endregion
-
-				#region Tags
-
-				var tags = resourceDtoList.Where(a => a.Tags != null).SelectMany(a => a.Tags!).Where(a => a.Id == 0)
-					.Distinct(TagDto.BizComparer).ToArray();
-				var savedTags = await _tagService.GetOrAddRangeByNameAndGroupName(tags, false);
-				var resourceTagsMap = resourceDtoList.ToDictionary(a => a.Id,
-					a => a.Tags?.Select(b =>
-					{
-						if (b.Id > 0)
-						{
-							return b.Id;
-						}
-
-						var tag = savedTags.FirstOrDefault(t =>
-							TagDto.BizComparer.Equals(b, t));
-						if (tag == null)
-						{
-#if DEBUG
-							Debugger.Break();
-#endif
-							_logger.LogWarning(
-								$"Tag [{b.GroupName}:{b.Name}] is not found in saved tags: {string.Join(',', savedTags.Select(t => $"{t.GroupName}:{t.Name}"))}");
-						}
-
-						return tag?.Id;
-					}).Where(b => b.HasValue).Select(b => b!.Value).ToArray());
-				await _resourceTagMappingService.PutRange(resourceTagsMap);
-
-				#endregion
-
-				#region Custom Properties
-
-				var resourceIds = resourceDtoList.Select(t => t.Id).ToList();
+                var resourceIds = resourceDtoList.Select(t => t.Id).ToList();
 				var existedCustomProperties =
 					(await _customResourcePropertyService.GetAll(t => resourceIds.Contains(t.ResourceId)))
 					.GroupBy(t => t.ResourceId).ToDictionary(t => t.Key,
@@ -897,7 +791,7 @@ namespace Bakabase.InsideWorld.Business.Services
 				var changedProperties = new List<CustomResourceProperty>();
 				foreach (var r in resourceDtoList)
 				{
-					r.CustomProperties ??= new Dictionary<string, List<CustomResourceProperty>>();
+					r.CustomPropertyValues ??= new Dictionary<string, List<CustomResourceProperty>>();
 					if (!existedCustomProperties.TryGetValue(r.Id, out var existedProperties))
 					{
 						existedProperties = new();
@@ -959,16 +853,7 @@ namespace Bakabase.InsideWorld.Business.Services
 					NewAliasCount = aliasAddResult.AddedCount,
 
 					ResourceCount = resources.Count,
-					NewResourceCount = newResources.Count,
-
-					PublisherCount = publisherRangeAddResult.Count,
-					NewPublisherCount = publisherRangeAddResult.AddedCount,
-
-					VolumeCount = volumeRangeAddResult.Count,
-					NewVolumeCount = volumeRangeAddResult.AddedCount,
-
-					OriginalCount = originalRangeAddResult.Count,
-					NewOriginalCount = originalRangeAddResult.AddedCount,
+					NewResourceCount = newResources.Count
 				};
 			}
 			finally
