@@ -153,6 +153,9 @@
   <data name="CookieValidation_Fail" xml:space="preserve">
     <value>Failed to validate cookie. Requested url: {0}, message: {1}, content: {2}</value>
   </data>
+  <data name="CustomProperty_DescriptorNotFound" xml:space="preserve">
+    <value>Descriptor for property with type:{0} is not found</value>
+  </data>
   <data name="Downloader_BilibiliCookieIsInvalid" xml:space="preserve">
     <value>Can not get mid from cookie, please make sure cookie is correct</value>
   </data>
@@ -275,6 +278,9 @@
   </data>
   <data name="Resource_NotFound" xml:space="preserve">
     <value>Resource with id:{0} is not found</value>
+  </data>
+  <data name="StandardValue_HandlerNotFound" xml:space="preserve">
+    <value>Handler for standard value with type:{0} is not found</value>
   </data>
   <data name="TypeIsNotFound" xml:space="preserve">
     <value>Type {0} is not found</value>

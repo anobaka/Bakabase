@@ -17,7 +17,7 @@ public class StandardValueService(AliasService aliasService) : IStandardValueSer
         var valueReplacer = new Dictionary<object, Func<Dictionary<string, string>, object>>();
         foreach (var (v, t) in values)
         {
-            var ctx = v.BuildContextForReplaceValueWithAlias(t);
+            var ctx = v.BuildContextForReplacingValueWithAlias(t);
             if (ctx.HasValue)
             {
                 foreach (var tt in ctx.Value.StringValues)

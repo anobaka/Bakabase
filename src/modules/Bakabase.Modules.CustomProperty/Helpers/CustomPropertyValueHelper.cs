@@ -15,49 +15,72 @@ using Bakabase.Modules.CustomProperty.Properties.Number;
 using Bakabase.Modules.CustomProperty.Properties.Number.Abstractions;
 using Bakabase.Modules.CustomProperty.Properties.Text;
 using Bakabase.Modules.CustomProperty.Properties.Time;
+using Bootstrap.Extensions;
+using Newtonsoft.Json;
 
 namespace Bakabase.Modules.CustomProperty.Helpers
 {
     public class CustomPropertyValueHelper
     {
-        public static CustomPropertyValue CreateFromImplicitValue(object? typedInnerValue, CustomPropertyType type)
+        public static CustomPropertyValue CreateFromImplicitValue(object? typedInnerValue, int type,
+            int resourceId, int propertyId,
+            int scope)
         {
-            switch (type)
+            CustomPropertyValue pv = (CustomPropertyType) type switch
             {
-                case CustomPropertyType.SingleLineText:
-                    return new SingleLineTextPropertyValue {TypedValue = typedInnerValue as string};
-                case CustomPropertyType.MultilineText:
-                    return new MultilineTextPropertyValue() {TypedValue = typedInnerValue as string };
-                case CustomPropertyType.SingleChoice:
-                    return new SingleChoicePropertyValue {TypedValue = typedInnerValue as string};
-                case CustomPropertyType.MultipleChoice:
-                    return new MultipleChoicePropertyValue() {TypedValue = typedInnerValue as List<string> };
-                case CustomPropertyType.Number:
-                    return new NumberPropertyValue {TypedValue = typedInnerValue is decimal value1 ? value1 : 0};
-                case CustomPropertyType.Percentage:
-                    return new PercentagePropertyValue() {TypedValue = typedInnerValue is decimal value2 ? value2 : 0};
-                case CustomPropertyType.Rating:
-                    return new RatingPropertyValue() {TypedValue = typedInnerValue is decimal value3 ? value3 : 0};
-                case CustomPropertyType.Boolean:
-                    return new BooleanPropertyValue() {TypedValue = typedInnerValue is true};
-                case CustomPropertyType.Link:
-                    return new LinkPropertyValue() {TypedValue = typedInnerValue as LinkData};
-                case CustomPropertyType.Attachment:
-                    return new AttachmentPropertyValue() {TypedValue = typedInnerValue as List<string> };
-                case CustomPropertyType.Date:
-                    return new DatePropertyValue() {TypedValue = typedInnerValue is DateTime date ? date : default};
-                case CustomPropertyType.DateTime:
-                    return new DateTimePropertyValue()
-                        {TypedValue = typedInnerValue is DateTime dateTime ? dateTime : default};
-                case CustomPropertyType.Time:
-                    return new TimePropertyValue() {TypedValue = typedInnerValue is TimeSpan timeSpan ? timeSpan : default};
-                case CustomPropertyType.Formula:
-                    return new FormulaPropertyValue() {TypedValue = typedInnerValue as string};
-                case CustomPropertyType.Multilevel:
-                    return new MultilevelPropertyValue() {TypedValue = typedInnerValue as List<string> };
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                CustomPropertyType.SingleLineText => new SingleLineTextPropertyValue
+                    {TypedValue = typedInnerValue as string},
+                CustomPropertyType.MultilineText => new MultilineTextPropertyValue()
+                    {TypedValue = typedInnerValue as string},
+                CustomPropertyType.SingleChoice => new SingleChoicePropertyValue
+                    {TypedValue = typedInnerValue as string},
+                CustomPropertyType.MultipleChoice => new MultipleChoicePropertyValue()
+                    {TypedValue = typedInnerValue as List<string>},
+                CustomPropertyType.Number => new NumberPropertyValue
+                    {TypedValue = typedInnerValue is decimal value1 ? value1 : 0},
+                CustomPropertyType.Percentage => new PercentagePropertyValue()
+                    {TypedValue = typedInnerValue is decimal value2 ? value2 : 0},
+                CustomPropertyType.Rating => new RatingPropertyValue()
+                    {TypedValue = typedInnerValue is decimal value3 ? value3 : 0},
+                CustomPropertyType.Boolean => new BooleanPropertyValue() {TypedValue = typedInnerValue is true},
+                CustomPropertyType.Link => new LinkPropertyValue() {TypedValue = typedInnerValue as LinkData},
+                CustomPropertyType.Attachment => new AttachmentPropertyValue()
+                    {TypedValue = typedInnerValue as List<string>},
+                CustomPropertyType.Date => new DatePropertyValue()
+                    {TypedValue = typedInnerValue is DateTime date ? date : default},
+                CustomPropertyType.DateTime => new DateTimePropertyValue()
+                    {TypedValue = typedInnerValue is DateTime dateTime ? dateTime : default},
+                CustomPropertyType.Time => new TimePropertyValue()
+                    {TypedValue = typedInnerValue is TimeSpan timeSpan ? timeSpan : default},
+                CustomPropertyType.Formula => new FormulaPropertyValue() {TypedValue = typedInnerValue as string},
+                CustomPropertyType.Multilevel => new MultilevelPropertyValue()
+                    {TypedValue = typedInnerValue as List<string>},
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+            };
+            pv.Scope = scope;
+            pv.ResourceId = resourceId;
+            pv.PropertyId = propertyId;
+            return pv;
+        }
+
+        public static string? SerializeValue(object? value)
+        {
+            if (value == null)
+            {
+                return null;
             }
+
+            return value.ToJson();
+        }
+
+        public static object? DeserializeValue<T>(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+
+            return JsonConvert.DeserializeObject<T>(value);
         }
     }
 }

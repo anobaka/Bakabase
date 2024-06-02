@@ -460,7 +460,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         var propertyMap = (pr.Properties ??= []).GetOrAdd(ResourcePropertyType.Custom, () => [])!;
                         var rp = propertyMap.GetOrAdd(property.Id,
-                            () => new Resource.Property(property.Name, property.ValueType, property.ValueType, null));
+                            () => new Resource.Property(property.Name, property.DbValueType, property.DbValueType, null));
                         rp.Values ??= [];
                         rp.Values.Add(new Resource.Property.PropertyValue(CustomPropertyValueScope.Synchronization,
                             rawValue, rawValue, rawValue));
@@ -839,7 +839,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         {
                             customPropertyIdValueMap[property.Id] =
                                 (await ConversionService.CheckConversionLoss(listString.ToList(),
-                                    StandardValueType.ListString, property.ValueType)).NewValue;
+                                    StandardValueType.ListString, property.DbValueType)).NewValue;
                         }
                     }
 

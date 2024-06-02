@@ -16,12 +16,12 @@ namespace Bakabase.Modules.CustomProperty.Properties
         where TProperty : Models.CustomProperty, new()
         where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
     {
-        public StandardValueType ValueType => EnumType.ToStandardValueType();
+        public StandardValueType DbValueType => EnumType.ToStandardValueType();
         public abstract CustomPropertyType EnumType { get; }
 
         public int Type => (int) EnumType;
 
-        public virtual Models.CustomProperty? BuildDomainProperty(
+        public virtual Models.CustomProperty? ToDomainModel(
             Bakabase.Abstractions.Models.Db.CustomProperty? customProperty)
         {
             if (customProperty == null)
@@ -36,19 +36,19 @@ namespace Bakabase.Modules.CustomProperty.Properties
                 Id = customProperty.Id,
                 Name = customProperty.Name,
                 Type = (int) EnumType,
-                ValueType = ValueType,
+                DbValueType = DbValueType,
                 EnumType = EnumType
             };
         }
 
-        public virtual CustomPropertyValue? BuildDomainValue(Bakabase.Abstractions.Models.Db.CustomPropertyValue? value)
+        public virtual CustomPropertyValue? ToDomainModel(Bakabase.Abstractions.Models.Db.CustomPropertyValue? value)
         {
             if (value == null)
             {
                 return null;
             }
 
-            var innerValue = value.Value?.DeserializeAsStandardValue(ValueType);
+            var innerValue = value.Value?.DeserializeAsStandardValue(DbValueType);
 
             var dto = new TPropertyValue
             {
@@ -70,11 +70,9 @@ namespace Bakabase.Modules.CustomProperty.Properties
 
         public abstract SearchOperation[] SearchOperations { get; }
 
-        public object? BuildValueForDisplay(Bakabase.Abstractions.Models.Domain.CustomProperty property, CustomPropertyValue value)
+        public object? ConvertDbValueToBizValue(Bakabase.Abstractions.Models.Domain.CustomProperty property, object? dbValue)
         {
-            return value.Value == null
-                ? default
-                : BuildValueForDisplay((property as TProperty)!, (TInnerValue) value.Value);
+            return dbValue == null ? default : BuildValueForDisplay((property as TProperty)!, (TInnerValue) dbValue);
         }
 
         protected virtual object? BuildValueForDisplay(TProperty property, TInnerValue value) => value;
@@ -105,10 +103,10 @@ namespace Bakabase.Modules.CustomProperty.Properties
         where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
         where TPropertyOptions : new()
     {
-        public override Models.CustomProperty? BuildDomainProperty(
+        public override Models.CustomProperty? ToDomainModel(
             Bakabase.Abstractions.Models.Db.CustomProperty? customProperty)
         {
-            var p = base.BuildDomainProperty(customProperty);
+            var p = base.ToDomainModel(customProperty);
             if (p is TProperty sp)
             {
                 try

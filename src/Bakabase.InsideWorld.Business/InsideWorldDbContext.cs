@@ -1,9 +1,11 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
+using Bakabase.InsideWorld.Business.Components.Legacy.Models;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using Alias = Bakabase.InsideWorld.Models.Models.Entities.Alias;
 
 namespace Bakabase.InsideWorld.Business
 {
@@ -11,7 +13,8 @@ namespace Bakabase.InsideWorld.Business
     {
         public DbSet<Alias> Aliases { get; set; }
         public DbSet<AliasGroup> AliasGroups { get; set; }
-        public DbSet<Resource> Resources { get; set; }
+        [Obsolete]
+        public DbSet<LegacyDbResource> Resources { get; set; }
         public DbSet<SpecialText> SpecialTexts { get; set; }
         public DbSet<Original> Originals { get; set; }
         public DbSet<Publisher> Publishers { get; set; }
@@ -49,6 +52,8 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<Enhancement> Enhancements { get; set; }
         public DbSet<CategoryEnhancerOptions> CategoryEnhancerOptions { get; set; }
+
+        public DbSet<Resource> ResourcesV2 { get; set; }
 
         public InsideWorldDbContext()
         {
@@ -103,14 +108,10 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<Resource>(t =>
             {
                 t.HasIndex(a => a.CategoryId);
-                t.HasIndex(a => a.Name);
-                t.HasIndex(a => a.RawName);
-                t.HasIndex(a => a.Language);
                 t.HasIndex(a => a.CreateDt);
                 t.HasIndex(a => a.UpdateDt);
                 t.HasIndex(a => a.FileCreateDt);
                 t.HasIndex(a => a.FileModifyDt);
-                t.HasIndex(a => a.Rate);
             });
 
             modelBuilder.Entity<MediaLibrary>(t =>

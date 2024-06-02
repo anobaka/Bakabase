@@ -52,7 +52,7 @@ public static class CustomPropertyExtensions
     public static Models.CustomProperty? ToDomainModel(
         this Bakabase.Abstractions.Models.Db.CustomProperty? entity)
     {
-        return entity == null ? null : Descriptors[(CustomPropertyType)entity.Type].BuildDomainProperty(entity);
+        return entity == null ? null : Descriptors[(CustomPropertyType)entity.Type].ToDomainModel(entity);
     }
 
     public static StandardValueType ToStandardValueType(this CustomPropertyType type) =>

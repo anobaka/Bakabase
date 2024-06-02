@@ -7,12 +7,20 @@ namespace Bakabase.Modules.CustomProperty.Abstractions
 {
     public interface ICustomPropertyDescriptor
     {
-        StandardValueType ValueType { get; }
+        StandardValueType DbValueType { get; }
+        StandardValueType BizValueType { get; }
         int Type { get; }
-        Modules.CustomProperty.Models.CustomProperty? BuildDomainProperty(Bakabase.Abstractions.Models.Db.CustomProperty? customProperty);
-        CustomPropertyValue? BuildDomainValue(Bakabase.Abstractions.Models.Db.CustomPropertyValue? value);
+
+        Models.CustomProperty? ToDomainModel(Bakabase.Abstractions.Models.Db.CustomProperty? customProperty);
+
+        CustomPropertyValue? ToDomainModel(Bakabase.Abstractions.Models.Db.CustomPropertyValue? value);
+
+        object? ConvertDbValueToBizValue(Bakabase.Abstractions.Models.Domain.CustomProperty property, object? dbValue);
+
+        (object? DbValue, bool PropertyChanged) PrepareDbValueFromBizValue(
+            Bakabase.Abstractions.Models.Domain.CustomProperty property, object? bizValue);
+
         bool IsMatch(CustomPropertyValue? value, ResourceSearchFilter filter);
         SearchOperation[] SearchOperations { get; }
-        object? BuildValueForDisplay(Bakabase.Abstractions.Models.Domain.CustomProperty property, CustomPropertyValue value);
     }
 }

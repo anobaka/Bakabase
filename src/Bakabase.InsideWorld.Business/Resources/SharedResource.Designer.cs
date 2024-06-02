@@ -169,6 +169,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Descriptor for property with type:{0} is not found.
+        /// </summary>
+        internal static string CustomProperty_DescriptorNotFound {
+            get {
+                return ResourceManager.GetString("CustomProperty_DescriptorNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Can not get mid from cookie, please make sure cookie is correct.
         /// </summary>
         internal static string Downloader_BilibiliCookieIsInvalid {
@@ -534,6 +543,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string Resource_NotFound {
             get {
                 return ResourceManager.GetString("Resource_NotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Handler for standard value with type:{0} is not found.
+        /// </summary>
+        internal static string StandardValue_HandlerNotFound {
+            get {
+                return ResourceManager.GetString("StandardValue_HandlerNotFound", resourceCulture);
             }
         }
         

@@ -22,6 +22,7 @@ using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+	[Obsolete]
 	public class AliasService : FullMemoryCacheResourceService<InsideWorldDbContext, Alias, int>
 	{
 		protected AliasGroupService AliasGroupService => GetRequiredService<AliasGroupService>();

@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Models.ResponseModels;
@@ -8,16 +9,28 @@ namespace Bakabase.Modules.CustomProperty.Abstractions.Services;
 
 public interface ICustomPropertyValueService
 {
-    Task<List<CustomPropertyValue>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>>? exp, CustomPropertyValueAdditionalItem additionalItems, bool returnCopy);
+    Task<List<CustomPropertyValue>> GetAll(
+        Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>>? exp,
+        CustomPropertyValueAdditionalItem additionalItems, bool returnCopy);
 
-    Task<List<Bakabase.Abstractions.Models.Db.CustomPropertyValue>> GetAllDbModels(Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>> selector = null, bool returnCopy = true);
+    Task SaveByResources(List<Resource> data);
+
+    Task<(CustomPropertyValue Value, bool PropertyChanged)?> Create(object? bizValue, StandardValueType bizValueType,
+        Bakabase.Abstractions.Models.Domain.CustomProperty property, int resourceId, int scope);
+
+    Task<List<Bakabase.Abstractions.Models.Db.CustomPropertyValue>> GetAllDbModels(
+        Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>> selector = null,
+        bool returnCopy = true);
 
     Task<BaseResponse> SetResourceValue(int resourceId, int propertyId,
         ResourceCustomPropertyValuePutRequestModel model);
+
     //
     Task<BaseResponse> AddRange(IEnumerable<CustomPropertyValue> values);
+
     // Task<ListResponse<CustomPropertyValue>> AddRange(List<CustomPropertyValue> resources);
     Task<BaseResponse> UpdateRange(IEnumerable<CustomPropertyValue> values);
+
     // Task<BaseResponse> UpdateRange(IReadOnlyCollection<CustomPropertyValue> resources);
     // Task<CustomPropertyValue> GetByKey(Int32 key, bool returnCopy = true);
     // Task<CustomPropertyValue[]> GetByKeys(IEnumerable<Int32> keys, bool returnCopy = true);
@@ -45,7 +58,9 @@ public interface ICustomPropertyValueService
     //
     Task<BaseResponse> Remove(Bakabase.Abstractions.Models.Db.CustomPropertyValue resource);
     Task<BaseResponse> RemoveRange(IEnumerable<Bakabase.Abstractions.Models.Db.CustomPropertyValue> resources);
+
     Task<BaseResponse> RemoveAll(Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>> selector);
+
     // Task<BaseResponse> RemoveByKey(Int32 key);
     Task<BaseResponse> RemoveByKeys(IEnumerable<Int32> keys);
     // Task<SingletonResponse<CustomPropertyValue>> Add(CustomPropertyValue resource);

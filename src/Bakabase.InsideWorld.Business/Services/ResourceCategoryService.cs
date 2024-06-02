@@ -568,7 +568,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     if (value != null)
                     {
                         var displayValue = CustomPropertyDescriptorMap[d.Value.Type]
-                            .BuildValueForDisplay(d.Value, value);
+                            .ConvertDbValueToBizValue(d.Value, value);
                         var stdValueHandler = StandardValueHandlerMap[d.Value.ValueType];
                         return stdValueHandler.BuildDisplayValue(displayValue);
                     }
@@ -635,8 +635,8 @@ namespace Bakabase.InsideWorld.Business.Services
                         if (value != null)
                         {
                             var displayValue = CustomPropertyDescriptorMap[d.Value.Type]
-                                .BuildValueForDisplay(d.Value, value);
-                            var stdValueHandler = StandardValueHandlerMap[d.Value.ValueType];
+                                .ConvertDbValueToBizValue(d.Value, value);
+                            var stdValueHandler = StandardValueHandlerMap[d.Value.DbValueType];
                             return stdValueHandler.BuildDisplayValue(displayValue);
                         }
 

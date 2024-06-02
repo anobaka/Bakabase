@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Models.Extensions;
+using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Abstractions.Models.Domain;
 
@@ -99,6 +100,35 @@ public record Resource
     public DateTime FileCreateDt { get; set; }
     public DateTime FileModifyDt { get; set; }
 
+
+    public Resource? Parent { get; set; }
+    public Dictionary<ResourcePropertyType, Dictionary<int, Property>>? Properties { get; set; }
+
+    public record Property(
+        string? Name,
+        StandardValueType ValueType,
+        StandardValueType BizValueType,
+        List<Property.PropertyValue>? Values)
+    {
+        public string? Name { get; set; } = Name;
+        public List<PropertyValue>? Values { get; set; } = Values;
+        public StandardValueType ValueType { get; set; } = ValueType;
+        public StandardValueType BizValueType { get; set; } = BizValueType;
+
+        public record PropertyValue(
+            int Scope,
+            object? Value,
+            object? BizValue,
+            object? AliasAppliedBizValue)
+        {
+            public int Scope { get; set; } = Scope;
+            public object? Value { get; set; } = Value;
+            public object? BizValue { get; set; } = BizValue ?? Value;
+            public object? AliasAppliedBizValue { get; set; } = AliasAppliedBizValue ?? BizValue ?? Value;
+        }
+    }
+
+    public Category? Category { get; set; }
 
     private void RebuildPath()
     {

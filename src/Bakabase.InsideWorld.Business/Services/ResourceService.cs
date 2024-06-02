@@ -42,6 +42,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Alias;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Search;
@@ -96,8 +97,9 @@ namespace Bakabase.InsideWorld.Business.Services
 		private readonly ICustomPropertyValueService _customPropertyValueService;
 		private readonly IResourceSearchContextProcessor _resourceSearchContextProcessor;
         private readonly ITagService _tagServiceV2;
+        private readonly IAliasService _aliasServiceV2;
 
-		public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
+        public ResourceService(IServiceProvider serviceProvider, SpecialTextService specialTextService,
 			PublisherService publisherService, AliasService aliasService,
 			VolumeService volumeService, SeriesService serialService, OriginalService originalService,
 			TagService tagService, PublisherResourceMappingService publisherMappingService,
@@ -109,7 +111,7 @@ namespace Bakabase.InsideWorld.Business.Services
 			TagGroupService tagGroupService, IBOptionsManager<ResourceOptions> optionsManager,
 			IBOptions<ThirdPartyOptions> thirdPartyOptions, TempFileManager tempFileManager,
 			FfMpegService ffMpegService, InsideWorldLocalizer localizer, ICustomPropertyService customPropertyService,
-			ICustomPropertyValueService customPropertyValueService, IResourceSearchContextProcessor resourceSearchContextProcessor, ITagService tagServiceV2)
+			ICustomPropertyValueService customPropertyValueService, IResourceSearchContextProcessor resourceSearchContextProcessor, ITagService tagServiceV2, IAliasService aliasServiceV2)
 		{
 			_specialTextService = specialTextService;
 			_publisherService = publisherService;
@@ -138,101 +140,11 @@ namespace Bakabase.InsideWorld.Business.Services
 			_customPropertyValueService = customPropertyValueService;
 			_resourceSearchContextProcessor = resourceSearchContextProcessor;
             _tagServiceV2 = tagServiceV2;
+            _aliasServiceV2 = aliasServiceV2;
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(serviceProvider);
 		}
 
 		public InsideWorldDbContext DbContext => _orm.DbContext;
-
-		public async Task<BaseResponse> Patch(int id, ResourceUpdateRequestModel model)
-		{
-			var entity = await _orm.GetByKey(id);
-			if (model.Rate > 0)
-			{
-				entity.Rate = model.Rate.Value;
-			}
-
-			if (model.Name.IsNotEmpty())
-			{
-				entity.Name = model.Name;
-			}
-
-			if (model.ReleaseDt.HasValue)
-			{
-				entity.ReleaseDt = model.ReleaseDt.Value;
-			}
-
-			if (model.Language.HasValue)
-			{
-				entity.Language = model.Language.Value;
-			}
-
-			if (model.Introduction.IsNotEmpty())
-			{
-				entity.Introduction = model.Introduction;
-			}
-
-			if (model.Series != null)
-			{
-				var volume = (await _volumeService.GetByResourceKeys([id])).Values.FirstOrDefault();
-				if (model.Series.IsNotEmpty())
-				{
-					var series =
-						(await _serialService.GetOrAddRangeByNames([model.Series])).Data.Values.FirstOrDefault()!;
-					if (volume == null)
-					{
-						await _volumeService.AddRange([
-							new Volume
-							{
-								ResourceId = id,
-								SerialId = series.Id
-							}
-						]);
-					}
-					else
-					{
-						if (volume.SerialId != series.Id)
-						{
-							await _volumeService.UpdateByKey(volume.ResourceId, t => t.SerialId = series.Id);
-						}
-					}
-				}
-				else
-				{
-					if (volume != null)
-					{
-						await _volumeService.UpdateByKey(volume.ResourceId, t => t.SerialId = 0);
-					}
-				}
-			}
-
-			if (model.Originals != null)
-			{
-				await _originalMappingService.UpdateResourceOriginals(id, model.Originals);
-			}
-
-			if (model.Publishers != null)
-			{
-				await _publisherMappingService.UpdateResourcePublishers(id, model.Publishers);
-			}
-
-			if (model.Tags != null)
-			{
-				var tags = await _tagService.GetOrAddRangeByNameAndGroupName(model.Tags, false);
-				await _resourceTagMappingService.PutRange(new Dictionary<int, int[]?>
-					{{id, tags.Select(t => t.Id).ToArray()}});
-			}
-
-			await _orm.Update(entity);
-
-			var category = await _categoryService.GetByKey(entity.CategoryId);
-			if (category.GenerateNfo)
-			{
-				var dto = await GetByKey(id, ResourceAdditionalItem.All, true);
-				await SaveNfo(dto, true);
-			}
-
-			return BaseResponseBuilder.Ok;
-		}
 
 		public Task RemoveByMediaLibraryIdsNotIn(int[] ids)
 		{
@@ -737,13 +649,13 @@ namespace Bakabase.InsideWorld.Business.Services
 		/// <para>All properties of resources will be saved, including null values.</para>
 		/// <para>Parents will be saved too, so be sure the properties of parent are fulfilled.</para>
 		/// </summary>
-		/// <param name="resourceDtoList"></param>
+		/// <param name="resources"></param>
 		/// <returns></returns>
-		public async Task<ResourceRangeAddOrUpdateResult> AddOrPutRange(List<Resource> resourceDtoList)
+		public async Task<ResourceRangeAddOrUpdateResult> AddOrPutRange(List<Resource> resources)
         {
-            var resourceDtoMap = resourceDtoList.GroupBy(d => d.Path).ToDictionary(d => d.Key, d => d.First());
+            var resourceDtoMap = resources.GroupBy(d => d.Path).ToDictionary(d => d.Key, d => d.First());
 
-			var parents = resourceDtoList.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a!.Path)
+			var parents = resources.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a!.Path)
 				.Select(a => a.FirstOrDefault()).ToList();
 			if (parents.Any())
 			{
@@ -753,35 +665,28 @@ namespace Bakabase.InsideWorld.Business.Services
 			await _addOrUpdateLock.WaitAsync();
 			try
 			{
-				#region Aliases
+				// Resource
+                {
+                    var dbResources = resources.Select(a => a.ToDbModel()!).ToList();
+                    var existedResources = dbResources.Where(a => a.Id > 0).ToList();
+                    var newResources = dbResources.Except(existedResources).ToList();
+                    await _orm.UpdateRange(existedResources);
+                    dbResources = (await _orm.AddRange(newResources)).Data.Concat(existedResources).ToList();
+                    dbResources.ForEach(a => { resourceDtoMap[a.BuildPath()].Id = a.Id; });
+                }
 
-				var names = resourceDtoList.Select(a => a.Name).Where(a => !string.IsNullOrEmpty(a)).ToHashSet();
-				var publisherNames = resourceDtoList.SelectMany(a => a.Publishers.GetNames()).Distinct()
-					.Where(x => !string.IsNullOrEmpty(x)).ToList();
-				var originalNames = resourceDtoList.Where(a => a.Originals != null)
-					.SelectMany(a => a.Originals!.Select(b => b.Name))
-					.Distinct().Where(x => !string.IsNullOrEmpty(x)).ToList();
-				var allNames = names.Concat(publisherNames).Concat(originalNames).ToList();
-				var aliasAddResult = await _aliasService.AddRange(allNames!);
+                // Alias
+                await _aliasServiceV2.SaveByResources(resources);
 
-				#endregion
+				// Tag
+                await _tagServiceV2.SaveByResources(resources);
 
-				#region Resources
-
-				var resources = resourceDtoList.Select(a => a.ToDbModel()!).ToList();
-				var existedResources = resources.Where(a => a.Id > 0).ToList();
-				var newResources = resources.Except(existedResources).ToList();
-				await _orm.UpdateRange(existedResources);
-				resources = (await _orm.AddRange(newResources)).Data.Concat(existedResources).ToList();
-				resources.ForEach(a => { resourceDtoMap[a.BuildPath()].Id = a.Id; });
-
-                #endregion
-
-                await _tagServiceV2.SaveByResources(resourceDtoList);
+				// Custom properties
+                await _customPropertyValueService.SaveByResources(resources);
 
                 #region Custom Properties
 
-                var resourceIds = resourceDtoList.Select(t => t.Id).ToList();
+                var resourceIds = resources.Select(t => t.Id).ToList();
 				var existedCustomProperties =
 					(await _customResourcePropertyService.GetAll(t => resourceIds.Contains(t.ResourceId)))
 					.GroupBy(t => t.ResourceId).ToDictionary(t => t.Key,
@@ -789,7 +694,7 @@ namespace Bakabase.InsideWorld.Business.Services
 				var invalidProperties = new List<CustomResourceProperty>();
 				var newProperties = new List<CustomResourceProperty>();
 				var changedProperties = new List<CustomResourceProperty>();
-				foreach (var r in resourceDtoList)
+				foreach (var r in resources)
 				{
 					r.CustomPropertyValues ??= new Dictionary<string, List<CustomResourceProperty>>();
 					if (!existedCustomProperties.TryGetValue(r.Id, out var existedProperties))
@@ -852,7 +757,7 @@ namespace Bakabase.InsideWorld.Business.Services
 					AliasCount = aliasAddResult.Count,
 					NewAliasCount = aliasAddResult.AddedCount,
 
-					ResourceCount = resources.Count,
+					ResourceCount = dbResources.Count,
 					NewResourceCount = newResources.Count
 				};
 			}

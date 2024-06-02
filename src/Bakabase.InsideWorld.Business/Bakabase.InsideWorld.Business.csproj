@@ -69,6 +69,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Folder Include="Components\Conversion\" />
+	  <Folder Include="Components\Legacy\Services\" />
 	  <Folder Include="Models\Db\" />
 	  <Folder Include="Models\View\Constants\" />
 	</ItemGroup>

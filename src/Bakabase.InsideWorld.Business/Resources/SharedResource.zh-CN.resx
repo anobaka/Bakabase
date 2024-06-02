@@ -153,6 +153,9 @@
   <data name="CookieValidation_Fail" xml:space="preserve">
     <value>验证Cookie失败. 请求链接: {0}, 信息: {1}, 内容: {2}</value>
   </data>
+  <data name="CustomProperty_DescriptorNotFound" xml:space="preserve">
+    <value>未找到类型[{0}]对应的自定义属性描述器</value>
+  </data>
   <data name="Downloader_BilibiliCookieIsInvalid" xml:space="preserve">
     <value>无法通过cookie获取用户mid, 请确认cookie是否正确</value>
   </data>
@@ -275,6 +278,9 @@
   </data>
   <data name="Resource_NotFound" xml:space="preserve">
     <value>未找到id={0}的资源</value>
+  </data>
+  <data name="StandardValue_HandlerNotFound" xml:space="preserve">
+    <value>未找到类型[{0}]对应的标准数据处理器</value>
   </data>
   <data name="TypeIsNotFound" xml:space="preserve">
     <value>未找到类型：{0}</value>

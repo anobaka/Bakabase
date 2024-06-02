@@ -14,7 +14,7 @@ namespace Bakabase.InsideWorld.Business.Components.StandardValue
     public static class StandardValueExtensions
     {
         public static (HashSet<string> StringValues, Func<Dictionary<string, string>, object> ReplaceWithAlias)?
-            BuildContextForReplaceValueWithAlias(this object value, StandardValueType valueType)
+            BuildContextForReplacingValueWithAlias(this object value, StandardValueType valueType)
         {
             switch (valueType)
             {

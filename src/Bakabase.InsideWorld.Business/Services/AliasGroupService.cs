@@ -7,6 +7,7 @@ using Bootstrap.Components.Orm.Infrastructures;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+    [Obsolete]
     public class AliasGroupService: ResourceService<InsideWorldDbContext, AliasGroup, int>
     {
         public AliasGroupService(IServiceProvider serviceProvider) : base(serviceProvider)

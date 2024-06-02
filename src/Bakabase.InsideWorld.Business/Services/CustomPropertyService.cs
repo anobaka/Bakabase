@@ -171,16 +171,16 @@ namespace Bakabase.InsideWorld.Business.Services
             return await base.RemoveByKey(id);
         }
 
-        public async Task<CustomPropertyTypeConversionLossViewModel> CalculateTypeConversionLoss(int id,
+        public async Task<CustomPropertyTypeConversionLossViewModel> CalculateTypeConversionLoss(int sourcePropertyId,
             CustomPropertyType type)
         {
-            var property = await GetByKey(id);
-            var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == id,
+            var property = await GetByKey(sourcePropertyId);
+            var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == sourcePropertyId,
                 CustomPropertyValueAdditionalItem.None, false);
             var propertyDescriptor = PropertyDescriptors[property.Type];
-            var stdValueHandler = StdValueHandlers[property.ValueType];
+            var stdValueHandler = StdValueHandlers[property.DbValueType];
 
-            var typedValues = values.Select(v => propertyDescriptor.BuildValueForDisplay(property, v)).ToList();
+            var typedValues = values.Select(v => propertyDescriptor.ConvertDbValueToBizValue(property, v)).ToList();
 
             var lossMap = new Dictionary<StandardValueConversionLoss, List<string>>();
             var result = new CustomPropertyTypeConversionLossViewModel
@@ -191,7 +191,7 @@ namespace Bakabase.InsideWorld.Business.Services
             foreach (var d in typedValues)
             {
                 var (nv, loss) =
-                    await ConversionService.CheckConversionLoss(d, property.ValueType, type.ToStandardValueType());
+                    await ConversionService.CheckConversionLoss(d, property.DbValueType, type.ToStandardValueType());
                 var list = SpecificEnumUtils<StandardValueConversionLoss>.Values.Where(s => loss?.HasFlag(s) == true)
                     .ToList();
                 foreach (var l in list)

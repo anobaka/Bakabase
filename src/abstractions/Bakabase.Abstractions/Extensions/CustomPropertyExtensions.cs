@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Bakabase.Abstractions.Components.StandardValue;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bootstrap.Extensions;
@@ -38,8 +39,18 @@ public static class CustomPropertyExtensions
             Id = domain.Id,
             PropertyId = domain.PropertyId,
             ResourceId = domain.ResourceId,
-            Value = domain.Value == null ? null : JsonConvert.SerializeObject(domain.Value),
+            Value = Models.Db.CustomPropertyValue.SerializeValue(domain.Value),
             Scope = domain.Scope
         };
+    }
+
+    public static TProperty Cast<TProperty>(this CustomProperty toProperty)
+    {
+        if (toProperty is not TProperty typedProperty)
+        {
+            throw new DevException($"Can not cast {nameof(toProperty)} to {toProperty.Type}");
+        }
+
+        return typedProperty;
     }
 }
