@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv.Models;
@@ -26,7 +27,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         private static readonly HashSet<string> UrlKeywords = new()
             {"bookmark_new_illust_r18.php", "bookmark_new_illust.php"};
 
-        public PixivFollowingDownloader(IServiceProvider serviceProvider, SpecialTextService specialTextService,
+        public PixivFollowingDownloader(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IBOptions<PixivOptions> options, PixivClient client) : base(serviceProvider, specialTextService, options,
             client)
         {

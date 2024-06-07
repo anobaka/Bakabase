@@ -38,7 +38,7 @@ export default () => {
 
   const loadAllCategories = (cb: () => void = () => {
   }): Promise<any> => {
-    return BApi.resourceCategory.getAllResourceCategories({ additionalItems:
+    return BApi.category.getAllResourceCategories({ additionalItems:
         ResourceCategoryAdditionalItem.Validation |
         ResourceCategoryAdditionalItem.CustomProperties |
       ResourceCategoryAdditionalItem.EnhancerOptions,
@@ -122,7 +122,7 @@ export default () => {
                   if (name == undefined || name.length == 0) {
                     throw new Error('Name is required');
                   }
-                  await BApi.resourceCategory.addResourceCategory({
+                  await BApi.category.addResourceCategory({
                     name,
                   });
                   loadAllCategories();
@@ -167,7 +167,7 @@ export default () => {
                 children: t('We\'ll sort categories by name'),
                 onOk: async () => {
                   const orderedCategoryIds = categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(a => a.id);
-                  const rsp = await BApi.resourceCategory.sortCategories({
+                  const rsp = await BApi.category.sortCategories({
                     ids: orderedCategoryIds,
                   });
                   if (!rsp.code) {

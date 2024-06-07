@@ -89,7 +89,7 @@ const CategoryEnhancerOptionsDialog = ({
   }, []);
 
   const loadCategory = async () => {
-    const r = await BApi.resourceCategory.getResourceCategory(categoryId,
+    const r = await BApi.category.getResourceCategory(categoryId,
       // @ts-ignore
       { additionalItems: ResourceCategoryAdditionalItem.EnhancerOptions | ResourceCategoryAdditionalItem.CustomProperties });
     setCategory({
@@ -184,7 +184,7 @@ const CategoryEnhancerOptionsDialog = ({
                             onSubmit: async properties => {
                               const no = patchTargetOptions(options, target.id, { propertyId: properties[0].id });
                               // console.log(no);
-                              await BApi.resourceCategory.patchCategoryEnhancerOptions(categoryId, enhancer.id, { options: no });
+                              await BApi.category.patchCategoryEnhancerOptions(categoryId, enhancer.id, { options: no });
                               await loadAllProperties();
                               setOptions(no);
                             },
@@ -214,7 +214,7 @@ const CategoryEnhancerOptionsDialog = ({
                           delete o.propertyId;
                           const no = patchTargetOptions(options, target.id, o);
                           // console.log(options, target.id, o, no);
-                          BApi.resourceCategory.patchCategoryEnhancerOptions(categoryId, enhancer.id, { options: no });
+                          BApi.category.patchCategoryEnhancerOptions(categoryId, enhancer.id, { options: no });
                           setOptions(no);
                         }}
                       />

@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App.Migrations;
 using Bootstrap.Extensions;
+using InsideWorld.Migrations.V190;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -21,6 +22,8 @@ namespace InsideWorld.Migrations
             {
                 services.AddTransient(SpecificTypeUtils<IMigrator>.Type, m);
             }
+
+            services.AddTransient<V190MigrationLocalizer>();
         }
     }
 }

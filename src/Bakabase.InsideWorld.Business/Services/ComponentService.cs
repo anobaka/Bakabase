@@ -6,6 +6,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Component;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Resource.Components;
 using Bakabase.InsideWorld.Models.Components;
 using Bakabase.InsideWorld.Models.Constants;
@@ -37,7 +39,7 @@ namespace Bakabase.InsideWorld.Business.Services
     {
         private ComponentOptionsService OptionsService => GetRequiredService<ComponentOptionsService>();
         private ComponentOptionsService ComponentOptionsService => GetRequiredService<ComponentOptionsService>();
-        private ResourceCategoryService ResourceCategoryService => GetRequiredService<ResourceCategoryService>();
+        private ICategoryService ResourceCategoryService => GetRequiredService<ICategoryService>();
         private CategoryComponentService CategoryComponentService => GetRequiredService<CategoryComponentService>();
         private IStringLocalizer<SharedResource> Localizer => GetRequiredService<IStringLocalizer<SharedResource>>();
 
@@ -218,7 +220,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                     .ToDictionary(x => x.Key, a => a.Select(b => b.CategoryId).Distinct().ToArray());
                                 var categoryIds = mappings.Select(a => a.CategoryId).Distinct().ToArray();
                                 var categories =
-                                    await ResourceCategoryService.GetAllDto(a => categoryIds.Contains(a.Id));
+                                    await ResourceCategoryService.GetAll(a => categoryIds.Contains(a.Id));
                                 var categoryMap = categories.ToDictionary(x => x.Id, x => x);
                                 foreach (var d in dtoList)
                                 {

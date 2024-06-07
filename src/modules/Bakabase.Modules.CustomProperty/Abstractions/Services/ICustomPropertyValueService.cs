@@ -39,6 +39,7 @@ public interface ICustomPropertyValueService
     //     Expression<Func<CustomPropertyValue, object>> orderBy = null, bool asc = false, bool returnCopy = true);
     //
     // Task<int> Count(Func<CustomPropertyValue, bool> selector = null);
+    Task<bool> Any(Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>? selector = null);
     //
     // /// <summary>
     // /// 

@@ -38,7 +38,7 @@ const EnhancerSelector = ({
     });
 
     // @ts-ignore
-    BApi.resourceCategory.getResourceCategory(categoryId, { additionalItems: ResourceCategoryAdditionalItem.EnhancerOptions | ResourceCategoryAdditionalItem.CustomProperties }).then(r => {
+    BApi.category.getResourceCategory(categoryId, { additionalItems: ResourceCategoryAdditionalItem.EnhancerOptions | ResourceCategoryAdditionalItem.CustomProperties }).then(r => {
       const data = r.data || {};
       setCategoryEnhancerOptionsList(data.enhancerOptions?.map(eo => (eo as CategoryEnhancerFullOptions)) || []);
     });
@@ -175,7 +175,7 @@ const EnhancerSelector = ({
                   size={'sm'}
                   isSelected={ceo?.active}
                   onValueChange={(c) => {
-                    BApi.resourceCategory.patchCategoryEnhancerOptions(categoryId, e.id, {
+                    BApi.category.patchCategoryEnhancerOptions(categoryId, e.id, {
                       active: c,
                     }).then(() => {
                       patchCategoryEnhancerOptions(e.id, { active: c });

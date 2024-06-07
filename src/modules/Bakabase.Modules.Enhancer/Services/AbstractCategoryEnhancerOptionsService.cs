@@ -12,14 +12,13 @@ using Newtonsoft.Json;
 
 namespace Bakabase.Modules.Enhancer.Services
 {
-    public abstract class AbstractCategoryEnhancerOptionsService<TDbContext>(IServiceProvider serviceProvider)
-        : ResourceService<TDbContext, CategoryEnhancerOptions, int>(serviceProvider),
-            ICategoryEnhancerOptionsService where TDbContext : DbContext
+    public abstract class AbstractCategoryEnhancerOptionsService<TDbContext>(ResourceService<TDbContext, CategoryEnhancerOptions, int> orm)
+        : ICategoryEnhancerOptionsService where TDbContext : DbContext
     {
         public async Task<List<CategoryEnhancerFullOptions>> GetAll(
             Expression<Func<CategoryEnhancerOptions, bool>>? exp)
         {
-            var data = await base.GetAll(exp, false);
+            var data = await orm.GetAll(exp);
             return data.Select(d => d.ToDomainModel()!).ToList();
         }
 
@@ -29,7 +28,7 @@ namespace Bakabase.Modules.Enhancer.Services
         public async Task<BaseResponse> Patch(int categoryId, int enhancerId,
             CategoryEnhancerOptionsPatchInputModel model)
         {
-            var data = await GetFirst(x => x.CategoryId == categoryId && x.EnhancerId == enhancerId);
+            var data = await orm.GetFirst(x => x.CategoryId == categoryId && x.EnhancerId == enhancerId);
             var dataExists = data != null;
             data ??= new CategoryEnhancerOptions
             {
@@ -49,10 +48,10 @@ namespace Bakabase.Modules.Enhancer.Services
 
             if (dataExists)
             {
-                return await Update(data);
+                return await orm.Update(data);
             }
 
-            return await Add(data);
+            return await orm.Add(data);
         }
     }
 }

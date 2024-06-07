@@ -1,7 +1,8 @@
-﻿using Bakabase.Modules.CustomProperty.Properties.Multilevel;
+﻿using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,15 +10,59 @@ namespace Bakabase.Modules.CustomProperty.Extensions
 {
     public static class MultilevelPropertyExtensions
     {
-        public static string[]? FindLabel(this MultilevelDataOptions options, string id)
+        public static string[]? FindLabelChain(this MultilevelDataOptions options, string id)
         {
             if (options.Value == id)
             {
                 return [options.Label];
             }
 
-            return options.Children?.Select(child => child.FindLabel(id)).OfType<string[]>()
+            return options.Children?.Select(child => child.FindLabelChain(id)).OfType<string[]>()
                 .Select(result => new[] {options.Label}.Concat(result).ToArray()).FirstOrDefault();
+        }
+
+        public static List<string?> FindValuesByLabelChains(this List<MultilevelDataOptions> branches,
+            List<List<string>> labelChains)
+        {
+            return labelChains.Select(branches.FindValueByLabelChain).ToList();
+        }
+
+        public static string? FindValueByLabelChain(this List<MultilevelDataOptions> branches, List<string> labelChain)
+        {
+            if (labelChain.Any())
+            {
+                var label = labelChain[0];
+                var branch = branches.FirstOrDefault(x => x.Label == label);
+                if (branch != null)
+                {
+                    if (labelChain.Count == 1)
+                    {
+                        return branch.Value;
+                    }
+
+                    return branch.Children?.FindValueByLabelChain(labelChain.Skip(1).ToList());
+                }
+            }
+
+            return null;
+        }
+
+        public static MultilevelDataOptions? FindNode(this MultilevelDataOptions branch,
+            Func<MultilevelDataOptions, bool> find)
+        {
+            if (find(branch))
+            {
+                return branch;
+            }
+
+            return branch.Children?.Select(subBranch => subBranch.FindNode(find)).OfType<MultilevelDataOptions>()
+                .FirstOrDefault();
+        }
+
+        public static MultilevelDataOptions? FindNode(this List<MultilevelDataOptions> branches,
+            Func<MultilevelDataOptions, bool> find)
+        {
+            return branches.Select(branch => branch.FindNode(find)).OfType<MultilevelDataOptions>().FirstOrDefault();
         }
 
         /// <summary>

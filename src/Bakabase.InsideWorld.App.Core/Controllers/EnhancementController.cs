@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
@@ -21,14 +23,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     {
         private readonly IEnhancementService _enhancementService;
         private readonly IEnhancerService _enhancerService;
-        private readonly MediaLibraryService _mediaLibraryService;
-        private readonly ResourceCategoryService _categoryService;
-        private readonly ResourceService _resourceService;
+        private readonly IMediaLibraryService _mediaLibraryService;
+        private readonly ICategoryService _categoryService;
+        private readonly IResourceService _resourceService;
         private readonly ICategoryEnhancerOptionsService _categoryEnhancerOptionsService;
         private readonly IEnumerable<EnhancerDescriptor> _enhancerDescriptors;
 
-        public EnhancementController(MediaLibraryService mediaLibraryService, ResourceCategoryService categoryService,
-            ResourceService resourceService, IEnhancementService enhancementService, IEnhancerService enhancerService, ICategoryEnhancerOptionsService categoryEnhancerOptionsService, IEnumerable<EnhancerDescriptor> enhancerDescriptors)
+        public EnhancementController(IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
+            IResourceService resourceService, IEnhancementService enhancementService, IEnhancerService enhancerService, ICategoryEnhancerOptionsService categoryEnhancerOptionsService, IEnumerable<EnhancerDescriptor> enhancerDescriptors)
         {
             _mediaLibraryService = mediaLibraryService;
             _categoryService = categoryService;
@@ -43,13 +45,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "GetResourceEnhancements")]
         public async Task<ListResponse<ResourceEnhancements>> GetResourceEnhancementRecords(int resourceId, EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None)
         {
-            var resource = await _resourceService.GetByKey(resourceId, false);
+            var resource = await _resourceService.Get(resourceId, ResourceAdditionalItem.None);
             if (resource == null)
             {
                 return ListResponseBuilder<ResourceEnhancements>.NotFound;
             }
 
-            var category = await _categoryService.GetByKey(resource.CategoryId, false);
+            var category = await _categoryService.Get(resource.CategoryId, CategoryAdditionalItem.None);
             if (category == null)
             {
                 return ListResponseBuilder<ResourceEnhancements>.NotFound;
@@ -107,7 +109,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "RemoveMediaLibraryEnhancements")]
         public async Task<BaseResponse> RemoveMediaLibraryEnhancementRecords(int mediaLibraryId)
         {
-            var resourceIds = (await _resourceService.GetAllEntities(t => t.MediaLibraryId == mediaLibraryId))
+            var resourceIds = (await _resourceService.GetAll(t => t.MediaLibraryId == mediaLibraryId))
                 .Select(t => t.Id).ToArray();
             return await _enhancementService.RemoveAll(t => resourceIds.Contains(t.Id), true);
         }
@@ -116,7 +118,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "RemoveCategoryEnhancements")]
         public async Task<BaseResponse> RemoveCategoryEnhancementRecords(int categoryId)
         {
-            var resourceIds = (await _resourceService.GetAllEntities(t => t.CategoryId == categoryId))
+            var resourceIds = (await _resourceService.GetAll(t => t.CategoryId == categoryId))
                 .Select(t => t.Id).ToArray();
             return await _enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
         }

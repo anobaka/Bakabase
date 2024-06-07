@@ -1,52 +1,56 @@
-﻿using Bakabase.Abstractions.Components.StandardValue;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Abstractions.Components;
 
-namespace Bakabase.Abstractions.Models.Domain.Constants
+namespace Bakabase.Modules.CustomProperty.Models.Domain.Constants
 {
     public enum CustomPropertyType
     {
-        [StandardValue(StandardValueType.String)]
+        [CustomProperty(StandardValueType.String, StandardValueType.String)]
         SingleLineText = 1,
 
-        [StandardValue(StandardValueType.String)]
+        [CustomProperty(StandardValueType.String, StandardValueType.String)]
         MultilineText,
 
-        [StandardValue(StandardValueType.String)]
+        [CustomProperty(StandardValueType.String, StandardValueType.String)]
         SingleChoice,
 
-        [StandardValue(StandardValueType.ListString)]
+        [CustomProperty(StandardValueType.ListString, StandardValueType.ListString)]
         MultipleChoice,
 
-        [StandardValue(StandardValueType.Decimal)]
+        [CustomProperty(StandardValueType.Decimal, StandardValueType.Decimal)]
         Number,
 
-        [StandardValue(StandardValueType.Decimal)]
+        [CustomProperty(StandardValueType.Decimal, StandardValueType.Decimal)]
         Percentage,
 
-        [StandardValue(StandardValueType.Decimal)]
+        [CustomProperty(StandardValueType.Decimal, StandardValueType.Decimal)]
         Rating,
 
-        [StandardValue(StandardValueType.Boolean)]
+        [CustomProperty(StandardValueType.Boolean, StandardValueType.Boolean)]
         Boolean,
 
-        [StandardValue(StandardValueType.Link)]
+        [CustomProperty(StandardValueType.Link, StandardValueType.Link)]
         Link,
 
-        [StandardValue(StandardValueType.ListString)]
+        [CustomProperty(StandardValueType.ListString, StandardValueType.ListString)]
         Attachment,
 
-        [StandardValue(StandardValueType.DateTime)]
+        [CustomProperty(StandardValueType.DateTime, StandardValueType.DateTime)]
         Date,
 
-        [StandardValue(StandardValueType.DateTime)]
+        [CustomProperty(StandardValueType.DateTime, StandardValueType.DateTime)]
         DateTime,
 
-        [StandardValue(StandardValueType.Time)]
+        [CustomProperty(StandardValueType.Time, StandardValueType.Time)]
         Time,
 
-        [StandardValue(StandardValueType.String)]
+        [CustomProperty(StandardValueType.String, StandardValueType.String)]
         Formula,
 
-        [StandardValue(StandardValueType.ListListString)]
+        [CustomProperty(StandardValueType.ListString, StandardValueType.ListListString)]
         Multilevel,
+
+        [CustomProperty(StandardValueType.ListTag, StandardValueType.ListString)]
+        Tags,
     }
 }

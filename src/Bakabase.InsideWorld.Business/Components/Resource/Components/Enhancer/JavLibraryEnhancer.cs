@@ -51,7 +51,7 @@
 //             return Task.FromResult((string)null);
 //         }
 //
-//         public async Task<Enhancement[]> Enhance(Business.Models.Domain.Resource resource)
+//         public async Task<Enhancement[]> Enhance(Bakabase.Abstractions.Models.Domain.Resource resource)
 //         {
 //             var match = CodeRegex.Match(resource.FileName);
 //             var enhancements = new List<Enhancement>();

@@ -12,6 +12,6 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
     public interface IBulkModificationProcessor
     {
         // ResourceDiff? Preview(BulkModificationProcess process, ResourceDto resource);
-        Task Process(BulkModificationProcess process, Business.Models.Domain.Resource resource, Dictionary<string, string?> variables);
+        Task Process(BulkModificationProcess process, Bakabase.Abstractions.Models.Domain.Resource resource, Dictionary<string, string?> variables);
     }
 }

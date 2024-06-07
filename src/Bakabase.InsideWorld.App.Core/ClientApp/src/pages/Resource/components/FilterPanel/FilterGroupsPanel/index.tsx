@@ -52,9 +52,9 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
   };
 
   const prepareDataPool = async () => {
-    const categorties = (await BApi.resourceCategory.getAllResourceCategories()).data ?? [];
+    const categories = (await BApi.category.getAllCategories()).data ?? [];
     const mediaLibraries = (await BApi.mediaLibrary.getAllMediaLibraries()).data ?? [];
-    const categoryMap = categorties.reduce<Record<number, DataPoolCategory>>((s, c) => {
+    const categoryMap = categories.reduce<Record<number, DataPoolCategory>>((s, c) => {
       s[c.id!] = {
         id: c.id!,
         name: c.name!,

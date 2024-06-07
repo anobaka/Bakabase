@@ -99,13 +99,13 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         // ])]
         // Series = 14,
 
-        [BulkModificationPropertyFilter(
-        [
-            FO.Contains, FO.NotContains, FO.StartsWith, FO.NotStartsWith,
-            FO.EndsWith, FO.NotEndsWith, FO.IsNotNull, FO.IsNull,
-            FO.In, FO.NotIn, FO.Matches, FO.NotMatches
-        ])]
-        Tag = 15,
+        // [BulkModificationPropertyFilter(
+        // [
+        //     FO.Contains, FO.NotContains, FO.StartsWith, FO.NotStartsWith,
+        //     FO.EndsWith, FO.NotEndsWith, FO.IsNotNull, FO.IsNull,
+        //     FO.In, FO.NotIn, FO.Matches, FO.NotMatches
+        // ])]
+        // Tag = 15,
 
         // [BulkModificationPropertyFilter(
         // [

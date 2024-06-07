@@ -15,8 +15,11 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Dto;
+using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Legacy.Services;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
-using Bakabase.InsideWorld.Business.Components.Tag;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Extensions;
@@ -28,7 +31,11 @@ using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Services;
+using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
@@ -48,38 +55,37 @@ using NPOI.SS.Formula.Functions;
 using SharpCompress.Readers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using static Bakabase.Abstractions.Models.Domain.PathConfigurationValidateResult.Resource;
-using MediaLibrary = Bakabase.InsideWorld.Business.Models.Domain.MediaLibrary;
-using PathConfiguration = Bakabase.InsideWorld.Business.Models.Domain.PathConfiguration;
-using Resource = Bakabase.InsideWorld.Business.Models.Domain.Resource;
+using static Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult.Resource;
+using MediaLibrary = Bakabase.Abstractions.Models.Domain.MediaLibrary;
+using PathConfiguration = Bakabase.Abstractions.Models.Domain.PathConfiguration;
 using SearchOption = System.IO.SearchOption;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class MediaLibraryService : ResourceService<InsideWorldDbContext,
-        InsideWorld.Models.Models.Entities.MediaLibrary, int>
+    public class MediaLibraryService: BootstrapService,  IMediaLibraryService
     {
+        private readonly ResourceService<InsideWorldDbContext,
+            Abstractions.Models.Db.MediaLibrary, int> _orm;
         private const decimal MinimalFreeSpace = 1_000_000_000;
         protected BackgroundTaskManager BackgroundTaskManager => GetRequiredService<BackgroundTaskManager>();
-        protected ResourceCategoryService ResourceCategoryService => GetRequiredService<ResourceCategoryService>();
-        protected ResourceService ResourceService => GetRequiredService<ResourceService>();
-        protected TagService TagService => GetRequiredService<TagService>();
+        protected ICategoryService ResourceCategoryService => GetRequiredService<ICategoryService>();
+        protected IResourceService ResourceService => GetRequiredService<IResourceService>();
         protected BackgroundTaskHelper BackgroundTaskHelper => GetRequiredService<BackgroundTaskHelper>();
         private InsideWorldLocalizer _localizer;
         protected LogService LogService => GetRequiredService<LogService>();
-        protected CustomPropertyService CustomPropertyService => GetRequiredService<CustomPropertyService>();
-        protected ConversionService ConversionService => GetRequiredService<ConversionService>();
-        protected ITagService TagServiceV2 => GetRequiredService<ITagService>();
+        protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
         protected InsideWorldOptionsManagerPool InsideWorldAppService =>
             GetRequiredService<InsideWorldOptionsManagerPool>();
+        protected IStandardValueService StandardValueService => GetRequiredService<IStandardValueService>();
 
-        public MediaLibraryService(IServiceProvider serviceProvider, InsideWorldLocalizer localizer) : base(
-            serviceProvider)
+        public MediaLibraryService(IServiceProvider serviceProvider, InsideWorldLocalizer localizer,
+            ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibrary, int> orm) : base(serviceProvider)
         {
             _localizer = localizer;
+            _orm = orm;
         }
 
-        public async Task<BaseResponse> Add(MediaLibraryCreateDto model)
+        public async Task<BaseResponse> Add(MediaLibraryAddDto model)
         {
             var dto = new MediaLibrary
             {
@@ -88,14 +94,14 @@ namespace Bakabase.InsideWorld.Business.Services
                 PathConfigurations = model.PathConfigurations
             };
 
-            var t = await Add(dto.ToDbModel()!);
+            var t = await _orm.Add(dto.ToDbModel()!);
             return t;
         }
 
         public async Task AddRange(ICollection<MediaLibrary> mls)
         {
             var map = mls.ToDictionary(x => x, x => x.ToDbModel()!);
-            await base.AddRange(map.Values);
+            await _orm.AddRange(map.Values);
             foreach (var (dto, entity) in map)
             {
                 dto.Id = entity.Id;
@@ -104,7 +110,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<BaseResponse> Patch(int id, MediaLibraryPatchDto model)
         {
-            var ml = (await GetDto(id, MediaLibraryAdditionalItem.None))!;
+            var ml = (await Get(id, MediaLibraryAdditionalItem.None))!;
             if (model.PathConfigurations != null)
             {
                 ml.PathConfigurations = model.PathConfigurations;
@@ -120,30 +126,40 @@ namespace Bakabase.InsideWorld.Business.Services
                 ml.Order = model.Order.Value;
             }
 
-            var t = await Update(ml.ToDbModel()!);
+            var t = await _orm.Update(ml.ToDbModel()!);
             return t;
         }
 
         public async Task<BaseResponse> Put(MediaLibrary dto)
         {
-            return await Update(dto.ToDbModel()!);
+            return await _orm.Update(dto.ToDbModel()!);
         }
 
-        public async Task<MediaLibrary?> GetDto(int id, MediaLibraryAdditionalItem additionalItems)
+        public async Task<MediaLibrary?> Get(int id, MediaLibraryAdditionalItem additionalItems = MediaLibraryAdditionalItem.None)
         {
-            var ml = await GetByKey(id, true);
+            var ml = await _orm.GetByKey(id);
             return (await ToDtoList([ml], additionalItems)).FirstOrDefault();
         }
 
-        public async Task<List<MediaLibrary>> GetAllDto(
-            Expression<Func<InsideWorld.Models.Models.Entities.MediaLibrary, bool>>? exp,
-            MediaLibraryAdditionalItem additionalItems)
+        public async Task<List<MediaLibrary>> GetAll(
+            Expression<Func<Abstractions.Models.Db.MediaLibrary, bool>>? exp = null,
+            MediaLibraryAdditionalItem additionalItems = MediaLibraryAdditionalItem.None)
         {
-            var wss = (await base.GetAll(exp, true)).OrderBy(a => a.Order).ToList();
+            var wss = (await _orm.GetAll(exp)).OrderBy(a => a.Order).ToList();
             return await ToDtoList(wss, additionalItems);
         }
 
-        protected async Task<List<MediaLibrary>> ToDtoList(List<InsideWorld.Models.Models.Entities.MediaLibrary> mls,
+        public async Task<BaseResponse> DeleteAll(Expression<Func<Abstractions.Models.Db.MediaLibrary, bool>> selector)
+        {
+            return await _orm.RemoveAll(selector);
+        }
+
+        public async Task<BaseResponse> DeleteByKey(int key)
+        {
+            return await _orm.RemoveByKey(key);
+        }
+
+        protected async Task<List<MediaLibrary>> ToDtoList(List<Abstractions.Models.Db.MediaLibrary> mls,
             MediaLibraryAdditionalItem additionalItems)
         {
             var dtoList = mls.Select(ml => ml.ToDomainModel()!).ToList();
@@ -190,31 +206,31 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             break;
                         }
-                        case MediaLibraryAdditionalItem.FixedTags:
-                        {
-                            var fixedTagIds = dtoList.Where(t => t.PathConfigurations != null)
-                                .SelectMany(t =>
-                                    t.PathConfigurations!.Where(a => a.FixedTagIds != null)
-                                        .SelectMany(x => x.FixedTagIds!)).ToHashSet();
-                            var tags = (await TagService.GetByKeys(fixedTagIds, TagAdditionalItem.None))
-                                .ToDictionary(t => t.Id, t => t);
-                            foreach (var ml in dtoList.Where(t => t.PathConfigurations != null))
-                            {
-                                foreach (var pathConfiguration in ml.PathConfigurations!.Where(pathConfiguration =>
-                                             pathConfiguration.FixedTagIds?.Any() == true))
-                                {
-                                    pathConfiguration.FixedTags = pathConfiguration.FixedTagIds!
-                                        .Select(t => tags.GetValueOrDefault(t)).Where(t => t != null).ToList()!;
-                                }
-                            }
-
-                            break;
-                        }
+                        // case MediaLibraryAdditionalItem.FixedTags:
+                        // {
+                        //     var fixedTagIds = dtoList.Where(t => t.PathConfigurations != null)
+                        //         .SelectMany(t =>
+                        //             t.PathConfigurations!.Where(a => a.FixedTagIds != null)
+                        //                 .SelectMany(x => x.FixedTagIds!)).ToHashSet();
+                        //     var tags = (await TagService.GetByKeys(fixedTagIds, TagAdditionalItem.None))
+                        //         .ToDictionary(t => t.Id, t => t);
+                        //     foreach (var ml in dtoList.Where(t => t.PathConfigurations != null))
+                        //     {
+                        //         foreach (var pathConfiguration in ml.PathConfigurations!.Where(pathConfiguration =>
+                        //                      pathConfiguration.FixedTagIds?.Any() == true))
+                        //         {
+                        //             pathConfiguration.FixedTags = pathConfiguration.FixedTagIds!
+                        //                 .Select(t => tags.GetValueOrDefault(t)).Where(t => t != null).ToList()!;
+                        //         }
+                        //     }
+                        //
+                        //     break;
+                        // }
                         case MediaLibraryAdditionalItem.Category:
                         {
                             var categoryIds = dtoList.Select(c => c.CategoryId).ToHashSet();
                             var categories =
-                                (await ResourceCategoryService.GetAllDto(x => categoryIds.Contains(x.Id))).ToDictionary(
+                                (await ResourceCategoryService.GetAll(x => categoryIds.Contains(x.Id))).ToDictionary(
                                     a => a.Id, a => a);
                             foreach (var ml in dtoList)
                             {
@@ -234,8 +250,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<BaseResponse> Sort(int[] ids)
         {
-            var libraries = (await GetByKeys(ids)).ToDictionary(t => t.Id, t => t);
-            var changed = new List<InsideWorld.Models.Models.Entities.MediaLibrary>();
+            var libraries = (await _orm.GetByKeys(ids)).ToDictionary(t => t.Id, t => t);
+            var changed = new List<Abstractions.Models.Db.MediaLibrary>();
             for (var i = 0; i < ids.Length; i++)
             {
                 var id = ids[i];
@@ -246,12 +262,12 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            return await UpdateRange(changed);
+            return await _orm.UpdateRange(changed);
         }
 
-        public async Task<BaseResponse> Duplicate(int fromCategoryId, int toCategoryId)
+        public async Task<BaseResponse> DuplicateAllInCategory(int fromCategoryId, int toCategoryId)
         {
-            var libraries = await GetAllDto(x => x.CategoryId == fromCategoryId, MediaLibraryAdditionalItem.None);
+            var libraries = await GetAll(x => x.CategoryId == fromCategoryId, MediaLibraryAdditionalItem.None);
             if (libraries.Any())
             {
                 var newLibraries = libraries.Select(l => l.Duplicate(toCategoryId)).ToArray();
@@ -261,7 +277,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task StopSync()
+        public async Task StopSyncing()
         {
             BackgroundTaskManager.StopByName(SyncTaskBackgroundTaskName);
         }
@@ -374,13 +390,13 @@ namespace Bakabase.InsideWorld.Business.Services
         /// 
         /// </summary>
         /// <returns></returns>
-        public void SyncInBackgroundTask()
+        public void StartSyncing()
         {
             BackgroundTaskHelper.RunInNewScope<MediaLibraryService>(SyncTaskBackgroundTaskName,
                 async (service, task) => await service.Sync(task));
         }
 
-        private void SetPropertiesByMatchers(string rootPath, PathConfigurationValidateResult.Resource e, Resource pr,
+        private void SetPropertiesByMatchers(string rootPath, PathConfigurationTestResult.Resource e, Resource pr,
             Dictionary<string, Resource> parentResources, Dictionary<int, CustomProperty> customPropertyMap)
         {
             if (parentResources == null) throw new ArgumentNullException(nameof(parentResources));
@@ -462,7 +478,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         var rp = propertyMap.GetOrAdd(property.Id,
                             () => new Resource.Property(property.Name, property.DbValueType, property.DbValueType, null));
                         rp.Values ??= [];
-                        rp.Values.Add(new Resource.Property.PropertyValue(CustomPropertyValueScope.Synchronization,
+                        rp.Values.Add(new Resource.Property.PropertyValue((int)PropertyValueScope.Synchronization,
                             rawValue, rawValue, rawValue));
                     }
                 }
@@ -472,9 +488,9 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<BaseResponse> Sync(BackgroundTask task)
         {
             // Make log and error can show in background task info.
-            var libraries = await GetAllDto(null, MediaLibraryAdditionalItem.None);
+            var libraries = await GetAll(null, MediaLibraryAdditionalItem.None);
             var librariesMap = libraries.ToDictionary(a => a.Id, a => a);
-            var categories = (await ResourceCategoryService.GetAllDto()).ToDictionary(a => a.Id, a => a);
+            var categories = (await ResourceCategoryService.GetAll()).ToDictionary(a => a.Id, a => a);
 
             // Validation
             {
@@ -502,8 +518,8 @@ namespace Bakabase.InsideWorld.Business.Services
             // Top level directory/file name - (Filename, IsSingleFile, MediaLibraryId, FixedTagIds, TagNames)
             var patchingResources = new Dictionary<string, Resource>(StringComparer.OrdinalIgnoreCase);
             var parentResources = new Dictionary<string, Resource>();
-            var prevRawFullnameResourcesMap = new Dictionary<string, Resource>();
-            var invalidData = new List<Resource>();
+            var prevPathResourceMap = new Dictionary<string, Resource>();
+            var invalidResources = new List<Resource>();
 
             var changedResources = new ConcurrentDictionary<string, Resource>();
 
@@ -590,10 +606,10 @@ namespace Bakabase.InsideWorld.Business.Services
                             FileSystemInfo fileSystemInfo = patches.IsFile
                                 ? new FileInfo(fullname)
                                 : new DirectoryInfo(fullname);
-                            patches.FileCreateDt =
+                            patches.FileCreatedAt =
                                 fileSystemInfo.CreationTime.AddTicks(-(fileSystemInfo.CreationTime.Ticks %
                                                                        TimeSpan.TicksPerSecond));
-                            patches.FileModifyDt =
+                            patches.FileModifiedAt =
                                 fileSystemInfo.LastWriteTime.AddTicks(-(fileSystemInfo.LastWriteTime.Ticks %
                                                                         TimeSpan.TicksPerSecond));
                             task.Percentage = basePercentage + (int) (++count / resourceCountPerPercentage);
@@ -603,61 +619,31 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                     case MediaLibrarySyncStep.CleanResources:
                     {
-                        // Remove resources belonged to unknown libraries
-                        await ResourceService.RemoveByMediaLibraryIdsNotIn(librariesMap.Keys.ToArray());
-                        var prevResources = await ResourceService.GetAll(ResourceAdditionalItem.All);
+                        var prevResources = await ResourceService.GetAll(null, ResourceAdditionalItem.All);
+                        // Delete resources with unknown paths
+                        invalidResources.AddRange(prevResources.Where(x => !patchingResources.Keys.Contains(x.Path)));
 
-                        var prevRawFullnameResourcesList = prevResources
-                            .GroupBy(a => a.Path.StandardizePath()!, StringComparer.OrdinalIgnoreCase)
-                            .ToDictionary(t => t.Key, t => t.ToArray());
+                        var invalidIds = invalidResources.Select(r => r.Id).ToArray();
+                        await ResourceService.DeleteByKeys(invalidIds);
+                        prevResources.RemoveAll(x => invalidResources.Contains(x));
 
-                        var duplicatedResources = prevRawFullnameResourcesList.Values.Where(t => t.Length > 0)
-                            .SelectMany(t => t.Skip(1)).ToArray();
-
-                        invalidData.AddRange(duplicatedResources);
-                        prevRawFullnameResourcesMap =
-                            prevRawFullnameResourcesList.ToDictionary(t => t.Key, t => t.Value[0]);
-
-                        // Compare
-                        var missingFullnameList = prevRawFullnameResourcesMap.Keys
-                            .Except(patchingResources.Keys, StringComparer.OrdinalIgnoreCase)
-                            .ToHashSet();
-                        // Remove unknown data
-                        // Bad directory/raw names will be deleted there.
-                        invalidData.AddRange(missingFullnameList.Select(a =>
-                        {
-                            prevRawFullnameResourcesMap.Remove(a, out var d);
-                            return d!;
-                        }));
-                        // Remove mismatched category/library resources.
-
-                        var invalidMediaLibraryResources = prevRawFullnameResourcesMap.Values
-                            .Where(a => !librariesMap.ContainsKey(a.MediaLibraryId)).ToArray();
-
-                        foreach (var r in invalidMediaLibraryResources)
-                        {
-                            prevRawFullnameResourcesMap.Remove(r.Path);
-                            invalidData.Add(r);
-                        }
-
-                        await ResourceService.RemoveByKeys(invalidData.Select(a => a.Id).ToArray());
+                        prevPathResourceMap = prevResources.ToDictionary(t => t.Path);
                         break;
                     }
                     case MediaLibrarySyncStep.CompareResources:
                     {
                         var count = 0;
-                        foreach (var (fullname, pr) in
-                                 patchingResources)
+                        foreach (var (path, pr) in patchingResources)
                         {
-                            if (!prevRawFullnameResourcesMap.TryGetValue(fullname, out var resource))
+                            if (!prevPathResourceMap.TryGetValue(path, out var resource))
                             {
                                 resource = pr;
-                                changedResources[fullname] = resource;
+                                changedResources[path] = resource;
                             }
 
                             if (resource.MergeOnSynchronization(pr))
                             {
-                                changedResources[fullname] = resource;
+                                changedResources[path] = resource;
                             }
 
                             task.Percentage = basePercentage + (int) (++count / resourceCountPerPercentage);
@@ -665,7 +651,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                         foreach (var (_, r) in changedResources)
                         {
-                            r.UpdateDt = DateTime.Now;
+                            r.UpdatedAt = DateTime.Now;
                         }
 
                         break;
@@ -678,12 +664,12 @@ namespace Bakabase.InsideWorld.Business.Services
                         // Update sync result
                         var libraryResourceCount = patchingResources.GroupBy(a => a.Value.MediaLibraryId)
                             .ToDictionary(a => a.Key, a => a.Count());
-                        await UpdateByKeys(libraries.Select(a => a.Id).ToArray(),
+                        await _orm.UpdateByKeys(libraries.Select(a => a.Id).ToArray(),
                             l => { l.ResourceCount = libraryResourceCount.TryGetValue(l.Id, out var c) ? c : 0; });
 
                         task.Message = string.Join(
                             Environment.NewLine,
-                            $"[Resource] Found: {patchingResources.Count}, New: {newResources.Length} Removed: {invalidData.Count}, Updated: {resourcesToBeSaved.Count - newResources.Length}",
+                            $"[Resource] Found: {patchingResources.Count}, New: {newResources.Length} Removed: {invalidResources.Count}, Updated: {resourcesToBeSaved.Count - newResources.Length}",
                             $"[Directory]: Found: {patchingResources.Count(a => !a.Value.IsFile)}",
                             $"[File]: Found: {patchingResources.Count(a => a.Value.IsFile)}"
                         );
@@ -703,12 +689,12 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<SingletonResponse<PathConfigurationValidateResult>> Test(
+        public async Task<SingletonResponse<PathConfigurationTestResult>> Test(
             PathConfiguration pc, int maxResourceCount = int.MaxValue)
         {
             if (pc.Path.IsNullOrEmpty())
             {
-                return SingletonResponseBuilder<PathConfigurationValidateResult>.BuildBadRequest(
+                return SingletonResponseBuilder<PathConfigurationTestResult>.BuildBadRequest(
                     _localizer.ValueIsNotSet(nameof(pc.Path)));
             }
 
@@ -717,13 +703,13 @@ namespace Bakabase.InsideWorld.Business.Services
                     {PropertyId: (int) ResourceProperty.Resource, IsReservedProperty: true, IsValid: true});
             if (resourceMatcherValue == null)
             {
-                return SingletonResponseBuilder<PathConfigurationValidateResult>.BuildBadRequest(
+                return SingletonResponseBuilder<PathConfigurationTestResult>.BuildBadRequest(
                     "A valid resource matcher value is required");
             }
 
             pc.Path = pc.Path?.StandardizePath()!;
             var dir = new DirectoryInfo(pc.Path!);
-            var entries = new List<PathConfigurationValidateResult.Resource>();
+            var entries = new List<PathConfigurationTestResult.Resource>();
             if (dir.Exists)
             {
                 var customPropertyIds =
@@ -813,18 +799,18 @@ namespace Bakabase.InsideWorld.Business.Services
                         })
                         .ToList();
 
-                    var propertyIdRawValueMap = new Dictionary<int, HashSet<string>>();
+                    var propertyIdBizValueMap = new Dictionary<int, HashSet<string>>();
                     foreach (var segment in list)
                     {
                         foreach (var p in segment.PropertyKeys.Where(p => !p.IsReserved))
                         {
-                            propertyIdRawValueMap.GetOrAdd(p.Id, () => []).Add(segment.SegmentText);
+                            propertyIdBizValueMap.GetOrAdd(p.Id, () => []).Add(segment.SegmentText);
                         }
                     }
 
                     foreach (var gv in globalValues.Where(x => !x.PropertyKey.IsReserved))
                     {
-                        var set = propertyIdRawValueMap.GetOrAdd(gv.PropertyKey.Id, () => []);
+                        var set = propertyIdBizValueMap.GetOrAdd(gv.PropertyKey.Id, () => []);
                         foreach (var x in gv.TextValues)
                         {
                             set.Add(x);
@@ -832,18 +818,19 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
 
                     var customPropertyIdValueMap = new Dictionary<int, object?>();
-                    foreach (var (pId, listString) in propertyIdRawValueMap)
+                    foreach (var (pId, listString) in propertyIdBizValueMap)
                     {
                         var property = customPropertyMap.GetValueOrDefault(pId);
                         if (property != null)
                         {
+                            
                             customPropertyIdValueMap[property.Id] =
-                                (await ConversionService.CheckConversionLoss(listString.ToList(),
+                                (await StandardValueService.CheckConversionLoss(listString.ToList(),
                                     StandardValueType.ListString, property.DbValueType)).NewValue;
                         }
                     }
 
-                    var entry = new PathConfigurationValidateResult.Resource(Directory.Exists(f), relativePath)
+                    var entry = new PathConfigurationTestResult.Resource(Directory.Exists(f), relativePath)
                     {
                         SegmentAndMatchedValues = list,
                         IsDirectory = Directory.Exists(f),
@@ -862,13 +849,13 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 var relativeCustomPropertyIds = entries.SelectMany(x => x.CustomPropertyIdValueMap.Keys).ToHashSet();
 
-                return new SingletonResponse<PathConfigurationValidateResult>(
-                    new PathConfigurationValidateResult(dir.FullName.StandardizePath()!, entries,
+                return new SingletonResponse<PathConfigurationTestResult>(
+                    new PathConfigurationTestResult(dir.FullName.StandardizePath()!, entries,
                         customPropertyMap.Where(c => relativeCustomPropertyIds.Contains(c.Key))
                             .ToDictionary(d => d.Key, d => (CustomProperty) d.Value)));
             }
 
-            return SingletonResponseBuilder<PathConfigurationValidateResult>.NotFound;
+            return SingletonResponseBuilder<PathConfigurationTestResult>.NotFound;
         }
 
         public static bool CheckPathContaining(IReadOnlyCollection<string> pool, string target)

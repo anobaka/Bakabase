@@ -78,7 +78,7 @@ export default ({
     });
     setWrappers(wrappers);
 
-    const cr = await BApi.resourceCategory.getResourceCategory(categoryId, { additionalItems: ResourceCategoryAdditionalItem.CustomProperties });
+    const cr = await BApi.category.getResourceCategory(categoryId, { additionalItems: ResourceCategoryAdditionalItem.CustomProperties });
     const c = cr.data || {};
     setCategory({
       id: c.id!,
@@ -119,7 +119,7 @@ export default ({
       onClose={close}
       size={'xl'}
       onOk={async () => {
-        await BApi.resourceCategory.updateResourceCategory(categoryId, {
+        await BApi.category.updateResourceCategory(categoryId, {
           resourceDisplayNameTemplate: templateRef.current,
         });
       }}
@@ -211,7 +211,7 @@ export default ({
         <div>
           <Button
             onClick={() => {
-              BApi.resourceCategory.previewCategoryDisplayNameTemplate(categoryId, { template: templateRef.current })
+              BApi.category.previewCategoryDisplayNameTemplate(categoryId, { template: templateRef.current })
                 .then(r => {
                   const data = r.data || [];
                   createPortal(Modal, {

@@ -12,175 +12,32 @@ import request from './api-wrapper';
  ==========================================================*/
 /**
  * 
- * request: GetAlias
- * url: GetAliasURL
- * method: GetAlias_TYPE
- * raw_url: GetAlias_RAW_URL
- * @param id - 
- */
-export const GetAlias = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/alias/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAlias_RAW_URL = function() {
-  return '/alias/{id}'
-}
-export const GetAlias_TYPE = function() {
-  return 'get'
-}
-export const GetAliasURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/alias/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: UpdateAlias
- * url: UpdateAliasURL
- * method: UpdateAlias_TYPE
- * raw_url: UpdateAlias_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const UpdateAlias = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/alias/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const UpdateAlias_RAW_URL = function() {
-  return '/alias/{id}'
-}
-export const UpdateAlias_TYPE = function() {
-  return 'put'
-}
-export const UpdateAliasURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/alias/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: RemoveAlias
- * url: RemoveAliasURL
- * method: RemoveAlias_TYPE
- * raw_url: RemoveAlias_RAW_URL
- * @param id - 
- */
-export const RemoveAlias = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/alias/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const RemoveAlias_RAW_URL = function() {
-  return '/alias/{id}'
-}
-export const RemoveAlias_TYPE = function() {
-  return 'delete'
-}
-export const RemoveAliasURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/alias/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: SearchAliases
- * url: SearchAliasesURL
- * method: SearchAliases_TYPE
- * raw_url: SearchAliases_RAW_URL
- * @param names - 
- * @param name - 
- * @param exactly - 
- * @param additionalItems - 
+ * request: SearchAliasGroups
+ * url: SearchAliasGroupsURL
+ * method: SearchAliasGroups_TYPE
+ * raw_url: SearchAliasGroups_RAW_URL
+ * @param texts - 
+ * @param text - 
+ * @param fuzzyText - 
  * @param pageIndex - 
  * @param pageSize - 
  * @param skipCount - 
  */
-export const SearchAliases = function(parameters = {}) {
+export const SearchAliasGroups = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/alias'
   let body
   let queryParameters = {}
   let form = {}
-  if (parameters['names'] !== undefined) {
-    queryParameters['names'] = parameters['names']
+  if (parameters['texts'] !== undefined) {
+    queryParameters['texts'] = parameters['texts']
   }
-  if (parameters['name'] !== undefined) {
-    queryParameters['name'] = parameters['name']
+  if (parameters['text'] !== undefined) {
+    queryParameters['text'] = parameters['text']
   }
-  if (parameters['exactly'] !== undefined) {
-    queryParameters['exactly'] = parameters['exactly']
-  }
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
+  if (parameters['fuzzyText'] !== undefined) {
+    queryParameters['fuzzyText'] = parameters['fuzzyText']
   }
   if (parameters['pageIndex'] !== undefined) {
     queryParameters['pageIndex'] = parameters['pageIndex']
@@ -198,27 +55,24 @@ export const SearchAliases = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const SearchAliases_RAW_URL = function() {
+export const SearchAliasGroups_RAW_URL = function() {
   return '/alias'
 }
-export const SearchAliases_TYPE = function() {
+export const SearchAliasGroups_TYPE = function() {
   return 'get'
 }
-export const SearchAliasesURL = function(parameters = {}) {
+export const SearchAliasGroupsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/alias'
-  if (parameters['names'] !== undefined) {
-    queryParameters['names'] = parameters['names']
+  if (parameters['texts'] !== undefined) {
+    queryParameters['texts'] = parameters['texts']
   }
-  if (parameters['name'] !== undefined) {
-    queryParameters['name'] = parameters['name']
+  if (parameters['text'] !== undefined) {
+    queryParameters['text'] = parameters['text']
   }
-  if (parameters['exactly'] !== undefined) {
-    queryParameters['exactly'] = parameters['exactly']
-  }
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
+  if (parameters['fuzzyText'] !== undefined) {
+    queryParameters['fuzzyText'] = parameters['fuzzyText']
   }
   if (parameters['pageIndex'] !== undefined) {
     queryParameters['pageIndex'] = parameters['pageIndex']
@@ -239,193 +93,22 @@ export const SearchAliasesURL = function(parameters = {}) {
 }
 /**
  * 
- * request: CreateAlias
- * url: CreateAliasURL
- * method: CreateAlias_TYPE
- * raw_url: CreateAlias_RAW_URL
+ * request: PatchAlias
+ * url: PatchAliasURL
+ * method: PatchAlias_TYPE
+ * raw_url: PatchAlias_RAW_URL
+ * @param text - 
  * @param model - 
  */
-export const CreateAlias = function(parameters = {}) {
+export const PatchAlias = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/alias'
   let body
   let queryParameters = {}
   let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const CreateAlias_RAW_URL = function() {
-  return '/alias'
-}
-export const CreateAlias_TYPE = function() {
-  return 'post'
-}
-export const CreateAliasURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/alias'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: ExportAliases
- * url: ExportAliasesURL
- * method: ExportAliases_TYPE
- * raw_url: ExportAliases_RAW_URL
- */
-export const ExportAliases = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/alias/export'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const ExportAliases_RAW_URL = function() {
-  return '/alias/export'
-}
-export const ExportAliases_TYPE = function() {
-  return 'post'
-}
-export const ExportAliasesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/alias/export'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: ImportAliases
- * url: ImportAliasesURL
- * method: ImportAliases_TYPE
- * raw_url: ImportAliases_RAW_URL
- * @param model - 
- */
-export const ImportAliases = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/alias/import'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const ImportAliases_RAW_URL = function() {
-  return '/alias/import'
-}
-export const ImportAliases_TYPE = function() {
-  return 'post'
-}
-export const ImportAliasesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/alias/import'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: RemoveAliasGroup
- * url: RemoveAliasGroupURL
- * method: RemoveAliasGroup_TYPE
- * raw_url: RemoveAliasGroup_RAW_URL
- * @param id - 
- */
-export const RemoveAliasGroup = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/alias-group/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const RemoveAliasGroup_RAW_URL = function() {
-  return '/alias-group/{id}'
-}
-export const RemoveAliasGroup_TYPE = function() {
-  return 'delete'
-}
-export const RemoveAliasGroupURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/alias-group/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: MergeAliasGroup
- * url: MergeAliasGroupURL
- * method: MergeAliasGroup_TYPE
- * raw_url: MergeAliasGroup_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const MergeAliasGroup = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/alias-group/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
+  if (parameters['text'] !== undefined) {
+    queryParameters['text'] = parameters['text']
   }
   if (parameters['model'] !== undefined) {
     body = parameters['model']
@@ -437,17 +120,200 @@ export const MergeAliasGroup = function(parameters = {}) {
   }
   return request('put', domain + path, body, queryParameters, form, config)
 }
-export const MergeAliasGroup_RAW_URL = function() {
-  return '/alias-group/{id}'
+export const PatchAlias_RAW_URL = function() {
+  return '/alias'
 }
-export const MergeAliasGroup_TYPE = function() {
+export const PatchAlias_TYPE = function() {
   return 'put'
 }
-export const MergeAliasGroupURL = function(parameters = {}) {
+export const PatchAliasURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/alias-group/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
+  let path = '/alias'
+  if (parameters['text'] !== undefined) {
+    queryParameters['text'] = parameters['text']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: AddAlias
+ * url: AddAliasURL
+ * method: AddAlias_TYPE
+ * raw_url: AddAlias_RAW_URL
+ * @param model - 
+ */
+export const AddAlias = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/alias'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const AddAlias_RAW_URL = function() {
+  return '/alias'
+}
+export const AddAlias_TYPE = function() {
+  return 'post'
+}
+export const AddAliasURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/alias'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DeleteAlias
+ * url: DeleteAliasURL
+ * method: DeleteAlias_TYPE
+ * raw_url: DeleteAlias_RAW_URL
+ * @param text - 
+ */
+export const DeleteAlias = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/alias'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['text'] !== undefined) {
+    queryParameters['text'] = parameters['text']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteAlias_RAW_URL = function() {
+  return '/alias'
+}
+export const DeleteAlias_TYPE = function() {
+  return 'delete'
+}
+export const DeleteAliasURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/alias'
+  if (parameters['text'] !== undefined) {
+    queryParameters['text'] = parameters['text']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DeleteAliasGroups
+ * url: DeleteAliasGroupsURL
+ * method: DeleteAliasGroups_TYPE
+ * raw_url: DeleteAliasGroups_RAW_URL
+ * @param preferredTexts - 
+ */
+export const DeleteAliasGroups = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/alias/groups'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['preferredTexts'] !== undefined) {
+    queryParameters['preferredTexts'] = parameters['preferredTexts']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteAliasGroups_RAW_URL = function() {
+  return '/alias/groups'
+}
+export const DeleteAliasGroups_TYPE = function() {
+  return 'delete'
+}
+export const DeleteAliasGroupsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/alias/groups'
+  if (parameters['preferredTexts'] !== undefined) {
+    queryParameters['preferredTexts'] = parameters['preferredTexts']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: MergeAliasGroups
+ * url: MergeAliasGroupsURL
+ * method: MergeAliasGroups_TYPE
+ * raw_url: MergeAliasGroups_RAW_URL
+ * @param preferredTexts - 
+ */
+export const MergeAliasGroups = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/alias/merge'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['preferredTexts'] !== undefined) {
+    queryParameters['preferredTexts'] = parameters['preferredTexts']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const MergeAliasGroups_RAW_URL = function() {
+  return '/alias/merge'
+}
+export const MergeAliasGroups_TYPE = function() {
+  return 'put'
+}
+export const MergeAliasGroupsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/alias/merge'
+  if (parameters['preferredTexts'] !== undefined) {
+    queryParameters['preferredTexts'] = parameters['preferredTexts']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -1442,6 +1308,596 @@ export const RevertBulkModificationURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/bulk-modification/{id}/revert'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetCategory
+ * url: GetCategoryURL
+ * method: GetCategory_TYPE
+ * raw_url: GetCategory_RAW_URL
+ * @param id - 
+ * @param additionalItems - 
+ */
+export const GetCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetCategory_RAW_URL = function() {
+  return '/category/{id}'
+}
+export const GetCategory_TYPE = function() {
+  return 'get'
+}
+export const GetCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PatchCategory
+ * url: PatchCategoryURL
+ * method: PatchCategory_TYPE
+ * raw_url: PatchCategory_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const PatchCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PatchCategory_RAW_URL = function() {
+  return '/category/{id}'
+}
+export const PatchCategory_TYPE = function() {
+  return 'put'
+}
+export const PatchCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DeleteCategory
+ * url: DeleteCategoryURL
+ * method: DeleteCategory_TYPE
+ * raw_url: DeleteCategory_RAW_URL
+ * @param id - 
+ */
+export const DeleteCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteCategory_RAW_URL = function() {
+  return '/category/{id}'
+}
+export const DeleteCategory_TYPE = function() {
+  return 'delete'
+}
+export const DeleteCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetAllCategories
+ * url: GetAllCategoriesURL
+ * method: GetAllCategories_TYPE
+ * raw_url: GetAllCategories_RAW_URL
+ * @param additionalItems - 
+ */
+export const GetAllCategories = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllCategories_RAW_URL = function() {
+  return '/category'
+}
+export const GetAllCategories_TYPE = function() {
+  return 'get'
+}
+export const GetAllCategoriesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category'
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: AddCategory
+ * url: AddCategoryURL
+ * method: AddCategory_TYPE
+ * raw_url: AddCategory_RAW_URL
+ * @param model - 
+ */
+export const AddCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const AddCategory_RAW_URL = function() {
+  return '/category'
+}
+export const AddCategory_TYPE = function() {
+  return 'post'
+}
+export const AddCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DuplicateCategory
+ * url: DuplicateCategoryURL
+ * method: DuplicateCategory_TYPE
+ * raw_url: DuplicateCategory_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const DuplicateCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/duplication'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const DuplicateCategory_RAW_URL = function() {
+  return '/category/{id}/duplication'
+}
+export const DuplicateCategory_TYPE = function() {
+  return 'post'
+}
+export const DuplicateCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/duplication'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: ConfigureCategoryComponents
+ * url: ConfigureCategoryComponentsURL
+ * method: ConfigureCategoryComponents_TYPE
+ * raw_url: ConfigureCategoryComponents_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const ConfigureCategoryComponents = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/component'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const ConfigureCategoryComponents_RAW_URL = function() {
+  return '/category/{id}/component'
+}
+export const ConfigureCategoryComponents_TYPE = function() {
+  return 'put'
+}
+export const ConfigureCategoryComponentsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/component'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: SortCategories
+ * url: SortCategoriesURL
+ * method: SortCategories_TYPE
+ * raw_url: SortCategories_RAW_URL
+ * @param model - 
+ */
+export const SortCategories = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/orders'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const SortCategories_RAW_URL = function() {
+  return '/category/orders'
+}
+export const SortCategories_TYPE = function() {
+  return 'put'
+}
+export const SortCategoriesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/orders'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: BindCustomPropertiesToCategory
+ * url: BindCustomPropertiesToCategoryURL
+ * method: BindCustomPropertiesToCategory_TYPE
+ * raw_url: BindCustomPropertiesToCategory_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const BindCustomPropertiesToCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/custom-properties'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const BindCustomPropertiesToCategory_RAW_URL = function() {
+  return '/category/{id}/custom-properties'
+}
+export const BindCustomPropertiesToCategory_TYPE = function() {
+  return 'put'
+}
+export const BindCustomPropertiesToCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/custom-properties'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: BindCustomPropertyToCategory
+ * url: BindCustomPropertyToCategoryURL
+ * method: BindCustomPropertyToCategory_TYPE
+ * raw_url: BindCustomPropertyToCategory_RAW_URL
+ * @param categoryId - 
+ * @param customPropertyId - 
+ */
+export const BindCustomPropertyToCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{categoryId}/custom-property/{customPropertyId}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  if (parameters['categoryId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: categoryId'))
+  }
+  path = path.replace('{customPropertyId}', `${parameters['customPropertyId']}`)
+  if (parameters['customPropertyId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: customPropertyId'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const BindCustomPropertyToCategory_RAW_URL = function() {
+  return '/category/{categoryId}/custom-property/{customPropertyId}'
+}
+export const BindCustomPropertyToCategory_TYPE = function() {
+  return 'post'
+}
+export const BindCustomPropertyToCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{categoryId}/custom-property/{customPropertyId}'
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  path = path.replace('{customPropertyId}', `${parameters['customPropertyId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PreviewCategoryDisplayNameTemplate
+ * url: PreviewCategoryDisplayNameTemplateURL
+ * method: PreviewCategoryDisplayNameTemplate_TYPE
+ * raw_url: PreviewCategoryDisplayNameTemplate_RAW_URL
+ * @param id - 
+ * @param template - 
+ * @param maxCount - 
+ */
+export const PreviewCategoryDisplayNameTemplate = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/resource/resource-display-name-template/preview'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['template'] !== undefined) {
+    queryParameters['template'] = parameters['template']
+  }
+  if (parameters['maxCount'] !== undefined) {
+    queryParameters['maxCount'] = parameters['maxCount']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const PreviewCategoryDisplayNameTemplate_RAW_URL = function() {
+  return '/category/{id}/resource/resource-display-name-template/preview'
+}
+export const PreviewCategoryDisplayNameTemplate_TYPE = function() {
+  return 'get'
+}
+export const PreviewCategoryDisplayNameTemplateURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/resource/resource-display-name-template/preview'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['template'] !== undefined) {
+    queryParameters['template'] = parameters['template']
+  }
+  if (parameters['maxCount'] !== undefined) {
+    queryParameters['maxCount'] = parameters['maxCount']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PatchCategoryEnhancerOptions
+ * url: PatchCategoryEnhancerOptionsURL
+ * method: PatchCategoryEnhancerOptions_TYPE
+ * raw_url: PatchCategoryEnhancerOptions_RAW_URL
+ * @param id - 
+ * @param enhancerId - 
+ * @param model - 
+ */
+export const PatchCategoryEnhancerOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/enhancer/{enhancerId}/options'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('patch', domain + path, body, queryParameters, form, config)
+}
+export const PatchCategoryEnhancerOptions_RAW_URL = function() {
+  return '/category/{id}/enhancer/{enhancerId}/options'
+}
+export const PatchCategoryEnhancerOptions_TYPE = function() {
+  return 'patch'
+}
+export const PatchCategoryEnhancerOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/enhancer/{enhancerId}/options'
+  path = path.replace('{id}', `${parameters['id']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -2862,87 +3318,6 @@ export const RemoveCategoryEnhancementsURL = function(parameters = {}) {
 }
 /**
  * 
- * request: SearchEnhancementRecords
- * url: SearchEnhancementRecordsURL
- * method: SearchEnhancementRecords_TYPE
- * raw_url: SearchEnhancementRecords_RAW_URL
- * @param resourceId - 
- * @param success - 
- * @param enhancerDescriptorId - 
- * @param pageIndex - 
- * @param pageSize - 
- * @param skipCount - 
- */
-export const SearchEnhancementRecords = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/enhancement-record'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['resourceId'] !== undefined) {
-    queryParameters['resourceId'] = parameters['resourceId']
-  }
-  if (parameters['success'] !== undefined) {
-    queryParameters['success'] = parameters['success']
-  }
-  if (parameters['enhancerDescriptorId'] !== undefined) {
-    queryParameters['enhancerDescriptorId'] = parameters['enhancerDescriptorId']
-  }
-  if (parameters['pageIndex'] !== undefined) {
-    queryParameters['pageIndex'] = parameters['pageIndex']
-  }
-  if (parameters['pageSize'] !== undefined) {
-    queryParameters['pageSize'] = parameters['pageSize']
-  }
-  if (parameters['skipCount'] !== undefined) {
-    queryParameters['skipCount'] = parameters['skipCount']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const SearchEnhancementRecords_RAW_URL = function() {
-  return '/enhancement-record'
-}
-export const SearchEnhancementRecords_TYPE = function() {
-  return 'get'
-}
-export const SearchEnhancementRecordsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/enhancement-record'
-  if (parameters['resourceId'] !== undefined) {
-    queryParameters['resourceId'] = parameters['resourceId']
-  }
-  if (parameters['success'] !== undefined) {
-    queryParameters['success'] = parameters['success']
-  }
-  if (parameters['enhancerDescriptorId'] !== undefined) {
-    queryParameters['enhancerDescriptorId'] = parameters['enhancerDescriptorId']
-  }
-  if (parameters['pageIndex'] !== undefined) {
-    queryParameters['pageIndex'] = parameters['pageIndex']
-  }
-  if (parameters['pageSize'] !== undefined) {
-    queryParameters['pageSize'] = parameters['pageSize']
-  }
-  if (parameters['skipCount'] !== undefined) {
-    queryParameters['skipCount'] = parameters['skipCount']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: GetAllEnhancerDescriptors
  * url: GetAllEnhancerDescriptorsURL
  * method: GetAllEnhancerDescriptors_TYPE
@@ -2972,323 +3347,6 @@ export const GetAllEnhancerDescriptorsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/enhancer/descriptor'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllFavorites
- * url: GetAllFavoritesURL
- * method: GetAllFavorites_TYPE
- * raw_url: GetAllFavorites_RAW_URL
- */
-export const GetAllFavorites = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/favorites'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllFavorites_RAW_URL = function() {
-  return '/favorites'
-}
-export const GetAllFavorites_TYPE = function() {
-  return 'get'
-}
-export const GetAllFavoritesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/favorites'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: AddFavorites
- * url: AddFavoritesURL
- * method: AddFavorites_TYPE
- * raw_url: AddFavorites_RAW_URL
- * @param model - 
- */
-export const AddFavorites = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/favorites'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const AddFavorites_RAW_URL = function() {
-  return '/favorites'
-}
-export const AddFavorites_TYPE = function() {
-  return 'post'
-}
-export const AddFavoritesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/favorites'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: PutFavorites
- * url: PutFavoritesURL
- * method: PutFavorites_TYPE
- * raw_url: PutFavorites_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const PutFavorites = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/favorites/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('patch', domain + path, body, queryParameters, form, config)
-}
-export const PutFavorites_RAW_URL = function() {
-  return '/favorites/{id}'
-}
-export const PutFavorites_TYPE = function() {
-  return 'patch'
-}
-export const PutFavoritesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/favorites/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: DeleteFavorites
- * url: DeleteFavoritesURL
- * method: DeleteFavorites_TYPE
- * raw_url: DeleteFavorites_RAW_URL
- * @param id - 
- */
-export const DeleteFavorites = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/favorites/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const DeleteFavorites_RAW_URL = function() {
-  return '/favorites/{id}'
-}
-export const DeleteFavorites_TYPE = function() {
-  return 'delete'
-}
-export const DeleteFavoritesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/favorites/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: AddResourceToFavorites
- * url: AddResourceToFavoritesURL
- * method: AddResourceToFavorites_TYPE
- * raw_url: AddResourceToFavorites_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const AddResourceToFavorites = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/favorites/{id}/resource'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const AddResourceToFavorites_RAW_URL = function() {
-  return '/favorites/{id}/resource'
-}
-export const AddResourceToFavorites_TYPE = function() {
-  return 'post'
-}
-export const AddResourceToFavoritesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/favorites/{id}/resource'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: DeleteResourceFromFavorites
- * url: DeleteResourceFromFavoritesURL
- * method: DeleteResourceFromFavorites_TYPE
- * raw_url: DeleteResourceFromFavorites_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const DeleteResourceFromFavorites = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/favorites/{id}/resource'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const DeleteResourceFromFavorites_RAW_URL = function() {
-  return '/favorites/{id}/resource'
-}
-export const DeleteResourceFromFavorites_TYPE = function() {
-  return 'delete'
-}
-export const DeleteResourceFromFavoritesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/favorites/{id}/resource'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: PutResourcesFavorites
- * url: PutResourcesFavoritesURL
- * method: PutResourcesFavorites_TYPE
- * raw_url: PutResourcesFavorites_RAW_URL
- * @param model - 
- */
-export const PutResourcesFavorites = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/favorites/resource-mapping'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const PutResourcesFavorites_RAW_URL = function() {
-  return '/favorites/resource-mapping'
-}
-export const PutResourcesFavorites_TYPE = function() {
-  return 'put'
-}
-export const PutResourcesFavoritesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/favorites/resource-mapping'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -5041,13 +5099,13 @@ export const AddMediaLibraryURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveMediaLibrary
- * url: RemoveMediaLibraryURL
- * method: RemoveMediaLibrary_TYPE
- * raw_url: RemoveMediaLibrary_RAW_URL
+ * request: DeleteMediaLibrary
+ * url: DeleteMediaLibraryURL
+ * method: DeleteMediaLibrary_TYPE
+ * raw_url: DeleteMediaLibrary_RAW_URL
  * @param id - 
  */
-export const RemoveMediaLibrary = function(parameters = {}) {
+export const DeleteMediaLibrary = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/media-library/{id}'
@@ -5065,13 +5123,13 @@ export const RemoveMediaLibrary = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const RemoveMediaLibrary_RAW_URL = function() {
+export const DeleteMediaLibrary_RAW_URL = function() {
   return '/media-library/{id}'
 }
-export const RemoveMediaLibrary_TYPE = function() {
+export const DeleteMediaLibrary_TYPE = function() {
   return 'delete'
 }
-export const RemoveMediaLibraryURL = function(parameters = {}) {
+export const DeleteMediaLibraryURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library/{id}'
@@ -5135,51 +5193,12 @@ export const PatchMediaLibraryURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetMediaLibrarySyncStatus
- * url: GetMediaLibrarySyncStatusURL
- * method: GetMediaLibrarySyncStatus_TYPE
- * raw_url: GetMediaLibrarySyncStatus_RAW_URL
+ * request: StartSyncMediaLibrary
+ * url: StartSyncMediaLibraryURL
+ * method: StartSyncMediaLibrary_TYPE
+ * raw_url: StartSyncMediaLibrary_RAW_URL
  */
-export const GetMediaLibrarySyncStatus = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/media-library/sync/status'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetMediaLibrarySyncStatus_RAW_URL = function() {
-  return '/media-library/sync/status'
-}
-export const GetMediaLibrarySyncStatus_TYPE = function() {
-  return 'get'
-}
-export const GetMediaLibrarySyncStatusURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/media-library/sync/status'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: SyncMediaLibrary
- * url: SyncMediaLibraryURL
- * method: SyncMediaLibrary_TYPE
- * raw_url: SyncMediaLibrary_RAW_URL
- */
-export const SyncMediaLibrary = function(parameters = {}) {
+export const StartSyncMediaLibrary = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/media-library/sync'
@@ -5193,13 +5212,13 @@ export const SyncMediaLibrary = function(parameters = {}) {
   }
   return request('put', domain + path, body, queryParameters, form, config)
 }
-export const SyncMediaLibrary_RAW_URL = function() {
+export const StartSyncMediaLibrary_RAW_URL = function() {
   return '/media-library/sync'
 }
-export const SyncMediaLibrary_TYPE = function() {
+export const StartSyncMediaLibrary_TYPE = function() {
   return 'put'
 }
-export const SyncMediaLibraryURL = function(parameters = {}) {
+export const StartSyncMediaLibraryURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library/sync'
@@ -5524,148 +5543,6 @@ export const AddMediaLibraryRootPathsInBulkURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library/{mlId}/path-configuration/root-paths'
   path = path.replace('{mlId}', `${parameters['mlId']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetPathRelatedLibraries
- * url: GetPathRelatedLibrariesURL
- * method: GetPathRelatedLibraries_TYPE
- * raw_url: GetPathRelatedLibraries_RAW_URL
- * @param libraryId - 
- * @param currentPath - 
- * @param newPath - 
- */
-export const GetPathRelatedLibraries = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/media-library/path-related-libraries'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['libraryId'] !== undefined) {
-    queryParameters['libraryId'] = parameters['libraryId']
-  }
-  if (parameters['currentPath'] !== undefined) {
-    queryParameters['currentPath'] = parameters['currentPath']
-  }
-  if (parameters['newPath'] !== undefined) {
-    queryParameters['newPath'] = parameters['newPath']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetPathRelatedLibraries_RAW_URL = function() {
-  return '/media-library/path-related-libraries'
-}
-export const GetPathRelatedLibraries_TYPE = function() {
-  return 'get'
-}
-export const GetPathRelatedLibrariesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/media-library/path-related-libraries'
-  if (parameters['libraryId'] !== undefined) {
-    queryParameters['libraryId'] = parameters['libraryId']
-  }
-  if (parameters['currentPath'] !== undefined) {
-    queryParameters['currentPath'] = parameters['currentPath']
-  }
-  if (parameters['newPath'] !== undefined) {
-    queryParameters['newPath'] = parameters['newPath']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetMigrationTargets
- * url: GetMigrationTargetsURL
- * method: GetMigrationTargets_TYPE
- * raw_url: GetMigrationTargets_RAW_URL
- */
-export const GetMigrationTargets = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/migration/targets'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetMigrationTargets_RAW_URL = function() {
-  return '/migration/targets'
-}
-export const GetMigrationTargets_TYPE = function() {
-  return 'get'
-}
-export const GetMigrationTargetsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/migration/targets'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: MigrateTarget
- * url: MigrateTargetURL
- * method: MigrateTarget_TYPE
- * raw_url: MigrateTarget_RAW_URL
- * @param model - 
- */
-export const MigrateTarget = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/migration/target/migration'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const MigrateTarget_RAW_URL = function() {
-  return '/migration/target/migration'
-}
-export const MigrateTarget_TYPE = function() {
-  return 'post'
-}
-export const MigrateTargetURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/migration/target/migration'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -6907,104 +6784,16 @@ export const GetPlaylistFilesURL = function(parameters = {}) {
 }
 /**
  * 
- * request: UpdatePublisher
- * url: UpdatePublisherURL
- * method: UpdatePublisher_TYPE
- * raw_url: UpdatePublisher_RAW_URL
- * @param id - 
+ * request: SearchResources
+ * url: SearchResourcesURL
+ * method: SearchResources_TYPE
+ * raw_url: SearchResources_RAW_URL
  * @param model - 
  */
-export const UpdatePublisher = function(parameters = {}) {
+export const SearchResources = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/publisher/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const UpdatePublisher_RAW_URL = function() {
-  return '/publisher/{id}'
-}
-export const UpdatePublisher_TYPE = function() {
-  return 'put'
-}
-export const UpdatePublisherURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/publisher/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllPublishers
- * url: GetAllPublishersURL
- * method: GetAllPublishers_TYPE
- * raw_url: GetAllPublishers_RAW_URL
- */
-export const GetAllPublishers = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/publisher/all'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllPublishers_RAW_URL = function() {
-  return '/publisher/all'
-}
-export const GetAllPublishers_TYPE = function() {
-  return 'get'
-}
-export const GetAllPublishersURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/publisher/all'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: SearchResourcesV2
- * url: SearchResourcesV2URL
- * method: SearchResourcesV2_TYPE
- * raw_url: SearchResourcesV2_RAW_URL
- * @param model - 
- */
-export const SearchResourcesV2 = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/search/v2'
+  let path = '/resource/search'
   let body
   let queryParameters = {}
   let form = {}
@@ -7018,16 +6807,16 @@ export const SearchResourcesV2 = function(parameters = {}) {
   }
   return request('post', domain + path, body, queryParameters, form, config)
 }
-export const SearchResourcesV2_RAW_URL = function() {
-  return '/resource/search/v2'
+export const SearchResources_RAW_URL = function() {
+  return '/resource/search'
 }
-export const SearchResourcesV2_TYPE = function() {
+export const SearchResources_TYPE = function() {
   return 'post'
 }
-export const SearchResourcesV2URL = function(parameters = {}) {
+export const SearchResourcesURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/search/v2'
+  let path = '/resource/search'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -7074,98 +6863,6 @@ export const GetResourcesByKeysURL = function(parameters = {}) {
   if (parameters['ids'] !== undefined) {
     queryParameters['ids'] = parameters['ids']
   }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: PatchResource
- * url: PatchResourceURL
- * method: PatchResource_TYPE
- * raw_url: PatchResource_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const PatchResource = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const PatchResource_RAW_URL = function() {
-  return '/resource/{id}'
-}
-export const PatchResource_TYPE = function() {
-  return 'put'
-}
-export const PatchResourceURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: UpdateResourceTags
- * url: UpdateResourceTagsURL
- * method: UpdateResourceTags_TYPE
- * raw_url: UpdateResourceTags_RAW_URL
- * @param model - 
- */
-export const UpdateResourceTags = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/tag'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const UpdateResourceTags_RAW_URL = function() {
-  return '/resource/tag'
-}
-export const UpdateResourceTags_TYPE = function() {
-  return 'put'
-}
-export const UpdateResourceTagsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/tag'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -7361,217 +7058,6 @@ export const GetResourcePlayableFilesURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetAllCustomPropertyKeys
- * url: GetAllCustomPropertyKeysURL
- * method: GetAllCustomPropertyKeys_TYPE
- * raw_url: GetAllCustomPropertyKeys_RAW_URL
- */
-export const GetAllCustomPropertyKeys = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/custom-property-keys'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllCustomPropertyKeys_RAW_URL = function() {
-  return '/resource/custom-property-keys'
-}
-export const GetAllCustomPropertyKeys_TYPE = function() {
-  return 'get'
-}
-export const GetAllCustomPropertyKeysURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/custom-property-keys'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllCustomPropertiesAndCandidates
- * url: GetAllCustomPropertiesAndCandidatesURL
- * method: GetAllCustomPropertiesAndCandidates_TYPE
- * raw_url: GetAllCustomPropertiesAndCandidates_RAW_URL
- */
-export const GetAllCustomPropertiesAndCandidates = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/custom-properties-and-candidates'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllCustomPropertiesAndCandidates_RAW_URL = function() {
-  return '/resource/custom-properties-and-candidates'
-}
-export const GetAllCustomPropertiesAndCandidates_TYPE = function() {
-  return 'get'
-}
-export const GetAllCustomPropertiesAndCandidatesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/custom-properties-and-candidates'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllReservedPropertiesAndCandidates
- * url: GetAllReservedPropertiesAndCandidatesURL
- * method: GetAllReservedPropertiesAndCandidates_TYPE
- * raw_url: GetAllReservedPropertiesAndCandidates_RAW_URL
- */
-export const GetAllReservedPropertiesAndCandidates = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/reserved-properties-and-candidates'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllReservedPropertiesAndCandidates_RAW_URL = function() {
-  return '/resource/reserved-properties-and-candidates'
-}
-export const GetAllReservedPropertiesAndCandidates_TYPE = function() {
-  return 'get'
-}
-export const GetAllReservedPropertiesAndCandidatesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/reserved-properties-and-candidates'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: RemoveResourceCustomProperty
- * url: RemoveResourceCustomPropertyURL
- * method: RemoveResourceCustomProperty_TYPE
- * raw_url: RemoveResourceCustomProperty_RAW_URL
- * @param id - 
- * @param propertyKey - 
- */
-export const RemoveResourceCustomProperty = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/resource/{id}/custom-property/{propertyKey}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  path = path.replace('{propertyKey}', `${parameters['propertyKey']}`)
-  if (parameters['propertyKey'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: propertyKey'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const RemoveResourceCustomProperty_RAW_URL = function() {
-  return '/resource/resource/{id}/custom-property/{propertyKey}'
-}
-export const RemoveResourceCustomProperty_TYPE = function() {
-  return 'delete'
-}
-export const RemoveResourceCustomPropertyURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/resource/{id}/custom-property/{propertyKey}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  path = path.replace('{propertyKey}', `${parameters['propertyKey']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: MoveResources
- * url: MoveResourcesURL
- * method: MoveResources_TYPE
- * raw_url: MoveResources_RAW_URL
- * @param model - 
- */
-export const MoveResources = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/move'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const MoveResources_RAW_URL = function() {
-  return '/resource/move'
-}
-export const MoveResources_TYPE = function() {
-  return 'put'
-}
-export const MoveResourcesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/move'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: ClearResourceTask
  * url: ClearResourceTaskURL
  * method: ClearResourceTask_TYPE
@@ -7617,91 +7103,6 @@ export const ClearResourceTaskURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetFavoritesResourcesMappings
- * url: GetFavoritesResourcesMappingsURL
- * method: GetFavoritesResourcesMappings_TYPE
- * raw_url: GetFavoritesResourcesMappings_RAW_URL
- * @param ids - 
- */
-export const GetFavoritesResourcesMappings = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/favorites-mappings'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['ids'] !== undefined) {
-    queryParameters['ids'] = parameters['ids']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetFavoritesResourcesMappings_RAW_URL = function() {
-  return '/resource/favorites-mappings'
-}
-export const GetFavoritesResourcesMappings_TYPE = function() {
-  return 'get'
-}
-export const GetFavoritesResourcesMappingsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/favorites-mappings'
-  if (parameters['ids'] !== undefined) {
-    queryParameters['ids'] = parameters['ids']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: StartResourceNfoGenerationTask
- * url: StartResourceNfoGenerationTaskURL
- * method: StartResourceNfoGenerationTask_TYPE
- * raw_url: StartResourceNfoGenerationTask_RAW_URL
- */
-export const StartResourceNfoGenerationTask = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/nfo'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const StartResourceNfoGenerationTask_RAW_URL = function() {
-  return '/resource/nfo'
-}
-export const StartResourceNfoGenerationTask_TYPE = function() {
-  return 'post'
-}
-export const StartResourceNfoGenerationTaskURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/nfo'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: GetResourceDataForPreviewer
  * url: GetResourceDataForPreviewerURL
  * method: GetResourceDataForPreviewer_TYPE
@@ -7737,123 +7138,6 @@ export const GetResourceDataForPreviewerURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/{id}/previewer'
   path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllOriginals
- * url: GetAllOriginalsURL
- * method: GetAllOriginals_TYPE
- * raw_url: GetAllOriginals_RAW_URL
- */
-export const GetAllOriginals = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/original/all'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllOriginals_RAW_URL = function() {
-  return '/resource/original/all'
-}
-export const GetAllOriginals_TYPE = function() {
-  return 'get'
-}
-export const GetAllOriginalsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/original/all'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllSeries
- * url: GetAllSeriesURL
- * method: GetAllSeries_TYPE
- * raw_url: GetAllSeries_RAW_URL
- */
-export const GetAllSeries = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/series/all'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllSeries_RAW_URL = function() {
-  return '/resource/series/all'
-}
-export const GetAllSeries_TYPE = function() {
-  return 'get'
-}
-export const GetAllSeriesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/series/all'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllCustomProperties
- * url: GetAllCustomPropertiesURL
- * method: GetAllCustomProperties_TYPE
- * raw_url: GetAllCustomProperties_RAW_URL
- */
-export const GetAllCustomProperties = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/custom-property/all'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllCustomProperties_RAW_URL = function() {
-  return '/resource/custom-property/all'
-}
-export const GetAllCustomProperties_TYPE = function() {
-  return 'get'
-}
-export const GetAllCustomPropertiesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/custom-property/all'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -7919,26 +7203,26 @@ export const PutResourceCustomPropertyValueURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetResourceCategory
- * url: GetResourceCategoryURL
- * method: GetResourceCategory_TYPE
- * raw_url: GetResourceCategory_RAW_URL
- * @param id - 
- * @param additionalItems - 
+ * request: PlayResourceFile
+ * url: PlayResourceFileURL
+ * method: PlayResourceFile_TYPE
+ * raw_url: PlayResourceFile_RAW_URL
+ * @param resourceId - 
+ * @param file - 
  */
-export const GetResourceCategory = function(parameters = {}) {
+export const PlayResourceFile = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/resource-category/{id}'
+  let path = '/resource/{resourceId}/play'
   let body
   let queryParameters = {}
   let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  if (parameters['resourceId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: resourceId'))
   }
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
+  if (parameters['file'] !== undefined) {
+    queryParameters['file'] = parameters['file']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -7947,19 +7231,19 @@ export const GetResourceCategory = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetResourceCategory_RAW_URL = function() {
-  return '/resource-category/{id}'
+export const PlayResourceFile_RAW_URL = function() {
+  return '/resource/{resourceId}/play'
 }
-export const GetResourceCategory_TYPE = function() {
+export const PlayResourceFile_TYPE = function() {
   return 'get'
 }
-export const GetResourceCategoryURL = function(parameters = {}) {
+export const PlayResourceFileURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
+  let path = '/resource/{resourceId}/play'
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  if (parameters['file'] !== undefined) {
+    queryParameters['file'] = parameters['file']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -7971,593 +7255,12 @@ export const GetResourceCategoryURL = function(parameters = {}) {
 }
 /**
  * 
- * request: UpdateResourceCategory
- * url: UpdateResourceCategoryURL
- * method: UpdateResourceCategory_TYPE
- * raw_url: UpdateResourceCategory_RAW_URL
- * @param id - 
- * @param model - 
+ * request: GetAllSpecialTexts
+ * url: GetAllSpecialTextsURL
+ * method: GetAllSpecialTexts_TYPE
+ * raw_url: GetAllSpecialTexts_RAW_URL
  */
-export const UpdateResourceCategory = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const UpdateResourceCategory_RAW_URL = function() {
-  return '/resource-category/{id}'
-}
-export const UpdateResourceCategory_TYPE = function() {
-  return 'put'
-}
-export const UpdateResourceCategoryURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: DeleteResourceCategoryAndClearAllRelatedData
- * url: DeleteResourceCategoryAndClearAllRelatedDataURL
- * method: DeleteResourceCategoryAndClearAllRelatedData_TYPE
- * raw_url: DeleteResourceCategoryAndClearAllRelatedData_RAW_URL
- * @param id - 
- */
-export const DeleteResourceCategoryAndClearAllRelatedData = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const DeleteResourceCategoryAndClearAllRelatedData_RAW_URL = function() {
-  return '/resource-category/{id}'
-}
-export const DeleteResourceCategoryAndClearAllRelatedData_TYPE = function() {
-  return 'delete'
-}
-export const DeleteResourceCategoryAndClearAllRelatedDataURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllResourceCategories
- * url: GetAllResourceCategoriesURL
- * method: GetAllResourceCategories_TYPE
- * raw_url: GetAllResourceCategories_RAW_URL
- * @param additionalItems - 
- */
-export const GetAllResourceCategories = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllResourceCategories_RAW_URL = function() {
-  return '/resource-category'
-}
-export const GetAllResourceCategories_TYPE = function() {
-  return 'get'
-}
-export const GetAllResourceCategoriesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category'
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: AddResourceCategory
- * url: AddResourceCategoryURL
- * method: AddResourceCategory_TYPE
- * raw_url: AddResourceCategory_RAW_URL
- * @param model - 
- */
-export const AddResourceCategory = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const AddResourceCategory_RAW_URL = function() {
-  return '/resource-category'
-}
-export const AddResourceCategory_TYPE = function() {
-  return 'post'
-}
-export const AddResourceCategoryURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: DuplicateResourceCategory
- * url: DuplicateResourceCategoryURL
- * method: DuplicateResourceCategory_TYPE
- * raw_url: DuplicateResourceCategory_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const DuplicateResourceCategory = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/{id}/duplication'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const DuplicateResourceCategory_RAW_URL = function() {
-  return '/resource-category/{id}/duplication'
-}
-export const DuplicateResourceCategory_TYPE = function() {
-  return 'post'
-}
-export const DuplicateResourceCategoryURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{id}/duplication'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: ConfigureResourceCategoryComponents
- * url: ConfigureResourceCategoryComponentsURL
- * method: ConfigureResourceCategoryComponents_TYPE
- * raw_url: ConfigureResourceCategoryComponents_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const ConfigureResourceCategoryComponents = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/{id}/component'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const ConfigureResourceCategoryComponents_RAW_URL = function() {
-  return '/resource-category/{id}/component'
-}
-export const ConfigureResourceCategoryComponents_TYPE = function() {
-  return 'put'
-}
-export const ConfigureResourceCategoryComponentsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{id}/component'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: SortCategories
- * url: SortCategoriesURL
- * method: SortCategories_TYPE
- * raw_url: SortCategories_RAW_URL
- * @param model - 
- */
-export const SortCategories = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/orders'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const SortCategories_RAW_URL = function() {
-  return '/resource-category/orders'
-}
-export const SortCategories_TYPE = function() {
-  return 'put'
-}
-export const SortCategoriesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/orders'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: SaveDataFromSetupWizard
- * url: SaveDataFromSetupWizardURL
- * method: SaveDataFromSetupWizard_TYPE
- * raw_url: SaveDataFromSetupWizard_RAW_URL
- * @param model - 
- */
-export const SaveDataFromSetupWizard = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/setup-wizard'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const SaveDataFromSetupWizard_RAW_URL = function() {
-  return '/resource-category/setup-wizard'
-}
-export const SaveDataFromSetupWizard_TYPE = function() {
-  return 'post'
-}
-export const SaveDataFromSetupWizardURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/setup-wizard'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: BindCustomPropertiesToCategory
- * url: BindCustomPropertiesToCategoryURL
- * method: BindCustomPropertiesToCategory_TYPE
- * raw_url: BindCustomPropertiesToCategory_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const BindCustomPropertiesToCategory = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/{id}/custom-properties'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const BindCustomPropertiesToCategory_RAW_URL = function() {
-  return '/resource-category/{id}/custom-properties'
-}
-export const BindCustomPropertiesToCategory_TYPE = function() {
-  return 'put'
-}
-export const BindCustomPropertiesToCategoryURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{id}/custom-properties'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: BindCustomPropertyToCategory
- * url: BindCustomPropertyToCategoryURL
- * method: BindCustomPropertyToCategory_TYPE
- * raw_url: BindCustomPropertyToCategory_RAW_URL
- * @param categoryId - 
- * @param customPropertyId - 
- */
-export const BindCustomPropertyToCategory = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/{categoryId}/custom-property/{customPropertyId}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
-  if (parameters['categoryId'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: categoryId'))
-  }
-  path = path.replace('{customPropertyId}', `${parameters['customPropertyId']}`)
-  if (parameters['customPropertyId'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: customPropertyId'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const BindCustomPropertyToCategory_RAW_URL = function() {
-  return '/resource-category/{categoryId}/custom-property/{customPropertyId}'
-}
-export const BindCustomPropertyToCategory_TYPE = function() {
-  return 'post'
-}
-export const BindCustomPropertyToCategoryURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{categoryId}/custom-property/{customPropertyId}'
-  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
-  path = path.replace('{customPropertyId}', `${parameters['customPropertyId']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: PreviewCategoryDisplayNameTemplate
- * url: PreviewCategoryDisplayNameTemplateURL
- * method: PreviewCategoryDisplayNameTemplate_TYPE
- * raw_url: PreviewCategoryDisplayNameTemplate_RAW_URL
- * @param id - 
- * @param template - 
- * @param maxCount - 
- */
-export const PreviewCategoryDisplayNameTemplate = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/{id}/resource/resource-display-name-template/preview'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['template'] !== undefined) {
-    queryParameters['template'] = parameters['template']
-  }
-  if (parameters['maxCount'] !== undefined) {
-    queryParameters['maxCount'] = parameters['maxCount']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const PreviewCategoryDisplayNameTemplate_RAW_URL = function() {
-  return '/resource-category/{id}/resource/resource-display-name-template/preview'
-}
-export const PreviewCategoryDisplayNameTemplate_TYPE = function() {
-  return 'get'
-}
-export const PreviewCategoryDisplayNameTemplateURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{id}/resource/resource-display-name-template/preview'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['template'] !== undefined) {
-    queryParameters['template'] = parameters['template']
-  }
-  if (parameters['maxCount'] !== undefined) {
-    queryParameters['maxCount'] = parameters['maxCount']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: PatchCategoryEnhancerOptions
- * url: PatchCategoryEnhancerOptionsURL
- * method: PatchCategoryEnhancerOptions_TYPE
- * raw_url: PatchCategoryEnhancerOptions_RAW_URL
- * @param id - 
- * @param enhancerId - 
- * @param model - 
- */
-export const PatchCategoryEnhancerOptions = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource-category/{id}/enhancer/{enhancerId}/options'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
-  if (parameters['enhancerId'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('patch', domain + path, body, queryParameters, form, config)
-}
-export const PatchCategoryEnhancerOptions_RAW_URL = function() {
-  return '/resource-category/{id}/enhancer/{enhancerId}/options'
-}
-export const PatchCategoryEnhancerOptions_TYPE = function() {
-  return 'patch'
-}
-export const PatchCategoryEnhancerOptionsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{id}/enhancer/{enhancerId}/options'
-  path = path.replace('{id}', `${parameters['id']}`)
-  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllSpecialText
- * url: GetAllSpecialTextURL
- * method: GetAllSpecialText_TYPE
- * raw_url: GetAllSpecialText_RAW_URL
- */
-export const GetAllSpecialText = function(parameters = {}) {
+export const GetAllSpecialTexts = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/special-text'
@@ -8571,13 +7274,13 @@ export const GetAllSpecialText = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetAllSpecialText_RAW_URL = function() {
+export const GetAllSpecialTexts_RAW_URL = function() {
   return '/special-text'
 }
-export const GetAllSpecialText_TYPE = function() {
+export const GetAllSpecialTexts_TYPE = function() {
   return 'get'
 }
-export const GetAllSpecialTextURL = function(parameters = {}) {
+export const GetAllSpecialTextsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/special-text'
@@ -8591,13 +7294,13 @@ export const GetAllSpecialTextURL = function(parameters = {}) {
 }
 /**
  * 
- * request: CreateSpecialText
- * url: CreateSpecialTextURL
- * method: CreateSpecialText_TYPE
- * raw_url: CreateSpecialText_RAW_URL
+ * request: AddSpecialText
+ * url: AddSpecialTextURL
+ * method: AddSpecialText_TYPE
+ * raw_url: AddSpecialText_RAW_URL
  * @param model - 
  */
-export const CreateSpecialText = function(parameters = {}) {
+export const AddSpecialText = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/special-text'
@@ -8614,13 +7317,13 @@ export const CreateSpecialText = function(parameters = {}) {
   }
   return request('post', domain + path, body, queryParameters, form, config)
 }
-export const CreateSpecialText_RAW_URL = function() {
+export const AddSpecialText_RAW_URL = function() {
   return '/special-text'
 }
-export const CreateSpecialText_TYPE = function() {
+export const AddSpecialText_TYPE = function() {
   return 'post'
 }
-export const CreateSpecialTextURL = function(parameters = {}) {
+export const AddSpecialTextURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/special-text'
@@ -8679,14 +7382,14 @@ export const DeleteSpecialTextURL = function(parameters = {}) {
 }
 /**
  * 
- * request: UpdateSpecialText
- * url: UpdateSpecialTextURL
- * method: UpdateSpecialText_TYPE
- * raw_url: UpdateSpecialText_RAW_URL
+ * request: PatchSpecialText
+ * url: PatchSpecialTextURL
+ * method: PatchSpecialText_TYPE
+ * raw_url: PatchSpecialText_RAW_URL
  * @param id - 
  * @param model - 
  */
-export const UpdateSpecialText = function(parameters = {}) {
+export const PatchSpecialText = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/special-text/{id}'
@@ -8707,13 +7410,13 @@ export const UpdateSpecialText = function(parameters = {}) {
   }
   return request('put', domain + path, body, queryParameters, form, config)
 }
-export const UpdateSpecialText_RAW_URL = function() {
+export const PatchSpecialText_RAW_URL = function() {
   return '/special-text/{id}'
 }
-export const UpdateSpecialText_TYPE = function() {
+export const PatchSpecialText_TYPE = function() {
   return 'put'
 }
-export const UpdateSpecialTextURL = function(parameters = {}) {
+export const PatchSpecialTextURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/special-text/{id}'
@@ -8813,609 +7516,6 @@ export const PretreatTextURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetAllTags
- * url: GetAllTagsURL
- * method: GetAllTags_TYPE
- * raw_url: GetAllTags_RAW_URL
- * @param additionalItems - 
- */
-export const GetAllTags = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tag'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllTags_RAW_URL = function() {
-  return '/tag'
-}
-export const GetAllTags_TYPE = function() {
-  return 'get'
-}
-export const GetAllTagsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tag'
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: AddTags
- * url: AddTagsURL
- * method: AddTags_TYPE
- * raw_url: AddTags_RAW_URL
- * @param model - 
- */
-export const AddTags = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tag'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const AddTags_RAW_URL = function() {
-  return '/tag'
-}
-export const AddTags_TYPE = function() {
-  return 'post'
-}
-export const AddTagsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tag'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetTagByIds
- * url: GetTagByIdsURL
- * method: GetTagByIds_TYPE
- * raw_url: GetTagByIds_RAW_URL
- * @param ids - 
- * @param additionalItems - 
- */
-export const GetTagByIds = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tag/ids'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['ids'] !== undefined) {
-    queryParameters['ids'] = parameters['ids']
-  }
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetTagByIds_RAW_URL = function() {
-  return '/tag/ids'
-}
-export const GetTagByIds_TYPE = function() {
-  return 'get'
-}
-export const GetTagByIdsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tag/ids'
-  if (parameters['ids'] !== undefined) {
-    queryParameters['ids'] = parameters['ids']
-  }
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: UpdateTagName
- * url: UpdateTagNameURL
- * method: UpdateTagName_TYPE
- * raw_url: UpdateTagName_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const UpdateTagName = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tag/{id}/name'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const UpdateTagName_RAW_URL = function() {
-  return '/tag/{id}/name'
-}
-export const UpdateTagName_TYPE = function() {
-  return 'put'
-}
-export const UpdateTagNameURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tag/{id}/name'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: UpdateTag
- * url: UpdateTagURL
- * method: UpdateTag_TYPE
- * raw_url: UpdateTag_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const UpdateTag = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tag/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('patch', domain + path, body, queryParameters, form, config)
-}
-export const UpdateTag_RAW_URL = function() {
-  return '/tag/{id}'
-}
-export const UpdateTag_TYPE = function() {
-  return 'patch'
-}
-export const UpdateTagURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tag/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: RemoveTag
- * url: RemoveTagURL
- * method: RemoveTag_TYPE
- * raw_url: RemoveTag_RAW_URL
- * @param id - 
- */
-export const RemoveTag = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tag/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const RemoveTag_RAW_URL = function() {
-  return '/tag/{id}'
-}
-export const RemoveTag_TYPE = function() {
-  return 'delete'
-}
-export const RemoveTagURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tag/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: MoveTag
- * url: MoveTagURL
- * method: MoveTag_TYPE
- * raw_url: MoveTag_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const MoveTag = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tag/{id}/move'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const MoveTag_RAW_URL = function() {
-  return '/tag/{id}/move'
-}
-export const MoveTag_TYPE = function() {
-  return 'put'
-}
-export const MoveTagURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tag/{id}/move'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: BulkDeleteTags
- * url: BulkDeleteTagsURL
- * method: BulkDeleteTags_TYPE
- * raw_url: BulkDeleteTags_RAW_URL
- * @param model - 
- */
-export const BulkDeleteTags = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tag/bulk'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const BulkDeleteTags_RAW_URL = function() {
-  return '/tag/bulk'
-}
-export const BulkDeleteTags_TYPE = function() {
-  return 'delete'
-}
-export const BulkDeleteTagsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tag/bulk'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetAllTagGroups
- * url: GetAllTagGroupsURL
- * method: GetAllTagGroups_TYPE
- * raw_url: GetAllTagGroups_RAW_URL
- * @param additionalItems - 
- */
-export const GetAllTagGroups = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/TagGroup'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllTagGroups_RAW_URL = function() {
-  return '/TagGroup'
-}
-export const GetAllTagGroups_TYPE = function() {
-  return 'get'
-}
-export const GetAllTagGroupsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/TagGroup'
-  if (parameters['additionalItems'] !== undefined) {
-    queryParameters['additionalItems'] = parameters['additionalItems']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: AddTagGroups
- * url: AddTagGroupsURL
- * method: AddTagGroups_TYPE
- * raw_url: AddTagGroups_RAW_URL
- * @param model - 
- */
-export const AddTagGroups = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/TagGroup'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const AddTagGroups_RAW_URL = function() {
-  return '/TagGroup'
-}
-export const AddTagGroups_TYPE = function() {
-  return 'post'
-}
-export const AddTagGroupsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/TagGroup'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: UpdateTagGroup
- * url: UpdateTagGroupURL
- * method: UpdateTagGroup_TYPE
- * raw_url: UpdateTagGroup_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const UpdateTagGroup = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/TagGroup/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const UpdateTagGroup_RAW_URL = function() {
-  return '/TagGroup/{id}'
-}
-export const UpdateTagGroup_TYPE = function() {
-  return 'put'
-}
-export const UpdateTagGroupURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/TagGroup/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: RemoveTagGroup
- * url: RemoveTagGroupURL
- * method: RemoveTagGroup_TYPE
- * raw_url: RemoveTagGroup_RAW_URL
- * @param id - 
- */
-export const RemoveTagGroup = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/TagGroup/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const RemoveTagGroup_RAW_URL = function() {
-  return '/TagGroup/{id}'
-}
-export const RemoveTagGroup_TYPE = function() {
-  return 'delete'
-}
-export const RemoveTagGroupURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/TagGroup/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: SortTagGroups
- * url: SortTagGroupsURL
- * method: SortTagGroups_TYPE
- * raw_url: SortTagGroups_RAW_URL
- * @param model - 
- */
-export const SortTagGroups = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/TagGroup/orders'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const SortTagGroups_RAW_URL = function() {
-  return '/TagGroup/orders'
-}
-export const SortTagGroups_TYPE = function() {
-  return 'put'
-}
-export const SortTagGroupsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/TagGroup/orders'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: GetAllThirdPartyRequestStatistics
  * url: GetAllThirdPartyRequestStatisticsURL
  * method: GetAllThirdPartyRequestStatistics_TYPE
@@ -9445,49 +7545,6 @@ export const GetAllThirdPartyRequestStatisticsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/third-party/request-statistics'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: ExtraSubdirectories
- * url: ExtraSubdirectoriesURL
- * method: ExtraSubdirectories_TYPE
- * raw_url: ExtraSubdirectories_RAW_URL
- * @param model - 
- */
-export const ExtraSubdirectories = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tool/extra-subdirectories'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const ExtraSubdirectories_RAW_URL = function() {
-  return '/tool/extra-subdirectories'
-}
-export const ExtraSubdirectories_TYPE = function() {
-  return 'post'
-}
-export const ExtraSubdirectoriesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tool/extra-subdirectories'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -9540,274 +7597,6 @@ export const OpenFileOrDirectoryURL = function(parameters = {}) {
   }
   if (parameters['openInDirectory'] !== undefined) {
     queryParameters['openInDirectory'] = parameters['openInDirectory']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: RemoveRelayDirectories
- * url: RemoveRelayDirectoriesURL
- * method: RemoveRelayDirectories_TYPE
- * raw_url: RemoveRelayDirectories_RAW_URL
- * @param root - 
- */
-export const RemoveRelayDirectories = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tool/remove-relay-directories'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['root'] !== undefined) {
-    queryParameters['root'] = parameters['root']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const RemoveRelayDirectories_RAW_URL = function() {
-  return '/tool/remove-relay-directories'
-}
-export const RemoveRelayDirectories_TYPE = function() {
-  return 'post'
-}
-export const RemoveRelayDirectoriesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tool/remove-relay-directories'
-  if (parameters['root'] !== undefined) {
-    queryParameters['root'] = parameters['root']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GroupFilesToDirectories
- * url: GroupFilesToDirectoriesURL
- * method: GroupFilesToDirectories_TYPE
- * raw_url: GroupFilesToDirectories_RAW_URL
- * @param root - 
- */
-export const GroupFilesToDirectories = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tool/group-files-into-directories'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['root'] !== undefined) {
-    queryParameters['root'] = parameters['root']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const GroupFilesToDirectories_RAW_URL = function() {
-  return '/tool/group-files-into-directories'
-}
-export const GroupFilesToDirectories_TYPE = function() {
-  return 'post'
-}
-export const GroupFilesToDirectoriesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tool/group-files-into-directories'
-  if (parameters['root'] !== undefined) {
-    queryParameters['root'] = parameters['root']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: StartExtractEverything
- * url: StartExtractEverythingURL
- * method: StartExtractEverything_TYPE
- * raw_url: StartExtractEverything_RAW_URL
- * @param root - 
- */
-export const StartExtractEverything = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tool/everything-extraction'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['root'] !== undefined) {
-    queryParameters['root'] = parameters['root']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const StartExtractEverything_RAW_URL = function() {
-  return '/tool/everything-extraction'
-}
-export const StartExtractEverything_TYPE = function() {
-  return 'post'
-}
-export const StartExtractEverythingURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tool/everything-extraction'
-  if (parameters['root'] !== undefined) {
-    queryParameters['root'] = parameters['root']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: StopExtractingEverything
- * url: StopExtractingEverythingURL
- * method: StopExtractingEverything_TYPE
- * raw_url: StopExtractingEverything_RAW_URL
- */
-export const StopExtractingEverything = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tool/everything-extraction'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const StopExtractingEverything_RAW_URL = function() {
-  return '/tool/everything-extraction'
-}
-export const StopExtractingEverything_TYPE = function() {
-  return 'delete'
-}
-export const StopExtractingEverythingURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tool/everything-extraction'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetEverythingExtractionStatus
- * url: GetEverythingExtractionStatusURL
- * method: GetEverythingExtractionStatus_TYPE
- * raw_url: GetEverythingExtractionStatus_RAW_URL
- */
-export const GetEverythingExtractionStatus = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tool/everything-extraction/status'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetEverythingExtractionStatus_RAW_URL = function() {
-  return '/tool/everything-extraction/status'
-}
-export const GetEverythingExtractionStatus_TYPE = function() {
-  return 'get'
-}
-export const GetEverythingExtractionStatusURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tool/everything-extraction/status'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: PlayResourceFile
- * url: PlayResourceFileURL
- * method: PlayResourceFile_TYPE
- * raw_url: PlayResourceFile_RAW_URL
- * @param id - 
- * @param file - 
- */
-export const PlayResourceFile = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/tool/{id}/play'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['file'] !== undefined) {
-    queryParameters['file'] = parameters['file']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const PlayResourceFile_RAW_URL = function() {
-  return '/tool/{id}/play'
-}
-export const PlayResourceFile_TYPE = function() {
-  return 'get'
-}
-export const PlayResourceFileURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/tool/{id}/play'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['file'] !== undefined) {
-    queryParameters['file'] = parameters['file']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {

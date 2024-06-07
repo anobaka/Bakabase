@@ -1,4 +1,4 @@
-﻿using Bakabase.Modules.CustomProperty.Properties.Choice.Abstractions;
+﻿using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
 using Quartz;
 using System;
 using System.Collections.Generic;

@@ -24,15 +24,11 @@ namespace Bakabase.Abstractions.Extensions
                     let s = ((Func<Resource, object> SelectKey, IComparer<object>? Comparer)) (o switch
                     {
                         ResourceSearchSortableProperty.AddDt => (x => x.CreateDt, null),
-                        ResourceSearchSortableProperty.ReleaseDt => (x => x.ReleaseDt, null),
-                        // ResourceSearchSortableProperty.Rate => (x => x.Rate, null),
                         ResourceSearchSortableProperty.Category => (x => x.CategoryId, null),
                         ResourceSearchSortableProperty.MediaLibrary => (x => x.MediaLibraryId, null),
-                        // ResourceSearchSortableProperty.Name => (x => x.Name,
-                        // 	Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
                         ResourceSearchSortableProperty.FileCreateDt => (x => x.FileCreateDt, null),
                         ResourceSearchSortableProperty.FileModifyDt => (x => x.FileModifyDt, null),
-                        ResourceSearchSortableProperty.Filename => (x => x.RawName,
+                        ResourceSearchSortableProperty.Filename => (x => x,
                             Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
                         _ => throw new ArgumentOutOfRangeException()
                     })

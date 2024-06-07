@@ -49,7 +49,7 @@ export default ({
     console.log(newDs);
     switch (property) {
       case BulkModificationProperty.Category: {
-        BApi.resourceCategory.getAllResourceCategories().then(r => {
+        BApi.category.getAllResourceCategories().then(r => {
           const newDataSource = r.data?.filter(c => newDs.some(d => d.value == c.id!.toString())).map(item => ({
             label: item.name!,
             value: item.id!,

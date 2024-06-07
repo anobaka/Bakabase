@@ -5,40 +5,42 @@ using Bakabase.InsideWorld.Business.Components.Legacy.Models;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using Alias = Bakabase.InsideWorld.Models.Models.Entities.Alias;
+using LegacyAlias = Bakabase.InsideWorld.Models.Models.Entities.LegacyAlias;
+using Tag = Bakabase.InsideWorld.Models.Models.Entities.Tag;
 
 namespace Bakabase.InsideWorld.Business
 {
     public class InsideWorldDbContext : DbContext
     {
-        public DbSet<Alias> Aliases { get; set; }
-        public DbSet<AliasGroup> AliasGroups { get; set; }
-        [Obsolete]
-        public DbSet<LegacyDbResource> Resources { get; set; }
+        [Obsolete] public DbSet<LegacyAlias> Aliases { get; set; }
+        [Obsolete] public DbSet<AliasGroup> AliasGroups { get; set; }
+        [Obsolete] public DbSet<LegacyDbResource> Resources { get; set; }
+        [Obsolete] public DbSet<Original> Originals { get; set; }
+        [Obsolete] public DbSet<Publisher> Publishers { get; set; }
+        [Obsolete] public DbSet<Series> Series { get; set; }
+        [Obsolete] public DbSet<CustomResourceProperty> CustomResourceProperties { get; set; }
+        [Obsolete] public DbSet<PublisherResourceMapping> OrganizationResourceMappings { get; set; }
+        [Obsolete] public DbSet<OriginalResourceMapping> OriginalResourceMappings { get; set; }
+        [Obsolete] public DbSet<ResourceTagMapping> ResourceTagMappings { get; set; }
+        [Obsolete] public DbSet<PublisherTagMapping> PublisherTagMappings { get; set; }
+        [Obsolete] public DbSet<Favorites> Favorites { get; set; }
+        [Obsolete] public DbSet<FavoritesResourceMapping> FavoritesResourceMappings { get; set; }
+        [Obsolete] public DbSet<Volume> Volumes { get; set; }
+        [Obsolete] public DbSet<Tag> Tags { get; set; }
+        [Obsolete] public DbSet<TagGroup> TagGroups { get; set; }
+        [Obsolete] public DbSet<Log> Logs { get; set; }
+        [Obsolete] public DbSet<CustomPlayerOptions> CustomPlayerOptionsList { get; set; }
+        [Obsolete] public DbSet<CustomPlayableFileSelectorOptions> CustomPlayableFileSelectorOptionsList { get; set; }
+
         public DbSet<SpecialText> SpecialTexts { get; set; }
-        public DbSet<Original> Originals { get; set; }
-        public DbSet<Publisher> Publishers { get; set; }
-        public DbSet<Series> Series { get; set; }
-        public DbSet<ResourceCategory> ResourceCategories { get; set; }
-        public DbSet<CustomResourceProperty> CustomResourceProperties { get; set; }
-        public DbSet<PublisherResourceMapping> OrganizationResourceMappings { get; set; }
-        public DbSet<OriginalResourceMapping> OriginalResourceMappings { get; set; }
-        public DbSet<Volume> Volumes { get; set; }
-        public DbSet<Tag> Tags { get; set; }
-        public DbSet<TagGroup> TagGroups { get; set; }
-        public DbSet<ResourceTagMapping> ResourceTagMappings { get; set; }
-        public DbSet<PublisherTagMapping> PublisherTagMappings { get; set; }
+        public DbSet<Category> ResourceCategories { get; set; }
+
         public DbSet<MediaLibrary> MediaLibraries { get; set; }
         public DbSet<Playlist> Playlists { get; set; }
         public DbSet<ComponentOptions> ComponentOptions { get; set; }
         public DbSet<CategoryComponent> CategoryComponents { get; set; }
-        public DbSet<Favorites> Favorites { get; set; }
-        public DbSet<FavoritesResourceMapping> FavoritesResourceMappings { get; set; }
 
         public DbSet<DownloadTask> DownloadTasks { get; set; }
-        [Obsolete] public DbSet<Log> Logs { get; set; }
-        [Obsolete] public DbSet<CustomPlayerOptions> CustomPlayerOptionsList { get; set; }
-        [Obsolete] public DbSet<CustomPlayableFileSelectorOptions> CustomPlayableFileSelectorOptionsList { get; set; }
 
         public DbSet<Password> Passwords { get; set; }
 
@@ -54,6 +56,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<CategoryEnhancerOptions> CategoryEnhancerOptions { get; set; }
 
         public DbSet<Resource> ResourcesV2 { get; set; }
+        public DbSet<BuiltinPropertyValue> BuiltinPropertyValues { get; set; }
+        public DbSet<Modules.Alias.Abstractions.Models.Db.Alias> AliasesV2 { get; set; }
 
         public InsideWorldDbContext()
         {
@@ -75,7 +79,7 @@ namespace Bakabase.InsideWorld.Business
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Alias>(t =>
+            modelBuilder.Entity<LegacyAlias>(t =>
             {
                 t.HasIndex(a => a.GroupId).IsUnique(false);
                 t.HasIndex(a => a.IsPreferred).IsUnique(false);
@@ -105,19 +109,17 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<TagGroup>(a => { a.HasIndex(b => b.Name).IsUnique(); });
 
 
-            modelBuilder.Entity<Resource>(t =>
+            modelBuilder.Entity<LegacyDbResource>(t =>
             {
                 t.HasIndex(a => a.CategoryId);
+                t.HasIndex(a => a.Name);
+                t.HasIndex(a => a.RawName);
+                t.HasIndex(a => a.Language);
                 t.HasIndex(a => a.CreateDt);
                 t.HasIndex(a => a.UpdateDt);
                 t.HasIndex(a => a.FileCreateDt);
                 t.HasIndex(a => a.FileModifyDt);
-            });
-
-            modelBuilder.Entity<MediaLibrary>(t =>
-            {
-                t.HasIndex(a => a.CategoryId);
-                t.HasIndex(a => a.Name);
+                t.HasIndex(a => a.Rate);
             });
 
             modelBuilder.Entity<Original>(t => { t.HasIndex(a => a.Name); });
@@ -137,6 +139,12 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => new {a.Name, a.GroupId}).IsUnique();
             });
 
+            modelBuilder.Entity<MediaLibrary>(t =>
+            {
+                t.HasIndex(a => a.CategoryId);
+                t.HasIndex(a => a.Name);
+            });
+
             modelBuilder.Entity<DownloadTask>(t =>
             {
                 t.HasIndex(a => a.ThirdPartyId);
@@ -152,19 +160,26 @@ namespace Bakabase.InsideWorld.Business
 
             modelBuilder.Entity<CategoryCustomPropertyMapping>(t =>
             {
-	            t.HasIndex(x => new {x.CategoryId, x.PropertyId}).IsUnique();
+                t.HasIndex(x => new {x.CategoryId, x.PropertyId}).IsUnique();
             });
 
-            modelBuilder.Entity<CustomProperty>(t =>
-            {
-
-            });
+            modelBuilder.Entity<CustomProperty>(t => { });
 
             modelBuilder.Entity<CustomPropertyValue>(t =>
             {
-	            t.HasIndex(x => new {x.ResourceId});
-	            t.HasIndex(x => x.PropertyId);
+                t.HasIndex(x => new {x.ResourceId});
+                t.HasIndex(x => x.PropertyId);
                 t.HasIndex(x => new {x.ResourceId, x.PropertyId, x.Scope}).IsUnique();
+            });
+
+            modelBuilder.Entity<BuiltinPropertyValue>(t =>
+            {
+                t.HasIndex(x => new {x.ResourceId, x.Scope}).IsUnique();
+            });
+
+            modelBuilder.Entity<Resource>(r =>
+            {
+                r.HasIndex(x => x.Path).IsUnique();
             });
         }
     }

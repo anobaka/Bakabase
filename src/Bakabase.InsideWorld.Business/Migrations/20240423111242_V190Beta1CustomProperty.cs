@@ -80,11 +80,22 @@ namespace Bakabase.InsideWorld.Business.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_CustomPropertyValues_ResourceId_PropertyId_Scope",
                 table: "CustomPropertyValues",
-                columns: new[] { "ResourceId", "PropertyId", "Scope" });
+                columns: new[] { "ResourceId", "PropertyId", "Scope" },
+                unique: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "ResourceDisplayNameTemplate",
+                table: "ResourceCategories",
+                type: "TEXT",
+                nullable: true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropColumn(
+                name: "ResourceDisplayNameTemplate",
+                table: "ResourceCategories");
+
             migrationBuilder.DropIndex(
                 name: "IX_CustomPropertyValues_ResourceId_PropertyId_Scope",
                 table: "CustomPropertyValues");

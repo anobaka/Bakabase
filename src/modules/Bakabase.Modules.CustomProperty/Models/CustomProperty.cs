@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 
 namespace Bakabase.Modules.CustomProperty.Models;
 
@@ -8,11 +9,11 @@ public record CustomProperty : Bakabase.Abstractions.Models.Domain.CustomPropert
 }
 
 
-public record CustomProperty<T> : CustomProperty
+public record CustomProperty<TOptions> : CustomProperty
 {
-    private T? _options;
+    private TOptions? _options;
 
-    public new T? Options
+    public new TOptions? Options
     {
         get => _options;
         set => base.Options = _options = value;

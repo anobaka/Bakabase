@@ -17,14 +17,14 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
     /// </summary>
     public abstract class BmSingleValuePropertyFilterExpressionBuilder<TValue> : BmAbstractFilterExpressionBuilder
     {
-        protected abstract TValue? GetValue(Models.Domain.Resource resource);
+        protected abstract TValue? GetValue(Bakabase.Abstractions.Models.Domain.Resource resource);
         protected virtual string? ToString(TValue? value) => value?.ToString();
         private static bool IsComparable => typeof(IComparable).IsAssignableFrom(typeof(TValue));
 
-        protected virtual Func<Models.Domain.Resource, bool> BuildEqualsOrNotEquals(BulkModificationFilter filter)
+        protected virtual Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildEqualsOrNotEquals(BulkModificationFilter filter)
         {
             var target = JsonConvert.DeserializeObject<TValue>(filter.Target!)!;
-            Func<Models.Domain.Resource, bool> func = filter.Operation switch
+            Func<Bakabase.Abstractions.Models.Domain.Resource, bool> func = filter.Operation switch
             {
                 BulkModificationFilterOperation.Equals => r => GetValue(r)?.Equals(target) == true,
                 BulkModificationFilterOperation.NotEquals => r => GetValue(r)?.Equals(target) != true,
@@ -33,16 +33,16 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
             return func;
         }
 
-        protected override Func<Models.Domain.Resource, bool> BuildEquals(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildEquals(BulkModificationFilter filter) =>
             BuildEqualsOrNotEquals(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildNotEquals(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotEquals(BulkModificationFilter filter) =>
             BuildEqualsOrNotEquals(filter);
 
-        protected virtual Func<Models.Domain.Resource, bool> BuildStringOperation(BulkModificationFilter filter)
+        protected virtual Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildStringOperation(BulkModificationFilter filter)
         {
             var target = JsonConvert.DeserializeObject<string>(filter.Target!)!;
-            Func<Models.Domain.Resource, bool> func = filter.Operation switch
+            Func<Bakabase.Abstractions.Models.Domain.Resource, bool> func = filter.Operation switch
             {
                 BulkModificationFilterOperation.StartsWith => r =>
                     ToString(GetValue(r))?.StartsWith(target) == true,
@@ -71,34 +71,34 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
             return func;
         }
 
-        protected override Func<Models.Domain.Resource, bool> BuildContains(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildContains(BulkModificationFilter filter) =>
             BuildStringOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildNotContains(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotContains(BulkModificationFilter filter) =>
             BuildStringOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildMatches(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildMatches(BulkModificationFilter filter) =>
             BuildStringOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildNotMatches(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotMatches(BulkModificationFilter filter) =>
             BuildStringOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildEndsWith(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildEndsWith(BulkModificationFilter filter) =>
             BuildStringOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildNotEndsWith(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotEndsWith(BulkModificationFilter filter) =>
             BuildStringOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildStartsWith(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildStartsWith(BulkModificationFilter filter) =>
             BuildStringOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildNotStartsWith(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotStartsWith(BulkModificationFilter filter) =>
             BuildStringOperation(filter);
 
-        protected virtual Func<Models.Domain.Resource, bool> BuildInOrNotIn(BulkModificationFilter filter)
+        protected virtual Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildInOrNotIn(BulkModificationFilter filter)
         {
             var target = JsonConvert.DeserializeObject<HashSet<TValue>>(filter.Target!)!;
-            Func<Models.Domain.Resource, bool> func = filter.Operation switch
+            Func<Bakabase.Abstractions.Models.Domain.Resource, bool> func = filter.Operation switch
             {
                 BulkModificationFilterOperation.In => r =>
                 {
@@ -115,10 +115,10 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
             return func;
         }
 
-        protected override Func<Models.Domain.Resource, bool> BuildIn(BulkModificationFilter filter) => BuildInOrNotIn(filter);
-        protected override Func<Models.Domain.Resource, bool> BuildNotIn(BulkModificationFilter filter) => BuildInOrNotIn(filter);
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildIn(BulkModificationFilter filter) => BuildInOrNotIn(filter);
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotIn(BulkModificationFilter filter) => BuildInOrNotIn(filter);
 
-        protected virtual Func<Models.Domain.Resource, bool> BuildComparableOperation(BulkModificationFilter filter)
+        protected virtual Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildComparableOperation(BulkModificationFilter filter)
         {
             if (!IsComparable)
             {
@@ -126,7 +126,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
             }
 
             var target = JsonConvert.DeserializeObject<TValue>(filter.Target!)!;
-            Func<Models.Domain.Resource, bool> func = filter.Operation switch
+            Func<Bakabase.Abstractions.Models.Domain.Resource, bool> func = filter.Operation switch
             {
                 BulkModificationFilterOperation.GreaterThan => r =>
                 {
@@ -153,22 +153,22 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
             return func;
         }
 
-        protected override Func<Models.Domain.Resource, bool> BuildGreaterThan(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildGreaterThan(BulkModificationFilter filter) =>
             BuildComparableOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildGreaterThanOrEquals(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildGreaterThanOrEquals(BulkModificationFilter filter) =>
             BuildComparableOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildLessThan(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildLessThan(BulkModificationFilter filter) =>
             BuildComparableOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildLessThanOrEquals(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildLessThanOrEquals(BulkModificationFilter filter) =>
             BuildComparableOperation(filter);
 
-        protected override Func<Models.Domain.Resource, bool> BuildIsNull(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildIsNull(BulkModificationFilter filter) =>
             r => GetValue(r) == null;
 
-        protected override Func<Models.Domain.Resource, bool> BuildIsNotNull(BulkModificationFilter filter) =>
+        protected override Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildIsNotNull(BulkModificationFilter filter) =>
             r => GetValue(r) != null;
     }
 }

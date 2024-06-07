@@ -7,7 +7,6 @@ export interface ChipProps extends NextUIChipProps{
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  onClick?: () => any;
   radius?: 'full' | 'sm' | 'md' | 'lg';
   isDisabled?: boolean;
   variant?: 'solid' | 'bordered' | 'light' | 'flat' | 'faded' | 'shadow' | 'dot';

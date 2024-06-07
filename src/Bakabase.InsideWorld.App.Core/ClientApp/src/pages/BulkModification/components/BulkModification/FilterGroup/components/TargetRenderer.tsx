@@ -30,7 +30,7 @@ export default ({
 
     switch (property) {
       case BulkModificationProperty.Category: {
-        BApi.resourceCategory.getAllResourceCategories().then(r => {
+        BApi.category.getAllResourceCategories().then(r => {
           const newLabels = r.data?.filter(c => values.some(d => d == c.id!.toString())).map(item => item.name!);
           setLabels(newLabels || []);
         });

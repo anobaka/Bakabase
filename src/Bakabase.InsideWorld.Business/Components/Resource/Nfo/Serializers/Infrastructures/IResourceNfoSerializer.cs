@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bakabase.Abstractions.Models.Domain;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers.Infrastructures
 {
@@ -11,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers.Infr
     {
         int Version { get; }
         [Obsolete("Decoupling with resource")]
-        Business.Models.Domain.Resource Deserialize(string xml);
-        string Serialize(Business.Models.Domain.Resource resource);
+        Abstractions.Models.Domain.Resource Deserialize(string xml);
+        string Serialize(Abstractions.Models.Domain.Resource resource);
     }
 }

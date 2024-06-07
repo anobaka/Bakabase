@@ -35,9 +35,9 @@ namespace Bakabase.Abstractions.Models.Domain
     }
 
 
-    public abstract record CustomPropertyValue<TValue> : CustomPropertyValue
+    public abstract record CustomPropertyValue<TDbValue> : CustomPropertyValue
     {
-        public TValue? TypedValue { get; set; }
+        public TDbValue? TypedValue { get; set; }
 
         public override object? Value => TypedValue;
     }

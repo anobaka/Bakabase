@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos;
@@ -35,7 +36,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public class BulkModificationService : ResourceService<InsideWorldDbContext, Models.BulkModification, int>
     {
-        protected ResourceService ResourceService => GetRequiredService<ResourceService>();
+        protected IResourceService ResourceService => GetRequiredService<IResourceService>();
 
         protected BulkModificationDiffService BulkModificationDiffService =>
             GetRequiredService<BulkModificationDiffService>();
@@ -107,7 +108,6 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                 {
                     {BulkModificationFilterableProperty.Category, GetRequiredService<BmCategoryProcessor>()},
                     {BulkModificationFilterableProperty.MediaLibrary, GetRequiredService<BmMediaLibraryProcessor>()},
-                    {BulkModificationFilterableProperty.Tag, GetRequiredService<BmTagProcessor>()},
                 });
         }
 
@@ -123,7 +123,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             var rootFilter = bulkModification.Filter;
             if (rootFilter != null)
             {
-                var allResources = await ResourceService.GetAll(ResourceAdditionalItem.All);
+                var allResources = await ResourceService.GetAll(null, ResourceAdditionalItem.All);
                 var exp = rootFilter.BuildExpression();
                 var filteredResources = allResources.Where(exp.Compile()).ToList();
                 ids = filteredResources.Select(r => r.Id).ToList();
@@ -134,14 +134,14 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             return new ListResponse<int>(ids ?? new List<int>());
         }
 
-        public async Task<ListResponse<(Business.Models.Domain.Resource Current, Business.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>>
+        public async Task<ListResponse<(Bakabase.Abstractions.Models.Domain.Resource Current, Bakabase.Abstractions.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>>
             Preview(int id, CancellationToken ct)
         {
             var bm = await GetDto(id);
 
             if (bm.Status == BulkModificationStatus.Closed)
             {
-                return ListResponseBuilder<(Business.Models.Domain.Resource Current, Business.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>
+                return ListResponseBuilder<(Bakabase.Abstractions.Models.Domain.Resource Current, Bakabase.Abstractions.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>
                     .BuildBadRequest("Can't operate on a closed bulk modification.");
             }
 
@@ -150,71 +150,71 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             var resources = await ResourceService.GetByKeys(resourceIds.ToArray());
 
             var processors = PrepareProcessors();
-            var data = new List<(Business.Models.Domain.Resource Current, Business.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>();
+            var data = new List<(Bakabase.Abstractions.Models.Domain.Resource Current, Bakabase.Abstractions.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>();
 
             if (bm.Processes?.Any() == true)
             {
                 foreach (var resource in resources)
                 {
-                    ct.ThrowIfCancellationRequested();
-                    var variables = new Dictionary<string, string?>();
-                    if (bm.Variables != null)
-                    {
-                        foreach (var variable in bm.Variables)
-                        {
-                            var sourceValue =
-                                variable.Source switch
-                                {
-                                    BulkModificationVariableSource.None => null,
-                                    BulkModificationVariableSource.FileName => resource.FileName,
-                                    BulkModificationVariableSource.FileNameWithoutExtension => Path.GetFileNameWithoutExtension(resource.FileName),
-                                    BulkModificationVariableSource.FullPath => resource.Path,
-                                    BulkModificationVariableSource.DirectoryName => resource.Directory,
-                                    _ => throw new ArgumentOutOfRangeException()
-                                };
-
-                            string? value = null;
-                            if (!string.IsNullOrEmpty(variable.Find) && !string.IsNullOrEmpty(sourceValue))
-                            {
-                                var match = Regex.Match(sourceValue, variable.Find);
-                                if (match.Success)
-                                {
-                                    value = string.IsNullOrEmpty(variable.Value)
-                                        ? match.Value
-                                        : Regex.Replace(match.Value, variable.Find, variable.Value);
-                                }
-                            }
-                            else
-                            {
-                                value = variable.Value;
-                            }
-
-                            if (!string.IsNullOrEmpty(value))
-                            {
-                                variables[variable.Key] = value;
-                            }
-                        }
-                    }
-
-                    var copy = resource.Clone();
-                    foreach (var process in bm.Processes)
-                    {
-                        var processor = processors[process.Property];
-                        try
-                        {
-                            await processor.Process(process, copy, variables);
-                        }
-                        catch (Exception e)
-                        {
-                            throw new Exception(
-                                $"An error occurred during applying processor [{processor.GetType()}] on process {process}: {e.Message}",
-                                e);
-                        }
-                    }
-
-                    var diffs = resource.Compare(copy)
-                        .Select(d => d.ToBulkModificationDiff(id, resource.Id, resource.Path)).ToList();
-                    data.Add((resource, copy, diffs));
+                    // ct.ThrowIfCancellationRequested();
+                    // var variables = new Dictionary<string, string?>();
+                    // if (bm.Variables != null)
+                    // {
+                    //     foreach (var variable in bm.Variables)
+                    //     {
+                    //         var sourceValue =
+                    //             variable.Source switch
+                    //             {
+                    //                 BulkModificationVariableSource.None => null,
+                    //                 BulkModificationVariableSource.FileName => resource.FileName,
+                    //                 BulkModificationVariableSource.FileNameWithoutExtension => Path.GetFileNameWithoutExtension(resource.FileName),
+                    //                 BulkModificationVariableSource.FullPath => resource.Path,
+                    //                 BulkModificationVariableSource.DirectoryName => resource.Directory,
+                    //                 _ => throw new ArgumentOutOfRangeException()
+                    //             };
+                    //
+                    //         string? value = null;
+                    //         if (!string.IsNullOrEmpty(variable.Find) && !string.IsNullOrEmpty(sourceValue))
+                    //         {
+                    //             var match = Regex.Match(sourceValue, variable.Find);
+                    //             if (match.Success)
+                    //             {
+                    //                 value = string.IsNullOrEmpty(variable.Value)
+                    //                     ? match.Value
+                    //                     : Regex.Replace(match.Value, variable.Find, variable.Value);
+                    //             }
+                    //         }
+                    //         else
+                    //         {
+                    //             value = variable.Value;
+                    //         }
+                    //
+                    //         if (!string.IsNullOrEmpty(value))
+                    //         {
+                    //             variables[variable.Key] = value;
+                    //         }
+                    //     }
+                    // }
+                    //
+                    // var copy = resource.Clone();
+                    // foreach (var process in bm.Processes)
+                    // {
+                    //     var processor = processors[process.Property];
+                    //     try
+                    //     {
+                    //         await processor.Process(process, copy, variables);
+                    //     }
+                    //     catch (Exception e)
+                    //     {
+                    //         throw new Exception(
+                    //             $"An error occurred during applying processor [{processor.GetType()}] on process {process}: {e.Message}",
+                    //             e);
+                    //     }
+                    // }
+                    //
+                    // var diffs = resource.Compare(copy)
+                    //     .Select(d => d.ToBulkModificationDiff(id, resource.Id, resource.Path)).ToList();
+                    // data.Add((resource, copy, diffs));
                 }
             }
 
@@ -227,7 +227,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 
             await tran.CommitAsync(ct);
 
-            return new ListResponse<(Business.Models.Domain.Resource Current, Business.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>(data);
+            return new ListResponse<(Bakabase.Abstractions.Models.Domain.Resource Current, Bakabase.Abstractions.Models.Domain.Resource New, List<BulkModificationDiff> Diffs)>(data);
         }
 
         public async Task<BaseResponse> Apply(int id)

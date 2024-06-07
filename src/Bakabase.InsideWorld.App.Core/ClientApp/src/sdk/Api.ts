@@ -75,37 +75,22 @@ export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
 }
 
 /**
- * [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel]
- * @format int32
- */
-export type BakabaseAbstractionsModelsDomainConstantsCustomPropertyType =
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6
-  | 7
-  | 8
-  | 9
-  | 10
-  | 11
-  | 12
-  | 13
-  | 14
-  | 15;
-
-/**
  * [1: NotAcceptTerms, 2: NeedRestart]
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsInitializationContentType = 1 | 2;
 
 /**
- * [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString]
+ * [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsStandardValueType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type BakabaseAbstractionsModelsDomainConstantsSpecialTextType = 1 | 3 | 4 | 6 | 7 | 8 | 9;
+
+/**
+ * [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsStandardValueType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export interface BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
@@ -113,8 +98,10 @@ export interface BakabaseAbstractionsModelsDomainCustomProperty {
   name?: string | null;
   /** @format int32 */
   type?: number;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString] */
-  valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  dbValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** @format date-time */
   createdAt?: string;
   categories?: BakabaseAbstractionsModelsDomainCategory[] | null;
@@ -142,7 +129,7 @@ export interface BakabaseAbstractionsModelsDomainEnhancement {
   resourceId?: number;
   /** @format int32 */
   enhancerId?: number;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString] */
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** @format int32 */
   target?: number;
@@ -167,10 +154,118 @@ export interface BakabaseAbstractionsModelsDomainEnhancerDescriptor {
 export interface BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor {
   id?: SystemEnum;
   name?: string | null;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString] */
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   description?: string | null;
   optionsItems?: number[] | null;
+}
+
+export interface BakabaseAbstractionsModelsDomainMediaLibrary {
+  /** @format int32 */
+  id?: number;
+  /** @minLength 1 */
+  name: string;
+  /** @format int32 */
+  categoryId: number;
+  /** @format int32 */
+  order?: number;
+  /** @format int32 */
+  resourceCount?: number;
+  fileSystemInformation?: Record<string, BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation>;
+  category?: BakabaseAbstractionsModelsDomainCategory;
+  pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[] | null;
+}
+
+export interface BakabaseAbstractionsModelsDomainPathConfiguration {
+  path?: string | null;
+  rpmValues?: BakabaseInsideWorldModelsModelsAosPropertyPathSegmentMatcherValue[] | null;
+}
+
+export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResult {
+  rootPath?: string | null;
+  resources?: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResource[] | null;
+  customPropertyMap?: Record<string, BakabaseAbstractionsModelsDomainCustomProperty>;
+}
+
+export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResource {
+  isDirectory?: boolean;
+  relativePath?: string | null;
+  segmentAndMatchedValues?:
+    | BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentMatchResult[]
+    | null;
+  globalMatchedValues?: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceGlobalMatchedValue[] | null;
+  customPropertyIdValueMap?: Record<string, any>;
+}
+
+export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceGlobalMatchedValue {
+  propertyKey?: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey;
+  /** @uniqueItems true */
+  textValues?: string[] | null;
+}
+
+export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentMatchResult {
+  segmentText?: string | null;
+  propertyKeys?: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey[] | null;
+}
+
+export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey {
+  /** @format int32 */
+  id?: number;
+  isReserved?: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainResource {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  mediaLibraryId?: number;
+  /** @format int32 */
+  categoryId?: number;
+  fileName?: string | null;
+  directory?: string | null;
+  path?: string | null;
+  displayName?: string | null;
+  /** @format int32 */
+  parentId?: number | null;
+  hasChildren?: boolean;
+  isFile?: boolean;
+  /** @format date-time */
+  createdAt?: string;
+  /** @format date-time */
+  updatedAt?: string;
+  /** @format date-time */
+  fileCreatedAt?: string;
+  /** @format date-time */
+  fileModifiedAt?: string;
+  parent?: BakabaseAbstractionsModelsDomainResource;
+  properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
+  category?: BakabaseAbstractionsModelsDomainCategory;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProperty {
+  name?: string | null;
+  values?: BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue[] | null;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  dbValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {
+  /** @format int32 */
+  scope?: number;
+  value?: any;
+  bizValue?: any;
+  aliasAppliedBizValue?: any;
+}
+
+export interface BakabaseAbstractionsModelsDomainSpecialText {
+  /** @format int32 */
+  id?: number;
+  value1?: string | null;
+  value2?: string | null;
+  /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
+  type?: BakabaseAbstractionsModelsDomainConstantsSpecialTextType;
 }
 
 export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
@@ -178,6 +273,21 @@ export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
   /** @format int32 */
   type?: number;
   options?: string | null;
+}
+
+export interface BakabaseAbstractionsModelsDtoMediaLibraryAddDto {
+  /** @minLength 1 */
+  name: string;
+  /** @format int32 */
+  categoryId: number;
+  pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[] | null;
+}
+
+export interface BakabaseAbstractionsModelsDtoMediaLibraryPatchDto {
+  name?: string | null;
+  pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[] | null;
+  /** @format int32 */
+  order?: number | null;
 }
 
 export interface BakabaseAbstractionsModelsDtoResourceSearchDto {
@@ -195,10 +305,35 @@ export interface BakabaseAbstractionsModelsDtoResourceSearchDto {
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[] | null;
 }
 
+export interface BakabaseAbstractionsModelsInputMediaLibraryAddInBulkInputModel {
+  nameAndPaths: Record<string, string[] | null>;
+}
+
+export interface BakabaseAbstractionsModelsInputMediaLibraryPathConfigurationAddInputModel {
+  /** @minLength 1 */
+  path: string;
+}
+
+export interface BakabaseAbstractionsModelsInputMediaLibraryRootPathsAddInBulkInputModel {
+  rootPaths?: string[] | null;
+}
+
 export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
   /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary] */
   property?: BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty;
   asc?: boolean;
+}
+
+export interface BakabaseAbstractionsModelsInputSpecialTextAddInputModel {
+  /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
+  type?: BakabaseAbstractionsModelsDomainConstantsSpecialTextType;
+  value1?: string | null;
+  value2?: string | null;
+}
+
+export interface BakabaseAbstractionsModelsInputSpecialTextPatchInputModel {
+  value1?: string | null;
+  value2?: string | null;
 }
 
 export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
@@ -296,7 +431,7 @@ export type BakabaseInfrastructuresComponentsGuiCloseBehavior = 0 | 1 | 2 | 1000
 export type BakabaseInfrastructuresComponentsGuiUiTheme = 0 | 1 | 2;
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilter {
-  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag] */
+  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt] */
   property?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty;
   propertyKey?: string | null;
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
@@ -312,7 +447,7 @@ export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractio
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess {
-  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag] */
+  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt] */
   property?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty;
   propertyKey?: string | null;
   value?: string | null;
@@ -358,11 +493,11 @@ export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsMod
   1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
 
 /**
- * [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag]
+ * [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt]
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty =
-  1 | 2 | 4 | 5 | 7 | 8 | 9 | 15;
+  1 | 2 | 4 | 5 | 7 | 8 | 9;
 
 /**
  * [1: Processing, 2: Closed]
@@ -419,7 +554,7 @@ export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractio
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffsDiff {
-  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt, 15: Tag] */
+  /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt] */
   property?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty;
   propertyKey?: string | null;
   /** [1: Added, 2: Removed, 3: Modified] */
@@ -571,128 +706,6 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOpt
   coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
 }
 
-export interface BakabaseInsideWorldBusinessModelsDomainMediaLibrary {
-  /** @format int32 */
-  id?: number;
-  /** @minLength 1 */
-  name: string;
-  /** @format int32 */
-  categoryId: number;
-  /** @format int32 */
-  order?: number;
-  /** @format int32 */
-  resourceCount?: number;
-  fileSystemInformation?: Record<string, BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation>;
-  category?: BakabaseAbstractionsModelsDomainCategory;
-  pathConfigurations?: BakabaseInsideWorldBusinessModelsDomainPathConfiguration[] | null;
-}
-
-export interface BakabaseInsideWorldBusinessModelsDomainMigrationTarget {
-  /** @format int32 */
-  dataCount?: number;
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
-  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
-  propertyKey?: string | null;
-  /** @format int32 */
-  targetPropertyId?: number | null;
-  subTargets?: BakabaseInsideWorldBusinessModelsDomainMigrationTarget[] | null;
-  data?: any;
-  dataForDisplay?: string[] | null;
-}
-
-export interface BakabaseInsideWorldBusinessModelsDomainPathConfiguration {
-  path?: string | null;
-  rpmValues?: BakabaseInsideWorldModelsModelsAosPropertyPathSegmentMatcherValue[] | null;
-  /** @deprecated */
-  fixedTagIds?: number[] | null;
-  /** @deprecated */
-  fixedTags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
-}
-
-export interface BakabaseInsideWorldBusinessModelsDomainResource {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  mediaLibraryId?: number;
-  /** @format int32 */
-  categoryId?: number;
-  fileName?: string | null;
-  directory?: string | null;
-  path?: string | null;
-  displayName?: string | null;
-  /** @format int32 */
-  parentId?: number | null;
-  hasChildren?: boolean;
-  isFile?: boolean;
-  /** @format date-time */
-  createDt?: string;
-  /** @format date-time */
-  updateDt?: string;
-  /** @format date-time */
-  fileCreateDt?: string;
-  /** @format date-time */
-  fileModifyDt?: string;
-  parent?: BakabaseInsideWorldBusinessModelsDomainResource;
-  customPropertiesV2?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
-  customPropertyValues?: BakabaseAbstractionsModelsDomainCustomPropertyValue[] | null;
-  category?: BakabaseAbstractionsModelsDomainCategory;
-  /** @deprecated */
-  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
-  /** @deprecated */
-  customProperties?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
-  /** @deprecated */
-  introduction?: string | null;
-  series?: BakabaseInsideWorldModelsModelsDtosSeriesDto;
-  /**
-   * @deprecated
-   * @format double
-   */
-  rate?: number;
-  /** @deprecated */
-  name?: string | null;
-  volume?: BakabaseInsideWorldModelsModelsDtosVolumeDto;
-  /** [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian] */
-  language?: BakabaseInsideWorldModelsConstantsResourceLanguage;
-  /** @deprecated */
-  publishers?: BakabaseInsideWorldModelsModelsDtosPublisherDto[] | null;
-  /** @deprecated */
-  originals?: BakabaseInsideWorldModelsModelsDtosOriginalDto[] | null;
-  /**
-   * @deprecated
-   * @format date-time
-   */
-  releaseDt?: string | null;
-}
-
-export interface BakabaseInsideWorldBusinessModelsDtoMediaLibraryCreateDto {
-  /** @minLength 1 */
-  name: string;
-  /** @format int32 */
-  categoryId: number;
-  pathConfigurations?: BakabaseInsideWorldBusinessModelsDomainPathConfiguration[] | null;
-}
-
-export interface BakabaseInsideWorldBusinessModelsDtoMediaLibraryPatchDto {
-  name?: string | null;
-  pathConfigurations?: BakabaseInsideWorldBusinessModelsDomainPathConfiguration[] | null;
-  /** @format int32 */
-  order?: number | null;
-}
-
-export interface BakabaseInsideWorldBusinessModelsInputCategorySetupWizardInputModel {
-  category?: BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModel;
-  mediaLibraries?: BakabaseInsideWorldBusinessModelsDomainMediaLibrary[] | null;
-  syncAfterSaving?: boolean;
-}
-
-export interface BakabaseInsideWorldBusinessModelsInputMigrationTargetApplyInputModel {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
-  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
-  propertyKey?: string | null;
-  /** @format int32 */
-  targetPropertyId?: number | null;
-}
-
 export interface BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel {
   /** @format int32 */
   pageIndex?: number;
@@ -706,7 +719,7 @@ export interface BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel 
   skipCount?: number;
   group?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[] | null;
-  save?: boolean;
+  saveSearchCriteria?: boolean;
 }
 
 export interface BakabaseInsideWorldModelsConfigsBilibiliOptions {
@@ -817,10 +830,10 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
 export type BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource = 1 | 2;
 
 /**
- * [1: Candidates]
+ * [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsAliasAdditionalItem = 1;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsCategoryAdditionalItem = 0 | 1 | 3 | 4 | 8;
 
 /**
  * [0: None, 1: AssociatedCategories]
@@ -835,28 +848,10 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptor
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 1;
 
 /**
- * [0: None, 1: Category, 2: FileSystemInfo, 4: FixedTags]
+ * [0: None, 1: Category, 2: FileSystemInfo]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
-
-/**
- * [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem = 0 | 1 | 3 | 4 | 8;
-
-/**
- * [0: None, 1: GroupName, 2: PreferredAlias]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsTagAdditionalItem = 0 | 1 | 2;
-
-/**
- * [1: Tags, 2: PreferredAlias, 4: TagNamePreferredAlias]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsTagGroupAdditionalItem = 1 | 2 | 4;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -911,12 +906,6 @@ export type BakabaseInsideWorldModelsConstantsCoverSaveLocation = 1 | 2;
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsCoverSelectOrder = 1 | 2;
-
-/**
- * [1: String, 2: DateTime, 3: Number, 4: Enum]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsCustomDataType = 1 | 2 | 3 | 4;
 
 /**
  * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
@@ -986,33 +975,19 @@ export type BakabaseInsideWorldModelsConstantsResourceDiffProperty =
 export type BakabaseInsideWorldModelsConstantsResourceDiffType = 1 | 2 | 3;
 
 /**
- * [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsResourceLanguage = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-
-/**
  * [1: Layer, 2: Regex, 3: FixedText]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsResourceMatcherValueType = 1 | 2 | 3;
 
 /**
- * [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites]
+ * [1: RootPath, 2: ParentResource, 3: Resource, 12: Introduction, 13: Rating, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsResourceProperty =
   | 1
   | 2
   | 3
-  | 4
-  | 5
-  | 6
-  | 7
-  | 8
-  | 9
-  | 10
-  | 11
   | 12
   | 13
   | 14
@@ -1022,8 +997,7 @@ export type BakabaseInsideWorldModelsConstantsResourceProperty =
   | 18
   | 19
   | 20
-  | 21
-  | 22;
+  | 21;
 
 /**
  * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
@@ -1048,12 +1022,6 @@ export type BakabaseInsideWorldModelsConstantsSearchOperation =
   | 16
   | 17
   | 18;
-
-/**
- * [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsSpecialTextType = 1 | 3 | 4 | 6 | 7 | 8 | 9;
 
 /**
  * [0: Default, 1: Resource]
@@ -1099,42 +1067,6 @@ export interface BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInforma
   error?: BakabaseInsideWorldModelsConstantsMediaLibraryFileSystemError;
 }
 
-export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult {
-  rootPath?: string | null;
-  entries?: BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntry[] | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntry {
-  isDirectory?: boolean;
-  relativePath?: string | null;
-  segmentAndMatchedValues?:
-    | BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResult[]
-    | null;
-  globalMatchedValues?:
-    | BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntryGlobalMatchedValue[]
-    | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntryGlobalMatchedValue {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
-  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
-  key?: string | null;
-  values?: string[] | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResult {
-  value?: string | null;
-  properties?:
-    | BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResultSegmentPropertyResult[]
-    | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResultEntrySegmentMatchResultSegmentPropertyResult {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
-  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
-  keys?: string[] | null;
-}
-
 export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   filePath?: string | null;
   /** [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown] */
@@ -1155,8 +1087,10 @@ export interface BakabaseInsideWorldModelsModelsAosPropertyPathSegmentMatcherVal
   valueType?: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
   /** @deprecated */
   key?: string | null;
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 12: Introduction, 13: Rating, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary] */
   property?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  isSecondaryProperty?: boolean;
+  isResourceProperty?: boolean;
   isValid?: boolean;
 }
 
@@ -1193,17 +1127,6 @@ export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
   counts?: Record<string, number>;
 }
 
-export interface BakabaseInsideWorldModelsModelsDtosAliasDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  candidates?: BakabaseInsideWorldModelsModelsDtosAliasDto[] | null;
-  /** @format int32 */
-  groupId?: number;
-  /** @uniqueItems true */
-  allNames?: string[] | null;
-}
-
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
   categoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
   todayAddedCategoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
@@ -1232,7 +1155,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMover
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 4: ReleaseDt, 5: Publisher, 6: Name, 7: Language, 8: Volume, 9: Original, 10: Series, 11: Tag, 12: Introduction, 13: Rate, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary, 22: Favorites] */
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 12: Introduction, 13: Rating, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary] */
   property?: BakabaseInsideWorldModelsConstantsResourceProperty;
   propertyKey?: string | null;
   value?: string | null;
@@ -1298,38 +1221,6 @@ export interface BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
   canStart?: boolean;
 }
 
-export interface BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  resourceId?: number;
-  resourceRawFullName?: string | null;
-  enhancerName?: string | null;
-  enhancerDescriptorId?: string | null;
-  ruleId?: string | null;
-  success?: boolean;
-  enhancement?: string | null;
-  message?: string | null;
-  /** @format date-time */
-  createDt?: string;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosFavoritesDto {
-  /** @format int32 */
-  id?: number;
-  /** @minLength 1 */
-  name: string;
-  description?: string | null;
-  /** @format date-time */
-  createDt?: string;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosOriginalDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-}
-
 export interface BakabaseInsideWorldModelsModelsDtosPlaylistDto {
   /** @format int32 */
   id?: number;
@@ -1351,75 +1242,9 @@ export interface BakabaseInsideWorldModelsModelsDtosPlaylistItemDto {
   endTime?: SystemTimeSpan;
 }
 
-export interface BakabaseInsideWorldModelsModelsDtosPublisherDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  subPublishers?: BakabaseInsideWorldModelsModelsDtosPublisherDto[] | null;
-  /** @format int32 */
-  rank?: number;
-  favorite?: boolean;
-  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
-}
-
 export interface BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions {
   enhancementPriorities?: Record<string, string[]>;
   defaultPriority?: string[] | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosSeriesDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosTagDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  preferredAlias?: string | null;
-  color?: string | null;
-  /** @format int32 */
-  order?: number;
-  /** @format int32 */
-  groupId?: number;
-  groupName?: string | null;
-  groupNamePreferredAlias?: string | null;
-  displayName?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosTagGroupDto {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  /** @format int32 */
-  order?: number;
-  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
-  preferredAlias?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosVolumeDto {
-  /** @format int32 */
-  index?: number;
-  name?: string | null;
-  title?: string | null;
-  /** @format int32 */
-  serialId?: number;
-  /** @format int32 */
-  resourceId?: number;
-}
-
-export interface BakabaseInsideWorldModelsModelsEntitiesAlias {
-  /** @format int32 */
-  id?: number;
-  /**
-   * @minLength 1
-   * @maxLength 256
-   */
-  name: string;
-  /** @format int32 */
-  groupId?: number;
-  isPreferred?: boolean;
 }
 
 export interface BakabaseInsideWorldModelsModelsEntitiesComponentOptions {
@@ -1434,21 +1259,6 @@ export interface BakabaseInsideWorldModelsModelsEntitiesComponentOptions {
   description?: string | null;
   /** @minLength 1 */
   json: string;
-}
-
-export interface BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty {
-  /** @format int32 */
-  id?: number;
-  /** @format int32 */
-  resourceId?: number;
-  /** @minLength 1 */
-  key: string;
-  /** @format int32 */
-  index?: number | null;
-  /** @minLength 1 */
-  value: string;
-  /** [1: String, 2: DateTime, 3: Number, 4: Enum] */
-  valueType?: BakabaseInsideWorldModelsConstantsCustomDataType;
 }
 
 export interface BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
@@ -1489,35 +1299,54 @@ export interface BakabaseInsideWorldModelsModelsEntitiesPassword {
   lastUsedAt?: string;
 }
 
-export interface BakabaseInsideWorldModelsModelsEntitiesSpecialText {
+export interface BakabaseInsideWorldModelsRequestModelsCategoryAddInputModel {
   /** @format int32 */
   id?: number;
-  /**
-   * @minLength 1
-   * @maxLength 64
-   */
-  value1: string;
-  /** @maxLength 64 */
-  value2?: string | null;
-  /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
-  type?: BakabaseInsideWorldModelsConstantsSpecialTextType;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsAliasCreateRequestModel {
-  /** @minLength 1 */
-  name: string;
-  /** @format int32 */
-  groupId?: number | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsAliasGroupUpdateRequestModel {
-  /** @format int32 */
-  targetGroupId?: number;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsAliasUpdateRequestModel {
   name?: string | null;
-  isPreferred?: boolean;
+  color?: string | null;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  /** @format int32 */
+  order?: number | null;
+  generateNfo?: boolean | null;
+  resourceDisplayNameTemplate?: string | null;
+  componentsData?: BakabaseInsideWorldModelsRequestModelsCategoryAddInputModelSimpleCategoryComponent[] | null;
+  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsCategoryAddInputModelSimpleCategoryComponent {
+  /** @minLength 1 */
+  componentKey: string;
+  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
+  componentType: BakabaseInsideWorldModelsConstantsComponentType;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsCategoryComponentConfigureInputModel {
+  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
+  type: BakabaseInsideWorldModelsConstantsComponentType;
+  componentKeys: string[];
+  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsCategoryCustomPropertyBindInputModel {
+  customPropertyIds?: number[] | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsCategoryDuplicateInputModel {
+  name?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsCategoryPatchInputModel {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  color?: string | null;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  /** @format int32 */
+  order?: number | null;
+  generateNfo?: boolean | null;
+  resourceDisplayNameTemplate?: string | null;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsComponentOptionsAddRequestModel {
@@ -1562,21 +1391,6 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestM
   actionOnConflict?: BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel {
-  /** @format int32 */
-  id?: number;
-  /** @minLength 1 */
-  name: string;
-  description?: string | null;
-  /** @format date-time */
-  createDt?: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsFavoritesResourceMappingAddOrRemoveRequestModel {
-  /** @format int32 */
-  resourceId?: number;
-}
-
 export interface BakabaseInsideWorldModelsRequestModelsFileDecompressRequestModel {
   paths?: string[] | null;
   password?: string | null;
@@ -1600,30 +1414,9 @@ export interface BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel {
   ids?: number[] | null;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryAddInBulkRequestModel {
-  nameAndPaths: Record<string, string[] | null>;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryPathConfigurationCreateRequestModel {
-  /** @minLength 1 */
-  path: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsMediaLibraryRootPathsAddInBulkRequestModel {
-  rootPaths?: string[] | null;
-}
-
 export interface BakabaseInsideWorldModelsRequestModelsPathConfigurationRemoveRequestModel {
   /** @format int32 */
   index: number;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsPublisherUpdateModel {
-  name?: string | null;
-  /** @format int32 */
-  rank?: number | null;
-  favorite?: boolean | null;
-  tagIds?: number[] | null;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingDirectoryRequestModel {
@@ -1631,134 +1424,8 @@ export interface BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingD
   entryPath?: string | null;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModel {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  color?: string | null;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
-  /** @format int32 */
-  order?: number | null;
-  generateNfo?: boolean | null;
-  resourceDisplayNameTemplate?: string | null;
-  componentsData?:
-    | BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModelSimpleCategoryComponent[]
-    | null;
-  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModelSimpleCategoryComponent {
-  /** @minLength 1 */
-  componentKey: string;
-  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-  componentType: BakabaseInsideWorldModelsConstantsComponentType;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryComponentConfigureRequestModel {
-  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-  type: BakabaseInsideWorldModelsConstantsComponentType;
-  componentKeys: string[];
-  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryCustomPropertyBindRequestModel {
-  customPropertyIds?: number[] | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryDuplicateRequestModel {
-  name?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateRequestModel {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  color?: string | null;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
-  /** @format int32 */
-  order?: number | null;
-  generateNfo?: boolean | null;
-  resourceDisplayNameTemplate?: string | null;
-}
-
 export interface BakabaseInsideWorldModelsRequestModelsResourceCustomPropertyValuePutRequestModel {
   value?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel {
-  ids: number[];
-  /** @format int32 */
-  mediaLibraryId?: number | null;
-  /** @minLength 1 */
-  path: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceTagUpdateRequestModel {
-  resourceTagIds: Record<string, number[]>;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsResourceUpdateRequestModel {
-  publishers?: BakabaseInsideWorldModelsModelsDtosPublisherDto[] | null;
-  name?: string | null;
-  originals?: string[] | null;
-  series?: string | null;
-  /** @format date-time */
-  releaseDt?: string | null;
-  /** [0: NotSet, 1: Chinese, 2: English, 3: Japanese, 4: Korean, 5: French, 6: German, 7: Spanish, 8: Russian] */
-  language?: BakabaseInsideWorldModelsConstantsResourceLanguage;
-  /** @format double */
-  rate?: number | null;
-  tags?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
-  introduction?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsSpecialTextCreateRequestModel {
-  /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
-  type?: BakabaseInsideWorldModelsConstantsSpecialTextType;
-  value1?: string | null;
-  value2?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsSpecialTextUpdateRequestModel {
-  value1?: string | null;
-  value2?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsSubdirectoriesExtractRequestModel {
-  /** @minLength 1 */
-  path: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsTagGroupAddRequestModel {
-  names: string[];
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsTagGroupUpdateRequestModel {
-  name?: string | null;
-  /** @format int32 */
-  order?: number | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsTagMoveRequestModel {
-  /** @format int32 */
-  targetTagId?: number | null;
-  /** @format int32 */
-  targetGroupId?: number | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsTagNameUpdateRequestModel {
-  /** @minLength 1 */
-  name: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsTagUpdateRequestModel {
-  color?: string | null;
-  /** @format int32 */
-  groupId?: number | null;
-  /** @format int32 */
-  order?: number | null;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel {
@@ -1767,26 +1434,45 @@ export interface BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestMode
   startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
 }
 
-export interface BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatus {
-  running?: boolean;
-  current?: string | null;
-  /** @format int32 */
-  doneCount?: number;
-  /** @format int32 */
-  failedCount?: number;
-  /** @format int32 */
-  totalCount?: number;
-  /** @format int32 */
-  percent?: number;
-  /** @format date-time */
-  startDt?: string;
-  failures?: BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatusFailure[] | null;
+export interface BakabaseModulesAliasAbstractionsModelsDomainAlias {
+  text?: string | null;
+  preferred?: string | null;
+  /** @uniqueItems true */
+  candidates?: string[] | null;
 }
 
-export interface BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatusFailure {
-  fullnameList?: string[] | null;
-  error?: string | null;
+export interface BakabaseModulesAliasModelsInputAliasAddInputModel {
+  /** @minLength 1 */
+  text: string;
+  preferred?: string | null;
 }
+
+export interface BakabaseModulesAliasModelsInputAliasPatchInputModel {
+  text?: string | null;
+  isPreferred?: boolean;
+}
+
+/**
+ * [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags]
+ * @format int32
+ */
+export type BakabaseModulesCustomPropertyModelsDomainConstantsCustomPropertyType =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16;
 
 /**
  * [0: None, 1: GeneratedCustomPropertyValue]
@@ -1873,6 +1559,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsDomainEnhancerDescriptor[] | null;
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibrary {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainMediaLibrary[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainResource[] | null;
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
   /** @format int32 */
   code?: number;
@@ -1917,27 +1617,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   data?: BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites[] | null;
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMediaLibrary {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldBusinessModelsDomainMediaLibrary[] | null;
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMigrationTarget {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldBusinessModelsDomainMigrationTarget[] | null;
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainResource {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldBusinessModelsDomainResource[] | null;
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
   /** @format int32 */
   code?: number;
@@ -1952,53 +1631,11 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   data?: BakabaseInsideWorldModelsModelsDtosDownloadTaskDto[] | null;
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosFavoritesDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosFavoritesDto[] | null;
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosOriginalDto[] | null;
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
   /** @format int32 */
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto[] | null;
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPublisherDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosPublisherDto[] | null;
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosSeriesDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosSeriesDto[] | null;
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosTagDto[] | null;
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagGroupDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosTagGroupDto[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
@@ -2043,37 +1680,11 @@ export interface BootstrapModelsResponseModelsListResponse1SystemString {
   data?: string[] | null;
 }
 
-export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldBusinessModelsDomainResource {
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDomainResource {
   /** @format int32 */
   code?: number;
   message?: string | null;
-  data?: BakabaseInsideWorldBusinessModelsDomainResource[] | null;
-  /** @format int32 */
-  totalCount?: number;
-  /** @format int32 */
-  pageIndex?: number;
-  /** @format int32 */
-  pageSize?: number;
-}
-
-export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsDtosAliasDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosAliasDto[] | null;
-  /** @format int32 */
-  totalCount?: number;
-  /** @format int32 */
-  pageIndex?: number;
-  /** @format int32 */
-  pageSize?: number;
-}
-
-export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto[] | null;
+  data?: BakabaseAbstractionsModelsDomainResource[] | null;
   /** @format int32 */
   totalCount?: number;
   /** @format int32 */
@@ -2087,6 +1698,19 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorld
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsEntitiesPassword[] | null;
+  /** @format int32 */
+  totalCount?: number;
+  /** @format int32 */
+  pageIndex?: number;
+  /** @format int32 */
+  pageSize?: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseModulesAliasAbstractionsModelsDomainAlias {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseModulesAliasAbstractionsModelsDomainAlias[] | null;
   /** @format int32 */
   totalCount?: number;
   /** @format int32 */
@@ -2135,6 +1759,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code?: number;
   message?: string | null;
   data?: BakabaseAbstractionsModelsDomainCustomProperty;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathConfigurationTestResult {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainPathConfigurationTestResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainSpecialText;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel {
@@ -2284,13 +1922,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
   /** @format int32 */
   code?: number;
@@ -2319,32 +1950,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesAlias {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsEntitiesAlias;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesComponentOptions {
   /** @format int32 */
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsEntitiesComponentOptions;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesSpecialText {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsEntitiesSpecialText;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatus {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatus;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
@@ -2354,18 +1964,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   data?: Record<string, BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions>;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesSpecialText {
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseAbstractionsModelsDomainSpecialText {
   /** @format int32 */
   code?: number;
   message?: string | null;
-  data?: Record<string, BakabaseInsideWorldModelsModelsEntitiesSpecialText[] | null>;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32 {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, number[] | null>;
+  data?: Record<string, BakabaseAbstractionsModelsDomainSpecialText[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldModelsConstantsMediaType {
@@ -2375,25 +1978,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   data?: Record<string, BakabaseInsideWorldModelsConstantsMediaType>;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty[] | null>;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemInt32 {
   /** @format int32 */
   code?: number;
   message?: string | null;
   data?: Record<string, number | null>;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemString {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: Record<string, string[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemInt32 {
@@ -3310,67 +2899,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Alias
-     * @name GetAlias
-     * @request GET:/alias/{id}
-     */
-    getAlias: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesAlias, any>({
-        path: `/alias/${id}`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Alias
-     * @name UpdateAlias
-     * @request PUT:/alias/{id}
-     */
-    updateAlias: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsAliasUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/alias/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Alias
-     * @name RemoveAlias
-     * @request DELETE:/alias/{id}
-     */
-    removeAlias: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/alias/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Alias
-     * @name SearchAliases
+     * @name SearchAliasGroups
      * @request GET:/alias
      */
-    searchAliases: (
+    searchAliasGroups: (
       query?: {
-        names?: string[];
-        name?: string;
-        exactly?: boolean;
-        /** [1: Candidates] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsAliasAdditionalItem;
+        /** @uniqueItems true */
+        texts?: string[];
+        text?: string;
+        fuzzyText?: string;
         /** @format int32 */
         pageIndex?: number;
         /**
@@ -3384,7 +2921,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsDtosAliasDto, any>({
+      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseModulesAliasAbstractionsModelsDomainAlias, any>({
         path: `/alias`,
         method: "GET",
         query: query,
@@ -3396,10 +2933,34 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Alias
-     * @name CreateAlias
+     * @name PatchAlias
+     * @request PUT:/alias
+     */
+    patchAlias: (
+      data: BakabaseModulesAliasModelsInputAliasPatchInputModel,
+      query?: {
+        text?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/alias`,
+        method: "PUT",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Alias
+     * @name AddAlias
      * @request POST:/alias
      */
-    createAlias: (data: BakabaseInsideWorldModelsRequestModelsAliasCreateRequestModel, params: RequestParams = {}) =>
+    addAlias: (data: BakabaseModulesAliasModelsInputAliasAddInputModel, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/alias`,
         method: "POST",
@@ -3413,13 +2974,19 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Alias
-     * @name ExportAliases
-     * @request POST:/alias/export
+     * @name DeleteAlias
+     * @request DELETE:/alias
      */
-    exportAliases: (params: RequestParams = {}) =>
+    deleteAlias: (
+      query?: {
+        text?: string;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/alias/export`,
-        method: "POST",
+        path: `/alias`,
+        method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -3428,37 +2995,19 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Alias
-     * @name ImportAliases
-     * @request POST:/alias/import
+     * @name DeleteAliasGroups
+     * @request DELETE:/alias/groups
      */
-    importAliases: (
-      data: {
-        /** @format binary */
-        file?: File;
+    deleteAliasGroups: (
+      query?: {
+        preferredTexts?: string[];
       },
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/alias/import`,
-        method: "POST",
-        body: data,
-        type: ContentType.FormData,
-        format: "json",
-        ...params,
-      }),
-  };
-  aliasGroup = {
-    /**
-     * No description
-     *
-     * @tags AliasGroup
-     * @name RemoveAliasGroup
-     * @request DELETE:/alias-group/{id}
-     */
-    removeAliasGroup: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/alias-group/${id}`,
+        path: `/alias/groups`,
         method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -3466,20 +3015,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags AliasGroup
-     * @name MergeAliasGroup
-     * @request PUT:/alias-group/{id}
+     * @tags Alias
+     * @name MergeAliasGroups
+     * @request PUT:/alias/merge
      */
-    mergeAliasGroup: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsAliasGroupUpdateRequestModel,
+    mergeAliasGroups: (
+      query?: {
+        preferredTexts?: string[];
+      },
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/alias-group/${id}`,
+        path: `/alias/merge`,
         method: "PUT",
-        body: data,
-        type: ContentType.Json,
+        query: query,
         format: "json",
         ...params,
       }),
@@ -3815,7 +3364,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/bulk-modification/{id}/filtered-resources
      */
     getBulkModificationFilteredResources: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainResource, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource, any>({
         path: `/bulk-modification/${id}/filtered-resources`,
         method: "GET",
         format: "json",
@@ -3881,6 +3430,252 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}/revert`,
         method: "POST",
+        format: "json",
+        ...params,
+      }),
+  };
+  category = {
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name GetCategory
+     * @request GET:/category/{id}
+     */
+    getCategory: (
+      id: number,
+      query?: {
+        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsCategoryAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory, any>({
+        path: `/category/${id}`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name PatchCategory
+     * @request PUT:/category/{id}
+     */
+    patchCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsCategoryPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name DeleteCategory
+     * @request DELETE:/category/{id}
+     */
+    deleteCategory: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name GetAllCategories
+     * @request GET:/category
+     */
+    getAllCategories: (
+      query?: {
+        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsCategoryAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory, any>({
+        path: `/category`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name AddCategory
+     * @request POST:/category
+     */
+    addCategory: (data: BakabaseInsideWorldModelsRequestModelsCategoryAddInputModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name DuplicateCategory
+     * @request POST:/category/{id}/duplication
+     */
+    duplicateCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsCategoryDuplicateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}/duplication`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name ConfigureCategoryComponents
+     * @request PUT:/category/{id}/component
+     */
+    configureCategoryComponents: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsCategoryComponentConfigureInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}/component`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name SortCategories
+     * @request PUT:/category/orders
+     */
+    sortCategories: (data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/orders`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name BindCustomPropertiesToCategory
+     * @request PUT:/category/{id}/custom-properties
+     */
+    bindCustomPropertiesToCategory: (
+      id: number,
+      data: BakabaseInsideWorldModelsRequestModelsCategoryCustomPropertyBindInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}/custom-properties`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name BindCustomPropertyToCategory
+     * @request POST:/category/{categoryId}/custom-property/{customPropertyId}
+     */
+    bindCustomPropertyToCategory: (categoryId: number, customPropertyId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${categoryId}/custom-property/${customPropertyId}`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name PreviewCategoryDisplayNameTemplate
+     * @request GET:/category/{id}/resource/resource-display-name-template/preview
+     */
+    previewCategoryDisplayNameTemplate: (
+      id: number,
+      query?: {
+        template?: string;
+        /**
+         * @format int32
+         * @default 100
+         */
+        maxCount?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel,
+        any
+      >({
+        path: `/category/${id}/resource/resource-display-name-template/preview`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name PatchCategoryEnhancerOptions
+     * @request PATCH:/category/{id}/enhancer/{enhancerId}/options
+     */
+    patchCategoryEnhancerOptions: (
+      id: number,
+      enhancerId: number,
+      data: BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}/enhancer/${enhancerId}/options`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -4181,7 +3976,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     calculateCustomPropertyTypeConversionLoss: (
       id: number,
-      type: BakabaseAbstractionsModelsDomainConstantsCustomPropertyType,
+      type: BakabaseModulesCustomPropertyModelsDomainConstantsCustomPropertyType,
       params: RequestParams = {},
     ) =>
       this.request<
@@ -4451,15 +4246,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name SearchResourcesV2
-     * @request POST:/resource/search/v2
+     * @name SearchResources
+     * @request POST:/resource/search
      */
-    searchResourcesV2: (
+    searchResources: (
       data: BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldBusinessModelsDomainResource, any>({
-        path: `/resource/search/v2`,
+      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDomainResource, any>({
+        path: `/resource/search`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -4480,51 +4275,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainResource, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource, any>({
         path: `/resource/keys`,
         method: "GET",
         query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name PatchResource
-     * @request PUT:/resource/{id}
-     */
-    patchResource: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name UpdateResourceTags
-     * @request PUT:/resource/tag
-     */
-    updateResourceTags: (
-      data: BakabaseInsideWorldModelsRequestModelsResourceTagUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/tag`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -4605,89 +4359,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name GetAllCustomPropertyKeys
-     * @request GET:/resource/custom-property-keys
-     */
-    getAllCustomPropertyKeys: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
-        path: `/resource/custom-property-keys`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetAllCustomPropertiesAndCandidates
-     * @request GET:/resource/custom-properties-and-candidates
-     */
-    getAllCustomPropertiesAndCandidates: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemString,
-        any
-      >({
-        path: `/resource/custom-properties-and-candidates`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetAllReservedPropertiesAndCandidates
-     * @request GET:/resource/reserved-properties-and-candidates
-     */
-    getAllReservedPropertiesAndCandidates: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemString,
-        any
-      >({
-        path: `/resource/reserved-properties-and-candidates`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name RemoveResourceCustomProperty
-     * @request DELETE:/resource/resource/{id}/custom-property/{propertyKey}
-     */
-    removeResourceCustomProperty: (id: number, propertyKey: string, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/resource/${id}/custom-property/${propertyKey}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name MoveResources
-     * @request PUT:/resource/move
-     */
-    moveResources: (data: BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/move`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
      * @name ClearResourceTask
      * @request DELETE:/resource/{id}/task
      */
@@ -4695,45 +4366,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}/task`,
         method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetFavoritesResourcesMappings
-     * @request GET:/resource/favorites-mappings
-     */
-    getFavoritesResourcesMappings: (
-      query?: {
-        ids?: number[];
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32,
-        any
-      >({
-        path: `/resource/favorites-mappings`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name StartResourceNfoGenerationTask
-     * @request POST:/resource/nfo
-     */
-    startResourceNfoGenerationTask: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/nfo`,
-        method: "POST",
         format: "json",
         ...params,
       }),
@@ -4757,54 +4389,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name GetAllOriginals
-     * @request GET:/resource/original/all
-     */
-    getAllOriginals: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosOriginalDto, any>({
-        path: `/resource/original/all`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetAllSeries
-     * @request GET:/resource/series/all
-     */
-    getAllSeries: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosSeriesDto, any>({
-        path: `/resource/series/all`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetAllCustomProperties
-     * @request GET:/resource/custom-property/all
-     */
-    getAllCustomProperties: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesCustomResourceProperty,
-        any
-      >({
-        path: `/resource/custom-property/all`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
      * @name PutResourceCustomPropertyValue
      * @request PUT:/resource/{id}/custom-property/{pId}/value
      */
@@ -4819,6 +4403,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PlayResourceFile
+     * @request GET:/resource/{resourceId}/play
+     */
+    playResourceFile: (
+      resourceId: number,
+      query?: {
+        file?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/play`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -4848,12 +4454,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllMediaLibraries: (
       query?: {
-        /** [0: None, 1: Category, 2: FileSystemInfo, 4: FixedTags] */
+        /** [0: None, 1: Category, 2: FileSystemInfo] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMediaLibrary, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibrary, any>({
         path: `/media-library`,
         method: "GET",
         query: query,
@@ -4868,7 +4474,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddMediaLibrary
      * @request POST:/media-library
      */
-    addMediaLibrary: (data: BakabaseInsideWorldBusinessModelsDtoMediaLibraryCreateDto, params: RequestParams = {}) =>
+    addMediaLibrary: (data: BakabaseAbstractionsModelsDtoMediaLibraryAddDto, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library`,
         method: "POST",
@@ -4882,10 +4488,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibrary
-     * @name RemoveMediaLibrary
+     * @name DeleteMediaLibrary
      * @request DELETE:/media-library/{id}
      */
-    removeMediaLibrary: (id: number, params: RequestParams = {}) =>
+    deleteMediaLibrary: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${id}`,
         method: "DELETE",
@@ -4902,7 +4508,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     patchMediaLibrary: (
       id: number,
-      data: BakabaseInsideWorldBusinessModelsDtoMediaLibraryPatchDto,
+      data: BakabaseAbstractionsModelsDtoMediaLibraryPatchDto,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -4918,28 +4524,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibrary
-     * @name GetMediaLibrarySyncStatus
-     * @request GET:/media-library/sync/status
-     */
-    getMediaLibrarySyncStatus: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto,
-        any
-      >({
-        path: `/media-library/sync/status`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibrary
-     * @name SyncMediaLibrary
+     * @name StartSyncMediaLibrary
      * @request PUT:/media-library/sync
      */
-    syncMediaLibrary: (params: RequestParams = {}) =>
+    startSyncMediaLibrary: (params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/sync`,
         method: "PUT",
@@ -4969,12 +4557,9 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name ValidatePathConfiguration
      * @request POST:/media-library/path-configuration-validation
      */
-    validatePathConfiguration: (
-      data: BakabaseInsideWorldBusinessModelsDomainPathConfiguration,
-      params: RequestParams = {},
-    ) =>
+    validatePathConfiguration: (data: BakabaseAbstractionsModelsDomainPathConfiguration, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosPathConfigurationValidateResult,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathConfigurationTestResult,
         any
       >({
         path: `/media-library/path-configuration-validation`,
@@ -5014,7 +4599,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     addMediaLibraryPathConfiguration: (
       id: number,
-      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryPathConfigurationCreateRequestModel,
+      data: BakabaseAbstractionsModelsInputMediaLibraryPathConfigurationAddInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -5056,7 +4641,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     addMediaLibrariesInBulk: (
       cId: number,
-      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryAddInBulkRequestModel,
+      data: BakabaseAbstractionsModelsInputMediaLibraryAddInBulkInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -5077,7 +4662,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     addMediaLibraryRootPathsInBulk: (
       mlId: number,
-      data: BakabaseInsideWorldModelsRequestModelsMediaLibraryRootPathsAddInBulkRequestModel,
+      data: BakabaseAbstractionsModelsInputMediaLibraryRootPathsAddInBulkInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -5085,30 +4670,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibrary
-     * @name GetPathRelatedLibraries
-     * @request GET:/media-library/path-related-libraries
-     */
-    getPathRelatedLibraries: (
-      query?: {
-        /** @format int32 */
-        libraryId?: number;
-        currentPath?: string;
-        newPath?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMediaLibrary, any>({
-        path: `/media-library/path-related-libraries`,
-        method: "GET",
-        query: query,
         format: "json",
         ...params,
       }),
@@ -5128,312 +4689,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name GetResourceCategory
-     * @request GET:/resource-category/{id}
-     */
-    getResourceCategory: (
-      id: number,
-      query?: {
-        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory, any>({
-        path: `/resource-category/${id}`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name UpdateResourceCategory
-     * @request PUT:/resource-category/{id}
-     */
-    updateResourceCategory: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name DeleteResourceCategoryAndClearAllRelatedData
-     * @request DELETE:/resource-category/{id}
-     */
-    deleteResourceCategoryAndClearAllRelatedData: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name GetAllResourceCategories
-     * @request GET:/resource-category
-     */
-    getAllResourceCategories: (
-      query?: {
-        /** [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceCategoryAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory, any>({
-        path: `/resource-category`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name AddResourceCategory
-     * @request POST:/resource-category
-     */
-    addResourceCategory: (
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryAddRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name DuplicateResourceCategory
-     * @request POST:/resource-category/{id}/duplication
-     */
-    duplicateResourceCategory: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryDuplicateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}/duplication`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name ConfigureResourceCategoryComponents
-     * @request PUT:/resource-category/{id}/component
-     */
-    configureResourceCategoryComponents: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryComponentConfigureRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}/component`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name SortCategories
-     * @request PUT:/resource-category/orders
-     */
-    sortCategories: (data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/orders`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name SaveDataFromSetupWizard
-     * @request POST:/resource-category/setup-wizard
-     */
-    saveDataFromSetupWizard: (
-      data: BakabaseInsideWorldBusinessModelsInputCategorySetupWizardInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/setup-wizard`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name BindCustomPropertiesToCategory
-     * @request PUT:/resource-category/{id}/custom-properties
-     */
-    bindCustomPropertiesToCategory: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCategoryCustomPropertyBindRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}/custom-properties`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name BindCustomPropertyToCategory
-     * @request POST:/resource-category/{categoryId}/custom-property/{customPropertyId}
-     */
-    bindCustomPropertyToCategory: (categoryId: number, customPropertyId: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${categoryId}/custom-property/${customPropertyId}`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name PreviewCategoryDisplayNameTemplate
-     * @request GET:/resource-category/{id}/resource/resource-display-name-template/preview
-     */
-    previewCategoryDisplayNameTemplate: (
-      id: number,
-      query?: {
-        template?: string;
-        /**
-         * @format int32
-         * @default 100
-         */
-        maxCount?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel,
-        any
-      >({
-        path: `/resource-category/${id}/resource/resource-display-name-template/preview`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceCategory
-     * @name PatchCategoryEnhancerOptions
-     * @request PATCH:/resource-category/{id}/enhancer/{enhancerId}/options
-     */
-    patchCategoryEnhancerOptions: (
-      id: number,
-      enhancerId: number,
-      data: BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${id}/enhancer/${enhancerId}/options`,
-        method: "PATCH",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-  };
-  enhancementRecord = {
-    /**
-     * No description
-     *
-     * @tags EnhancementRecord
-     * @name SearchEnhancementRecords
-     * @request GET:/enhancement-record
-     */
-    searchEnhancementRecords: (
-      query?: {
-        /** @format int32 */
-        resourceId?: number;
-        success?: boolean;
-        enhancerDescriptorId?: string;
-        /** @format int32 */
-        pageIndex?: number;
-        /**
-         * @format int32
-         * @min 0
-         * @max 100
-         */
-        pageSize?: number;
-        /** @format int32 */
-        skipCount?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsDtosEnhancementRecordDto,
-        any
-      >({
-        path: `/enhancement-record`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
   };
   enhancer = {
     /**
@@ -5447,137 +4702,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainEnhancerDescriptor, any>({
         path: `/enhancer/descriptor`,
         method: "GET",
-        format: "json",
-        ...params,
-      }),
-  };
-  favorites = {
-    /**
-     * No description
-     *
-     * @tags Favorites
-     * @name GetAllFavorites
-     * @request GET:/favorites
-     */
-    getAllFavorites: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosFavoritesDto, any>({
-        path: `/favorites`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Favorites
-     * @name AddFavorites
-     * @request POST:/favorites
-     */
-    addFavorites: (
-      data: BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/favorites`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Favorites
-     * @name PutFavorites
-     * @request PATCH:/favorites/{id}
-     */
-    putFavorites: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsFavoritesAddOrUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/favorites/${id}`,
-        method: "PATCH",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Favorites
-     * @name DeleteFavorites
-     * @request DELETE:/favorites/{id}
-     */
-    deleteFavorites: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/favorites/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Favorites
-     * @name AddResourceToFavorites
-     * @request POST:/favorites/{id}/resource
-     */
-    addResourceToFavorites: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsFavoritesResourceMappingAddOrRemoveRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/favorites/${id}/resource`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Favorites
-     * @name DeleteResourceFromFavorites
-     * @request DELETE:/favorites/{id}/resource
-     */
-    deleteResourceFromFavorites: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsFavoritesResourceMappingAddOrRemoveRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/favorites/${id}/resource`,
-        method: "DELETE",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Favorites
-     * @name PutResourcesFavorites
-     * @request PUT:/favorites/resource-mapping
-     */
-    putResourcesFavorites: (data: Record<string, number[]>, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/favorites/resource-mapping`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -6318,45 +5442,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
-  migration = {
-    /**
-     * No description
-     *
-     * @tags Migration
-     * @name GetMigrationTargets
-     * @request GET:/migration/targets
-     */
-    getMigrationTargets: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessModelsDomainMigrationTarget,
-        any
-      >({
-        path: `/migration/targets`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Migration
-     * @name MigrateTarget
-     * @request POST:/migration/target/migration
-     */
-    migrateTarget: (
-      data: BakabaseInsideWorldBusinessModelsInputMigrationTargetApplyInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/migration/target/migration`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-  };
   options = {
     /**
      * No description
@@ -6864,54 +5949,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
-  publisher = {
-    /**
-     * No description
-     *
-     * @tags Publisher
-     * @name UpdatePublisher
-     * @request PUT:/publisher/{id}
-     */
-    updatePublisher: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsPublisherUpdateModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/publisher/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Publisher
-     * @name GetAllPublishers
-     * @request GET:/publisher/all
-     */
-    getAllPublishers: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPublisherDto, any>({
-        path: `/publisher/all`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-  };
   specialText = {
     /**
      * No description
      *
      * @tags SpecialText
-     * @name GetAllSpecialText
+     * @name GetAllSpecialTexts
      * @request GET:/special-text
      */
-    getAllSpecialText: (params: RequestParams = {}) =>
+    getAllSpecialTexts: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseInsideWorldModelsModelsEntitiesSpecialText,
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseAbstractionsModelsDomainSpecialText,
         any
       >({
         path: `/special-text`,
@@ -6924,17 +5972,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags SpecialText
-     * @name CreateSpecialText
+     * @name AddSpecialText
      * @request POST:/special-text
      */
-    createSpecialText: (
-      data: BakabaseInsideWorldModelsRequestModelsSpecialTextCreateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesSpecialText,
-        any
-      >({
+    addSpecialText: (data: BakabaseAbstractionsModelsInputSpecialTextAddInputModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText, any>({
         path: `/special-text`,
         method: "POST",
         body: data,
@@ -6962,12 +6004,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags SpecialText
-     * @name UpdateSpecialText
+     * @name PatchSpecialText
      * @request PUT:/special-text/{id}
      */
-    updateSpecialText: (
+    patchSpecialText: (
       id: number,
-      data: BakabaseInsideWorldModelsRequestModelsSpecialTextUpdateRequestModel,
+      data: BakabaseAbstractionsModelsInputSpecialTextPatchInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -7015,257 +6057,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
-  tag = {
-    /**
-     * No description
-     *
-     * @tags Tag
-     * @name GetAllTags
-     * @request GET:/tag
-     */
-    getAllTags: (
-      query?: {
-        /** [0: None, 1: GroupName, 2: PreferredAlias] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsTagAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagDto, any>({
-        path: `/tag`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tag
-     * @name AddTags
-     * @request POST:/tag
-     */
-    addTags: (data: Record<string, string[]>, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tag`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tag
-     * @name GetTagByIds
-     * @request GET:/tag/ids
-     */
-    getTagByIds: (
-      query?: {
-        ids?: number[];
-        /** [0: None, 1: GroupName, 2: PreferredAlias] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsTagAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagDto, any>({
-        path: `/tag/ids`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tag
-     * @name UpdateTagName
-     * @request PUT:/tag/{id}/name
-     */
-    updateTagName: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsTagNameUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tag/${id}/name`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tag
-     * @name UpdateTag
-     * @request PATCH:/tag/{id}
-     */
-    updateTag: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsTagUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tag/${id}`,
-        method: "PATCH",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tag
-     * @name RemoveTag
-     * @request DELETE:/tag/{id}
-     */
-    removeTag: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tag/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tag
-     * @name MoveTag
-     * @request PUT:/tag/{id}/move
-     */
-    moveTag: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsTagMoveRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tag/${id}/move`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tag
-     * @name BulkDeleteTags
-     * @request DELETE:/tag/bulk
-     */
-    bulkDeleteTags: (data: number[], params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tag/bulk`,
-        method: "DELETE",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-  };
-  tagGroup = {
-    /**
-     * No description
-     *
-     * @tags TagGroup
-     * @name GetAllTagGroups
-     * @request GET:/TagGroup
-     */
-    getAllTagGroups: (
-      query?: {
-        /** [1: Tags, 2: PreferredAlias, 4: TagNamePreferredAlias] */
-        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsTagGroupAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosTagGroupDto, any>({
-        path: `/TagGroup`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags TagGroup
-     * @name AddTagGroups
-     * @request POST:/TagGroup
-     */
-    addTagGroups: (data: BakabaseInsideWorldModelsRequestModelsTagGroupAddRequestModel, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/TagGroup`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags TagGroup
-     * @name UpdateTagGroup
-     * @request PUT:/TagGroup/{id}
-     */
-    updateTagGroup: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsTagGroupUpdateRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/TagGroup/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags TagGroup
-     * @name RemoveTagGroup
-     * @request DELETE:/TagGroup/{id}
-     */
-    removeTagGroup: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/TagGroup/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags TagGroup
-     * @name SortTagGroups
-     * @request PUT:/TagGroup/orders
-     */
-    sortTagGroups: (data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/TagGroup/orders`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-  };
   thirdParty = {
     /**
      * No description
@@ -7290,26 +6081,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Tool
-     * @name ExtraSubdirectories
-     * @request POST:/tool/extra-subdirectories
-     */
-    extraSubdirectories: (
-      data: BakabaseInsideWorldModelsRequestModelsSubdirectoriesExtractRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tool/extra-subdirectories`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tool
      * @name OpenFileOrDirectory
      * @request GET:/tool/open
      */
@@ -7322,124 +6093,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/open`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tool
-     * @name RemoveRelayDirectories
-     * @request POST:/tool/remove-relay-directories
-     */
-    removeRelayDirectories: (
-      query?: {
-        root?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tool/remove-relay-directories`,
-        method: "POST",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tool
-     * @name GroupFilesToDirectories
-     * @request POST:/tool/group-files-into-directories
-     */
-    groupFilesToDirectories: (
-      query?: {
-        root?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tool/group-files-into-directories`,
-        method: "POST",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tool
-     * @name StartExtractEverything
-     * @request POST:/tool/everything-extraction
-     */
-    startExtractEverything: (
-      query?: {
-        root?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tool/everything-extraction`,
-        method: "POST",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tool
-     * @name StopExtractingEverything
-     * @request DELETE:/tool/everything-extraction
-     */
-    stopExtractingEverything: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tool/everything-extraction`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tool
-     * @name GetEverythingExtractionStatus
-     * @request GET:/tool/everything-extraction/status
-     */
-    getEverythingExtractionStatus: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsResponseModelsEverythingExtractionStatus,
-        any
-      >({
-        path: `/tool/everything-extraction/status`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Tool
-     * @name PlayResourceFile
-     * @request GET:/tool/{id}/play
-     */
-    playResourceFile: (
-      id: number,
-      query?: {
-        file?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/tool/${id}/play`,
         method: "GET",
         query: query,
         format: "json",

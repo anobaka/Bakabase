@@ -10,18 +10,21 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 		public HashSet<int> AllResourceIds { get; }
 		public HashSet<int> ResourceIdCandidates { get; }
 
-		public ResourceSearchContext(IEnumerable<Abstractions.Models.Db.Resource> allResources)
+		public ResourceSearchContext(IEnumerable<Abstractions.Models.Domain.Resource> allResources)
 		{
 			ResourcesPool = allResources.ToDictionary(x => x.Id, x => x);
 			ResourceIdCandidates = ResourcesPool.Keys.ToHashSet();
 			AllResourceIds = new HashSet<int>(ResourceIdCandidates);
 		}
 
-		public Dictionary<string, HashSet<string>>? Aliases;
+		/// <summary>
+		/// Text - Candidates
+		/// </summary>
+		public Dictionary<string, HashSet<string>>? AliasCandidates;
 
 		public Dictionary<int, Dictionary<int, CustomPropertyValue?>?>? CustomPropertyDataPool;
 
-		public Dictionary<int, Abstractions.Models.Db.Resource>? ResourcesPool { get; }
+		public Dictionary<int, Abstractions.Models.Domain.Resource>? ResourcesPool { get; }
 
 		/// <summary>
 		/// FavoritesId - ResourceIds

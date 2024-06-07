@@ -87,27 +87,27 @@ export default ({
             });
           },
         },
-        {
-          label: 'Move',
-          icon: 'move',
-          onClick: () => {
-            MediaLibraryPathSelector.show({
-              onSelect: path => BApi.resource.moveResources({
-                ids: selectedResourceIds!,
-                path,
-              }),
-            });
-          },
-        },
-        {
-          label: 'Add to favorites',
-          icon: 'star',
-          onClick: () => {
-            FavoritesSelector.show({
-              resourceIds: selectedResourceIds!,
-            });
-          },
-        },
+        // {
+        //   label: 'Move',
+        //   icon: 'move',
+        //   onClick: () => {
+        //     MediaLibraryPathSelector.show({
+        //       onSelect: path => BApi.resource.moveResources({
+        //         ids: selectedResourceIds!,
+        //         path,
+        //       }),
+        //     });
+        //   },
+        // },
+        // {
+        //   label: 'Add to favorites',
+        //   icon: 'star',
+        //   onClick: () => {
+        //     FavoritesSelector.show({
+        //       resourceIds: selectedResourceIds!,
+        //     });
+        //   },
+        // },
       ];
 
       const anyResourceSelected = selectedResourceIds && selectedResourceIds.length > 0;

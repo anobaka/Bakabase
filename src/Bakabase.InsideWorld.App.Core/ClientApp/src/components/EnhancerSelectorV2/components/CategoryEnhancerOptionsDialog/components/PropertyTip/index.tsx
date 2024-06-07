@@ -66,7 +66,7 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
                 }),
                 defaultVisible: true,
                 onOk: async () => {
-                  await BApi.resourceCategory.bindCustomPropertyToCategory(category.id, property.id);
+                  await BApi.category.bindCustomPropertyToCategory(category.id, property.id);
                   onPropertyBoundToCategory?.();
                 },
               });

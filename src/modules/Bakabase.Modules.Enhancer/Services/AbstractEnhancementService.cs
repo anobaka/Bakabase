@@ -4,6 +4,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm.Infrastructures;

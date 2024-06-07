@@ -14,7 +14,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Entries;
@@ -47,7 +49,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     [Route("~/file")]
     public class FileController : Controller
     {
-        private readonly SpecialTextService _specialTextService;
+        private readonly ISpecialTextService _specialTextService;
         private readonly IWebHostEnvironment _env;
         private readonly BackgroundTaskManager _backgroundTaskManager;
         private readonly BackgroundTaskHelper _backgroundTaskHelper;
@@ -61,7 +63,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly PasswordService _passwordService;
         private readonly ILogger<FileController> _logger;
 
-        public FileController(SpecialTextService specialTextService, IWebHostEnvironment env,
+        public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             BackgroundTaskHelper backgroundTaskHelper, InsideWorldOptionsManagerPool insideWorldOptionsManager,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,

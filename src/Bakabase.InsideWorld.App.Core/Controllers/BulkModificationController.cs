@@ -5,6 +5,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.Caching;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Constants;
@@ -32,11 +34,11 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     public class BulkModificationController : Controller
     {
         private readonly BulkModificationService _service;
-        private readonly ResourceService _resourceService;
+        private readonly IResourceService _resourceService;
         private readonly BulkModificationDiffService _diffService;
         private readonly BulkModificationTempDataService _tempDataService;
 
-        public BulkModificationController(BulkModificationService service, ResourceService resourceService,
+        public BulkModificationController(BulkModificationService service, IResourceService resourceService,
             BulkModificationDiffService diffService, BulkModificationTempDataService tempDataService)
         {
             _service = service;

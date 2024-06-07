@@ -111,7 +111,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("ResourceId");
 
-                    b.HasIndex("ResourceId", "PropertyId", "Scope");
+                    b.HasIndex("ResourceId", "PropertyId", "Scope").IsUnique();
 
                     b.ToTable("CustomPropertyValues");
                 });
@@ -797,6 +797,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.Property<bool>("TryCompressedFilesOnCoverSelection")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResourceDisplayNameTemplate")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

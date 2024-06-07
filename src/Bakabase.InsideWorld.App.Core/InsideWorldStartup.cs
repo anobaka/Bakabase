@@ -7,6 +7,7 @@ using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.App.Core.Components;
 using Bakabase.InsideWorld.App.Core.Extensions;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.CookieValidation;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
@@ -25,7 +26,6 @@ using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
 using Bakabase.InsideWorld.Business.Components.Jobs;
 using Bakabase.InsideWorld.Business.Components.Network;
-using Bakabase.InsideWorld.Business.Components.StandardValue;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai;
@@ -133,16 +133,11 @@ namespace Bakabase.InsideWorld.App.Core
             services.TryAddSingleton<CompressedFileService>();
 
             services.AddTransient<IBakabaseLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
-            services.AddTransient<IEnhancerLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
             services.AddTransient<InsideWorldLocalizer>();
 
             services.TryAddSingleton<IFileMover, FileMover>();
 
             services.TryAddSingleton<InsideWorldWebProxy>();
-
-            services.AddCustomProperty<CustomPropertyService, CustomPropertyValueService>();
-            services.AddEnhancers<EnhancementService, EnhancerService, CategoryEnhancerOptionsService, InsideWorldLocalizer>();
-            services.AddStandardValue<StandardValueService>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

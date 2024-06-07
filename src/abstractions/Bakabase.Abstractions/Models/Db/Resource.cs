@@ -14,6 +14,9 @@ namespace Bakabase.Abstractions.Models.Db
     public record Resource
     {
         public int Id { get; set; }
+        [Required]
+        public string Path { get; set; } = null!;
+        public bool IsFile { get; set; }
         public DateTime CreateDt { get; set; } = DateTime.Now;
         public DateTime UpdateDt { get; set; } = DateTime.Now;
         public DateTime FileCreateDt { get; set; }

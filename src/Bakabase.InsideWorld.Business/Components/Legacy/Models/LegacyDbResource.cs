@@ -1,5 +1,9 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.IO;
+using System.Linq;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.Legacy.Models
@@ -37,18 +41,18 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Models
 
         #endregion
 
-        // [NotMapped]
-        // public string RawFullname
-        // {
-        //     get
-        //     {
-        //         if (Directory.IsNullOrEmpty() && RawName.IsNullOrEmpty())
-        //         {
-        //             return null;
-        //         }
-        //
-        //         return Path.Combine(new[] {Directory, RawName}.Where(a => a.IsNotEmpty()).ToArray()).StandardizePath();
-        //     }
-        // }
+        [NotMapped]
+        public string RawFullname
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Directory) && string.IsNullOrEmpty(RawName))
+                {
+                    return null;
+                }
+        
+                return Path.Combine(new[] {Directory, RawName}.Where(a => !string.IsNullOrEmpty(a)).ToArray()).StandardizePath()!;
+            }
+        }
     }
 }

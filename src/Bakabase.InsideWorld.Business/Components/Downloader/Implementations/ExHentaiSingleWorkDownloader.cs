@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
@@ -30,7 +31,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
     public class ExHentaiSingleWorkDownloader : AbstractExHentaiDownloader
     {
         public ExHentaiSingleWorkDownloader(IServiceProvider serviceProvider,
-            IStringLocalizer<SharedResource> localizer, ExHentaiClient client, SpecialTextService specialTextService,
+            IStringLocalizer<SharedResource> localizer, ExHentaiClient client, ISpecialTextService specialTextService,
             IHostEnvironment env, IBOptionsManager<ExHentaiOptions> optionsManager) : base(serviceProvider, localizer,
             client, specialTextService, env, optionsManager)
         {

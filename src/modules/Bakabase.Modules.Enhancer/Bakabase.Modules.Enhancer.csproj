@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj" />
+    <ProjectReference Include="..\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
   </ItemGroup>
 
   <ItemGroup>

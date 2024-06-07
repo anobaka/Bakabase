@@ -25,7 +25,7 @@ const CategoryCustomPropertyBinderDialog = ({
       selection={category.customProperties?.map(c => ({ id: c.id, isReserved: false }))}
       title={t('Binding custom properties to category {{categoryName}}', { categoryName: category.name })}
       onSubmit={async (properties) => {
-        const rsp = await BApi.resourceCategory.bindCustomPropertiesToCategory(category.id, { customPropertyIds: properties?.map(p => p.id) });
+        const rsp = await BApi.category.bindCustomPropertiesToCategory(category.id, { customPropertyIds: properties?.map(p => p.id) });
         if (!rsp.code) {
           onSaved?.();
         } else {

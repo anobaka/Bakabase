@@ -6,23 +6,28 @@ using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions;
 
 namespace Bakabase.Modules.Enhancer.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddEnhancers<TEnhancementService, TEnhancerService,
+    public static IServiceCollection AddEnhancers<TDbContext, TEnhancementService, TEnhancerService,
         TCategoryEnhancerOptionsService, TLocalizer>(this IServiceCollection services)
         where TEnhancerService : class, IEnhancerService
         where TEnhancementService : class, IEnhancementService
         where TCategoryEnhancerOptionsService : class, ICategoryEnhancerOptionsService
         where TLocalizer : class, IEnhancerLocalizer
+        where TDbContext : DbContext
     {
         services.TryAddScoped<IEnhancerService, TEnhancerService>();
         services.TryAddScoped<IEnhancementService, TEnhancementService>();
+        services.TryAddScoped<ResourceService<TDbContext, CategoryEnhancerOptions, int>>();
         services.TryAddScoped<ICategoryEnhancerOptionsService, TCategoryEnhancerOptionsService>();
         services.AddTransient<IEnhancerLocalizer, TLocalizer>(x => x.GetRequiredService<TLocalizer>());
 

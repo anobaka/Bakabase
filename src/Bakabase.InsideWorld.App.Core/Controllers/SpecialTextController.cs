@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Input;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
@@ -13,55 +15,49 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Bakabase.InsideWorld.App.Core.Controllers
 {
     [Route("~/special-text")]
-    public class SpecialTextController : Controller
+    public class SpecialTextController(ISpecialTextService textService) : Controller
     {
-        private readonly SpecialTextService _textService;
-
-        public SpecialTextController(SpecialTextService textService)
-        {
-            _textService = textService;
-        }
-
         [HttpGet]
-        [SwaggerOperation(OperationId = "GetAllSpecialText")]
+        [SwaggerOperation(OperationId = "GetAllSpecialTexts")]
         public async Task<SingletonResponse<Dictionary<int, List<SpecialText>>>> GetAll()
         {
-            return new((await _textService.GetAll()).ToDictionary(d => (int) d.Key, d => d.Value));
+            return new((await textService.GetAll()).GroupBy(d => d.Type)
+                .ToDictionary(d => (int) d.Key, d => d.ToList()));
         }
 
         [HttpDelete("{id}")]
         [SwaggerOperation(OperationId = "DeleteSpecialText")]
-        public async Task<BaseResponse> Remove(int id)
+        public async Task<BaseResponse> Delete(int id)
         {
-            return await _textService.RemoveByKey(id);
+            return await textService.DeleteByKey(id);
         }
 
         [HttpPost]
-        [SwaggerOperation(OperationId = "CreateSpecialText")]
-        public async Task<SingletonResponse<SpecialText>> Create([FromBody] SpecialTextCreateRequestModel model)
+        [SwaggerOperation(OperationId = "AddSpecialText")]
+        public async Task<SingletonResponse<SpecialText>> Add([FromBody] SpecialTextAddInputModel model)
         {
-            return await _textService.Add(model);
+            return await textService.Add(model);
         }
 
         [HttpPut("{id}")]
-        [SwaggerOperation(OperationId = "UpdateSpecialText")]
-        public async Task<BaseResponse> Update(int id, [FromBody] SpecialTextUpdateRequestModel model)
+        [SwaggerOperation(OperationId = "PatchSpecialText")]
+        public async Task<BaseResponse> Patch(int id, [FromBody] SpecialTextPatchInputModel model)
         {
-            return await _textService.UpdateByKey(id, model);
+            return await textService.Patch(id, model);
         }
 
         [HttpPost("prefabs")]
         [SwaggerOperation(OperationId = "AddSpecialTextPrefabs")]
         public async Task<BaseResponse> AddPrefabs()
         {
-            return await _textService.AddPrefabs();
+            return await textService.AddPrefabs();
         }
 
         [HttpPost("pretreatment")]
         [SwaggerOperation(OperationId = "PretreatText")]
         public async Task<SingletonResponse<string>> Pretreat(string text)
         {
-            var result = await _textService.Pretreatment(text);
+            var result = await textService.Pretreatment(text);
             return new SingletonResponse<string>(result);
         }
     }

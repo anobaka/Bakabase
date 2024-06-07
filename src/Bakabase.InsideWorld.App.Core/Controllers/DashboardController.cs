@@ -2,14 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Legacy.Services;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Http;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Logging;
+using Bakabase.InsideWorld.Business.Components.ThirdParty.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bakabase.Modules.Alias.Abstractions.Services;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
@@ -21,31 +25,24 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     [Route("~/dashboard")]
     public class DashboardController : Controller
     {
-        private readonly ResourceService _resourceService;
+        private readonly IResourceService _resourceService;
         private readonly DownloadTaskService _downloadTaskService;
-        private readonly ResourceTagMappingService _resourceTagMappingService;
-        private readonly TagService _tagService;
-        private readonly TagGroupService _tagGroupService;
         private readonly ThirdPartyHttpRequestLogger _thirdPartyHttpRequestLogger;
-        private readonly ThirdPartyService _thirdPartyService;
+        private readonly IThirdPartyService _thirdPartyService;
         private readonly IBOptions<FileSystemOptions> _fsOptions;
-        private readonly AliasService _aliasService;
-        private readonly SpecialTextService _specialTextService;
+        private readonly IAliasService _aliasService;
+        private readonly ISpecialTextService _specialTextService;
         private readonly ComponentService _componentService;
         private readonly ComponentOptionsService _componentOptionsService;
         private readonly PasswordService _passwordService;
 
-        public DashboardController(ResourceService resourceService, DownloadTaskService downloadTaskService,
-            ResourceTagMappingService resourceTagMappingService, TagService tagService, TagGroupService tagGroupService,
-            ThirdPartyHttpRequestLogger thirdPartyHttpRequestLogger, ThirdPartyService thirdPartyService,
-            IBOptions<FileSystemOptions> fsOptions, AliasService aliasService, SpecialTextService specialTextService,
+        public DashboardController(IResourceService resourceService, DownloadTaskService downloadTaskService,
+            ThirdPartyHttpRequestLogger thirdPartyHttpRequestLogger, IThirdPartyService thirdPartyService,
+            IBOptions<FileSystemOptions> fsOptions, IAliasService aliasService, ISpecialTextService specialTextService,
             ComponentService componentService, PasswordService passwordService, ComponentOptionsService componentOptionsService)
         {
             _resourceService = resourceService;
             _downloadTaskService = downloadTaskService;
-            _resourceTagMappingService = resourceTagMappingService;
-            _tagService = tagService;
-            _tagGroupService = tagGroupService;
             _thirdPartyHttpRequestLogger = thirdPartyHttpRequestLogger;
             _thirdPartyService = thirdPartyService;
             _fsOptions = fsOptions;
@@ -63,7 +60,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             var ds = new DashboardStatistics();
 
             // Resource & Properties
-            await _resourceService.PopulateStatistics(ds);
+            // await _resourceService.PopulateStatistics(ds);
 
             // Downloader
             var allDownloadTasks = await _downloadTaskService.GetAll();
@@ -87,11 +84,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             // Alias, Special Text
             var aliasCount = await _aliasService.Count();
             var stCount = await _specialTextService.Count();
-            ds.OtherCounts.Add(new List<DashboardStatistics.TextAndCount>
-            {
+            ds.OtherCounts.Add([
                 new("Aliases", aliasCount),
                 new("SpecialTexts", stCount)
-            });
+            ]);
             // Players, PlayableFileSelectors, Enhancers
             var descriptors = await _componentOptionsService.GetAll();
             ds.OtherCounts.Add(descriptors.GroupBy(a => a.ComponentType)

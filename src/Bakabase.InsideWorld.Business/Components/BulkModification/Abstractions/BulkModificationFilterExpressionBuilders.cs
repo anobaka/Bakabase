@@ -23,7 +23,6 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
                     {BulkModificationFilterableProperty.CreateDt, BmCreateDtFilterExpressionBuilder.Instance},
                     {BulkModificationFilterableProperty.FileCreateDt, BmFileCreateDtFilterExpressionBuilder.Instance},
                     {BulkModificationFilterableProperty.FileModifyDt, BmFileModifyDtFilterExpressionBuilder.Instance},
-                    {BulkModificationFilterableProperty.Tag, BmTagFilterExpressionBuilder.Instance},
                 });
     }
 }

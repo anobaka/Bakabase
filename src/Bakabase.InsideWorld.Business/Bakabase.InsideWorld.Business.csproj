@@ -7,10 +7,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Compile Remove="Components\Conversion\**" />
 		<Compile Remove="Components\HttpClientProvider\**" />
 		<Compile Remove="Components\Subscribers\**" />
+		<EmbeddedResource Remove="Components\Conversion\**" />
 		<EmbeddedResource Remove="Components\HttpClientProvider\**" />
 		<EmbeddedResource Remove="Components\Subscribers\**" />
+		<None Remove="Components\Conversion\**" />
 		<None Remove="Components\HttpClientProvider\**" />
 		<None Remove="Components\Subscribers\**" />
 	</ItemGroup>
@@ -25,6 +28,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
 		<ProjectReference Include="..\Bakabase.InsideWorld.Prefabs\Bakabase.InsideWorld.Prefabs.csproj" />
+		<ProjectReference Include="..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
 		<ProjectReference Include="..\modules\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj" />
 		<ProjectReference Include="..\modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj" />
 	</ItemGroup>
@@ -39,7 +43,6 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="SevenZipExtractor" Version="1.0.17" />
 		<PackageReference Include="System.Runtime.Caching" Version="7.0.0" />
 	</ItemGroup>
 
@@ -69,10 +72,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Components\Conversion\" />
-	  <Folder Include="Components\Legacy\Services\" />
-	  <Folder Include="Models\Db\" />
-	  <Folder Include="Models\View\Constants\" />
+	  <Folder Include="Components\Modules\CustomProperty\" />
+	  <Folder Include="Models\View\" />
 	</ItemGroup>
 
 </Project>

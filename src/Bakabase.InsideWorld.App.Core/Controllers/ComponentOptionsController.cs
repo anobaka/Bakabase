@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
@@ -19,11 +21,11 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     public class ComponentOptionsController : Controller
     {
         private readonly ComponentOptionsService _service;
-        private readonly ResourceCategoryService _categoryService;
+        private readonly ICategoryService _categoryService;
         private readonly CategoryComponentService _categoryComponentService;
         private readonly InsideWorldLocalizer _localizer;
 
-        public ComponentOptionsController(ComponentOptionsService service, ResourceCategoryService categoryService,
+        public ComponentOptionsController(ComponentOptionsService service, ICategoryService categoryService,
             CategoryComponentService categoryComponentService, InsideWorldLocalizer localizer)
         {
             _service = service;

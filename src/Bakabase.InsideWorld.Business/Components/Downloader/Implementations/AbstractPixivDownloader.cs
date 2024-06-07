@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
@@ -20,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
 {
     public abstract class AbstractPixivDownloader : AbstractDownloader
     {
-        private readonly SpecialTextService _specialTextService;
+        private readonly ISpecialTextService _specialTextService;
         protected readonly IBOptions<PixivOptions> Options;
         protected readonly PixivClient Client;
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.Pixiv;
@@ -29,7 +31,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         public const string DefaultNamingConvention =
             $"{{{PixivNamingFields.UserName}}}/{{{PixivNamingFields.IllustrationId}}}-{{{PixivNamingFields.IllustrationTitle}}}-{{{PixivNamingFields.Tags}}}-p{{{PixivNamingFields.PageNo}}}{{{PixivNamingFields.Extension}}}";
 
-        protected AbstractPixivDownloader(IServiceProvider serviceProvider, SpecialTextService specialTextService,
+        protected AbstractPixivDownloader(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IBOptions<PixivOptions> options, PixivClient client) : base(serviceProvider)
         {
             _specialTextService = specialTextService;

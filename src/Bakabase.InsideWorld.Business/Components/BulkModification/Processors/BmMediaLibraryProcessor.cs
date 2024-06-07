@@ -12,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Processors
 {
     public class BmMediaLibraryProcessor : BmAbstractBmProcessor<int>
     {
-        protected override Task ProcessInternal(int value, Models.Domain.Resource resource, Dictionary<string, string?> variables,
+        protected override Task ProcessInternal(int value, Bakabase.Abstractions.Models.Domain.Resource resource, Dictionary<string, string?> variables,
             string? propertyKey)
         {
             resource.MediaLibraryId = value;

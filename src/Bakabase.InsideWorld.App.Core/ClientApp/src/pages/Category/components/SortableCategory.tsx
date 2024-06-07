@@ -108,7 +108,7 @@ export default (({
         closeable: true,
         onOk: () => new Promise((resolve, reject) => {
           if (newKey) {
-            return BApi.resourceCategory.configureResourceCategoryComponents(category.id, {
+            return BApi.category.configureResourceCategoryComponents(category.id, {
               componentKeys: [newKey],
               type: componentType,
             }).then(a => {
@@ -273,7 +273,7 @@ export default (({
                     title: t('Removing all enhancement records of resources under this category'),
                     children: t('This operation cannot be undone. Would you like to proceed?'),
                     onOk: async () => {
-                      await BApi.resourceCategory.removeCategoryEnhancements(category.id);
+                      await BApi.category.removeCategoryEnhancements(category.id);
                     },
                   });
                   break;
@@ -288,7 +288,7 @@ export default (({
                       <div>{t('This operation cannot be undone. Would you like to proceed?')}</div>
                     </>),
                     onOk: async () => {
-                      const rsp = await BApi.resourceCategory.deleteResourceCategoryAndClearAllRelatedData(category.id);
+                      const rsp = await BApi.category.deleteResourceCategoryAndClearAllRelatedData(category.id);
                       if (!rsp.code) {
                         loadAllCategories();
                       }
@@ -347,7 +347,7 @@ export default (({
                 width: 'auto',
                 closeMode: ['close', 'mask', 'esc'],
                 onOk: async () => {
-                  const rsp = await BApi.resourceCategory.duplicateResourceCategory(category.id, { name });
+                  const rsp = await BApi.category.duplicateResourceCategory(category.id, { name });
                   if (!rsp.code) {
                     loadAllCategories();
                     loadAllMediaLibraries();

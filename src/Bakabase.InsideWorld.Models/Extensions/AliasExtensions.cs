@@ -7,7 +7,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
 {
     public static class AliasExtensions
     {
-        public static AliasDto ToDto(this Alias a)
+        public static AliasDto ToDto(this LegacyAlias a)
         {
             return new()
             {
@@ -17,7 +17,7 @@ namespace Bakabase.InsideWorld.Models.Extensions
             };
         }
 
-        public static List<AliasDto> Merge(this IEnumerable<Alias> aliases)
+        public static List<AliasDto> Merge(this IEnumerable<LegacyAlias> aliases)
         {
             var groups = aliases.GroupBy(a => a.GroupId).ToList();
             var list = new List<AliasDto>();

@@ -1,7 +1,9 @@
 ﻿using System;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.InsideWorld.Business.Configurations.Models.Dto;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
 
 namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
@@ -14,9 +16,9 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
         public ResourceSearchDto? LastSearchV2 { get; set; }
         public CoverOptionsModel CoverOptions { get; set; } = new();
         public bool HideChildren { get; set; }
+        public PropertyValueScope[] PropertyValueScopePriority { get; set; } = [];
 
-        public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; } =
-            Array.Empty<AdditionalCoverDiscoveringSource>();
+        public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; } = [];
 
         public record CoverOptionsModel
         {

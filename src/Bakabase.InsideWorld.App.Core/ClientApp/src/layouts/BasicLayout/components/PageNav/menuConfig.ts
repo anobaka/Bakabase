@@ -40,21 +40,21 @@ const asideMenuConfig: IMenuItem[] = [
     icon: 'DatabaseOutlined',
     path: '/expandable-2',
     children: [
-      {
-        name: 'Resource property',
-        path: '/resourceproperty',
-        icon: 'RadarChartOutlined',
-      },
+      // {
+      //   name: 'Resource property',
+      //   path: '/resourceproperty',
+      //   icon: 'RadarChartOutlined',
+      // },
       {
         name: 'Custom property',
         path: '/customproperty',
         icon: 'RadarChartOutlined',
       },
-      {
-        name: 'Tag',
-        path: '/tag',
-        icon: 'TagsOutlined',
-      },
+      // {
+      //   name: 'Tag',
+      //   path: '/tag',
+      //   icon: 'TagsOutlined',
+      // },
       {
         name: 'Alias',
         path: '/alias',
@@ -97,11 +97,11 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/tools',
         icon: 'ToolOutlined',
       },
-      {
-        name: 'Migration',
-        path: '/migration',
-        icon: 'TruckOutlined',
-      },
+      // {
+      //   name: 'Migration',
+      //   path: '/migration',
+      //   icon: 'TruckOutlined',
+      // },
     ],
   },
   {

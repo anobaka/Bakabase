@@ -14,7 +14,7 @@ export default (props: IProps) => {
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    BApi.resourceCategory.getAllResourceCategories().then((a) => {
+    BApi.category.getAllResourceCategories().then((a) => {
       // @ts-ignore
       setCategories(a.data.map((b) => ({ label: b.name, value: b.id })));
     });

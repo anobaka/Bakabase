@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
@@ -28,7 +29,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
     public class PixivRankingDownloader : AbstractPixivDownloader
     {
         public override PixivDownloadTaskType TaskType => PixivDownloadTaskType.Ranking;
-        public PixivRankingDownloader(IServiceProvider serviceProvider, SpecialTextService specialTextService,
+        public PixivRankingDownloader(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IBOptions<PixivOptions> options, PixivClient client) : base(serviceProvider, specialTextService, options,
             client)
         {

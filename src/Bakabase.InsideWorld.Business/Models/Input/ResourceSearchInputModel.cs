@@ -4,6 +4,6 @@ namespace Bakabase.InsideWorld.Business.Models.Input
 {
 	public class ResourceSearchInputModel: ResourceSearchDto
     {
-		public bool Save { get; set; }
+		public bool SaveSearchCriteria { get; set; }
 	}
 }

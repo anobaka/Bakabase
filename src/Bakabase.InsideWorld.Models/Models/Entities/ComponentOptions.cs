@@ -20,7 +20,7 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
         [BindRequired]
         public ComponentType ComponentType { get; set; }
 
-        [Required] public string ComponentAssemblyQualifiedTypeName { get; set; }
+        [Required] public string ComponentAssemblyQualifiedTypeName { get; set; } 
         [Required] public string Name { get; set; }
         public string? Description { get; set; }
         [Required] public string Json { get; set; }

@@ -17,6 +17,32 @@ namespace Bakabase.InsideWorld.Business.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.6");
 
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.BuiltinPropertyValue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Introduction")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("Rating")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResourceId", "Scope")
+                        .IsUnique();
+
+                    b.ToTable("BuiltinPropertyValues");
+                });
+
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.CategoryComponent", b =>
                 {
                     b.Property<int>("Id")
@@ -109,7 +135,8 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("ResourceId");
 
-                    b.HasIndex("ResourceId", "PropertyId", "Scope");
+                    b.HasIndex("ResourceId", "PropertyId", "Scope")
+                        .IsUnique();
 
                     b.ToTable("CustomPropertyValues");
                 });
@@ -158,10 +185,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<DateTime>("CreateDt")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Directory")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("FileCreateDt")
                         .HasColumnType("TEXT");
 
@@ -171,32 +194,17 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<bool>("HasChildren")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Introduction")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsSingleFile")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Language")
+                    b.Property<bool>("IsFile")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("MediaLibraryId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Name")
-                        .HasColumnType("TEXT");
-
                     b.Property<int?>("ParentId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("Rate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RawName")
+                    b.Property<string>("Path")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("ReleaseDt")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdateDt")
@@ -204,25 +212,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("CreateDt");
-
-                    b.HasIndex("FileCreateDt");
-
-                    b.HasIndex("FileModifyDt");
-
-                    b.HasIndex("Language");
-
-                    b.HasIndex("Name");
-
-                    b.HasIndex("Rate");
-
-                    b.HasIndex("RawName");
-
-                    b.HasIndex("UpdateDt");
-
-                    b.ToTable("Resources");
+                    b.ToTable("ResourcesV2");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModification", b =>
@@ -321,6 +311,85 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("BulkModificationTempData");
                 });
 
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Legacy.Models.LegacyDbResource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreateDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Directory")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FileCreateDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FileModifyDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasChildren")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Introduction")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsSingleFile")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Language")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MediaLibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Rate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RawName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReleaseDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdateDt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("CreateDt");
+
+                    b.HasIndex("FileCreateDt");
+
+                    b.HasIndex("FileModifyDt");
+
+                    b.HasIndex("Language");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("Rate");
+
+                    b.HasIndex("RawName");
+
+                    b.HasIndex("UpdateDt");
+
+                    b.ToTable("Resources");
+                });
+
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Alias", b =>
                 {
                     b.Property<int>("Id")
@@ -359,6 +428,48 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AliasGroups");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Category", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Color")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ComponentsJsonData")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CoverSelectionOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreateDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnhancementOptionsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("GenerateNfo")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResourceDisplayNameTemplate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("TryCompressedFilesOnCoverSelection")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ResourceCategories");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.CategoryCustomPropertyMapping", b =>
@@ -762,48 +873,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("PublisherTagMappings");
                 });
 
-            modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.ResourceCategory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Color")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ComponentsJsonData")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("CoverSelectionOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreateDt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EnhancementOptionsJson")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("GenerateNfo")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ResourceDisplayNameTemplate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("TryCompressedFilesOnCoverSelection")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ResourceCategories");
-                });
-
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.ResourceTagMapping", b =>
                 {
                     b.Property<int>("Id")
@@ -946,6 +1015,26 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("Title");
 
                     b.ToTable("Volumes");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Alias.Abstractions.Models.Db.Alias", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Preferred")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AliasesV2");
                 });
 
             modelBuilder.Entity("Bootstrap.Components.Logging.LogService.Models.Entities.Log", b =>

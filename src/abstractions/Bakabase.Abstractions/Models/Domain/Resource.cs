@@ -95,10 +95,10 @@ public record Resource
     public bool HasChildren { get; set; }
     public bool IsFile { get; set; }
 
-    public DateTime CreateDt { get; set; } = DateTime.Now;
-    public DateTime UpdateDt { get; set; } = DateTime.Now;
-    public DateTime FileCreateDt { get; set; }
-    public DateTime FileModifyDt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    public DateTime FileCreatedAt { get; set; }
+    public DateTime FileModifiedAt { get; set; }
 
 
     public Resource? Parent { get; set; }
@@ -106,13 +106,13 @@ public record Resource
 
     public record Property(
         string? Name,
-        StandardValueType ValueType,
+        StandardValueType DbValueType,
         StandardValueType BizValueType,
         List<Property.PropertyValue>? Values)
     {
         public string? Name { get; set; } = Name;
         public List<PropertyValue>? Values { get; set; } = Values;
-        public StandardValueType ValueType { get; set; } = ValueType;
+        public StandardValueType DbValueType { get; set; } = DbValueType;
         public StandardValueType BizValueType { get; set; } = BizValueType;
 
         public record PropertyValue(

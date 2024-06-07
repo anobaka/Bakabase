@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
@@ -39,14 +41,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         private readonly IHostEnvironment _env;
         private readonly BilibiliClient _client;
         private readonly InsideWorldOptionsManagerPool _optionsManager;
-        private readonly SpecialTextService _specialTextService;
+        private readonly ISpecialTextService _specialTextService;
 
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.Bilibili;
 
         private readonly LuxService _luxService;
 
         public BilibiliDownloader(IStringLocalizer<SharedResource> localizer,
-            BilibiliClient client, InsideWorldOptionsManagerPool optionsManager, SpecialTextService specialTextService,
+            BilibiliClient client, InsideWorldOptionsManagerPool optionsManager, ISpecialTextService specialTextService,
             IHostEnvironment env, IServiceProvider serviceProvider, LuxService luxService) : base(serviceProvider)
         {
             _localizer = localizer;

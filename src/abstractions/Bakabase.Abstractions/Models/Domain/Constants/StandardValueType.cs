@@ -9,5 +9,6 @@ public enum StandardValueType
     Boolean,
     DateTime,
     Time,
-    ListListString
+    ListListString,
+    ListTag
 }

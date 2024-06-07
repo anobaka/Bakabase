@@ -17,15 +17,15 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
 {
     public static class BulkModificationExtensions
     {
-        public static Expression<Func<Business.Models.Domain.Resource, bool>> BuildExpression(this BulkModificationFilter filter)
+        public static Expression<Func<Bakabase.Abstractions.Models.Domain.Resource, bool>> BuildExpression(this BulkModificationFilter filter)
         {
             var builder = BulkModificationFilterExpressionBuilders.Builders[filter.Property];
             return builder.Build(filter);
         }
 
-        public static Expression<Func<Business.Models.Domain.Resource, bool>> BuildExpression(this BulkModificationFilterGroup group)
+        public static Expression<Func<Bakabase.Abstractions.Models.Domain.Resource, bool>> BuildExpression(this BulkModificationFilterGroup group)
         {
-            var exps = new List<Expression<Func<Business.Models.Domain.Resource, bool>>>();
+            var exps = new List<Expression<Func<Bakabase.Abstractions.Models.Domain.Resource, bool>>>();
             if (group.Filters != null)
             {
                 exps.AddRange(group.Filters.Select(f => f.BuildExpression()));
@@ -80,7 +80,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
             {
                 ResourceDiffProperty.Category => BulkModificationFilterableProperty.Category,
                 ResourceDiffProperty.MediaLibrary => BulkModificationFilterableProperty.MediaLibrary,
-                ResourceDiffProperty.Tag => BulkModificationFilterableProperty.Tag,
+                // ResourceDiffProperty.Tag => BulkModificationFilterableProperty.Tag,
                 _ => throw new ArgumentOutOfRangeException(nameof(rdp), rdp, null)
             };
         }
@@ -117,15 +117,15 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions
         {
             [BulkModificationFilterableProperty.Category] = new BmCategoryDiffHandler(),
             [BulkModificationFilterableProperty.MediaLibrary] = new BmMediaLibraryDiffHandler(),
-            [BulkModificationFilterableProperty.Tag] = new BmTagDiffHandler(),
+            // [BulkModificationFilterableProperty.Tag] = new BmTagDiffHandler(),
         };
 
-        public static void Apply(this BulkModificationDiff diff, Business.Models.Domain.Resource resource)
+        public static void Apply(this BulkModificationDiff diff, Bakabase.Abstractions.Models.Domain.Resource resource)
         {
             DiffHandlers.GetValueOrDefault(diff.Property)?.Apply(resource, diff);
         }
 
-        public static void Revert(this BulkModificationDiff diff, Business.Models.Domain.Resource resource)
+        public static void Revert(this BulkModificationDiff diff, Bakabase.Abstractions.Models.Domain.Resource resource)
         {
             DiffHandlers.GetValueOrDefault(diff.Property)?.Revert(resource, diff);
         }

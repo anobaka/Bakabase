@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Modules.CustomProperty.Abstractions.Services;
@@ -63,7 +64,7 @@ public interface ICustomPropertyService
     // Task<BaseResponse> RemoveByKeys(IEnumerable<Int32> keys);
     // Task<ListResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> AddRange(List<Bakabase.Abstractions.Models.Db.CustomProperty> resources);
     // Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> UpdateByKey(Int32 key, Action<Bakabase.Abstractions.Models.Db.CustomProperty> modify);
-    Task<BaseResponse> Update(Bakabase.Abstractions.Models.Db.CustomProperty resource);
+    Task<BaseResponse> Put(Bakabase.Abstractions.Models.Domain.CustomProperty resource);
     Task<BaseResponse> UpdateRange(IReadOnlyCollection<Bakabase.Abstractions.Models.Db.CustomProperty> resources);
     //
     // Task<ListResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> UpdateByKeys(IReadOnlyCollection<Int32> keys,

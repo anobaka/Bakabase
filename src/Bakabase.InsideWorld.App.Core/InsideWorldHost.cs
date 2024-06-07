@@ -48,10 +48,6 @@ namespace Bakabase.InsideWorld.App.Core
         protected override void Initialize()
         {
             base.Initialize();
-
-            // Move previous app data
-            // This is a temporary hard code, and will be removed after 1.7.x.
-            V170Migrator.CopyCoreAppData();
         }
 
         protected override IHostBuilder CreateHostBuilder(params string[] args) =>

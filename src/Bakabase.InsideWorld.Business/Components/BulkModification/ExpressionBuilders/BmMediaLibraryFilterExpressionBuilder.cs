@@ -15,7 +15,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
 
         protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.MediaLibrary;
 
-        protected override int GetValue(Models.Domain.Resource resource)
+        protected override int GetValue(Bakabase.Abstractions.Models.Domain.Resource resource)
         {
             return resource.MediaLibraryId;
         }

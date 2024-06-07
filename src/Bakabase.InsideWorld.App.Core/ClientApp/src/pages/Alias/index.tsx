@@ -1,22 +1,58 @@
-import React, { useCallback, useEffect, useReducer, useState } from 'react';
-import { Button, Dialog, Input, Loading, Message, Pagination, Table, Upload } from '@alifd/next';
-import { CreateAlias, ExportAliases, ImportAliasesURL, MergeAliasGroup, RemoveAlias, SearchAliases, UpdateAlias } from '@/sdk/apis';
+import React, { useEffect, useReducer, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AliasAdditionalItem } from '@/sdk/constants';
 import './index.scss';
-import i18n from 'i18next';
-import CustomIcon from '@/components/CustomIcon';
-import ButtonsBalloon from '@/components/ButtonsBalloon';
-import ConfirmationButton from '@/components/ConfirmationButton';
-import AliasSelector from '@/pages/Alias/components/AliasSelector';
-import serverConfig from '@/serverConfig';
+import BApi from '@/sdk/BApi';
+import {
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Chip,
+  Divider,
+  Input,
+  Modal,
+  Pagination,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow, Tooltip,
+} from '@/components/bakaui';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { DeleteOutlined, EnterOutlined, MergeOutlined, SearchOutlined, ToTopOutlined } from '@ant-design/icons';
+
+type Form = {
+  pageSize: 20;
+  pageIndex: number;
+  additionalItems: AliasAdditionalItem.Candidates;
+  text?: string;
+  fuzzyText?: string;
+};
+
+type Alias = {
+  originalText: string;
+  text: string;
+  preferred?: string;
+  candidates?: string[];
+};
+
+type BulkOperationContext = {
+  preferredTexts: string[];
+};
 
 export default () => {
-  const [form, setForm] = useState({
+  const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
+
+  const [form, setForm] = useState<Form>({
     pageSize: 20,
     pageIndex: 0,
     additionalItems: AliasAdditionalItem.Candidates,
   });
-  const [aliases, setAliases] = useState([]);
+  const [aliases, setAliases] = useState<Alias[]>([]);
+  const [bulkOperationContext, setBulkOperationContext] = useState<BulkOperationContext>();
   const [totalCount, setTotalCount] = useState(0);
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const [loading, setLoading] = useState(false);
@@ -25,344 +61,252 @@ export default () => {
     search();
   }, []);
 
-  const search = () => {
-    SearchAliases(form)
-      .invoke((a) => {
-        setForm({
-          ...form,
-          pageIndex: a.pageIndex,
-          pageSize: a.pageSize,
-        });
-        setAliases(a.data);
-        setTotalCount(a.totalCount);
+  const search = (pForm?: Partial<Form>) => {
+    const nf = {
+      ...form,
+      ...pForm,
+    };
+    setForm(nf);
+    BApi.alias.searchAliasGroups(nf)
+      .then((a) => {
+        setAliases(a.data?.map(x => ({
+          originalText: x.text!,
+          text: x.text!,
+          preferred: x.preferred ?? undefined,
+          candidates: x.candidates ?? undefined,
+        })) ?? []);
+        setTotalCount(a.totalCount!);
       });
   };
 
-  const changeForm = (update, searchAfterChanging = false) => {
-    update(form);
-    setForm({ ...form });
-    if (searchAfterChanging) {
-      search();
+  const renderPagination = () => {
+    const pageCount = Math.ceil(totalCount / form.pageSize);
+    if (pageCount > 1) {
+      return (
+        <div className={'flex justify-center'}>
+          <Pagination
+            size={'sm'}
+            page={form.pageIndex}
+            total={pageCount}
+            onChange={(p) => search({ pageIndex: p })}
+          />
+        </div>
+      );
     }
+    return;
   };
 
-  const startEditingAlias = useCallback((alias) => {
-    let { name } = alias;
-    const title = alias.id > 0 ? `${i18n.t('Editing alias')}: ${name}` : i18n.t('Adding alias');
-    Dialog.show({
-      title,
-      content: (
-        <Input defaultValue={name} onChange={(v) => { name = v; }} />
-      ),
-      closeable: true,
-      onOk: () => new Promise(((resolve, reject) => {
-        if (name?.length > 0) {
-          if (alias.id > 0) {
-            UpdateAlias({
-              id: alias.id,
-              model: { name },
-            }).invoke((b) => {
-              if (!b.code) {
-                alias.name = name;
-                forceUpdate();
-                resolve();
-              } else {
-                reject();
-              }
-            });
-          } else {
-            CreateAlias({
-              model: {
-                ...alias,
-                name,
-              },
-            }).invoke((a) => {
-              if (!a.code) {
-                search();
-                resolve();
-              } else {
-                reject();
-              }
-            });
-          }
-        }
-      })),
-    });
-  }, []);
-
   return (
-    <div className="alias-page">
-      <Loading visible={loading} fullScreen />
-      <div className="form">
-        <div className="opt">
-          <div className="left">
-            <Input.Group
-              addonAfter={(
-                <Button
-                  type={'normal'}
-                  onClick={() => {
-                    changeForm((f) => { f.pageIndex = 0; }, true);
-                  }}
-                >
-                  {i18n.t('Search')}
-                </Button>
-              )}
-            >
-              <Input
-                onKeyDown={(e) => {
-                  if (e.key == 'Enter') {
-                    changeForm((f) => { f.pageIndex = 0; }, true);
-                  }
-                }}
-                addonTextBefore={i18n.t('Keyword')}
-                size={'medium'}
-                value={form.name}
-                onChange={(v) => changeForm((f) => {
-                  f.name = v;
-                })}
-              />
-            </Input.Group>
-          </div>
-          <div className="right">
-            <Upload
-              action={`${serverConfig.apiEndpoint}${ImportAliasesURL()}`}
-              onSuccess={(a) => {
-                setLoading(false);
-                Message.success(i18n.t('Success'));
+    <div className="">
+      <div className={'flex items-center justify-between'}>
+        <div>
+          <Input
+            startContent={<SearchOutlined className={'text-sm'} />}
+            placeholder={t('Press enter to search')}
+            value={form.fuzzyText}
+            onValueChange={v => setForm({
+              ...form,
+              fuzzyText: v,
+            })}
+            onKeyDown={e => {
+              if (e.key == 'Enter') {
                 search();
-                console.log(a);
-              }}
-              beforeUpload={() => {
-                setLoading(true);
-                Message.loading(i18n.t('Importing'));
-              }}
-              onError={({ response }) => {
-                setLoading(false);
-                Message.error(i18n.t(response.message));
-              }}
-              multiple
-              formatter={(res, file) => {
-                // 函数里面根据当前服务器返回的响应数据
-                // 重新拼装符合组件要求的数据格式
-                return {
-                  success: res.code == 0,
-                  message: res.message,
-                };
-              }}
-            >
-              <Button
-                type="normal"
-                size={'small'}
-                // onClick={() => {
-                //   OpenFilesSelector().invoke((a) => {
-                //     if (a.data) {
-                //       ImportAliases({
-                //
-                //       });
-                //     }
-                //   });
-                // }}
-              >
-                <CustomIcon type={'upload'} size={'small'} />
-                {i18n.t('Import')}
-              </Button>
-            </Upload>
-            <Button
-              type="normal"
-              size={'small'}
-              onClick={() => {
-                ExportAliases()
-                  .invoke();
-              }}
-            >
-              <CustomIcon type={'download'} size={'small'} />
-              {i18n.t('Export')}
-            </Button>
-          </div>
-        </div>
-      </div>
-      <div className="aliases">
-        {totalCount > 1 &&
-          (
-            <Pagination
-              size={'small'}
-              pageShowCount={8}
-              current={form.pageIndex}
-              pageSize={form.pageSize}
-              total={totalCount}
-              onChange={(p) => changeForm((f) => f.pageIndex = p, true)}
-            />
-          )}
-        <Table
-          dataSource={aliases}
-          isZebra
-          size={'small'}
-        >
-          <Table.Column
-            title={i18n.t('Preferred')}
-            dataIndex="name"
-            cell={(n, i, a) => {
-              const name = n;
-              return (
-                <ButtonsBalloon
-                  operations={[
-                    {
-                      type: 'secondary',
-                      label: 'Edit',
-                      icon: 'edit-square',
-                      onClick: () => startEditingAlias(a),
-                    },
-                  ]}
-                  trigger={n}
-                />
-              );
+              }
             }}
           />
-          <Table.Column
-            title={i18n.t('Candidates')}
-            dataIndex="candidates"
-            cell={(candidates, i, alias) => candidates && (
-              <div className={'candidates'} key={i}>
-                {
-                  candidates.map((c, j) => (
-                    <ButtonsBalloon
-                      key={j}
-                      operations={[
-                        {
-                          type: 'secondary',
-                          label: 'Edit',
-                          icon: 'edit-square',
-                          onClick: () => startEditingAlias(c),
+        </div>
+        <div>
+          <Button
+            size={'sm'}
+          >
+            {t('Add an alias')}
+          </Button>
+        </div>
+      </div>
+      <Divider className={'my-1'} />
+      {bulkOperationContext && (
+        <>
+          <Card>
+            <CardHeader>
+              <div className={'text-md flex items-center gap-2'}>
+                {t('Bulk operations')}
+                <Tooltip
+                  content={t('{{text}} will be the preferred text in merged groups, you can change the preferred text by clicking the text.', { text: bulkOperationContext.preferredTexts[0] })}
+                >
+                  <Button
+                    color={'secondary'}
+                    size={'sm'}
+                    startContent={<MergeOutlined className={'text-sm'} />}
+                    onClick={() => {
+                      createPortal(Modal, {
+                        defaultVisible: true,
+                        title: t('Merging alias groups: {{texts}}', { texts: bulkOperationContext.preferredTexts.join(',') }),
+                        children: t('All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?', { preferred: bulkOperationContext.preferredTexts[0] }),
+                        onOk: async () => {
+                          await BApi.alias.mergeAliasGroups({ preferredTexts: bulkOperationContext.preferredTexts });
+                          setBulkOperationContext(undefined);
+                          search();
                         },
-                        {
-                          type: 'secondary',
-                          label: 'Set preferred',
-                          icon: 'totop',
-                          onClick: () => {
-                            UpdateAlias({
-                              id: c.id,
-                              model: {
-                                isPreferred: true,
-                              },
-                            }).invoke((a) => {
-                              if (!a.code) {
-                                search();
-                              }
-                            });
-                          },
-                        },
-                        {
-                          warning: true,
-                          onClick: (e) => {
-                            RemoveAlias({
-                              id: c.id,
-                            }).invoke((t) => {
-                              if (!t.code) {
-                                alias.candidates = candidates.filter((tc) => tc != c);
-                                setAliases([...aliases]);
-                              }
-                            });
-                          },
-                          label: 'Delete',
-                          icon: 'delete',
-                          confirmation: true,
-                        },
-                      ]}
-                      trigger={(
-                        <div className={'candidate'}>
-                          {c.name}
-                        </div>
-                      )}
-                    />
-                  ))
-                }
-              </div>
-            )}
-          />
-          <Table.Column
-            title={i18n.t('Operations')}
-            dataIndex="id"
-            width={'20%'}
-            cell={(id, _, a) => (
-              <div className={'opts'}>
+                      });
+                    }}
+                  >
+                    {t('Merge')}
+                  </Button>
+                </Tooltip>
                 <Button
-                  size={'small'}
-                  type={'secondary'}
+                  color={'danger'}
+                  size={'sm'}
                   onClick={() => {
-                    startEditingAlias({
-                      groupId: a.groupId,
+                    createPortal(Modal, {
+                      defaultVisible: true,
+                      title: t('Deleting alias groups: {{texts}}', { texts: bulkOperationContext.preferredTexts.join(',') }),
+                      children: t('All selected alias groups and its candidates will be delete and there is no way back, are you sure?'),
+                      onOk: async () => {
+                        await BApi.alias.deleteAliasGroups({ preferredTexts: bulkOperationContext.preferredTexts });
+                        setBulkOperationContext(undefined);
+                        search();
+                      },
                     });
                   }}
+                  startContent={<DeleteOutlined className={'text-sm'} />}
                 >
-                  <CustomIcon type={'plus-circle'} size={'small'} />
-                  {i18n.t('Add')}
+                  {t('Delete')}
                 </Button>
                 <Button
-                  size={'small'}
+                  color={'default'}
+                  size={'sm'}
+                  startContent={<EnterOutlined className={'text-sm'} />}
                   onClick={() => {
-                    let targetGroupId;
-                    Dialog.show({
-                      title: i18n.t('Merging current alias group to'),
-                      content: (
-                        <AliasSelector onChange={(v) => { targetGroupId = v; }} excludeGroupIds={[a.groupId]} />
-                      ),
-                      closeable: true,
-                      onOk: () => new Promise(((resolve, reject) => {
-                        if (targetGroupId > 0) {
-                          MergeAliasGroup({
-                            model: {
-                              targetGroupId,
-                            },
-                            id: a.groupId,
-                          }).invoke((a) => {
-                            if (!a.code) {
-                              resolve();
-                              search();
-                            } else {
-                              reject();
-                            }
+                    setBulkOperationContext(undefined);
+                  }}
+                >
+                  {t('Exit')}
+                </Button>
+              </div>
+            </CardHeader>
+            <Divider />
+            <CardBody>
+              <div className={'flex flex-wrap gap-1'}>
+                {bulkOperationContext.preferredTexts.map((t, i) => {
+                  return (
+                    <Chip
+                      size={'sm'}
+                      radius={'sm'}
+                      color={i == 0 ? 'primary' : 'default'}
+                      onClick={() => {
+                        bulkOperationContext.preferredTexts.splice(i, 1);
+                        setBulkOperationContext({
+                          ...bulkOperationContext,
+                          preferredTexts: [t, ...bulkOperationContext.preferredTexts],
+                        });
+                      }}
+                      onClose={() => {
+                        const texts = bulkOperationContext.preferredTexts.filter(x => x != t);
+                        if (texts.length == 0) {
+                          setBulkOperationContext(undefined);
+                        } else {
+                          setBulkOperationContext({
+                            ...bulkOperationContext,
+                            preferredTexts: texts,
                           });
                         }
-                      })),
-                    });
-                  }}
-                >
-                  <CustomIcon type={'git-merge-line'} size={'small'} />
-                  {i18n.t('Merge to')}
-                </Button>
-                <ConfirmationButton
-                  size={'small'}
-                  warning
-                  type={'normal'}
-                  onClick={() => {
-                    RemoveAlias({
-                      id,
-                    }).invoke((a) => {
-                      if (!a.code) {
-                        search();
-                      }
-                    });
-                  }}
-                  confirmation
-                  icon={'delete'}
-                  label={'Delete'}
-                />
+                      }}
+                    >
+                      {t}
+                    </Chip>
+                  );
+                })}
               </div>
-            )}
-          />
-        </Table>
-        {totalCount > 1 &&
-          (
-            <Pagination
-              size={'small'}
-              pageShowCount={8}
-              current={form.pageIndex}
-              pageSize={form.pageSize}
-              total={totalCount}
-              onChange={(p) => changeForm((f) => f.pageIndex = p, true)}
-            />
-          )}
-      </div>
+            </CardBody>
+          </Card>
+        </>
+      )}
+      {aliases.length > 0 && (
+        <div className={'mt-1'}>
+          <Table
+            topContent={renderPagination()}
+            bottomContent={renderPagination()}
+            isStriped
+            isCompact
+            selectionMode={'multiple'}
+            selectedKeys={bulkOperationContext?.preferredTexts}
+            onSelectionChange={keys => {
+              let selection: string[];
+              if (keys === 'all') {
+                selection = aliases.map(a => a.text);
+              } else {
+                selection = Array.from(keys).map(String);
+              }
+
+              const notSelected = aliases.map(x => x.text).filter(x => !selection.includes(x));
+              const ns = Array.from(new Set(
+                (bulkOperationContext?.preferredTexts ?? []).filter(x => !notSelected.includes(x)).concat(selection),
+              ));
+
+              setBulkOperationContext({
+                ...bulkOperationContext,
+                preferredTexts: ns,
+              });
+            }}
+            color={'primary'}
+          >
+            <TableHeader>
+              <TableColumn>{t('Preferred')}</TableColumn>
+              <TableColumn>{t('Candidates')}</TableColumn></TableHeader>
+            <TableBody>
+              {aliases.map(a => {
+                return (
+                  <TableRow key={a.text}>
+                    <TableCell>{a.originalText}</TableCell>
+                    <TableCell>
+                      <div
+                        className={'flex flex-wrap gap-1'}
+                        onClick={e => {
+                        e.cancelable = true;
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      >
+                        {a.candidates?.map(c => {
+                          return (
+                            <Chip
+                              radius={'sm'}
+                              onClick={e => {
+                                e.cancelable = true;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                BApi.alias.patchAlias({
+                                  isPreferred: true,
+                                }, { text: a.originalText }).then(() => {
+                                  search();
+                                });
+                              }}
+                              onClose={() => {
+                                createPortal(Modal, {
+                                  defaultVisible: true,
+                                  title: t('Deleting an alias: {{text}}', { text: c }),
+                                  content: t('There is no way back, are you sure?'),
+                                  onOk: async () => {
+                                    await BApi.alias.deleteAlias({ text: c });
+                                    a.candidates = a.candidates?.filter(x => x != c);
+                                    forceUpdate();
+                                  },
+                                });
+                              }}
+                            >
+                              {c}
+                            </Chip>
+                          );
+                        })}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 };

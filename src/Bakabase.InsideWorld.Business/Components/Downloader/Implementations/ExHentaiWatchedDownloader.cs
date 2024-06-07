@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
@@ -18,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
     public class ExHentaiWatchedDownloader : ExHentaiListDownloader
     {
         public ExHentaiWatchedDownloader(IServiceProvider serviceProvider, IStringLocalizer<SharedResource> localizer,
-            ExHentaiClient client, SpecialTextService specialTextService, IHostEnvironment env,
+            ExHentaiClient client, ISpecialTextService specialTextService, IHostEnvironment env,
             IBOptionsManager<ExHentaiOptions> optionsManager) : base(serviceProvider, localizer, client,
             specialTextService, env, optionsManager)
         {

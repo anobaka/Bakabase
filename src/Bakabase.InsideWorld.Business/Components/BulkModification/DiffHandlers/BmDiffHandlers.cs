@@ -16,7 +16,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers
     {
         protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.Category;
 
-        protected override void SetProperty(Models.Domain.Resource resource, int value, BulkModificationDiff diff)
+        protected override void SetProperty(Bakabase.Abstractions.Models.Domain.Resource resource, int value, BulkModificationDiff diff)
         {
             resource.CategoryId = value;
         }
@@ -26,7 +26,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers
     {
         protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.MediaLibrary;
 
-        protected override void SetProperty(Models.Domain.Resource resource, int value, BulkModificationDiff diff)
+        protected override void SetProperty(Bakabase.Abstractions.Models.Domain.Resource resource, int value, BulkModificationDiff diff)
         {
             resource.MediaLibraryId = value;
         }
@@ -37,7 +37,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers
     // {
     //     protected override BulkModificationProperty Property => BulkModificationProperty.FileName;
     //
-    //     protected override void SetProperty(Models.Domain.Resource resource, string value, BulkModificationDiff diff)
+    //     protected override void SetProperty(Bakabase.Abstractions.Models.Domain.Resource resource, string value, BulkModificationDiff diff)
     //     {
     //         throw new NotImplementedException();
     //     }
@@ -48,7 +48,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers
     // {
     //     protected override BulkModificationProperty Property => BulkModificationProperty.DirectoryPath;
     //
-    //     protected override void SetProperty(Models.Domain.Resource resource, string value, BulkModificationDiff diff)
+    //     protected override void SetProperty(Bakabase.Abstractions.Models.Domain.Resource resource, string value, BulkModificationDiff diff)
     //     {
     //         resource.DirectoryPath = value;
     //     }
@@ -59,9 +59,9 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers
     {
         protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.CreateDt;
 
-        protected override void SetProperty(Models.Domain.Resource resource, DateTime value, BulkModificationDiff diff)
+        protected override void SetProperty(Bakabase.Abstractions.Models.Domain.Resource resource, DateTime value, BulkModificationDiff diff)
         {
-            resource.CreateDt = value;
+            resource.CreatedAt = value;
         }
     }
 
@@ -70,9 +70,9 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers
     {
         protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.FileCreateDt;
 
-        protected override void SetProperty(Models.Domain.Resource resource, DateTime value, BulkModificationDiff diff)
+        protected override void SetProperty(Bakabase.Abstractions.Models.Domain.Resource resource, DateTime value, BulkModificationDiff diff)
         {
-            resource.FileCreateDt = value;
+            resource.FileCreatedAt = value;
         }
     }
 
@@ -81,20 +81,20 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.DiffHandlers
     {
         protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.FileModifyDt;
 
-        protected override void SetProperty(Models.Domain.Resource resource, DateTime value, BulkModificationDiff diff)
+        protected override void SetProperty(Bakabase.Abstractions.Models.Domain.Resource resource, DateTime value, BulkModificationDiff diff)
         {
-            resource.FileModifyDt = value;
+            resource.FileModifiedAt = value;
         }
     }
 
-    // Tag
-    public class BmTagDiffHandler : BmAbstractDiffHandler<List<TagDto>>
-    {
-        protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.Tag;
-
-        protected override void SetProperty(Models.Domain.Resource resource, List<TagDto>? value, BulkModificationDiff diff)
-        {
-            resource.Tags = value;
-        }
-    }
+    // // Tag
+    // public class BmTagDiffHandler : BmAbstractDiffHandler<List<TagDto>>
+    // {
+    //     protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.Tag;
+    //
+    //     protected override void SetProperty(Bakabase.Abstractions.Models.Domain.Resource resource, List<TagDto>? value, BulkModificationDiff diff)
+    //     {
+    //         resource.Tags = value;
+    //     }
+    // }
 }

@@ -44,7 +44,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Abstractions", "ab
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.CustomProperty", "modules\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj", "{CB569CF2-09AA-4D76-8E51-278642C66E0D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.Enhancer", "modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj", "{C7F49146-4E21-48E2-AEB4-8BA20E93E306}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.Enhancer", "modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj", "{C7F49146-4E21-48E2-AEB4-8BA20E93E306}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.Alias", "modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj", "{1622FBF0-8158-4622-A1E1-2AE627293C33}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.StandardValue", "modules\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj", "{F36E2211-31DC-47E0-9F1A-2B19D00BB022}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -137,6 +141,18 @@ Global
 		{C7F49146-4E21-48E2-AEB4-8BA20E93E306}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C7F49146-4E21-48E2-AEB4-8BA20E93E306}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C7F49146-4E21-48E2-AEB4-8BA20E93E306}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1622FBF0-8158-4622-A1E1-2AE627293C33}.Company|Any CPU.ActiveCfg = Debug|Any CPU
+		{1622FBF0-8158-4622-A1E1-2AE627293C33}.Company|Any CPU.Build.0 = Debug|Any CPU
+		{1622FBF0-8158-4622-A1E1-2AE627293C33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1622FBF0-8158-4622-A1E1-2AE627293C33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1622FBF0-8158-4622-A1E1-2AE627293C33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1622FBF0-8158-4622-A1E1-2AE627293C33}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F36E2211-31DC-47E0-9F1A-2B19D00BB022}.Company|Any CPU.ActiveCfg = Debug|Any CPU
+		{F36E2211-31DC-47E0-9F1A-2B19D00BB022}.Company|Any CPU.Build.0 = Debug|Any CPU
+		{F36E2211-31DC-47E0-9F1A-2B19D00BB022}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F36E2211-31DC-47E0-9F1A-2B19D00BB022}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F36E2211-31DC-47E0-9F1A-2B19D00BB022}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F36E2211-31DC-47E0-9F1A-2B19D00BB022}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -158,6 +174,8 @@ Global
 		{8686512A-39C1-4EEE-A3F5-101D50D07763} = {BABE7A92-4BB0-41D0-B7AD-AA14275DC8BF}
 		{CB569CF2-09AA-4D76-8E51-278642C66E0D} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
 		{C7F49146-4E21-48E2-AEB4-8BA20E93E306} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
+		{1622FBF0-8158-4622-A1E1-2AE627293C33} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
+		{F36E2211-31DC-47E0-9F1A-2B19D00BB022} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0EDB2DE5-2794-4737-A47F-105A2CCFFD16}

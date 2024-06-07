@@ -1281,5 +1281,12 @@
   "Path segment": "路径片段",
   "Segment of root path": "根路径片段",
   "Segment of resource": "资源路径片段",
-  "Current segment": "当前路径片段"
+  "Current segment": "当前路径片段",
+  "Deleting an alias: {{text}}": "删除别名：{{text}}",
+  "There is no way back, are you sure?": "操作不可恢复，确定继续吗？",
+  "{{text}} will be the preferred text in merged groups, you can change the preferred text by clicking the text.": "{{text}}将会作为合并后的别名组的首选文本，您可以通过点击它们来修改首选文本。",
+  "All selected alias groups and its candidates will be delete and there is no way back, are you sure?": "所有已选择的别名组和它们的候选词均会被删除，并且不可恢复，确认继续吗？",
+  "Deleting alias groups: {{texts}}": "正在删除多个别名组：{{texts}}",
+  "All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?": "所有选择的别名组将会被合并至一个组，并且最终的首选文本是{{preferred}}，确认继续吗？",
+  "Merging alias groups: {{texts}}": "正在合并多个别名组：{{texts}}"
 }

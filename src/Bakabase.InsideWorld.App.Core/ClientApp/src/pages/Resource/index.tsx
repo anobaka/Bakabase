@@ -72,7 +72,7 @@ export default () => {
       ...newForm,
       group: convertFilterGroupToDto(newForm.group),
     };
-    const rsp = await BApi.resource.searchResourcesV2(dto);
+    const rsp = await BApi.resource.searchResources(dto);
 
     setPageable({
       page: rsp.pageIndex!,

@@ -14,9 +14,9 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
         public static BmFileModifyDtFilterExpressionBuilder Instance = new();
 
         protected override BulkModificationFilterableProperty Property => BulkModificationFilterableProperty.FileModifyDt;
-        protected override DateTime? GetValue(Models.Domain.Resource resource)
+        protected override DateTime? GetValue(Bakabase.Abstractions.Models.Domain.Resource resource)
         {
-            return resource.FileModifyDt;
+            return resource.FileModifiedAt;
         }
     }
 }

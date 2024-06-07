@@ -27,13 +27,13 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo
                         t.Namespace!.StartsWith(SpecificTypeUtils<ResourceNfoService>.Type.Namespace!))
             .Select(t => Activator.CreateInstance(t) as IResourceNfoSerializer).ToDictionary(x => x!.Version, t => t!);
 
-        public static string Serialize(Business.Models.Domain.Resource resource)
+        public static string Serialize(Abstractions.Models.Domain.Resource resource)
         {
             var newestSerializer = Serializers[Serializers.Max(s => s.Key)];
             return newestSerializer.Serialize(resource);
         }
 
-        public static async Task<Business.Models.Domain.Resource> Deserialize(string xmlOrPath)
+        public static async Task<Abstractions.Models.Domain.Resource> Deserialize(string xmlOrPath)
         {
             if (xmlOrPath.IsNullOrEmpty())
             {

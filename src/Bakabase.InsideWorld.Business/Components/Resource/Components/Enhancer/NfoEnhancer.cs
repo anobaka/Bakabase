@@ -29,7 +29,7 @@
 //             return Task.FromResult((string) null);
 //         }
 //
-//         public async Task<Enhancement[]> Enhance(Business.Models.Domain.Resource resource)
+//         public async Task<Enhancement[]> Enhance(Bakabase.Abstractions.Models.Domain.Resource resource)
 //         {
 //             var nfoFullname = Path.Combine(resource.IsFile ? resource.Directory : resource.Path,
 //                 ResourceNfoService.DefaultFilename);

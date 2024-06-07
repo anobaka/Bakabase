@@ -8,7 +8,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Attributes;
 [AttributeUsage(AttributeTargets.Field)]
 public class EnhancerAttribute(
     Type enhancerType,
-    CustomPropertyValueScope customPropertyValueLayer,
+    PropertyValueScope customPropertyValueLayer,
     Type targetEnumType,
     Type? optionsType = null) : Attribute
 {

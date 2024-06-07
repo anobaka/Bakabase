@@ -66,7 +66,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> Duplicate(int fromCategoryId, int toCategoryId)
+        public async Task<BaseResponse> DuplicateAllInCategory(int fromCategoryId, int toCategoryId)
         {
             var data = await GetAll(x => x.CategoryId == fromCategoryId);
             if (data != null)

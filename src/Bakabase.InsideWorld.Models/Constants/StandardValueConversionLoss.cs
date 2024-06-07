@@ -16,5 +16,6 @@ public enum StandardValueConversionLoss
     NonZeroValueWillBeConvertedToTrue = 1 << 5,
     TextWillBeLost = 1 << 6,
     TimeWillBeLost = 1 << 7,
-    DateWillBeLost = 1 << 8
+    DateWillBeLost = 1 << 8,
+    TagGroupAndNameWillBeMerged = 1 << 9,
 }

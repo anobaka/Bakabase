@@ -4,5 +4,5 @@ public enum BulkModificationModifiableProperty
 {
     FileName = BulkModificationFilterableProperty.FileName,
     CreateDt = BulkModificationFilterableProperty.CreateDt,
-    Tag = BulkModificationFilterableProperty.Tag
+    // Tag = BulkModificationFilterableProperty.Tag
 }

@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Services;
@@ -29,7 +30,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
     {
         public override PixivDownloadTaskType TaskType => PixivDownloadTaskType.Search;
 
-        public PixivSearchDownloader(IServiceProvider serviceProvider, SpecialTextService specialTextService,
+        public PixivSearchDownloader(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IBOptions<PixivOptions> options, PixivClient client) : base(serviceProvider, specialTextService, options,
             client)
         {

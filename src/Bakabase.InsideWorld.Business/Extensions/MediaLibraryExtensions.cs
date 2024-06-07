@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using Bakabase.Abstractions.Models.Domain;
 using CsQuery.Utility;
 
 namespace Bakabase.InsideWorld.Business.Extensions
@@ -37,7 +38,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
             return null;
         }
 
-        public static MediaLibrary? ToDomainModel(this InsideWorld.Models.Models.Entities.MediaLibrary? ml)
+        public static MediaLibrary? ToDomainModel(this Abstractions.Models.Db.MediaLibrary? ml)
         {
             if (ml == null)
             {
@@ -69,14 +70,14 @@ namespace Bakabase.InsideWorld.Business.Extensions
             return d;
         }
 
-        public static InsideWorld.Models.Models.Entities.MediaLibrary? ToDbModel(this MediaLibrary? ml)
+        public static Abstractions.Models.Db.MediaLibrary? ToDbModel(this MediaLibrary? ml)
         {
             if (ml == null)
             {
                 return null;
             }
 
-            var entity = new InsideWorld.Models.Models.Entities.MediaLibrary
+            var entity = new Abstractions.Models.Db.MediaLibrary
             {
                 Id = ml.Id,
                 CategoryId = ml.CategoryId,

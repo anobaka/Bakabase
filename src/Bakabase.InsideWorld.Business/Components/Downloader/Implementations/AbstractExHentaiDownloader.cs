@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
@@ -29,7 +31,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
     {
         protected readonly IStringLocalizer<SharedResource> Localizer;
         protected readonly ExHentaiClient Client;
-        protected readonly SpecialTextService SpecialTextService;
+        protected readonly ISpecialTextService SpecialTextService;
         protected readonly IHostEnvironment Env;
 
         public const string DefaultNamingConvention =
@@ -39,7 +41,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
 
         protected AbstractExHentaiDownloader(IServiceProvider serviceProvider,
             IStringLocalizer<SharedResource> localizer,
-            ExHentaiClient client, SpecialTextService specialTextService,
+            ExHentaiClient client, ISpecialTextService specialTextService,
             IHostEnvironment env, IBOptions<ExHentaiOptions> options) : base(serviceProvider)
         {
             Localizer = localizer;

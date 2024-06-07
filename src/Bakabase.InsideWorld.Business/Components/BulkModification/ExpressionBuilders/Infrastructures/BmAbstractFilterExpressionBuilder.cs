@@ -20,7 +20,7 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
         protected virtual HashSet<BulkModificationFilterOperation> NullableValueOperations { get; } =
             [BulkModificationFilterOperation.IsNotNull, BulkModificationFilterOperation.IsNull];
 
-        public Expression<Func<Models.Domain.Resource, bool>> Build(BulkModificationFilter filter)
+        public Expression<Func<Bakabase.Abstractions.Models.Domain.Resource, bool>> Build(BulkModificationFilter filter)
         {
             if (Property != filter.Property)
             {
@@ -68,23 +68,23 @@ namespace Bakabase.InsideWorld.Business.Components.BulkModification.ExpressionBu
             return r => func(r);
         }
 
-        protected abstract Func<Models.Domain.Resource, bool> BuildEquals(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildNotEquals(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildContains(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildNotContains(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildStartsWith(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildNotStartsWith(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildEndsWith(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildNotEndsWith(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildGreaterThan(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildLessThan(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildGreaterThanOrEquals(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildLessThanOrEquals(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildIsNull(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildIsNotNull(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildIn(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildNotIn(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildMatches(BulkModificationFilter filter);
-        protected abstract Func<Models.Domain.Resource, bool> BuildNotMatches(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildEquals(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotEquals(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildContains(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotContains(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildStartsWith(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotStartsWith(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildEndsWith(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotEndsWith(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildGreaterThan(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildLessThan(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildGreaterThanOrEquals(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildLessThanOrEquals(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildIsNull(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildIsNotNull(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildIn(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotIn(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildMatches(BulkModificationFilter filter);
+        protected abstract Func<Bakabase.Abstractions.Models.Domain.Resource, bool> BuildNotMatches(BulkModificationFilter filter);
     }
 }

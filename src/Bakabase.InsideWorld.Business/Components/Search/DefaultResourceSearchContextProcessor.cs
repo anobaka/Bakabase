@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.Legacy.Services;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
@@ -13,7 +14,9 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.Modules.CustomProperty.Abstractions;
+using Bakabase.Modules.Alias.Abstractions.Services;
+using Bakabase.Modules.Alias.Models.Input;
+using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Newtonsoft.Json;
@@ -21,23 +24,19 @@ using SQLitePCL;
 
 namespace Bakabase.InsideWorld.Business.Components.Search
 {
-	public class DefaultResourceSearchContextProcessor : IResourceSearchContextProcessor
+    public class DefaultResourceSearchContextProcessor : IResourceSearchContextProcessor
 	{
 		private readonly ICustomPropertyValueService _customPropertyValueService;
-		private readonly AliasService _aliasService;
+        private readonly IAliasService _aliasService;
 		private readonly ICustomPropertyService _customPropertyService;
-		private readonly FavoritesResourceMappingService _favoritesResourceMappingService;
-		private readonly ResourceTagMappingService _resourceTagMappingService;
         private readonly Dictionary<int, ICustomPropertyDescriptor> _propertyDescriptors;
 
 		public DefaultResourceSearchContextProcessor(ICustomPropertyValueService customPropertyValueService,
-			AliasService aliasService, ICustomPropertyService customPropertyService, FavoritesResourceMappingService favoritesResourceMappingService, ResourceTagMappingService resourceTagMappingService, IEnumerable<ICustomPropertyDescriptor> propertyDescriptors)
+            IAliasService aliasService, ICustomPropertyService customPropertyService, IEnumerable<ICustomPropertyDescriptor> propertyDescriptors)
 		{
 			_customPropertyValueService = customPropertyValueService;
 			_aliasService = aliasService;
 			_customPropertyService = customPropertyService;
-			_favoritesResourceMappingService = favoritesResourceMappingService;
-			_resourceTagMappingService = resourceTagMappingService;
             _propertyDescriptors = propertyDescriptors.ToDictionary(x => x.Type);
         }
 
@@ -50,7 +49,16 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                 {
                     if (property.EnumType.IntegratedWithAlias())
                     {
-                        context.Aliases ??= await _aliasService.GetFullMap();
+                        var allAliasGroups =
+                            (await _aliasService.SearchGroups(new AliasSearchInputModel {PageSize = int.MaxValue}))
+                            .Data;
+
+                        context.AliasCandidates ??= allAliasGroups.SelectMany(g =>
+                        {
+                            var allTexts = g.Candidates ?? [];
+                            allTexts.Add(g.Text);
+                            return allTexts.Select(text => (Text: text, Candidates: allTexts));
+                        }).ToDictionary(d => d.Text, d => d.Candidates);
                     }
                 }
             }
@@ -106,7 +114,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 							var getValue = property switch
 							{
 								SearchableReservedProperty.FileName =>
-									(Func<Abstractions.Models.Db.Resource, string>) (x => x.RawName),
+									(Func<Abstractions.Models.Domain.Resource, string>) (x => x.FileName),
 								SearchableReservedProperty.DirectoryPath => x => x.Directory!,
 								_ => null!
 							};
@@ -273,9 +281,9 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 							var getValue = property switch
 							{
 								SearchableReservedProperty.CreatedAt =>
-									(Func<Abstractions.Models.Db.Resource, DateTime?>) (x => x.CreateDt),
-								SearchableReservedProperty.FileCreatedAt => x => x.FileCreateDt,
-								SearchableReservedProperty.FileModifiedAt => x => x.FileModifyDt,
+									(Func<Abstractions.Models.Domain.Resource, DateTime?>) (x => x.CreatedAt),
+								SearchableReservedProperty.FileCreatedAt => x => x.FileCreatedAt,
+								SearchableReservedProperty.FileModifiedAt => x => x.FileModifiedAt,
 								_ => null!
 							};
 
@@ -371,7 +379,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                         {
                             var getValue = property switch
                             {
-                                SearchableReservedProperty.MediaLibrary => (Func<Abstractions.Models.Db.Resource, int>)
+                                SearchableReservedProperty.MediaLibrary => (Func<Abstractions.Models.Domain.Resource, int>)
                                     (x => x.MediaLibraryId),
                                 SearchableReservedProperty.Category => x => x.CategoryId,
                                 _ => null!

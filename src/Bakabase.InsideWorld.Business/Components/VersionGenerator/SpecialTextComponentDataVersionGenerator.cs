@@ -13,12 +13,12 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.VersionGenerator
 {
-    public class SpecialTextComponentDataVersionGenerator : DefaultComponentDataVersionGenerator
-    {
-        public override async Task<string> GetVersionAsync(ComponentDescriptor descriptor)
-        {
-            var v = await base.GetVersionAsync(descriptor);
-            return v.IsNotEmpty() ? $"{v}-{SpecialTextService.Version}" : SpecialTextService.Version;
-        }
-    }
+    // public class SpecialTextComponentDataVersionGenerator : DefaultComponentDataVersionGenerator
+    // {
+    //     public override async Task<string> GetVersionAsync(ComponentDescriptor descriptor)
+    //     {
+    //         var v = await base.GetVersionAsync(descriptor);
+    //         return v.IsNotEmpty() ? $"{v}-{SpecialTextService.Version}" : SpecialTextService.Version;
+    //     }
+    // }
 }

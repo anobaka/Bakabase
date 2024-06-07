@@ -13,14 +13,14 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers.Infr
     {
         public abstract int Version { get; }
 
-        public string Serialize(Business.Models.Domain.Resource resource)
+        public string Serialize(Bakabase.Abstractions.Models.Domain.Resource resource)
         {
             var nfo = ToNfo(resource);
             nfo.Version = Version;
             return SerializeInternal(nfo);
         }
 
-        public Business.Models.Domain.Resource Deserialize(string xml)
+        public Bakabase.Abstractions.Models.Domain.Resource Deserialize(string xml)
         {
             var nfo = DeserializeInternal(xml);
             return ToResource(nfo);
@@ -28,7 +28,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Nfo.Serializers.Infr
 
         protected abstract string SerializeInternal(TNfo nfo);
         protected abstract TNfo DeserializeInternal(string xml);
-        protected abstract Business.Models.Domain.Resource ToResource(TNfo nfo);
-        protected abstract TNfo ToNfo(Business.Models.Domain.Resource resource);
+        protected abstract Bakabase.Abstractions.Models.Domain.Resource ToResource(TNfo nfo);
+        protected abstract TNfo ToNfo(Bakabase.Abstractions.Models.Domain.Resource resource);
     }
 }
