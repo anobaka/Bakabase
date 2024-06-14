@@ -1,13 +1,8 @@
 ﻿using Bakabase.InsideWorld.Models.Constants;
-using Bootstrap.Extensions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Bootstrap.Components.Doc.Swagger;
+using Bootstrap.Extensions;
 
-namespace Bakabase.InsideWorld.Models.Models.Aos
+namespace Bakabase.Abstractions.Models.Domain
 {
     [SwaggerCustomModel]
     public record PropertyPathSegmentMatcherValue
@@ -16,17 +11,19 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
         public int? Layer { get; set; }
         public string? Regex { get; set; }
         public int PropertyId { get; set; }
-        public bool IsReservedProperty { get; set; }
+        public bool IsCustomProperty { get; set; }
         public ResourceMatcherValueType ValueType { get; set; }
-        [Obsolete] public string? Key { get; set; }
-        [Obsolete] public ResourceProperty Property { get; set; }
+        public CustomProperty? CustomProperty { get; set; }
 
         /// <summary>
         /// <see cref="ResourceProperty.ParentResource"/> or custom properties.
         /// </summary>
-        public bool IsSecondaryProperty => !IsReservedProperty || PropertyId == (int) ResourceProperty.ParentResource;
+        public bool IsSecondaryProperty => IsCustomProperty || PropertyId == (int) ResourceProperty.ParentResource ||
+                                           PropertyId == (int) ResourceProperty.Rating ||
+                                           PropertyId == (int) ResourceProperty.Introduction;
 
-        public bool IsResourceProperty => IsReservedProperty && PropertyId == (int) ResourceProperty.Resource;
+        public bool IsResourceProperty => !IsCustomProperty && PropertyId == (int) ResourceProperty.Resource;
+
 
         public bool IsValid => PropertyId > 0 && ValueType switch
         {
@@ -42,7 +39,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
                 Layer = 1,
                 ValueType = ResourceMatcherValueType.Layer,
                 PropertyId = (int) ResourceProperty.Resource,
-                IsReservedProperty = true
+                IsCustomProperty = false
             };
     }
 }

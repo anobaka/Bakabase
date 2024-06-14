@@ -104,6 +104,18 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
 
         public DependentComponentStatus Status { get; protected set; } = DependentComponentStatus.NotInstalled;
 
+        private DependentComponentVersion? _latestVersion;
+
+        public async Task<DependentComponentVersion> GetLatestVersion(bool fromCache, CancellationToken ct)
+        {
+            if (!fromCache || _latestVersion == null)
+            {
+                _latestVersion = await GetLatestVersion(ct);
+            }
+
+            return _latestVersion;
+        }
+
         public abstract Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct);
 
 

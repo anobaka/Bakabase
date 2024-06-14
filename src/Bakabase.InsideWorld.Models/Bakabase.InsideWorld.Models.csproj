@@ -26,8 +26,4 @@
 		<PackageReference Include="NJsonSchema" Version="10.8.0" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="RequestModels\Options\" />
-	</ItemGroup>
-
 </Project>

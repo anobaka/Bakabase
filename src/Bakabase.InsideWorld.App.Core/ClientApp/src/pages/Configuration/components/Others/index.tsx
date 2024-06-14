@@ -1,23 +1,34 @@
 import i18n from 'i18next';
-import { Balloon, Dialog, Input, Message, Radio, Switch, Table } from '@alifd/next';
+import { Balloon, Dialog, Message, Switch, Table } from '@alifd/next';
 import React, { useEffect, useState } from 'react';
 import Cookies from 'universal-cookie';
 import { useTranslation } from 'react-i18next';
+import type { Key } from '@react-types/shared';
 import Title from '@/components/Title';
 import CustomIcon from '@/components/CustomIcon';
-import { MoveCoreData, PatchAppOptions, PatchThirdPartyOptions } from '@/sdk/apis';
+import { MoveCoreData, PatchAppOptions } from '@/sdk/apis';
 import FileSelector from '@/components/FileSelector';
 import store from '@/store';
 import BApi from '@/sdk/BApi';
-import { UiTheme, uiThemes } from '@/sdk/constants';
+import { Button, Select, Notification, Modal, Input } from '@/components/bakaui';
+import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel } from '@/sdk/Api';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 const cookies = new Cookies();
+
+enum ProxyMode {
+  DoNotUse = 0,
+  UseSystem = 1,
+  UseCustom = 2,
+}
 
 export default ({
                   applyPatches = () => {
                   },
                 }: { applyPatches: (API: any, patches: any, success: (rsp: any) => void) => void }) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
+
   const [appOptions, appOptionsDispatcher] = store.useModel('appOptions');
   const thirdPartyOptions = store.useModelState('thirdPartyOptions');
   const networkOptions = store.useModelState('networkOptions');
@@ -27,30 +38,128 @@ export default ({
     setProxy(networkOptions.proxy);
   }, [networkOptions]);
 
+  const proxies = [
+    {
+      label: t('Do not use proxy'),
+      value: ProxyMode.DoNotUse,
+    },
+    {
+      label: t('Use system proxy'),
+      value: ProxyMode.UseSystem,
+    },
+    ...(networkOptions.customProxies?.map(c => ({
+      label: c.address!,
+      value: c.id!,
+    })) ?? []),
+  ];
+
+  let selectedProxy: Key | undefined;
+  if (networkOptions?.proxy) {
+    const p = networkOptions.proxy;
+    if (p.mode == ProxyMode.UseCustom) {
+      selectedProxy = p.customProxyId!;
+    } else {
+      selectedProxy = p.mode;
+    }
+  }
+
+  // console.log('xxxxxx', selectedProxy, proxies);
+
   const otherSettings = [
     {
       label: 'Proxy',
       tip: 'You can set a proxy for network requests, such as socks5://127.0.0.1:18888',
       renderValue: () => {
         return (
-          <Input
-            size={'small'}
-            value={proxy?.address}
-            onChange={v => {
-              setProxy({
-                address: v,
-              });
-            }}
-            onBlur={() => {
-              BApi.options.patchNetworkOptions({
-                proxy,
-              }).then(t => {
-                if (!t.code) {
-                  Message.success(i18n.t('Saved'));
-                }
-              });
-            }}
-          />
+          <div className={'flex items-center gap-2'}>
+            <div style={{ width: 300 }}>
+              <Select
+                multiple={false}
+                dataSource={proxies}
+                selectedKeys={selectedProxy == undefined ? undefined : [selectedProxy]}
+                size={'sm'}
+                onSelectionChange={keys => {
+                  const key = Array.from(keys)[0] as string;
+                  const patches: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel = {};
+                  if (key == ProxyMode.DoNotUse.toString()) {
+                    patches.proxy = {
+                      mode: ProxyMode.DoNotUse,
+                      customProxyId: undefined,
+                    };
+                  } else {
+                    if (key == ProxyMode.UseSystem.toString()) {
+                      patches.proxy = {
+                        mode: ProxyMode.UseSystem,
+                        customProxyId: undefined,
+                      };
+                    } else {
+                      patches.proxy = {
+                        mode: ProxyMode.UseCustom,
+                        customProxyId: key,
+                      };
+                    }
+                  }
+                  console.log(key, keys, patches);
+                  BApi.options.patchNetworkOptions(patches).then(x => {
+                    if (!x.code) {
+                      Notification.success(t('Saved'));
+                    }
+                  });
+                }}
+              />
+            </div>
+
+            <Button
+              size={'sm'}
+              color={'primary'}
+              onClick={() => {
+                let p: string;
+                createPortal(Modal, {
+                  defaultVisible: true,
+                  size: 'lg',
+                  title: t('Add a proxy'),
+                  children: (
+                    <Input
+                      placeholder={t('You can set a proxy for network requests, such as socks5://127.0.0.1:18888')}
+                      onValueChange={v => p = v}
+                    />
+                  ),
+                  onOk: async () => {
+                    if (p == undefined || p.length == 0) {
+                      Notification.error(t('Invalid Data'));
+                      throw new Error('Invalid data');
+                    }
+                    await BApi.options.patchNetworkOptions({
+                      customProxies: [
+                        ...(networkOptions.customProxies ?? []),
+                        { address: p },
+                      ],
+                    });
+                  },
+                });
+              }}
+            >
+              {t('Add')}
+            </Button>
+          </div>
+          // <Input
+          //   size={'small'}
+          //   value={proxy?.address}
+          //   onChange={v => {
+          //     setProxy({
+          //       address: v,
+          //     });
+          //   }}
+          //   onBlur={() => {
+          //     BApi.options.patchNetworkOptions({
+          //       proxy,
+          //     }).then(t => {
+          //       if (!t.code) {
+          //         Message.success(i18n.t('Saved'));
+          //       }
+          //     });
+          //   }}
+          // />
         );
       },
     },
@@ -176,7 +285,11 @@ export default ({
             title={i18n.t('Other setting')}
             cell={(l, i, r) => {
               return (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+                >
                   {i18n.t(l)}
                   {r.tip && (
                     <>

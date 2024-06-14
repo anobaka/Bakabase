@@ -102,7 +102,10 @@ public record Resource
 
 
     public Resource? Parent { get; set; }
-    public Dictionary<ResourcePropertyType, Dictionary<int, Property>>? Properties { get; set; }
+    /// <summary>
+    /// ResourcePropertyType - PropertyId - Property
+    /// </summary>
+    public Dictionary<int, Dictionary<int, Property>>? Properties { get; set; }
 
     public record Property(
         string? Name,

@@ -194,7 +194,7 @@ export enum CustomPropertyAdditionalItem {None = 0, Category = 1}
 export const customPropertyAdditionalItems = Object.keys(CustomPropertyAdditionalItem).filter(k => typeof CustomPropertyAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyAdditionalItem[t]}));
 export enum CustomPropertyValueAdditionalItem {None = 0}
 export const customPropertyValueAdditionalItems = Object.keys(CustomPropertyValueAdditionalItem).filter(k => typeof CustomPropertyValueAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyValueAdditionalItem[t]}));
-export enum MediaLibraryAdditionalItem {None = 0, Category = 1, FileSystemInfo = 2}
+export enum MediaLibraryAdditionalItem {None = 0, Category = 1, FileSystemInfo = 2, PathConfigurationCustomProperties = 4}
 export const mediaLibraryAdditionalItems = Object.keys(MediaLibraryAdditionalItem).filter(k => typeof MediaLibraryAdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryAdditionalItem[t]}));
 export enum ResourceAdditionalItem {None = 0, CustomProperties = 32, Alias = 64, Category = 128, DisplayName = 416, HasChildren = 512, BuiltinProperties = 1024, All = 2016}
 export const resourceAdditionalItems = Object.keys(ResourceAdditionalItem).filter(k => typeof ResourceAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceAdditionalItem[t]}));

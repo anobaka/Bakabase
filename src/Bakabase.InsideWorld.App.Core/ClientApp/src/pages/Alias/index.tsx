@@ -1,7 +1,7 @@
 import React, { useEffect, useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { DeleteOutlined, EnterOutlined, MergeOutlined, SearchOutlined, ToTopOutlined } from '@ant-design/icons';
 import { AliasAdditionalItem } from '@/sdk/constants';
-import './index.scss';
 import BApi from '@/sdk/BApi';
 import {
   Button,
@@ -18,10 +18,10 @@ import {
   TableCell,
   TableColumn,
   TableHeader,
-  TableRow, Tooltip,
+  TableRow,
+  Tooltip,
 } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { DeleteOutlined, EnterOutlined, MergeOutlined, SearchOutlined, ToTopOutlined } from '@ant-design/icons';
 
 type Form = {
   pageSize: 20;
@@ -52,10 +52,9 @@ export default () => {
     additionalItems: AliasAdditionalItem.Candidates,
   });
   const [aliases, setAliases] = useState<Alias[]>([]);
-  const [bulkOperationContext, setBulkOperationContext] = useState<BulkOperationContext>();
+  const [bulkOperationContext, setBulkOperationContext] = useState<BulkOperationContext>({ preferredTexts: [] });
   const [totalCount, setTotalCount] = useState(0);
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     search();
@@ -96,6 +95,14 @@ export default () => {
     return;
   };
 
+  const resetBulkOperationContext = () => {
+    setBulkOperationContext({
+      preferredTexts: [],
+    });
+  };
+
+  console.log('1232131231', bulkOperationContext.preferredTexts);
+
   return (
     <div className="">
       <div className={'flex items-center justify-between'}>
@@ -118,13 +125,31 @@ export default () => {
         <div>
           <Button
             size={'sm'}
+            onClick={() => {
+              let value: string;
+              createPortal(Modal, {
+                defaultVisible: true,
+                size: 'lg',
+                title: t('Add an alias'),
+                children: (
+                  <Input
+                    onValueChange={v => value = v}
+                  />
+                ),
+                onOk: async () => {
+                  await BApi.alias.addAlias({
+                    text: value,
+                  });
+                },
+              });
+            }}
           >
             {t('Add an alias')}
           </Button>
         </div>
       </div>
       <Divider className={'my-1'} />
-      {bulkOperationContext && (
+      {bulkOperationContext.preferredTexts.length > 0 && (
         <>
           <Card>
             <CardHeader>
@@ -144,7 +169,7 @@ export default () => {
                         children: t('All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?', { preferred: bulkOperationContext.preferredTexts[0] }),
                         onOk: async () => {
                           await BApi.alias.mergeAliasGroups({ preferredTexts: bulkOperationContext.preferredTexts });
-                          setBulkOperationContext(undefined);
+                          resetBulkOperationContext();
                           search();
                         },
                       });
@@ -163,7 +188,7 @@ export default () => {
                       children: t('All selected alias groups and its candidates will be delete and there is no way back, are you sure?'),
                       onOk: async () => {
                         await BApi.alias.deleteAliasGroups({ preferredTexts: bulkOperationContext.preferredTexts });
-                        setBulkOperationContext(undefined);
+                        resetBulkOperationContext();
                         search();
                       },
                     });
@@ -177,7 +202,7 @@ export default () => {
                   size={'sm'}
                   startContent={<EnterOutlined className={'text-sm'} />}
                   onClick={() => {
-                    setBulkOperationContext(undefined);
+                    resetBulkOperationContext();
                   }}
                 >
                   {t('Exit')}
@@ -203,7 +228,7 @@ export default () => {
                       onClose={() => {
                         const texts = bulkOperationContext.preferredTexts.filter(x => x != t);
                         if (texts.length == 0) {
-                          setBulkOperationContext(undefined);
+                          resetBulkOperationContext();
                         } else {
                           setBulkOperationContext({
                             ...bulkOperationContext,
@@ -229,7 +254,7 @@ export default () => {
             isStriped
             isCompact
             selectionMode={'multiple'}
-            selectedKeys={bulkOperationContext?.preferredTexts}
+            selectedKeys={bulkOperationContext.preferredTexts.filter(x => aliases.some(a => a.text == x))}
             onSelectionChange={keys => {
               let selection: string[];
               if (keys === 'all') {
@@ -239,9 +264,9 @@ export default () => {
               }
 
               const notSelected = aliases.map(x => x.text).filter(x => !selection.includes(x));
-              const ns = Array.from(new Set(
-                (bulkOperationContext?.preferredTexts ?? []).filter(x => !notSelected.includes(x)).concat(selection),
-              ));
+              const ns = Array.from(
+                new Set(bulkOperationContext.preferredTexts.filter(x => !notSelected.includes(x)).concat(selection)),
+              );
 
               setBulkOperationContext({
                 ...bulkOperationContext,
@@ -262,40 +287,53 @@ export default () => {
                       <div
                         className={'flex flex-wrap gap-1'}
                         onClick={e => {
-                        e.cancelable = true;
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
+                          e.cancelable = true;
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
                       >
                         {a.candidates?.map(c => {
                           return (
-                            <Chip
-                              radius={'sm'}
-                              onClick={e => {
-                                e.cancelable = true;
-                                e.preventDefault();
-                                e.stopPropagation();
-                                BApi.alias.patchAlias({
-                                  isPreferred: true,
-                                }, { text: a.originalText }).then(() => {
-                                  search();
-                                });
-                              }}
-                              onClose={() => {
-                                createPortal(Modal, {
-                                  defaultVisible: true,
-                                  title: t('Deleting an alias: {{text}}', { text: c }),
-                                  content: t('There is no way back, are you sure?'),
-                                  onOk: async () => {
-                                    await BApi.alias.deleteAlias({ text: c });
-                                    a.candidates = a.candidates?.filter(x => x != c);
-                                    forceUpdate();
-                                  },
-                                });
-                              }}
+                            <Tooltip content={(
+                              <div className={'flex'}>
+                                <Button
+                                  startContent={(
+                                    <ToTopOutlined className={'text-sm'} />
+                                  )}
+                                  size={'sm'}
+                                  variant={'light'}
+                                  color={'success'}
+                                  onClick={() => {
+                                    BApi.alias.patchAlias({
+                                      isPreferred: true,
+                                    }, { text: c }).then(() => {
+                                      search();
+                                    });
+                                  }}
+                                >
+                                  {t('Set as preferred')}
+                                </Button>
+                              </div>
+                            )}
                             >
-                              {c}
-                            </Chip>
+                              <Chip
+                                radius={'sm'}
+                                onClose={() => {
+                                  createPortal(Modal, {
+                                    defaultVisible: true,
+                                    title: t('Deleting an alias: {{text}}', { text: c }),
+                                    content: t('There is no way back, are you sure?'),
+                                    onOk: async () => {
+                                      await BApi.alias.deleteAlias({ text: c });
+                                      a.candidates = a.candidates?.filter(x => x != c);
+                                      forceUpdate();
+                                    },
+                                  });
+                                }}
+                              >
+                                {c}
+                              </Chip>
+                            </Tooltip>
                           );
                         })}
                       </div>

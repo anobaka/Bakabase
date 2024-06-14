@@ -106,7 +106,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         }
 
         [HttpDelete("~/media-library/{mediaLibraryId:int}/enhancement")]
-        [SwaggerOperation(OperationId = "RemoveMediaLibraryEnhancements")]
+        [SwaggerOperation(OperationId = "DeleteByEnhancementsMediaLibrary")]
         public async Task<BaseResponse> RemoveMediaLibraryEnhancementRecords(int mediaLibraryId)
         {
             var resourceIds = (await _resourceService.GetAll(t => t.MediaLibraryId == mediaLibraryId))
@@ -114,8 +114,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return await _enhancementService.RemoveAll(t => resourceIds.Contains(t.Id), true);
         }
 
-        [HttpDelete("~/resource-category/{categoryId:int}/enhancement")]
-        [SwaggerOperation(OperationId = "RemoveCategoryEnhancements")]
+        [HttpDelete("~/category/{categoryId:int}/enhancement")]
+        [SwaggerOperation(OperationId = "DeleteEnhancementsByCategory")]
         public async Task<BaseResponse> RemoveCategoryEnhancementRecords(int categoryId)
         {
             var resourceIds = (await _resourceService.GetAll(t => t.CategoryId == categoryId))

@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.CustomProperty.Components;
 

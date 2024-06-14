@@ -26,6 +26,7 @@ import store from '@/store';
 import type { BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions } from '@/sdk/Api';
 import { uuidv4 } from '@/components/utils';
 import dependentComponentIds from '@/core/models/Constants/DependentComponentIds';
+import FeatureStatusTip from '@/components/FeatureStatusTip';
 
 export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: any) => void}) => {
   const { t } = useTranslation();
@@ -146,89 +147,96 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
       tip: 'You can set external search engines for searching resource by name quickly in resource list, ' +
         "'{keyword}' will replaced by resource name or filename.",
       renderCell: () => {
-        const addBtn = (
-          <Button
-            type={'normal'}
-            size={'small'}
-            onClick={() => {
-              const newSimpleSearchEngines = simpleSearchEngines || [];
-              newSimpleSearchEngines.push({
-                key: uuidv4(),
-              });
-              setSimpleSearchEngines([...newSimpleSearchEngines]);
-            }}
-          >{t('Add')}
-          </Button>
+        return (
+          <FeatureStatusTip
+            status={'deprecated'}
+            name={t('External search engines')}
+            // url={'https://github.com/anobaka/InsideWorld/discussions/506'}
+          />
         );
-        if (simpleSearchEngines?.length > 0) {
-          return (
-            <List
-              size="small"
-              header={
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  {addBtn}
-                  <Button
-                    type={'primary'}
-                    size={'small'}
-                    onClick={() => {
-                      if (simpleSearchEngines?.some((e) => !(e.name?.length > 0) || !(e.urlTemplate?.length > 0))) {
-                        return Message.error(i18n.t('Name or url template can not be empty'));
-                      }
-                      applyPatches(PatchThirdPartyOptions, {
-                        simpleSearchEngines: simpleSearchEngines || [],
-                      });
-                    }}
-                  >
-                    {t('Save')}
-                  </Button>
-                </div>
-              }
-              dataSource={simpleSearchEngines || []}
-              renderItem={(item, i) => (
-                <List.Item
-                  key={i}
-                  title={(
-                    <div style={{ display: 'flex', gap: '10px', paddingBottom: '5px' }}>
-                      <Input
-                        defaultValue={item.name}
-                        addonTextBefore={t('Name')}
-                        size={'small'}
-                        onChange={(v) => {
-                          item.name = v;
-                        }}
-                      />
-                      <div className="confirmation-button-group">
-                        <ConfirmationButton
-                          size={'small'}
-                          label={'Delete'}
-                          warning
-                          icon={'delete'}
-                          confirmation
-                          onClick={(e) => {
-                            simpleSearchEngines.splice(i, 1);
-                            setSimpleSearchEngines([...simpleSearchEngines]);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                >
-                  <Input
-                    defaultValue={item.urlTemplate}
-                    placeholder={i18n.t('{keyword} will be replaced by subject')}
-                    addonTextBefore={t('Url template')}
-                    size={'small'}
-                    onChange={(v) => {
-                      item.urlTemplate = v;
-                    }}
-                  />
-                </List.Item>
-              )}
-            />
-          );
-        } else {
-          return addBtn;
-        }
+        // const addBtn = (
+        //   <Button
+        //     type={'normal'}
+        //     size={'small'}
+        //     onClick={() => {
+        //       const newSimpleSearchEngines = simpleSearchEngines || [];
+        //       newSimpleSearchEngines.push({
+        //         key: uuidv4(),
+        //       });
+        //       setSimpleSearchEngines([...newSimpleSearchEngines]);
+        //     }}
+        //   >{t('Add')}
+        //   </Button>
+        // );
+        // if (simpleSearchEngines?.length > 0) {
+        //   return (
+        //     <List
+        //       size="small"
+        //       header={
+        //         <div style={{ display: 'flex', gap: '10px' }}>
+        //           {addBtn}
+        //           <Button
+        //             type={'primary'}
+        //             size={'small'}
+        //             onClick={() => {
+        //               if (simpleSearchEngines?.some((e) => !(e.name?.length > 0) || !(e.urlTemplate?.length > 0))) {
+        //                 return Message.error(i18n.t('Name or url template can not be empty'));
+        //               }
+        //               applyPatches(PatchThirdPartyOptions, {
+        //                 simpleSearchEngines: simpleSearchEngines || [],
+        //               });
+        //             }}
+        //           >
+        //             {t('Save')}
+        //           </Button>
+        //         </div>
+        //       }
+        //       dataSource={simpleSearchEngines || []}
+        //       renderItem={(item, i) => (
+        //         <List.Item
+        //           key={i}
+        //           title={(
+        //             <div style={{ display: 'flex', gap: '10px', paddingBottom: '5px' }}>
+        //               <Input
+        //                 defaultValue={item.name}
+        //                 addonTextBefore={t('Name')}
+        //                 size={'small'}
+        //                 onChange={(v) => {
+        //                   item.name = v;
+        //                 }}
+        //               />
+        //               <div className="confirmation-button-group">
+        //                 <ConfirmationButton
+        //                   size={'small'}
+        //                   label={'Delete'}
+        //                   warning
+        //                   icon={'delete'}
+        //                   confirmation
+        //                   onClick={(e) => {
+        //                     simpleSearchEngines.splice(i, 1);
+        //                     setSimpleSearchEngines([...simpleSearchEngines]);
+        //                   }}
+        //                 />
+        //               </div>
+        //             </div>
+        //           )}
+        //         >
+        //           <Input
+        //             defaultValue={item.urlTemplate}
+        //             placeholder={i18n.t('{keyword} will be replaced by subject')}
+        //             addonTextBefore={t('Url template')}
+        //             size={'small'}
+        //             onChange={(v) => {
+        //               item.urlTemplate = v;
+        //             }}
+        //           />
+        //         </List.Item>
+        //       )}
+        //     />
+        //   );
+        // } else {
+        //   return addBtn;
+        // }
       },
     },
     {

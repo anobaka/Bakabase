@@ -116,7 +116,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   };
 
   const play = (file) =>
-    BApi.tool.playResourceFile(resource.categoryId, {
+    BApi.resource.playResourceFile(resource.categoryId, {
       file,
     }).then((a) => {
       if (!a.code) {

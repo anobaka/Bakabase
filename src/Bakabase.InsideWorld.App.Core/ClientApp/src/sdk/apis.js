@@ -2065,6 +2065,7 @@ export const DiscoverDependentComponentURL = function(parameters = {}) {
  * method: GetDependentComponentLatestVersion_TYPE
  * raw_url: GetDependentComponentLatestVersion_RAW_URL
  * @param id - 
+ * @param fromCache - 
  */
 export const GetDependentComponentLatestVersion = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -2075,6 +2076,9 @@ export const GetDependentComponentLatestVersion = function(parameters = {}) {
   let form = {}
   if (parameters['id'] !== undefined) {
     queryParameters['id'] = parameters['id']
+  }
+  if (parameters['fromCache'] !== undefined) {
+    queryParameters['fromCache'] = parameters['fromCache']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -2095,6 +2099,9 @@ export const GetDependentComponentLatestVersionURL = function(parameters = {}) {
   let path = '/component/dependency/latest-version'
   if (parameters['id'] !== undefined) {
     queryParameters['id'] = parameters['id']
+  }
+  if (parameters['fromCache'] !== undefined) {
+    queryParameters['fromCache'] = parameters['fromCache']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -3228,13 +3235,13 @@ export const CreateEnhancementForResourceByEnhancerURL = function(parameters = {
 }
 /**
  * 
- * request: RemoveMediaLibraryEnhancements
- * url: RemoveMediaLibraryEnhancementsURL
- * method: RemoveMediaLibraryEnhancements_TYPE
- * raw_url: RemoveMediaLibraryEnhancements_RAW_URL
+ * request: DeleteByEnhancementsMediaLibrary
+ * url: DeleteByEnhancementsMediaLibraryURL
+ * method: DeleteByEnhancementsMediaLibrary_TYPE
+ * raw_url: DeleteByEnhancementsMediaLibrary_RAW_URL
  * @param mediaLibraryId - 
  */
-export const RemoveMediaLibraryEnhancements = function(parameters = {}) {
+export const DeleteByEnhancementsMediaLibrary = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/media-library/{mediaLibraryId}/enhancement'
@@ -3252,13 +3259,13 @@ export const RemoveMediaLibraryEnhancements = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const RemoveMediaLibraryEnhancements_RAW_URL = function() {
+export const DeleteByEnhancementsMediaLibrary_RAW_URL = function() {
   return '/media-library/{mediaLibraryId}/enhancement'
 }
-export const RemoveMediaLibraryEnhancements_TYPE = function() {
+export const DeleteByEnhancementsMediaLibrary_TYPE = function() {
   return 'delete'
 }
-export const RemoveMediaLibraryEnhancementsURL = function(parameters = {}) {
+export const DeleteByEnhancementsMediaLibraryURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library/{mediaLibraryId}/enhancement'
@@ -3273,16 +3280,16 @@ export const RemoveMediaLibraryEnhancementsURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveCategoryEnhancements
- * url: RemoveCategoryEnhancementsURL
- * method: RemoveCategoryEnhancements_TYPE
- * raw_url: RemoveCategoryEnhancements_RAW_URL
+ * request: DeleteEnhancementsByCategory
+ * url: DeleteEnhancementsByCategoryURL
+ * method: DeleteEnhancementsByCategory_TYPE
+ * raw_url: DeleteEnhancementsByCategory_RAW_URL
  * @param categoryId - 
  */
-export const RemoveCategoryEnhancements = function(parameters = {}) {
+export const DeleteEnhancementsByCategory = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/resource-category/{categoryId}/enhancement'
+  let path = '/category/{categoryId}/enhancement'
   let body
   let queryParameters = {}
   let form = {}
@@ -3297,16 +3304,16 @@ export const RemoveCategoryEnhancements = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const RemoveCategoryEnhancements_RAW_URL = function() {
-  return '/resource-category/{categoryId}/enhancement'
+export const DeleteEnhancementsByCategory_RAW_URL = function() {
+  return '/category/{categoryId}/enhancement'
 }
-export const RemoveCategoryEnhancements_TYPE = function() {
+export const DeleteEnhancementsByCategory_TYPE = function() {
   return 'delete'
 }
-export const RemoveCategoryEnhancementsURL = function(parameters = {}) {
+export const DeleteEnhancementsByCategoryURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource-category/{categoryId}/enhancement'
+  let path = '/category/{categoryId}/enhancement'
   path = path.replace('{categoryId}', `${parameters['categoryId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -5089,6 +5096,58 @@ export const AddMediaLibraryURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetMediaLibrary
+ * url: GetMediaLibraryURL
+ * method: GetMediaLibrary_TYPE
+ * raw_url: GetMediaLibrary_RAW_URL
+ * @param id - 
+ * @param additionalItems - 
+ */
+export const GetMediaLibrary = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library/{id}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetMediaLibrary_RAW_URL = function() {
+  return '/media-library/{id}'
+}
+export const GetMediaLibrary_TYPE = function() {
+  return 'get'
+}
+export const GetMediaLibraryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library/{id}'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

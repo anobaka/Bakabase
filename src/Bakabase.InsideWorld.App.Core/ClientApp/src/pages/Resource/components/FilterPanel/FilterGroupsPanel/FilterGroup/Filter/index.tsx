@@ -66,7 +66,7 @@ export default ({
     let operations: SearchOperation[] | undefined;
     const property = propertyMap?.[filter.propertyId!];
     if (property) {
-      operations = property.isReserved ? SearchableReservedPropertySearchOperationsMap[property.id] : standardValueTypeSearchOperationsMap[property.valueType];
+      operations = property.isCustom ? standardValueTypeSearchOperationsMap[property.dbValueType] : SearchableReservedPropertySearchOperationsMap[property.id];
     }
     operations ??= [];
     if (operations.length == 0) {
@@ -144,13 +144,13 @@ export default ({
             PropertySelector.show({
               selection: filter.propertyId == undefined
                 ? undefined
-                : [{ id: filter.propertyId, isReserved: filter.isReservedProperty! }],
+                : [{ id: filter.propertyId, isCustom: filter.isCustomProperty! }],
               onSubmit: async (selectedProperties) => {
                 const property = selectedProperties[0]!;
                 setFilter({
                   ...filter,
                   propertyId: property.id,
-                  isReservedProperty: property.isReserved,
+                  isCustomProperty: property.isCustom,
                 });
               },
               multiple: false,
@@ -160,7 +160,7 @@ export default ({
             });
           }}
         >
-          {(filter.propertyId ? filter.isReservedProperty ? t(ResourceProperty[filter.propertyId]) : propertyMap[filter.propertyId]?.name : t('Property')) ?? t('Unknown property')}
+          {(filter.propertyId ? filter.isCustomProperty ? t(ResourceProperty[filter.propertyId]) : propertyMap[filter.propertyId]?.name : t('Property')) ?? t('Unknown property')}
         </Button>
       </div>
       <div className={''}>

@@ -246,7 +246,7 @@ export default ({
           <Tooltip content={t('Show larger cover on mouse hover')}>
             <Icon
               type={'ZoomInOutlined'}
-              className={`${styles.switch} ${uiOptions?.resource?.showBiggerCoverWhileHover ? styles.on : ''} text-xl`}
+              className={`${styles.switch} ${uiOptions?.resource?.showBiggerCoverWhileHover ? styles.on : ''} !text-xl`}
               onClick={() => {
                 BApi.options.patchUiOptions({
                   resource: {
@@ -260,7 +260,7 @@ export default ({
           <Tooltip content={t('Preview files of a resource on mouse hover')}>
             <Icon
               type={'PlayCircleOutlined'}
-              className={`${styles.switch} ${uiOptions?.resource?.disableMediaPreviewer ? styles.on : ''} text-xl`}
+              className={`${styles.switch} ${uiOptions?.resource?.disableMediaPreviewer ? styles.on : ''} !text-xl`}
               onClick={() => {
                 BApi.options.patchUiOptions({
                   resource: {
@@ -274,7 +274,7 @@ export default ({
           <Tooltip content={t('Enabling caching can improve loading speed')}>
             <Icon
               type={'DashboardOutlined'}
-              className={`${styles.switch} ${uiOptions?.resource?.disableCache ? '' : styles.on} text-xl`}
+              className={`${styles.switch} ${uiOptions?.resource?.disableCache ? '' : styles.on} !text-xl`}
               onClick={() => {
                 BApi.options.patchUiOptions({
                   resource: {

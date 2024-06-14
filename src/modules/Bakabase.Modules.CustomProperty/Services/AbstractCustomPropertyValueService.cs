@@ -124,7 +124,7 @@ namespace Bakabase.Modules.CustomProperty.Services
         public async Task SaveByResources(List<Resource> data)
         {
             var resourceProperties =
-                data.ToDictionary(d => d.Id, d => d.Properties?.GetValueOrDefault(ResourcePropertyType.Custom))
+                data.ToDictionary(d => d.Id, d => d.Properties?.GetValueOrDefault((int)ResourcePropertyType.Custom))
                     .Where(d => d.Value != null).ToDictionary(d => d.Key, d => d.Value!);
 
             var propertyIds = resourceProperties.SelectMany(d => d.Value.Select(c => c.Key)).ToHashSet();

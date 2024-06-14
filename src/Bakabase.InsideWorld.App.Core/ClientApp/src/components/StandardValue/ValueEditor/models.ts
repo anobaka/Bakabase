@@ -1,5 +1,6 @@
-export interface ValueEditorProps<V = any> {
+export type ValueEditorProps<V = any> = {
   initValue?: V;
   onChange?: (value?: V) => any;
   onCancel?: () => any;
-}
+};
+

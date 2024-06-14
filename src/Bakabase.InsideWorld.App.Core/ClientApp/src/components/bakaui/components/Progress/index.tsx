@@ -1,16 +1,3 @@
-import { Progress } from 'antd';
+import { Progress } from '@nextui-org/react';
 
-interface ProgressProps {
-  className?: string;
-  percent: number;
-  renderPercent?: (percent: number) => any;
-}
-
-export default ({ renderPercent, ...otherProps }: ProgressProps) => {
-  return (
-    <Progress
-      format={renderPercent}
-      {...otherProps}
-    />
-  );
-};
+export default Progress;

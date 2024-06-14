@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
 	public record ResourceSearchFilter
 	{
 		public int PropertyId { get; set; }
-		public bool IsReservedProperty { get; set; }
+		public bool IsCustomProperty { get; set; }
 		public SearchOperation Operation { get; set; }
 		public string? Value { get; set; }
 	}

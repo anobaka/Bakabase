@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Message } from '@alifd/next';
 import './index.scss';
 import { useTranslation } from 'react-i18next';
 import { ArrowRightOutlined, DoubleRightOutlined } from '@ant-design/icons';
-import { AddSpecialTextPrefabs } from '../../sdk/apis';
 import { SpecialTextType, specialTextTypes } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import {
@@ -69,7 +67,7 @@ export default () => {
   }, []);
 
   const loadData = () => {
-    BApi.specialText.getAllSpecialText().then((t) => {
+    BApi.specialText.getAllSpecialTexts().then((t) => {
       const data = t.data || {};
       const ts = specialTextTypes.reduce<{ [key in SpecialTextType]?: SpecialText[] }>((s, t) => {
         const list = data[t.value] ?? [];
@@ -100,9 +98,9 @@ export default () => {
       size: 'lg',
       onOk: async () => {
         if (c.id > 0) {
-          await BApi.specialText.updateSpecialText(c.id, text);
+          await BApi.specialText.patchSpecialText(c.id, text);
         } else {
-          await BApi.specialText.createSpecialText(text);
+          await BApi.specialText.addSpecialText(text);
         }
         await loadData();
       },
@@ -185,10 +183,9 @@ export default () => {
           variant={'light'}
           color={'primary'}
           onClick={() => {
-            AddSpecialTextPrefabs().invoke((a) => {
+            BApi.specialText.addSpecialTextPrefabs().then((a) => {
               if (!a.code) {
                 loadData();
-                Message.success('Success');
               }
             });
           }}

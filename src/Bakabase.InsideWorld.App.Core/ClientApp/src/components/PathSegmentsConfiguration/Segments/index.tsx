@@ -161,7 +161,7 @@ export default ({
                   const values = value.filter(v => v.property.equals(mr.property));
                   const v = values[mr.valueIndex ?? 0]?.value;
                   let colorKey: ChipProps['color'] = 'primary';
-                  if (mr.property.isReserved && (mr.property.id == ResourceProperty.Resource || mr.property.id == ResourceProperty.RootPath)) {
+                  if (!mr.property.isCustom && (mr.property.id == ResourceProperty.Resource || mr.property.id == ResourceProperty.RootPath)) {
                     colorKey = 'success';
                   }
                   if (hasError) {
@@ -275,7 +275,7 @@ export default ({
                                       const p = selection[0];
                                       const property = new PscProperty({
                                         id: p.id,
-                                        isReserved: false,
+                                        isCustom: true,
                                         name: p.name!,
                                       });
                                       createPortal(SegmentMatcherConfiguration, {

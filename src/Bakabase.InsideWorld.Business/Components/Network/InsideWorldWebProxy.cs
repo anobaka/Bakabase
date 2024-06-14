@@ -10,17 +10,24 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.Network
 {
-    public class InsideWorldWebProxy : IWebProxy
+    public class InsideWorldWebProxy(IBOptions<NetworkOptions> options) : IWebProxy
     {
-        private readonly IBOptions<NetworkOptions> _options;
-
-        public InsideWorldWebProxy(IBOptions<NetworkOptions> options)
+        public Uri? GetProxy(Uri destination)
         {
-            _options = options;
+            switch (options.Value.Proxy.Mode)
+            {
+                case NetworkOptions.ProxyMode.DoNotUse:
+                    return null;
+                case NetworkOptions.ProxyMode.UseSystem:
+                    return WebRequest.GetSystemWebProxy().GetProxy(destination);
+                case NetworkOptions.ProxyMode.UseCustom:
+                    var p = (options.Value.CustomProxies?.FirstOrDefault(x =>
+                        x.Id == options.Value.Proxy.CustomProxyId));
+                    return !string.IsNullOrEmpty(p?.Address) ? new Uri(p.Address) : null;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
-
-        public Uri? GetProxy(Uri destination) =>
-            !string.IsNullOrEmpty(_options.Value.Proxy?.Address) ? new Uri(_options.Value.Proxy.Address) : null;
 
         public bool IsBypassed(Uri host) => false;
 
@@ -28,8 +35,19 @@ namespace Bakabase.InsideWorld.Business.Components.Network
         {
             get
             {
-                var c = _options.Value.Proxy?.Credentials;
-                return c != null ? new NetworkCredential(c.Username, c.Password, c.Domain) : null;
+                switch (options.Value.Proxy.Mode)
+                {
+                    case NetworkOptions.ProxyMode.DoNotUse:
+                        return null;
+                    case NetworkOptions.ProxyMode.UseSystem:
+                        return WebRequest.GetSystemWebProxy().Credentials;
+                    case NetworkOptions.ProxyMode.UseCustom:
+                        var c = (options.Value.CustomProxies?.FirstOrDefault(x =>
+                            x.Id == options.Value.Proxy.CustomProxyId))?.Credentials;
+                        return c != null ? new NetworkCredential(c.Username, c.Password, c.Domain) : null;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
             set { }
         }

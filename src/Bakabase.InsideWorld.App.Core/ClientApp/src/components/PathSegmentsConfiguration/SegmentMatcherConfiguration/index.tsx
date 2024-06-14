@@ -177,7 +177,7 @@ export default ({
               regex: v,
             });
           }}
-          isResourceProperty={property.id == ResourceProperty.Resource && property.isReserved}
+          isResourceProperty={property.id == ResourceProperty.Resource && !property.isCustom}
         />
       </div>
     </Modal>

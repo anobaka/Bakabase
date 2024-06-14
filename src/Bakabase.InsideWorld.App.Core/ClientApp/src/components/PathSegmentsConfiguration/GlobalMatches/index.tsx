@@ -23,7 +23,7 @@ export default ({ matches, value, onDeleteMatcherValue }: Props) => {
           const v = value?.filter(v => v.property.equals(gm.property))?.[gm.valueIndex ?? 0]?.value;
           return (
             <div className={'global-match'}>
-              <SimpleLabel status={'default'}>{gm.label}</SimpleLabel>
+              <SimpleLabel status={'default'}>{gm.property.toString(t, gm.valueIndex)}</SimpleLabel>
               {v && (
                 <span>{PscMatcherValue.ToString(t, v)}</span>
               )}

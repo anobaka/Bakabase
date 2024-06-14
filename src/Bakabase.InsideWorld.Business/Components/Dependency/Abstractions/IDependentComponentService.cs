@@ -19,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Abstractions
         bool IsRequired { get; }
 
         Task Install(CancellationToken ct);
-        Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct);
+        Task<DependentComponentVersion> GetLatestVersion(bool fromCache, CancellationToken ct);
 
         /// <summary>
         /// Priority: App component directory > System wide

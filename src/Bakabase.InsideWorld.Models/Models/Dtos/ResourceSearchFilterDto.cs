@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
 	public record ResourceSearchFilterDto
 	{
 		public int PropertyId { get; set; }
-		public bool IsReservedProperty { get; set; }
+		public bool IsCustomProperty { get; set; }
 		public SearchOperation Operation { get; set; }
 		public string? Value { get; set; }
 	}

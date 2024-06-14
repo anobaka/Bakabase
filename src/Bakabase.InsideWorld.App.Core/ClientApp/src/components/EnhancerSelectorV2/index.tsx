@@ -8,7 +8,7 @@ import BApi from '@/sdk/BApi';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import CustomIcon from '@/components/CustomIcon';
 import { StandardValueIcon } from '@/components/StandardValue';
-import { ResourceCategoryAdditionalItem, StandardValueType } from '@/sdk/constants';
+import { CategoryAdditionalItem, StandardValueType } from '@/sdk/constants';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
 import { BakabaseContext, useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { DestroyableProps } from '@/components/bakaui/types';
@@ -38,7 +38,7 @@ const EnhancerSelector = ({
     });
 
     // @ts-ignore
-    BApi.category.getResourceCategory(categoryId, { additionalItems: ResourceCategoryAdditionalItem.EnhancerOptions | ResourceCategoryAdditionalItem.CustomProperties }).then(r => {
+    BApi.category.getResourceCategory(categoryId, { additionalItems: CategoryAdditionalItem.EnhancerOptions | CategoryAdditionalItem.CustomProperties }).then(r => {
       const data = r.data || {};
       setCategoryEnhancerOptionsList(data.enhancerOptions?.map(eo => (eo as CategoryEnhancerFullOptions)) || []);
     });

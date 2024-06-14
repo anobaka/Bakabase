@@ -1,10 +1,15 @@
-import { Button, Input, Message } from '@alifd/next';
+import { Button, Input } from '@alifd/next';
 import React, { useEffect, useState } from 'react';
 import i18n from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { ValidateCookie } from '@/sdk/apis';
 import type { CookieValidatorTarget } from '@/sdk/constants';
+import { Message } from '@/components/bakaui';
+import BApi from '@/sdk/BApi';
 
 export default ({ cookie, target, onChange = (v) => {} }: {cookie: string | undefined; target: CookieValidatorTarget; onChange: any}) => {
+  const { t } = useTranslation();
+
   return (
     <div className={'cookie-validator'}>
       <Input.TextArea
@@ -23,19 +28,19 @@ export default ({ cookie, target, onChange = (v) => {} }: {cookie: string | unde
         onClick={() => {
           if (cookie?.length > 0) {
             Message.loading({
-              title: i18n.t('Validating cookie'),
+              title: t('Validating cookie'),
               align: 'cc cc',
               duration: 0,
               closeable: true,
               hasMask: true,
             });
-            ValidateCookie({
+            BApi.tool.validateCookie({
               target,
               cookie,
-            }).invoke((a) => {
+            }).then((a) => {
               if (!a.code) {
                 Message.success({
-                  title: i18n.t('Success'),
+                  title: t('Success'),
                   align: 'cc cc',
                 });
               } else {
@@ -51,7 +56,7 @@ export default ({ cookie, target, onChange = (v) => {} }: {cookie: string | unde
           }
         }}
       >
-        {i18n.t('Validate')}
+        {t('Validate')}
       </Button>
     </div>
   );

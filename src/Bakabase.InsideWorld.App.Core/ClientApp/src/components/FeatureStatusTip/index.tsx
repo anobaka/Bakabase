@@ -2,19 +2,21 @@ import { Trans, useTranslation } from 'react-i18next';
 import React, { useCallback } from 'react';
 import ExternalLink from '@/components/ExternalLink';
 import qqGroupImg from '@/assets/qq-group.png';
-import { Chip, Modal } from '@/components/bakaui';
+import { Chip, Link, Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 type Props = {
   name: string;
   status: 'developing' | 'deprecated' | 'deprecating';
   className?: string;
+  url?: string;
 };
 
 export default ({
                   name,
                   status,
                   className,
+                  url,
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -81,8 +83,19 @@ export default ({
   }, []);
 
   return (
-    <div className={`italic opacity-80 ${className}`}>
+    <div className={`italic opacity-80 whitespace-break-spaces ${className}`}>
       {renderText()}
+      {url && (
+        <>
+          {t('For more information, you can visit:')}
+          <ExternalLink
+            to={url}
+            className={'px-1'}
+          >
+            {url}
+          </ExternalLink>
+        </>
+      )}
     </div>
   );
 };

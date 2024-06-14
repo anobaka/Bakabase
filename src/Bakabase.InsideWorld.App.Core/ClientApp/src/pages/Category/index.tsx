@@ -10,7 +10,7 @@ import SortableCategoryList from '@/pages/Category/components/SortableCategoryLi
 import MediaLibrarySynchronization from '@/pages/Category/components/MediaLibrarySynchronization';
 import store from '@/store';
 import BApi from '@/sdk/BApi';
-import { MediaLibraryAdditionalItem, ResourceCategoryAdditionalItem } from '@/sdk/constants';
+import { CategoryAdditionalItem, MediaLibraryAdditionalItem } from '@/sdk/constants';
 import SimpleOneStepDialog from '@/components/SimpleOneStepDialog';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -38,10 +38,10 @@ export default () => {
 
   const loadAllCategories = (cb: () => void = () => {
   }): Promise<any> => {
-    return BApi.category.getAllResourceCategories({ additionalItems:
-        ResourceCategoryAdditionalItem.Validation |
-        ResourceCategoryAdditionalItem.CustomProperties |
-      ResourceCategoryAdditionalItem.EnhancerOptions,
+    return BApi.category.getAllCategories({ additionalItems:
+        CategoryAdditionalItem.Validation |
+        CategoryAdditionalItem.CustomProperties |
+        CategoryAdditionalItem.EnhancerOptions,
     }).then((rsp) => {
       categoriesLoadedRef.current = true;
       rsp.data?.sort((a, b) => a.order! - b.order!);
@@ -52,7 +52,7 @@ export default () => {
 
   const loadAllMediaLibraries = (cb: () => void = () => {
   }): Promise<any> => {
-    return BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category | MediaLibraryAdditionalItem.FileSystemInfo | MediaLibraryAdditionalItem.FixedTags }).then((x) => {
+    return BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category | MediaLibraryAdditionalItem.FileSystemInfo | MediaLibraryAdditionalItem.PathConfigurationCustomProperties }).then((x) => {
       x.data?.sort((a, b) => a.order - b.order);
       setLibraries(x.data || []);
     });
@@ -122,7 +122,7 @@ export default () => {
                   if (name == undefined || name.length == 0) {
                     throw new Error('Name is required');
                   }
-                  await BApi.category.addResourceCategory({
+                  await BApi.category.addCategory({
                     name,
                   });
                   loadAllCategories();

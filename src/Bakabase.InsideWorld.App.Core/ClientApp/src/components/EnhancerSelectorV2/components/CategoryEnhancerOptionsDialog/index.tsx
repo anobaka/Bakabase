@@ -19,7 +19,7 @@ import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models'
 import { StandardValueIcon } from '@/components/StandardValue';
 import {
   CustomPropertyType,
-  ResourceCategoryAdditionalItem,
+  CategoryAdditionalItem,
   SpecialTextType,
   StandardValueType,
 } from '@/sdk/constants';
@@ -89,9 +89,9 @@ const CategoryEnhancerOptionsDialog = ({
   }, []);
 
   const loadCategory = async () => {
-    const r = await BApi.category.getResourceCategory(categoryId,
+    const r = await BApi.category.getCategory(categoryId,
       // @ts-ignore
-      { additionalItems: ResourceCategoryAdditionalItem.EnhancerOptions | ResourceCategoryAdditionalItem.CustomProperties });
+      { additionalItems: CategoryAdditionalItem.EnhancerOptions | CategoryAdditionalItem.CustomProperties });
     setCategory({
       id: r.data?.id ?? 0,
       name: r.data?.name ?? '',

@@ -4,7 +4,7 @@ import type { IPscPropertyMatcherValue } from './models/PscPropertyMatcherValue'
 import { PscMatcherValue } from './models/PscMatcherValue';
 import { execAll } from '@/components/utils';
 import { MatchResultType, ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
-import type { BakabaseInsideWorldBusinessModelsDomainPathConfiguration } from '@/sdk/Api';
+import type { BakabaseAbstractionsModelsDomainPathConfiguration } from '@/sdk/Api';
 import { PscContext } from '@/components/PathSegmentsConfiguration/models/PscContext';
 import type { PscMatchResult } from '@/components/PathSegmentsConfiguration/models/PscMatchResult';
 import PscMatcher from '@/components/PathSegmentsConfiguration/models/PscMatcher';
@@ -13,7 +13,7 @@ import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/P
 import SimpleGlobalError = PscContext.SimpleGlobalError;
 import SimpleGlobalMatch = PscContext.SimpleGlobalMatchResult;
 
-export function convertToPscValueFromPathConfigurationDto(pc: BakabaseInsideWorldBusinessModelsDomainPathConfiguration): IPscPropertyMatcherValue[] {
+export function convertToPscValueFromPathConfigurationDto(pc: BakabaseAbstractionsModelsDomainPathConfiguration): IPscPropertyMatcherValue[] {
   const value: IPscPropertyMatcherValue[] = [];
   if (pc.path) {
     value.push({
@@ -35,7 +35,7 @@ export function convertToPscValueFromPathConfigurationDto(pc: BakabaseInsideWorl
           layer: segment.layer ?? undefined,
         }),
         property: new PscProperty({
-          isReserved: segment.isReservedProperty!,
+          isCustom: segment.isCustomProperty!,
           id: segment.propertyId!,
         }),
       });
@@ -44,6 +44,28 @@ export function convertToPscValueFromPathConfigurationDto(pc: BakabaseInsideWorl
 
   console.log('Convert dto value to component value', pc, value);
   return value;
+}
+
+export function convertToPathConfigurationDtoFromPscValue(pmvs: IPscPropertyMatcherValue[]): BakabaseAbstractionsModelsDomainPathConfiguration {
+  const rootPath = (pmvs.filter(v => v.property.isRootPath))[0]?.value?.fixedText;
+  const dto: BakabaseAbstractionsModelsDomainPathConfiguration = {
+    path: rootPath,
+    // regex: resourceRegex,
+    rpmValues: pmvs.filter(v => !v.property.isRootPath).map(v => {
+      return {
+        propertyId: v.property.id,
+        isCustomProperty: v.property.isCustom,
+        fixedText: v.value.fixedText,
+        layer: v.value.layer,
+        regex: v.value.regex,
+        valueType: v.value.valueType,
+      };
+    }),
+  };
+
+  console.log('Convert component value to dto value', pmvs, dto);
+  // @ts-ignore
+  return dto;
 }
 
 export function getResultFromExecAll(regex: RegExp | string, str: string): {
@@ -93,28 +115,6 @@ export function getResultFromExecAll(regex: RegExp | string, str: string): {
     return result;
   }
   return null;
-}
-
-export function convertToPathConfigurationDtoFromPscValue(pmvs: IPscPropertyMatcherValue[]): BakabaseInsideWorldBusinessModelsDomainPathConfiguration {
-  const rootPath = (pmvs.filter(v => v.property.isRootPath))[0]?.value?.fixedText;
-  const dto: BakabaseInsideWorldBusinessModelsDomainPathConfiguration = {
-    path: rootPath,
-    // regex: resourceRegex,
-    rpmValues: pmvs.filter(v => !v.property.isRootPath).map(v => {
-      return {
-        propertyId: v.property.id,
-        isReservedProperty: v.property.isReserved,
-        fixedText: v.value.fixedText,
-        layer: v.value.layer,
-        regex: v.value.regex,
-        valueType: v.value.valueType,
-      };
-    }),
-  };
-
-  console.log('Convert component value to dto value', pmvs, dto);
-  // @ts-ignore
-  return dto;
 }
 
 type IPscPropertyMatcherResult = {
@@ -281,7 +281,7 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
     // validate all match results
     for (const pmr of propertyMatchResultsOfMatcher) {
       const r = pmr.result;
-      log(`Checking result ${pmr.indexByProperty} of ${pmr.pmv.property.toString(t, pmr.indexByProperty)}`);
+      log(`Checking result ${pmr.indexByProperty} of ${pmr.pmv.property.toString(t, pmr.indexByProperty)}`, r);
       // check mismatched values
       if (r == undefined) {
         data.globalErrors.push(new SimpleGlobalError(pmr.pmv.property, pmr.indexByProperty, t('Match failed'), true));
@@ -290,7 +290,7 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
           if (r.index != undefined) {
             const segmentIndex = r.index!;
             const segment = data.segments[segmentIndex];
-            let mr = segment.matchResults.find(a => a.property.type == vm.propertyType && a.valueIndex == pmr.indexByProperty);
+            let mr = segment.matchResults.find(a => a.property.equals(pmr.pmv.property) && a.valueIndex == pmr.indexByProperty);
             if (!mr) {
               mr = new PscContext.SimpleMatchResult(pmr.pmv.property, pmr.indexByProperty);
               mr.readonly = readonly;

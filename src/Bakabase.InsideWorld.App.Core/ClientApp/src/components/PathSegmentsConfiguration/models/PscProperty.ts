@@ -4,13 +4,13 @@ import { ResourceProperty } from '@/sdk/constants';
 
 export interface IPscProperty {
   id: number;
-  isReserved: boolean;
+  isCustom: boolean;
   name?: string;
 }
 
 class PscProperty implements IPscProperty {
   id: number;
-  isReserved: boolean;
+  isCustom: boolean;
   name?: string;
 
   constructor(p: IPscProperty) {
@@ -18,15 +18,17 @@ class PscProperty implements IPscProperty {
   }
 
   equals: (other: IPscProperty) => boolean = (other: IPscProperty) => {
-    return this.id === other.id && this.isReserved == other.isReserved;
+    return this.id === other.id && this.isCustom == other.isCustom;
   };
 
   get key(): string {
-    return `${this.isReserved ? 'r' : 'c'}-${this.id}`;
+    return `${(this.isCustom ? 'c' : 'r')}-${this.id}`;
   }
 
   get type(): PscPropertyType | undefined {
-    if (this.isReserved) {
+    if (this.isCustom) {
+      return PscPropertyType.CustomProperty;
+    } else {
       const rp = this.id as ResourceProperty;
       switch (rp) {
         case ResourceProperty.RootPath:
@@ -35,28 +37,34 @@ class PscProperty implements IPscProperty {
           return PscPropertyType.ParentResource;
         case ResourceProperty.Resource:
           return PscPropertyType.Resource;
+        case ResourceProperty.Rating:
+          return PscPropertyType.Rating;
+        case ResourceProperty.Introduction:
+          return PscPropertyType.Introduction;
         default:
           return;
       }
-    } else {
-      return PscPropertyType.CustomProperty;
     }
   }
 
   get isRootPath(): boolean {
-    return this.isReserved && this.id == ResourceProperty.RootPath;
+    return !this.isCustom && this.id == ResourceProperty.RootPath;
   }
 
   get isResource(): boolean {
-    return this.isReserved && this.id == ResourceProperty.Resource;
+    return !this.isCustom && this.id == ResourceProperty.Resource;
   }
 
   toString(t: TFunction<'translation', undefined>, index?: number): string {
-    return `${this.isReserved ? t(ResourceProperty[this.id]) : this.name}${index == undefined ? '' : index + 1}`;
+    return `${(this.isCustom ? this.name : t(ResourceProperty[this.id]))}${index == undefined ? '' : index + 1}`;
   }
 
   static fromPscType(type: PscPropertyType): PscProperty {
     switch (type) {
+      case PscPropertyType.Rating:
+        return this.Rating;
+      case PscPropertyType.Introduction:
+        return this.Introduction;
       case PscPropertyType.RootPath:
         return this.RootPath;
       case PscPropertyType.Resource:
@@ -70,22 +78,32 @@ class PscProperty implements IPscProperty {
 
   static Resource = new PscProperty({
     id: ResourceProperty.Resource,
-    isReserved: true,
+    isCustom: false,
     name: ResourceProperty[ResourceProperty.Resource],
   });
   static RootPath = new PscProperty({
     id: ResourceProperty.RootPath,
-    isReserved: true,
+    isCustom: false,
     name: ResourceProperty[ResourceProperty.RootPath],
   });
   static ParentResource = new PscProperty({
     id: ResourceProperty.ParentResource,
-    isReserved: true,
+    isCustom: false,
     name: ResourceProperty[ResourceProperty.ParentResource],
+  });
+  static Rating = new PscProperty({
+    id: ResourceProperty.Rating,
+    isCustom: false,
+    name: ResourceProperty[ResourceProperty.Rating],
+  });
+  static Introduction = new PscProperty({
+    id: ResourceProperty.Introduction,
+    isCustom: false,
+    name: ResourceProperty[ResourceProperty.Introduction],
   });
   static CustomProperty = new PscProperty({
     id: ResourceProperty.CustomProperty,
-    isReserved: true,
+    isCustom: true,
     name: ResourceProperty[ResourceProperty.CustomProperty],
   });
 }

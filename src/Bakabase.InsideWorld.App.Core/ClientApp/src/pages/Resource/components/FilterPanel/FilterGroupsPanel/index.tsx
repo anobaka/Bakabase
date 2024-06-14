@@ -33,8 +33,8 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
           return {
             id: p,
             name: t(EnumResourceProperty[p]),
-            valueType: map[p],
-            isReserved: true,
+            dbValueType: map[p],
+            isCustom: false,
           };
         }),
       );
@@ -42,7 +42,7 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
       // @ts-ignore
       arr.push(...(rsp.data || []).map(d => ({
         ...d,
-        isReserved: false,
+        isCustom: true,
       })));
     setPropertyMap(arr.reduce((s, p) => {
       // @ts-ignore

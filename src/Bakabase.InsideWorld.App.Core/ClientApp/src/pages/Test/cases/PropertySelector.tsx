@@ -14,7 +14,7 @@ export default () => {
       text
       onClick={() => {
         PropertySelector.show({
-          selection: { [filter.isReservedProperty ? 'reservedPropertyIds' : 'customPropertyIds']: filter.propertyId == undefined ? undefined : [filter.propertyId] },
+          selection: { [filter.isCustomProperty ? 'reservedPropertyIds' : 'customPropertyIds']: filter.propertyId == undefined ? undefined : [filter.propertyId] },
           onSubmit: async (selectedProperties) => {
             const property = (selectedProperties.reservedProperties?.[0] ?? selectedProperties.customProperties?.[0])!;
             const cp = property as ICustomProperty;
@@ -22,7 +22,7 @@ export default () => {
               ...filter,
               propertyId: property.id,
               propertyName: property.name,
-              isReservedProperty: cp == undefined,
+              isCustomProperty: cp == undefined,
             });
           },
           multiple: false,

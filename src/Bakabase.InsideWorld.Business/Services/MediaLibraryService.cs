@@ -16,6 +16,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
+using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Legacy.Services;
@@ -138,7 +139,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<MediaLibrary?> Get(int id, MediaLibraryAdditionalItem additionalItems = MediaLibraryAdditionalItem.None)
         {
             var ml = await _orm.GetByKey(id);
-            return (await ToDtoList([ml], additionalItems)).FirstOrDefault();
+            return (await ToDomainModels([ml], additionalItems)).FirstOrDefault();
         }
 
         public async Task<List<MediaLibrary>> GetAll(
@@ -146,7 +147,7 @@ namespace Bakabase.InsideWorld.Business.Services
             MediaLibraryAdditionalItem additionalItems = MediaLibraryAdditionalItem.None)
         {
             var wss = (await _orm.GetAll(exp)).OrderBy(a => a.Order).ToList();
-            return await ToDtoList(wss, additionalItems);
+            return await ToDomainModels(wss, additionalItems);
         }
 
         public async Task<BaseResponse> DeleteAll(Expression<Func<Abstractions.Models.Db.MediaLibrary, bool>> selector)
@@ -159,7 +160,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return await _orm.RemoveByKey(key);
         }
 
-        protected async Task<List<MediaLibrary>> ToDtoList(List<Abstractions.Models.Db.MediaLibrary> mls,
+        protected async Task<List<MediaLibrary>> ToDomainModels(List<Abstractions.Models.Db.MediaLibrary> mls,
             MediaLibraryAdditionalItem additionalItems)
         {
             var dtoList = mls.Select(ml => ml.ToDomainModel()!).ToList();
@@ -235,6 +236,32 @@ namespace Bakabase.InsideWorld.Business.Services
                             foreach (var ml in dtoList)
                             {
                                 ml.Category = categories.GetValueOrDefault(ml.CategoryId);
+                            }
+
+                            break;
+                        }
+                        case MediaLibraryAdditionalItem.PathConfigurationCustomProperties:
+                        {
+                            var customPropertyIds = dtoList.Where(t => t.PathConfigurations != null).SelectMany(t =>
+                                t.PathConfigurations!.SelectMany(a => a.RpmValues ?? []).Where(a => a.IsCustomProperty)
+                                    .Select(a => a.PropertyId)).ToHashSet();
+                            var customProperty = (await CustomPropertyService.GetByKeys(customPropertyIds,
+                                CustomPropertyAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
+                            foreach (var ml in dtoList)
+                            {
+                                if (ml.PathConfigurations != null)
+                                {
+                                    foreach (var pathConfiguration in ml.PathConfigurations!)
+                                    {
+                                        if (pathConfiguration.RpmValues != null)
+                                        {
+                                            foreach (var rv in pathConfiguration.RpmValues)
+                                            {
+                                                rv.CustomProperty = customProperty.GetValueOrDefault(rv.PropertyId);
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             break;
@@ -392,8 +419,22 @@ namespace Bakabase.InsideWorld.Business.Services
         /// <returns></returns>
         public void StartSyncing()
         {
-            BackgroundTaskHelper.RunInNewScope<MediaLibraryService>(SyncTaskBackgroundTaskName,
-                async (service, task) => await service.Sync(task));
+            BackgroundTaskHelper.RunInNewScope<IMediaLibraryService>(SyncTaskBackgroundTaskName,
+                async (service, task) =>
+                {
+                    var rsp = await service.Sync(process => task.CurrentProcess = process,
+                        progress => task.Percentage = progress);
+
+                    var result = rsp.Data;
+
+                    task.Message = string.Join(
+                        Environment.NewLine,
+                        $"[Resource] Found: {result.ResourceCount}, Added: {result.AddedResourceCount}, Deleted: {result.DeletedResourceCount}, Updated: {result.UpdatedResourceCount}",
+                        $"[Directory]: Found: {result.FileResourceCount}",
+                        $"[File]: Found: {result.DirectoryResourceCount}");
+
+                    return rsp;
+                });
         }
 
         private void SetPropertiesByMatchers(string rootPath, PathConfigurationTestResult.Resource e, Resource pr,
@@ -409,11 +450,11 @@ namespace Bakabase.InsideWorld.Business.Services
                 var t = e.SegmentAndMatchedValues[i];
                 if (t.PropertyKeys.Any())
                 {
-                    foreach (var p in t.PropertyKeys.Where(x => x.IsReserved))
+                    foreach (var p in t.PropertyKeys.Where(x => !x.IsCustom))
                     {
                         var propertyIdAndValues = reservedPropertyValues.GetOrAdd((ResourceProperty) p.Id, () => new());
                         var v = t.SegmentText;
-                        if (p is {IsReserved: true, Id: (int) ResourceProperty.ParentResource})
+                        if (p is {IsCustom: false, Id: (int) ResourceProperty.ParentResource})
                         {
                             v = Path.Combine(rootPath,
                                     string.Join(InternalOptions.DirSeparator,
@@ -426,7 +467,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            foreach (var t in e.GlobalMatchedValues.Where(p => p.PropertyKey.IsReserved))
+            foreach (var t in e.GlobalMatchedValues.Where(p => !p.PropertyKey.IsCustom))
             {
                 var values = reservedPropertyValues.GetOrAdd((ResourceProperty) t.PropertyKey.Id, () => new());
                 values.AddRange(t.TextValues);
@@ -474,7 +515,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     var property = customPropertyMap.GetValueOrDefault(pId);
                     if (property != null)
                     {
-                        var propertyMap = (pr.Properties ??= []).GetOrAdd(ResourcePropertyType.Custom, () => [])!;
+                        var propertyMap = (pr.Properties ??= []).GetOrAdd((int)ResourcePropertyType.Custom, () => [])!;
                         var rp = propertyMap.GetOrAdd(property.Id,
                             () => new Resource.Property(property.Name, property.DbValueType, property.DbValueType, null));
                         rp.Values ??= [];
@@ -485,11 +526,10 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<BaseResponse> Sync(BackgroundTask task)
+        public async Task<SingletonResponse<SyncResultViewModel>> Sync(Action<string> onProcessChange, Action<int> onProgressChange)
         {
             // Make log and error can show in background task info.
             var libraries = await GetAll(null, MediaLibraryAdditionalItem.None);
-            var librariesMap = libraries.ToDictionary(a => a.Id, a => a);
             var categories = (await ResourceCategoryService.GetAll()).ToDictionary(a => a.Id, a => a);
 
             // Validation
@@ -525,6 +565,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
             var step = SpecificEnumUtils<MediaLibrarySyncStep>.Values.FirstOrDefault();
 
+            var result = new SyncResultViewModel();
+
             while (step <= MediaLibrarySyncStep.SaveResources)
             {
                 var basePercentage = step.GetBasePercentage();
@@ -532,8 +574,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 var resourceCountPerPercentage = patchingResources.Any()
                     ? patchingResources.Count / (decimal) stepPercentage
                     : decimal.MaxValue;
-                task.Percentage = basePercentage;
-                task.CurrentProcess = step.ToString();
+                onProgressChange(basePercentage);
+                onProcessChange(step.ToString());
                 switch (step)
                 {
                     case MediaLibrarySyncStep.Filtering:
@@ -576,6 +618,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                             CategoryId = library.CategoryId,
                                             MediaLibraryId = library.Id,
                                             IsFile = new FileInfo(resourcePath).Exists,
+                                            Path = resourcePath
                                         };
 
                                         if (pathConfiguration.RpmValues?.Any() ==
@@ -585,9 +628,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                         }
 
                                         patchingResources.TryAdd(pr.Path, pr);
-                                        task.Percentage = basePercentage + (int) (i * percentagePerLibrary +
+                                        onProgressChange(basePercentage + (int) (i * percentagePerLibrary +
                                             percentagePerPathConfiguration * j +
-                                            percentagePerItem * (++count));
+                                            percentagePerItem * (++count)));
                                     }
                                 }
                             }
@@ -612,7 +655,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             patches.FileModifiedAt =
                                 fileSystemInfo.LastWriteTime.AddTicks(-(fileSystemInfo.LastWriteTime.Ticks %
                                                                         TimeSpan.TicksPerSecond));
-                            task.Percentage = basePercentage + (int) (++count / resourceCountPerPercentage);
+                            onProgressChange(basePercentage + (int) (++count / resourceCountPerPercentage));
                         }
 
                         break;
@@ -628,6 +671,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         prevResources.RemoveAll(x => invalidResources.Contains(x));
 
                         prevPathResourceMap = prevResources.ToDictionary(t => t.Path);
+
                         break;
                     }
                     case MediaLibrarySyncStep.CompareResources:
@@ -646,7 +690,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 changedResources[path] = resource;
                             }
 
-                            task.Percentage = basePercentage + (int) (++count / resourceCountPerPercentage);
+                            onProgressChange(basePercentage + (int) (++count / resourceCountPerPercentage));
                         }
 
                         foreach (var (_, r) in changedResources)
@@ -667,13 +711,14 @@ namespace Bakabase.InsideWorld.Business.Services
                         await _orm.UpdateByKeys(libraries.Select(a => a.Id).ToArray(),
                             l => { l.ResourceCount = libraryResourceCount.TryGetValue(l.Id, out var c) ? c : 0; });
 
-                        task.Message = string.Join(
-                            Environment.NewLine,
-                            $"[Resource] Found: {patchingResources.Count}, New: {newResources.Length} Removed: {invalidResources.Count}, Updated: {resourcesToBeSaved.Count - newResources.Length}",
-                            $"[Directory]: Found: {patchingResources.Count(a => !a.Value.IsFile)}",
-                            $"[File]: Found: {patchingResources.Count(a => a.Value.IsFile)}"
-                        );
-                        task.Percentage = basePercentage + stepPercentage;
+                        result.ResourceCount = patchingResources.Count;
+                        result.AddedResourceCount = newResources.Length;
+                        result.DeletedResourceCount = invalidResources.Count;
+                        result.UpdatedResourceCount = resourcesToBeSaved.Count - newResources.Length;
+                        result.DirectoryResourceCount = patchingResources.Count(a => !a.Value.IsFile);
+                        result.FileResourceCount = patchingResources.Count(a => a.Value.IsFile);
+
+                        onProgressChange(basePercentage + stepPercentage);
 
                         await InsideWorldAppService.Resource.SaveAsync(t => t.LastSyncDt = DateTime.Now);
 
@@ -686,7 +731,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 step++;
             }
 
-            return BaseResponseBuilder.Ok;
+            return new SingletonResponse<SyncResultViewModel>(result);
         }
 
         public async Task<SingletonResponse<PathConfigurationTestResult>> Test(
@@ -700,7 +745,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             var resourceMatcherValue =
                 pc.RpmValues?.FirstOrDefault(a => a is
-                    {PropertyId: (int) ResourceProperty.Resource, IsReservedProperty: true, IsValid: true});
+                    {PropertyId: (int) ResourceProperty.Resource, IsCustomProperty: false, IsValid: true});
             if (resourceMatcherValue == null)
             {
                 return SingletonResponseBuilder<PathConfigurationTestResult>.BuildBadRequest(
@@ -713,7 +758,7 @@ namespace Bakabase.InsideWorld.Business.Services
             if (dir.Exists)
             {
                 var customPropertyIds =
-                    pc.RpmValues?.Where(r => !r.IsReservedProperty).Select(r => r.PropertyId).ToHashSet() ?? [];
+                    pc.RpmValues?.Where(r => r.IsCustomProperty).Select(r => r.PropertyId).ToHashSet() ?? [];
                 var customPropertyMap =
                     (await CustomPropertyService.GetByKeys(customPropertyIds, CustomPropertyAdditionalItem.None))
                     .ToDictionary(d => d.Id, d => d);
@@ -730,9 +775,9 @@ namespace Bakabase.InsideWorld.Business.Services
 
                     var otherMatchers = pc.RpmValues!.Where(a => a.IsSecondaryProperty).ToList();
 
-                    // Index - IsReservedProperty - PropertyId
+                    // Index - IsCustomProperty - PropertyId
                     var tmpSegmentProperties = new Dictionary<int, Dictionary<bool, HashSet<int>>>();
-                    // IsReservedProperty - PropertyId - Values
+                    // IsCustomProperty - PropertyId - Values
                     var tmpGlobalMatchedValues = new Dictionary<bool, Dictionary<int, HashSet<string>>>();
 
                     foreach (var m in otherMatchers)
@@ -751,7 +796,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                     var propertyIds = tmpSegmentProperties
                                         .GetOrAdd(idx, () => new())
-                                        .GetOrAdd(m.IsReservedProperty, () => new());
+                                        .GetOrAdd(m.IsCustomProperty, () => new());
                                     propertyIds.Add(m.PropertyId);
 
                                     break;
@@ -759,7 +804,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 case MatchResultType.Regex:
                                 {
                                     var values = tmpGlobalMatchedValues
-                                        .GetOrAdd(m.IsReservedProperty, () => new())
+                                        .GetOrAdd(m.IsCustomProperty, () => new())
                                         .GetOrAdd(m.PropertyId, () => new());
                                     values.AddRange(result.Matches!);
 
@@ -779,8 +824,8 @@ namespace Bakabase.InsideWorld.Business.Services
                         var segmentProperties = tmpSegmentProperties.TryGetValue(i, out var t)
                             ? t.SelectMany(a =>
                             {
-                                var (isReserved, pIds) = a;
-                                return pIds.Select(b => new SegmentPropertyKey(isReserved, b));
+                                var (isCustom, pIds) = a;
+                                return pIds.Select(b => new SegmentPropertyKey(isCustom, b));
                             }).ToList()
                             : [];
 
@@ -790,11 +835,11 @@ namespace Bakabase.InsideWorld.Business.Services
 
                     var globalValues = tmpGlobalMatchedValues.SelectMany(a =>
                         {
-                            var (isReserved, pIdAndValues) = a;
+                            var (isCustom, pIdAndValues) = a;
                             return pIdAndValues.Select(b =>
                             {
                                 var (pId, textValues) = b;
-                                return new GlobalMatchedValue(new SegmentPropertyKey(isReserved, pId), textValues);
+                                return new GlobalMatchedValue(new SegmentPropertyKey(isCustom, pId), textValues);
                             });
                         })
                         .ToList();
@@ -802,13 +847,13 @@ namespace Bakabase.InsideWorld.Business.Services
                     var propertyIdBizValueMap = new Dictionary<int, HashSet<string>>();
                     foreach (var segment in list)
                     {
-                        foreach (var p in segment.PropertyKeys.Where(p => !p.IsReserved))
+                        foreach (var p in segment.PropertyKeys.Where(p => p.IsCustom))
                         {
                             propertyIdBizValueMap.GetOrAdd(p.Id, () => []).Add(segment.SegmentText);
                         }
                     }
 
-                    foreach (var gv in globalValues.Where(x => !x.PropertyKey.IsReserved))
+                    foreach (var gv in globalValues.Where(x => x.PropertyKey.IsCustom))
                     {
                         var set = propertyIdBizValueMap.GetOrAdd(gv.PropertyKey.Id, () => []);
                         foreach (var x in gv.TextValues)

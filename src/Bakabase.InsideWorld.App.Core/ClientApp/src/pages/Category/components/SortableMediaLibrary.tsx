@@ -1,24 +1,20 @@
 import React, { useCallback, useEffect, useReducer, useState } from 'react';
-import { Badge, Balloon, Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
+import { Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
+import { DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import CustomIcon from '@/components/CustomIcon';
-import {
-  AddMediaLibraryPathConfiguration,
-  RemoveMediaLibrary,
-  RemoveMediaLibraryEnhancementRecords,
-} from '@/sdk/apis';
 import DragHandle from '@/components/DragHandle';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
 import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import PathConfigurationDialog from '@/pages/Category/components/PathConfigurationDialog';
 import ClickableIcon from '@/components/ClickableIcon';
-import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsInBulkDialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { Chip, Badge, Tooltip, Button, Modal } from '@/components/bakaui';
 
 export default (({
                    library,
@@ -62,7 +58,7 @@ export default (({
   // }, 'MediaLibrary')
 
   const renderFilter = useCallback((pc: any) => {
-    const resourceValue = pc.rpmValues?.find(r => r.property == ResourceProperty.Resource);
+    const resourceValue = pc.rpmValues?.find(r => !r.isCustomProperty && r.propertyId == ResourceProperty.Resource);
     let valueComponent: any;
     if (resourceValue) {
       switch (resourceValue.valueType) {
@@ -86,9 +82,10 @@ export default (({
     if (valueComponent) {
       return (
         <div className={'filter'}>
-          <SimpleLabel
-            status={'default'}
-          >{t(ResourceMatcherValueType[resourceValue.valueType])}</SimpleLabel>
+          <Chip
+            size={'sm'}
+            radius={'sm'}
+          >{t(ResourceMatcherValueType[resourceValue.valueType])}</Chip>
           {valueComponent}
         </div>
       );
@@ -96,10 +93,19 @@ export default (({
     return (<div className={'unset filter'}>{t('Not set')}</div>);
   }, []);
 
-  const renderAdditionalProperties = useCallback(p => {
-    const properties = p.rpmValues?.filter((a, j) => j == p.rpmValues.findIndex((b) => b.property == a.property) && a.property != ResourceProperty.Resource) || [];
-    return properties.length > 0 ? properties.map((s) => t(ResourceProperty[s.property]))
-      .join(',') : (<div className={'unset'}>{t('Not set')}</div>);
+  const renderCustomProperties = useCallback(p => {
+    const properties = p.rpmValues?.filter((a, j) => j == p.rpmValues.findIndex((b) => b.isCustomProperty && b.propertyId == a.propertyId)) || [];
+    return properties.length > 0 ? properties.map((s) => s.customProperty?.name)
+      .map(n => {
+        return (
+          <Chip
+            size={'sm'}
+            radius={'sm'}
+          >
+            {n}
+          </Chip>
+        );
+      }) : t('Not set');
   }, []);
 
   return (
@@ -110,7 +116,7 @@ export default (({
     >
       <div className="library">
         <DragHandle {...listeners} {...attributes} />
-        <div className="name">
+        <div className="flex items-center gap-1">
           <div
             className={'edit'}
             onClick={() => {
@@ -154,44 +160,47 @@ export default (({
           >
             {library.name}
           </div>
-          <div className="opt">
-            <Balloon.Tooltip
-              trigger={(
-                <Badge
-                  count={library.resourceCount}
-                  overflowCount={9999999}
-                  className={'count'}
-                />
-              )}
-              triggerType={'hover'}
-              align={'t'}
+          {library.resourceCount > 0 && (
+            <Tooltip
+              content={t('Count of resources')}
             >
-              {t('Count of resources')}
-            </Balloon.Tooltip>
+              <Chip
+                color={'success'}
+                size={'sm'}
+                variant={'flat'}
+              >
+                {library.resourceCount}
+              </Chip>
+            </Tooltip>
+          )}
+          <div>
             <Dropdown
               trigger={(
-                <ClickableIcon
-                  colorType={'normal'}
-                  type={'plus-circle'}
-                  onClick={() => {
-                    FileSystemSelectorDialog.show({
-                      targetType: 'folder',
-                      onSelected: e => {
-                        AddMediaLibraryPathConfiguration({
-                          id: library.id,
-                          model: {
-                            path: e.path,
-                          },
-                        })
-                          .invoke((b) => {
-                            if (!b.code) {
-                              loadAllMediaLibraries();
-                            }
-                          });
-                      },
-                    });
-                  }}
-                />
+                <Button
+                  variant={'light'}
+                  size={'sm'}
+                  isIconOnly
+                >
+                  <PlusCircleOutlined
+                    className={'text-base'}
+                    onClick={() => {
+                      FileSystemSelectorDialog.show({
+                        targetType: 'folder',
+                        onSelected: e => {
+                          BApi.mediaLibrary.addMediaLibraryPathConfiguration(library.id,
+                            {
+                              path: e.path,
+                            })
+                            .then((b) => {
+                              if (!b.code) {
+                                loadAllMediaLibraries();
+                              }
+                            });
+                        },
+                      });
+                    }}
+                  />
+                </Button>
               )}
               triggerType={['hover']}
             >
@@ -204,17 +213,26 @@ export default (({
                     });
                   }}
                 >
-                  <CustomIcon type="playlist_add" />
+                  <CustomIcon
+                    type="playlist_add"
+                    className={'text-base'}
+                  />
                   {t('Add root paths in bulk')}
                 </Menu.Item>
               </Menu>
             </Dropdown>
             <Dropdown
               trigger={(
-                <ClickableIcon
-                  colorType={'normal'}
-                  type={'ellipsis-circle'}
-                />
+                <Button
+                  variant={'light'}
+                  size={'sm'}
+                  isIconOnly
+                >
+                  <UnorderedListOutlined
+                    className={'text-base'}
+                  />
+                </Button>
+
               )}
               className={'category-page-media-library-more-operations-popup'}
               triggerType={['click']}
@@ -227,10 +245,8 @@ export default (({
                       title: `${t('Removing all enhancement records of resources under this media library')}`,
                       closeable: true,
                       onOk: () => new Promise(((resolve, reject) => {
-                        RemoveMediaLibraryEnhancementRecords({
-                          id: library.id,
-                        })
-                          .invoke((a) => {
+                        BApi.mediaLibrary.deleteByEnhancementsMediaLibrary(library.id)
+                          .then((a) => {
                             if (!a.code) {
                               resolve(a);
                             }
@@ -239,7 +255,10 @@ export default (({
                     });
                   }}
                 >
-                  <CustomIcon type="flashlight" />
+                  <CustomIcon
+                    type="flashlight"
+                    className={'text-base'}
+                  />
                   {t('Remove all enhancement records')}
                 </Menu.Item>
                 <Menu.Item
@@ -249,10 +268,8 @@ export default (({
                       title: `${t('Deleting')} ${library.name}`,
                       closeable: true,
                       onOk: () => new Promise(((resolve, reject) => {
-                        RemoveMediaLibrary({
-                          id: library.id,
-                        })
-                          .invoke((a) => {
+                        BApi.mediaLibrary.deleteMediaLibrary(library.id)
+                          .then((a) => {
                             if (!a.code) {
                               loadAllMediaLibraries();
                               resolve(a);
@@ -262,7 +279,10 @@ export default (({
                     });
                   }}
                 >
-                  <CustomIcon type="delete" />
+                  <CustomIcon
+                    type="delete"
+                    className={'text-base'}
+                  />
                   {t('Remove')}
                 </Menu.Item>
               </Menu>
@@ -278,61 +298,73 @@ export default (({
               key={i}
               onClick={() => {
                 createPortal(PathConfigurationDialog, {
-                  onSaved: () => loadAllMediaLibraries(),
-                  library,
+                  onSaved: (pc) => {
+                    Object.assign(library.pathConfigurations[i], pc);
+                    forceUpdate();
+                  },
+                  libraryId: library.id,
                   pcIdx: i,
                 });
               }}
             >
-              <div className="path">
+              <div className="flex items-center">
                 <span>
                   {p.path}
                 </span>
-                <SimpleLabel status={'default'}>
+                <Chip
+                  size={'sm'}
+                  radius={'sm'}
+                  color={'success'}
+                  variant={'light'}
+                >
                   {library.fileSystemInformation?.[p.path]?.freeSpaceInGb}GB
-                </SimpleLabel>
-                <ClickableIcon
-                  type="delete"
-                  colorType={'danger'}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    Dialog.confirm({
-                      title: `${t('Deleting')} ${p.path}`,
-                      closeable: true,
-                      onOk: async () => {
-                        const rsp = await BApi.mediaLibrary.removeMediaLibraryPathConfiguration(library.id, {
-                          index: i,
+                </Chip>
+                <div>
+                  <Button
+                    size={'sm'}
+                    isIconOnly
+                    variant={'light'}
+                  >
+                    <FolderOpenOutlined
+                      className={'text-base'}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        BApi.tool.openFileOrDirectory({ path: p.path });
+                      }}
+                    />
+                  </Button>
+                  <Button
+                    size={'sm'}
+                    isIconOnly
+                    variant={'light'}
+                    color={'danger'}
+                  >
+                    <DeleteOutlined
+                      className={'text-base'}
+                      onClick={(e) => {
+                        createPortal(Modal, {
+                          defaultVisible: true,
+                          title: `${t('Deleting')} ${p.path}`,
+                          onOk: async () => {
+                            const rsp = await BApi.mediaLibrary.removeMediaLibraryPathConfiguration(library.id, {
+                              index: i,
+                            });
+                            if (rsp.code) {
+                              throw new Error(rsp.message!);
+                            } else {
+                              loadAllMediaLibraries();
+                            }
+                          },
                         });
-                        if (rsp.code) {
-                          throw new Error(rsp.message!);
-                        } else {
-                          loadAllMediaLibraries();
-                        }
-                      },
-                    });
-                  }}
-                />
-                <ClickableIcon
-                  colorType={'normal'}
-                  type="folder-open"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    BApi.tool.openFileOrDirectory({ path: p.path });
-                  }}
-                />
+                      }}
+                    />
+                  </Button>
+                </div>
               </div>
               {renderFilter(p)}
-              <div className={`tags fixed-tags ${p.fixedTags?.length > 0 ? '' : 'not-set'}`}>
-                {p.fixedTags?.length > 0 ? p.fixedTags.map((b) => {
-                  return (
-                    <div className={'tag'} key={b.id}>{b.groupName ? `${b.groupName}:${b.name}` : b.name}</div>
-                  );
-                }) : (<div className={'unset'}>{t('Not set')}</div>)}
-              </div>
-              <div className="segment-configurations">
-                {renderAdditionalProperties(p)}
+              <div className="flex flex-wrap gap-1">
+                {renderCustomProperties(p)}
               </div>
             </div>
           );

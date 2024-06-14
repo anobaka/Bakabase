@@ -59,10 +59,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("dependency/latest-version")]
         [SwaggerOperation(OperationId = "GetDependentComponentLatestVersion")]
-        public async Task<SingletonResponse<DependentComponentVersion>> GetDependentComponentLatestVersion(string id)
+        public async Task<SingletonResponse<DependentComponentVersion>> GetDependentComponentLatestVersion(string id, bool fromCache = true)
         {
             var installer = _componentServices[id];
-            var latestVersion = await installer.GetLatestVersion(HttpContext.RequestAborted);
+            var latestVersion = await installer.GetLatestVersion(fromCache, HttpContext.RequestAborted);
             return new SingletonResponse<DependentComponentVersion>(latestVersion);
         }
 

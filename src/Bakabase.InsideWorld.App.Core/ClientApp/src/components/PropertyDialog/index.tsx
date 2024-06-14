@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dropdown, DropdownMenu, DropdownItem, DropdownTrigger, RadioGroup, Radio } from '@nextui-org/react';
 import AceEditor from 'react-ace';
+import type { Key } from '@react-types/shared';
 import ChoiceList from './components/ChoiceList';
 import { createPortalOfComponent } from '@/components/utils';
 import { CustomPropertyType, StandardValueConversionLoss } from '@/sdk/constants';
@@ -23,7 +24,7 @@ import 'ace-builds/src-noconflict/ext-language_tools';
 
 interface IProps {
   value?: CustomPropertyForm;
-  onSaved?: (property: Omit<IProperty, 'isReserved'>) => any;
+  onSaved?: (property: Omit<IProperty, 'isCustom'>) => any;
   validValueTypes?: CustomPropertyType[];
 }
 
@@ -126,7 +127,7 @@ const PropertyDialog = ({
                   value: choice.id,
                 }))}
                 onSelectionChange={c => {
-                  const array = Array.from(c.values());
+                  const array = Array.from((c as Set<Key>).values());
                   setProperty({
                     ...property,
                     options: {
@@ -156,7 +157,7 @@ const PropertyDialog = ({
                     ...property,
                     options: {
                       ...options,
-                      precision: c.values().next().value,
+                      precision: (c as Set<Key>).values().next().value,
                     },
                   });
                 }}
@@ -185,7 +186,7 @@ const PropertyDialog = ({
                     ...property,
                     options: {
                       ...options,
-                      precision: c.values().next().value,
+                      precision: (c as Set<Key>).values().next().value,
                     },
                   });
                 }}
@@ -239,7 +240,7 @@ const PropertyDialog = ({
                     ...property,
                     options: {
                       ...options,
-                      maxValue: c.values().next().value,
+                      maxValue: (c as Set<Key>).values().next().value,
                     },
                   });
                 }}
@@ -306,7 +307,8 @@ const PropertyDialog = ({
           onSaved?.({
             id: rsp.data!.id!,
             name: rsp.data!.name!,
-            valueType: rsp.data!.valueType!,
+            dbValueType: rsp.data!.dbValueType!,
+            bizValueType: rsp.data!.bizValueType!,
             type: rsp.data!.type!,
           });
           close();

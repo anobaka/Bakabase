@@ -22,7 +22,7 @@ const CategoryCustomPropertyBinderDialog = ({
     <PropertySelector
       multiple
       pool={'custom'}
-      selection={category.customProperties?.map(c => ({ id: c.id, isReserved: false }))}
+      selection={category.customProperties?.map(c => ({ id: c.id, isCustom: true }))}
       title={t('Binding custom properties to category {{categoryName}}', { categoryName: category.name })}
       onSubmit={async (properties) => {
         const rsp = await BApi.category.bindCustomPropertiesToCategory(category.id, { customPropertyIds: properties?.map(p => p.id) });

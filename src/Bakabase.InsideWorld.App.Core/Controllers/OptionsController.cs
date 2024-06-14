@@ -21,6 +21,7 @@ using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Configs.Infrastructures;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.InsideWorld.Models.RequestModels.Options;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
@@ -45,7 +46,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         public OptionsController(IStringLocalizer<SharedResource> prevLocalizer,
             IBOptionsManager<AppOptions> appOptionsManager,
-            InsideWorldOptionsManagerPool insideWorldOptionsManager,  InsideWorldLocalizer localizer, IGuiAdapter guiAdapter, FfMpegService ffMpegInstaller)
+            InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
+            IGuiAdapter guiAdapter, FfMpegService ffMpegInstaller)
         {
             _prevLocalizer = prevLocalizer;
             _appOptionsManager = appOptionsManager;
@@ -402,10 +404,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("resource")]
         [SwaggerOperation(OperationId = "GetResourceOptions")]
-        public async Task<SingletonResponse<ResourceOptionsDto>> GetResourceOptions()
+        public async Task<SingletonResponse<ResourceOptions>> GetResourceOptions()
         {
-            return new SingletonResponse<ResourceOptionsDto>((_insideWorldOptionsManager.Resource)
-                .Value.ToDto());
+            return new SingletonResponse<ResourceOptions>(_insideWorldOptionsManager.Resource.Value);
         }
 
         [HttpPatch("resource")]
@@ -422,6 +423,11 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 if (model.CoverOptions != null)
                 {
                     options.CoverOptions = model.CoverOptions;
+                }
+
+                if (model.PropertyValueScopePriority?.Any() == true)
+                {
+                    options.PropertyValueScopePriority = model.PropertyValueScopePriority;
                 }
 
             });
@@ -460,13 +466,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpPatch("network")]
         [SwaggerOperation(OperationId = "PatchNetworkOptions")]
-        public async Task<BaseResponse> PatchNetworkOptions([FromBody] NetworkOptions model)
+        public async Task<BaseResponse> PatchNetworkOptions([FromBody] NetworkOptionsPatchInputModel model)
         {
             await _insideWorldOptionsManager.Network.SaveAsync(options =>
             {
                 if (model.Proxy != null)
                 {
                     options.Proxy = model.Proxy;
+                }
+
+                if (model.CustomProxies != null)
+                {
+                    options.CustomProxies = model.CustomProxies.Select(c => c.ToOptions()).ToList();
                 }
 
             });

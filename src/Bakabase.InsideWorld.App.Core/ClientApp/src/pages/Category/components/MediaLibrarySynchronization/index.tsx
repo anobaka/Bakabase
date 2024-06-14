@@ -1,13 +1,12 @@
 import React, { useEffect } from 'react';
 import { Balloon, Progress } from '@alifd/next';
-import i18n from 'i18next';
-import { SyncMediaLibrary } from '@/sdk/apis';
 import { BackgroundTaskStatus } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import store from '@/store';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/bakaui';
+import { Button, Tooltip } from '@/components/bakaui';
+import BApi from '@/sdk/BApi';
 
 const testData = {
   status: BackgroundTaskStatus.Running,
@@ -49,7 +48,7 @@ export default ({
               color={'secondary'}
               size={'small'}
               onClick={() => {
-                SyncMediaLibrary().invoke();
+                BApi.mediaLibrary.startSyncMediaLibrary();
               }}
             >{t('Sync now')}
             </Button>
@@ -57,25 +56,28 @@ export default ({
           {(failed || isComplete) && (
             <div className="status">
               {failed && (
-                <Balloon
-                  trigger={(
-                    <div className={'failed'}>
-                      {t('Failed')}
-                      &nbsp;
-                      <CustomIcon type={'question-circle'} size={'xs'} />
-                    </div>
+                <Tooltip
+                  content={(
+                    <pre>{taskInfo?.message}</pre>
                   )}
-                  closable={false}
-                  triggerType={'hover'}
-                  align={'bl'}
                 >
-                  <pre>{taskInfo?.message}</pre>
-                </Balloon>
+                  <div className={'failed'}>
+                    {t('Failed')}
+                    &nbsp;
+                    <CustomIcon
+                      type={'question-circle'}
+                      className={'text-base'}
+                    />
+                  </div>
+                </Tooltip>
               )}
               {
                 isComplete && (
                   <div className={'complete'}>
-                    <CustomIcon type={'check-circle'} size={'xs'} />
+                    <CustomIcon
+                      type={'check-circle'}
+                      className={'text-base'}
+                    />
                     &nbsp;
                     {t('Complete')}
                   </div>

@@ -41,7 +41,7 @@ const Target = ({
 
   const [selectedProperty, setSelectedProperty] = useState<IProperty>();
 
-  const lossData = target.targetCandidates?.find(d => d.type == (selectedProperty?.valueType as unknown as CustomPropertyType))?.lossData;
+  const lossData = target.targetCandidates?.find(d => d.type == (selectedProperty?.dbValueType as unknown as CustomPropertyType))?.lossData;
   const hasLossData = lossData && Object.keys(lossData).length > 0;
 
   useEffect(() => {

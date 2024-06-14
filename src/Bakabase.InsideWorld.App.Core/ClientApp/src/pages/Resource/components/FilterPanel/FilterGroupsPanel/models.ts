@@ -16,7 +16,7 @@ export enum GroupCombinator {
 
 export interface IFilter {
   propertyId?: number;
-  isReservedProperty?: boolean;
+  isCustomProperty?: boolean;
   group?: IGroup;
   operation?: SearchOperation;
   value?: string;

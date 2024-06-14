@@ -1,34 +1,30 @@
 import React, { useState } from 'react';
-import { Balloon, Checkbox, Dialog, Input, Menu, Message } from '@alifd/next';
+import { Checkbox, Dialog, Input, Message } from '@alifd/next';
 import { SketchPicker } from 'react-color';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
-import { UnorderedListOutlined } from '@ant-design/icons';
+import { EditOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import AddMediaLibraryInBulkDialog from './AddMediaLibraryInBulkDialog';
 import DisplayNameTemplateEditorDialog from './DisplayNameTemplateEditorDialog';
-import { AddMediaLibrary, RemoveCategoryEnhancementRecords, UpdateResourceCategory } from '@/sdk/apis';
 import CustomIcon from '@/components/CustomIcon';
 import { ComponentType, componentTypes, CoverSelectOrder, coverSelectOrders } from '@/sdk/constants';
 import SortableMediaLibraryList from '@/pages/Category/components/SortableMediaLibraryList';
 import DragHandle from '@/components/DragHandle';
 import BasicCategoryComponentSelector from '@/components/BasicCategoryComponentSelector';
-import EnhancerSelector from '@/components/EnhancerSelector';
 import BApi from '@/sdk/BApi';
 import ClickableIcon from '@/components/ClickableIcon';
-import SimpleLabel from '@/components/SimpleLabel';
 import CategoryCustomPropertyBinderDialog from '@/pages/Category/components/CustomPropertyBinder';
 import {
-  Chip,
   Button,
+  Chip,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Modal,
   Spacer,
   Tooltip,
-  Badge,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-  Modal,
 } from '@/components/bakaui';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -108,7 +104,7 @@ export default (({
         closeable: true,
         onOk: () => new Promise((resolve, reject) => {
           if (newKey) {
-            return BApi.category.configureResourceCategoryComponents(category.id, {
+            return BApi.category.configureCategoryComponents(category.id, {
               componentKeys: [newKey],
               type: componentType,
             }).then(a => {
@@ -126,6 +122,8 @@ export default (({
       });
     }
   };
+
+  const resourceCount = libraries.reduce((s, t) => s + t.resourceCount, 0);
 
   return (
     <div
@@ -202,14 +200,13 @@ export default (({
                   type="select"
                   useInBuildIcon
                   onClick={() => {
-                    UpdateResourceCategory({
-                      id: category.id,
-                      model: {
+                    BApi.category.patchCategory(category.id,
+                      {
                         name,
                         color: categoryColor.hex,
                       },
-                    })
-                      .invoke((t) => {
+                    )
+                      .then((t) => {
                         if (!t.code) {
                           category.name = name;
                           category.color = categoryColor.hex;
@@ -230,14 +227,6 @@ export default (({
             ) : (
               <span
                 className="editable"
-                onClick={() => {
-                  setName(category.name);
-                  setCategoryColor({
-                    hex: category.color,
-                  });
-                  // console.log(category.color);
-                  setEditMode(EditMode.NameAndColor);
-                }}
               >
                 <span className="hover-area">
                   <span
@@ -246,7 +235,20 @@ export default (({
                   >{category.name}
                   </span>
                   &nbsp;
-                  <ClickableIcon type={'edit-square'} colorType={'normal'} />
+                  <Button
+                    size={'sm'}
+                    isIconOnly
+                    onClick={() => {
+                      setName(category.name);
+                      setCategoryColor({
+                        hex: category.color,
+                      });
+                      // console.log(category.color);
+                      setEditMode(EditMode.NameAndColor);
+                    }}
+                  >
+                    <EditOutlined className={'text-base'} />
+                  </Button>
                 </span>
               </span>
             )}
@@ -263,41 +265,40 @@ export default (({
             <DropdownMenu
               aria-label={'static actions'}
               onAction={key => {
-              switch (key) {
-                case 'enhance-manually': {
-                  break;
+                switch (key) {
+                  case 'enhance-manually': {
+                    break;
+                  }
+                  case 'delete-enhancements': {
+                    createPortal(Modal, {
+                      defaultVisible: true,
+                      title: t('Removing all enhancement records of resources under this category'),
+                      children: t('This operation cannot be undone. Would you like to proceed?'),
+                      onOk: async () => {
+                        await BApi.category.deleteEnhancementsByCategory(category.id);
+                      },
+                    });
+                    break;
+                  }
+                  case 'delete-category': {
+                    createPortal(Modal, {
+                      defaultVisible: true,
+                      title: `${t('Deleting')} ${category.name}`,
+                      children: (<>
+                        <div>{t('All related data will be deleted too, are you sure?')}</div>
+                        <div>{t('This operation cannot be undone. Would you like to proceed?')}</div>
+                      </>),
+                      onOk: async () => {
+                        const rsp = await BApi.category.deleteCategory(category.id);
+                        if (!rsp.code) {
+                          loadAllCategories();
+                        }
+                      },
+                    });
+                    break;
+                  }
                 }
-                case 'delete-enhancements': {
-                  createPortal(Modal, {
-                    defaultVisible: true,
-                    title: t('Removing all enhancement records of resources under this category'),
-                    children: t('This operation cannot be undone. Would you like to proceed?'),
-                    onOk: async () => {
-                      await BApi.category.removeCategoryEnhancements(category.id);
-                    },
-                  });
-                  break;
-                }
-                case 'delete-category':
-                {
-                  createPortal(Modal, {
-                    defaultVisible: true,
-                    title: `${t('Deleting')} ${category.name}`,
-                    children: (<>
-                      <div>{t('All related data will be deleted too, are you sure?')}</div>
-                      <div>{t('This operation cannot be undone. Would you like to proceed?')}</div>
-                    </>),
-                    onOk: async () => {
-                      const rsp = await BApi.category.deleteResourceCategoryAndClearAllRelatedData(category.id);
-                      if (!rsp.code) {
-                        loadAllCategories();
-                      }
-                    },
-                  });
-                  break;
-                }
-              }
-            }}
+              }}
             >
               <DropdownItem
                 className="text-danger"
@@ -315,16 +316,21 @@ export default (({
               </DropdownItem>
             </DropdownMenu>
           </Dropdown>
-          <Spacer x={2} />
-          <Tooltip
-            content={t('Count of resources')}
-          >
-            <Badge
-              content={libraries.reduce((s, t) => s + t.resourceCount, 0)}
-              color={'primary'}
-              variant={'flat'}
-            >&nbsp;</Badge>
-          </Tooltip>
+
+          {resourceCount > 0 && (
+            <>
+              <Tooltip
+                content={t('Count of resources')}
+              >
+                <Chip
+                  size={'sm'}
+                  color={'success'}
+                  variant={'flat'}
+                >{resourceCount}</Chip>
+              </Tooltip>
+            </>
+          )}
+
         </div>
         <div className="right">
           <Button
@@ -347,7 +353,7 @@ export default (({
                 width: 'auto',
                 closeMode: ['close', 'mask', 'esc'],
                 onOk: async () => {
-                  const rsp = await BApi.category.duplicateResourceCategory(category.id, { name });
+                  const rsp = await BApi.category.duplicateCategory(category.id, { name });
                   if (!rsp.code) {
                     loadAllCategories();
                     loadAllMediaLibraries();
@@ -412,13 +418,13 @@ export default (({
               className="hover-area"
               onClick={() => {
                 const order = (category.coverSelectionOrder || CoverSelectOrder.FilenameAscending) % coverSelectOrders.length + 1;
-                UpdateResourceCategory({
-                  id: category.id,
-                  model: {
+                BApi.category.patchCategory(
+                  category.id,
+                  {
                     coverSelectionOrder: order,
                   },
-                })
-                  .invoke((t) => {
+                )
+                  .then((t) => {
                     if (!t.code) {
                       category.coverSelectionOrder = order;
                       forceUpdate();
@@ -448,13 +454,13 @@ export default (({
           <Checkbox
             checked={category.generateNfo}
             onChange={(checked) => {
-              UpdateResourceCategory({
-                id: category.id,
-                model: {
+              BApi.category.patchCategory(
+                category.id,
+                {
                   generateNfo: checked,
                 },
-              })
-                .invoke((t) => {
+              )
+                .then((t) => {
                   if (!t.code) {
                     category.generateNfo = checked;
                     forceUpdate();
@@ -644,8 +650,8 @@ export default (({
                         onOk: async () => {
                           if (n?.length > 0) {
                             const r = await BApi.mediaLibrary.addMediaLibrary({
-                                categoryId: category.id,
-                                name: n,
+                              categoryId: category.id,
+                              name: n,
                             });
                             if (!r.code) {
                               loadAllMediaLibraries();
@@ -660,8 +666,7 @@ export default (({
                       });
                       break;
                     }
-                    case 'add-in-bulk':
-                    {
+                    case 'add-in-bulk': {
                       AddMediaLibraryInBulkDialog.show({
                         categoryId: category.id,
                         onSubmitted: loadAllMediaLibraries,
@@ -691,8 +696,8 @@ export default (({
           <div className="path-configuration header">
             <div className="path">{t('Root path')}</div>
             <div className="filter">{t('Resource discovery')}</div>
-            <div className="tags">{t('Fixed tags')}</div>
-            <div className="tags">{t('Additional properties')}</div>
+            {/* <div className="tags">{t('Fixed tags')}</div> */}
+            <div className="tags">{t('Custom properties')}</div>
           </div>
         </div>
         <div className="libraries">

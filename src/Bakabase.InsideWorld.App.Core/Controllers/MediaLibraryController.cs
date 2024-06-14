@@ -40,6 +40,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return new(await service.GetAll(null, additionalItems));
         }
 
+        [HttpGet("{id:int}")]
+        [SwaggerOperation(OperationId = "GetMediaLibrary")]
+        public async Task<SingletonResponse<MediaLibrary?>> Get(int id, MediaLibraryAdditionalItem additionalItems)
+        {
+            return new(await service.Get(id, additionalItems));
+        }
+
         [HttpPost]
         [SwaggerOperation(OperationId = "AddMediaLibrary")]
         public async Task<BaseResponse> Add([FromBody] MediaLibraryAddDto model)

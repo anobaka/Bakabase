@@ -5,10 +5,12 @@ using Bakabase.InsideWorld.Business.Configurations.Models.Dto;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
+using Bootstrap.Components.Doc.Swagger;
 
 namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
 {
     [Options]
+    [SwaggerCustomModel]
     public record ResourceOptions
     {
         public DateTime LastSyncDt { get; set; }
@@ -17,9 +19,7 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
         public CoverOptionsModel CoverOptions { get; set; } = new();
         public bool HideChildren { get; set; }
         public PropertyValueScope[] PropertyValueScopePriority { get; set; } = [];
-
         public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; } = [];
-
         public record CoverOptionsModel
         {
             public CoverSaveLocation? SaveLocation { get; set; }

@@ -32,10 +32,10 @@ namespace Bakabase.Abstractions.Models.Domain
                 public HashSet<string> TextValues { get; set; } = TextValues;
             }
 
-            public record SegmentPropertyKey(bool IsReserved, int Id)
+            public record SegmentPropertyKey(bool IsCustom, int Id)
             {
                 public int Id { get; set; } = Id;
-                public bool IsReserved { get; set; } = IsReserved;
+                public bool IsCustom { get; set; } = IsCustom;
             }
 
             public Dictionary<int, object?> CustomPropertyIdValueMap { get; set; } = [];

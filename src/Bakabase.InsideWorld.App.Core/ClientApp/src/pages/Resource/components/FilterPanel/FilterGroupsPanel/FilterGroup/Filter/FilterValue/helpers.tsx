@@ -5,42 +5,35 @@ import React from 'react';
 import type { DataPool } from '../../../models';
 import type { FilterValueContext } from './models';
 import { RenderType } from './models';
-import { NumberValueRenderer, StringValueRenderer, BooleanValueRenderer, ListStringValueRenderer, DateTimeValueRenderer } from './ValueRenderer';
+import {
+  BooleanValueRenderer,
+  DateTimeValueRenderer,
+  ListStringValueRenderer,
+  NumberValueRenderer,
+  StringValueRenderer,
+} from '@/components/StandardValue';
 import {
   BooleanValueEditor,
   ChoiceValueEditor,
   DateTimeValueEditor,
+  MultilevelValueEditor,
   NumberValueEditor,
-  StringValueEditor, TimeValueEditor,
-} from './ValueEditor';
+  StringValueEditor,
+  TimeValueEditor,
+} from '@/components/StandardValue';
 import type { ChoicePropertyOptions, IProperty, MultilevelPropertyOptions } from '@/components/Property/models';
 import { CustomPropertyType, ResourceProperty } from '@/sdk/constants';
 import { findNodeChainInMultilevelData } from '@/components/StandardValue/helpers';
-import MultilevelValueEditor
-  from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/FilterValue/ValueEditor/Editors/MultilevelValueEditor';
 import type { MultilevelData } from '@/components/StandardValue/models';
 
 export function getRenderType(property?: IProperty): RenderType | undefined {
   if (!property) {
     return;
   }
-  if (property.isReserved) {
-    const type = property.id as ResourceProperty;
-    switch (type) {
-      case ResourceProperty.FileName:
-      case ResourceProperty.DirectoryPath:
-        return RenderType.StringValue;
-      case ResourceProperty.CreatedAt:
-      case ResourceProperty.FileCreatedAt:
-      case ResourceProperty.FileModifiedAt:
-        return RenderType.DateTimeValue;
-      case ResourceProperty.Category:
-        break;
-      case ResourceProperty.MediaLibrary:
-        return RenderType.MediaLibrary;
-    }
-  } else {
+  if (property.isCustom) {
     switch (property.type as CustomPropertyType) {
+      case CustomPropertyType.Tags:
+        return RenderType.MultilevelValue;
       case CustomPropertyType.SingleLineText:
       case CustomPropertyType.MultilineText:
         return RenderType.StringValue;
@@ -54,7 +47,6 @@ export function getRenderType(property?: IProperty): RenderType | undefined {
         return RenderType.NumberValue;
       case CustomPropertyType.Boolean:
         return RenderType.BooleanValue;
-        break;
       case CustomPropertyType.Link:
         return RenderType.StringValue;
       case CustomPropertyType.Attachment:
@@ -69,6 +61,25 @@ export function getRenderType(property?: IProperty): RenderType | undefined {
         break;
       case CustomPropertyType.Multilevel:
         return RenderType.MultilevelValue;
+    }
+  } else {
+    const type = property.id as ResourceProperty;
+    switch (type) {
+      case ResourceProperty.FileName:
+      case ResourceProperty.DirectoryPath:
+        return RenderType.StringValue;
+      case ResourceProperty.CreatedAt:
+      case ResourceProperty.FileCreatedAt:
+      case ResourceProperty.FileModifiedAt:
+        return RenderType.DateTimeValue;
+      case ResourceProperty.Category:
+        break;
+      case ResourceProperty.MediaLibrary:
+        return RenderType.MediaLibrary;
+      case ResourceProperty.Rating:
+        return RenderType.NumberValue;
+      case ResourceProperty.Introduction:
+        return RenderType.StringValue;
     }
   }
   return;
@@ -188,7 +199,7 @@ export function buildFilterValueContext(property: IProperty, value?: string, dat
 
               multilevelData.push(md);
             });
-            return multilevelData;
+            return multilevelData.filter(d => d.children && d.children.length > 0);
           }}
           onChange={v => {
             const newValue = v?.map(x => parseInt(x, 10));

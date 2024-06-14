@@ -1,4 +1,4 @@
-﻿namespace Bakabase.Abstractions.Models.Domain;
+﻿namespace Bakabase.Modules.StandardValue.Models.Domain;
 
 public record LinkValue
 {

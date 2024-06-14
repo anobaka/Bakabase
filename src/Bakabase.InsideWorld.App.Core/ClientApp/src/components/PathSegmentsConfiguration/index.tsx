@@ -78,7 +78,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
 
   useUpdateEffect(() => {
     value.forEach(v => {
-      if (!v.property.isReserved) {
+      if (v.property.isCustom) {
         v.property.name ??= customPropertyNameMap[v.property.id];
       }
     });
@@ -107,7 +107,8 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
       defaultVisible: true,
       title: t('Sure to delete this property?'),
       onOk: () => {
-        const bad = value?.filter(v => !v.property.equals(property))?.[valueIndex ?? 0];
+        const bad = value?.filter(v => v.property.equals(property))?.[valueIndex ?? 0];
+        // console.log(bad, value.filter(v => v != bad), property);
         setValue(value.filter(v => v != bad));
       },
     });

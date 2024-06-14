@@ -81,6 +81,12 @@ export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
 export type BakabaseAbstractionsModelsDomainConstantsInitializationContentType = 1 | 2;
 
 /**
+ * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 | 1000;
+
+/**
  * [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
  * @format int32
  */
@@ -178,7 +184,7 @@ export interface BakabaseAbstractionsModelsDomainMediaLibrary {
 
 export interface BakabaseAbstractionsModelsDomainPathConfiguration {
   path?: string | null;
-  rpmValues?: BakabaseInsideWorldModelsModelsAosPropertyPathSegmentMatcherValue[] | null;
+  rpmValues?: BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue[] | null;
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResult {
@@ -211,7 +217,23 @@ export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultReso
 export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey {
   /** @format int32 */
   id?: number;
-  isReserved?: boolean;
+  isCustom?: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
+  fixedText?: string | null;
+  /** @format int32 */
+  layer?: number | null;
+  regex?: string | null;
+  /** @format int32 */
+  propertyId?: number;
+  isCustomProperty?: boolean;
+  /** [1: Layer, 2: Regex, 3: FixedText] */
+  valueType?: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
+  customProperty?: BakabaseAbstractionsModelsDomainCustomProperty;
+  isSecondaryProperty?: boolean;
+  isResourceProperty?: boolean;
+  isValid?: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDomainResource {
@@ -685,25 +707,28 @@ export interface BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFa
   mediaCount?: number;
 }
 
-export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
-  /** [1: ResourceDirectory, 2: TempDirectory] */
-  saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
-  overwrite?: boolean | null;
-}
-
-export interface BakabaseInsideWorldBusinessConfigurationsModelsDtoResourceOptionsDto {
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions {
   /** @format date-time */
   lastSyncDt?: string;
   /** @format date-time */
   lastNfoGenerationDt?: string;
   lastSearchV2?: BakabaseAbstractionsModelsDtoResourceSearchDto;
   coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
+  hideChildren?: boolean;
+  propertyValueScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[] | null;
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
+}
+
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
+  /** [1: ResourceDirectory, 2: TempDirectory] */
+  saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
+  overwrite?: boolean | null;
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel {
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
   coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
+  propertyValueScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[] | null;
 }
 
 export interface BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel {
@@ -781,10 +806,24 @@ export interface BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptio
 }
 
 export interface BakabaseInsideWorldModelsConfigsNetworkOptions {
-  proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions;
+  customProxies?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions[] | null;
+  proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+}
+
+/**
+ * [0: DoNotUse, 1: UseSystem, 2: UseCustom]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConfigsNetworkOptionsProxyMode = 0 | 1 | 2;
+
+export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel {
+  /** [0: DoNotUse, 1: UseSystem, 2: UseCustom] */
+  mode?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyMode;
+  customProxyId?: string | null;
 }
 
 export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions {
+  id?: string | null;
   address?: string | null;
   credentials?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials;
 }
@@ -848,10 +887,10 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptor
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 1;
 
 /**
- * [0: None, 1: Category, 2: FileSystemInfo]
+ * [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationCustomProperties]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -1075,25 +1114,6 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   duration?: number;
 }
 
-export interface BakabaseInsideWorldModelsModelsAosPropertyPathSegmentMatcherValue {
-  fixedText?: string | null;
-  /** @format int32 */
-  layer?: number | null;
-  regex?: string | null;
-  /** @format int32 */
-  propertyId?: number;
-  isReservedProperty?: boolean;
-  /** [1: Layer, 2: Regex, 3: FixedText] */
-  valueType?: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
-  /** @deprecated */
-  key?: string | null;
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 12: Introduction, 13: Rating, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary] */
-  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
-  isSecondaryProperty?: boolean;
-  isResourceProperty?: boolean;
-  isValid?: boolean;
-}
-
 export interface BakabaseInsideWorldModelsModelsAosResourceDiff {
   /** [0: Category, 1: MediaLibrary, 2: ReleaseDt, 3: Publisher, 4: Name, 5: Language, 6: Volume, 7: Original, 8: Series, 9: Tag, 10: Introduction, 11: Rate, 12: CustomProperty] */
   property?: BakabaseInsideWorldModelsConstantsResourceDiffProperty;
@@ -1108,7 +1128,7 @@ export interface BakabaseInsideWorldModelsModelsAosResourceDiff {
 export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilter {
   /** @format int32 */
   propertyId?: number;
-  isReservedProperty?: boolean;
+  isCustomProperty?: boolean;
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
   operation?: BakabaseInsideWorldModelsConstantsSearchOperation;
   value?: string | null;
@@ -1412,6 +1432,17 @@ export interface BakabaseInsideWorldModelsRequestModelsFileRenameRequestModel {
 
 export interface BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel {
   ids?: number[] | null;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel {
+  customProxies?: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModelProxyOptions[] | null;
+  proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModelProxyOptions {
+  id?: string | null;
+  address?: string | null;
+  credentials?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsPathConfigurationRemoveRequestModel {
@@ -1761,6 +1792,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainCustomProperty;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibrary {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainMediaLibrary;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathConfigurationTestResult {
   /** @format int32 */
   code?: number;
@@ -1852,11 +1890,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDtoResourceOptionsDto {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions {
   /** @format int32 */
   code?: number;
   message?: string | null;
-  data?: BakabaseInsideWorldBusinessConfigurationsModelsDtoResourceOptionsDto;
+  data?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsBilibiliOptions {
@@ -3679,6 +3717,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByCategory
+     * @request DELETE:/category/{categoryId}/enhancement
+     */
+    deleteEnhancementsByCategory: (categoryId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${categoryId}/enhancement`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
   };
   component = {
     /**
@@ -3762,6 +3815,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getDependentComponentLatestVersion: (
       query?: {
         id?: string;
+        /** @default true */
+        fromCache?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -4434,10 +4489,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
-     * @name RemoveMediaLibraryEnhancements
+     * @name DeleteByEnhancementsMediaLibrary
      * @request DELETE:/media-library/{mediaLibraryId}/enhancement
      */
-    removeMediaLibraryEnhancements: (mediaLibraryId: number, params: RequestParams = {}) =>
+    deleteByEnhancementsMediaLibrary: (mediaLibraryId: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${mediaLibraryId}/enhancement`,
         method: "DELETE",
@@ -4454,7 +4509,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllMediaLibraries: (
       query?: {
-        /** [0: None, 1: Category, 2: FileSystemInfo] */
+        /** [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationCustomProperties] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem;
       },
       params: RequestParams = {},
@@ -4480,6 +4535,29 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibrary
+     * @name GetMediaLibrary
+     * @request GET:/media-library/{id}
+     */
+    getMediaLibrary: (
+      id: number,
+      query?: {
+        /** [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationCustomProperties] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibrary, any>({
+        path: `/media-library/${id}`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -4670,22 +4748,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-  };
-  resourceCategory = {
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name RemoveCategoryEnhancements
-     * @request DELETE:/resource-category/{categoryId}/enhancement
-     */
-    removeCategoryEnhancements: (categoryId: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-category/${categoryId}/enhancement`,
-        method: "DELETE",
         format: "json",
         ...params,
       }),
@@ -5695,7 +5757,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getResourceOptions: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDtoResourceOptionsDto,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions,
         any
       >({
         path: `/options/resource`,
@@ -5781,7 +5843,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchNetworkOptions
      * @request PATCH:/options/network
      */
-    patchNetworkOptions: (data: BakabaseInsideWorldModelsConfigsNetworkOptions, params: RequestParams = {}) =>
+    patchNetworkOptions: (
+      data: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/network`,
         method: "PATCH",

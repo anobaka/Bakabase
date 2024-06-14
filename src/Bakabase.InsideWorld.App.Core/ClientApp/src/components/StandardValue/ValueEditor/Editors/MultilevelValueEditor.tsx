@@ -5,12 +5,21 @@ import type { ValueEditorProps } from '../models';
 import { Button, Input, Modal } from '@/components/bakaui';
 import type { MultilevelData } from '@/components/StandardValue/models';
 import { filterMultilevelData } from '@/components/StandardValue/helpers';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
-interface MultilevelValueEditorProps<V> extends ValueEditorProps<V[]>{
+type Selectable<V> = (data: MultilevelData<V>, depth: number, index: number) => boolean;
+
+interface MultilevelValueEditorProps<V> extends ValueEditorProps<V[]>, DestroyableProps{
   getDataSource: () => Promise<MultilevelData<V>[] | undefined>;
+  selectable?: Selectable<V>;
+  multiple?: boolean;
 }
 
-export default <V = string>({ getDataSource, initValue, onChange, onCancel }: MultilevelValueEditorProps<V>) => {
+const buildDefaultSelectable: (<V>() => Selectable<V>) = () => {
+  return (data, depth, index) => data.children == undefined || data.children.length == 0;
+};
+
+export default <V = string>({ getDataSource, selectable = buildDefaultSelectable<V>(), initValue, onChange, onCancel, multiple }: MultilevelValueEditorProps<V>) => {
   const { t } = useTranslation();
 
   const [dataSource, setDataSource] = useState<MultilevelData<V>[]>([]);
@@ -46,10 +55,14 @@ export default <V = string>({ getDataSource, initValue, onChange, onCancel }: Mu
                 key={idx}
                 color={value.includes(nodeValue) ? 'primary' : 'default'}
                 onClick={() => {
-                  if (value.includes(nodeValue)) {
-                    setValue(value.filter(v => v !== nodeValue));
+                  if (multiple) {
+                    if (value.includes(nodeValue)) {
+                      setValue(value.filter(v => v !== nodeValue));
+                    } else {
+                      setValue([...value, nodeValue]);
+                    }
                   } else {
-                    setValue([...value, nodeValue]);
+                    setValue([nodeValue]);
                   }
                 }}
               >{label}</Button>

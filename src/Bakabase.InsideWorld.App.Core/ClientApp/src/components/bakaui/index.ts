@@ -37,6 +37,7 @@ import { Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from './compone
 import { DateInput, DatePicker } from './components/Date';
 import { TimeInput } from './components/Time';
 import Pagination from './components/Pagination';
+import Rating from './components/Rating';
 import { RadioGroup, Radio } from './components/Radio';
 
 export {
@@ -97,4 +98,5 @@ export {
   Pagination,
   RadioGroup,
   Radio,
+  Rating,
 };

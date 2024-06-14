@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 

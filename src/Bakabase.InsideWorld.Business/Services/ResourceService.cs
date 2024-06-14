@@ -345,7 +345,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             foreach (var r in doList)
                             {
                                 r.Properties ??= [];
-                                var builtinProperties = r.Properties.GetOrAdd(ResourcePropertyType.Reserved, () => []);
+                                var builtinProperties = r.Properties.GetOrAdd((int)ResourcePropertyType.Reserved, () => []);
                                 var ratingProperty = resourceRatingPropertyMap.GetValueOrDefault(r.Id);
                                 if (ratingProperty != null)
                                 {
@@ -377,7 +377,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             foreach (var r in doList)
                             {
                                 r.Properties ??= [];
-                                var customProperties = r.Properties.GetOrAdd(ResourcePropertyType.Reserved, () => []);
+                                var customProperties = r.Properties.GetOrAdd((int)ResourcePropertyType.Reserved, () => []);
                                 var values = customPropertiesValuesMap.GetValueOrDefault(r.Id);
                                 if (values != null)
                                 {

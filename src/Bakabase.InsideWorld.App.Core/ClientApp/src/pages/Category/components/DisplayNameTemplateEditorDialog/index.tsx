@@ -9,7 +9,7 @@ import { Button, Chip, Code, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import {
   CategoryResourceDisplayNameSegmentType,
-  ResourceCategoryAdditionalItem,
+  CategoryAdditionalItem,
   SpecialTextType,
 } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
@@ -68,7 +68,7 @@ export default ({
   const templateRef = useRef('');
 
   const init = useCallback(async () => {
-    const tr = await BApi.specialText.getAllSpecialText();
+    const tr = await BApi.specialText.getAllSpecialTexts();
     const texts = tr.data?.[SpecialTextType.Wrapper] || [];
     const wrappers = texts.map(text => {
       return {
@@ -78,7 +78,7 @@ export default ({
     });
     setWrappers(wrappers);
 
-    const cr = await BApi.category.getResourceCategory(categoryId, { additionalItems: ResourceCategoryAdditionalItem.CustomProperties });
+    const cr = await BApi.category.getCategory(categoryId, { additionalItems: CategoryAdditionalItem.CustomProperties });
     const c = cr.data || {};
     setCategory({
       id: c.id!,
@@ -119,7 +119,7 @@ export default ({
       onClose={close}
       size={'xl'}
       onOk={async () => {
-        await BApi.category.updateResourceCategory(categoryId, {
+        await BApi.category.patchCategory(categoryId, {
           resourceDisplayNameTemplate: templateRef.current,
         });
       }}

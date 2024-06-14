@@ -62,7 +62,8 @@ public abstract class AbstractAliasService<TDbContext>(
         {
             if (!string.IsNullOrEmpty(alias.Preferred))
             {
-                var otherAliases = await orm.GetAll(x => x.Preferred == alias.Preferred && x.Text != text);
+                var otherAliases = await orm.GetAll(x =>
+                    (x.Preferred == alias.Preferred || x.Text == alias.Preferred) && x.Text != text);
                 foreach (var otherAlias in otherAliases)
                 {
                     otherAlias.Preferred = alias.Text;

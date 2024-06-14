@@ -13,6 +13,7 @@ import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
 import ResourceMasonry from '@/pages/Resource/components/ResourceMasonry';
 import { Pagination } from '@/components/bakaui';
+import type { BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel } from '@/sdk/Api';
 
 const PageSize = 100;
 const MinResourceWidth = 100;
@@ -68,9 +69,10 @@ export default () => {
 
     setSearchForm(newForm);
 
-    const dto = {
+    const dto: BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel = {
       ...newForm,
       group: convertFilterGroupToDto(newForm.group),
+      saveSearchCriteria: true,
     };
     const rsp = await BApi.resource.searchResources(dto);
 

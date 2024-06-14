@@ -39,10 +39,10 @@ export default ({
 
   const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] = useState(false);
 
-  const editable = !property.isReserved && props.editable;
-  const removable = !property.isReserved && props.removable;
+  const editable = property.isCustom && props.editable;
+  const removable = property.isCustom && props.removable;
 
-  const icon = property.valueType == undefined ? undefined : PropertyTypeIconMap[property.valueType];
+  const icon = property.dbValueType == undefined ? undefined : PropertyTypeIconMap[property.dbValueType];
 
   return (
     <div
@@ -64,14 +64,9 @@ export default ({
       <div className={styles.line1}>
         <div className={`${styles.left} mr-2`}>
           <div className={styles.name}>{
-            property.isReserved ? t(ResourceProperty[property.id]) : property.name
+            property.isCustom ? property.name : t(ResourceProperty[property.id])
           }</div>
-          {property.isReserved ? (
-            <StandardValueIcon
-              valueType={property.valueType}
-              style={{ color: 'var(--bakaui-color)' }}
-            />
-          ) : (
+          {property.isCustom ? (
             icon != undefined && (
               <Tooltip
                 color={'foreground'}
@@ -85,6 +80,11 @@ export default ({
                 </div>
               </Tooltip>
             )
+          ) : (
+            <StandardValueIcon
+              valueType={property.dbValueType}
+              style={{ color: 'var(--bakaui-color)' }}
+            />
           )}
         </div>
         <div className={'flex gap-0.5 items-center invisible group-hover:visible'}>
@@ -103,8 +103,8 @@ export default ({
                   },
                   onSaved: p => onSaved?.({
                     ...p,
-                    valueType: property.valueType as unknown as StandardValueType,
-                    isReserved: property.isReserved,
+                    dbValueType: property.dbValueType as unknown as StandardValueType,
+                    isCustom: property.isCustom,
                   }),
                 });
               }}

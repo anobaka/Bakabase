@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.InsideWorld.Business.Configurations.Models.Input
 {
@@ -13,5 +14,6 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Input
     {
         public AdditionalCoverDiscoveringSource[]? AdditionalCoverDiscoveringSources { get; set; }
         public ResourceOptions.CoverOptionsModel? CoverOptions { get; set; }
+        public PropertyValueScope[]? PropertyValueScopePriority { get; set; }
     }
 }

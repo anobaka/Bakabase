@@ -5,11 +5,12 @@ import type { MultilevelData } from '@/components/StandardValue/models';
 
 export interface IProperty {
   id: number;
-  valueType: StandardValueType;
+  dbValueType: StandardValueType;
+  bizValueType: StandardValueType;
   name?: string;
   categories?: {id: number; name: string}[];
   options?: any;
-  isReserved: boolean;
+  isCustom: boolean;
   type?: CustomPropertyType;
 }
 

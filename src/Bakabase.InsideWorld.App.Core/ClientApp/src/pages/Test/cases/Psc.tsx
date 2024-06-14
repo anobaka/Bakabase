@@ -85,7 +85,7 @@ export default () => {
               },
               property: {
                 id: 1,
-                isReserved: true,
+                isCustom: false,
                 name: t('Resource'),
               },
               modesData: new SegmentMatcherConfigurationModesData(

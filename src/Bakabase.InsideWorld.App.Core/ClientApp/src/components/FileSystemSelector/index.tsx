@@ -246,7 +246,7 @@ export default (props: IFileSystemSelectorProps) => {
               });
             }}
           >
-            <CustomIcon type={'folder-add'} size={'small'} />
+            <CustomIcon type={'folder-add'} className={'text-base'} />
             {t('New Folder')}
           </Button>
         </div>

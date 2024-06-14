@@ -544,7 +544,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template, (string Left, string Right)[] wrappers)
         {
-            var matcherPropertyMap = resource.Properties?.GetValueOrDefault(ResourcePropertyType.Custom)?.Values
+            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int)ResourcePropertyType.Custom)?.Values
                 .GroupBy(d => d.Name)
                 .ToDictionary(d => $"{{{d.Key}}}", d => d.First()) ?? [];
 
@@ -585,7 +585,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     [
                         new ResourceSearchFilter
                         {
-                            IsReservedProperty = true,
+                            IsCustomProperty = false,
                             Operation = SearchOperation.In,
                             PropertyId = (int) ResourceProperty.Category,
                             Value = new[]{id}.ToJson()

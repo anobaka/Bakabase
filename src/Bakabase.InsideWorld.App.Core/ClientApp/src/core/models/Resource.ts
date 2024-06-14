@@ -1,4 +1,19 @@
-import type { IProperty, PropertyValue } from '@/components/Property/models';
+import type { PropertyValueScope, StandardValueType } from '@/sdk/constants';
+import type { ResourcePropertyType } from '@/sdk/constants';
+
+type Value = {
+  scope: PropertyValueScope;
+  value?: any;
+  bizValue?: any;
+  aliasAppliedBizValue?: any;
+};
+
+export type Property = {
+  name?: string;
+  dbValueType: StandardValueType;
+  bizValueType: StandardValueType;
+  values?: Value[];
+};
 
 export type Resource = {
   id: number;
@@ -16,6 +31,5 @@ export type Resource = {
   fileCreateDt: string;
   fileUpdateDt: string;
   parent?: Resource;
-  customPropertiesV2?: IProperty[];
-  customPropertyValues?: PropertyValue[];
+  properties?: Record<ResourcePropertyType, Record<number, Property>>;
 };

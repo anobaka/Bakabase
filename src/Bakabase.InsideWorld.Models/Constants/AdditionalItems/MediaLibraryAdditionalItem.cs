@@ -12,6 +12,6 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
         None = 0,
         Category = 1,
         FileSystemInfo = 1 << 1,
-        // FixedTags = 1 << 2
+        PathConfigurationCustomProperties = 1 << 2
     }
 }

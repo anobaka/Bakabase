@@ -235,7 +235,7 @@
   .libraries-line {
     .libraries-header {
       display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 13fr);
+      grid-template-columns: 240px minmax(0, 1fr);
       gap: 5px;
 
       .path-configuration {
@@ -251,7 +251,7 @@
 .category-page-draggable-media-library {
 
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 13fr);
+  grid-template-columns: 240px minmax(0, 1fr);
   gap: 5px;
 
   border-bottom: 1px solid var(--theme-border-color-accent);

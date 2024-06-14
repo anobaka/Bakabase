@@ -17,7 +17,7 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface IKey {
   id: number;
-  isReserved: boolean;
+  isCustom: boolean;
 }
 
 interface IProps extends DestroyableProps{
@@ -72,8 +72,8 @@ const PropertySelector = ({
           const p = parseInt(pStr, 10) as EnumResourceProperty;
           return {
             id: p,
-            valueType: map[p],
-            isReserved: true,
+            dbValueType: map[p],
+            isCustom: false,
           };
         }),
       );
@@ -83,7 +83,7 @@ const PropertySelector = ({
       // @ts-ignore
       arr.push(...(rsp.data || []).map(d => ({
         ...d,
-        isReserved: false,
+        isCustom: true,
       })));
     }
     setProperties(arr);
@@ -98,29 +98,29 @@ const PropertySelector = ({
   };
 
   const renderProperty = (property: IProperty) => {
-    const selected = selection.some(s => s.id == property.id && s.isReserved == property.isReserved);
+    const selected = selection.some(s => s.id == property.id && s.isCustom == property.isCustom);
     // console.log(id, isReserved, reservedProperties, customProperties);
     return (
       <Property
-        key={`${property.id}-${property.isReserved}`}
+        key={`${property.id}-${property.isCustom}`}
         property={property}
         onClick={async () => {
           if (multiple) {
             if (selected) {
-              setSelection(selection.filter(s => s.id != property.id && s.isReserved == property.isReserved));
+              setSelection(selection.filter(s => s.id != property.id && s.isCustom == property.isCustom));
             } else {
               setSelection([...selection, {
                 id: property.id,
-                isReserved: property.isReserved,
+                isCustom: property.isCustom,
               }]);
             }
           } else {
             if (selected) {
               setSelection([]);
             } else {
-              const ns = [{
+              const ns: IKey[] = [{
                 id: property.id,
-                isReserved: property.isReserved,
+                isCustom: property.isCustom,
               }];
               setSelection(ns);
               await onSubmit(ns);
@@ -138,7 +138,7 @@ const PropertySelector = ({
   const onSubmit = async (selection: IKey[]) => {
     // console.log(customProperties, selection);
     if (propsOnSubmit) {
-      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.isReserved == s.isReserved)).filter(x => x != undefined) as IProperty[]);
+      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.isCustom == s.isCustom)).filter(x => x != undefined) as IProperty[]);
     }
   };
 
@@ -178,12 +178,12 @@ const PropertySelector = ({
 
   const filteredProperties = properties.filter(p => {
     if (valueTypes) {
-      return valueTypes.includes(p.valueType);
+      return valueTypes.includes(p.dbValueType);
     }
     return true;
   });
-  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.isReserved == s.isReserved)).filter(x => x).map(x => x!);
-  const unselectedProperties = filteredProperties.filter(p => !selection.some(s => s.id == p.id && s.isReserved == p.isReserved));
+  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.isCustom == s.isCustom)).filter(x => x).map(x => x!);
+  const unselectedProperties = filteredProperties.filter(p => !selection.some(s => s.id == p.id && s.isCustom == p.isCustom));
   const propertyCount = selectedProperties.length + unselectedProperties.length;
 
   const renderProperties = () => {

@@ -1,6 +1,8 @@
 import type {
   BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel,
   BakabaseInfrastructuresComponentsConfigurationsAppAppOptions,
+  BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions,
+  BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel,
   BakabaseInsideWorldModelsConfigsBilibiliOptions,
   BakabaseInsideWorldModelsConfigsExHentaiOptions,
   BakabaseInsideWorldModelsConfigsFileSystemOptions,
@@ -9,10 +11,8 @@ import type {
   BakabaseInsideWorldModelsConfigsJavLibraryOptions,
   BakabaseInsideWorldModelsConfigsNetworkOptions,
   BakabaseInsideWorldModelsConfigsPixivOptions,
-  BakabaseInsideWorldModelsConfigsResourceResourceOptionsDto,
   BakabaseInsideWorldModelsConfigsThirdPartyOptions,
   BakabaseInsideWorldModelsConfigsUIOptions,
-  BakabaseInsideWorldModelsRequestModelsOptionsResourceOptionsPatchRequestModel,
   BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel,
   BootstrapModelsResponseModelsBaseResponse,
 } from '@/sdk/Api';
@@ -68,7 +68,7 @@ export default {
   }, BakabaseInsideWorldModelsConfigsFileSystemOptions>(BApi.options.patchFileSystemOptions),
   javLibraryOptions: buildModel<BakabaseInsideWorldModelsConfigsJavLibraryOptions, BakabaseInsideWorldModelsConfigsJavLibraryOptions>(BApi.options.patchJavLibraryOptions),
   pixivOptions: buildModel<BakabaseInsideWorldModelsConfigsPixivOptions, BakabaseInsideWorldModelsConfigsPixivOptions>(BApi.options.patchPixivOptions),
-  resourceOptions: buildModel<BakabaseInsideWorldModelsConfigsResourceResourceOptionsDto, BakabaseInsideWorldModelsRequestModelsOptionsResourceOptionsPatchRequestModel>(BApi.options.patchResourceOptions),
+  resourceOptions: buildModel<BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions, BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel>(BApi.options.patchResourceOptions),
   thirdPartyOptions: buildModel<BakabaseInsideWorldModelsConfigsThirdPartyOptions, BakabaseInsideWorldModelsConfigsThirdPartyOptions>(BApi.options.patchThirdPartyOptions),
   networkOptions: buildModel<BakabaseInsideWorldModelsConfigsNetworkOptions, BakabaseInsideWorldModelsConfigsNetworkOptions>(BApi.options.patchNetworkOptions),
 };

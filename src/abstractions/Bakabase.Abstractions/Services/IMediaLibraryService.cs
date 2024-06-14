@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Dto;
+using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bootstrap.Models.ResponseModels;
 
@@ -38,9 +39,9 @@ public interface IMediaLibraryService
     Task StopSyncing();
     // BackgroundTaskDto? SyncTaskInformation { get; }
     void StartSyncing();
-    //
-    // Task<BaseResponse> Sync(BackgroundTask task);
-    //
+
+    Task<SingletonResponse<SyncResultViewModel>> Sync(Action<string> onProcessChange, Action<int> onProgressChange);
+
     Task<SingletonResponse<PathConfigurationTestResult>>
         Test(PathConfiguration pc, int maxResourceCount = int.MaxValue);
     //

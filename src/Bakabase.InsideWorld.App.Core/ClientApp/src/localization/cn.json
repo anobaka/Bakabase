@@ -1288,5 +1288,17 @@
   "All selected alias groups and its candidates will be delete and there is no way back, are you sure?": "所有已选择的别名组和它们的候选词均会被删除，并且不可恢复，确认继续吗？",
   "Deleting alias groups: {{texts}}": "正在删除多个别名组：{{texts}}",
   "All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?": "所有选择的别名组将会被合并至一个组，并且最终的首选文本是{{preferred}}，确认继续吗？",
-  "Merging alias groups: {{texts}}": "正在合并多个别名组：{{texts}}"
+  "Merging alias groups: {{texts}}": "正在合并多个别名组：{{texts}}",
+  "Set as preferred": "设置为首选",
+  "Press enter to search": "按下回车键搜索",
+  "Add an alias": "添加别名",
+  "For more information, you can visit:": "为了了解更多信息，您可以访问：",
+  "Add a proxy": "添加代理",
+  "Use system proxy": "使用系统代理",
+  "Do not use proxy": "不使用代理",
+  "PropertyValueScope.Manual": "手动设置",
+  "PropertyValueScope.Synchronization": "同步",
+  "PropertyValueScope.BakabaseEnhancer": "Bakabase增强器",
+  "You can set the priority for following scopes of values, the first not empty value in the priority queen will be displayed, and you also can hide values by deselecting their scopes.": "您可以设置不同维度的数据的展示优先级，第一个不为空的数据将会被展示；您也可以通过反选维度来隐藏数据。",
+  "This priority will be applied for all properties and resources.": "该优先级会被应用到所有属性和资源上。"
 }

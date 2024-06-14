@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useHistory } from 'react-router-dom';
 import { history } from 'ice';
 import { createPortal } from 'react-dom';
+import { SyncOutlined } from '@ant-design/icons';
 import { Button, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
 import ClickableIcon from '@/components/ClickableIcon';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
@@ -42,6 +43,19 @@ export default () => {
           <div className="text-small font-bold">Popover Content</div>
           <div className="text-tiny">This is the popover content</div>
         </div>
+      </Popover>
+
+      <Popover trigger={(
+        <Button
+          size={'sm'}
+          isIconOnly
+          variant={'light'}
+        >
+          <SyncOutlined className={'text-lg'} />
+        </Button>
+      )}
+      >
+        1232112321321
       </Popover>
     </>
   );
