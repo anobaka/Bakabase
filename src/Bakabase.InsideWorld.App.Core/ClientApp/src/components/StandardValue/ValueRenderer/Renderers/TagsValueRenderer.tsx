@@ -1,50 +1,52 @@
 import { useRef, useState } from 'react';
 import type { ValueRendererProps } from '../models';
-import type { EditableValueProps } from '../../models';
+import type { EditableValueProps, MultilevelData, TagValue } from '../../models';
 import MultilevelValueEditor from '../../ValueEditor/Editors/MultilevelValueEditor';
-import ChoiceValueEditor from '../../ValueEditor/Editors/ChoiceValueEditor';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Chip, Card, CardBody } from '@/components/bakaui';
 
-type Data = {label: string; value: string};
-
-type ListStringValueRendererProps = ValueRendererProps<string[]> & EditableValueProps<string[]> & {
-  multiple?: boolean;
-  getDataSource?: () => Promise<Data[]>;
+type TagsValueRendererProps = ValueRendererProps<TagValue[]> & EditableValueProps<string[]> & {
+  getDataSource?: () => Promise<TagValue[]>;
 };
 
-export default ({ value, onValueChange, editable, variant, getDataSource, multiple, ...props }: ListStringValueRendererProps) => {
+export default ({ value, onValueChange, editable, variant, getDataSource, ...props }: TagsValueRendererProps) => {
   const { createPortal } = useBakabaseContext();
 
-  const dataSourceRef = useRef<Data[]>([]);
+  const dataSourceRef = useRef<MultilevelData<string>[]>([]);
+
+  const simpleLabels = value?.map(v => {
+    if (v.group != undefined && v.group.length > 0) {
+      return `${v.group}:${v.name}`;
+    }
+    return v.name;
+  });
 
   const showEditor = () => {
-    createPortal(ChoiceValueEditor, {
+    createPortal(MultilevelValueEditor<string>, {
       getDataSource: async () => dataSourceRef.current,
       onChange: v => {
         if (v) {
           onValueChange?.(v);
         }
       },
-      multiple: multiple ?? false,
     });
   };
 
   if (variant == 'light') {
     return (
-      <span onClick={editable ? showEditor : undefined}>{value?.join(', ')}</span>
+      <span onClick={editable ? showEditor : undefined}>{simpleLabels?.join(',')}</span>
     );
   } else {
     return (
       <Card onClick={editable ? showEditor : undefined}>
         <CardBody className={'flex flex-wrap gap-1'}>
-          {value?.map(d => {
+          {simpleLabels?.map(l => {
             return (
               <Chip
                 size={'sm'}
                 radius={'sm'}
               >
-                {d}
+                {l}
               </Chip>
             );
           })}

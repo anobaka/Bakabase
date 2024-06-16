@@ -1,50 +1,48 @@
 import { useRef, useState } from 'react';
 import type { ValueRendererProps } from '../models';
-import type { EditableValueProps } from '../../models';
+import type { EditableValueProps, MultilevelData } from '../../models';
 import MultilevelValueEditor from '../../ValueEditor/Editors/MultilevelValueEditor';
-import ChoiceValueEditor from '../../ValueEditor/Editors/ChoiceValueEditor';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Chip, Card, CardBody } from '@/components/bakaui';
 
-type Data = {label: string; value: string};
-
-type ListStringValueRendererProps = ValueRendererProps<string[]> & EditableValueProps<string[]> & {
+type MultilevelValueRendererProps = ValueRendererProps<string[][]> & EditableValueProps<string[]> & {
   multiple?: boolean;
-  getDataSource?: () => Promise<Data[]>;
+  getDataSource?: () => Promise<MultilevelData<string>>;
 };
 
-export default ({ value, onValueChange, editable, variant, getDataSource, multiple, ...props }: ListStringValueRendererProps) => {
+export default ({ value, onValueChange, editable, variant, getDataSource, multiple, ...props }: MultilevelValueRendererProps) => {
   const { createPortal } = useBakabaseContext();
 
-  const dataSourceRef = useRef<Data[]>([]);
+  const dataSourceRef = useRef<MultilevelData<string>[]>([]);
 
   const showEditor = () => {
-    createPortal(ChoiceValueEditor, {
+    createPortal(MultilevelValueEditor<string>, {
       getDataSource: async () => dataSourceRef.current,
       onChange: v => {
         if (v) {
-          onValueChange?.(v);
+          onValueChange?.(v.map(x => x));
         }
       },
-      multiple: multiple ?? false,
+      multiple,
     });
   };
 
   if (variant == 'light') {
     return (
-      <span onClick={editable ? showEditor : undefined}>{value?.join(', ')}</span>
+      <span onClick={editable ? showEditor : undefined}>{value?.map(v => v.join('/')).join(';')}</span>
     );
   } else {
     return (
       <Card onClick={editable ? showEditor : undefined}>
         <CardBody className={'flex flex-wrap gap-1'}>
-          {value?.map(d => {
+          {value?.map(v => {
+            const str = v.join('/');
             return (
               <Chip
                 size={'sm'}
                 radius={'sm'}
               >
-                {d}
+                {str}
               </Chip>
             );
           })}

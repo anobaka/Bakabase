@@ -3,7 +3,7 @@ import type { ValueRendererProps } from '../models';
 import type { EditableValueProps } from '../../models';
 import { Checkbox, Switch } from '@/components/bakaui';
 
-type BooleanValueRendererProps = Omit<ValueRendererProps<boolean>, 'variant'> & EditableValueProps & {
+type BooleanValueRendererProps = Omit<ValueRendererProps<boolean>, 'variant'> & EditableValueProps<boolean> & {
   variant: ValueRendererProps<boolean>['variant'] | 'switch';
 };
 

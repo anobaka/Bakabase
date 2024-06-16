@@ -1,20 +1,23 @@
 import { EyeInvisibleOutlined, SwapOutlined } from '@ant-design/icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import CustomProperty from './CustomProperty';
 import { Button, Card, CardBody, Chip, Listbox, ListboxItem, Popover } from '@/components/bakaui';
-import { PropertyValueScope, propertyValueScopes, ResourceProperty, ResourcePropertyType } from '@/sdk/constants';
+import { CustomPropertyType, PropertyValueScope, propertyValueScopes, ResourceProperty } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import type { Property } from '@/core/models/Resource';
 
 type Props = {
   isCustomProperty: boolean;
   propertyId: number;
+  customPropertyType?: CustomPropertyType;
   valueScopePriority: PropertyValueScope[];
   onValueScopePriorityChange: (priority: PropertyValueScope[]) => any;
   property: Property;
+  onChanged: () => any;
 };
 
-export default ({ isCustomProperty, propertyId, valueScopePriority, onValueScopePriorityChange, property }: Props) => {
+export default ({ isCustomProperty, propertyId, valueScopePriority, onValueScopePriorityChange, property, customPropertyType, onChanged }: Props) => {
   const { t } = useTranslation();
 
   const scopedValueCandidates = propertyValueScopes.map(s => {
@@ -37,6 +40,54 @@ export default ({ isCustomProperty, propertyId, valueScopePriority, onValueScope
     }
   }
 
+  const renderValue = () => {
+    if (!isCustomProperty) {
+      const rp = propertyId as ResourceProperty;
+      switch (rp) {
+        case ResourceProperty.Introduction:
+          return (
+            <CustomProperty
+              id={propertyId}
+              variant={'default'}
+              editable
+              bizValue={displayValue}
+              bizValueType={property.bizValueType}
+              onValueChange={onChanged}
+              type={CustomPropertyType.MultilineText}
+            />
+          );
+        case ResourceProperty.Rating:
+          return (
+            <CustomProperty
+              id={propertyId}
+              variant={'default'}
+              editable
+              bizValue={displayValue}
+              bizValueType={property.bizValueType}
+              onValueChange={onChanged}
+              type={CustomPropertyType.Rating}
+            />
+          );
+        default:
+          return (
+            <span>{t('Not supported')}</span>
+          );
+      }
+    } else {
+      return (
+        <CustomProperty
+          id={propertyId}
+          variant={'default'}
+          editable
+          bizValue={displayValue}
+          bizValueType={property.bizValueType}
+          onValueChange={onChanged}
+          type={customPropertyType!}
+        />
+      );
+    }
+  };
+
   return (
     <>
       <Chip
@@ -51,13 +102,7 @@ export default ({ isCustomProperty, propertyId, valueScopePriority, onValueScope
           <div
             className={'flex items-center gap-2'}
           >
-
-            1231233121212
-            {/* <CustomPropertyValue */}
-            {/*   resourceId={resource.id} */}
-            {/*   property={cp} */}
-            {/*   value={cpvs[i]?.value} */}
-            {/* />   */}
+            {renderValue()}
             <Popover
               trigger={(
                 <Button

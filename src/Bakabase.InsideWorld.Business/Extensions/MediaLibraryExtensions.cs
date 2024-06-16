@@ -4,8 +4,12 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.InsideWorld.Models.Constants;
 using CsQuery.Utility;
+using Newtonsoft.Json.Linq;
+using Quartz.Impl.AdoJobStore;
 
 namespace Bakabase.InsideWorld.Business.Extensions
 {
@@ -27,7 +31,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
             {
                 try
                 {
-                    return JsonConvert.SerializeObject(pcs.Select(p => p with { }));
+                    return JsonConvert.SerializeObject(pcs.Select(p => p with {Path = p.Path?.StandardizePath()}));
                 }
                 catch
                 {
@@ -60,6 +64,38 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 {
                     d.PathConfigurations = JsonConvert
                         .DeserializeObject<List<PathConfiguration>>(ml.PathConfigurationsJson)?.ToList();
+                    if (d.PathConfigurations != null)
+                    {
+                        var jo = JArray.Parse(ml.PathConfigurationsJson);
+                        for (var i = 0; i < d.PathConfigurations.Count; i++)
+                        {
+                            var pc = d.PathConfigurations[i];
+                            pc.Path = pc.Path.StandardizePath();
+                            if (pc.RpmValues != null)
+                            {
+                                for (var j = 0; j < pc.RpmValues.Count; j++)
+                                {
+                                    var r = pc.RpmValues[j];
+                                    if (r.PropertyId == 0)
+                                    {
+                                        try
+                                        {
+                                            var prevProperty = jo[i]?["rpmValues"]?[j]?["property"]?
+                                                .ToObject<ResourceProperty>();
+                                            if (prevProperty != null)
+                                            {
+                                                r.PropertyId = (int)prevProperty;
+                                            }
+                                        }
+                                        catch
+                                        {
+
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 catch (Exception)
                 {

@@ -1300,5 +1300,6 @@
   "PropertyValueScope.Synchronization": "同步",
   "PropertyValueScope.BakabaseEnhancer": "Bakabase增强器",
   "You can set the priority for following scopes of values, the first not empty value in the priority queen will be displayed, and you also can hide values by deselecting their scopes.": "您可以设置不同维度的数据的展示优先级，第一个不为空的数据将会被展示；您也可以通过反选维度来隐藏数据。",
-  "This priority will be applied for all properties and resources.": "该优先级会被应用到所有属性和资源上。"
+  "This priority will be applied for all properties and resources.": "该优先级会被应用到所有属性和资源上。",
+  "Unknown property": "未知属性"
 }

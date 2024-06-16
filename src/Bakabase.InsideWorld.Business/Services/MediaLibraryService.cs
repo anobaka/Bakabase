@@ -604,7 +604,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 }
 
                                 var pscResult = await Test(pathConfiguration, int.MaxValue);
-                                if (pscResult.Code == (int) ResponseCode.Success)
+                                if (pscResult.Code == (int) ResponseCode.Success && pscResult.Data.Resources.Any())
                                 {
                                     var percentagePerItem =
                                         (decimal) 1 / pscResult.Data.Resources.Count * percentagePerPathConfiguration;

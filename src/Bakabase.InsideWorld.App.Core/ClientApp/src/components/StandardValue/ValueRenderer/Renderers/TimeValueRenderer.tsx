@@ -3,12 +3,11 @@ import type { Duration } from 'dayjs/plugin/duration';
 import type { ValueRendererProps } from '../models';
 import type { EditableValueProps } from '@/components/StandardValue/models';
 import { DateInput, TimeInput } from '@/components/bakaui';
-type DateTimeValueRendererProps = ValueRendererProps<Duration> & EditableValueProps<Duration> & {
+type TimeValueRendererProps = ValueRendererProps<Duration> & EditableValueProps<Duration> & {
   format: string;
-  as: 'datetime' | 'date';
 };
 
-export default ({ value, format, as, variant, onValueChange, editable, ...props }: DateTimeValueRendererProps) => {
+export default ({ value, format, variant, onValueChange, editable, ...props }: TimeValueRendererProps) => {
   const [editing, setEditing] = useState(false);
 
   if (variant == 'light' && !editing) {

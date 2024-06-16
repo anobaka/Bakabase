@@ -3,13 +3,14 @@ import { useEffect, useState } from 'react';
 import { SearchOutlined } from '@ant-design/icons';
 import type { ValueEditorProps } from '../models';
 import { Button, Input, Modal } from '@/components/bakaui';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
-type Data = { id: string; value: string };
+type Data = { value: string; label: string };
 
-interface ChoiceValueEditorProps extends ValueEditorProps<string[]>{
+type ChoiceValueEditorProps = ValueEditorProps<string[]> & DestroyableProps & {
   multiple: boolean;
   getDataSource: () => Promise<Data[] | undefined>;
-}
+};
 
 export default ({ multiple, getDataSource, initValue, onChange }: ChoiceValueEditorProps) => {
   const { t } = useTranslation();
@@ -48,24 +49,24 @@ export default ({ multiple, getDataSource, initValue, onChange }: ChoiceValueEdi
       </div>
       <div className={'flex flex-wrap gap-1'}>
         {dataSource.filter(d =>
-          keyword.length == 0 || d.value.toLowerCase().includes(keyword.toLowerCase())).map(({ id, value: v }) => {
+          keyword.length == 0 || d.label.toLowerCase().includes(keyword.toLowerCase())).map(d => {
           return (
             <Button
               size={'sm'}
-              color={value.includes(id) ? 'primary' : 'default'}
+              color={value.includes(d.value) ? 'primary' : 'default'}
               onClick={() => {
                 if (multiple) {
-                  if (value.includes(id)) {
-                    setValue(value.filter(v => v !== id));
+                  if (value.includes(d.value)) {
+                    setValue(value.filter(v => v !== d.value));
                   } else {
-                    setValue([...(value || []), id]);
+                    setValue([...(d.value || []), d.value]);
                   }
                 } else {
-                  setValue([id]);
+                  setValue([d.value]);
                 }
               }}
             >
-              {v}
+              {d.label}
             </Button>
           );
         })}

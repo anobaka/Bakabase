@@ -319,7 +319,7 @@ export default (({
                 >
                   {library.fileSystemInformation?.[p.path]?.freeSpaceInGb}GB
                 </Chip>
-                <div>
+                <div className={'flex items-center'}>
                   <Button
                     size={'sm'}
                     isIconOnly

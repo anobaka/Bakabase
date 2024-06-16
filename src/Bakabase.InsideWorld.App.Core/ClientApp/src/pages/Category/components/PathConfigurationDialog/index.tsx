@@ -137,12 +137,15 @@ export default ({
       return null;
     }
 
-    // console.log(values);
+    console.log(values, 55555);
 
     return (
       <div className="flex flex-col gap-1 my-1">
         {(values).map((s, i) => {
-          const label = s.isCustomProperty ? customPropertyMap[s.propertyId!]?.name : t(ResourceProperty[s.propertyId!]);
+          let label = s.isCustomProperty ? customPropertyMap[s.propertyId!]?.name : t(ResourceProperty[s.propertyId!]);
+          if (label.length == 0) {
+            label = t('Unknown property');
+          }
           return (
             <div className={'flex items-center gap-2'}>
               <Chip

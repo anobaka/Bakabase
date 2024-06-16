@@ -1,33 +1,43 @@
+/**
+ * This StandardValue is a collection of components that are used to render and edit values in GUI. It's different to the StandardValue in back-end.
+ */
+
 import Icon from './Icon';
 
-import BooleanValueEditor from './ValueEditor/Editors/BooleanValueEditor';
 import ChoiceValueEditor from './ValueEditor/Editors/ChoiceValueEditor';
-import DateTimeValueEditor from './ValueEditor/Editors/DateTimeValueEditor';
 import NumberValueEditor from './ValueEditor/Editors/NumberValueEditor';
-import StringValueEditor from './ValueEditor/Editors/StringValueEditor';
-import TimeValueEditor from './ValueEditor/Editors/TimeValueEditor';
 import MultilevelValueEditor from './ValueEditor/Editors/MultilevelValueEditor';
 
 import BooleanValueRenderer from './ValueRenderer/Renderers/BooleanValueRenderer';
 import StringValueRenderer from './ValueRenderer/Renderers/StringValueRenderer';
 import NumberValueRenderer from './ValueRenderer/Renderers/NumberValueRenderer';
-import ListStringValueRenderer from './ValueRenderer/Renderers/ListStringValueRenderer';
 import DateTimeValueRenderer from './ValueRenderer/Renderers/DateTimeValueRenderer';
+import ChoiceValueRenderer from './ValueRenderer/Renderers/ChoiceValueRenderer';
+import MultilineStringValueRenderer from './ValueRenderer/Renderers/MultilineStringValueRenderer';
+import FormulaValueRenderer from './ValueRenderer/Renderers/FormulaValueRenderer';
+import AttachmentValueRenderer from './ValueRenderer/Renderers/AttachmentValueRenderer';
+import RatingValueRenderer from './ValueRenderer/Renderers/RatingValueRenderer';
+import MultilevelValueRenderer from './ValueRenderer/Renderers/MultilevelValueRenderer';
+import TagsValueRenderer from './ValueRenderer/Renderers/TagsValueRenderer';
+import TimeValueRenderer from './ValueRenderer/Renderers/TimeValueRenderer';
 
 export {
   Icon as StandardValueIcon,
 
-  StringValueEditor,
   NumberValueEditor,
-  BooleanValueEditor,
   ChoiceValueEditor,
-  TimeValueEditor,
-  DateTimeValueEditor,
   MultilevelValueEditor,
 
+  AttachmentValueRenderer,
   BooleanValueRenderer,
-  ListStringValueRenderer,
-  StringValueRenderer,
-  NumberValueRenderer,
+  ChoiceValueRenderer,
   DateTimeValueRenderer,
+  FormulaValueRenderer,
+  MultilevelValueRenderer,
+  MultilineStringValueRenderer,
+  NumberValueRenderer,
+  RatingValueRenderer,
+  StringValueRenderer,
+  TagsValueRenderer,
+  TimeValueRenderer,
 };
