@@ -3,16 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { useRef, useState } from 'react';
 import { useUpdate } from 'react-use';
 import type { ValueRendererProps } from '../models';
-import type { EditableValueProps, LinkValue } from '../../models';
+import type { LinkValue } from '../../models';
 import ExternalLink from '@/components/ExternalLink';
 import { Button, Input, Popover } from '@/components/bakaui';
 
-type LinkValueRendererProps = ValueRendererProps<LinkValue> & EditableValueProps<LinkValue>;
+type LinkValueRendererProps = ValueRendererProps<LinkValue> & {
+};
 
 export default ({
                   value,
-                  onValueChange,
-                  editable,
+                  editor,
                   variant,
                   ...props
                 }: LinkValueRendererProps) => {
@@ -39,7 +39,7 @@ export default ({
   };
 
   const inner = renderInner();
-  if (editable) {
+  if (editor) {
     return (
       <span>
         {inner}
@@ -86,7 +86,7 @@ export default ({
                 size={'sm'}
                 color={'primary'}
                 onClick={() => {
-                  onValueChange?.(editingValue);
+                  editor?.onValueChange?.(editingValue, editingValue);
                   setEditingValue(undefined);
                 }}
               >

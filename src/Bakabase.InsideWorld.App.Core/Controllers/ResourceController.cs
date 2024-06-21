@@ -10,8 +10,11 @@ using System.Runtime.Caching;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business;
@@ -38,6 +41,13 @@ using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
+using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
+using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
+using Bakabase.Modules.CustomProperty.Components.Properties.Tags;
+using Bakabase.Modules.CustomProperty.Extensions;
+using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Helpers;
+using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
@@ -52,6 +62,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Org.BouncyCastle.Utilities;
 using SharpCompress.IO;
 using SixLabors.ImageSharp;
@@ -81,7 +92,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly Business.Components.Dependency.Implementations.FfMpeg.FfMpegService _ffMpegInstaller;
         private readonly ILogger<ResourceController> _logger;
         private readonly ICustomPropertyValueService _customPropertyValueService;
-        private readonly ICategoryService _categoryservice;
+        private readonly ICategoryService _categoryService;
+        private readonly ICustomPropertyService _customPropertyService;
 
         public ResourceController(IResourceService service, IServiceProvider serviceProvider,
             ISpecialTextService specialTextService, IMediaLibraryService mediaLibraryService,
@@ -90,7 +102,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions,
             Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
             ILogger<ResourceController> logger, ICustomPropertyValueService customPropertyValueService,
-            ICategoryService categoryservice)
+            ICategoryService categoryService, ICustomPropertyService customPropertyService)
         {
             _service = service;
             _serviceProvider = serviceProvider;
@@ -107,7 +119,280 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _ffMpegInstaller = ffMpegInstaller;
             _logger = logger;
             _customPropertyValueService = customPropertyValueService;
-            _categoryservice = categoryservice;
+            _categoryService = categoryService;
+            _customPropertyService = customPropertyService;
+        }
+
+        [HttpGet("search-criteria")]
+        [SwaggerOperation(OperationId = "GetResourceSearchCriteria")]
+        public async Task<SingletonResponse<ResourceSearchDto?>> GetSearchCriteria()
+        {
+            var sc = _resourceOptions.Value.LastSearchV2;
+            if (sc != null)
+            {
+                if (sc.Group != null)
+                {
+                    var filters = sc.Group.ExtractFilters();
+                    var customPropertyIds =
+                        filters.Where(d => d.IsCustomProperty).Select(d => d.PropertyId).ToHashSet();
+                    var customPropertyMap =
+                        (await _customPropertyService.GetByKeys(customPropertyIds, CustomPropertyAdditionalItem.None))
+                        .ToDictionary(d => d.Id, d => d);
+
+                    Dictionary<int, MediaLibrary>? mediaLibraryMap = null;
+                    Dictionary<int, Category>? categoryMap = null;
+                    var propertyMap = (await _customPropertyService.GetAll()).ToDictionary(d => d.Id, d => d);
+
+                    foreach (var filter in filters)
+                    {
+                        if (string.IsNullOrEmpty(filter.DbValue))
+                        {
+                            continue;
+                        }
+
+                        if (filter.IsCustomProperty)
+                        {
+                            var property = customPropertyMap.GetValueOrDefault(filter.PropertyId);
+                            if (property == null)
+                            {
+                                continue;
+                            }
+
+                            switch (property.EnumType)
+                            {
+                                case CustomPropertyType.SingleLineText:
+                                case CustomPropertyType.MultilineText:
+                                case CustomPropertyType.Date:
+                                case CustomPropertyType.DateTime:
+                                case CustomPropertyType.Time:
+                                case CustomPropertyType.Formula:
+                                case CustomPropertyType.Number:
+                                case CustomPropertyType.Percentage:
+                                case CustomPropertyType.Rating:
+                                case CustomPropertyType.Boolean:
+                                case CustomPropertyType.Attachment:
+                                case CustomPropertyType.Link:
+                                {
+                                    filter.BizValue = filter.DbValue;
+                                    break;
+                                }
+                                case CustomPropertyType.SingleChoice:
+                                {
+                                    switch (filter.Operation)
+                                    {
+                                        case SearchOperation.Equals:
+                                        case SearchOperation.NotEquals:
+                                        {
+                                            var value = filter.DbValue?.DeserializeAsStandardValue(StandardValueType
+                                                .String) as string;
+                                            if (!string.IsNullOrEmpty(value))
+                                            {
+                                                var choices = (propertyMap.GetValueOrDefault(filter.PropertyId) as
+                                                    SingleChoiceProperty)?.Options?.Choices;
+                                                if (choices?.Any() == true)
+                                                {
+                                                    filter.BizValue = choices.FirstOrDefault(x => x.Value == value)
+                                                        ?.Label;
+                                                }
+                                            }
+
+                                            break;
+                                        }
+                                        case SearchOperation.In:
+                                        case SearchOperation.NotIn:
+                                        {
+                                            var value =
+                                                (filter.DbValue?.DeserializeAsStandardValue(
+                                                    StandardValueType.ListString) as List<string>)?.OfType<string>()
+                                                .ToList();
+                                            if (value?.Any() == true)
+                                            {
+                                                var choices = (propertyMap.GetValueOrDefault(filter.PropertyId) as
+                                                    SingleChoiceProperty)?.Options?.Choices;
+                                                if (choices?.Any() == true)
+                                                {
+                                                    filter.BizValue = value
+                                                        .Select(v => choices.FirstOrDefault(x => x.Value == v)?.Label)
+                                                        .OfType<string>().ToList().SerializeAsStandardValue();
+                                                }
+                                                       
+                                            }
+
+                                            break;
+                                        }
+                                    }
+
+                                    break;
+                                }
+                                case CustomPropertyType.MultipleChoice:
+                                {
+                                    switch (filter.Operation)
+                                    {
+                                        case SearchOperation.Contains:
+                                        case SearchOperation.NotContains:
+                                        {
+                                            var value =
+                                                (filter.DbValue?.DeserializeAsStandardValue(
+                                                    StandardValueType.ListString) as List<string>)?.OfType<string>()
+                                                .ToList();
+                                            if (value?.Any() == true)
+                                            {
+                                                var choices = (propertyMap.GetValueOrDefault(filter.PropertyId) as MultipleChoiceProperty)?.Options?.Choices;
+                                                if (choices?.Any() == true)
+                                                {
+                                                    filter.BizValue = value
+                                                        .Select(v => choices.FirstOrDefault(x => x.Value == v)?.Label)
+                                                        .OfType<string>().ToList().SerializeAsStandardValue();
+                                                }
+
+                                            }
+
+                                            break;
+                                        }
+                                        }
+
+                                    break;
+                                }
+                                case CustomPropertyType.Multilevel:
+                                {
+                                    switch (filter.Operation)
+                                    {
+                                        case SearchOperation.Contains:
+                                        case SearchOperation.NotContains:
+                                        {
+                                            var value =
+                                                (filter.DbValue?.DeserializeAsStandardValue(
+                                                    StandardValueType.ListString) as List<string>)?.OfType<string>()
+                                                .ToList();
+                                            if (value?.Any() == true)
+                                            {
+                                                var trees = (propertyMap.GetValueOrDefault(filter.PropertyId) as
+                                                    MultilevelProperty)?.Options?.Data;
+                                                if (trees?.Any() == true)
+                                                {
+                                                    filter.BizValue = value
+                                                        .Select(v => trees.FindLabelChain(v)?.ToList())
+                                                        .OfType<List<string>>().ToList().SerializeAsStandardValue();
+                                                }
+                                            }
+
+                                            break;
+                                        }
+                                    }
+
+                                    break;
+                                }
+                                case CustomPropertyType.Tags:
+                                {
+                                    switch (filter.Operation)
+                                    {
+                                        case SearchOperation.Contains:
+                                        case SearchOperation.NotContains:
+                                        {
+                                            var value =
+                                                (filter.DbValue?.DeserializeAsStandardValue(
+                                                    StandardValueType.ListString) as List<string>)?.OfType<string>()
+                                                .ToList();
+                                            if (value?.Any() == true)
+                                            {
+                                                var tags = (propertyMap.GetValueOrDefault(filter.PropertyId) as TagsProperty)?.Options?.Tags;
+                                                if (tags?.Any() == true)
+                                                {
+                                                    filter.BizValue = value
+                                                        .Select(v =>
+                                                        {
+                                                            var tag = tags.FirstOrDefault(x => x.Value == v);
+                                                            if (tag == null)
+                                                            {
+                                                                return null;
+                                                            }
+
+                                                            return new TagValue(tag.Group, tag.Name);
+                                                        })
+                                                        .OfType<TagValue>()
+                                                        .ToList().SerializeAsStandardValue();
+                                                }
+                                            }
+
+                                            break;
+                                        }
+                                    }
+
+                                    break;
+                                }
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
+                        }
+                        else
+                        {
+                            var rp = (SearchableReservedProperty) filter.PropertyId;
+                            var valueTypes =
+                                InternalOptions.ReservedResourcePropertyAndValueTypesMap.GetValueOrDefault(rp);
+                            if (valueTypes == null)
+                            {
+                                switch (rp)
+                                {
+                                    case SearchableReservedProperty.MediaLibrary:
+                                    {
+                                        if (!string.IsNullOrEmpty(filter.DbValue))
+                                        {
+                                            mediaLibraryMap ??= (await _mediaLibraryService.GetAll(null,
+                                                MediaLibraryAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
+
+                                            categoryMap ??=
+                                                (await _categoryService.GetAll(null, CategoryAdditionalItem.None))
+                                                .ToDictionary(d => d.Id, d => d);
+
+                                            var ids = (filter.BizValue?.DeserializeAsStandardValue(StandardValueType
+                                                .ListString) as List<string>)?.Select(int.Parse) ?? [];
+
+                                            var tMlMap = mediaLibraryMap;
+                                            var tCMap = categoryMap;
+                                            var bizValue = new List<List<string>>();
+                                            foreach (var id in ids)
+                                            {
+                                                var ml = tMlMap.GetValueOrDefault(id);
+                                                if (ml == null)
+                                                {
+                                                    continue;
+                                                }
+
+                                                var c = tCMap.GetValueOrDefault(ml.CategoryId);
+                                                if (c == null)
+                                                {
+                                                    continue;
+                                                }
+
+                                                bizValue.Add([c.Name, ml.Name]);
+                                            }
+
+                                            filter.BizValue = bizValue.SerializeAsStandardValue();
+                                        }
+
+                                        break;
+                                    }
+                                    case SearchableReservedProperty.FileName:
+                                    case SearchableReservedProperty.DirectoryPath:
+                                    case SearchableReservedProperty.CreatedAt:
+                                    case SearchableReservedProperty.FileCreatedAt:
+                                    case SearchableReservedProperty.FileModifiedAt:
+                                    case SearchableReservedProperty.Introduction:
+                                    case SearchableReservedProperty.Rating:
+                                    {
+                                        filter.BizValue = filter.DbValue;
+                                        break;
+                                    }
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return new SingletonResponse<ResourceSearchDto>(sc);
         }
 
         [HttpPost("search")]
@@ -119,9 +404,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("keys")]
         [SwaggerOperation(OperationId = "GetResourcesByKeys")]
-        public async Task<ListResponse<Resource>> GetByKeys([FromQuery] int[] ids)
+        public async Task<ListResponse<Resource>> GetByKeys([FromQuery] int[] ids, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
-            return new ListResponse<Resource>(await _service.GetByKeys(ids));
+            return new ListResponse<Resource>(await _service.GetByKeys(ids, additionalItems));
         }
 
         // [HttpPut("{id}")]
@@ -381,12 +666,11 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return new ListResponse<PreviewerItem>(items);
         }
 
-        [HttpPut("{id:int}/custom-property/{pId:int}/value")]
-        [SwaggerOperation(OperationId = "PutResourceCustomPropertyValue")]
-        public async Task<BaseResponse> PutCustomPropertyValue(int id, int pId,
-            [FromBody] ResourceCustomPropertyValuePutRequestModel model)
+        [HttpPut("{id:int}/property-value")]
+        [SwaggerOperation(OperationId = "PutResourcePropertyValue")]
+        public async Task<BaseResponse> PutPropertyValue(int id, [FromBody] ResourcePropertyValuePutInputModel model)
         {
-            return await _customPropertyValueService.SetResourceValue(id, pId, model);
+            return await _service.PutPropertyValue(id, model);
         }
 
         [HttpGet("{resourceId}/play")]

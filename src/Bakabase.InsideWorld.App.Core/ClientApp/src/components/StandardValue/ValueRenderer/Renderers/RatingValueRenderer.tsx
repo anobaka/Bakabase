@@ -1,33 +1,64 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useUpdateEffect } from 'react-use';
 import type { ValueRendererProps } from '../models';
 import NumberValueEditor from '../../ValueEditor/Editors/NumberValueEditor';
-import type { EditableValueProps } from '@/components/StandardValue/models';
 import { Input, Progress, Rating } from '@/components/bakaui';
-type RatingValueRendererProps = ValueRendererProps<number> & EditableValueProps<number> & {
+import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
+import { buildLogger } from '@/components/utils';
+type RatingValueRendererProps = ValueRendererProps<number, number> & {
   allowHalf?: boolean;
 };
 
-export default ({ value, onValueChange, editable, variant, allowHalf, ...props }: RatingValueRendererProps) => {
+const log = buildLogger('RatingValueRenderer');
+
+export default (props: RatingValueRendererProps) => {
+  const { value: propsValue, editor, variant, allowHalf = true } = props;
+  const [value, setValue] = useState(propsValue);
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
+
+  log(props);
+
+  useUpdateEffect(() => {
+    setValue(propsValue);
+  }, [propsValue]);
+
+  const startEditing = editor ? () => setEditing(true) : undefined;
+  const changeValue = (v: number) => {
+    setValue(v);
+    editor?.onValueChange?.(v, v);
+  };
 
   if (variant == 'light') {
     if (editing) {
       return (
         <NumberValueEditor
-          initValue={value}
-          onChange={onValueChange}
+          value={value}
+          onValueChange={changeValue}
         />
       );
     } else {
-      return (
-        <span
-          onClick={editable ? () => setEditing(true) : undefined}
-        >{value}</span>
-      );
+      if (value != undefined && value > 0) {
+        return (
+          <span
+            onClick={startEditing}
+          >{value}</span>
+        );
+      } else {
+        return (
+          <NotSet onClick={startEditing} />
+        );
+      }
     }
   } else {
     return (
-      <Rating value={value} disabled={!editable} allowHalf={allowHalf} onChange={onValueChange} />
+      <Rating
+        value={value}
+        disabled={!editor}
+        allowHalf={allowHalf}
+        onChange={changeValue}
+      />
     );
   }
 };

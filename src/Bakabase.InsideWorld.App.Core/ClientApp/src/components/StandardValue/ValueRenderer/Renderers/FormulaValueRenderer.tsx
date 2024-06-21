@@ -1,13 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import type { ValueRendererProps } from '../models';
-import type { EditableValueProps } from '../../models';
-import { Checkbox, Switch } from '@/components/bakaui';
 
-type FormulaValueRendererProps = Omit<ValueRendererProps<string[]>, 'variant'> & EditableValueProps<string[]> & {
-  variant: ValueRendererProps<boolean>['variant'];
+type FormulaValueRendererProps = Omit<ValueRendererProps<string>, 'variant'> & {
+  variant: ValueRendererProps<string>['variant'];
 };
 
-export default ({ value, variant, onValueChange, editable, ...props }: FormulaValueRendererProps) => {
+export default ({ value, variant, editor, ...props }: FormulaValueRendererProps) => {
   const { t } = useTranslation();
 
   const v = variant ?? 'default';

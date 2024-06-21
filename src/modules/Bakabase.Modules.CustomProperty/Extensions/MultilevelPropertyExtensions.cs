@@ -21,6 +21,11 @@ namespace Bakabase.Modules.CustomProperty.Extensions
                 .Select(result => new[] {options.Label}.Concat(result).ToArray()).FirstOrDefault();
         }
 
+        public static string[]? FindLabelChain(this List<MultilevelDataOptions> options, string id)
+        {
+            return options.Select(o => o.FindLabelChain(id)).OfType<string[]>().FirstOrDefault();
+        }
+
         public static List<string?> FindValuesByLabelChains(this List<MultilevelDataOptions> branches,
             List<List<string>> labelChains)
         {

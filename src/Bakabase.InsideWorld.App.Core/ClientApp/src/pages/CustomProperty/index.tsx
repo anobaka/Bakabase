@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { SearchOutlined } from '@ant-design/icons';
 import PropertyDialog from '@/components/PropertyDialog';
 import BApi from '@/sdk/BApi';
-import { StandardValueType } from '@/sdk/constants';
+import type { StandardValueType } from '@/sdk/constants';
+import { CustomPropertyType } from '@/sdk/constants';
 import { CustomPropertyAdditionalItem } from '@/sdk/constants';
 import { Button, Chip, Input } from '@/components/bakaui';
 import Property from '@/components/Property';
@@ -16,9 +17,14 @@ export default () => {
   const [keyword, setKeyword] = useState('');
 
   const loadProperties = async () => {
-    const rsp = await BApi.customProperty.getAllCustomPropertiesV2({ additionalItems: CustomPropertyAdditionalItem.Category });
+    const rsp = await BApi.customProperty.getAllCustomProperties({ additionalItems: CustomPropertyAdditionalItem.Category });
     // @ts-ignore
-    setProperties(rsp.data || []);
+    setProperties((rsp.data || []).map(x => (
+      {
+        ...x,
+        isCustom: true,
+      }
+    )));
   };
 
   useEffect(() => {
@@ -27,9 +33,11 @@ export default () => {
 
   const filteredProperties = properties.filter(p => keyword == undefined || keyword.length == 0 || p.name!.toLowerCase().includes(keyword.toLowerCase()));
   const groupedFilteredProperties = filteredProperties.reduce<{[key in StandardValueType]?: IProperty[]}>((s, t) => {
-    (s[t.dbValueType] ??= []).push(t);
+    (s[t.type!] ??= []).push(t);
     return s;
   }, {});
+
+  console.log('[CustomProperty] render', groupedFilteredProperties);
 
   return (
     <div>
@@ -56,35 +64,40 @@ export default () => {
           />
         </div>
       </div>
-      {Object.keys(groupedFilteredProperties).map(k => {
-        const type = parseInt(k, 10);
-        const ps = groupedFilteredProperties[k];
-        return (
-          <div className={'flex gap-4 mt-2'}>
-            <div className={'mb-1 max-w-[80px] w-[80px]'}>
-              <Chip>
-                {t(StandardValueType[type])}
-              </Chip>
-            </div>
-            <div className={'flex items-start gap-2 flex-wrap'}>
-              {ps.map(p => {
-                return (
-                  <Property
-                    property={p}
-                    onSaved={loadProperties}
-                    key={p.id}
-                    editable
-                    removable
-                    onRemoved={() => {
-                      loadProperties();
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+      <div
+        className={'grid gap-2 items-center'}
+        style={{ gridTemplateColumns: 'auto auto' }}
+      >
+        {Object.keys(groupedFilteredProperties).map(k => {
+          const type = parseInt(k, 10);
+          const ps = groupedFilteredProperties[k];
+          return (
+            <>
+              <div className={'mb-1'}>
+                <Chip radius={'sm'}>
+                  {t(`CustomPropertyType.${CustomPropertyType[type]}`)}
+                </Chip>
+              </div>
+              <div className={'flex items-start gap-2 flex-wrap'}>
+                {ps.map(p => {
+                  return (
+                    <Property
+                      property={p}
+                      onSaved={loadProperties}
+                      key={p.id}
+                      editable
+                      removable
+                      onRemoved={() => {
+                        loadProperties();
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          );
+        })}
+      </div>
     </div>
   );
 };

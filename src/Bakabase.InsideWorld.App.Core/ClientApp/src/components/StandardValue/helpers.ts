@@ -1,4 +1,7 @@
 import type { TFunction } from 'react-i18next';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+import type { Duration } from 'dayjs/plugin/duration';
 import type { LinkValue, MultilevelData } from './models';
 import { StandardValueType } from '@/sdk/constants';
 
@@ -39,4 +42,46 @@ export const findNodeChainInMultilevelData = <V>(data: MultilevelData<V>[], valu
     }
   }
   return;
+};
+
+export const deserializeStandardValue = (value: string | null, type: StandardValueType): any | undefined => {
+  if (value == undefined) {
+    return undefined;
+  }
+
+  switch (type) {
+    case StandardValueType.String:
+    case StandardValueType.ListString:
+    case StandardValueType.Decimal:
+    case StandardValueType.Link:
+    case StandardValueType.Boolean:
+    case StandardValueType.ListListString:
+    case StandardValueType.ListTag:
+      return JSON.parse(value);
+    case StandardValueType.DateTime:
+      return dayjs(value);
+    case StandardValueType.Time:
+      return dayjs.duration(value);
+  }
+};
+
+export const serializeStandardValue = (value: any | null, type: StandardValueType): string | undefined => {
+  if (value == undefined) {
+    return undefined;
+  }
+
+  switch (type) {
+    case StandardValueType.String:
+    case StandardValueType.ListString:
+    case StandardValueType.Decimal:
+    case StandardValueType.Link:
+    case StandardValueType.Boolean:
+    case StandardValueType.ListListString:
+    case StandardValueType.ListTag:
+      return JSON.stringify(value);
+    case StandardValueType.DateTime:
+      return (value as Dayjs).format('YYYY-MM-DD HH:mm:ss');
+    case StandardValueType.Time:
+      return (value as Duration).format('HH:mm:ss');
+  }
 };

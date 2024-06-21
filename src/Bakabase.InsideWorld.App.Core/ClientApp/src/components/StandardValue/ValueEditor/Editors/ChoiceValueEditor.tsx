@@ -1,23 +1,30 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { SearchOutlined } from '@ant-design/icons';
+import { data } from 'autoprefixer';
 import type { ValueEditorProps } from '../models';
 import { Button, Input, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
+import { buildLogger } from '@/components/utils';
 
 type Data = { value: string; label: string };
 
-type ChoiceValueEditorProps = ValueEditorProps<string[]> & DestroyableProps & {
+type ChoiceValueEditorProps = ValueEditorProps<string[] | undefined> & DestroyableProps & {
   multiple: boolean;
   getDataSource: () => Promise<Data[] | undefined>;
 };
 
-export default ({ multiple, getDataSource, initValue, onChange }: ChoiceValueEditorProps) => {
+const log = buildLogger('ChoiceValueEditor');
+
+export default (props: ChoiceValueEditorProps) => {
   const { t } = useTranslation();
+  const { multiple, getDataSource, value: propsValue, onValueChange } = props;
 
   const [dataSource, setDataSource] = useState<Data[]>([]);
   const [keyword, setKeyword] = useState('');
-  const [value, setValue] = useState<string[]>(initValue ?? []);
+  const [value, setValue] = useState<string[]>(propsValue ?? []);
+
+  log(props);
 
   useEffect(() => {
     loadData();
@@ -36,7 +43,8 @@ export default ({ multiple, getDataSource, initValue, onChange }: ChoiceValueEdi
       size={dataSource.length > 10 ? 'xl' : 'lg'}
       title={t('Select data')}
       onOk={async () => {
-        onChange?.(value);
+        const validValues = value.filter(v => dataSource.some(d => d.value == v));
+        onValueChange?.(validValues, validValues.map(v => dataSource.find(x => x.value == v)?.label).filter(x => x) as string[]);
       }}
     >
       <div>
@@ -56,10 +64,11 @@ export default ({ multiple, getDataSource, initValue, onChange }: ChoiceValueEdi
               color={value.includes(d.value) ? 'primary' : 'default'}
               onClick={() => {
                 if (multiple) {
+                  log('value', value, 'select', d.value, 'includes', value.includes(d.value));
                   if (value.includes(d.value)) {
                     setValue(value.filter(v => v !== d.value));
                   } else {
-                    setValue([...(d.value || []), d.value]);
+                    setValue([...(value || []), d.value]);
                   }
                 } else {
                   setValue([d.value]);

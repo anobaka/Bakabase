@@ -4,14 +4,11 @@ import styles from './index.module.scss';
 import type { IProperty } from './models';
 import { PropertyTypeIconMap } from './models';
 import Label from './components/Label';
-import CustomIcon from '@/components/CustomIcon';
 import ClickableIcon from '@/components/ClickableIcon';
 import PropertyDialog from '@/components/PropertyDialog';
-import { Modal, Tooltip } from '@/components/bakaui';
+import { Chip, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
-import SimpleLabel from '@/components/SimpleLabel';
 import { CustomPropertyType, ResourceProperty } from '@/sdk/constants';
-import type { StandardValueType } from '@/sdk/constants';
 import { StandardValueIcon } from '@/components/StandardValue';
 
 interface IProps {
@@ -42,7 +39,39 @@ export default ({
   const editable = property.isCustom && props.editable;
   const removable = property.isCustom && props.removable;
 
-  const icon = property.dbValueType == undefined ? undefined : PropertyTypeIconMap[property.dbValueType];
+  const icon = property.type == undefined ? undefined : PropertyTypeIconMap[property.type];
+
+  const renderCategories = () => {
+    const categories = property.categories || [];
+    return (
+      <div className={`${styles.categories} flex flex-wrap gap-1`}>
+        {categories.length > 0 ? (
+          <Popover trigger={(
+            <Chip
+              radius={'sm'}
+              size={'sm'}
+              classNames={{}}
+            >{t('{{count}} categories', { count: categories.length })}</Chip>
+          )}
+          >
+            <div className={'flex flex-wrap gap-1 max-w-[600px]'}>
+              {categories.map(c => {
+                return (
+                  <Chip
+                    size={'sm'}
+                    radius={'sm'}
+                    key={c.id}
+                  >
+                    {c.name}
+                  </Chip>
+                );
+              })}
+            </div>
+          </Popover>
+        ) : t('No category bound')}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -57,7 +86,7 @@ export default ({
           await BApi.customProperty.removeCustomProperty(property.id);
           onRemoved?.();
         }}
-        title={t('Removing property')}
+        title={t('Delete a property')}
       >
         {t('This operation can not be undone, are you sure?')}
       </Modal>
@@ -73,9 +102,9 @@ export default ({
                 content={t(CustomPropertyType[property.type!])}
               >
                 <div className={styles.type}>
-                  <CustomIcon
+                  <Icon
                     type={icon}
-                    className={'text-small'}
+                    className={'text-base'}
                   />
                 </div>
               </Tooltip>
@@ -103,7 +132,6 @@ export default ({
                   },
                   onSaved: p => onSaved?.({
                     ...p,
-                    dbValueType: property.dbValueType as unknown as StandardValueType,
                     isCustom: property.isCustom,
                   }),
                 });
@@ -124,15 +152,7 @@ export default ({
           )}
         </div>
       </div>
-      <div className={`${styles.categories} flex flex-wrap gap-1`}>
-        {property.categories?.map(c => {
-          return (
-            <SimpleLabel key={c.id} className={styles.category}>
-              {c.name}
-            </SimpleLabel>
-          );
-        }) ?? t('No category bound')}
-      </div>
+      {renderCategories()}
     </div>
   );
 };

@@ -1,12 +1,14 @@
-import type { SelectProps as NextUISelectProps } from '@nextui-org/react';
+import type { SelectedItems, SelectProps as NextUISelectProps } from '@nextui-org/react';
 import { Select, SelectItem } from '@nextui-org/react';
 import type { Key } from '@react-types/shared';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Chip } from '@/components/bakaui';
 
+type Data = { label?: any; value: Key; textValue?: string };
 
 export interface SelectProps extends Omit<NextUISelectProps, 'children'> {
-  dataSource?: { label: any; value: Key; textValue?: string }[];
+  dataSource?: Data[];
   children?: any;
 }
 
@@ -14,40 +16,44 @@ export default ({
                               dataSource = [],
                               ...props
                             }: SelectProps) => {
+  const { t } = useTranslation();
+
   const isMultiline = props.selectionMode === 'multiple';
 
   // console.log(props.selectedKeys, dataSource);
-  const renderValue = props.renderValue ?? (isMultiline ? (v => {
+  const renderValue = props.renderValue ?? (isMultiline ? ((v: SelectedItems<Data>) => {
+    // console.log(v);
     if (v.length > 0) {
       return (
         <div className={'flex flex-wrap gap-2'}>
-          {v.reduce<ReactNode[]>((s, t, i) => {
-            s.push(<Chip>{dataSource.find(d => d.value.toString() === t.textValue)?.label}</Chip>);
+          {v.reduce<ReactNode[]>((s, x, i) => {
+            s.push(<Chip>{dataSource.find(d => d.value === x.data?.value)?.label ?? t('Unknown label')}</Chip>);
             return s;
           }, [])}
         </div>
       );
     }
-    return null;
+    return undefined;
   }) : undefined);
 
   return (
     <Select
+      items={dataSource ?? []}
       isMultiline={isMultiline}
       renderValue={renderValue}
       {...props}
     >
-      {dataSource.map(d => {
+      {(data: Data) => {
         return (
           <SelectItem
-            key={d.value}
-            value={d.value}
-            textValue={d.textValue ?? d.label.toString()}
+            key={data.value}
+            value={data.value}
+            textValue={data.textValue ?? data.label?.toString()}
           >
-            {d.label}
+            {data.label}
           </SelectItem>
         );
-      }) ?? []}
+      }}
     </Select>
   );
 };

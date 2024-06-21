@@ -68,6 +68,7 @@ using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
+using Bakabase.Modules.StandardValue.Helpers;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -346,17 +347,17 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 r.Properties ??= [];
                                 var builtinProperties = r.Properties.GetOrAdd((int)ResourcePropertyType.Reserved, () => []);
-                                var ratingProperty = resourceRatingPropertyMap.GetValueOrDefault(r.Id);
-                                if (ratingProperty != null)
-                                {
-                                    builtinProperties[(int) ResourceProperty.Rating] = ratingProperty;
-                                }
-
-                                var introductionProperty = resourceIntroductionPropertyMap.GetValueOrDefault(r.Id);
-                                if (introductionProperty != null)
-                                {
-                                    builtinProperties[(int) ResourceProperty.Introduction] = introductionProperty;
-                                }
+                                var dbBuiltinProperties = builtinPropertyValueMap.GetValueOrDefault(r.Id);
+                                builtinProperties[(int)ResourceProperty.Rating] = new Resource.Property(null, StandardValueType.Decimal,
+                                    StandardValueType.Decimal,
+                                    dbBuiltinProperties?.Select(s =>
+                                        new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating,
+                                            s.Rating)).ToList());
+                                builtinProperties[(int)ResourceProperty.Introduction] = new Resource.Property(null, StandardValueType.String,
+                                    StandardValueType.String,
+                                    dbBuiltinProperties?.Select(s =>
+                                        new Resource.Property.PropertyValue(s.Scope, s.Introduction, s.Introduction,
+                                            s.Introduction)).ToList());
                             }
 
                             SortPropertyValuesByScope(doList);
@@ -365,23 +366,27 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
                         case ResourceAdditionalItem.CustomProperties:
                         {
+                            // ResourceId - PropertyId - Values
                             var customPropertiesValuesMap = (await _customPropertyValueService.GetAll(
                                 x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
                                 true)).GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
-                                x => x.ToDictionary(y => y.PropertyId, y => y));
+                                x => x.GroupBy(y => y.PropertyId).ToDictionary(y => y.Key, y => y.ToList()));
                             var propertyIds = customPropertiesValuesMap.Values.SelectMany(x => x.Keys).ToHashSet();
                             var propertyMap =
                                 (await _customPropertyService.GetByKeys(propertyIds, CustomPropertyAdditionalItem.None))
                                 .ToDictionary(d => d.Id, d => d);
 
+                            var categoryMap = (await _categoryService.GetByKeys(
+                                doList.Select(d => d.CategoryId).ToHashSet(), CategoryAdditionalItem.CustomProperties)).ToDictionary(d => d.Id, d => d);
+
                             foreach (var r in doList)
                             {
                                 r.Properties ??= [];
-                                var customProperties = r.Properties.GetOrAdd((int)ResourcePropertyType.Reserved, () => []);
-                                var values = customPropertiesValuesMap.GetValueOrDefault(r.Id);
-                                if (values != null)
+                                var customProperties = r.Properties.GetOrAdd((int)ResourcePropertyType.Custom, () => []);
+                                var pValues = customPropertiesValuesMap.GetValueOrDefault(r.Id);
+                                if (pValues != null)
                                 {
-                                    foreach (var (pId, v) in values)
+                                    foreach (var (pId, values) in pValues)
                                     {
                                         var property = propertyMap.GetValueOrDefault(pId);
                                         if (property == null)
@@ -394,10 +399,22 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 property.BizValueType, []));
                                         p.Values ??= [];
                                         var cpd = _customPropertyDescriptors.GetValueOrDefault(property.Type);
-                                        var bizValue = cpd?.ConvertDbValueToBizValue(property, v.Value) ?? v.Value;
-                                        var pv = new Resource.Property.PropertyValue(v.Scope, v.Value, bizValue,
-                                            bizValue);
-                                        p.Values.Add(pv);
+                                        foreach (var v in values)
+                                        {
+                                            var bizValue = cpd?.ConvertDbValueToBizValue(property, v.Value) ?? v.Value;
+                                            var pv = new Resource.Property.PropertyValue(v.Scope, v.Value, bizValue,
+                                                bizValue);
+                                            p.Values.Add(pv);
+                                        }
+                                    }
+                                }
+                                var properties = categoryMap.GetValueOrDefault(r.CategoryId)?.CustomProperties;
+                                if (properties != null)
+                                {
+                                    foreach (var p in properties)
+                                    {
+                                        customProperties.TryAdd(p.Id,
+                                            new Resource.Property(p.Name, p.DbValueType, p.BizValueType, null));
                                     }
                                 }
                             }
@@ -781,7 +798,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            var aliasAppliedBizValues = await _aliasService.ReplaceWithPreferredAlias(bizValuePropertyValuePairs
+            var aliasAppliedBizValues = await _aliasService.GetAliasAppliedValues(bizValuePropertyValuePairs
                 .Select(b => (b.BizValue, b.BizValueType)).ToList());
 
             for (var i = 0; i < bizValuePropertyValuePairs.Count; i++)
@@ -842,6 +859,93 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<List<Abstractions.Models.Db.Resource>> AddAll(IEnumerable<Abstractions.Models.Db.Resource> resources)
         {
             return (await _orm.AddRange(resources.ToList())).Data;
+        }
+
+
+        public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)
+        {
+            if (model.IsCustomProperty)
+            {
+                var value = (await _customPropertyValueService.GetAllDbModels(x =>
+                    x.ResourceId == resourceId && x.PropertyId == model.PropertyId &&
+                    x.Scope == (int) PropertyValueScope.Manual)).FirstOrDefault();
+                if (value == null)
+                {
+                    value = new Bakabase.Abstractions.Models.Db.CustomPropertyValue()
+                    {
+                        ResourceId = resourceId,
+                        PropertyId = model.PropertyId,
+                        Value = model.Value,
+                        Scope = (int)PropertyValueScope.Manual
+                    };
+                    return await _customPropertyValueService.AddDbModel(value);
+                }
+                else
+                {
+                    value.Value = model.Value;
+                    return await _customPropertyValueService.UpdateDbModel(value);
+                }
+            }
+            else
+            {
+                var property = (ResourceProperty)model.PropertyId;
+                switch (property)
+                {
+                    // case ResourceProperty.RootPath:
+                    //     break;
+                    // case ResourceProperty.ParentResource:
+                    //     break;
+                    // case ResourceProperty.Resource:
+                    //     break;
+                    case ResourceProperty.Introduction:
+                    case ResourceProperty.Rating:
+                        {
+                            var scopeValue = await _builtinPropertyValueService.GetFirst(x =>
+                                x.ResourceId == resourceId && x.Scope == (int)PropertyValueScope.Manual);
+                            var noValue = scopeValue == null;
+                            scopeValue ??= new BuiltinPropertyValue
+                            {
+                                ResourceId = resourceId,
+                                Scope = (int)PropertyValueScope.Manual
+                            };
+
+                            if (property == ResourceProperty.Introduction)
+                            {
+                                scopeValue.Introduction =
+                                    model.Value?.DeserializeAsStandardValue(StandardValueType.String) as string;
+                            }
+                            else
+                            {
+                                scopeValue.Rating =
+                                    model.Value?.DeserializeAsStandardValue(StandardValueType.Decimal) is decimal x
+                                        ? x
+                                        : null;
+                            }
+
+                            return noValue
+                                ? await _builtinPropertyValueService.Add(scopeValue)
+                                : await _builtinPropertyValueService.Update(scopeValue);
+                        }
+                    // case ResourceProperty.CustomProperty:
+                    //     break;
+                    // case ResourceProperty.FileName:
+                    //     break;
+                    // case ResourceProperty.DirectoryPath:
+                    //     break;
+                    // case ResourceProperty.CreatedAt:
+                    //     break;
+                    // case ResourceProperty.FileCreatedAt:
+                    //     break;
+                    // case ResourceProperty.FileModifiedAt:
+                    //     break;
+                    // case ResourceProperty.Category:
+                    //     break;
+                    // case ResourceProperty.MediaLibrary:
+                    //     break;
+                    default:
+                        return BaseResponseBuilder.BuildBadRequest("Unknown property");
+                }
+            }
         }
 
         /// <summary>

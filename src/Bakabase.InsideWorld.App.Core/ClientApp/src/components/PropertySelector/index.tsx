@@ -66,20 +66,21 @@ const PropertySelector = ({
   const loadProperties = async () => {
     const arr: IProperty[] = [];
     if (pool == 'all' || pool == 'reserved') {
-      const map = internalOptions.resource.reservedResourcePropertyAndValueTypeMap || {};
+      const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
       arr.push(
         ...Object.keys(map).map<IProperty>(pStr => {
           const p = parseInt(pStr, 10) as EnumResourceProperty;
           return {
             id: p,
-            dbValueType: map[p],
+            dbValueType: map[p].dbValueType,
             isCustom: false,
+            bizValueType: map[p].bizValueType,
           };
         }),
       );
     }
     if (pool == 'all' || pool == 'custom') {
-      const rsp = await BApi.customProperty.getAllCustomPropertiesV2({ additionalItems: CustomPropertyAdditionalItem.Category });
+      const rsp = await BApi.customProperty.getAllCustomProperties({ additionalItems: CustomPropertyAdditionalItem.Category });
       // @ts-ignore
       arr.push(...(rsp.data || []).map(d => ({
         ...d,

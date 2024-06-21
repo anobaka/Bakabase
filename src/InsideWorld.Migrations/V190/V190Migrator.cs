@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Business.Components.BuiltinProperty;
 using Bakabase.InsideWorld.Business.Components.Legacy.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.Alias.Abstractions.Models.Db;
 using Bakabase.Modules.Alias.Abstractions.Services;
@@ -46,6 +47,8 @@ namespace InsideWorld.Migrations.V190
         private readonly IBuiltinPropertyValueService _builtinPropertyValueService;
         private readonly IResourceService _resourceService;
         private readonly IAliasService _aliasService;
+        private readonly ICategoryCustomPropertyMappingService _categoryCustomPropertyMappingService;
+        private readonly ICategoryService _categoryService;
 
         private readonly InsideWorldDbContext _dbCtx;
 
@@ -59,7 +62,10 @@ namespace InsideWorld.Migrations.V190
             LegacyPublisherResourceMappingService publisherResourceMappingService, LegacyTagService tagService,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IServiceProvider serviceProvider, V190MigrationLocalizer localizer,
-            IBuiltinPropertyValueService builtinPropertyValueService, IResourceService resourceService, IAliasService aliasService, LegacyAliasService legacyAliasService, InsideWorldDbContext dbCtx) : base(serviceProvider)
+            IBuiltinPropertyValueService builtinPropertyValueService, IResourceService resourceService,
+            IAliasService aliasService, LegacyAliasService legacyAliasService, InsideWorldDbContext dbCtx,
+            ICategoryCustomPropertyMappingService categoryCustomPropertyMappingService,
+            ICategoryService categoryService) : base(serviceProvider)
         {
             _publisherService = publisherService;
             _volumeService = volumeService;
@@ -82,6 +88,8 @@ namespace InsideWorld.Migrations.V190
             _aliasService = aliasService;
             _legacyAliasService = legacyAliasService;
             _dbCtx = dbCtx;
+            _categoryCustomPropertyMappingService = categoryCustomPropertyMappingService;
+            _categoryService = categoryService;
         }
 
         protected override async Task MigrateAfterDbMigrationInternal(object context)
@@ -101,7 +109,7 @@ namespace InsideWorld.Migrations.V190
                     .ToDictionary(d => (d.FirstOrDefault(x => x.IsPreferred) ?? d.First()).Name,
                         d => d.Select(c => c.Name).ToHashSet());
                 var aliases = legacyGroups.SelectMany(la =>
-                    la.Value.Select(t => new Alias { Text = t, Preferred = t == la.Key ? null : la.Key })).ToList();
+                    la.Value.Select(t => new Alias {Text = t, Preferred = t == la.Key ? null : la.Key})).ToList();
                 await _aliasService.AddAll(aliases);
             }
         }
@@ -129,11 +137,11 @@ namespace InsideWorld.Migrations.V190
             }
         }
 
-        private async Task<CustomProperty> CreateOrGetDefaultProperty(LegacyCustomProperty property,
+        private async Task<CustomProperty> CreateOrGetDefaultProperty(LegacyResourceProperty property,
             string? subProperty)
         {
             var cpType = GetDefaultCustomPropertyTypeForLegacyProperties(property, subProperty);
-            var cpName = _localizer.DefaultPropertyName((ResourceProperty) property, subProperty);
+            var cpName = _localizer.DefaultPropertyName(property, subProperty);
             var cp = (await _customPropertyService.GetAll(x => x.Name == cpName && x.Type == (int) cpType))
                 .FirstOrDefault() ?? await _customPropertyService.Add(new CustomPropertyAddOrPutDto
                 {
@@ -176,12 +184,13 @@ namespace InsideWorld.Migrations.V190
         private async Task MigrateCustomProperties()
         {
             var customPropertyMigrationContexts =
-                new List<(LegacyCustomProperty Property, string? SubProperty, Dictionary<int, object?> ResourceBizValue
+                new List<(LegacyResourceProperty Property, string? SubProperty, Dictionary<int, object?>
+                    ResourceBizValue
                     )>();
 
-            foreach (var property in SpecificEnumUtils<LegacyCustomProperty>.Values)
+            foreach (var property in SpecificEnumUtils<LegacyResourceProperty>.Values)
             {
-                if (property == LegacyCustomProperty.Volume)
+                if (property == LegacyResourceProperty.Volume)
                 {
                     var resourceVolumeMap = (await _volumeService.GetAll()).ToDictionary(x => x.ResourceId, x => x);
                     {
@@ -200,7 +209,7 @@ namespace InsideWorld.Migrations.V190
                         customPropertyMigrationContexts.Add((property, nameof(Volume.Name), valueMap));
                     }
                 }
-                else if (property == LegacyCustomProperty.CustomProperty)
+                else if (property == LegacyResourceProperty.CustomProperty)
                 {
                     var typedValueMap = (await _customResourcePropertyService.GetAll())
                         .GroupBy(x => x.Key)
@@ -213,7 +222,7 @@ namespace InsideWorld.Migrations.V190
                     foreach (var (resourceKey, valueMap) in typedValueMap)
                     {
                         customPropertyMigrationContexts.Add(
-                            (LegacyCustomProperty.CustomProperty, resourceKey,
+                            (LegacyResourceProperty.CustomProperty, resourceKey,
                                 MergeSameValue(valueMap).ToDictionary(d => d.Key, d => (object?) d.Value)));
                     }
                 }
@@ -222,14 +231,14 @@ namespace InsideWorld.Migrations.V190
                     Dictionary<int, object?> resourceBizValueMap;
                     switch (property)
                     {
-                        case LegacyCustomProperty.ReleaseDt:
+                        case LegacyResourceProperty.ReleaseDt:
                         {
                             var resources = await _legacyResourceService.GetAll();
                             resourceBizValueMap = resources.Where(r => r.ReleaseDt.HasValue)
                                 .ToDictionary(x => x.Id, x => (object?) x.ReleaseDt!.Value);
                             break;
                         }
-                        case LegacyCustomProperty.Publisher:
+                        case LegacyResourceProperty.Publisher:
                         {
                             var mappings = await _publisherResourceMappingService.GetAll();
                             var publisherMap = (await _publisherService.GetAll()).ToDictionary(d => d.Id);
@@ -240,21 +249,21 @@ namespace InsideWorld.Migrations.V190
                                 .ToDictionary(d => d.Key, d => (object?) d.Value);
                             break;
                         }
-                        case LegacyCustomProperty.Name:
+                        case LegacyResourceProperty.Name:
                         {
                             var resources = await _legacyResourceService.GetAll();
                             resourceBizValueMap = resources.Where(r => !string.IsNullOrEmpty(r.Name))
                                 .ToDictionary(x => x.Id, x => (object?) x.Name);
                             break;
                         }
-                        case LegacyCustomProperty.Language:
+                        case LegacyResourceProperty.Language:
                         {
                             var resources = await _legacyResourceService.GetAll();
                             resourceBizValueMap = resources.Where(r => r.Language > 0)
-                                .ToDictionary(x => x.Id, x => (object?) x.Language);
+                                .ToDictionary(x => x.Id, x => (object?) _localizer.Language(x.Language));
                             break;
                         }
-                        case LegacyCustomProperty.Original:
+                        case LegacyResourceProperty.Original:
                         {
                             var originals = (await _originalService.GetAll()).ToDictionary(x => x.Id, x => x);
                             var resourceOriginals = await _originalResourceMappingService.GetAll();
@@ -268,7 +277,7 @@ namespace InsideWorld.Migrations.V190
                                 .ToDictionary(d => d.Key, d => (object?) d.Value);
                             break;
                         }
-                        case LegacyCustomProperty.Series:
+                        case LegacyResourceProperty.Series:
                         {
                             var series = (await _seriesService.GetAll()).ToDictionary(x => x.Id, x => x);
                             var volumes = (await _volumeService.GetAll()).ToDictionary(x => x.ResourceId, x => x);
@@ -278,7 +287,7 @@ namespace InsideWorld.Migrations.V190
                                 .ToDictionary(x => x.Key, x => (object?) x.Value);
                             break;
                         }
-                        case LegacyCustomProperty.Favorites:
+                        case LegacyResourceProperty.Favorites:
                         {
                             var favorites = (await _favoritesService.GetAll()).ToDictionary(x => x.Id, x => x);
                             var resourceFavoritesMappings = await _favoritesResourceMappingService.GetAll();
@@ -290,7 +299,7 @@ namespace InsideWorld.Migrations.V190
                                 .ToDictionary(x => x.Key, x => (object?) x.Value);
                             break;
                         }
-                        case LegacyCustomProperty.Tag:
+                        case LegacyResourceProperty.Tag:
                         {
                             var tagGroupMap = (await _tagGroupService.GetAll()).ToDictionary(d => d.Id);
                             var tags = await _tagService.GetAll();
@@ -313,9 +322,11 @@ namespace InsideWorld.Migrations.V190
 
             customPropertyMigrationContexts.RemoveAll(x => !x.ResourceBizValue.Any());
 
+            var propertyIds = new List<int>();
             foreach (var (lp, sp, rbMap) in customPropertyMigrationContexts)
             {
                 var property = await CreateOrGetDefaultProperty(lp, sp);
+                propertyIds.Add(property.Id);
                 var migrated = await _customPropertyValueService.Any(x => x.PropertyId == property.Id);
                 if (!migrated)
                 {
@@ -345,28 +356,41 @@ namespace InsideWorld.Migrations.V190
                     await _customPropertyValueService.AddRange(values);
                 }
             }
+
+            var allMappings = await _categoryCustomPropertyMappingService.GetAll();
+            if (!allMappings.Any())
+            {
+                var categories = await _categoryService.GetAll(null, CategoryAdditionalItem.None);
+                var mappings = categories.SelectMany(c => propertyIds.Select(p => new CategoryCustomPropertyMapping
+                {
+                    CategoryId = c.Id,
+                    PropertyId = p
+                })).ToList();
+                await _categoryCustomPropertyMappingService.AddAll(mappings);
+            }
         }
 
-        public static CustomPropertyType GetDefaultCustomPropertyTypeForLegacyProperties(LegacyCustomProperty property,
+        public static CustomPropertyType GetDefaultCustomPropertyTypeForLegacyProperties(
+            LegacyResourceProperty property,
             string? propertyKey)
         {
             return property switch
             {
-                LegacyCustomProperty.ReleaseDt => CustomPropertyType.DateTime,
-                LegacyCustomProperty.Publisher => CustomPropertyType.MultipleChoice,
-                LegacyCustomProperty.Name => CustomPropertyType.SingleLineText,
-                LegacyCustomProperty.Language => CustomPropertyType.SingleChoice,
-                LegacyCustomProperty.Volume => propertyKey switch
+                LegacyResourceProperty.ReleaseDt => CustomPropertyType.DateTime,
+                LegacyResourceProperty.Publisher => CustomPropertyType.MultipleChoice,
+                LegacyResourceProperty.Name => CustomPropertyType.SingleLineText,
+                LegacyResourceProperty.Language => CustomPropertyType.SingleChoice,
+                LegacyResourceProperty.Volume => propertyKey switch
                 {
                     nameof(Volume.Index) => CustomPropertyType.Number,
                     nameof(Volume.Title) => CustomPropertyType.SingleLineText,
                     nameof(Volume.Name) => CustomPropertyType.SingleLineText,
                 },
-                LegacyCustomProperty.Original => CustomPropertyType.MultipleChoice,
-                LegacyCustomProperty.Series => CustomPropertyType.SingleLineText,
-                LegacyCustomProperty.CustomProperty => CustomPropertyType.MultipleChoice,
-                LegacyCustomProperty.Favorites => CustomPropertyType.MultipleChoice,
-                LegacyCustomProperty.Tag => CustomPropertyType.Tags,
+                LegacyResourceProperty.Original => CustomPropertyType.MultipleChoice,
+                LegacyResourceProperty.Series => CustomPropertyType.SingleLineText,
+                LegacyResourceProperty.CustomProperty => CustomPropertyType.MultipleChoice,
+                LegacyResourceProperty.Favorites => CustomPropertyType.MultipleChoice,
+                LegacyResourceProperty.Tag => CustomPropertyType.Tags,
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }

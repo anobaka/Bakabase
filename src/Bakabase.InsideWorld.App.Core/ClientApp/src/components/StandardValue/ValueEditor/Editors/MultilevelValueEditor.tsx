@@ -4,13 +4,13 @@ import { DoubleRightOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ValueEditorProps } from '../models';
 import { Button, Input, Modal } from '@/components/bakaui';
 import type { MultilevelData } from '@/components/StandardValue/models';
-import { filterMultilevelData } from '@/components/StandardValue/helpers';
+import { filterMultilevelData, findNodeChainInMultilevelData } from '@/components/StandardValue/helpers';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
 type Selectable<V> = (data: MultilevelData<V>, depth: number, index: number) => boolean;
 
-interface MultilevelValueEditorProps<V> extends ValueEditorProps<V[]>, DestroyableProps{
-  getDataSource: () => Promise<MultilevelData<V>[] | undefined>;
+interface MultilevelValueEditorProps<V> extends ValueEditorProps<V[], string[][]>, DestroyableProps{
+  getDataSource?: () => Promise<MultilevelData<V>[] | undefined>;
   selectable?: Selectable<V>;
   multiple?: boolean;
 }
@@ -19,23 +19,23 @@ const buildDefaultSelectable: (<V>() => Selectable<V>) = () => {
   return (data, depth, index) => data.children == undefined || data.children.length == 0;
 };
 
-export default <V = string>({ getDataSource, selectable = buildDefaultSelectable<V>(), initValue, onChange, onCancel, multiple }: MultilevelValueEditorProps<V>) => {
+export default <V = string>({ getDataSource, selectable = buildDefaultSelectable<V>(), value: propsValue, onValueChange, onCancel, multiple }: MultilevelValueEditorProps<V>) => {
   const { t } = useTranslation();
 
   const [dataSource, setDataSource] = useState<MultilevelData<V>[]>([]);
   const [keyword, setKeyword] = useState('');
-  const [value, setValue] = useState<V[]>(initValue ?? []);
+  const [value, setValue] = useState<V[]>(propsValue ?? []);
 
   useEffect(() => {
     loadData();
   }, []);
 
   useEffect(() => {
-    setValue(initValue ?? []);
-  }, [initValue]);
+    setValue(propsValue ?? []);
+  }, [propsValue]);
 
   const loadData = async () => {
-    const data = await getDataSource() ?? [];
+    const data = await getDataSource?.() ?? [];
     if (data.length > 0) {
       setDataSource(data);
     }
@@ -95,7 +95,7 @@ export default <V = string>({ getDataSource, selectable = buildDefaultSelectable
       size={dataSource.length > 10 ? 'xl' : 'lg'}
       title={t('Select data')}
       onOk={async () => {
-        onChange?.(value);
+        onValueChange?.(value, value.map(v => findNodeChainInMultilevelData(dataSource, v)?.map(x => x.label)).filter(x => x) as string[][]);
       }}
       onClose={onCancel}
     >

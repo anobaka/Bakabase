@@ -3,7 +3,7 @@ import type { SignalRData } from '@/components/SignalR/models';
 
 interface Options {
   resource: {
-    reservedResourcePropertyAndValueTypeMap: Record<ResourceProperty, StandardValueType>;
+    reservedResourcePropertyAndValueTypesMap: Record<ResourceProperty, {dbValueType: StandardValueType; bizValueType: StandardValueType}>;
     customPropertyValueSearchOperationsMap: Record<StandardValueType, SearchOperation[]>;
   };
 }

@@ -1,4 +1,5 @@
-﻿using Bootstrap.Components.Orm;
+﻿using Bakabase.Abstractions.Services;
+using Bootstrap.Components.Orm;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.InsideWorld.Business.Components.BuiltinProperty;

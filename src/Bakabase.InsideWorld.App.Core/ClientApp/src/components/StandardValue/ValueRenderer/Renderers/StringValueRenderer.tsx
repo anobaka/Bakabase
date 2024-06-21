@@ -1,55 +1,79 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
+import { useUpdateEffect } from 'react-use';
 import type { ValueRendererProps } from '../models';
-import type { EditableValueProps } from '../../models';
-import { Button, Chip, Input, TextArea, Card, CardBody } from '@/components/bakaui';
+import NotSet from './components/NotSet';
+import { Card, CardBody, Input, Textarea } from '@/components/bakaui';
+import { buildLogger } from '@/components/utils';
 
-type StringValueRendererProps = ValueRendererProps<string> & EditableValueProps<string> & {
+type StringValueRendererProps = ValueRendererProps<string> & {
   multiline?: boolean;
 };
 
-export default ({ value, multiline, variant, onValueChange, editable }: StringValueRendererProps) => {
+const log = buildLogger('StringValueRenderer');
+
+export default (props: StringValueRendererProps) => {
+  const {
+    value: propsValue,
+    multiline,
+    variant,
+    editor,
+  } = props;
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(propsValue);
 
-  if (!editing || !editable) {
+  useUpdateEffect(() => {
+    setValue(propsValue);
+  }, [propsValue]);
+
+  const startEditing = editor ? () => {
+    log('Start editing');
+    setEditing(true);
+  } : undefined;
+
+  if (!editing) {
+    if (value == undefined || value.length == 0) {
+      return (
+        <NotSet onClick={startEditing} />
+      );
+    }
+  }
+
+  log(props);
+
+  const completeEditing = () => {
+    editor?.onValueChange?.(value, value);
+    setEditing(false);
+  };
+
+  if (variant == 'light' && !editing) {
     return (
-      <>{value}</>
+      <span onClick={startEditing}>{value}</span>
     );
   }
 
   if (editing) {
     if (multiline) {
       return (
-        <TextArea
+        <Textarea
           value={value}
-          onValueChange={onValueChange}
-          onBlur={() => {
-            setEditing(false);
-          }}
+          onValueChange={setValue}
+          onBlur={completeEditing}
         />
       );
     } else {
       return (
         <Input
           value={value}
-          onValueChange={onValueChange}
-          onBlur={() => {
-            setEditing(false);
-          }}
+          onValueChange={setValue}
+          onBlur={completeEditing}
         />
       );
     }
   } else {
     return (
-      <Card
-        className={'cursor-pointer'}
-        onClick={() => {
-        setEditing(true);
-      }}
-      >
-        <CardBody>{value ?? t('Click to set')}</CardBody>
-      </Card>
+      <span onClick={startEditing}>{value}</span>
     );
   }
 };

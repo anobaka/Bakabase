@@ -7,10 +7,10 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Models.Models.Aos
 {
-	public record ResourceSearchFilterGroup
-	{
-		public Combinator Combinator { get; set; }
-		public List<ResourceSearchFilterGroup>? Groups { get; set; }
-		public List<ResourceSearchFilter>? Filters { get; set; }
-	}
+    public record ResourceSearchFilterGroup
+    {
+        public Combinator Combinator { get; set; }
+        public List<ResourceSearchFilterGroup>? Groups { get; set; }
+        public List<ResourceSearchFilter>? Filters { get; set; }
+    }
 }

@@ -7,7 +7,7 @@ import FilterGroup from './FilterGroup';
 import type { IProperty } from '@/components/Property/models';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
-import { CustomPropertyAdditionalItem, ResourceProperty as EnumResourceProperty } from '@/sdk/constants';
+import { ResourceProperty as EnumResourceProperty } from '@/sdk/constants';
 
 interface IProps {
   group?: IGroup;
@@ -15,7 +15,11 @@ interface IProps {
   portalContainer?: any;
 }
 
-export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
+export default ({
+                  group: propsGroup,
+                  onChange,
+                  portalContainer,
+                }: IProps) => {
   const { t } = useTranslation();
 
   const [group, setGroup] = useState<IGroup>(propsGroup ?? { combinator: GroupCombinator.And });
@@ -26,24 +30,25 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
 
   const loadProperties = async () => {
     const arr: IProperty[] = [];
-      const map = internalOptions.resource.reservedResourcePropertyAndValueTypeMap || {};
-      arr.push(
-        ...Object.keys(map).map<IProperty>(pStr => {
-          const p = parseInt(pStr, 10) as EnumResourceProperty;
-          return {
-            id: p,
-            name: t(EnumResourceProperty[p]),
-            dbValueType: map[p],
-            isCustom: false,
-          };
-        }),
-      );
-      const rsp = await BApi.customProperty.getAllCustomPropertiesV2();
-      // @ts-ignore
-      arr.push(...(rsp.data || []).map(d => ({
-        ...d,
-        isCustom: true,
-      })));
+    const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
+    arr.push(
+      ...Object.keys(map).map<IProperty>(pStr => {
+        const p = parseInt(pStr, 10) as EnumResourceProperty;
+        return {
+          id: p,
+          name: t(EnumResourceProperty[p]),
+          dbValueType: map[p].dbValueType,
+          isCustom: false,
+          bizValueType: map[p].bizValueType,
+        };
+      }),
+    );
+    const rsp = await BApi.customProperty.getAllCustomProperties();
+    // @ts-ignore
+    arr.push(...(rsp.data || []).map(d => ({
+      ...d,
+      isCustom: true,
+    })));
     setPropertyMap(arr.reduce((s, p) => {
       // @ts-ignore
       s[p.id!] = p;
@@ -70,7 +75,10 @@ export default ({ group: propsGroup, onChange, portalContainer }: IProps) => {
       };
       return s;
     }, {});
-    const dataPool: DataPool = { categoryMap, mediaLibraryMap };
+    const dataPool: DataPool = {
+      categoryMap,
+      mediaLibraryMap,
+    };
     setDataPool(dataPool);
   };
 

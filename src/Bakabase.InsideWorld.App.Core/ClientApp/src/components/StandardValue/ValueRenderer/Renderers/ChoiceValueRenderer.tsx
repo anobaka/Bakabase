@@ -1,44 +1,52 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ValueRendererProps } from '../models';
-import type { EditableValueProps } from '../../models';
-import MultilevelValueEditor from '../../ValueEditor/Editors/MultilevelValueEditor';
 import ChoiceValueEditor from '../../ValueEditor/Editors/ChoiceValueEditor';
+import NotSet from './components/NotSet';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Chip, Card, CardBody } from '@/components/bakaui';
+import { buildLogger } from '@/components/utils';
 
 type Data = {label: string; value: string};
 
-type ListStringValueRendererProps = ValueRendererProps<string[]> & EditableValueProps<string[]> & {
+type ListStringValueRendererProps = ValueRendererProps<string[]> & {
   multiple?: boolean;
   getDataSource?: () => Promise<Data[]>;
 };
 
-export default ({ value, onValueChange, editable, variant, getDataSource, multiple, ...props }: ListStringValueRendererProps) => {
+const log = buildLogger('ChoiceValueRenderer');
+
+export default (props: ListStringValueRendererProps) => {
+  const { value, editor, variant, getDataSource, multiple } = props;
+  const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const dataSourceRef = useRef<Data[]>([]);
+  log(props);
 
-  const showEditor = () => {
+  const startEditing = editor ? async () => {
     createPortal(ChoiceValueEditor, {
-      getDataSource: async () => dataSourceRef.current,
-      onChange: v => {
-        if (v) {
-          onValueChange?.(v);
-        }
-      },
+      value: editor?.value,
+      getDataSource: getDataSource ?? (async () => []),
+      onValueChange: editor?.onValueChange,
       multiple: multiple ?? false,
     });
-  };
+  } : undefined;
+
+  const validValues = value?.map(v => v != undefined) || [];
+  if (validValues.length == 0) {
+    return (
+      <NotSet onClick={startEditing} />
+    );
+  }
 
   if (variant == 'light') {
     return (
-      <span onClick={editable ? showEditor : undefined}>{value?.join(', ')}</span>
+      <span onClick={startEditing}>{value?.join(', ')}</span>
     );
   } else {
     return (
-      <Card onClick={editable ? showEditor : undefined}>
-        <CardBody className={'flex flex-wrap gap-1'}>
-          {value?.map(d => {
+      <div onClick={startEditing} className={'flex flex-wrap gap-1'}>
+        {value?.map(d => {
             return (
               <Chip
                 size={'sm'}
@@ -48,8 +56,7 @@ export default ({ value, onValueChange, editable, variant, getDataSource, multip
               </Chip>
             );
           })}
-        </CardBody>
-      </Card>
+      </div>
     );
   }
 };

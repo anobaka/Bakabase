@@ -126,6 +126,9 @@
   <data name="Category_MediaLibraryExistsOnDeletion" xml:space="preserve">
     <value>请先分类下的媒体库，然后再删除分类</value>
   </data>
+  <data name="Chinese" xml:space="preserve">
+    <value>汉语</value>
+  </data>
   <data name="Component_DuplicatesAreFound" xml:space="preserve">
     <value>发现重复组件: {0}</value>
   </data>
@@ -182,6 +185,9 @@
   </data>
   <data name="Downloader_UnknownType" xml:space="preserve">
     <value>未知任务类型: {0}</value>
+  </data>
+  <data name="English" xml:space="preserve">
+    <value>英语</value>
   </data>
   <data name="Enhancer_Bakabase_Description" xml:space="preserve">
     <value>解析类似"[(20)191202][作者1(作者2,作者3),作者4(作者5),作者6]标题 第2话 召唤神龙(原作1、原作2)[CN]"格式的文件名</value>
@@ -249,6 +255,54 @@
   <data name="FilesDoNotExistInPath" xml:space="preserve">
     <value>在{1}中未找到文件{0}</value>
   </data>
+  <data name="French" xml:space="preserve">
+    <value>法语</value>
+  </data>
+  <data name="German" xml:space="preserve">
+    <value>德语</value>
+  </data>
+  <data name="Japanese" xml:space="preserve">
+    <value>日语</value>
+  </data>
+  <data name="Korean" xml:space="preserve">
+    <value>韩文</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_CustomProperty" xml:space="preserve">
+    <value>自定义属性</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Favorites" xml:space="preserve">
+    <value>收藏夹</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Language" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Original" xml:space="preserve">
+    <value>原作</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Publisher" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_ReleaseDt" xml:space="preserve">
+    <value>发售日</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Series" xml:space="preserve">
+    <value>系列</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Tag" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Volume_Index" xml:space="preserve">
+    <value>期数索引</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Volume_Name" xml:space="preserve">
+    <value>期数名称</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Volume_Title" xml:space="preserve">
+    <value>期数标题</value>
+  </data>
   <data name="NewFolderName" xml:space="preserve">
     <value>新文件夹</value>
   </data>
@@ -278,6 +332,12 @@
   </data>
   <data name="Resource_NotFound" xml:space="preserve">
     <value>未找到id={0}的资源</value>
+  </data>
+  <data name="Russian" xml:space="preserve">
+    <value>俄语</value>
+  </data>
+  <data name="Spanish" xml:space="preserve">
+    <value>西班牙语</value>
   </data>
   <data name="StandardValue_HandlerNotFound" xml:space="preserve">
     <value>未找到类型[{0}]对应的标准数据处理器</value>

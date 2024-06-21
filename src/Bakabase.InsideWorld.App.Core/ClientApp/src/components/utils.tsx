@@ -10,11 +10,11 @@ import { string } from 'prop-types';
 import { isStr } from 'react-toastify/dist/utils';
 import isUncPath from 'is-unc-path';
 import hoistNonReactStatic from 'hoist-non-react-statics';
+import chalk from 'chalk';
 import { reservedResourceFileTypes, reservedResourceProperties } from '@/sdk/constants';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
 import BakabaseContextProvider from '@/components/ContextProvider/BakabaseContextProvider';
-import type { CloseableProps } from '@/components/bakaui/types';
 
 
 export default { // 工具集
@@ -475,7 +475,7 @@ export function standardizePath(path?: string) {
 
 export function buildLogger(key: string) {
   return ((...args) => {
-    return Function.prototype.bind.call(console.log, console, `[${key}]`);
+    return Function.prototype.bind.call(console.log, console, chalk.blue(`[${key}]`));
   })();
 }
 

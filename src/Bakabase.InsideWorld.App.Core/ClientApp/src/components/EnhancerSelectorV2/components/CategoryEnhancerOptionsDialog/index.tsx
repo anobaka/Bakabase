@@ -103,7 +103,7 @@ const CategoryEnhancerOptionsDialog = ({
   };
 
   const loadAllProperties = async () => {
-    const r = await BApi.customProperty.getAllCustomPropertiesV2();
+    const r = await BApi.customProperty.getAllCustomProperties();
     const pm = (r.data ?? []).reduce<Record<number, IProperty>>((s, t) => {
       s[t.id!] = t as IProperty;
       return s;

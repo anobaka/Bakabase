@@ -19,7 +19,8 @@ export interface IFilter {
   isCustomProperty?: boolean;
   group?: IGroup;
   operation?: SearchOperation;
-  value?: string;
+  dbValue?: string;
+  bizValue?: string;
 }
 
 export interface IGroup {

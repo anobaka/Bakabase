@@ -34,7 +34,7 @@ export default ({
     setValue(propsValue);
   }, [propsValue]);
 
-  const orderDataSourceRef = useRef(resourceSearchSortableProperties.reduce<{ label: any; value: string }[]>((s, x) => {
+  const orderDataSourceRef = useRef(resourceSearchSortableProperties.reduce<{ label: any; value: string; textValue: string }[]>((s, x) => {
     directionDataSource.forEach((y) => {
       s.push({
         label: (
@@ -51,6 +51,7 @@ export default ({
           </div>
         ),
         value: `${x.value}-${y.asc}`,
+        textValue: `${x.label}${t(y.asc ? 'Asc' : 'Desc')}`,
       });
     });
 
@@ -60,6 +61,7 @@ export default ({
   return (
     <div>
       <Select
+        aria-label={t('Orders')}
         selectionMode={'multiple'}
         style={{
           maxWidth: 500,
@@ -71,9 +73,10 @@ export default ({
         selectedKeys={(value || []).map((a) => `${a.property}-${a.asc}`)}
         size={'sm'}
         onSelectionChange={(arr) => {
+          const set = arr as Set<string>;
           const orderAscMap: {[key in ResourceSearchSortableProperty]?: boolean} = {};
-          for (const v of arr.values()) {
-            const vl = (v as string).split('-');
+          for (const v of set.values()) {
+            const vl = v.split('-');
             orderAscMap[parseInt(vl[0], 10)] = vl[1] === 'true';
           }
 

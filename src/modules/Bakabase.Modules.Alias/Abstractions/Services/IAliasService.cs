@@ -8,8 +8,7 @@ namespace Bakabase.Modules.Alias.Abstractions.Services;
 
 public interface IAliasService
 {
-    Task<List<(object BizValue, object AliasAppliedBizValue)>> ReplaceWithPreferredAlias(
-        List<(object BizValue, StandardValueType BizValueType)> values);
+    Task<List<object>> GetAliasAppliedValues(List<(object BizValue, StandardValueType BizValueType)> values);
     Task<DataChangeViewModel> SaveByResources(List<Bakabase.Abstractions.Models.Domain.Resource> resources);
     Task<SingletonResponse<Models.Domain.Alias>> Add(AliasAddInputModel model);
     Task<List<Models.Db.Alias>> AddAll(IEnumerable<Models.Db.Alias> aliases);

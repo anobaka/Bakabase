@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Bakabase.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Services;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
@@ -11,9 +12,9 @@ public class CustomPropertyValueService(
     IEnumerable<IStandardValueHandler> converters,
     IEnumerable<ICustomPropertyDescriptor> propertyDescriptors,
     ICustomPropertyLocalizer localizer,
-    IStandardValueLocalizer standardValueLocalizer)
-    : AbstractCustomPropertyValueService<InsideWorldDbContext>(serviceProvider, converters, propertyDescriptors,
-        localizer, standardValueLocalizer)
+    IBuiltinPropertyValueService builtinPropertyValueService,
+    IStandardValueLocalizer standardValueLocalizer) : AbstractCustomPropertyValueService<InsideWorldDbContext>(
+    serviceProvider, converters, propertyDescriptors, localizer, builtinPropertyValueService, standardValueLocalizer)
 {
 
 }

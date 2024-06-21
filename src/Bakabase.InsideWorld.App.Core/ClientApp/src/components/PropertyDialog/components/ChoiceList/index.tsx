@@ -8,11 +8,11 @@ import {
 } from '@dnd-kit/sortable';
 import { Input, Overlay } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import type { IChoice } from '../../../../models';
+import type { IChoice } from '../../../Property/models';
 import { SortableChoice } from './components/SortableChoice';
 import CustomIcon from '@/components/CustomIcon';
 import { uuidv4 } from '@/components/utils';
-import { Button, Popover, TextArea } from '@/components/bakaui';
+import { Button, Popover, Textarea } from '@/components/bakaui';
 
 const { Popup } = Overlay;
 
@@ -60,13 +60,13 @@ export default function ChoiceList({ choices: propsChoices, onChange, className 
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={choices}
+            items={choices?.map(c => ({ ...c, id: c.value }))}
             strategy={verticalListSortingStrategy}
           >
             {choices?.map((sc, index) => (
               <SortableChoice
-                key={sc.id}
-                id={sc.id}
+                key={sc.value}
+                id={sc.value}
                 choice={sc}
                 onRemove={t => {
                   choices.splice(index, 1);
@@ -85,14 +85,14 @@ export default function ChoiceList({ choices: propsChoices, onChange, className 
         <Button
           size={'sm'}
           onClick={() => {
-            setChoices([...choices, { id: uuidv4() }]);
+            setChoices([...choices, { value: uuidv4() }]);
           }}
         >
           <CustomIcon
             type={'plus-circle'}
             className={'text-medium'}
           />
-          {t('Add choice')}
+          {t('Add a choice')}
         </Button>
         <Popover
           trigger={(
@@ -111,10 +111,10 @@ export default function ChoiceList({ choices: propsChoices, onChange, className 
         >
           <div className={'flex flex-col gap-2 m-2 '}>
             <div className="text-medium">{t('Add choices in bulk')}</div>
-            <TextArea
+            <Textarea
               value={addInBulkText}
               onValueChange={v => setAddInBulkText(v)}
-              placeholder={t('Please enter the choices, one per line')}
+              placeholder={t('Please enter the data you want to add, separated by line breaks')}
             />
             <div className="flex justify-end items-center">
               <Button
@@ -130,7 +130,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className 
                 color={'primary'}
                 size={'sm'}
                 onClick={() => {
-                  const newChoices = addInBulkText.split('\n').map(c => ({ value: c, id: uuidv4() }));
+                  const newChoices = addInBulkText.split('\n').map(c => ({ label: c, value: uuidv4() }));
                   setChoices([...choices, ...newChoices]);
                   setAddInBulkPopupVisible(false);
                 }}
@@ -150,10 +150,10 @@ export default function ChoiceList({ choices: propsChoices, onChange, className 
       over,
     } = event;
 
-    if (active.id !== over.id) {
+    if (active.value !== over.value) {
       setChoices((items) => {
-        const oldIndex = items.indexOf(active.id);
-        const newIndex = items.indexOf(over.id);
+        const oldIndex = items.indexOf(active.value);
+        const newIndex = items.indexOf(over.value);
 
         return arrayMove(items, oldIndex, newIndex);
       });

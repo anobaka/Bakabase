@@ -4,7 +4,6 @@ import { useUpdateEffect } from 'react-use';
 import { DropdownItem, DropdownMenu, DropdownTrigger } from '@nextui-org/react';
 import groupStyles from '../index.module.scss';
 import type { DataPool, IFilter } from '../../models';
-import FilterValue from './FilterValue';
 import PropertySelector from '@/components/PropertySelector';
 import ClickableIcon from '@/components/ClickableIcon';
 import { ResourceProperty, SearchOperation } from '@/sdk/constants';
@@ -14,6 +13,9 @@ import { Button, Dropdown, Tooltip } from '@/components/bakaui';
 import {
   SearchableReservedPropertySearchOperationsMap,
 } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/models';
+import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
+import PropertyFilterValueRenderer
+  from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/PropertyFilterValueRenderer';
 
 interface IProps {
   filter: IFilter;
@@ -44,6 +46,8 @@ export default ({
   useUpdateEffect(() => {
     setFilter(propsFilter);
   }, [propsFilter]);
+
+  // console.log('Filter changed', propsFilter, filter);
 
   const renderOperations = () => {
     if (filter.propertyId == undefined) {
@@ -144,7 +148,10 @@ export default ({
             PropertySelector.show({
               selection: filter.propertyId == undefined
                 ? undefined
-                : [{ id: filter.propertyId, isCustom: filter.isCustomProperty! }],
+                : [{
+                  id: filter.propertyId,
+                  isCustom: filter.isCustomProperty!,
+                }],
               onSubmit: async (selectedProperties) => {
                 const property = selectedProperties[0]!;
                 setFilter({
@@ -167,16 +174,19 @@ export default ({
         {renderOperations()}
       </div>
       {noValue ? null : (filter.operation && property) ? (
-        <FilterValue
-          dataPool={dataPool}
-          value={filter.value}
+        <PropertyFilterValueRenderer
+          operation={filter.operation}
           property={property}
-          onChange={value => {
+          dataPool={dataPool}
+          onValueChange={(dbValue, bizValue) => {
             setFilter({
               ...filter,
-              value,
+              dbValue: dbValue,
+              bizValue: bizValue,
             });
           }}
+          dbValue={filter.dbValue}
+          bizValue={filter.bizValue}
         />
       ) : null}
     </div>

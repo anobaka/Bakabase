@@ -131,16 +131,51 @@ namespace Bakabase.Abstractions.Components.Configuration
         public const string TempDirectoryName = "temp";
         public const string ComponentInfoFileName = "i.json";
 
-        public static readonly ConcurrentDictionary<SearchableReservedProperty, StandardValueType>
-            ReservedResourcePropertyAndValueTypeMap =
-                new(new Dictionary<SearchableReservedProperty, StandardValueType>
+        public record SearchableReservedPropertyValueTypes(
+            StandardValueType DbValueType,
+            StandardValueType BizValueType)
+        {
+            public StandardValueType DbValueType { get; set; } = DbValueType;
+            public StandardValueType BizValueType { get; set; } = BizValueType;
+        }
+
+        public static readonly ConcurrentDictionary<SearchableReservedProperty, SearchableReservedPropertyValueTypes>
+            ReservedResourcePropertyAndValueTypesMap =
+                new(new Dictionary<SearchableReservedProperty, SearchableReservedPropertyValueTypes>
                 {
-                    {SearchableReservedProperty.FileName, StandardValueType.String},
-                    {SearchableReservedProperty.DirectoryPath, StandardValueType.String},
-                    {SearchableReservedProperty.CreatedAt, StandardValueType.DateTime},
-                    {SearchableReservedProperty.FileCreatedAt, StandardValueType.DateTime},
-                    {SearchableReservedProperty.FileModifiedAt, StandardValueType.DateTime},
-                    {SearchableReservedProperty.MediaLibrary, StandardValueType.Decimal},
+                    {
+                        SearchableReservedProperty.FileName,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
+                    },
+                    {
+                        SearchableReservedProperty.DirectoryPath,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
+                    },
+                    {
+                        SearchableReservedProperty.CreatedAt,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
+                    },
+                    {
+                        SearchableReservedProperty.FileCreatedAt,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
+                    },
+                    {
+                        SearchableReservedProperty.FileModifiedAt,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
+                    },
+                    {
+                        SearchableReservedProperty.MediaLibrary,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.ListString,
+                            StandardValueType.ListListString)
+                    },
+                    {
+                        SearchableReservedProperty.Rating,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.Decimal, StandardValueType.Decimal)
+                    },
+                    {
+                        SearchableReservedProperty.Introduction,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
+                    },
                 });
     }
 }

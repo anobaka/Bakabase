@@ -2,10 +2,10 @@ import { useRef } from 'react';
 import type { ValueEditorProps } from '../models';
 import { Input } from '@/components/bakaui';
 
-type NumberValueEditorProps = ValueEditorProps<number>;
+type NumberValueEditorProps = ValueEditorProps<number | undefined>;
 
-export default ({ initValue, onChange, ...props }: NumberValueEditorProps) => {
-  const valueRef = useRef(initValue);
+export default ({ value, onValueChange, ...props }: NumberValueEditorProps) => {
+  const valueRef = useRef(value);
 
   return (
     <Input
@@ -17,7 +17,7 @@ export default ({ initValue, onChange, ...props }: NumberValueEditorProps) => {
         valueRef.current = r;
       }}
       onBlur={() => {
-        onChange?.(valueRef.current);
+        onValueChange?.(valueRef.current, valueRef.current);
       }}
     />
   );

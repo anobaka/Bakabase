@@ -88,6 +88,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Chinese.
+        /// </summary>
+        internal static string Chinese {
+            get {
+                return ResourceManager.GetString("Chinese", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Duplicate components are found: {0}.
         /// </summary>
         internal static string Component_DuplicatesAreFound {
@@ -255,6 +264,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string Downloader_UnknownType {
             get {
                 return ResourceManager.GetString("Downloader_UnknownType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to English.
+        /// </summary>
+        internal static string English {
+            get {
+                return ResourceManager.GetString("English", resourceCulture);
             }
         }
         
@@ -457,6 +475,150 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to French.
+        /// </summary>
+        internal static string French {
+            get {
+                return ResourceManager.GetString("French", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to German.
+        /// </summary>
+        internal static string German {
+            get {
+                return ResourceManager.GetString("German", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Japanese.
+        /// </summary>
+        internal static string Japanese {
+            get {
+                return ResourceManager.GetString("Japanese", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Korean.
+        /// </summary>
+        internal static string Korean {
+            get {
+                return ResourceManager.GetString("Korean", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to CustomProperty.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_CustomProperty {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_CustomProperty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Favorites.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Favorites {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Favorites", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Language.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Language {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Language", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Name {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Original.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Original {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Original", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Publisher.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Publisher {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Publisher", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ReleaseDt.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_ReleaseDt {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_ReleaseDt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Series.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Series {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Series", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tag.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Tag {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Tag", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to VolumeIndex.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Volume_Index {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Volume_Index", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to VolumeName.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Volume_Name {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Volume_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to VolumeTitle.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Volume_Title {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Volume_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to New Folder.
         /// </summary>
         internal static string NewFolderName {
@@ -543,6 +705,24 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string Resource_NotFound {
             get {
                 return ResourceManager.GetString("Resource_NotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Russian.
+        /// </summary>
+        internal static string Russian {
+            get {
+                return ResourceManager.GetString("Russian", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Spanish.
+        /// </summary>
+        internal static string Spanish {
+            get {
+                return ResourceManager.GetString("Spanish", resourceCulture);
             }
         }
         

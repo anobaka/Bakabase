@@ -1,26 +1,42 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dropdown, DropdownMenu, DropdownItem, DropdownTrigger, RadioGroup, Radio } from '@nextui-org/react';
 import AceEditor from 'react-ace';
 import type { Key } from '@react-types/shared';
 import ChoiceList from './components/ChoiceList';
+import TagList from './components/TagList';
 import { createPortalOfComponent } from '@/components/utils';
 import { CustomPropertyType, StandardValueConversionLoss } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
-import { Button, Chip, Input, Modal, Popover, Progress, Select, Switch, Tab, Tabs } from '@/components/bakaui';
+import {
+  Button,
+  Chip,
+  Icon,
+  Input,
+  Modal,
+  Popover,
+  Progress,
+  Select,
+  Switch,
+  Tab,
+  Tabs,
+  Tooltip,
+} from '@/components/bakaui';
 import type {
   ChoicePropertyOptions,
   NumberPropertyOptions,
   PercentagePropertyOptions,
   IProperty,
-  RatingPropertyOptions,
+  RatingPropertyOptions, TagsPropertyOptions,
 } from '@/components/Property/models';
 import { PropertyTypeIconMap } from '@/components/Property/models';
 import 'ace-builds/src-noconflict/mode-javascript';
 import 'ace-builds/src-noconflict/theme-monokai';
 import 'ace-builds/src-noconflict/ext-language_tools';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import FeatureStatusTip from '@/components/FeatureStatusTip';
 
 interface IProps {
   value?: CustomPropertyForm;
@@ -35,6 +51,8 @@ interface CustomPropertyForm {
   options?: any;
 }
 
+const UnderDevelopmentGroupKey = 'UnderDevelopment';
+
 const PropertyTypeGroup: Record<string, CustomPropertyType[]> = {
   Text: [CustomPropertyType.SingleLineText, CustomPropertyType.MultilineText, CustomPropertyType.Link],
   Number: [CustomPropertyType.Number, CustomPropertyType.Percentage, CustomPropertyType.Rating],
@@ -43,10 +61,13 @@ const PropertyTypeGroup: Record<string, CustomPropertyType[]> = {
   Other: [
     CustomPropertyType.Attachment,
     CustomPropertyType.Boolean,
-    // CustomPropertyType.Formula
+    CustomPropertyType.Tags,
+  ],
+  [UnderDevelopmentGroupKey]: [
+    CustomPropertyType.Formula,
+    CustomPropertyType.Multilevel,
   ],
 };
-
 
 const NumberPrecisions = [0, 1, 2, 3, 4].map(x => ({
   value: x,
@@ -65,10 +86,13 @@ const PropertyDialog = ({
                           ...props
                         }: IProps) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const [visible, setVisible] = useState(true);
   const [property, setProperty] = useState<CustomPropertyForm>(value || {});
 
   const [typeGroupsVisible, setTypeGroupsVisible] = useState(false);
+
+  const typePopoverDomRef = useRef<HTMLDivElement>(null);
 
   const close = () => {
     setVisible(false);
@@ -103,7 +127,6 @@ const PropertyDialog = ({
               />
               <Switch
                 className={'mt-4'}
-                label={t('Allow adding new options while choosing')}
                 size={'sm'}
                 isSelected={options?.allowAddingNewDataDynamically}
                 onValueChange={c => {
@@ -115,17 +138,16 @@ const PropertyDialog = ({
                     },
                   });
                 }}
-              />
+              >
+                {t('Allow adding new options while choosing')}
+              </Switch>
               <Select
                 className={'mt-2'}
                 size={'sm'}
                 label={t('Default value')}
                 selectionMode={multiple ? 'multiple' : 'single'}
                 selectedKeys={options?.defaultValue}
-                dataSource={options?.choices?.map(choice => ({
-                  label: choice.value,
-                  value: choice.id,
-                }))}
+                dataSource={options?.choices}
                 onSelectionChange={c => {
                   const array = Array.from((c as Set<Key>).values());
                   setProperty({
@@ -192,7 +214,6 @@ const PropertyDialog = ({
                 }}
               />
               <Switch
-                label={t('Show progressbar')}
                 size={'sm'}
                 isSelected={options?.showProgressbar}
                 onValueChange={c => {
@@ -204,16 +225,14 @@ const PropertyDialog = ({
                     },
                   });
                 }}
-              />
+              >{t('Show progressbar')}</Switch>
               {options?.showProgressbar ? (
                 <div>
                   <div>{t('Preview')}</div>
                   <Progress
                     className={'max-w-[70%]'}
-                    renderPercent={p => (
-                      <div className={'text-[color:var(--bakaui-color)]'}>{previewValueStr}</div>
-                    )}
-                    percent={previewValue}
+                    label={<div className={'text-[color:var(--bakaui-color)]'}>{previewValueStr}</div>}
+                    value={previewValue}
                   />
                 </div>
               ) : (
@@ -285,6 +304,43 @@ const PropertyDialog = ({
         case CustomPropertyType.Multilevel: {
           break;
         }
+        case CustomPropertyType.Tags:
+        {
+          const options = property.options as TagsPropertyOptions;
+          return (
+            <>
+              <TagList
+                className={'mt-4'}
+                tags={options?.tags}
+                onChange={tags => {
+                  setProperty({
+                    ...property,
+                    options: {
+                      ...options,
+                      tags,
+                    },
+                  });
+                }}
+              />
+              <Switch
+                className={'mt-4'}
+                size={'sm'}
+                isSelected={options?.allowAddingNewDataDynamically}
+                onValueChange={c => {
+                  setProperty({
+                    ...property,
+                    options: {
+                      ...options,
+                      allowAddingNewOptionsWhileChoosing: c,
+                    },
+                  });
+                }}
+              >
+                {t('Allow adding new options while choosing')}
+              </Switch>
+            </>
+          );
+        }
       }
     }
     return;
@@ -292,6 +348,7 @@ const PropertyDialog = ({
 
   return (
     <Modal
+      size={'lg'}
       visible={visible}
       title={t('Custom property')}
       onClose={close}
@@ -331,7 +388,10 @@ const PropertyDialog = ({
               >
                 {property.type == undefined ? t('Select a type') : (
                   <>
-                    <CustomIcon type={PropertyTypeIconMap[property.type]!} className={'text-medium'} />
+                    <Icon
+                      type={PropertyTypeIconMap[property.type]!}
+                      className={'text-base'}
+                    />
                     {t(CustomPropertyType[property.type])}
                   </>
                 )}
@@ -339,13 +399,30 @@ const PropertyDialog = ({
             )}
             placement={'right'}
           >
-            <div className={'p-2 flex flex-col gap-2'}>
+            <div className={'p-2 flex flex-col gap-2'} ref={typePopoverDomRef}>
               {Object.keys(PropertyTypeGroup).map(group => {
                 return (
                   <div className={'pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0'}>
                     <div className={'mb-2 font-bold'}>{t(group)}</div>
                     <div className="grid grid-cols-2 gap-x-2 text-sm leading-5">
                       {PropertyTypeGroup[group].map(type => {
+                        if (group == UnderDevelopmentGroupKey) {
+                          return (
+                            <Tooltip content={(
+                              <FeatureStatusTip status={'developing'} name={t(CustomPropertyType[type])} />
+                            )}
+                            >
+                              <Button
+                                disabled={validValueTypes?.includes(type) === false}
+                                variant={'light'}
+                                className={'justify-start'}
+                              >
+                                <Icon type={PropertyTypeIconMap[type]!} className={'text-medium'} />
+                                {t(CustomPropertyType[type])}
+                              </Button>
+                            </Tooltip>
+                          );
+                        }
                         return (
                           <Button
                             disabled={validValueTypes?.includes(type) === false}
@@ -437,7 +514,7 @@ const PropertyDialog = ({
                               setTypeGroupsVisible(false);
                             }}
                           >
-                            <CustomIcon type={PropertyTypeIconMap[type]!} className={'text-medium'} />
+                            <Icon type={PropertyTypeIconMap[type]!} className={'text-medium'} />
                             {t(CustomPropertyType[type])}
                           </Button>
                         );

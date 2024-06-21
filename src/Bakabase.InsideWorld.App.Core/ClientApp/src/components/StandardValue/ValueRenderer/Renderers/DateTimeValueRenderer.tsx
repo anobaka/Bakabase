@@ -1,22 +1,31 @@
 import type { Dayjs } from 'dayjs';
 import { useState } from 'react';
 import type { ValueRendererProps } from '../models';
-import type { EditableValueProps } from '@/components/StandardValue/models';
 import { DateInput, TimeInput } from '@/components/bakaui';
-type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & EditableValueProps<Dayjs> & {
-  format: string;
+import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
+type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
+  format?: string;
   as: 'datetime' | 'date';
 };
 
-export default ({ value, format, as, variant, onValueChange, editable, ...props }: DateTimeValueRendererProps) => {
+export default ({ value, format, as, variant, editor, ...props }: DateTimeValueRendererProps) => {
   const [editing, setEditing] = useState(false);
+
+  const startEditing = editor ? () => {
+    setEditing(true);
+  } : undefined;
+
+  if (value == undefined) {
+    return (
+      <NotSet onClick={startEditing} />
+    );
+  }
+
+  const f = format == undefined ? as == 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'HH:mm:ss' : format;
 
   if (variant == 'light' && !editing) {
     return (
-      <span onClick={editable ? () => {
-        setEditing(true);
-      } : undefined}
-      >{value?.format(format)}</span>
+      <span onClick={startEditing}>{value?.format(f)}</span>
     );
   }
 
@@ -24,8 +33,8 @@ export default ({ value, format, as, variant, onValueChange, editable, ...props 
     <DateInput
       granularity={as == 'datetime' ? 'second' : 'day'}
       value={value}
-      isReadOnly={!editable}
-      onChange={onValueChange}
+      isReadOnly={!editor}
+      onChange={d => editor?.onValueChange?.(d, d)}
     />
   );
 };

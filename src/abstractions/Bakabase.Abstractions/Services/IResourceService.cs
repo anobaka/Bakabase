@@ -4,6 +4,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using System.Linq.Expressions;
 using Bakabase.Abstractions.Models.Dto;
 using Bootstrap.Models.ResponseModels;
+using Bakabase.InsideWorld.Models.RequestModels;
 
 namespace Bakabase.Abstractions.Services;
 
@@ -46,6 +47,8 @@ public interface IResourceService
     Task<bool> Any(Func<Models.Db.Resource, bool>? selector = null);
 
     Task<List<Models.Db.Resource>> AddAll(IEnumerable<Models.Db.Resource> resources);
+
+    Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model);
 
     //
     // /// <summary>

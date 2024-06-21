@@ -174,7 +174,7 @@ export default ({
         cellMeasurerCache={cacheRef.current}
         cellPositioner={cellPositionerRef.current}
         cellRenderer={_cellRenderer}
-        height={height}
+        height={height ?? 0}
         overscanByPixels={overscanByPixels}
         ref={_setMasonryRef}
         scrollTop={scrollTop}

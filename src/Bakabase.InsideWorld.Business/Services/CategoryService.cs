@@ -87,7 +87,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
         #region Infrastructures
 
-        public async Task<ListResponse<TComponent>> GetComponents<TComponent>(Abstractions.Models.Domain.Category category,
+        public async Task<ListResponse<TComponent>> GetComponents<TComponent>(
+            Abstractions.Models.Domain.Category category,
             ComponentType type)
             where TComponent : class, IComponent
         {
@@ -120,7 +121,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
         #endregion
 
-        public async Task<List<Abstractions.Models.Domain.Category>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.Category, bool>> selector = null,
+        public async Task<List<Abstractions.Models.Domain.Category>> GetAll(
+            Expression<Func<Bakabase.Abstractions.Models.Db.Category, bool>> selector = null,
             CategoryAdditionalItem additionalItems = CategoryAdditionalItem.None)
         {
             var data = await _orm.GetAll(selector);
@@ -141,7 +143,8 @@ namespace Bakabase.InsideWorld.Business.Services
         private async Task Populate(Abstractions.Models.Domain.Category dto, CategoryAdditionalItem additionalItems) =>
             await Populate(new[] {dto}, additionalItems);
 
-        private async Task Populate(Abstractions.Models.Domain.Category[] dtoList, CategoryAdditionalItem additionalItems)
+        private async Task Populate(Abstractions.Models.Domain.Category[] dtoList,
+            CategoryAdditionalItem additionalItems)
         {
             foreach (var rca in SpecificEnumUtils<CategoryAdditionalItem>.Values)
             {
@@ -251,7 +254,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 CoverSelectionOrder = model.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending,
                 Order = model.Order ?? 0,
                 GenerateNfo = model.GenerateNfo ?? false,
-                EnhancementOptions = model.EnhancementOptions, 
+                EnhancementOptions = model.EnhancementOptions,
             };
 
             if (componentKeys?.Any() == true)
@@ -405,7 +408,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<BaseResponse> Sort(int[] ids)
         {
-            var categories = (await GetByKeys(ids)).ToDictionary(t => t.Id, t => t);
+            var categories = (await GetByKeys(ids, CategoryAdditionalItem.None)).ToDictionary(t => t.Id, t => t);
             var changed = new List<Category>();
             for (var i = 0; i < ids.Length; i++)
             {
@@ -542,9 +545,10 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template, (string Left, string Right)[] wrappers)
+        public Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template,
+            (string Left, string Right)[] wrappers)
         {
-            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int)ResourcePropertyType.Custom)?.Values
+            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int) ResourcePropertyType.Custom)?.Values
                 .GroupBy(d => d.Name)
                 .ToDictionary(d => $"{{{d.Key}}}", d => d.First()) ?? [];
 
@@ -567,7 +571,8 @@ namespace Bakabase.InsideWorld.Business.Services
             return segments;
         }
 
-        public string BuildDisplayNameForResource(Resource resource, string template, (string Left, string Right)[] wrappers)
+        public string BuildDisplayNameForResource(Resource resource, string template,
+            (string Left, string Right)[] wrappers)
         {
             var segments = BuildDisplayNameSegmentsForResource(resource, template, wrappers);
             return string.Join("", segments.Select(a => a.Text));
@@ -588,7 +593,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             IsCustomProperty = false,
                             Operation = SearchOperation.In,
                             PropertyId = (int) ResourceProperty.Category,
-                            Value = new[]{id}.ToJson()
+                            DbValue = new[] {id}.ToJson()
                         }
                     ]
                 },
@@ -645,10 +650,13 @@ namespace Bakabase.InsideWorld.Business.Services
             return result;
         }
 
-        public async Task<List<Abstractions.Models.Domain.Category>> GetByKeys(IEnumerable<int> keys)
+        public async Task<List<Abstractions.Models.Domain.Category>> GetByKeys(IEnumerable<int> keys,
+            CategoryAdditionalItem additionalItems)
         {
             var data = await _orm.GetByKeys(keys);
-            return data.Select(d => d.ToDomainModel()).ToList();
+            var doList = data.Select(d => d.ToDomainModel()).ToArray();
+            await Populate(doList, additionalItems);
+            return doList.ToList();
         }
     }
 }

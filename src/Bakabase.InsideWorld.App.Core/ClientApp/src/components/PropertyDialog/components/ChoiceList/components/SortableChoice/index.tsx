@@ -1,13 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
-import { toast } from 'react-toastify';
-import type { IChoice } from '../../../../../../models';
+import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
 import DragHandle from '@/components/DragHandle';
-import ClickableIcon from '@/components/ClickableIcon';
-import { ColorPicker, Input, Popover } from '@/components/bakaui';
+import { Button, ColorPicker, Input } from '@/components/bakaui';
+import type { IChoice } from '@/components/Property/models';
 
 interface IProps {
   id: string;
@@ -16,7 +15,12 @@ interface IProps {
   onChange?: (choice: IChoice) => any;
 }
 
-export function SortableChoice({ id, choice: propsChoice, onRemove, onChange }: IProps) {
+export function SortableChoice({
+                                 id,
+                                 choice: propsChoice,
+                                 onRemove,
+                                 onChange,
+                               }: IProps) {
   const { t } = useTranslation();
   const {
     attributes,
@@ -47,35 +51,43 @@ export function SortableChoice({ id, choice: propsChoice, onRemove, onChange }: 
       <ColorPicker />
       <Input
         size={'sm'}
-        value={choice?.value}
-        onValueChange={value => {
+        value={choice?.label}
+        onValueChange={label => {
           setChoice({
             ...choice,
-            value,
+            label,
           });
         }}
       />
-      <ClickableIcon
-        colorType={'normal'}
-        type={choice.hide == true ? 'eye-close' : 'eye'}
-        className={'text-medium'}
-        title={t('Hide in view')}
-        onClick={() => {
-          setChoice({
-            ...choice,
-            hide: !choice.hide,
-          });
-        }}
-      />
-      <ClickableIcon
-        className={'text-medium'}
-        colorType={'danger'}
-        type={'delete'}
-        size={'small'}
-        onClick={() => {
-          onRemove?.(choice);
-        }}
-      />
+      <div className={'flex items-center'}>
+        <Button
+          size={'sm'}
+          radius={'sm'}
+          isIconOnly
+          title={t('Hide in view')}
+          onClick={() => {
+            setChoice({
+              ...choice,
+              hide: !choice.hide,
+            });
+          }}
+          variant={'light'}
+        >
+          {choice.hide ? <EyeInvisibleOutlined className={'text-base'} /> : <EyeOutlined className={'text-base'} />}
+        </Button>
+        <Button
+          size={'sm'}
+          radius={'sm'}
+          isIconOnly
+          onClick={() => {
+            onRemove?.(choice);
+          }}
+          variant={'light'}
+          color={'danger'}
+        >
+          <DeleteOutlined className={'text-base'} />
+        </Button>
+      </div>
     </div>
   );
 }

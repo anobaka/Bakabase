@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '@alifd/next';
 import { useUpdate, useUpdateEffect } from 'react-use';
+import { EyeInvisibleOutlined, LoadingOutlined } from '@ant-design/icons';
 import CustomIcon from '@/components/CustomIcon';
 import './index.scss';
 import BApi from '@/sdk/BApi';
@@ -272,7 +273,7 @@ const MediaPreviewer = (props: IProps) => {
           <div className={'nothing-to-preview'}>
             <div className="mask" />
             <div className="label">
-              {t(PreviewerStatus[status])}
+              <EyeInvisibleOutlined className={'text-2xl'} />
             </div>
           </div>
         );
@@ -282,8 +283,9 @@ const MediaPreviewer = (props: IProps) => {
           <div className={'loading'}>
             <div className="mask" />
             <div className="label">
-              <Icon type={'loading'} size={'xl'} />
-              {t(PreviewerStatus[status])}
+              <LoadingOutlined className={'text-2xl'} />
+              {/* <Icon type={'loading'} size={'xl'} /> */}
+              {/* {t(PreviewerStatus[status])} */}
             </div>
           </div>
         );
@@ -298,7 +300,7 @@ const MediaPreviewer = (props: IProps) => {
                   setStatus(PreviewerStatus.Playing);
                 }}
               >
-                <CustomIcon type={'timeout'} size={'xxxl'} />
+                <CustomIcon type={'timeout'} className={'text-3xl'} />
               </div>
             )}
             <div

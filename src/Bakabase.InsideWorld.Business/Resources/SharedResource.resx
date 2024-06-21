@@ -126,6 +126,9 @@
   <data name="Category_MediaLibraryExistsOnDeletion" xml:space="preserve">
     <value>Category can not be deleted when its media libraries exists</value>
   </data>
+  <data name="Chinese" xml:space="preserve">
+    <value>Chinese</value>
+  </data>
   <data name="Component_DuplicatesAreFound" xml:space="preserve">
     <value>Duplicate components are found: {0}</value>
   </data>
@@ -182,6 +185,9 @@
   </data>
   <data name="Downloader_UnknownType" xml:space="preserve">
     <value>Unknown type: {0}</value>
+  </data>
+  <data name="English" xml:space="preserve">
+    <value>English</value>
   </data>
   <data name="Enhancer_Bakabase_Description" xml:space="preserve">
     <value>Analyze a filename similar to [(20)191202][Publisher1(Publisher2,Publisher3),Publisher4(Publisher5),Publisher6]Title Part 2(Original)[CN]</value>
@@ -249,6 +255,54 @@
   <data name="FilesDoNotExistInPath" xml:space="preserve">
     <value>{0} do not exist in {1}</value>
   </data>
+  <data name="French" xml:space="preserve">
+    <value>French</value>
+  </data>
+  <data name="German" xml:space="preserve">
+    <value>German</value>
+  </data>
+  <data name="Japanese" xml:space="preserve">
+    <value>Japanese</value>
+  </data>
+  <data name="Korean" xml:space="preserve">
+    <value>Korean</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_CustomProperty" xml:space="preserve">
+    <value>CustomProperty</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Favorites" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Original" xml:space="preserve">
+    <value>Original</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Publisher" xml:space="preserve">
+    <value>Publisher</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_ReleaseDt" xml:space="preserve">
+    <value>ReleaseDt</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Series" xml:space="preserve">
+    <value>Series</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Tag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Volume_Index" xml:space="preserve">
+    <value>VolumeIndex</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Volume_Name" xml:space="preserve">
+    <value>VolumeName</value>
+  </data>
+  <data name="Migration_V190_DefaultPropertyName_Volume_Title" xml:space="preserve">
+    <value>VolumeTitle</value>
+  </data>
   <data name="NewFolderName" xml:space="preserve">
     <value>New Folder</value>
   </data>
@@ -278,6 +332,12 @@
   </data>
   <data name="Resource_NotFound" xml:space="preserve">
     <value>Resource with id:{0} is not found</value>
+  </data>
+  <data name="Russian" xml:space="preserve">
+    <value>Russian</value>
+  </data>
+  <data name="Spanish" xml:space="preserve">
+    <value>Spanish</value>
   </data>
   <data name="StandardValue_HandlerNotFound" xml:space="preserve">
     <value>Handler for standard value with type:{0} is not found</value>

@@ -18,6 +18,7 @@ import FormulaValueRenderer from './ValueRenderer/Renderers/FormulaValueRenderer
 import AttachmentValueRenderer from './ValueRenderer/Renderers/AttachmentValueRenderer';
 import RatingValueRenderer from './ValueRenderer/Renderers/RatingValueRenderer';
 import MultilevelValueRenderer from './ValueRenderer/Renderers/MultilevelValueRenderer';
+import LinkValueRenderer from './ValueRenderer/Renderers/LinkValueRenderer';
 import TagsValueRenderer from './ValueRenderer/Renderers/TagsValueRenderer';
 import TimeValueRenderer from './ValueRenderer/Renderers/TimeValueRenderer';
 
@@ -40,4 +41,5 @@ export {
   StringValueRenderer,
   TagsValueRenderer,
   TimeValueRenderer,
+  LinkValueRenderer,
 };

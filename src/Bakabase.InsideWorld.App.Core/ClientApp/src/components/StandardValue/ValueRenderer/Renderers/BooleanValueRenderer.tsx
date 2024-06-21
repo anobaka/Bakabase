@@ -1,13 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import type { ValueRendererProps } from '../models';
-import type { EditableValueProps } from '../../models';
 import { Checkbox, Switch } from '@/components/bakaui';
 
-type BooleanValueRendererProps = Omit<ValueRendererProps<boolean>, 'variant'> & EditableValueProps<boolean> & {
+type BooleanValueRendererProps = Omit<ValueRendererProps<boolean>, 'variant'> & {
   variant: ValueRendererProps<boolean>['variant'] | 'switch';
 };
 
-export default ({ value, variant, onValueChange, editable, ...props }: BooleanValueRendererProps) => {
+export default ({ value, variant, editor, ...props }: BooleanValueRendererProps) => {
   const { t } = useTranslation();
 
   const v = variant ?? 'default';
@@ -18,18 +17,18 @@ export default ({ value, variant, onValueChange, editable, ...props }: BooleanVa
       return (
         <Checkbox
           size={'sm'}
-          disableAnimation={!editable}
+          disableAnimation={!editor}
           checked={value}
-          onValueChange={onValueChange}
+          onValueChange={v => editor?.onValueChange?.(v, v)}
         />
       );
     case 'switch':
       return (
         <Switch
           size={'sm'}
-          disableAnimation={!editable}
+          disableAnimation={!editor}
           checked={value}
-          onValueChange={onValueChange}
+          onValueChange={v => editor?.onValueChange?.(v, v)}
         />
       );
   }

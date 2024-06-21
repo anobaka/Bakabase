@@ -49,7 +49,7 @@ export default ({
 
     loadLibrary();
 
-    BApi.customProperty.getAllCustomPropertiesV2().then(r => {
+    BApi.customProperty.getAllCustomProperties().then(r => {
       const ps = r.data || [];
       setCustomPropertyMap(ps.reduce<Record<number, { name: string }>>((s, t) => {
         s[t.id!] = { name: t.name! };

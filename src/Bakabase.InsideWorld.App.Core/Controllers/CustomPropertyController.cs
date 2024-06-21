@@ -30,12 +30,20 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _propertyValueService = propertyValueService;
         }
 
-        [HttpGet]
-        [SwaggerOperation(OperationId = "GetAllCustomPropertiesV2")]
+        [HttpGet("all")]
+        [SwaggerOperation(OperationId = "GetAllCustomProperties")]
         public async Task<ListResponse<CustomProperty>> GetAll(
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
         {
             return new ListResponse<CustomProperty>(await _service.GetAll(null, additionalItems, false));
+        }
+
+        [HttpGet("ids")]
+        [SwaggerOperation(OperationId = "GetCustomPropertyByKeys")]
+        public async Task<ListResponse<CustomProperty>> GetByKeys(int[] ids,
+            CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
+        {
+            return new ListResponse<CustomProperty>(await _service.GetByKeys(ids, additionalItems, false));
         }
 
         [HttpPost]

@@ -2,7 +2,7 @@
 
 namespace InsideWorld.Migrations.V190;
 
-public enum LegacyCustomProperty
+public enum LegacyResourceProperty
 {
     ReleaseDt = 4,
     Publisher = 5,

@@ -32,11 +32,11 @@ export default ({ resource }: Props) => {
   const { t } = useTranslation();
   return (
     <div className={'grid gap-1 grid-cols-2'}>
-      {dateTimes.map((dateTime) => {
+      {dateTimes.map((dateTime, i) => {
         const label = t(dateTime.label);
           const value = dayjs(resource[dateTime.key]).format('YYYY-MM-DD HH:mm:ss');
           return (
-            <div>
+            <div key={i}>
               <div className={'text-xs opacity-60'}>{label}</div>
               <div>{value}</div>
             </div>

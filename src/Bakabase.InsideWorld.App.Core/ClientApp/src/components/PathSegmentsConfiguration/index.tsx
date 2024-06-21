@@ -86,7 +86,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
   }, [customPropertyNameMap]);
 
   useEffect(() => {
-    BApi.customProperty.getAllCustomPropertiesV2().then(x => {
+    BApi.customProperty.getAllCustomProperties().then(x => {
       const data = x.data ?? [];
       const pnMap = data.reduce<Record<number, string>>((s, t) => {
         s[t.id!] = t.name!;

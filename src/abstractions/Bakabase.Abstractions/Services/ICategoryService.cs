@@ -126,7 +126,7 @@ public interface ICategoryService
     // Task<ListResponse<Category>> UpdateAll(Expression<Func<Category, bool>> selector,
     //     Action<Category> modify);
     //
-    Task<List<Category>> GetByKeys(IEnumerable<Int32> keys);
+    Task<List<Category>> GetByKeys(IEnumerable<Int32> keys, CategoryAdditionalItem additionalItems);
     //
     // Task<SingletonResponse<Category>> UpdateByKey(Int32 key, Action<Category> modify);
     //

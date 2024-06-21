@@ -1,22 +1,20 @@
 import { useRef, useState } from 'react';
 import type { ValueRendererProps } from '../models';
 import NumberValueEditor from '../../ValueEditor/Editors/NumberValueEditor';
-import StringValueRenderer from './StringValueRenderer';
-import type { EditableValueProps } from '@/components/StandardValue/models';
 import { Input, Progress } from '@/components/bakaui';
-type NumberValueRendererProps = ValueRendererProps<number> & EditableValueProps<number> & {
+type NumberValueRendererProps = ValueRendererProps<number, number> & {
   precision?: number;
   as?: 'number' | 'progress';
   suffix?: string;
 };
 
-export default ({ value, precision, onValueChange, editable, variant, suffix, as, ...props }: NumberValueRendererProps) => {
+export default ({ value, precision, editor, variant, suffix, as, ...props }: NumberValueRendererProps) => {
   const [editing, setEditing] = useState(false);
 
   if (variant == 'light' && !editing) {
     return (
       <span
-        onClick={editable ? () => setEditing(true) : undefined}
+        onClick={editor ? () => setEditing(true) : undefined}
       >{value}{suffix}</span>
     );
   }
@@ -24,8 +22,8 @@ export default ({ value, precision, onValueChange, editable, variant, suffix, as
   if (editing) {
     return (
       <NumberValueEditor
-        initValue={value}
-        onChange={onValueChange}
+        value={value}
+        onValueChange={editor?.onValueChange}
       />
     );
   } else {
@@ -34,14 +32,14 @@ export default ({ value, precision, onValueChange, editable, variant, suffix, as
       case 'number':
         return (
           <span
-            onClick={editable ? () => setEditing(true) : undefined}
+            onClick={editor ? () => setEditing(true) : undefined}
           >{value}{suffix}</span>
         );
       case 'progress':
         return (
           <Progress
             value={value}
-            onClick={editable ? () => setEditing(true) : undefined}
+            onClick={editor ? () => setEditing(true) : undefined}
           />
         );
     }

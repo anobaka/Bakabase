@@ -341,7 +341,7 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryRootPathsAddInBulkIn
 }
 
 export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
-  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary] */
+  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt] */
   property?: BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty;
   asc?: boolean;
 }
@@ -893,16 +893,30 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAddit
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
+ * [0: None, 32: CustomProperties, 64: Alias, 128: Category, 416: DisplayName, 512: HasChildren, 1024: BuiltinProperties, 2016: All]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
+  | 0
+  | 32
+  | 64
+  | 128
+  | 416
+  | 512
+  | 1024
+  | 2016;
+
+/**
  * [1: Latest, 2: Frequency]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder = 1 | 2;
 
 /**
- * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 5: ReleaseDt, 6: AddDt, 7: Category, 8: MediaLibrary]
+ * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty = 1 | 2 | 3 | 5 | 6 | 7 | 8;
+export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty = 1 | 2 | 3 | 6;
 
 /**
  * [1: Running, 2: Complete, 3: Failed]
@@ -1131,7 +1145,8 @@ export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilter {
   isCustomProperty?: boolean;
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
   operation?: BakabaseInsideWorldModelsConstantsSearchOperation;
-  value?: string | null;
+  dbValue?: string | null;
+  bizValue?: string | null;
 }
 
 export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup {
@@ -1455,7 +1470,10 @@ export interface BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingD
   entryPath?: string | null;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsResourceCustomPropertyValuePutRequestModel {
+export interface BakabaseInsideWorldModelsRequestModelsResourcePropertyValuePutInputModel {
+  /** @format int32 */
+  propertyId?: number;
+  isCustomProperty?: boolean;
   value?: string | null;
 }
 
@@ -1811,6 +1829,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code?: number;
   message?: string | null;
   data?: BakabaseAbstractionsModelsDomainSpecialText;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDtoResourceSearchDto {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDtoResourceSearchDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel {
@@ -3951,10 +3976,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags CustomProperty
-     * @name GetAllCustomPropertiesV2
-     * @request GET:/custom-property
+     * @name GetAllCustomProperties
+     * @request GET:/custom-property/all
      */
-    getAllCustomPropertiesV2: (
+    getAllCustomProperties: (
       query?: {
         /** [0: None, 1: Category] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem;
@@ -3962,7 +3987,30 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCustomProperty, any>({
-        path: `/custom-property`,
+        path: `/custom-property/all`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name GetCustomPropertyByKeys
+     * @request GET:/custom-property/ids
+     */
+    getCustomPropertyByKeys: (
+      query?: {
+        ids?: number[];
+        /** [0: None, 1: Category] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCustomProperty, any>({
+        path: `/custom-property/ids`,
         method: "GET",
         query: query,
         format: "json",
@@ -4301,6 +4349,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name GetResourceSearchCriteria
+     * @request GET:/resource/search-criteria
+     */
+    getResourceSearchCriteria: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDtoResourceSearchDto, any>({
+        path: `/resource/search-criteria`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name SearchResources
      * @request POST:/resource/search
      */
@@ -4327,6 +4390,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
+        /** [0: None, 32: CustomProperties, 64: Alias, 128: Category, 416: DisplayName, 512: HasChildren, 1024: BuiltinProperties, 2016: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
@@ -4444,17 +4509,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name PutResourceCustomPropertyValue
-     * @request PUT:/resource/{id}/custom-property/{pId}/value
+     * @name PutResourcePropertyValue
+     * @request PUT:/resource/{id}/property-value
      */
-    putResourceCustomPropertyValue: (
+    putResourcePropertyValue: (
       id: number,
-      pId: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourceCustomPropertyValuePutRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsResourcePropertyValuePutInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/custom-property/${pId}/value`,
+        path: `/resource/${id}/property-value`,
         method: "PUT",
         body: data,
         type: ContentType.Json,

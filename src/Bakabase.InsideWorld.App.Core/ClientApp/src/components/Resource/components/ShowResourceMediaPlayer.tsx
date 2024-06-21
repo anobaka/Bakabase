@@ -4,7 +4,6 @@ import * as dayjs from 'dayjs';
 import * as duration from 'dayjs/plugin/duration';
 import type ReactPlayer from 'react-player/lazy';
 import MediaPlayer from '@/components/MediaPlayer';
-import type { CoverSaveTarget } from '@/sdk/constants';
 import { MediaType, PlaylistItemType } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import { captureVideoFrame } from '@/components/utils';
@@ -17,7 +16,7 @@ dayjs.extend(duration);
 
 const { Popup } = Overlay;
 
-export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (base64String: string, saveTarget?: CoverSaveTarget) => any, t: any, isSingleFileResource: boolean) => {
+export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (base64String: string) => any, t: any, isSingleFileResource: boolean) => {
   // const { t } = useTranslation();
 
   console.log('Showing resource media player');

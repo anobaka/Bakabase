@@ -111,9 +111,10 @@ export default ({
           )}
         </div>
       </div>
-      <div className={'grid'}>
+      <div className={'grid grid-cols-7'}>
         {fsEntries.slice(skipCount, PageSize).map(e => (
           <FileSystemEntry
+            key={e.path}
             entry={e}
             onEnterDirectory={changePath}
           />

@@ -1,6 +1,8 @@
 ﻿using System.Linq.Expressions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
@@ -9,6 +11,7 @@ using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Helpers;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Models.ResponseModels;
@@ -25,6 +28,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             IEnumerable<IStandardValueHandler> converters,
             IEnumerable<ICustomPropertyDescriptor> propertyDescriptors,
             ICustomPropertyLocalizer localizer,
+            IBuiltinPropertyValueService _builtinPropertyValueService,
             IStandardValueLocalizer standardValueLocalizer)
         : FullMemoryCacheResourceService<TDbContext, CustomPropertyValue, int>(
             serviceProvider), ICustomPropertyValueService where TDbContext : DbContext
@@ -76,27 +80,6 @@ namespace Bakabase.Modules.CustomProperty.Services
             return dtoList;
         }
 
-        public async Task<BaseResponse> SetResourceValue(int resourceId, int propertyId,
-            ResourceCustomPropertyValuePutRequestModel model)
-        {
-            var value = await GetFirst(x => x.ResourceId == resourceId && x.PropertyId == propertyId);
-            if (value == null)
-            {
-                value = new Bakabase.Abstractions.Models.Db.CustomPropertyValue()
-                {
-                    ResourceId = resourceId,
-                    PropertyId = propertyId,
-                    Value = model.Value
-                };
-                return await Add(value);
-            }
-            else
-            {
-                value.Value = model.Value;
-                return await Update(value);
-            }
-        }
-
         public async Task<BaseResponse> AddRange(IEnumerable<Bakabase.Abstractions.Models.Domain.CustomPropertyValue> values)
         {
             var dbModelsMap = values.ToDictionary(v => v.ToDbModel()!,
@@ -115,6 +98,16 @@ namespace Bakabase.Modules.CustomProperty.Services
             var dbModels = values.Select(v => v.ToDbModel()!).ToList();
             await UpdateRange(dbModels);
             return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<SingletonResponse<CustomPropertyValue>> AddDbModel(CustomPropertyValue resource)
+        {
+            return await base.Add(resource);
+        }
+
+        public async Task<BaseResponse> UpdateDbModel(CustomPropertyValue resource)
+        {
+            return await base.Update(resource);
         }
 
         /// <summary>

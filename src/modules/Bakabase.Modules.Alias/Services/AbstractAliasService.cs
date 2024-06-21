@@ -145,7 +145,7 @@ public abstract class AbstractAliasService<TDbContext>(
     {
         var dbAliases = await orm.GetAll(x => texts.Contains(x.Text));
         var aliasMap = dbAliases.ToDictionary(a => a.Text, a => a.Preferred ?? a.Text);
-        return aliasMap;
+        return texts.ToDictionary(d => d, d => aliasMap.GetValueOrDefault(d) ?? d);
     }
 
     /// <summary>
@@ -153,11 +153,10 @@ public abstract class AbstractAliasService<TDbContext>(
     /// </summary>
     /// <param name="values"></param>
     /// <returns></returns>
-    public async Task<List<(object BizValue, object AliasAppliedBizValue)>> ReplaceWithPreferredAlias(
-        List<(object BizValue, StandardValueType BizValueType)> values)
+    public async Task<List<object>> GetAliasAppliedValues(List<(object BizValue, StandardValueType BizValueType)> values)
     {
         var texts = new HashSet<string>();
-        var valueReplacer = new Dictionary<object, Func<Dictionary<string, string>, object>>();
+        var valueReplacer = new List<Func<Dictionary<string, string>, object>?>();
         foreach (var (v, t) in values)
         {
             var ctx = v.BuildContextForReplacingValueWithAlias(t);
@@ -167,15 +166,13 @@ public abstract class AbstractAliasService<TDbContext>(
                 {
                     texts.Add(tt);
                 }
-
-                valueReplacer[v] = ctx.Value.ReplaceWithAlias;
             }
+            valueReplacer.Add(ctx?.ReplaceWithAlias);
         }
 
         var aliasMap = await GetPreferredNames(texts);
 
-        var replacedValues = values.Select(d =>
-            (d.BizValue, AliasAppliedBizValue: valueReplacer.GetValueOrDefault(d)?.Invoke(aliasMap) ?? d)).ToList();
+        var replacedValues = values.Select((d, i) => valueReplacer[i]?.Invoke(aliasMap) ?? d.BizValue).ToList();
         return replacedValues;
     }
 }

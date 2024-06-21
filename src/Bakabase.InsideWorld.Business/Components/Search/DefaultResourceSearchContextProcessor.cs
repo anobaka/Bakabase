@@ -19,6 +19,7 @@ using Bakabase.Modules.Alias.Models.Input;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
+using Bakabase.Modules.StandardValue.Helpers;
 using Newtonsoft.Json;
 using SQLitePCL;
 
@@ -107,9 +108,9 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 						case SearchableReservedProperty.FileName:
 						case SearchableReservedProperty.DirectoryPath:
 						{
-							var filterValue = string.IsNullOrEmpty(filter.Value)
+							var filterValue = string.IsNullOrEmpty(filter.DbValue)
 								? null
-								: JsonConvert.DeserializeObject<string>(filter.Value);
+								: JsonConvert.DeserializeObject<string>(filter.DbValue);
 
 							var getValue = property switch
 							{
@@ -274,9 +275,9 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 						case SearchableReservedProperty.FileCreatedAt:
 						case SearchableReservedProperty.FileModifiedAt:
 						{
-							var filterValue = string.IsNullOrEmpty(filter.Value)
+							var filterValue = string.IsNullOrEmpty(filter.DbValue)
 								? null
-								: JsonConvert.DeserializeObject<DateTime?>(filter.Value);
+								: JsonConvert.DeserializeObject<DateTime?>(filter.DbValue);
 
 							var getValue = property switch
 							{
@@ -375,13 +376,12 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 							break;
 						}
                         case SearchableReservedProperty.MediaLibrary:
-                        case SearchableReservedProperty.Category:
                         {
                             var getValue = property switch
                             {
                                 SearchableReservedProperty.MediaLibrary => (Func<Abstractions.Models.Domain.Resource, int>)
                                     (x => x.MediaLibraryId),
-                                SearchableReservedProperty.Category => x => x.CategoryId,
+                                // SearchableReservedProperty.Category => x => x.CategoryId,
                                 _ => null!
                             };
 
@@ -390,9 +390,9 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                                 case SearchOperation.Equals:
                                 case SearchOperation.NotEquals:
                                 {
-                                    var filterValue = string.IsNullOrEmpty(filter.Value)
+                                    var filterValue = string.IsNullOrEmpty(filter.DbValue)
                                         ? null
-                                        : JsonConvert.DeserializeObject<int?>(filter.Value);
+                                        : JsonConvert.DeserializeObject<int?>(filter.DbValue);
                                     switch (filter.Operation)
                                     {
                                         case SearchOperation.Equals:
@@ -430,9 +430,9 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                                 case SearchOperation.In:
                                 case SearchOperation.NotIn:
                                 {
-                                    var filterValue = string.IsNullOrEmpty(filter.Value)
-                                        ? null
-                                        : JsonConvert.DeserializeObject<HashSet<int>>(filter.Value);
+                                    var filterValue =
+                                        (filter.DbValue?.DeserializeAsStandardValue(StandardValueType.ListString) as
+                                            List<string>)?.Select(int.Parse).ToList();
                                     switch (filter.Operation)
                                     {
                                         case SearchOperation.In:

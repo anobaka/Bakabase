@@ -11,7 +11,7 @@ interface IProps {
   disabledReason?: string;
   isSingleFileResource: boolean;
   getDataURL: () => string;
-  onSaveAsNewCover: (base64String: string, saveTarget?: CoverSaveLocation) => any;
+  onSaveAsNewCover: (base64String: string) => any;
 }
 
 export default (props: IProps) => {
@@ -34,19 +34,10 @@ export default (props: IProps) => {
     rememberSaveLocationRef.current = resourceOptions.coverOptions?.saveLocation != undefined;
   }, [resourceOptions.coverOptions?.saveLocation]);
 
-  const buildButton = (listenOnClick: boolean, saveLocation?: CoverSaveLocation, text: string = 'Save as a new cover', otherProps?: ButtonProps) => {
+  const buildButton = (listenOnClick: boolean, text: string = 'Save as a new cover', otherProps?: ButtonProps) => {
     const onClick = listenOnClick ? async () => {
-      if (rememberSaveLocationRef.current) {
-        await BApi.options.patchResourceOptions({
-          coverOptions: {
-            ...(resourceOptions.coverOptions || {}),
-            // @ts-ignore
-            saveLocation,
-          },
-        });
-      }
       const data = getDataURL();
-      onSaveAsNewCover(data, saveLocation);
+      onSaveAsNewCover(data);
     } : undefined;
 
     return (
@@ -70,7 +61,7 @@ export default (props: IProps) => {
         <Balloon.Tooltip
           align={'t'}
           trigger={(
-            buildButton(true, CoverSaveLocation.TempDirectory)
+            buildButton(true)
           )}
         >
           {t('Cover of single-file-resource will be saved to temp folder')}
@@ -80,7 +71,7 @@ export default (props: IProps) => {
       const tmpDirBtn = (
         <Balloon.Tooltip
           trigger={(
-            buildButton(true, CoverSaveLocation.TempDirectory, 'Save to temp folder', { type: 'secondary' })
+            buildButton(true, 'Save to temp folder', { type: 'secondary' })
           )}
           v2
           triggerType={'hover'}
@@ -92,7 +83,7 @@ export default (props: IProps) => {
       const resourceDirBtn = (
         <Balloon.Tooltip
           trigger={(
-            buildButton(true, CoverSaveLocation.ResourceDirectory, 'Save to resource folder', { type: 'normal' })
+            buildButton(true, 'Save to resource folder', { type: 'normal' })
           )}
           v2
           triggerType={'hover'}

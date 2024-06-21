@@ -1,29 +1,30 @@
 import { useState } from 'react';
 import type { Duration } from 'dayjs/plugin/duration';
 import type { ValueRendererProps } from '../models';
-import type { EditableValueProps } from '@/components/StandardValue/models';
 import { DateInput, TimeInput } from '@/components/bakaui';
-type TimeValueRendererProps = ValueRendererProps<Duration> & EditableValueProps<Duration> & {
-  format: string;
+type TimeValueRendererProps = ValueRendererProps<Duration, Duration> & {
+  format?: string;
 };
 
-export default ({ value, format, variant, onValueChange, editable, ...props }: TimeValueRendererProps) => {
+export default ({ value, format, variant, editor, ...props }: TimeValueRendererProps) => {
   const [editing, setEditing] = useState(false);
+
+  const f = format == undefined ? 'HH:mm:ss' : format;
 
   if (variant == 'light' && !editing) {
     return (
-      <span onClick={editable ? () => {
+      <span onClick={editor ? () => {
         setEditing(true);
       } : undefined}
-      >{value?.format(format)}</span>
+      >{value?.format(f)}</span>
     );
   }
 
   return (
     <TimeInput
       value={value}
-      isReadOnly={!editable}
-      onChange={onValueChange}
+      isReadOnly={!editor}
+      onChange={x => editor?.onValueChange?.(x, x)}
     />
   );
 };

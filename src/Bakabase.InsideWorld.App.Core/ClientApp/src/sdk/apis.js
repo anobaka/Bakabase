@@ -2374,16 +2374,16 @@ export const getApiConstantURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetAllCustomPropertiesV2
- * url: GetAllCustomPropertiesV2URL
- * method: GetAllCustomPropertiesV2_TYPE
- * raw_url: GetAllCustomPropertiesV2_RAW_URL
+ * request: GetAllCustomProperties
+ * url: GetAllCustomPropertiesURL
+ * method: GetAllCustomProperties_TYPE
+ * raw_url: GetAllCustomProperties_RAW_URL
  * @param additionalItems - 
  */
-export const GetAllCustomPropertiesV2 = function(parameters = {}) {
+export const GetAllCustomProperties = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/custom-property'
+  let path = '/custom-property/all'
   let body
   let queryParameters = {}
   let form = {}
@@ -2397,16 +2397,69 @@ export const GetAllCustomPropertiesV2 = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetAllCustomPropertiesV2_RAW_URL = function() {
-  return '/custom-property'
+export const GetAllCustomProperties_RAW_URL = function() {
+  return '/custom-property/all'
 }
-export const GetAllCustomPropertiesV2_TYPE = function() {
+export const GetAllCustomProperties_TYPE = function() {
   return 'get'
 }
-export const GetAllCustomPropertiesV2URL = function(parameters = {}) {
+export const GetAllCustomPropertiesURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/custom-property'
+  let path = '/custom-property/all'
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetCustomPropertyByKeys
+ * url: GetCustomPropertyByKeysURL
+ * method: GetCustomPropertyByKeys_TYPE
+ * raw_url: GetCustomPropertyByKeys_RAW_URL
+ * @param ids - 
+ * @param additionalItems - 
+ */
+export const GetCustomPropertyByKeys = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property/ids'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['ids'] !== undefined) {
+    queryParameters['ids'] = parameters['ids']
+  }
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetCustomPropertyByKeys_RAW_URL = function() {
+  return '/custom-property/ids'
+}
+export const GetCustomPropertyByKeys_TYPE = function() {
+  return 'get'
+}
+export const GetCustomPropertyByKeysURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property/ids'
+  if (parameters['ids'] !== undefined) {
+    queryParameters['ids'] = parameters['ids']
+  }
   if (parameters['additionalItems'] !== undefined) {
     queryParameters['additionalItems'] = parameters['additionalItems']
   }
@@ -6843,6 +6896,45 @@ export const GetPlaylistFilesURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetResourceSearchCriteria
+ * url: GetResourceSearchCriteriaURL
+ * method: GetResourceSearchCriteria_TYPE
+ * raw_url: GetResourceSearchCriteria_RAW_URL
+ */
+export const GetResourceSearchCriteria = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/search-criteria'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetResourceSearchCriteria_RAW_URL = function() {
+  return '/resource/search-criteria'
+}
+export const GetResourceSearchCriteria_TYPE = function() {
+  return 'get'
+}
+export const GetResourceSearchCriteriaURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/search-criteria'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: SearchResources
  * url: SearchResourcesURL
  * method: SearchResources_TYPE
@@ -6891,6 +6983,7 @@ export const SearchResourcesURL = function(parameters = {}) {
  * method: GetResourcesByKeys_TYPE
  * raw_url: GetResourcesByKeys_RAW_URL
  * @param ids - 
+ * @param additionalItems - 
  */
 export const GetResourcesByKeys = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -6901,6 +6994,9 @@ export const GetResourcesByKeys = function(parameters = {}) {
   let form = {}
   if (parameters['ids'] !== undefined) {
     queryParameters['ids'] = parameters['ids']
+  }
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -6921,6 +7017,9 @@ export const GetResourcesByKeysURL = function(parameters = {}) {
   let path = '/resource/keys'
   if (parameters['ids'] !== undefined) {
     queryParameters['ids'] = parameters['ids']
+  }
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -7207,28 +7306,23 @@ export const GetResourceDataForPreviewerURL = function(parameters = {}) {
 }
 /**
  * 
- * request: PutResourceCustomPropertyValue
- * url: PutResourceCustomPropertyValueURL
- * method: PutResourceCustomPropertyValue_TYPE
- * raw_url: PutResourceCustomPropertyValue_RAW_URL
+ * request: PutResourcePropertyValue
+ * url: PutResourcePropertyValueURL
+ * method: PutResourcePropertyValue_TYPE
+ * raw_url: PutResourcePropertyValue_RAW_URL
  * @param id - 
- * @param pId - 
  * @param model - 
  */
-export const PutResourceCustomPropertyValue = function(parameters = {}) {
+export const PutResourcePropertyValue = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/resource/{id}/custom-property/{pId}/value'
+  let path = '/resource/{id}/property-value'
   let body
   let queryParameters = {}
   let form = {}
   path = path.replace('{id}', `${parameters['id']}`)
   if (parameters['id'] === undefined) {
     return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  path = path.replace('{pId}', `${parameters['pId']}`)
-  if (parameters['pId'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: pId'))
   }
   if (parameters['model'] !== undefined) {
     body = parameters['model']
@@ -7240,18 +7334,17 @@ export const PutResourceCustomPropertyValue = function(parameters = {}) {
   }
   return request('put', domain + path, body, queryParameters, form, config)
 }
-export const PutResourceCustomPropertyValue_RAW_URL = function() {
-  return '/resource/{id}/custom-property/{pId}/value'
+export const PutResourcePropertyValue_RAW_URL = function() {
+  return '/resource/{id}/property-value'
 }
-export const PutResourceCustomPropertyValue_TYPE = function() {
+export const PutResourcePropertyValue_TYPE = function() {
   return 'put'
 }
-export const PutResourceCustomPropertyValueURL = function(parameters = {}) {
+export const PutResourcePropertyValueURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/custom-property/{pId}/value'
+  let path = '/resource/{id}/property-value'
   path = path.replace('{id}', `${parameters['id']}`)
-  path = path.replace('{pId}', `${parameters['pId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

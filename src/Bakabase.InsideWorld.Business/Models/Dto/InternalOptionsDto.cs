@@ -3,6 +3,7 @@ using System.Linq;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using static Bakabase.Abstractions.Components.Configuration.InternalOptions;
 
 namespace Bakabase.InsideWorld.Business.Models.Dto
 {
@@ -12,8 +13,8 @@ namespace Bakabase.InsideWorld.Business.Models.Dto
 
 		public record ResourceOptions
 		{
-			public IDictionary<int, StandardValueType> ReservedResourcePropertyAndValueTypeMap { get; set; } =
-				InternalOptions.ReservedResourcePropertyAndValueTypeMap.ToDictionary(x => (int) x.Key, x => x.Value);
+			public IDictionary<int, SearchableReservedPropertyValueTypes> ReservedResourcePropertyAndValueTypesMap { get; set; } =
+				InternalOptions.ReservedResourcePropertyAndValueTypesMap.ToDictionary(x => (int) x.Key, x => x.Value);
 
             public Dictionary<int, SearchOperation[]> CustomPropertyValueSearchOperationsMap { get; set; } = new();
         }

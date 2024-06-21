@@ -1,4 +1,5 @@
 import type { StandardValueType } from '@/sdk/constants';
+import { ResourceProperty } from '@/sdk/constants';
 
 import { CustomPropertyType } from '@/sdk/constants';
 import type { MultilevelData } from '@/components/StandardValue/models';
@@ -23,28 +24,42 @@ export type PropertyValue = {
 };
 
 export interface IChoice {
-  id: string;
-  value?: string;
+  value: string;
+  label?: string;
   color?: string;
   hide?: boolean;
 }
 
+export type Tag = {
+  value: string;
+  group?: string;
+  name?: string;
+  color?: string;
+  hide?: boolean;
+};
+
+export type TagsPropertyOptions = {
+  tags: Tag[];
+  allowAddingNewDataDynamically: boolean;
+};
+
 export const PropertyTypeIconMap: {[key in CustomPropertyType]?: string} = {
-  [CustomPropertyType.SingleLineText]: 'single-line-text',
-  [CustomPropertyType.MultilineText]: 'multiline-text',
-  [CustomPropertyType.SingleChoice]: 'radiobox',
-  [CustomPropertyType.MultipleChoice]: 'multiple-select',
-  [CustomPropertyType.Multilevel]: 'multi_level',
-  [CustomPropertyType.Number]: 'number',
-  [CustomPropertyType.Percentage]: 'percentage',
-  [CustomPropertyType.Rating]: 'star',
-  [CustomPropertyType.Boolean]: 'checkboxchecked',
-  [CustomPropertyType.Link]: 'link',
-  [CustomPropertyType.Attachment]: 'attachment',
-  [CustomPropertyType.Formula]: 'formula',
-  [CustomPropertyType.Time]: 'time',
-  [CustomPropertyType.Date]: 'calendar-alt',
-  [CustomPropertyType.DateTime]: 'date-time',
+  [CustomPropertyType.SingleLineText]: 'FontSizeOutlined',
+  [CustomPropertyType.MultilineText]: 'OrderedListOutlined',
+  [CustomPropertyType.SingleChoice]: 'AppstoreOutlined',
+  [CustomPropertyType.MultipleChoice]: 'UnorderedListOutlined',
+  [CustomPropertyType.Multilevel]: 'ApartmentOutlined',
+  [CustomPropertyType.Number]: 'FieldBinaryOutlined',
+  [CustomPropertyType.Percentage]: 'PercentageOutlined',
+  [CustomPropertyType.Rating]: 'StarOutlined',
+  [CustomPropertyType.Boolean]: 'CheckSquareOutlined',
+  [CustomPropertyType.Link]: 'LinkOutlined',
+  [CustomPropertyType.Attachment]: 'PaperClipOutlined',
+  [CustomPropertyType.Formula]: 'FunctionOutlined',
+  [CustomPropertyType.Time]: 'HistoryOutlined',
+  [CustomPropertyType.Date]: 'CalendarOutlined',
+  [CustomPropertyType.DateTime]: 'CalendarOutlined',
+  [CustomPropertyType.Tags]: 'TagsOutlined',
 };
 
 export interface ChoicePropertyOptions {
@@ -71,3 +86,4 @@ export interface MultilevelPropertyOptions {
   allowAddingNewDataDynamically: boolean;
   defaultValue?: string;
 }
+

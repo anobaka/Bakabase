@@ -39,7 +39,7 @@ public interface ICategoryCustomPropertyMappingService
     // Task<BaseResponse> RemoveByKey(int key);
     // Task<BaseResponse> RemoveByKeys(IEnumerable<int> keys);
     // Task<SingletonResponse<CategoryCustomPropertyMapping>> Add(CategoryCustomPropertyMapping resource);
-    // Task<ListResponse<CategoryCustomPropertyMapping>> AddRange(List<CategoryCustomPropertyMapping> resources);
+    Task<ListResponse<CategoryCustomPropertyMapping>> AddAll(List<CategoryCustomPropertyMapping> resources);
     // Task<SingletonResponse<CategoryCustomPropertyMapping>> UpdateByKey(int key, Action<CategoryCustomPropertyMapping> modify);
     // Task<BaseResponse> Update(CategoryCustomPropertyMapping resource);
     // Task<BaseResponse> UpdateRange(IReadOnlyCollection<CategoryCustomPropertyMapping> resources);

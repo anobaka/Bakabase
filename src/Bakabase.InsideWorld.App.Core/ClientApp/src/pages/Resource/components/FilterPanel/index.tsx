@@ -74,6 +74,10 @@ export default ({
     onBulkOperationModeChange?.(bulkOperationMode);
   }, [bulkOperationMode]);
 
+  useUpdateEffect(() => {
+    console.log('Search form changed', searchForm);
+  }, [searchForm]);
+
   const renderBulkOperations = useCallback(() => {
     if (bulkOperationMode) {
       const operations: { label: string; onClick: () => any; icon: string }[] = [

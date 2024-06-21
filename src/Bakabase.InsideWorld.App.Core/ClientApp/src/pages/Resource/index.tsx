@@ -6,13 +6,13 @@ import { CheckCircleOutlined, CheckCircleTwoTone } from '@ant-design/icons';
 import styles from './index.module.scss';
 import FilterPanel from './components/FilterPanel';
 import type { ISearchForm } from '@/pages/Resource/models';
-import { convertFilterGroupToDto, convertSearchFormFromDto } from '@/pages/Resource/helpers';
+import { convertFilterGroupToDto } from '@/pages/Resource/helpers';
 import BApi from '@/sdk/BApi';
 import Resource from '@/components/Resource';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
 import ResourceMasonry from '@/pages/Resource/components/ResourceMasonry';
-import { Pagination } from '@/components/bakaui';
+import { Button, Pagination } from '@/components/bakaui';
 import type { BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel } from '@/sdk/Api';
 
 const PageSize = 100;
@@ -39,17 +39,6 @@ export default () => {
   const [bulkOperationMode, setBulkOperationMode] = useState<boolean>(false);
   const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
 
-  const resourceOptions = store.useModelState('resourceOptions');
-
-  useEffect(() => {
-    if (resourceOptions.initialized && !searchForm) {
-      const sf = resourceOptions.lastSearchV2 == undefined ? {} : convertSearchFormFromDto(resourceOptions.lastSearchV2);
-      console.log('initialize search form', sf);
-      setSearchForm(sf);
-      search(sf, false);
-    }
-  }, [resourceOptions]);
-
   useEffect(() => {
     const c = uiOptions.resource?.colCount ?? BusinessConstants.DefaultResourceColumnCount;
     if (uiOptions.initialized && (columnCount == 0 || columnCount != c)) {
@@ -59,15 +48,18 @@ export default () => {
 
   const pageContainerRef = useRef<any>();
 
-  const search = async (partialForm: Partial<ISearchForm>, append: boolean) => {
+  const search = async (partialForm: Partial<ISearchForm>, renderMode: 'append' | 'replace', replaceSearchCriteria: boolean = false) => {
+    const baseForm = replaceSearchCriteria ? {} : partialForm;
+
     const newForm = {
-      ...searchForm,
+      ...baseForm,
       ...partialForm,
       pageSize: PageSize,
       save: true,
     };
 
     setSearchForm(newForm);
+    console.log('Search resources', newForm);
 
     const dto: BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel = {
       ...newForm,
@@ -83,7 +75,7 @@ export default () => {
     });
 
     const newResources = rsp.data || [];
-    if (append) {
+    if (renderMode == 'append') {
       setResources([...resources, ...newResources]);
     } else {
       setResources(newResources);
@@ -91,7 +83,10 @@ export default () => {
   };
 
   useEffect(() => {
-
+    BApi.resource.getResourceSearchCriteria().then(r => {
+      // @ts-ignore
+      search(r.data || {}, false);
+    });
   }, []);
 
   return (
@@ -105,7 +100,7 @@ export default () => {
         onSearch={f => search({
           ...f,
           pageIndex: 1,
-        }, false)}
+        }, 'replace')}
         searchForm={searchForm}
         selectedResourceIds={selectedResourceIds}
         onBulkOperationModeChange={m => {
@@ -126,67 +121,84 @@ export default () => {
           });
         }}
       />
-      {pageable && (
-        <div className={styles.pagination}>
-          <Pagination
-            boundaries={3}
-            showControls
-            size={'sm'}
-            total={pageable.pageSize == undefined ? 0 : Math.ceil(pageable.totalCount / pageable.pageSize)}
-            page={pageable.page}
-            onChange={p => {
-              search({
-                pageIndex: p,
-              }, false);
+      {columnCount > 0 && resources.length > 0 && (
+        <>
+          {pageable && (
+            <div className={styles.pagination}>
+              <Pagination
+                boundaries={3}
+                showControls
+                size={'sm'}
+                total={pageable.pageSize == undefined ? 0 : Math.ceil(pageable.totalCount / pageable.pageSize)}
+                page={pageable.page}
+                onChange={p => {
+                  search({
+                    pageIndex: p,
+                  }, 'replace');
+                }}
+              />
+            </div>
+          )}
+          <ResourceMasonry
+            cellCount={resources.length}
+            columnCount={columnCount}
+            scrollElement={pageContainerRef.current}
+            renderCell={(index, style) => {
+              const resource = resources[index];
+              const selected = selectedResourceIds.includes(resource.id);
+              return (
+                <div
+                  className={'relative'}
+                  style={style}
+                >
+                  {bulkOperationMode && (
+                    <div
+                      className={'absolute top-0 left-0 z-10 flex items-center justify-center w-full h-full hover:bg-[hsla(var(--nextui-foreground)/0.1)] hover:cursor-pointer'}
+                      onClick={() => {
+                        if (bulkOperationMode) {
+                          if (selected) {
+                            setSelectedResourceIds(selectedResourceIds.filter(id => id != resource.id));
+                          } else {
+                            setSelectedResourceIds([...selectedResourceIds, resource.id]);
+                          }
+                        }
+                      }}
+                    >
+                      {selected ? <CheckCircleTwoTone className={'text-5xl'} />
+                        : <CheckCircleOutlined className={'text-5xl opacity-80'} />}
+                    </div>
+                  )}
+                  <Resource
+                    resource={resource}
+                  />
+                </div>
+              );
+            }}
+            loadMore={async () => {
+              const totalPage = Math.ceil((pageable?.totalCount ?? 0) / PageSize);
+              if ((pageable?.page ?? 0) < totalPage) {
+                await search({
+                  pageIndex: (pageable?.page ?? 0) + 1,
+                }, 'append');
+              }
             }}
           />
+        </>
+      ) || (
+        <div className={'mt-10 flex items-center gap-2 justify-center'}>
+          {t('Resource not found')}
+          <Button
+            size={'sm'}
+            variant={'light'}
+            radius={'sm'}
+            color={'primary'}
+            onClick={() => {
+              search({ pageIndex: 1 }, 'replace', true);
+            }}
+          >
+            {t('Reset search criteria')}
+          </Button>
         </div>
-      )}
-      {columnCount > 0 && resources.length > 0 && (
-        <ResourceMasonry
-          cellCount={resources.length}
-          columnCount={columnCount}
-          scrollElement={pageContainerRef.current}
-          renderCell={(index, style) => {
-            const resource = resources[index];
-            const selected = selectedResourceIds.includes(resource.id);
-            return (
-              <div
-                className={'relative'}
-                style={style}
-              >
-                {bulkOperationMode && (
-                  <div
-                    className={'absolute top-0 left-0 z-10 flex items-center justify-center w-full h-full hover:bg-[hsla(var(--nextui-foreground)/0.1)] hover:cursor-pointer'}
-                    onClick={() => {
-                      if (bulkOperationMode) {
-                        if (selected) {
-                          setSelectedResourceIds(selectedResourceIds.filter(id => id != resource.id));
-                        } else {
-                          setSelectedResourceIds([...selectedResourceIds, resource.id]);
-                        }
-                      }
-                    }}
-                  >
-                    {selected ? <CheckCircleTwoTone className={'text-5xl'} />
-                      : <CheckCircleOutlined className={'text-5xl opacity-80'} />}
-                  </div>
-                )}
-                <Resource
-                  resource={resource}
-                />
-              </div>
-            );
-          }}
-          loadMore={async () => {
-            const totalPage = Math.ceil((pageable?.totalCount ?? 0) / PageSize);
-            if ((pageable?.page ?? 0) < totalPage) {
-              await search({
-                pageIndex: (pageable?.page ?? 0) + 1,
-              }, true);
-            }
-          }}
-        />
       )}
     </div>
   );

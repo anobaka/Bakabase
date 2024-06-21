@@ -1,7 +1,6 @@
-import { SearchOperation } from '@/sdk/constants';
-import { SearchableReservedProperty } from '@/sdk/constants';
+import { SearchableReservedProperty, SearchOperation } from '@/sdk/constants';
 
-export const SearchableReservedPropertySearchOperationsMap: Record<SearchableReservedProperty, SearchOperation[]> = {
+export const SearchableReservedPropertySearchOperationsMap: { [key in SearchableReservedProperty]?: SearchOperation[] } = {
   [SearchableReservedProperty.FileName]: [
     SearchOperation.Equals,
     SearchOperation.NotEquals,
@@ -49,3 +48,4 @@ export const SearchableReservedPropertySearchOperationsMap: Record<SearchableRes
     SearchOperation.NotIn,
   ],
 };
+

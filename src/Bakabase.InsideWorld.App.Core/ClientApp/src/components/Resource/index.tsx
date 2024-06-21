@@ -1,4 +1,4 @@
-import { Balloon, Button, Dialog, Message, Tag } from '@alifd/next';
+import { Dialog, Message, Tag } from '@alifd/next';
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type Queue from 'queue';
 import { useTranslation } from 'react-i18next';
@@ -6,11 +6,9 @@ import { useUpdate } from 'react-use';
 import { PlayCircleOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import CustomIcon from '@/components/CustomIcon';
-import { OpenResourceDirectory, PlayResourceFile, RemoveResource } from '@/sdk/apis';
+import { OpenResourceDirectory } from '@/sdk/apis';
 import { buildLogger, splitPathIntoSegments, useTraceUpdate } from '@/components/utils';
 import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
-import store from '@/store';
-import { Tag as TagDto } from '@/core/models/Tag';
 import BApi from '@/sdk/BApi';
 import type { IResourceCoverRef } from '@/components/Resource/components/ResourceCover';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
@@ -18,15 +16,18 @@ import type SimpleSearchEngine from '@/core/models/SimpleSearchEngine';
 import type { RequestParams } from '@/sdk/Api';
 import Operations from '@/components/Resource/components/Operations';
 import TaskCover from '@/components/Resource/components/TaskCover';
-import type { Resource as ResourceModel } from '@/core/models/Resource';
+import type { Property, Resource as ResourceModel } from '@/core/models/Resource';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { Button, Tooltip } from '@/components/bakaui';
+import { ResourceAdditionalItem, ResourcePropertyType, StandardValueType } from '@/sdk/constants';
+import type { TagValue } from '@/components/StandardValue/models';
 
 export interface IResourceHandler {
   id: number;
   reload: (ct?: AbortSignal) => Promise<any>;
 }
 
-interface Props {
+type Props = {
   resource: ResourceModel;
   coverHash?: string;
   queue?: Queue;
@@ -34,12 +35,12 @@ interface Props {
   showBiggerCoverOnHover?: boolean;
   searchEngines?: SimpleSearchEngine[] | null;
   ct: AbortSignal;
-  onTagSearch?: (tagId: number, append: boolean) => any;
+  onTagClick?: (propertyId: number, value: string) => any;
   disableCache?: boolean;
   disableMediaPreviewer?: boolean;
   style?: any;
   className?: string;
-}
+};
 
 const Resource = React.forwardRef((props: Props, ref) => {
   const {
@@ -47,7 +48,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     onRemove = (id) => {
     },
     showBiggerCoverOnHover = true,
-    onTagSearch = (tagId: number, append: boolean) => {
+    onTagClick = (propertyId: number, value: string) => {
     },
     queue,
     ct = new AbortController().signal,
@@ -125,7 +126,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     });
 
   const reload = useCallback(async (ct?: AbortSignal) => {
-    const newResourceRsp = await BApi.resource.getResourcesByKeys({ ids: [resource.id] });
+    const newResourceRsp = await BApi.resource.getResourcesByKeys({ ids: [resource.id], additionalItems: ResourceAdditionalItem.All });
     if (!newResourceRsp.code) {
       const nr = (newResourceRsp.data || [])[0];
       if (nr) {
@@ -153,32 +154,28 @@ const Resource = React.forwardRef((props: Props, ref) => {
             {playableFiles.map((a) => {
               const segments = splitPathIntoSegments(a);
               return (
-                <Balloon.Tooltip
+                <Tooltip
                   key={a}
-                  trigger={(
-                    <Tag
-                      title={a}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => {
-                          play(a);
-                        }}
-                      >
-                        <CustomIcon type="play-circle" />
-                        {segments[segments.length - 1]}
-                      </div>
-                    </Tag>
-                  )}
-                  align={'t'}
-                  triggerType={'hover'}
+                  content={t('Use player to play')}
                 >
-                  {t('Use player to play')}
-                </Balloon.Tooltip>
+                  <Tag
+                    title={a}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => {
+                        play(a);
+                      }}
+                    >
+                      <CustomIcon type="play-circle" />
+                      {segments[segments.length - 1]}
+                    </div>
+                  </Tag>
+                </Tooltip>
               );
             })}
           </Tag.Group>
@@ -209,9 +206,12 @@ const Resource = React.forwardRef((props: Props, ref) => {
             disableMediaPreviewer={disableMediaPreviewer}
             onClick={() => {
               createPortal(ResourceDetailDialog, {
-                resource,
+                id: resource.id,
                 onPlay: clickPlayButton,
                 noPlayableFile: !(playableFiles?.length > 0),
+                onDestroyed: () => {
+                  reload();
+                },
               });
             }}
             resourceId={resource.id}
@@ -221,23 +221,44 @@ const Resource = React.forwardRef((props: Props, ref) => {
         </div>
         {playable && (
           <div className={styles.play}>
-            <Balloon.Tooltip
-              trigger={
-                <PlayCircleOutlined
-                  className={'text-2xl'}
-                  onClick={clickPlayButton}
-                />
-              }
-              triggerType={['hover']}
-              align={'t'}
+            <Tooltip
+              content={t('Use player to play')}
             >
-              {t('Use player to play')}
-            </Balloon.Tooltip>
+              <PlayCircleOutlined
+                className={'text-2xl'}
+                onClick={clickPlayButton}
+              />
+            </Tooltip>
           </div>
         )}
       </div>
     );
   };
+
+  let firstTagsValue: (TagValue & {value: string})[] | undefined;
+  let firstTagsValuePropertyId: number | undefined;
+  {
+    const customPropertyValues = resource.properties?.[ResourcePropertyType.Custom] || {};
+    Object.keys(customPropertyValues).find(x => {
+      const p: Property = customPropertyValues[x];
+      if (p.bizValueType == StandardValueType.ListTag) {
+        const values = p.values?.find(v => (v.value as string[])?.length > 0);
+        if (values) {
+          firstTagsValue = (values.value as string[]).map((id, i) => {
+            const bvs = values.aliasAppliedBizValue as TagValue[];
+            const bv = bvs?.[i];
+            return {
+              value: id,
+              ...bv,
+            };
+          });
+          firstTagsValuePropertyId = parseInt(x, 10);
+          return true;
+        }
+      }
+      return false;
+    });
+  }
 
   return (
     <div
@@ -256,11 +277,28 @@ const Resource = React.forwardRef((props: Props, ref) => {
       {renderCover()}
       <div className={styles.info}>
         <div
-          className={`select-text mb-2 ${styles.limitedContent}`}
+          className={`select-text ${styles.limitedContent}`}
         >
           {resource.displayName}
         </div>
       </div>
+      {firstTagsValue && firstTagsValue.length > 0 && (
+        <div className={styles.info}>
+          <div
+            className={`select-text mt-2 ${styles.limitedContent}`}
+          >
+            {firstTagsValue.map(v => {
+              return (
+                <Button
+                  onClick={() => onTagClick?.(firstTagsValuePropertyId!, v.value)}
+                  size={'sm'}
+                  variant={'light'}
+                >#{v.group == undefined ? '' : `${v.group}:`}{v.name}</Button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 });

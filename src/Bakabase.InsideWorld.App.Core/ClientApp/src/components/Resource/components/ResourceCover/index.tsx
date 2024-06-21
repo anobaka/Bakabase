@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Balloon, Checkbox, Dialog, Icon, Message } from '@alifd/next';
+import { Checkbox, Dialog, Icon, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import type { BalloonProps } from '@alifd/next/types/balloon';
 import { useUpdate } from 'react-use';
 import { Img } from 'react-image';
 import { LoadingOutlined } from '@ant-design/icons';
@@ -15,6 +14,7 @@ import store from '@/store';
 import type { CoverSaveLocation } from '@/sdk/constants';
 import { ResponseCode } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
+import { Tooltip } from '@/components/bakaui';
 
 interface Props {
   resourceId: number;
@@ -43,14 +43,15 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const [loaded, setLoaded] = useState(false);
   const [url, setUrl] = useState<string>();
 
-  const biggerCoverAlignRef = useRef<BalloonProps['align']>();
-
   const [previewerVisible, setPreviewerVisible] = useState(false);
   const previewerHoverTimerRef = useRef<any>();
 
   const disableCacheRef = useRef(disableCache);
 
   const appContext = store.useModelState('appContext');
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const coverSizeRef = useRef<{w: number; h: number}>({ w: 0, h: 0 });
 
   useEffect(() => {
     disableCacheRef.current = disableCache;
@@ -144,9 +145,13 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         <Img
           style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
           src={[url]}
-          onLoad={() => {
+          onLoad={(e) => {
             setLoaded(true);
-            // console.log('loaded');
+            const img = e.target as HTMLImageElement;
+            if (img) {
+              coverSizeRef.current = { w: img.width, h: img.height };
+            }
+            // console.log('loaded', e);
           }}
           loader={(
             <LoadingOutlined className={'text-2xl'} />
@@ -163,6 +168,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const renderContainer = () => {
     return (
       <div
+        ref={containerRef}
         onClick={onClick}
         className="resource-cover-container"
         onMouseOver={(e) => {
@@ -173,16 +179,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                 setPreviewerVisible(true);
               }, 1000);
             }
-          }
-
-          const hw = window.innerWidth / 2;
-          const hh = window.innerHeight / 2;
-          const cx = e.clientX;
-          const cy = e.clientY;
-          const align = cx > hw ? cy > hh ? 'lt' : 'l' : cy > hh ? 'rt' : 'r';
-          if (biggerCoverAlignRef.current != align) {
-            biggerCoverAlignRef.current = align;
-            forceUpdate();
           }
         }}
         onMouseLeave={() => {
@@ -206,21 +202,25 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   if (loaded) {
     if (showBiggerOnHover) {
-      return (
-        <Balloon
-          trigger={renderContainer()}
-          v2
-          delay={600}
-          closable={false}
-          triggerType={'hover'}
-          autoFocus={false}
-          autoAdjust
-          shouldUpdatePosition
-          align={biggerCoverAlignRef.current}
-        >
-          <img src={url} alt={''} style={{ maxWidth: 700, maxHeight: 700 }} />
-        </Balloon>
-      );
+      // ignore small cover
+      if (coverSizeRef.current.w == containerRef.current?.clientWidth || coverSizeRef.current.h == containerRef.current?.clientHeight) {
+        return (
+          <Tooltip
+            content={(
+              <img
+                src={url}
+                alt={''}
+                style={{
+                  maxWidth: 700,
+                  maxHeight: 700,
+                }}
+              />
+            )}
+          >
+            {renderContainer()}
+          </Tooltip>
+        );
+      }
     }
   }
   return renderContainer();

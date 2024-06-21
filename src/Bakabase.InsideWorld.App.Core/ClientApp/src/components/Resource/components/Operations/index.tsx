@@ -55,10 +55,10 @@ export default ({
           title={t('Preview')}
           isIconOnly
           onClick={() => {
-            ShowResourceMediaPlayer(resource.id, resource.path, (base64String: string, saveTarget?: CoverSaveLocation) => {
-              coverRef?.save(base64String, saveTarget);
+            ShowResourceMediaPlayer(resource.id, resource.path, (base64String: string) => {
+              coverRef?.save(base64String);
               // @ts-ignore
-            }, t, resource.isSingleFile, resourceOptions.coverOptions?.target);
+            }, t, resource.isSingleFile);
           }}
         >
           <SearchOutlined className={'text-base'} />

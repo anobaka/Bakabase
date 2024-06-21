@@ -21,10 +21,6 @@ public interface ICustomPropertyValueService
     Task<List<Bakabase.Abstractions.Models.Db.CustomPropertyValue>> GetAllDbModels(
         Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>> selector = null,
         bool returnCopy = true);
-
-    Task<BaseResponse> SetResourceValue(int resourceId, int propertyId,
-        ResourceCustomPropertyValuePutRequestModel model);
-
     //
     Task<BaseResponse> AddRange(IEnumerable<CustomPropertyValue> values);
 
@@ -34,9 +30,9 @@ public interface ICustomPropertyValueService
     // Task<BaseResponse> UpdateRange(IReadOnlyCollection<CustomPropertyValue> resources);
     // Task<CustomPropertyValue> GetByKey(Int32 key, bool returnCopy = true);
     // Task<CustomPropertyValue[]> GetByKeys(IEnumerable<Int32> keys, bool returnCopy = true);
-    //
-    // Task<CustomPropertyValue> GetFirst(Expression<Func<CustomPropertyValue, bool>> selector,
-    //     Expression<Func<CustomPropertyValue, object>> orderBy = null, bool asc = false, bool returnCopy = true);
+    
+    // Task<CustomPropertyValue?> GetFirst(Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>>? selector,
+    //     Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, object>>? orderBy = null, bool asc = false, bool returnCopy = true);
     //
     // Task<int> Count(Func<CustomPropertyValue, bool> selector = null);
     Task<bool> Any(Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>? selector = null);
@@ -64,9 +60,9 @@ public interface ICustomPropertyValueService
 
     // Task<BaseResponse> RemoveByKey(Int32 key);
     Task<BaseResponse> RemoveByKeys(IEnumerable<Int32> keys);
-    // Task<SingletonResponse<CustomPropertyValue>> Add(CustomPropertyValue resource);
+    Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomPropertyValue>> AddDbModel(Bakabase.Abstractions.Models.Db.CustomPropertyValue resource);
     // Task<SingletonResponse<CustomPropertyValue>> UpdateByKey(Int32 key, Action<CustomPropertyValue> modify);
-    // Task<BaseResponse> Update(CustomPropertyValue resource);
+    Task<BaseResponse> UpdateDbModel(Bakabase.Abstractions.Models.Db.CustomPropertyValue resource);
     //
     // Task<ListResponse<CustomPropertyValue>> UpdateByKeys(IReadOnlyCollection<Int32> keys,
     //     Action<CustomPropertyValue> modify);

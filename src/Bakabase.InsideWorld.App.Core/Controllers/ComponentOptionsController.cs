@@ -7,6 +7,7 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -57,7 +58,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             if (mappings.Any())
             {
                 var cIds = mappings.Select(a => a.CategoryId).Distinct().ToArray();
-                var categories = await _categoryService.GetByKeys(cIds);
+                var categories = await _categoryService.GetByKeys(cIds, CategoryAdditionalItem.None);
                 if (categories.Any())
                 {
                     return BaseResponseBuilder.BuildBadRequest(
