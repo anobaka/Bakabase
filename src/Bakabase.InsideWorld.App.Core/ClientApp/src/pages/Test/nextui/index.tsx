@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
+import { Tooltip } from '@/components/bakaui';
 
 export default () => {
   return (
@@ -20,6 +21,12 @@ export default () => {
           </div>
         </PopoverContent>
       </Popover>
+
+      <Tooltip
+        content={(
+          <img src={'http://localhost:5001/resource/56653/cover'} />
+        )}
+      >Test image in tooltip</Tooltip>
     </div>
   );
 };

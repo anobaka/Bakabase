@@ -16,6 +16,18 @@ export default defineConfig(() => ({
   },
   sourceMap: true,
   webpack: (webpackConfig) => {
+    webpackConfig.devServer??={};
+    webpackConfig.devServer.client??={};
+    webpackConfig.devServer.client.overlay??={};
+    const prevRuntimeErrors = webpackConfig.devServer.client.overlay.runtimeErrors;
+    webpackConfig.devServer.client.overlay.runtimeErrors = error => {
+      if(error?.message === "ResizeObserver loop completed with undelivered notifications.")
+      {
+        console.error(error)
+        return false;
+      }
+      return prevRuntimeErrors?.(error) ?? true;
+    }
     return webpackConfig;
   },
 }));

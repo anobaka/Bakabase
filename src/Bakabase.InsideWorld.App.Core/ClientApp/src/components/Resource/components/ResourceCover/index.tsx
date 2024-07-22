@@ -14,7 +14,7 @@ import store from '@/store';
 import type { CoverSaveLocation } from '@/sdk/constants';
 import { ResponseCode } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
-import { Tooltip } from '@/components/bakaui';
+import { Image, Tooltip } from '@/components/bakaui';
 
 interface Props {
   resourceId: number;
@@ -149,7 +149,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
             setLoaded(true);
             const img = e.target as HTMLImageElement;
             if (img) {
-              coverSizeRef.current = { w: img.width, h: img.height };
+              coverSizeRef.current = { w: img.naturalWidth, h: img.naturalHeight };
             }
             // console.log('loaded', e);
           }}
@@ -183,10 +183,12 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         }}
         onMouseLeave={() => {
           // console.log('mouse leave');
-          clearTimeout(previewerHoverTimerRef.current);
-          previewerHoverTimerRef.current = undefined;
-          if (previewerVisible) {
-            setPreviewerVisible(false);
+          if (!disableMediaPreviewer) {
+            clearTimeout(previewerHoverTimerRef.current);
+            previewerHoverTimerRef.current = undefined;
+            if (previewerVisible) {
+              setPreviewerVisible(false);
+            }
           }
         }}
       >
@@ -203,16 +205,23 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   if (loaded) {
     if (showBiggerOnHover) {
       // ignore small cover
-      if (coverSizeRef.current.w == containerRef.current?.clientWidth || coverSizeRef.current.h == containerRef.current?.clientHeight) {
+      if (coverSizeRef.current.w != containerRef.current?.clientWidth && coverSizeRef.current.h != containerRef.current?.clientHeight) {
         return (
           <Tooltip
             content={(
-              <img
-                src={url}
+              <Img
+                src={[url!]}
+                loader={(
+                  <LoadingOutlined className={'text-2xl'} />
+                )}
+                unloader={(
+                  <CustomIcon type={'image-slash'} className={'text-2xl'} />
+                )}
+                // src={url}
                 alt={''}
                 style={{
-                  maxWidth: 700,
-                  maxHeight: 700,
+                  maxWidth: window.innerWidth * 0.6,
+                  maxHeight: window.innerHeight * 0.6,
                 }}
               />
             )}

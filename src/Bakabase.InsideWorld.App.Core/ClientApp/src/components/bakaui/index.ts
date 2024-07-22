@@ -38,6 +38,7 @@ import { DateInput, DatePicker } from './components/Date';
 import { TimeInput } from './components/Time';
 import Pagination from './components/Pagination';
 import Rating from './components/Rating';
+import Image from './components/Image';
 import { RadioGroup, Radio } from './components/Radio';
 
 export {
@@ -99,4 +100,5 @@ export {
   RadioGroup,
   Radio,
   Rating,
+  Image,
 };

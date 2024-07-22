@@ -170,6 +170,9 @@ export default () => {
                   )}
                   <Resource
                     resource={resource}
+                    showBiggerCoverOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
+                    disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
+                    disableCache={uiOptions?.resource?.disableCache}
                   />
                 </div>
               );

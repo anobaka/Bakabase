@@ -264,7 +264,7 @@ export default ({
           <Tooltip content={t('Preview files of a resource on mouse hover')}>
             <Icon
               type={'PlayCircleOutlined'}
-              className={`${styles.switch} ${uiOptions?.resource?.disableMediaPreviewer ? styles.on : ''} !text-xl`}
+              className={`${styles.switch} ${uiOptions?.resource?.disableMediaPreviewer ? '' : styles.on} !text-xl`}
               onClick={() => {
                 BApi.options.patchUiOptions({
                   resource: {
