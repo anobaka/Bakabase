@@ -12,7 +12,7 @@ import Resource from '@/components/Resource';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
 import ResourceMasonry from '@/pages/Resource/components/ResourceMasonry';
-import { Button, Pagination } from '@/components/bakaui';
+import { Button, Pagination, Spinner } from '@/components/bakaui';
 import type { BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel } from '@/sdk/Api';
 
 const PageSize = 100;
@@ -35,6 +35,8 @@ export default () => {
 
   const [columnCount, setColumnCount] = useState<number>(0);
   const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>();
+
+  const [searching, setSearching] = useState(false);
 
   const [bulkOperationMode, setBulkOperationMode] = useState<boolean>(false);
   const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
@@ -66,6 +68,8 @@ export default () => {
       group: convertFilterGroupToDto(newForm.group),
       saveSearchCriteria: true,
     };
+
+    setSearching(true);
     const rsp = await BApi.resource.searchResources(dto);
 
     setPageable({
@@ -80,6 +84,7 @@ export default () => {
     } else {
       setResources(newResources);
     }
+    searching(false);
   };
 
   useEffect(() => {
@@ -173,6 +178,7 @@ export default () => {
                     showBiggerCoverOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
                     disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
                     disableCache={uiOptions?.resource?.disableCache}
+                    biggerCoverPlacement={index % columnCount < columnCount / 2 ? 'right' : 'left'}
                   />
                 </div>
               );
@@ -189,18 +195,24 @@ export default () => {
         </>
       ) || (
         <div className={'mt-10 flex items-center gap-2 justify-center'}>
-          {t('Resource not found')}
-          <Button
-            size={'sm'}
-            variant={'light'}
-            radius={'sm'}
-            color={'primary'}
-            onClick={() => {
-              search({ pageIndex: 1 }, 'replace', true);
-            }}
-          >
-            {t('Reset search criteria')}
-          </Button>
+          {searching ? (
+            <Spinner label={t('Searching...')} />
+          ) : (
+            <>
+              {t('Resource not found')}
+              <Button
+                size={'sm'}
+                variant={'light'}
+                radius={'sm'}
+                color={'primary'}
+                onClick={() => {
+                  search({ pageIndex: 1 }, 'replace', true);
+                }}
+              >
+                {t('Reset search criteria')}
+              </Button>
+            </>
+          )}
         </div>
       )}
     </div>

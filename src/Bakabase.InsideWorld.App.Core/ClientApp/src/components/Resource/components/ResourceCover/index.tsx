@@ -16,12 +16,27 @@ import { ResponseCode } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import { Image, Tooltip } from '@/components/bakaui';
 
+type TooltipPlacement =
+  | 'top'
+  | 'bottom'
+  | 'right'
+  | 'left'
+  | 'top-start'
+  | 'top-end'
+  | 'bottom-start'
+  | 'bottom-end'
+  | 'left-start'
+  | 'left-end'
+  | 'right-start'
+  | 'right-end';
+
 interface Props {
   resourceId: number;
   onClick?: () => any;
   showBiggerOnHover?: boolean;
   disableCache?: boolean;
   disableMediaPreviewer?: boolean;
+  biggerCoverPlacement?: TooltipPlacement;
 }
 
 export interface IResourceCoverRef {
@@ -36,6 +51,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     showBiggerOnHover = true,
     disableCache = false,
     disableMediaPreviewer = false,
+    biggerCoverPlacement,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -205,9 +221,12 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   if (loaded) {
     if (showBiggerOnHover) {
       // ignore small cover
-      if (coverSizeRef.current.w != containerRef.current?.clientWidth && coverSizeRef.current.h != containerRef.current?.clientHeight) {
+      const containerWidth = containerRef.current?.clientWidth ?? Number.MAX_VALUE;
+      const containerHeight = containerRef.current?.clientHeight ?? Number.MAX_VALUE;
+      if (coverSizeRef.current.w > containerWidth && coverSizeRef.current.h > containerHeight) {
         return (
           <Tooltip
+            placement={biggerCoverPlacement}
             content={(
               <Img
                 src={[url!]}

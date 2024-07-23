@@ -49,9 +49,7 @@ export default ({
   return (
     <Modal
       size={'xl'}
-      footer={{
-        actions: ['ok'],
-      }}
+      footer={false}
       defaultVisible
       onDestroyed={props.onDestroyed}
       title={resource?.displayName}

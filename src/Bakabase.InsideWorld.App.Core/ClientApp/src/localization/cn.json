@@ -1335,5 +1335,6 @@
   "Default value": "默认值",
   "Add choices in bulk": "批量添加选项",
   "Please enter the data you want to add, separated by line breaks": "请输入要添加的数据，用换行分隔",
-  "Please enter the data you want to add, colon can be added between group and name, and you can separated tags by line breaks": "请输入要添加的数据，英文冒号可以被用来分隔标签组和标签名，也可以用换行用于分隔标签"
+  "Please enter the data you want to add, colon can be added between group and name, and you can separated tags by line breaks": "请输入要添加的数据，英文冒号可以被用来分隔标签组和标签名，也可以用换行分隔多个标签",
+  "Searching...": "搜索中"
 }

@@ -1,5 +1,5 @@
 import i18n from 'i18next';
-import { Balloon, Button, Checkbox, Input, List, Message, Radio, Select, Table } from '@alifd/next';
+import { Balloon, Button, Checkbox, Input, List, Message, Radio, Select } from '@alifd/next';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import CustomIcon from '@/components/CustomIcon';
@@ -27,6 +27,7 @@ import type { BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngin
 import { uuidv4 } from '@/components/utils';
 import dependentComponentIds from '@/core/models/Constants/DependentComponentIds';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Tooltip } from '@/components/bakaui';
 
 export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: any) => void}) => {
   const { t } = useTranslation();
@@ -364,40 +365,43 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
 
   return (
     <div className="group">
-      <Title title={i18n.t('Functional configurations')} />
+      {/* <Title title={i18n.t('Functional configurations')} /> */}
       <div className="settings">
         <Table
-          dataSource={functionSettings}
-          size={'small'}
-          hasHeader={false}
-          cellProps={(r, c) => {
-            return {
-              className: c == 0 ? 'key' : c == 1 ? 'value' : '',
-            };
-          }}
+          removeWrapper
         >
-          <Table.Column
-            width={300}
-            dataIndex={'label'}
-            cell={(c, i, r) => (
-              <>
-                {t(c)}
-                {r.tip && (
-                  <Balloon.Tooltip
-                    key={i}
-                    trigger={(
-                      <CustomIcon type={'question-circle'} />
-                    )}
-                    triggerType={'hover'}
-                    align={'t'}
-                  >
-                    {t(r.tip)}
-                  </Balloon.Tooltip>
-                )}
-              </>
-            )}
-          />
-          <Table.Column dataIndex={'renderCell'} cell={(r) => r()} />
+          <TableHeader>
+            <TableColumn width={200}>{t('Functional configurations')}</TableColumn>
+            <TableColumn>&nbsp;</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {functionSettings.map((c, i) => {
+              return (
+                <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
+                  <TableCell>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      {t(c.label)}
+                      {c.tip && (
+                        <>
+                          &nbsp;
+                          <Tooltip
+                            placement={'right'}
+                            content={t(c.tip)}
+                          >
+                            <CustomIcon type={'question-circle'} className={'text-base'} />
+                          </Tooltip>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {c.renderCell()}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+
+          </TableBody>
         </Table>
       </div>
     </div>

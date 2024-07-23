@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import Dependency from './components/Dependency';
 import { GetAppInfo } from '@/sdk/apis';
 import './index.scss';
-import i18n from 'i18next';
 import AppInfo from '@/pages/Configuration/components/AppInfo';
 import ContactUs from '@/pages/Configuration/components/ContactUs';
 import Functional from '@/pages/Configuration/components/Functional';

@@ -1,5 +1,5 @@
 import i18n from 'i18next';
-import { Balloon, Dialog, Message, Switch, Table } from '@alifd/next';
+import { Balloon, Dialog, Message, Switch } from '@alifd/next';
 import React, { useEffect, useState } from 'react';
 import Cookies from 'universal-cookie';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,18 @@ import { MoveCoreData, PatchAppOptions } from '@/sdk/apis';
 import FileSelector from '@/components/FileSelector';
 import store from '@/store';
 import BApi from '@/sdk/BApi';
-import { Button, Select, Notification, Modal, Input } from '@/components/bakaui';
+import {
+  Button,
+  Select,
+  Notification,
+  Modal,
+  Input,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow, TableCell, Tooltip,
+  Table,
+} from '@/components/bakaui';
 import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel } from '@/sdk/Api';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
@@ -267,51 +278,87 @@ export default ({
 
   return (
     <div className="group">
-      <Title title={i18n.t('Other settings')} />
+      {/* <Title title={i18n.t('Other settings')} /> */}
       <div className="settings">
         <Table
-          dataSource={otherSettings}
-          size={'small'}
-          hasHeader={false}
-          cellProps={(r, c) => {
-            return {
-              className: c == 0 ? 'key' : c == 1 ? 'value' : '',
-            };
-          }}
+          removeWrapper
         >
-          <Table.Column
-            dataIndex={'label'}
-            width={300}
-            title={i18n.t('Other setting')}
-            cell={(l, i, r) => {
+          <TableHeader>
+            <TableColumn width={200}>{t('Other settings')}</TableColumn>
+            <TableColumn>&nbsp;</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {otherSettings.map((c, i) => {
               return (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-                >
-                  {i18n.t(l)}
-                  {r.tip && (
-                    <>
-                      &nbsp;
-                      <Balloon.Tooltip
-                        align={'r'}
-                        trigger={<CustomIcon type={'question-circle'} />}
-                      >
-                        {i18n.t(r.tip)}
-                      </Balloon.Tooltip>
-                    </>
-                  )}
-                </div>
+                <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
+                  <TableCell>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      {t(c.label)}
+                      {c.tip && (
+                        <>
+                          &nbsp;
+                          <Tooltip
+                            placement={'right'}
+                            content={t(c.tip)}
+                          >
+                            <CustomIcon type={'question-circle'} className={'text-base'} />
+                          </Tooltip>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {c.renderValue()}
+                  </TableCell>
+                </TableRow>
               );
-            }}
-          />
-          <Table.Column
-            dataIndex={'renderValue'}
-            title={i18n.t('Value')}
-            cell={(render, i, r) => (render ? render() : r.value)}
-          />
+            })}
+
+          </TableBody>
         </Table>
+        {/* <Table */}
+        {/*   dataSource={otherSettings} */}
+        {/*   size={'small'} */}
+        {/*   hasHeader={false} */}
+        {/*   cellProps={(r, c) => { */}
+        {/*     return { */}
+        {/*       className: c == 0 ? 'key' : c == 1 ? 'value' : '', */}
+        {/*     }; */}
+        {/*   }} */}
+        {/* > */}
+        {/*   <Table.Column */}
+        {/*     dataIndex={'label'} */}
+        {/*     width={300} */}
+        {/*     title={i18n.t('Other setting')} */}
+        {/*     cell={(l, i, r) => { */}
+        {/*       return ( */}
+        {/*         <div style={{ */}
+        {/*           display: 'flex', */}
+        {/*           alignItems: 'center', */}
+        {/*         }} */}
+        {/*         > */}
+        {/*           {i18n.t(l)} */}
+        {/*           {r.tip && ( */}
+        {/*             <> */}
+        {/*               &nbsp; */}
+        {/*               <Balloon.Tooltip */}
+        {/*                 align={'r'} */}
+        {/*                 trigger={<CustomIcon type={'question-circle'} />} */}
+        {/*               > */}
+        {/*                 {i18n.t(r.tip)} */}
+        {/*               </Balloon.Tooltip> */}
+        {/*             </> */}
+        {/*           )} */}
+        {/*         </div> */}
+        {/*       ); */}
+        {/*     }} */}
+        {/*   /> */}
+        {/*   <Table.Column */}
+        {/*     dataIndex={'renderValue'} */}
+        {/*     title={i18n.t('Value')} */}
+        {/*     cell={(render, i, r) => (render ? render() : r.value)} */}
+        {/*   /> */}
+        {/* </Table> */}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import type { DependentComponentStatus } from '@/sdk/constants';
 interface IContext {
   id: string;
   name: string;
+  description?: string;
   defaultLocation: string;
   status: DependentComponentStatus;
 

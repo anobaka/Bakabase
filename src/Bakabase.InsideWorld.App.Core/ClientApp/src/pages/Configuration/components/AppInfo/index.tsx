@@ -1,4 +1,4 @@
-import { Balloon, Box, Button, Divider, Icon, Message, Progress, Table } from '@alifd/next';
+import { Balloon, Box, Divider, Icon, Message, Progress } from '@alifd/next';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -15,6 +15,18 @@ import Title from '@/components/Title';
 import CustomIcon from '@/components/CustomIcon';
 import store from '@/store';
 import DependentComponentIds from '@/core/models/Constants/DependentComponentIds';
+import {
+  Button,
+  Table,
+  TableRow,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  Snippet,
+  Tooltip, Chip,
+} from '@/components/bakaui';
+
 
 export default ({ appInfo }) => {
   const { t } = useTranslation();
@@ -56,13 +68,14 @@ export default ({ appInfo }) => {
           if (newVersion.version) {
             return (
               <Box direction={'row'} style={{ alignItems: 'center' }}>
-                {newVersion.version}
+                <Chip radius={'sm'} variant={'light'}>{newVersion.version}</Chip>
                 <Divider direction={'ver'} />
                 <Button
                   onClick={() => {
                     StartUpdatingApp().invoke();
                   }}
-                  type={'primary'}
+                  variant={'light'}
+                  color={'success'}
                   size={'small'}
                 >{t('Click to auto-update')}
                 </Button>
@@ -70,7 +83,15 @@ export default ({ appInfo }) => {
                   newVersion.installers?.length > 0 ? (
                     <>
                       <Divider direction={'ver'} />
-                      <Balloon triggerType={'click'} align={'t'} trigger={<Button text type={'primary'}>{t('Auto-Update Fails? Click to download complete installers')}</Button>}>
+                      <Balloon
+                        triggerType={'click'}
+                        align={'t'}
+                        trigger={<Button
+                          variant={'light'}
+                          size={'sm'}
+                          color={'primary'}
+                        >{t('Auto-Update Fails? Click to download complete installers')}</Button>}
+                      >
                         {newVersion.installers.map((i) => (
                           <div key={i.url}>
                             <ExternalLink to={i.url} >{i.name}({bytesToSize(i.size)})</ExternalLink>
@@ -136,27 +157,28 @@ export default ({ appInfo }) => {
     {
       label: 'App Data Path',
       tip: 'This is where core data files stored and DO NOT change them if not necessary.',
-      value: <Button text type={'primary'} onClick={() => OpenFileOrDirectory({ path: appInfo.appDataPath }).invoke()}>{appInfo.appDataPath}</Button>,
+      value: <Button color={'primary'} variant={'light'} onClick={() => OpenFileOrDirectory({ path: appInfo.appDataPath }).invoke()}>{appInfo.appDataPath}</Button>,
+      // value: <Snippet hideSymbol>{appInfo.appDataPath}</Snippet>,
     },
     {
       label: 'Temporary files path',
       tip: 'It\'s a directory where temporary files stored, such as cover files, etc.',
-      value: <Button text type={'primary'} onClick={() => OpenFileOrDirectory({ path: appInfo.tempFilesPath }).invoke()}>{appInfo.tempFilesPath}</Button>,
+      value: <Button color={'primary'} variant={'light'} onClick={() => OpenFileOrDirectory({ path: appInfo.tempFilesPath }).invoke()}>{appInfo.tempFilesPath}</Button>,
     },
     {
       label: 'Log Path',
       tip: 'Detailed information which describing the running states of app.' +
         ' You can send log files to developer if the app is not running normally, and you can delete them also if everything is ok.',
-      value: <Button text type={'primary'} onClick={() => OpenFileOrDirectory({ path: appInfo.logPath }).invoke()}>{appInfo.logPath}</Button>,
+      value: <Button color={'primary'} variant={'light'} onClick={() => OpenFileOrDirectory({ path: appInfo.logPath }).invoke()}>{appInfo.logPath}</Button>,
     },
     {
       label: 'Backup Path',
       tip: 'A data backup will be created when using the new version of app first time, you can delete them if everything is ok.',
-      value: <Button text type={'primary'} onClick={() => OpenFileOrDirectory({ path: appInfo.backupPath }).invoke()}>{appInfo.backupPath}</Button>,
+      value: <Button color={'primary'} variant={'light'} onClick={() => OpenFileOrDirectory({ path: appInfo.backupPath }).invoke()}>{appInfo.backupPath}</Button>,
     },
     {
       label: 'Core Version',
-      value: appInfo.coreVersion,
+      value: (<Chip radius={'sm'} variant={'light'}>{appInfo.coreVersion}</Chip>),
     },
     {
       label: 'Latest version',
@@ -166,41 +188,44 @@ export default ({ appInfo }) => {
 
   return (
     <div className="group">
-      <Title title={t('System information')} />
+      {/* <Title title={t('System information')} /> */}
       <div className="settings">
         <Table
-          dataSource={buildAppInfoDataSource()}
-          size={'small'}
-          hasHeader={false}
-          cellProps={(r, c) => {
-            return {
-              className: c == 0 ? 'key' : c == 1 ? 'value' : '',
-            };
-          }}
+          removeWrapper
+          isCompact
         >
-          <Table.Column
-            dataIndex={'label'}
-            width={300}
-            cell={(l, i, r) => {
+          <TableHeader>
+            <TableColumn width={200}>{t('System information')}</TableColumn>
+            <TableColumn>&nbsp;</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {buildAppInfoDataSource().map((c, i) => {
               return (
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {t(l)}
-                  {r.tip && (
-                    <>
-                      &nbsp;
-                      <Balloon.Tooltip
-                        align={'r'}
-                        trigger={<CustomIcon type={'question-circle'} />}
-                      >
-                        {t(r.tip)}
-                      </Balloon.Tooltip>
-                    </>
-                  )}
-                </div>
+                <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
+                  <TableCell>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      {t(c.label)}
+                      {c.tip && (
+                        <>
+                          &nbsp;
+                          <Tooltip
+                            placement={'right'}
+                            content={t(c.tip)}
+                          >
+                            <CustomIcon type={'question-circle'} className={'text-base'} />
+                          </Tooltip>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {c.value}
+                  </TableCell>
+                </TableRow>
               );
-            }}
-          />
-          <Table.Column dataIndex={'value'} />
+            })}
+
+          </TableBody>
         </Table>
       </div>
     </div>

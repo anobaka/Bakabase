@@ -1,25 +1,28 @@
-import Title from '@/components/Title';
 import i18n from 'i18next';
-import { Table } from '@alifd/next';
 import React from 'react';
-import ExternalLink from '@/components/ExternalLink';
+import { GithubOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import Urls from '@/cons/Urls';
 import qqGroupImg from '@/assets/qq-group.png';
+import { Button, Table, TableRow, TableBody, TableCell, TableColumn, TableHeader } from '@/components/bakaui';
+import BApi from '@/sdk/BApi';
 
 const contacts = [
   {
     label: 'Github',
     value: (
-      <ExternalLink to={Urls.Github}>
-        <iframe
-          src="https://ghbtns.com/github-btn.html?user=Bakabase&repo=InsideWorld&type=star&count=true&size=large"
-          frameBorder="0"
-          scrolling="0"
-          width="170"
-          height="30"
-          title="GitHub"
-        />
-      </ExternalLink>
+      // <ExternalLink to={Urls.Github}>
+      <Button
+        size={'sm'}
+        color={'default'}
+        onClick={() => {
+          BApi.gui.openUrlInDefaultBrowser({ url: Urls.Github });
+        }}
+      >
+        <GithubOutlined className={'text-lg'} />
+        <span className={'font-bold'}>Github</span>
+      </Button>
+      // </ExternalLink>
     ),
   },
   {
@@ -33,22 +36,33 @@ const contacts = [
 ];
 
 export default () => {
+  const { t } = useTranslation();
   return (
     <div className="group">
-      <Title title={i18n.t('Contact us')} />
       <div className="settings">
         <Table
-          dataSource={contacts}
-          size={'small'}
-          hasHeader={false}
-          cellProps={(r, c) => {
-            return {
-              className: c == 0 ? 'key' : c == 1 ? 'value' : '',
-            };
-          }}
+          removeWrapper
+          isCompact
         >
-          <Table.Column dataIndex={'label'} width={300} title={i18n.t('Contact us')} cell={(l) => i18n.t(l)} />
-          <Table.Column dataIndex={'value'} />
+          <TableHeader>
+            <TableColumn width={200}>{t('Contact us')}</TableColumn>
+            <TableColumn>&nbsp;</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {contacts.map((c, i) => {
+              return (
+                <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
+                  <TableCell>
+                    {t(c.label)}
+                  </TableCell>
+                  <TableCell>
+                    {c.value}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+
+          </TableBody>
         </Table>
       </div>
     </div>

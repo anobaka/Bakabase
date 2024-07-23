@@ -27,12 +27,28 @@ export interface IResourceHandler {
   reload: (ct?: AbortSignal) => Promise<any>;
 }
 
+
+type TooltipPlacement =
+  | 'top'
+  | 'bottom'
+  | 'right'
+  | 'left'
+  | 'top-start'
+  | 'top-end'
+  | 'bottom-start'
+  | 'bottom-end'
+  | 'left-start'
+  | 'left-end'
+  | 'right-start'
+  | 'right-end';
+
 type Props = {
   resource: ResourceModel;
   coverHash?: string;
   queue?: Queue;
   onRemove?: (id: number) => any;
   showBiggerCoverOnHover?: boolean;
+  biggerCoverPlacement?: TooltipPlacement;
   searchEngines?: SimpleSearchEngine[] | null;
   ct: AbortSignal;
   onTagClick?: (propertyId: number, value: string) => any;
@@ -54,6 +70,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     ct = new AbortController().signal,
     disableCache = false,
     disableMediaPreviewer = false,
+    biggerCoverPlacement,
     style,
   } = props;
 
@@ -204,6 +221,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
       >
         <div className={styles.absoluteRectangle}>
           <ResourceCover
+            biggerCoverPlacement={biggerCoverPlacement}
             disableCache={disableCache}
             disableMediaPreviewer={disableMediaPreviewer}
             onClick={() => {
