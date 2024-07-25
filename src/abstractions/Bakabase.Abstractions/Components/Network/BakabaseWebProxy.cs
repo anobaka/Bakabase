@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net;
 using Bakabase.InsideWorld.Models.Configs;
 using Bootstrap.Components.Configuration.Abstractions;
-using Bootstrap.Extensions;
 
-namespace Bakabase.InsideWorld.Business.Components.Network
+namespace Bakabase.Abstractions.Components.Network
 {
-    public class InsideWorldWebProxy(IBOptions<NetworkOptions> options) : IWebProxy
+    public class BakabaseWebProxy(IBOptions<NetworkOptions> options) : IWebProxy
     {
         public Uri? GetProxy(Uri destination)
         {

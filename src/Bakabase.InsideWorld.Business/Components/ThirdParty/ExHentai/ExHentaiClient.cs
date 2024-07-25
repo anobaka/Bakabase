@@ -9,8 +9,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
-using Bakabase.InsideWorld.Business.Components.Network;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai.Models;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai.Models.RequestModels;
@@ -28,14 +28,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai
 {
-    public class ExHentaiClient : InsideWorldHttpClient
+    public class ExHentaiClient : BakabaseHttpClient
     {
         public const string Domain = "https://exhentai.org/";
         private readonly SemaphoreSlim _lock = new(1, 1);
         protected override string HttpClientName => InternalOptions.HttpClientNames.ExHentai;
 
         public ExHentaiClient(InsideWorldLocalizer localizer, IHttpClientFactory httpClientFactory,
-            ILoggerFactory loggerFactory) : base(localizer, httpClientFactory, loggerFactory)
+            ILoggerFactory loggerFactory) : base(httpClientFactory, loggerFactory)
         {
         }
 

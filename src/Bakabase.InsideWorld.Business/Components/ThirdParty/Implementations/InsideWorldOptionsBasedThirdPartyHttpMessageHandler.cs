@@ -5,13 +5,13 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.Infrastructures.Components.Configurations;
-using Bakabase.InsideWorld.Business.Components.Network;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Http;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bootstrap.Components.Configuration;
 using Microsoft.Extensions.Options;
 
@@ -27,7 +27,7 @@ namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations
 
         protected InsideWorldOptionsBasedThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger,
             ThirdPartyId thirdPartyId, AspNetCoreOptionsManager<TInsideWorldOptions> optionsManager,
-            InsideWorldWebProxy webProxy) : base(logger, thirdPartyId, webProxy)
+            BakabaseWebProxy webProxy) : base(logger, thirdPartyId, webProxy)
         {
             OptionsManager = optionsManager;
             _optionsChangeHandlerDisposable = OptionsManager.OnChange(OnOptionsChange);

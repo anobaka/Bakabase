@@ -1,20 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Network;
+﻿using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Aos;
 using Bootstrap.Extensions;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Options;
 
-namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Http
+namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 {
     public abstract class AbstractThirdPartyHttpMessageHandler<TOptions> : HttpClientHandler
         where TOptions : ThirdPartyHttpClientOptions
@@ -28,7 +17,7 @@ namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Http
 
         private IOptions<TOptions> _options;
 
-        protected AbstractThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger, ThirdPartyId thirdPartyId, InsideWorldWebProxy webProxy)
+        protected AbstractThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger, ThirdPartyId thirdPartyId, BakabaseWebProxy webProxy)
         {
             _logger = logger;
             ThirdPartyId = thirdPartyId;

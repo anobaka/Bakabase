@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CsQuery" Version="1.3.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
+    <ProjectReference Include="..\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Bangumi\Models\Constants\" />
+  </ItemGroup>
+
+</Project>

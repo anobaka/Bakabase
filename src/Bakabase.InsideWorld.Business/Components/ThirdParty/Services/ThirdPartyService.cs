@@ -4,9 +4,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Http;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Logging;
 using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.Modules.ThirdParty.Abstractions.Http;
 
 namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Services
 {

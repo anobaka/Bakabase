@@ -15,7 +15,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         public List<TextAndCount> ThisWeekAddedCategoryResourceCounts { get; set; } = new();
         public List<TextAndCount> ThisMonthAddedCategoryResourceCounts { get; set; } = new();
         public List<WeekCount> ResourceTrending { get; set; } = new();
-        public List<PropertyAndCount> PropertyResourceCounts { get; set; } = new();
+        public List<PropertyAndCount> PropertyValueCounts { get; set; } = new();
 
         public List<TextAndCount> TagResourceCounts { get; set; } = new();
         public List<DownloaderTaskCount> DownloaderDataCounts { get; set; } = new();
@@ -31,7 +31,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
             public int Count { get; set; } = Count;
         }
 
-        public record PropertyAndCount(ResourceProperty Property, string? PropertyKey, string Value, int Count);
+        public record PropertyAndCount(string Name, int ValueCount);
 
         public record DownloaderTaskCount(ThirdPartyId Id, Dictionary<int, int> StatusAndCounts);
         public record ThirdPartyRequestCount(ThirdPartyId Id, int ResultType, int TaskCount);

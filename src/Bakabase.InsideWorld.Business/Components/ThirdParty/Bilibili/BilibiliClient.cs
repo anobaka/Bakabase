@@ -8,7 +8,7 @@ using System.Net.Http;
 using Microsoft.Extensions.Localization;
 using System.Threading;
 using Bakabase.Abstractions.Components.Configuration;
-using Bakabase.InsideWorld.Business.Components.Network;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -21,10 +21,13 @@ using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
 
 namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili
 {
-    public class BilibiliClient : InsideWorldHttpClient
+    public class BilibiliClient : BakabaseHttpClient
     {
-        public BilibiliClient(InsideWorldLocalizer localizer, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) : base(localizer, httpClientFactory, loggerFactory)
+        private readonly InsideWorldLocalizer _localizer;
+
+        public BilibiliClient(InsideWorldLocalizer localizer, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) : base(httpClientFactory, loggerFactory)
         {
+            _localizer = localizer;
         }
 
         protected override string HttpClientName => InternalOptions.HttpClientNames.Bilibili;
@@ -36,7 +39,7 @@ namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili
             var mid = userCredential?.Profile.Mid;
             if (!mid.HasValue)
             {
-                throw new Exception(Localizer[SharedResource.Downloader_BilibiliCookieIsInvalid]);
+                throw new Exception(_localizer[SharedResource.Downloader_BilibiliCookieIsInvalid]);
             }
 
             var favListJson =

@@ -12,3 +12,4 @@ public record BooleanValueBuilder(bool? Value): IStandardValueBuilder<bool?>;
 public record DateTimeValueBuilder(DateTime? Value): IStandardValueBuilder<DateTime?>;
 public record TimeValueBuilder(TimeSpan? Value): IStandardValueBuilder<TimeSpan?>;
 public record ListListStringValueBuilder(List<List<string>>? Value) : IStandardValueBuilder<List<List<string>>>;
+public record ListTagValueBuilder(List<TagValue>? Value) : IStandardValueBuilder<List<TagValue>>;

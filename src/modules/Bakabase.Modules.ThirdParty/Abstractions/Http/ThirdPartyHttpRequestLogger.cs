@@ -1,18 +1,11 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Logging;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.Modules.ThirdParty.Abstractions.Logging;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Http
+namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 {
     public class ThirdPartyHttpRequestLogger
     {

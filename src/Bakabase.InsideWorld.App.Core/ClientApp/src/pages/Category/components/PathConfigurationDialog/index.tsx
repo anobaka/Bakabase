@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FolderOpenOutlined } from '@ant-design/icons';
+import { DeleteOutlined, FolderOpenOutlined } from '@ant-design/icons';
 import { useUpdate } from 'react-use';
 import BApi from '@/sdk/BApi';
 import { buildLogger, splitPathIntoSegments, standardizePath } from '@/components/utils';
@@ -137,15 +137,16 @@ export default ({
       return null;
     }
 
-    console.log(values, 55555);
+    // console.log(values, 55555);
 
     return (
       <div className="flex flex-col gap-1 my-1">
         {(values).map((s, i) => {
           let label = s.isCustomProperty ? customPropertyMap[s.propertyId!]?.name : t(ResourceProperty[s.propertyId!]);
-          if (label.length == 0) {
+          if (label == undefined || label.length == 0) {
             label = t('Unknown property');
           }
+          let isDeletable = !s.isResourceProperty;
           return (
             <div className={'flex items-center gap-2'}>
               <Chip
@@ -161,6 +162,29 @@ export default ({
                   valueType: s.valueType!,
                 })}
               </div>
+              {isDeletable && (
+                <Button
+                  size={'sm'}
+                  isIconOnly
+                  color={'danger'}
+                  variant={'light'}
+                  onClick={() => {
+                    createPortal(Modal, {
+                      defaultVisible: true,
+                      title: t('Deleting property locator for {{propertyName}}', { propertyName: label }),
+                      onOk: async () => {
+                        pc.rpmValues?.splice(i, 1);
+                        await BApi.mediaLibrary.patchMediaLibrary(libraryId, {
+                          pathConfigurations: library.pathConfigurations,
+                        });
+                        await loadLibrary();
+                      },
+                    });
+                  }}
+                >
+                  <DeleteOutlined className={'text-base'} />
+                </Button>
+              )}
             </div>
           );
         })}

@@ -9,6 +9,7 @@ import type {
   BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount,
 } from '@/sdk/Api';
 import { downloadTaskStatuses, ResourceProperty, ThirdPartyId } from '@/sdk/constants';
+import { Chip } from '@/components/bakaui';
 
 export default () => {
   const { t } = useTranslation();
@@ -118,56 +119,19 @@ export default () => {
           </div>
         </section>
         <section style={{ maxHeight: '40%' }}>
-          <div className="block" style={{ flex: 1.5 }}>
-            <div className={'title'}>{t('Resource tags')}</div>
-            <div className={'content'}>
-              {data.tagResourceCounts && data.tagResourceCounts.length > 0 && data.tagResourceCounts.map((t, i) => {
-                return (
-                  <div className="t-t-c" key={i}>
-                    <div className="left">
-                      <div className="label" title={t.label!}>
-                        {t.label}
-                      </div>
-                      <div className="text" title={t.name!}>
-                        {t.name}
-                      </div>
-                    </div>
-                    <div className="right">
-                      <div className="count">
-                        {t.count}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }) || (
-                t('No content')
-              )}
-            </div>
-          </div>
           <div className="block" style={{ flex: 2.5 }}>
             <div className={'title'}>{t('Resource properties')}</div>
             <div className={'content'}>
-              {data.propertyResourceCounts && data.propertyResourceCounts.length > 0 && data.propertyResourceCounts.map((c, i) => {
-                const property = c.property as number as ResourceProperty;
-                let propertyLabel = t(ResourceProperty[property]);
-                if (property == ResourceProperty.CustomProperty) {
-                  propertyLabel += `:${c.propertyKey}`;
-                }
+              {data.propertyValueCounts && data.propertyValueCounts.length > 0 && data.propertyValueCounts.map((c, i) => {
                 return (
-                  <div className="t-t-c" key={i}>
-                    <div className="left">
-                      <div
-                        className="label"
-                        title={propertyLabel!}
-                      >{propertyLabel}</div>
-                      <div
-                        className="text"
-                        title={c.value!}
-                      >{c.value}</div>
-                    </div>
-                    <div className="right">
-                      <div className="count">{c.count}</div>
-                    </div>
+                  <div className="flex items-center gap-1" key={i}>
+                    <Chip
+                      size={'sm'}
+                      radius={'sm'}
+                    >
+                      {c.name}
+                    </Chip>
+                    {c.valueCount}
                   </div>
                 );
               }) || (
@@ -220,15 +184,14 @@ export default () => {
                     return (
                       <div className="block" key={j}>
                         <div className="content">
-                          <div className="t-t-c" title={c.name!}>
-                            <div className="left">
-                              <div className="text">
-                                {t(c.name!)}
-                              </div>
-                            </div>
-                            <div className="right">
-                              <div className="count">{c.count}</div>
-                            </div>
+                          <div className="flex items-center gap-1" key={j}>
+                            <Chip
+                              size={'sm'}
+                              radius={'sm'}
+                            >
+                              {t(c.name)}
+                            </Chip>
+                            {c.count}
                           </div>
                         </div>
                       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import i18n from 'i18next';
+import { useTranslation } from 'react-i18next';
+import { PlusCircleOutlined } from '@ant-design/icons';
 import BApi from '@/sdk/BApi';
 import { ComponentDescriptorAdditionalItem, ComponentDescriptorType, ComponentType, componentTypes } from '@/sdk/constants';
 import './index.scss';
@@ -7,7 +8,8 @@ import CustomIcon from '@/components/CustomIcon';
 import type { CustomComponentDetailDialogProps } from '@/pages/CustomComponent/Detail';
 import Detail from '@/pages/CustomComponent/Detail';
 import ComponentDescriptorCard from '@/pages/CustomComponent/components/ComponentCard';
-import { Button } from '@alifd/next';
+import FeatureStatusTip from '@/components/FeatureStatusTip';
+import { Button } from '@/components/bakaui';
 
 const ComponentTypeIcons = {
   [ComponentType.Enhancer]: 'flashlight',
@@ -15,6 +17,7 @@ const ComponentTypeIcons = {
   [ComponentType.PlayableFileSelector]: 'filesearch',
 };
 export default () => {
+  const { t } = useTranslation();
   const [allComponents, setAllComponents] = useState([]);
 
   const [selectedComponent, setSelectedComponent] = useState<CustomComponentDetailDialogProps>();
@@ -51,28 +54,31 @@ export default () => {
           }}
         />
       )}
-      {componentTypes.map(t => {
-        const components = allComponents.filter(c => c.componentType == t.value && c.type == ComponentDescriptorType.Instance);
+      {componentTypes.map(ct => {
+        const components = allComponents.filter(c => c.componentType == ct.value && c.type == ComponentDescriptorType.Instance);
         return (
-          <div className={'component-type'} key={t.value}>
+          <div className={'component-type'} key={ct.value}>
             <div className="type-name">
-              <div className="name">
-                <CustomIcon type={ComponentTypeIcons[t.value]} size={'large'} />
-                {i18n.t(t.label)}
+              <div className="name flex items-center gap-1">
+                <CustomIcon type={ComponentTypeIcons[ct.value]} size={'large'} />
+                {t(ct.label)}
               </div>
-              <Button
-                type={'primary'}
-                text
-                className="add"
-                onClick={() => {
-                  showDetail(t.value);
-                }}
-              >
-                <CustomIcon type={'plus-circle'} />
-                {i18n.t('Add')}
-              </Button>
+              {ct.value != ComponentType.Enhancer && (
+                <Button
+                  color={'primary'}
+                  variant={'light'}
+                  onClick={() => {
+                    showDetail(ct.value);
+                  }}
+                >
+                  <PlusCircleOutlined className={'text-base'} />
+                  {t('Add')}
+                </Button>
+              )}
             </div>
-            {components.length > 0 ? (<div className="components">
+            {ct.value == ComponentType.Enhancer && (
+              <FeatureStatusTip name={t('Custom enhancer')} status={'deprecated'} />
+            ) || (components.length > 0 ? (<div className="components">
               {components.map(c => {
                 return (
                   <ComponentDescriptorCard
@@ -86,10 +92,9 @@ export default () => {
               })}
             </div>) : (
               <div className={'no-components'}>
-                {i18n.t('Nothing here yet')}
+                {t('Nothing here yet')}
               </div>
-            )}
-
+            ))}
           </div>
         );
       })}

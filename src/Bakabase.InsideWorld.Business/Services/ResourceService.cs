@@ -504,7 +504,7 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<List<Abstractions.Models.Db.Resource>> GetAllEntities(
+        public async Task<List<Abstractions.Models.Db.Resource>> GetAllDbModels(
             Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
             bool returnCopy = true)
         {
@@ -1316,162 +1316,70 @@ namespace Bakabase.InsideWorld.Business.Services
         //     return BaseResponseBuilder.Ok;
         // }
 
-        // public async Task PopulateStatistics(DashboardStatistics statistics)
-        // {
-        // 	var categories = (await _categoryService.GetAll()).ToDictionary(a => a.Id, a => a.Name);
-        // 	var allEntities = await GetAllEntities();
-        //
-        // 	var allEntitiesMap = allEntities.ToDictionary(a => a.Id, a => a);
-        //
-        // 	var totalCounts = allEntities.GroupBy(a => a.CategoryId)
-        // 		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-        // 		.ToList();
-        //
-        // 	statistics.CategoryResourceCounts = totalCounts;
-        //
-        // 	var today = DateTime.Today;
-        // 	var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
-        // 		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-        // 		.Where(a => a.Count > 0)
-        // 		.OrderByDescending(a => a.Count)
-        // 		.ToList();
-        //
-        // 	statistics.TodayAddedCategoryResourceCounts = todayCounts;
-        //
-        // 	var weekdayDiff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
-        // 	var monday = today.AddDays(-1 * weekdayDiff);
-        // 	var thisWeekCounts = allEntities.Where(a => a.CreateDt >= monday).GroupBy(a => a.CategoryId)
-        // 		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-        // 		.Where(a => a.Count > 0)
-        // 		.OrderByDescending(a => a.Count)
-        // 		.ToList();
-        //
-        // 	statistics.ThisWeekAddedCategoryResourceCounts = thisWeekCounts;
-        //
-        // 	var thisMonth = today.GetFirstDayOfMonth();
-        // 	var thisMonthCounts = allEntities.Where(a => a.CreateDt >= thisMonth).GroupBy(a => a.CategoryId)
-        // 		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-        // 		.Where(a => a.Count > 0)
-        // 		.OrderByDescending(a => a.Count)
-        // 		.ToList();
-        //
-        // 	statistics.ThisMonthAddedCategoryResourceCounts = thisMonthCounts;
-        //
-        // 	// 12 weeks added counts trending
-        // 	{
-        // 		var total = allEntities.Count;
-        // 		for (var i = 0; i < 12; i++)
-        // 		{
-        // 			var offset = -i * 7;
-        // 			var weekStart = today.AddDays(offset - weekdayDiff);
-        // 			var weekEnd = weekStart.AddDays(7);
-        // 			var count = allEntities.Count(a => a.CreateDt >= weekStart && a.CreateDt < weekEnd);
-        // 			statistics.ResourceTrending.Add(new DashboardStatistics.WeekCount(-i, total));
-        // 			total -= count;
-        // 		}
-        //
-        // 		statistics.ResourceTrending.Reverse();
-        // 	}
-        //
-        // 	const int maxPropertyCount = 30;
-        //
-        // 	// // Tags
-        // 	// {
-        // 	// 	var allTagMappings = await _resourceTagMappingService.GetAll(null, false);
-        // 	// 	var top30TagResourceCountsMap = allTagMappings.GroupBy(a => a.TagId)
-        // 	// 		.ToDictionary(a => a.Key, a => a.ToHashSet().Count(b => allEntitiesMap.ContainsKey(b.ResourceId)))
-        // 	// 		.OrderByDescending(a => a.Value).Take(maxPropertyCount).Where(a => a.Value > 0)
-        // 	// 		.ToList();
-        // 	// 	var tagIds = top30TagResourceCountsMap.Select(s => s.Key).ToArray();
-        // 	// 	var tags = await _tagService.GetByKeys(tagIds, TagAdditionalItem.PreferredAlias);
-        // 	// 	var groupIds = tags.Select(a => a.GroupId).ToHashSet().ToArray();
-        // 	// 	var groups = await _tagGroupService.GetByKeys(groupIds, TagGroupAdditionalItem.PreferredAlias);
-        // 	// 	var groupsMap = groups.ToDictionary(a => a.Id, a => a);
-        // 	// 	foreach (var tag in tags)
-        // 	// 	{
-        // 	// 		if (groupsMap.TryGetValue(tag.GroupId, out var g))
-        // 	// 		{
-        // 	// 			tag.GroupName = g.Name;
-        // 	// 			tag.GroupNamePreferredAlias = g.PreferredAlias;
-        // 	// 		}
-        // 	// 	}
-        // 	//
-        // 	// 	var tagsMap = tags.ToDictionary(a => a.Id, a => a);
-        // 	//
-        // 	// 	statistics.TagResourceCounts = top30TagResourceCountsMap.Select(kv =>
-        // 	// 	{
-        // 	// 		var a = tagsMap.GetValueOrDefault(kv.Key);
-        // 	// 		if (a != null)
-        // 	// 		{
-        // 	// 			return new DashboardStatistics.TextAndCount(a.PreferredAlias ?? a.Name,
-        // 	// 				kv.Value, a.GroupNamePreferredAlias ?? a.GroupName);
-        // 	// 		}
-        // 	//
-        // 	// 		return null;
-        // 	//
-        // 	// 	}).Where(a => a != null).ToList()!;
-        // 	// }
-        //
-        // 	// Properties
-        // 	{
-        // 		var propertyCountList = new List<DashboardStatistics.PropertyAndCount>();
-        //
-        // 		// #region Publisher
-        // 		//
-        // 		// var publisherResourceCounts = (await _publisherMappingService.GetAll(null, false))
-        // 		// 	.GroupBy(a => a.PublisherId)
-        // 		// 	.ToDictionary(a => a.Key, a => a.Count(b => allEntitiesMap.ContainsKey(b.ResourceId)));
-        // 		// var top30PublisherResourceCounts = publisherResourceCounts.OrderByDescending(a => a.Value)
-        // 		// 	.Take(maxPropertyCount)
-        // 		// 	.ToDictionary(a => a.Key, a => a.Value);
-        // 		// var publisherIds = top30PublisherResourceCounts.Keys.ToArray();
-        // 		// var publisherNames = await _publisherService.GetNamesByIds(publisherIds);
-        // 		// var publisherResourceTextAndCounts = publisherIds.Select((a, i) =>
-        // 		// 	new DashboardStatistics.PropertyAndCount(ResourceProperty.Publisher, null, publisherNames[i],
-        // 		// 		top30PublisherResourceCounts[a])).ToList();
-        // 		// propertyCountList.AddRange(publisherResourceTextAndCounts);
-        // 		//
-        // 		// #endregion
-        // 		//
-        // 		// #region Original
-        // 		//
-        // 		// var originalResourceCounts = (await _originalMappingService.GetAll(null, false))
-        // 		// 	.GroupBy(a => a.OriginalId)
-        // 		// 	.ToDictionary(a => a.Key, a => a.Count(b => allEntitiesMap.ContainsKey(b.ResourceId)));
-        // 		// var top30OriginalResourceCounts = originalResourceCounts.OrderByDescending(a => a.Value)
-        // 		// 	.Take(maxPropertyCount)
-        // 		// 	.ToDictionary(a => a.Key, a => a.Value);
-        // 		// var originalIds = top30OriginalResourceCounts.Keys.ToArray();
-        // 		// var originalNames = await _originalService.GetNamesByIds(originalIds);
-        // 		// var originalResourceTextAndCounts = originalIds.Select((a, i) =>
-        // 		// 	new DashboardStatistics.PropertyAndCount(ResourceProperty.Original, null, originalNames[i],
-        // 		// 		top30OriginalResourceCounts[a])).ToList();
-        // 		// propertyCountList.AddRange(originalResourceTextAndCounts);
-        // 		//
-        // 		// #endregion
-        // 		//
-        // 		// #region Custom Properties
-        // 		//
-        // 		// // key - value - count
-        // 		// var customPropertyResourceCounts = (await _customResourcePropertyService.GetAll(null, false))
-        // 		// 	.GroupBy(a => a.Key).SelectMany(s => s.GroupBy(b => b.Value).Select(c =>
-        // 		// 		(Key: s.Key, Value: c.Key, Count: c.Count(b => allEntitiesMap.ContainsKey(b.ResourceId)))))
-        // 		// 	.OrderByDescending(a => a.Count).ToList();
-        // 		// var top30CustomPropertyResourceCounts = customPropertyResourceCounts.Take(maxPropertyCount).ToList();
-        // 		// var customPropertyResourceTextAndCounts = top30CustomPropertyResourceCounts.Select((a, i) =>
-        // 		// 		new DashboardStatistics.PropertyAndCount(ResourceProperty.CustomProperty, a.Key, a.Value,
-        // 		// 			a.Count))
-        // 		// 	.ToList();
-        // 		// propertyCountList.AddRange(customPropertyResourceTextAndCounts);
-        // 		//
-        // 		//
-        // 		// statistics.PropertyResourceCounts =
-        // 		// 	propertyCountList.OrderByDescending(d => d.Count).Take(maxPropertyCount).Where(a => a.Count > 0)
-        // 		// 		.ToList();
-        // 		//
-        // 		// #endregion
-        // 	}
-        // }
+        public async Task PopulateStatistics(DashboardStatistics statistics)
+        {
+        	var categories = (await _categoryService.GetAll()).ToDictionary(a => a.Id, a => a.Name);
+        	var allEntities = await GetAllDbModels();
+        
+        	var allEntitiesMap = allEntities.ToDictionary(a => a.Id, a => a);
+        
+        	var totalCounts = allEntities.GroupBy(a => a.CategoryId)
+        		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+        		.ToList();
+        
+        	statistics.CategoryResourceCounts = totalCounts;
+        
+        	var today = DateTime.Today;
+        	var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
+        		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+        		.Where(a => a.Count > 0)
+        		.OrderByDescending(a => a.Count)
+        		.ToList();
+        
+        	statistics.TodayAddedCategoryResourceCounts = todayCounts;
+        
+        	var weekdayDiff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+        	var monday = today.AddDays(-1 * weekdayDiff);
+        	var thisWeekCounts = allEntities.Where(a => a.CreateDt >= monday).GroupBy(a => a.CategoryId)
+        		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+        		.Where(a => a.Count > 0)
+        		.OrderByDescending(a => a.Count)
+        		.ToList();
+        
+        	statistics.ThisWeekAddedCategoryResourceCounts = thisWeekCounts;
+        
+        	var thisMonth = today.GetFirstDayOfMonth();
+        	var thisMonthCounts = allEntities.Where(a => a.CreateDt >= thisMonth).GroupBy(a => a.CategoryId)
+        		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+        		.Where(a => a.Count > 0)
+        		.OrderByDescending(a => a.Count)
+        		.ToList();
+        
+        	statistics.ThisMonthAddedCategoryResourceCounts = thisMonthCounts;
+        
+        	// 12 weeks added counts trending
+        	{
+        		var total = allEntities.Count;
+        		for (var i = 0; i < 12; i++)
+        		{
+        			var offset = -i * 7;
+        			var weekStart = today.AddDays(offset - weekdayDiff);
+        			var weekEnd = weekStart.AddDays(7);
+        			var count = allEntities.Count(a => a.CreateDt >= weekStart && a.CreateDt < weekEnd);
+        			statistics.ResourceTrending.Add(new DashboardStatistics.WeekCount(-i, total));
+        			total -= count;
+        		}
+        
+        		statistics.ResourceTrending.Reverse();
+        	}
+        
+        	const int maxPropertyCount = 30;
+            
+        	// Properties
+        	{
+        		var propertyCountList = new List<DashboardStatistics.PropertyAndCount>();
+        	}
+        }
 
         public async Task<SingletonResponse<(string Path, byte[] Data)>> SaveCover(int id, bool overwrite,
             Func<byte[]> getImageData, CancellationToken ct)

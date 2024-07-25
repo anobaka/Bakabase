@@ -1,10 +1,9 @@
-﻿namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi
+﻿using Bakabase.Modules.StandardValue.Models.Domain;
+using Bakabase.Modules.ThirdParty.Bangumi.Models;
+
+namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi
 {
-    public record BangumiEnhancerContext
+    public record BangumiEnhancerContext : BangumiDetail
     {
-        public string? Name { get; set; }
-        public decimal? Rating { get; set; }
-        public List<string>? Tags { get; set; }
-        public List<string>? Originals { get; set; }
     }
 }

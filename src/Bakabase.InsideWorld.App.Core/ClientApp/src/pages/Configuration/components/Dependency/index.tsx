@@ -33,7 +33,7 @@ export default () => {
               return (
                 <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
                   <TableCell>
-                    <div className={'flex gap-1 align-items'}>
+                    <div className={'flex gap-1 items-center'}>
                       {c.name}
                       <Popover
                         trigger={(

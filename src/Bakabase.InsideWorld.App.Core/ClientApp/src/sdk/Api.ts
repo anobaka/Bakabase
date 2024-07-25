@@ -1034,25 +1034,6 @@ export type BakabaseInsideWorldModelsConstantsResourceDiffType = 1 | 2 | 3;
 export type BakabaseInsideWorldModelsConstantsResourceMatcherValueType = 1 | 2 | 3;
 
 /**
- * [1: RootPath, 2: ParentResource, 3: Resource, 12: Introduction, 13: Rating, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsResourceProperty =
-  | 1
-  | 2
-  | 3
-  | 12
-  | 13
-  | 14
-  | 15
-  | 16
-  | 17
-  | 18
-  | 19
-  | 20
-  | 21;
-
-/**
  * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
  * @format int32
  */
@@ -1168,7 +1149,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
   thisWeekAddedCategoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
   thisMonthAddedCategoryResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
   resourceTrending?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount[] | null;
-  propertyResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount[] | null;
+  propertyValueCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount[] | null;
   tagResourceCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[] | null;
   downloaderDataCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount[] | null;
   thirdPartyRequestCounts?: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount[] | null;
@@ -1190,12 +1171,9 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMover
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount {
-  /** [1: RootPath, 2: ParentResource, 3: Resource, 12: Introduction, 13: Rating, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary] */
-  property?: BakabaseInsideWorldModelsConstantsResourceProperty;
-  propertyKey?: string | null;
-  value?: string | null;
+  name?: string | null;
   /** @format int32 */
-  count?: number;
+  valueCount?: number;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount {

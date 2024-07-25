@@ -121,11 +121,12 @@ namespace Bakabase.Abstractions.Components.Configuration
             public const string Bilibili = nameof(Bilibili);
             public const string ExHentai = nameof(ExHentai);
             public const string Pixiv = nameof(Pixiv);
+            public const string Bangumi = nameof(Bangumi);
             public const string Default = nameof(Default);
         }
 
         public static string DefaultHttpUserAgent =
-            $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Safari/537.36 Edg/94.0.992.38 InsideWorld/{AppService.CoreVersion}";
+            $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Safari/537.36 Edg/94.0.992.38 Bakabase/{AppService.CoreVersion}";
 
         public const string CoverDirectoryName = "cover";
         public const string TempDirectoryName = "temp";

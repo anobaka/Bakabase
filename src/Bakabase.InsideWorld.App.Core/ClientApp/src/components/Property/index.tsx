@@ -46,28 +46,26 @@ export default ({
     return (
       <div className={`${styles.categories} flex flex-wrap gap-1`}>
         {categories.length > 0 ? (
-          <Popover trigger={(
+          <Tooltip content={<div className={'flex flex-wrap gap-1 max-w-[600px]'}>
+            {categories.map(c => {
+              return (
+                <Chip
+                  size={'sm'}
+                  radius={'sm'}
+                  key={c.id}
+                >
+                  {c.name}
+                </Chip>
+              );
+            })}
+          </div>}
+          >
             <Chip
               radius={'sm'}
               size={'sm'}
               classNames={{}}
             >{t('{{count}} categories', { count: categories.length })}</Chip>
-          )}
-          >
-            <div className={'flex flex-wrap gap-1 max-w-[600px]'}>
-              {categories.map(c => {
-                return (
-                  <Chip
-                    size={'sm'}
-                    radius={'sm'}
-                    key={c.id}
-                  >
-                    {c.name}
-                  </Chip>
-                );
-              })}
-            </div>
-          </Popover>
+          </Tooltip>
         ) : t('No category bound')}
       </div>
     );

@@ -17,7 +17,6 @@ using Bakabase.InsideWorld.Business.Components.Legacy;
 using Bakabase.InsideWorld.Business.Components.Legacy.Services;
 using Bakabase.InsideWorld.Business.Components.Modules.Alias;
 using Bakabase.InsideWorld.Business.Components.Modules.CustomProperty;
-using Bakabase.InsideWorld.Business.Components.Network;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
@@ -161,7 +160,7 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             return services;
         }
 
-        public static IServiceCollection AddInsideWorldHttpClient<THttpClientHandler>(this IServiceCollection services,
+        public static IServiceCollection AddBakabaseHttpClient<THttpClientHandler>(this IServiceCollection services,
             string name) where THttpClientHandler : HttpClientHandler
         {
             services.TryAddSingleton<THttpClientHandler>();

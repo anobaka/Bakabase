@@ -6,8 +6,8 @@ using System.Security.Authentication;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
-using Bakabase.InsideWorld.Business.Components.Network;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv.Models;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
@@ -22,13 +22,13 @@ using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv
 {
-    public class PixivClient : InsideWorldHttpClient
+    public class PixivClient : BakabaseHttpClient
     {
         public const string LoginStateCheckUrl = "https://www.pixiv.net/ajax/user/extra";
         protected override string HttpClientName => InternalOptions.HttpClientNames.Pixiv;
 
         public PixivClient(InsideWorldLocalizer localizer, IHttpClientFactory httpClientFactory,
-            ILoggerFactory loggerFactory) : base(localizer, httpClientFactory, loggerFactory)
+            ILoggerFactory loggerFactory) : base(httpClientFactory, loggerFactory)
         {
         }
 

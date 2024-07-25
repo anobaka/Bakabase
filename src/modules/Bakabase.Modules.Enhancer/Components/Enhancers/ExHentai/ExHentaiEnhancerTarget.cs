@@ -9,6 +9,6 @@ public enum ExHentaiEnhancerTarget
     [EnhancerTarget(StandardValueType.Decimal)]
     Rating = 1,
 
-    [EnhancerTarget(StandardValueType.ListListString)]
+    [EnhancerTarget(StandardValueType.ListTag)]
     Tags = 2,
 }

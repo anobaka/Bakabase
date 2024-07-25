@@ -1,8 +1,6 @@
-﻿using System;
-using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Aos;
+﻿using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Logging
+namespace Bakabase.Modules.ThirdParty.Abstractions.Logging
 {
     public class ThirdPartyRequestLog
     {

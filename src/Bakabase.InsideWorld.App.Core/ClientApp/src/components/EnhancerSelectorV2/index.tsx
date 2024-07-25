@@ -38,7 +38,7 @@ const EnhancerSelector = ({
     });
 
     // @ts-ignore
-    BApi.category.getResourceCategory(categoryId, { additionalItems: CategoryAdditionalItem.EnhancerOptions | CategoryAdditionalItem.CustomProperties }).then(r => {
+    BApi.category.getCategory(categoryId, { additionalItems: CategoryAdditionalItem.EnhancerOptions | CategoryAdditionalItem.CustomProperties }).then(r => {
       const data = r.data || {};
       setCategoryEnhancerOptionsList(data.enhancerOptions?.map(eo => (eo as CategoryEnhancerFullOptions)) || []);
     });

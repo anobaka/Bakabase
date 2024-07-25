@@ -29,12 +29,13 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers
             Logger = loggerFactory.CreateLogger(GetType());
         }
 
-        protected abstract Task<TContext> BuildContext(Resource resource);
+        protected abstract Task<TContext?> BuildContext(Resource resource);
 
-        public int Id => (int)TypedId;
+        public int Id => (int) TypedId;
+
         protected abstract EnhancerId TypedId { get; }
 
-        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource)
+        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, object? options)
         {
             var context = await BuildContext(resource);
             if (context == null)
@@ -44,7 +45,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers
 
             Logger.LogInformation($"Got context: {context.ToJson()}");
 
-            var targetValues = await ConvertContextByTargets(context);
+            var targetValues = await ConvertContextByTargets(context, options as TEnhancerOptions);
             if (targetValues?.Any(x => x.Value.Value != null) != true)
             {
                 return null;
@@ -57,7 +58,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers
                 if (value != null)
                 {
                     var targetAttr = target.GetAttribute<EnhancerTargetAttribute>();
-                    var intTarget = (int)(object)target;
+                    var intTarget = (int) (object) target;
                     var vt = targetAttr.ValueType;
                     // var vc = ValueConverters.FirstOrDefault(x => x.Type == vt)!;
                     // var isValid = vc.ValidateType(value);
@@ -79,10 +80,11 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers
         /// 
         /// </summary>
         /// <param name="context"></param>
+        /// <param name="options"></param>
         /// <returns>
         /// The value of the dictionary MUST be the standard value, which can be generated safely via <see cref="IStandardValueBuilder{TValue}"/>
         /// </returns>
         protected abstract Task<Dictionary<TEnumTarget, IStandardValueBuilder>> ConvertContextByTargets(
-            TContext context);
+            TContext context, TEnhancerOptions? options);
     }
 }

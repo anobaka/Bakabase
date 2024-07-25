@@ -17,5 +17,8 @@ public enum BangumiEnhancerTarget
     Original = 3,
 
     [EnhancerTarget(StandardValueType.Decimal)]
-    Rating = 4
+    Rating = 4,
+
+    [EnhancerTarget(StandardValueType.ListString, [EnhancerTargetOptionsItem.IntegrateWithAlias], true)]
+    OtherPropertiesInLeftPanel = 5,
 }

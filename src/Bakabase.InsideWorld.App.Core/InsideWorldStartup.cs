@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.Infrastructures.Components.Jobs;
@@ -25,11 +26,9 @@ using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
 using Bakabase.InsideWorld.Business.Components.Jobs;
-using Bakabase.InsideWorld.Business.Components.Network;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Http;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
@@ -40,6 +39,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Extensions;
+using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage.OneDrive;
@@ -76,9 +76,9 @@ namespace Bakabase.InsideWorld.App.Core
             services.AddBootstrapServices<InsideWorldDbContext>(c =>
                 c.UseBootstrapSqLite(AppDataPath, "bakabase_insideworld"));
 
-            services.AddInsideWorldHttpClient<InsideWorldHttpClientHandler>(InternalOptions.HttpClientNames.Default);
+            services.AddBakabaseHttpClient<BakabaseHttpClientHandler>(InternalOptions.HttpClientNames.Default);
 
-            services.AddInsideWorldHttpClient<JavLibraryThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
+            services.AddBakabaseHttpClient<JavLibraryThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
                 .JavLibrary);
             services.AddSimpleProgressor<JavLibraryDownloader>();
 
@@ -86,14 +86,14 @@ namespace Bakabase.InsideWorld.App.Core
 
             services.TryAddSingleton<ThirdPartyHttpRequestLogger>();
 
-            services.AddInsideWorldHttpClient<BilibiliThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
+            services.AddBakabaseHttpClient<BilibiliThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
                 .Bilibili);
             services.TryAddSingleton<BilibiliClient>();
             services.AddTransient<BilibiliDownloader>();
             services.TryAddSingleton<BilibiliDownloaderOptionsValidator>();
             services.TryAddSingleton<BilibiliCookieValidator>();
 
-            services.AddInsideWorldHttpClient<ExHentaiThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
+            services.AddBakabaseHttpClient<ExHentaiThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
                 .ExHentai);
             services.TryAddSingleton<ExHentaiClient>();
             services.AddTransient<ExHentaiSingleWorkDownloader>();
@@ -102,7 +102,7 @@ namespace Bakabase.InsideWorld.App.Core
             services.TryAddSingleton<ExHentaiDownloaderOptionsValidator>();
             services.TryAddSingleton<ExHentaiCookieValidator>();
 
-            services.AddInsideWorldHttpClient<PixivThirdPartyHttpMessageHandler>(
+            services.AddBakabaseHttpClient<PixivThirdPartyHttpMessageHandler>(
                 InternalOptions.HttpClientNames.Pixiv);
             services.TryAddSingleton<PixivClient>();
             services.AddTransient<PixivSearchDownloader>();
@@ -137,7 +137,7 @@ namespace Bakabase.InsideWorld.App.Core
 
             services.TryAddSingleton<IFileMover, FileMover>();
 
-            services.TryAddSingleton<InsideWorldWebProxy>();
+            services.TryAddSingleton<BakabaseWebProxy>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

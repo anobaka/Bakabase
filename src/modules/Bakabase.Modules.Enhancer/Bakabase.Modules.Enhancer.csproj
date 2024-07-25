@@ -4,13 +4,14 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
+    <ProjectReference Include="..\Bakabase.Modules.ThirdParty\Bakabase.Modules.ThirdParty.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-﻿namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Logging
+﻿namespace Bakabase.Modules.ThirdParty.Abstractions.Logging
 {
     public enum ThirdPartyRequestResultType
     {

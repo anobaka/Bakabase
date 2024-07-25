@@ -30,8 +30,8 @@ public interface IResourceService
     // Task<List<Resource>> ToDomainModel(Abstractions.Models.Db.Resource[] resources,
     //     ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
     //
-    // Task<List<Abstractions.Models.Db.Resource>> GetAllEntities(Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
-    //     bool asNoTracking = true);
+    Task<List<Abstractions.Models.Db.Resource>> GetAllDbModels(Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
+        bool asNoTracking = true);
     //
     /// <summary>
     /// <para>All properties of resources will be saved, including null values.</para>

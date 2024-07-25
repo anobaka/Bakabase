@@ -102,7 +102,7 @@ export default (({
             size={'sm'}
             radius={'sm'}
           >
-            {n}
+            {n ?? t('Unknown property')}
           </Chip>
         );
       }) : t('Not set');

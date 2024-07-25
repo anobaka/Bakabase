@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Network;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Http;
+using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bootstrap.Components.Configuration;
 
 namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations
@@ -15,7 +15,7 @@ namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations
         JavLibraryOptions, ThirdPartyHttpClientOptions>
     {
         public JavLibraryThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger, ThirdPartyId thirdPartyId,
-            AspNetCoreOptionsManager<JavLibraryOptions> optionsManager, InsideWorldWebProxy webProxy) : base(logger,
+            AspNetCoreOptionsManager<JavLibraryOptions> optionsManager, BakabaseWebProxy webProxy) : base(logger,
             thirdPartyId, optionsManager, webProxy)
         {
         }
