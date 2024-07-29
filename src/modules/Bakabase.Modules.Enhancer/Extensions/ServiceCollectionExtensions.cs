@@ -5,6 +5,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
@@ -42,7 +43,7 @@ public static class ServiceCollectionExtensions
             services.TryAddScoped(SpecificTypeUtils<IEnhancer>.Type, et);
         }
 
-        services.AddSingleton(sp =>
+        services.AddSingleton<IEnhancerDescriptors>(sp =>
         {
             var localizer = sp.GetRequiredService<IEnhancerLocalizer>();
             var enhancerDescriptors = SpecificEnumUtils<EnhancerId>.Values.Select(enhancerId =>
@@ -53,16 +54,17 @@ public static class ServiceCollectionExtensions
                 {
                     var targetAttr = target.GetAttribute<EnhancerTargetAttribute>();
                     return new EnhancerTargetDescriptor(target,
-                        localizer.Enhancer_TargetName(enhancerId, target),
+                        enhancerId,
+                        localizer,
                         targetAttr.ValueType,
-                        localizer.Enhancer_TargetDescription(enhancerId, target),
+                        targetAttr.IsDynamic,
                         targetAttr.Options?.Cast<int>().ToArray());
                 }).ToArray();
 
-                return new EnhancerDescriptor((int) enhancerId, localizer.Enhancer_Name(enhancerId),
-                    localizer.Enhancer_Description(enhancerId), targetDescriptors, attr.CustomPropertyValueLayer);
-            });
-            return enhancerDescriptors;
+                return (IEnhancerDescriptor) new EnhancerDescriptor(enhancerId, localizer, targetDescriptors,
+                    attr.PropertyValueScope);
+            }).ToArray();
+            return new EnhancerDescriptors(enhancerDescriptors, localizer);
         });
 
         return services;

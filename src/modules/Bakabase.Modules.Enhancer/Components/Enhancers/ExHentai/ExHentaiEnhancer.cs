@@ -13,6 +13,9 @@ using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.ThirdParty.ExHentai;
 using Bakabase.Modules.ThirdParty.ExHentai.Models.RequestModels;
 using Microsoft.Extensions.Options;
+using Bakabase.Modules.Enhancer.Abstractions;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 {
@@ -124,51 +127,29 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         }
 
         protected override EnhancerId TypedId => EnhancerId.Bakabase;
-
-        protected override async Task<Dictionary<ExHentaiEnhancerTarget, IStandardValueBuilder>>
-            ConvertContextByTargets(ExHentaiEnhancerContext context)
+        protected override async Task<List<EnhancementTargetValue<ExHentaiEnhancerTarget>>> ConvertContextByTargets(
+            ExHentaiEnhancerContext context)
         {
-            var targetValues = new Dictionary<ExHentaiEnhancerTarget, IStandardValueBuilder>();
+            var enhancements = new List<EnhancementTargetValue<ExHentaiEnhancerTarget>>();
             foreach (var target in SpecificEnumUtils<ExHentaiEnhancerTarget>.Values)
             {
-                var v = BuildTargetValue(context, target);
-                if (v != null)
+                IStandardValueBuilder valueBuilder = target switch
                 {
-                    targetValues.Add(target, v);
+                    ExHentaiEnhancerTarget.Name => new StringValueBuilder(context.Name),
+                    ExHentaiEnhancerTarget.Introduction => new StringValueBuilder(context.Introduction),
+                    ExHentaiEnhancerTarget.Rating => new DecimalValueBuilder(context.Rating),
+                    ExHentaiEnhancerTarget.Tags => new ListTagValueBuilder(context.Tags?.SelectMany(d => d.Value.Select(x => new TagValue(d.Key, x))).ToList()),
+                    ExHentaiEnhancerTarget.Cover => new StringValueBuilder(context.CoverUrl),
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+
+                if (valueBuilder.Value != null)
+                {
+                    enhancements.Add(new EnhancementTargetValue<ExHentaiEnhancerTarget>(target, null, valueBuilder));
                 }
             }
 
-            return targetValues;
-        }
-
-        protected IStandardValueBuilder? BuildTargetValue(ExHentaiEnhancerContext data, ExHentaiEnhancerTarget target)
-        {
-            switch (target)
-            {
-                case ExHentaiEnhancerTarget.Rating:
-                {
-                    if (data.Rating.HasValue)
-                    {
-                        return new DecimalValueBuilder(data.Rating.Value);
-                    }
-
-                    break;
-                }
-                case ExHentaiEnhancerTarget.Tags:
-                {
-                    var value = data.Tags?.SelectMany(t => t.Value.Select(x => new TagValue(t.Key, x))).ToList();
-                    if (value?.Count > 0)
-                    {
-                        return new ListTagValueBuilder(value);
-                    }
-
-                    break;
-                }
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(target), target, null);
-            }
-
-            return null;
+            return enhancements;
         }
     }
 }

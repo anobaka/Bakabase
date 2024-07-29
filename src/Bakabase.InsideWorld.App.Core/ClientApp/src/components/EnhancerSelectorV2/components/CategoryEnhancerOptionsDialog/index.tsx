@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useUpdate } from 'react-use';
 import {
-  Button,
-  Modal, Popover,
+  Button, Divider,
+  Modal, Popover, Spacer,
   Table,
   TableBody,
   TableCell,
@@ -41,6 +41,8 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import PropertyTip
   from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/PropertyTip';
+import DynamicTargetLabel
+  from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/DynamicTargetLabel';
 
 const StdValueSpecialTextIntegrationMap: { [key in StandardValueType]?: SpecialTextType } = {
   [StandardValueType.DateTime]: SpecialTextType.DateTime,
@@ -162,6 +164,7 @@ const CategoryEnhancerOptionsDialog = ({
                         {integratedSpecialTextType && (
                           <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
                         )}
+                        {target.isDynamic && (<DynamicTargetLabel />)}
                       </div>
                       <div className={'flex items-center gap-1 opacity-60'}>
                         <StandardValueIcon valueType={target.valueType} className={'text-small'} />

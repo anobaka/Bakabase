@@ -10,6 +10,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Services
     {
         public Task<List<CategoryEnhancerFullOptions>> GetAll(Expression<Func<CategoryEnhancerOptions, bool>>? exp);
         public Task<BaseResponse> Patch(int categoryId, int enhancerId, CategoryEnhancerOptionsPatchInputModel model);
+        public Task<BaseResponse> PutAll(CategoryEnhancerFullOptions[] options);
 
         // /// <summary>
         // /// 获取全部默认资源

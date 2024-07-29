@@ -22,6 +22,11 @@ namespace Bakabase.Modules.Enhancer.Services
             return data.Select(d => d.ToDomainModel()!).ToList();
         }
 
+        public async Task<BaseResponse> PutAll(CategoryEnhancerFullOptions[] options)
+        {
+            return await orm.UpdateRange(options.Select(o => o.ToDbModel()));
+        }
+
         public async Task<List<CategoryEnhancerFullOptions>> GetByCategory(int categoryId) =>
             await GetAll(x => x.CategoryId == categoryId);
 

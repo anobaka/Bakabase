@@ -6,6 +6,7 @@ export interface EnhancerDescriptor {
   description?: string;
   targets: {
     id: number;
+    isDynamic: boolean;
     name: string;
     description?: string;
     valueType: StandardValueType;

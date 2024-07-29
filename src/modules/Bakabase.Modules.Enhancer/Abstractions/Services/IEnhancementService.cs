@@ -1,5 +1,5 @@
 ﻿using System.Linq.Expressions;
-using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Modules.Enhancer.Abstractions.Services;

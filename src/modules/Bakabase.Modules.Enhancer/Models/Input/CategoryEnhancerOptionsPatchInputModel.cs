@@ -1,4 +1,4 @@
-﻿using Bakabase.Modules.Enhancer.Models.Domain;
+﻿using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 
 namespace Bakabase.Modules.Enhancer.Models.Input;
 

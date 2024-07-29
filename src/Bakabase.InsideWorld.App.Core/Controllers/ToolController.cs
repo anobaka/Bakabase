@@ -9,8 +9,6 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.ExHentai.Models;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;

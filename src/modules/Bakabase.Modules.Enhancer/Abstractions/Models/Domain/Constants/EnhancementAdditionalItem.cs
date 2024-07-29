@@ -1,4 +1,4 @@
-﻿namespace Bakabase.Modules.Enhancer.Models.Domain.Constants;
+﻿namespace Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 
 [Flags]
 public enum EnhancementAdditionalItem

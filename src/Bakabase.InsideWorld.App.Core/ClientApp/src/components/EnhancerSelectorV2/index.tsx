@@ -64,7 +64,7 @@ const EnhancerSelector = ({
     setCategoryEnhancerOptionsList([...categoryEnhancerOptionsList]);
   };
 
-  console.log(categoryEnhancerOptionsList, onDestroyed);
+  // console.log(categoryEnhancerOptionsList, onDestroyed);
 
   return (
     <Modal
@@ -74,121 +74,123 @@ const EnhancerSelector = ({
       onDestroyed={onDestroyed}
       onClose={onClose}
     >
-      {enhancers.map(e => {
-        const ceo = categoryEnhancerOptionsList.find(x => x.enhancerId == e.id);
-        return (
-          <div
-            key={e.id}
-            className={'max-w-[280px] rounded border-1 pl-3 pr-3 pt-2 pb-2'}
-          >
-            <div className={'text-medium font-bold'}>
-              {e.name}
-            </div>
-            <div className={'opacity-60'}>
-              {e.description}
-            </div>
-            <Divider />
-            <div className={'mt-2 mb-2'}>
-              <div className={' italic'}>
-                {t('This enhancer can produce the following property values')}
+      <div className={'flex flex-wrap justify-evenly items-start gap-1'}>
+        {enhancers.map(e => {
+          const ceo = categoryEnhancerOptionsList.find(x => x.enhancerId == e.id);
+          return (
+            <div
+              key={e.id}
+              className={'max-w-[280px] rounded border-1 pl-3 pr-3 pt-2 pb-2'}
+            >
+              <div className={'text-medium font-bold'}>
+                {e.name}
               </div>
-              <div className={'flex flex-wrap gap-x-3 gap-y-1 mt-1'}>
-                {e.targets.map(target => {
-                  return (
-                    <Tooltip
-                      key={target.id}
-                      content={(
-                        <div>
-                          <div>{target.description}</div>
+              <div className={'opacity-60'}>
+                {e.description}
+              </div>
+              <Divider />
+              <div className={'mt-2 mb-2'}>
+                <div className={' italic'}>
+                  {t('This enhancer can produce the following property values')}
+                </div>
+                <div className={'flex flex-wrap gap-x-3 gap-y-1 mt-1'}>
+                  {e.targets.map(target => {
+                    return (
+                      <Tooltip
+                        key={target.id}
+                        content={(
                           <div>
-                            {t('The value type of this target is')}
-                          &nbsp;
-                            <span className={'font-bold'}>
-                              <StandardValueIcon valueType={target.valueType} className={'text-small'} />
-                            &nbsp;
-                              {t(`StandardValueType.${StandardValueType[target.valueType]}`)}
-                            </span>
+                            <div>{target.description}</div>
+                            <div>
+                              {t('The value type of this target is')}
+                              &nbsp;
+                              <span className={'font-bold'}>
+                                <StandardValueIcon valueType={target.valueType} className={'text-small'} />
+                                &nbsp;
+                                {t(`StandardValueType.${StandardValueType[target.valueType]}`)}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    >
-                      <div
-                        className={'flex items-center gap-1'}
-                        style={{
-                          // color: 'var(--bakaui-primary)'
-                      }}
+                        )}
                       >
-                        <StandardValueIcon valueType={target.valueType} className={'text-small'} />
-                        <span className={'break-all'}>
-                          {target.name}
-                        </span>
-                      </div>
-                    </Tooltip>
-                  );
-                })}
+                        <div
+                          className={'flex items-center gap-1'}
+                          style={{
+                            // color: 'var(--bakaui-primary)'
+                          }}
+                        >
+                          <StandardValueIcon valueType={target.valueType} className={'text-small'} />
+                          <span className={'break-all'}>
+                            {target.name}
+                          </span>
+                        </div>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-            <Divider />
-            <div className={'flex items-center justify-between gap-1 mt-1'}>
-              <div className="flex items-center gap-1 mt-1">
-                {/* <Button */}
-                {/*   size={'sm'} */}
-                {/*   variant={'light'} */}
-                {/*   color={'primary'} */}
-                {/*   onClick={() => { */}
-                {/*     createPortal(Modal, { */}
-                {/*       defaultVisible: true, */}
-                {/*       title: t('Enhance manually'), */}
-                {/*       children: ( */}
-                {/*         <div> */}
-                {/*           {t('This may take a very long time to complete. Are you sure you want to continue?')} */}
-                {/*         </div> */}
-                {/*       ), */}
-                {/*       onOk: async () => { */}
+              <Divider />
+              <div className={'flex items-center justify-between gap-1 mt-1'}>
+                <div className="flex items-center gap-1 mt-1">
+                  {/* <Button */}
+                  {/*   size={'sm'} */}
+                  {/*   variant={'light'} */}
+                  {/*   color={'primary'} */}
+                  {/*   onClick={() => { */}
+                  {/*     createPortal(Modal, { */}
+                  {/*       defaultVisible: true, */}
+                  {/*       title: t('Enhance manually'), */}
+                  {/*       children: ( */}
+                  {/*         <div> */}
+                  {/*           {t('This may take a very long time to complete. Are you sure you want to continue?')} */}
+                  {/*         </div> */}
+                  {/*       ), */}
+                  {/*       onOk: async () => { */}
 
-                {/*       }, */}
-                {/*     }); */}
-                {/*   }} */}
-                {/* > */}
-                {/*   {t('Enhance now')} */}
-                {/* </Button> */}
-              </div>
-              <div className="flex items-center gap-1 mt-1">
-                <EnhancerTargetNotSetupTip
-                  enhancer={e}
-                  options={ceo}
-                />
-                <Button
-                  size={'sm'}
-                  variant={'light'}
-                  color={'primary'}
-                  onClick={() => {
-                    createPortal(CategoryEnhancerOptionsDialog, {
-                      enhancer: e,
-                      categoryId,
-                    });
-                  }}
-                >
-                  {t('Setup')}
-                </Button>
-                <Checkbox
-                  size={'sm'}
-                  isSelected={ceo?.active}
-                  onValueChange={(c) => {
-                    BApi.category.patchCategoryEnhancerOptions(categoryId, e.id, {
-                      active: c,
-                    }).then(() => {
-                      patchCategoryEnhancerOptions(e.id, { active: c });
-                    });
-                  }}
-                >
-                  {t('Enable')}
-                </Checkbox>
+                  {/*       }, */}
+                  {/*     }); */}
+                  {/*   }} */}
+                  {/* > */}
+                  {/*   {t('Enhance now')} */}
+                  {/* </Button> */}
+                </div>
+                <div className="flex items-center gap-1 mt-1">
+                  <EnhancerTargetNotSetupTip
+                    enhancer={e}
+                    options={ceo}
+                  />
+                  <Button
+                    size={'sm'}
+                    variant={'light'}
+                    color={'primary'}
+                    onClick={() => {
+                      createPortal(CategoryEnhancerOptionsDialog, {
+                        enhancer: e,
+                        categoryId,
+                      });
+                    }}
+                  >
+                    {t('Setup')}
+                  </Button>
+                  <Checkbox
+                    size={'sm'}
+                    isSelected={ceo?.active}
+                    onValueChange={(c) => {
+                      BApi.category.patchCategoryEnhancerOptions(categoryId, e.id, {
+                        active: c,
+                      }).then(() => {
+                        patchCategoryEnhancerOptions(e.id, { active: c });
+                      });
+                    }}
+                  >
+                    {t('Enable')}
+                  </Checkbox>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </Modal>
   );
 };

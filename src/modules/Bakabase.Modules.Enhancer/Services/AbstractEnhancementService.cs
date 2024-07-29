@@ -3,9 +3,10 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Extensions;
-using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
@@ -87,7 +88,7 @@ namespace Bakabase.Modules.Enhancer.Services
             var enhancements = await base.GetAll(selector);
             var enhancerDescriptorMap = EnhancerDescriptors.ToDictionary(d => d.Id, d => d);
             var keys = enhancements
-                .Select(e => (Scope: enhancerDescriptorMap.GetValueOrDefault(e.EnhancerId)?.CustomPropertyScope,
+                .Select(e => (Scope: enhancerDescriptorMap.GetValueOrDefault(e.EnhancerId)?.PropertyValueScope,
                     e.ResourceId)).Where(x => x.Scope.HasValue).ToList();
             var scopes = keys.Select(d => d.Scope).ToHashSet();
             var resourceIds = keys.Select(d => d.ResourceId).ToHashSet();

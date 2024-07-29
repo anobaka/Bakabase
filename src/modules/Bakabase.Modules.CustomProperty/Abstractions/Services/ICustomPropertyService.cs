@@ -31,6 +31,7 @@ public interface ICustomPropertyService
     // Task<Bakabase.Abstractions.Models.Db.CustomProperty[]> GetByKeys(IEnumerable<Int32> keys, bool returnCopy = true);
     Task<Dictionary<int, List<Models.CustomProperty>>> GetByCategoryIds(int[] ids);
     Task<Models.CustomProperty> Add(CustomPropertyAddOrPutDto model);
+    Task<List<Models.CustomProperty>> AddRange(CustomPropertyAddOrPutDto[] models);
     // Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> Add(Bakabase.Abstractions.Models.Db.CustomProperty resource);
     Task<Models.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model);
     Task<BaseResponse> RemoveByKey(int id);

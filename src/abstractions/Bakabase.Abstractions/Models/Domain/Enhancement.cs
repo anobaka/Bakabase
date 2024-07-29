@@ -14,6 +14,7 @@ namespace Bakabase.Abstractions.Models.Domain
         /// <see cref="EnhancementRawValue.Target"/>
         /// </summary>
         public int Target { get; set; }
+        public string? DynamicTarget { get; set; }
 
         /// <summary>
         /// <see cref="EnhancementRawValue.Value"/>

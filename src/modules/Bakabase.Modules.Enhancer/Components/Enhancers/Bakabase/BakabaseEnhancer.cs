@@ -10,8 +10,10 @@ using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.Modules.CustomProperty.Components;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
-using Bakabase.Modules.Enhancer.Components.Enhancers;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Extensions;
@@ -30,7 +32,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         protected override EnhancerId TypedId => EnhancerId.Bakabase;
         private readonly IBakabaseLocalizer _localizer = localizer;
 
-        protected override async Task<BakabaseEnhancerContext> BuildContext(Resource resource)
+        protected override async Task<BakabaseEnhancerContext?> BuildContext(Resource resource)
         {
             var name = resource.FileName;
             if (name.IsNullOrEmpty())
@@ -38,7 +40,6 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                 throw new ArgumentNullException(nameof(name));
             }
 
-            var enhancements = new List<Enhancement>();
             var ctx = new BakabaseEnhancerContext();
 
             name = await specialTextService.Pretreatment(name);
@@ -100,9 +101,8 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             return ctx;
         }
 
-        protected override async Task<Dictionary<BakabaseEnhancerTarget, IStandardValueBuilder>>
-            ConvertContextByTargets(
-                BakabaseEnhancerContext context)
+        protected override async Task<List<EnhancementTargetValue<BakabaseEnhancerTarget>>> ConvertContextByTargets(
+            BakabaseEnhancerContext context)
         {
             var dict = new Dictionary<BakabaseEnhancerTarget, IStandardValueBuilder>();
             foreach (var target in SpecificEnumUtils<BakabaseEnhancerTarget>.Values)
@@ -125,7 +125,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                 }
             }
 
-            return dict;
+            return dict.Select(v => new EnhancementTargetValue<BakabaseEnhancerTarget>(v.Key, null, v.Value)).ToList();
         }
 
         private async Task<DateTime?> GetAndRemoveReleaseDt(RefWrapper<string> name,

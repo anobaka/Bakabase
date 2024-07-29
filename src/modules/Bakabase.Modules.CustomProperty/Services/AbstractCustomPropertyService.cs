@@ -139,6 +139,19 @@ namespace Bakabase.Modules.CustomProperty.Services
             return data.Data.ToDomainModel()!;
         }
 
+        public async Task<List<Models.CustomProperty>> AddRange(CustomPropertyAddOrPutDto[] models)
+        {
+            var now = DateTime.Now;
+            var data = await AddRange(models.Select(model => new Bakabase.Abstractions.Models.Db.CustomProperty
+            {
+                CreatedAt = now,
+                Name = model.Name,
+                Options = model.Options,
+                Type = model.Type
+            }).ToList());
+            return data.Data.Select(d => d.ToDomainModel()!).ToList();
+        }
+
         public async Task<Modules.CustomProperty.Models.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model)
         {
             var rsp = await UpdateByKey(id, cp =>

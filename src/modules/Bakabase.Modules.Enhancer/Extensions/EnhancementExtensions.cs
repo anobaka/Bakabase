@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Helpers;
@@ -52,6 +53,20 @@ public static class EnhancementExtensions
 
             model.Options = JsonConvert.DeserializeObject<EnhancerFullOptions>(ce.Options);
         }
+
+        return model;
+    }
+    public static Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions ToDbModel(
+        this CategoryEnhancerFullOptions ce)
+    {
+        var model = new Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions
+        {
+            Id = ce.Id,
+            CategoryId = ce.CategoryId,
+            EnhancerId = ce.EnhancerId,
+            Active = ce.Active,
+            Options = JsonConvert.SerializeObject(ce.Options)
+        };
 
         return model;
     }

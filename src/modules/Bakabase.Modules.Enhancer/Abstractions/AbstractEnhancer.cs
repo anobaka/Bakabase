@@ -1,14 +1,14 @@
 ﻿using Bakabase.Abstractions.Components.Enhancer;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Modules.Enhancer.Components.Enhancers
+namespace Bakabase.Modules.Enhancer.Abstractions
 {
     /// <summary>
     /// 
@@ -30,12 +30,10 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers
         }
 
         protected abstract Task<TContext?> BuildContext(Resource resource);
-
         public int Id => (int) TypedId;
-
         protected abstract EnhancerId TypedId { get; }
 
-        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, object? options)
+        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource)
         {
             var context = await BuildContext(resource);
             if (context == null)
@@ -45,26 +43,25 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers
 
             Logger.LogInformation($"Got context: {context.ToJson()}");
 
-            var targetValues = await ConvertContextByTargets(context, options as TEnhancerOptions);
-            if (targetValues?.Any(x => x.Value.Value != null) != true)
+            var targetValues = await ConvertContextByTargets(context);
+            if (targetValues?.Any(x => x.ValueBuilder != null) != true)
             {
                 return null;
             }
 
             var enhancements = new List<EnhancementRawValue>();
-            foreach (var (target, valueBuilder) in targetValues)
+            foreach (var tv in targetValues)
             {
-                var value = valueBuilder?.Value;
+                var value = tv.ValueBuilder?.Value;
                 if (value != null)
                 {
-                    var targetAttr = target.GetAttribute<EnhancerTargetAttribute>();
-                    var intTarget = (int) (object) target;
+                    var targetAttr = tv.Target.GetAttribute<EnhancerTargetAttribute>();
+                    var intTarget = (int) (object) tv.Target;
                     var vt = targetAttr.ValueType;
-                    // var vc = ValueConverters.FirstOrDefault(x => x.Type == vt)!;
-                    // var isValid = vc.ValidateType(value);
                     var e = new EnhancementRawValue
                     {
                         Target = intTarget,
+                        DynamicTarget = tv.DynamicTarget,
                         Value = value,
                         ValueType = vt
                     };
@@ -80,11 +77,9 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers
         /// 
         /// </summary>
         /// <param name="context"></param>
-        /// <param name="options"></param>
         /// <returns>
         /// The value of the dictionary MUST be the standard value, which can be generated safely via <see cref="IStandardValueBuilder{TValue}"/>
         /// </returns>
-        protected abstract Task<Dictionary<TEnumTarget, IStandardValueBuilder>> ConvertContextByTargets(
-            TContext context, TEnhancerOptions? options);
+        protected abstract Task<List<EnhancementTargetValue<TEnumTarget>>> ConvertContextByTargets(TContext context);
     }
 }

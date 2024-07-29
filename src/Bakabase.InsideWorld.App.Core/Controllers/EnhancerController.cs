@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Enhancer;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -8,6 +9,7 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
+using Bakabase.Modules.Enhancer.Components;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -18,10 +20,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     [Route("~/enhancer")]
     public class EnhancerController
     {
-        private readonly IEnumerable<EnhancerDescriptor> _descriptors;
+        private readonly IEnhancerDescriptors _descriptors;
         private readonly IEnhancerLocalizer _localizer;
 
-        public EnhancerController(IEnumerable<EnhancerDescriptor> descriptors, IEnhancerLocalizer localizer)
+        public EnhancerController(IEnhancerDescriptors descriptors, IEnhancerLocalizer localizer)
         {
             _descriptors = descriptors;
             _localizer = localizer;
@@ -29,9 +31,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("descriptor")]
         [SwaggerOperation(OperationId = "GetAllEnhancerDescriptors")]
-        public ListResponse<EnhancerDescriptor> GetAllDescriptors()
+        public ListResponse<IEnhancerDescriptor> GetAllDescriptors()
         {
-            return new ListResponse<EnhancerDescriptor>(_descriptors);
+            return new ListResponse<IEnhancerDescriptor>(_descriptors.Descriptors);
         }
     }
 }

@@ -2,5 +2,6 @@
 
 public abstract record EnhancerTargetOptions()
 {
-    public int PropertyId { get; set; }
+    public int Target { get; set; }
+    public string? DynamicTarget { get; set; }
 }
