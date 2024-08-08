@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Extensions;
@@ -16,7 +17,8 @@ using Newtonsoft.Json;
 namespace Bakabase.Modules.Enhancer.Services
 {
     public abstract class AbstractCategoryEnhancerOptionsService<TDbContext>(
-        ResourceService<TDbContext, Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions, int> orm)
+        ResourceService<TDbContext, Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions, int> orm,
+        IEnhancerDescriptors enhancerDescriptors)
         : ICategoryEnhancerOptionsService where TDbContext : DbContext
     {
         public async Task<List<CategoryEnhancerFullOptions>> GetAll(
@@ -40,7 +42,7 @@ namespace Bakabase.Modules.Enhancer.Services
         public async Task<List<CategoryEnhancerFullOptions>> GetByCategory(int categoryId) =>
             await GetAll(x => x.CategoryId == categoryId);
 
-        public async Task<BaseResponse> Patch(int categoryId, int enhancerId,
+        public async Task<SingletonResponse<CategoryEnhancerFullOptions>> Patch(int categoryId, int enhancerId,
             CategoryEnhancerOptionsPatchInputModel model)
         {
             var data = await orm.GetFirst(x => x.CategoryId == categoryId && x.EnhancerId == enhancerId);
@@ -63,10 +65,14 @@ namespace Bakabase.Modules.Enhancer.Services
 
             if (dataExists)
             {
-                return await orm.Update(data);
+                await orm.Update(data);
+            }
+            else
+            {
+                data = (await orm.Add(data)).Data;
             }
 
-            return await orm.Add(data);
+            return new SingletonResponse<CategoryEnhancerFullOptions>(data.ToDomainModel());
         }
 
         public async Task<BaseResponse> DeleteTarget(int categoryId, int enhancerId, int target, string? dynamicTarget)
@@ -89,25 +95,44 @@ namespace Bakabase.Modules.Enhancer.Services
             return BaseResponseBuilder.Ok;
         }
 
+        private void RemoveInvalidOptions(CategoryEnhancerFullOptions options)
+        {
+            var enhancerDescriptor = enhancerDescriptors.TryGet(options.EnhancerId);
+            if (enhancerDescriptor != null)
+            {
+                var targetDescriptorMap = enhancerDescriptor.Targets.ToDictionary(d => d.Id, d => d);
+                options.Options?.TargetOptions?.RemoveAll(x =>
+                    !targetDescriptorMap.ContainsKey(x.Target) ||
+                    (!targetDescriptorMap[x.Target].IsDynamic && !string.IsNullOrEmpty(x.DynamicTarget)));
+            }
+        }
+
         public async Task<BaseResponse> PatchTarget(int categoryId, int enhancerId, int target, string? dynamicTarget,
             CategoryEnhancerTargetOptionsPatchInputModel patches)
         {
-            var data = await GetByCategoryAndEnhancer(categoryId, enhancerId);
-            if (data == null)
+            var targetDescriptor = enhancerDescriptors[enhancerId].Targets.FirstOrDefault(t => t.Id == target);
+            if (targetDescriptor == null)
             {
-                return BaseResponseBuilder.NotFound;
+                return BaseResponseBuilder.BuildBadRequest(
+                    $"Target descriptor for target:{target} of enhancer:{enhancerId} is not found.");
             }
+
+            if (!targetDescriptor.IsDynamic &&
+                (!string.IsNullOrEmpty(dynamicTarget) || !string.IsNullOrEmpty(patches.DynamicTarget)))
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Can not set dynamic target for a non-dynamic target");
+            }
+
+            var data = await GetByCategoryAndEnhancer(categoryId, enhancerId) ?? (await Patch(categoryId, enhancerId,
+                    new CategoryEnhancerOptionsPatchInputModel(null, true)))
+                .Data;
 
             var targetOptions =
                 data.Options?.TargetOptions?.FirstOrDefault(x =>
                     x.Target == target && x.DynamicTarget == dynamicTarget);
             if (targetOptions == null)
             {
-                targetOptions = new EnhancerTargetFullOptions
-                {
-                    Target = target,
-                    DynamicTarget = dynamicTarget
-                };
+                targetOptions = new EnhancerTargetFullOptions {Target = target};
                 data.Options ??= new EnhancerFullOptions();
                 data.Options.TargetOptions ??= [];
                 data.Options.TargetOptions.Add(targetOptions);
@@ -119,7 +144,8 @@ namespace Bakabase.Modules.Enhancer.Services
                 patches.AutoMatchMultilevelString ?? targetOptions.AutoMatchMultilevelString;
             targetOptions.AutoGenerateProperties =
                 patches.AutoGenerateProperties ?? targetOptions.AutoGenerateProperties;
-            targetOptions.DynamicTarget = patches.DynamicTarget ?? targetOptions.DynamicTarget;
+            // patch or create
+            targetOptions.DynamicTarget = patches.DynamicTarget ?? dynamicTarget;
 
             await orm.Update(data.ToDbModel());
 

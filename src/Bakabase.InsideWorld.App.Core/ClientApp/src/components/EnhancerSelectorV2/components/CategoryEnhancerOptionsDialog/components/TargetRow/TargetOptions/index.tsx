@@ -2,31 +2,34 @@ import { useState } from 'react';
 import IntegrateWithAlias from './IntegrateWithAlias';
 import AutoMatchMultilevelString from './AutoMatchMultilevelString';
 import AutoGenerateProperties from './AutoGenerateProperties';
-import type {
-  EnhancerFullOptions,
-  EnhancerTargetFullOptions,
-} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
+import type { EnhancerTargetFullOptions } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
 import { EnhancerTargetOptionsItem } from '@/sdk/constants';
 
+type Options = {
+  integrateWithAlias?: boolean;
+  autoMatchMultilevelString?: boolean;
+  autoGenerateProperties?: boolean;
+};
+
 interface IProps {
-  options?: Partial<EnhancerTargetFullOptions>;
+  options?: Options;
   optionsItems?: EnhancerTargetOptionsItem[];
   onChange?: (options: Partial<EnhancerTargetFullOptions>) => void;
 }
 
 export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
-  const [options, setOptions] = useState<Partial<EnhancerTargetFullOptions>>(propsOptions ?? {});
+  const [options, setOptions] = useState<Options>(propsOptions ?? {});
 
   // console.log(propsOptions);
 
-  const patchOptions = (patches: Partial<EnhancerTargetFullOptions>, triggerChange: boolean = true) => {
+  const patchOptions = (patches: Options, triggerChange: boolean = true) => {
     const no = {
       ...options,
       ...patches,
     };
     setOptions(no);
     if (triggerChange) {
-      onChange?.(patches);
+      onChange?.(no);
     }
   };
 

@@ -26,7 +26,7 @@ export default (props: Props) => {
     <>
       {/* NextUI doesn't support the wrap of TableRow, use div instead for now, waiting the updates of NextUI */}
       {/* see https://github.com/nextui-org/nextui/issues/729 */}
-      <Table removeWrapper>
+      <Table removeWrapper aria-label={'Fixed targets'}>
         <TableHeader>
           <TableColumn width={'41.666667%'}>{t('Enhancement target')}</TableColumn>
           <TableColumn width={'25%'}>{t('Save as property')}</TableColumn>
@@ -49,7 +49,7 @@ export default (props: Props) => {
               enhancer={enhancer}
               target={target.id}
               options={targetOptions}
-              property={propertyMap?.[targetOptions?.propertyId ?? 0]}
+              propertyMap={propertyMap}
               descriptor={targetDescriptor}
             />
           );

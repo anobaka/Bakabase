@@ -12,6 +12,7 @@ export default ({ integrateWithAlias, onChange }: IProps) => {
     <>
       <Tooltip
         content={t('If checked, the value produced will be replaced with the preferred alias.')}
+        placement={'left'}
       >
         <Checkbox
           size={'sm'}

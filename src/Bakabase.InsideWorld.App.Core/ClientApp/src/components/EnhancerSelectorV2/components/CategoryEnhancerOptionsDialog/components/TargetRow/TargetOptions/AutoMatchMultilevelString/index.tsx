@@ -22,6 +22,7 @@ export default ({ autoMatch, onChange }: IProps) => {
             <div>{t('This option may cause unexpected behaviors, make sure you have enough confidence to merge the produced data into data in db before check it.')}</div>
           </div>
         )}
+        placement={'left'}
       >
         <Checkbox
           size={'sm'}

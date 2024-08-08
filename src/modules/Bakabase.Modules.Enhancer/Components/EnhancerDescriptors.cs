@@ -17,16 +17,14 @@ public record EnhancerDescriptors : IEnhancerDescriptors
 
     public IEnhancerDescriptor[] Descriptors { get; }
 
+    public IEnhancerDescriptor? TryGet(int id) => _descriptors.TryGetValue(id, out var descriptor) ? descriptor : null;
+
     public IEnhancerDescriptor this[int id]
     {
         get
         {
-            if (!_descriptors.TryGetValue(id, out var descriptor))
-            {
-                throw new DevException($"{nameof(EnhancerDescriptor)} for {id} is not found");
-            }
-
-            return descriptor;
+            var descriptor = TryGet(id);
+            return descriptor ?? throw new DevException($"{nameof(EnhancerDescriptor)} for {id} is not found");
         }
     }
 }

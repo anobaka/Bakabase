@@ -60,7 +60,7 @@ const CategoryEnhancerOptionsDialog = ({
   const loadOptions = async () => {
     const data = (await BApi.category.getCategoryEnhancerOptions(categoryId, enhancer.id)).data ?? {};
     // @ts-ignore
-    setOptions(data.options);
+    setOptions(data.options || {});
   };
 
   const loadCategory = async () => {
@@ -83,9 +83,8 @@ const CategoryEnhancerOptionsDialog = ({
       s[t.id!] = t as IProperty;
       return s;
     }, {});
-    // console.log(pm, r.data ?? []);
     setPropertyMap(pm);
-    console.log('loadAllProperties', pm);
+    // console.log('loadAllProperties', pm);
   };
 
   console.log(options);

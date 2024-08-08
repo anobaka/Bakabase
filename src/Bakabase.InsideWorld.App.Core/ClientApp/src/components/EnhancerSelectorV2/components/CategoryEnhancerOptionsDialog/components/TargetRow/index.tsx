@@ -6,8 +6,7 @@ import { defaultCategoryEnhancerTargetOptions } from '../../models';
 import type { EnhancerDescriptor, EnhancerTargetDescriptor } from '../../../../models';
 import PropertyTip from './PropertyTip';
 import TargetOptions from './TargetOptions';
-import type { TableRowProps } from '@/components/bakaui';
-import { Button, Input, TableCell, TableRow } from '@/components/bakaui';
+import { Button, Input } from '@/components/bakaui';
 import PropertySelector from '@/components/PropertySelector';
 import BApi from '@/sdk/BApi';
 import { PropertyLabel } from '@/components/Property';
@@ -15,14 +14,14 @@ import type { IProperty } from '@/components/Property/models';
 import { EnhancerTargetType, SpecialTextType, StandardValueType } from '@/sdk/constants';
 import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
 
-interface Props extends Omit<TableRowProps, 'target' | 'property' | 'children'>{
+interface Props {
   target: number;
   dynamicTarget?: string;
   descriptor: EnhancerTargetDescriptor;
   options?: Partial<EnhancerTargetFullOptions>;
   otherDynamicTargetsInGroup?: string[];
   onDeleted?: () => any;
-  property?: IProperty;
+  propertyMap?: Record<number, IProperty>;
   category: {name: string; id: number; customPropertyIds?: number[]};
   onPropertyChanged?: () => any;
   onCategoryChanged?: () => any;
@@ -41,13 +40,12 @@ export default (props: Props) => {
     options: propsOptions,
     onDeleted,
     otherDynamicTargetsInGroup,
-    property,
+    propertyMap,
     descriptor,
     category,
     onPropertyChanged,
     onCategoryChanged,
     enhancer,
-    ...tableRowProps
   } = props;
 
   const [options, setOptions] = useState<Partial<EnhancerTargetFullOptions>>(propsOptions ?? defaultCategoryEnhancerTargetOptions(target, descriptor.optionsItems));
@@ -82,7 +80,8 @@ export default (props: Props) => {
 
   const targetLabel = descriptor.isDynamic ? dynamicTarget ?? t('Default') : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dynamicTarget == undefined;
-  const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.id];
+  const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
+  const property = propertyMap?.[options?.propertyId ?? 0];
 
   return (
     <div className={'flex items-center gap-1'}>
@@ -183,7 +182,7 @@ export default (props: Props) => {
       </div>
       <div className={'w-1/12'}>
         <div className={'flex flex-col gap-1'}>
-          {!descriptor.isDynamic && (
+          {(descriptor.isDynamic && !isDefaultTargetOfDynamic) && (
             <Button
               isIconOnly
               size={'sm'}

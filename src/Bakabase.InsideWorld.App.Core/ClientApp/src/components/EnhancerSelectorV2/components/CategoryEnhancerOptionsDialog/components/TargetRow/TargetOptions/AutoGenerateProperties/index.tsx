@@ -17,6 +17,7 @@ export default ({ autoGenerateProperties, onChange }: IProps) => {
             <div>{t('If checked in default options of a dynamic target, multiple properties will be created for all unlisted dynamic targets.')}</div>
           </div>
           }
+        placement={'left'}
       >
         <Checkbox
           size={'sm'}

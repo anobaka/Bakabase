@@ -10,6 +10,7 @@ import TargetRow from '../TargetRow';
 import type { IProperty } from '@/components/Property/models';
 import { Button, Table, TableBody, TableColumn, TableHeader } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
+import { EnhancerTargetType } from '@/sdk/constants';
 
 const sortOptions = (a: EnhancerTargetFullOptions, b: EnhancerTargetFullOptions) => {
   if (a.dynamicTarget == undefined) {
@@ -106,11 +107,13 @@ export default (props: Props) => {
           descriptor,
           subOptions,
         } = g;
+        const isDataTarget = descriptor.type == EnhancerTargetType.Data;
+
         return (
           <div>
             {/* NextUI doesn't support the wrap of TableRow, use div instead for now, waiting the updates of NextUI */}
             {/* see https://github.com/nextui-org/nextui/issues/729 */}
-            <Table removeWrapper>
+            <Table removeWrapper aria-label={'Dynamic target'}>
               <TableHeader>
                 <TableColumn width={'41.666667%'}>
                   {descriptor.name}
@@ -119,7 +122,7 @@ export default (props: Props) => {
                 </TableColumn>
                 <TableColumn width={'25%'}>{t('Save as property')}</TableColumn>
                 <TableColumn width={'25%'}>{t('Other options')}</TableColumn>
-                <TableColumn>{t('Operations')}</TableColumn>
+                <TableColumn >{t('Operations')}</TableColumn>
               </TableHeader>
               {/* @ts-ignore */}
               <TableBody />
@@ -133,28 +136,30 @@ export default (props: Props) => {
                     options={data}
                     descriptor={descriptor}
                     category={category}
-                    property={propertyMap?.[data.propertyId ?? 0]}
+                    propertyMap={propertyMap}
                     enhancer={enhancer}
                   />
                 );
               })}
             </div>
-            <Button
-              size={'sm'}
-              variant={'light'}
-              color={'success'}
-              onClick={async () => {
-                const newTargetOptions = createNewOptions(descriptor, subOptions);
-                await BApi.category.patchCategoryEnhancerTargetOptions(category.id, enhancer.id, { target: descriptor.id, dynamicTarget: newTargetOptions.dynamicTarget }, newTargetOptions);
-                options.targetOptions ??= [];
-                options.targetOptions.push(newTargetOptions);
-                setOptions({ ...options });
-                console.log('updating options', options);
-              }}
-            >
-              <PlusCircleOutlined className={'text-sm'} />
-              {t('Specify dynamic target')}
-            </Button>
+            {isDataTarget && (
+              <Button
+                size={'sm'}
+                variant={'light'}
+                color={'success'}
+                onClick={async () => {
+                  const newTargetOptions = createNewOptions(descriptor, subOptions);
+                  await BApi.category.patchCategoryEnhancerTargetOptions(category.id, enhancer.id, { target: descriptor.id, dynamicTarget: newTargetOptions.dynamicTarget }, newTargetOptions);
+                  options.targetOptions ??= [];
+                  options.targetOptions.push(newTargetOptions);
+                  setOptions({ ...options });
+                  console.log('updating options', options);
+                }}
+              >
+                <PlusCircleOutlined className={'text-sm'} />
+                {t('Specify dynamic target')}
+              </Button>
+            )}
           </div>
         );
       })}
