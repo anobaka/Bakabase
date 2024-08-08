@@ -12,14 +12,9 @@ namespace Bakabase.Modules.Enhancer.Extensions;
 
 public static class EnhancementExtensions
 {
-    public static CategoryEnhancerFullOptions? ToDomainModel(
-        this Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions? ce)
+    public static CategoryEnhancerFullOptions ToDomainModel(
+        this Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions ce)
     {
-        if (ce == null)
-        {
-            return null;
-        }
-
         var model = new CategoryEnhancerFullOptions
         {
             Id = ce.Id,

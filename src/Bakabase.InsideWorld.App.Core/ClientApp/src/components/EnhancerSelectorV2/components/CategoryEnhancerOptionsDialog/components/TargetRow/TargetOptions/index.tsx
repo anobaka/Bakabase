@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import IntegrateWithAlias from './IntegrateWithAlias';
 import AutoMatchMultilevelString from './AutoMatchMultilevelString';
+import AutoGenerateProperties from './AutoGenerateProperties';
 import type {
   EnhancerFullOptions,
   EnhancerTargetFullOptions,
@@ -8,24 +9,24 @@ import type {
 import { EnhancerTargetOptionsItem } from '@/sdk/constants';
 
 interface IProps {
-  options?: EnhancerTargetFullOptions;
+  options?: Partial<EnhancerTargetFullOptions>;
   optionsItems?: EnhancerTargetOptionsItem[];
-  onChange?: (options: EnhancerTargetFullOptions) => void;
+  onChange?: (options: Partial<EnhancerTargetFullOptions>) => void;
 }
 
 export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
-  const [options, setOptions] = useState<EnhancerTargetFullOptions>(propsOptions ?? {} as EnhancerTargetFullOptions);
+  const [options, setOptions] = useState<Partial<EnhancerTargetFullOptions>>(propsOptions ?? {});
 
   // console.log(propsOptions);
 
-  const patchOptions = (changes: Partial<EnhancerTargetFullOptions>, triggerChange: boolean = true) => {
+  const patchOptions = (patches: Partial<EnhancerTargetFullOptions>, triggerChange: boolean = true) => {
     const no = {
       ...options,
-      ...changes,
+      ...patches,
     };
     setOptions(no);
     if (triggerChange) {
-      onChange?.(no);
+      onChange?.(patches);
     }
   };
 
@@ -49,6 +50,14 @@ export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
                 key={item}
                 autoMatch={finalOptions.autoMatchMultilevelString ?? false}
                 onChange={o => patchOptions({ autoMatchMultilevelString: o })}
+              />
+            );
+          case EnhancerTargetOptionsItem.AutoGenerateProperties:
+            return (
+              <AutoGenerateProperties
+                key={item}
+                autoGenerateProperties={finalOptions.autoGenerateProperties ?? false}
+                onChange={o => patchOptions({ autoGenerateProperties: o })}
               />
             );
         }

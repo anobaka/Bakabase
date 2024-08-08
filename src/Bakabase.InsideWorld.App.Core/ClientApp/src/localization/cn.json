@@ -1340,5 +1340,15 @@
   "Saved passwords": "已保存密码",
   "Custom enhancer": "自定义增强器",
   "Deleting property locator for {{propertyName}}": "删除属性[{{propertyName}}]的定位器",
-  "This is not a fixed enhancement target, which will be replaced with other content when data is collected": "这是一个非固定的增强目标，将会在获取数据时被替换成其他内容，请以实际采集的数据为准"
+  "This is not a fixed enhancement target, which will be replaced with other content when data is collected": "这是一个非固定的增强目标，将会在获取数据时被替换成其他内容，请以实际采集的数据为准",
+  "Dynamic target": "动态目标",
+  "Enhancement target": "增强目标",
+  "General": "通用",
+  "Specify dynamic target": "指定动态目标",
+  "Auto generate properties": "自动创建属性",
+  "Click to specify target": "点击指定目标",
+  "Duplicate dynamic target is found": "有重复的动态目标",
+  "This field is required": "该字段为必填字段",
+  "If checked, a default property for this target will be created automatically.": "如果勾选本项，会自动为该目标创建一个属性。",
+  "If checked in default options of a dynamic target, multiple properties will be created for all unlisted dynamic targets.": "如果在动态目标的默认选项中勾选了此项，则会自动为所有未指定的动态目标创建对应的属性。"
 }

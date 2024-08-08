@@ -9,18 +9,22 @@ export interface CategoryEnhancerFullOptions {
 }
 
 export interface EnhancerFullOptions {
-  targetOptionsMap?: Record<number, EnhancerTargetFullOptions>;
+  targetOptions?: EnhancerTargetFullOptions[];
 }
 
 export interface EnhancerTargetFullOptions {
   propertyId?: number;
   integrateWithAlias?: boolean;
   autoMatchMultilevelString?: boolean;
+  autoGenerateProperties?: boolean;
+  target: number;
+  dynamicTarget?: string;
 }
 
-export function defaultCategoryEnhancerTargetOptions(optionsItems?: EnhancerTargetOptionsItem[]): EnhancerTargetFullOptions {
+export function defaultCategoryEnhancerTargetOptions(target: number, optionsItems?: EnhancerTargetOptionsItem[]): EnhancerTargetFullOptions {
   const eto: EnhancerTargetFullOptions = {
     propertyId: 0,
+    target,
   };
   if (optionsItems != undefined) {
     if (optionsItems.includes(EnhancerTargetOptionsItem.IntegrateWithAlias)) {

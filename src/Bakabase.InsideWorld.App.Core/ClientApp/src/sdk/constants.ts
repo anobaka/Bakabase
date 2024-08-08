@@ -1,9 +1,3 @@
-export enum ThirdPartyRequestResultType {Succeed = 1, TimedOut = 2, Banned = 3, Canceled = 4, Failed = 1000}
-export const thirdPartyRequestResultTypes = Object.keys(ThirdPartyRequestResultType).filter(k => typeof ThirdPartyRequestResultType[k] === 'number').map(t => ({label: t, value: ThirdPartyRequestResultType[t]}));
-export enum ExHentaiCategory {Unknown = 0, Misc = 1, Doushijin = 2, Manga = 4, ArtistCG = 8, GameCG = 16, ImageSet = 32, Cosplay = 64, AsianPorn = 128, NonH = 256, Western = 512}
-export const exHentaiCategories = Object.keys(ExHentaiCategory).filter(k => typeof ExHentaiCategory[k] === 'number').map(t => ({label: t, value: ExHentaiCategory[t]}));
-export enum ExHentaiConnectionStatus {Ok = 1, InvalidCookie = 2, IpBanned = 3, UnknownError = 4}
-export const exHentaiConnectionStatuses = Object.keys(ExHentaiConnectionStatus).filter(k => typeof ExHentaiConnectionStatus[k] === 'number').map(t => ({label: t, value: ExHentaiConnectionStatus[t]}));
 export enum TextProcessOperation {Remove = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
 export const textProcessOperations = Object.keys(TextProcessOperation).filter(k => typeof TextProcessOperation[k] === 'number').map(t => ({label: t, value: TextProcessOperation[t]}));
 export enum BackgroundTaskLevel {Default = 1, Critical = 2}
@@ -92,7 +86,7 @@ export enum CategoryResourceDisplayNameSegmentType {StaticText = 1, Property = 2
 export const categoryResourceDisplayNameSegmentTypes = Object.keys(CategoryResourceDisplayNameSegmentType).filter(k => typeof CategoryResourceDisplayNameSegmentType[k] === 'number').map(t => ({label: t, value: CategoryResourceDisplayNameSegmentType[t]}));
 export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
 export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
-export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000}
+export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000, ExHentaiEnhancer = 1001, BangumiEnhancer = 1002}
 export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
 export enum ResourcePropertyType {Internal = 1, Reserved = 2, Custom = 3}
 export const resourcePropertyTypes = Object.keys(ResourcePropertyType).filter(k => typeof ResourcePropertyType[k] === 'number').map(t => ({label: t, value: ResourcePropertyType[t]}));
@@ -202,18 +196,26 @@ export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));
 export enum TagGroupAdditionalItem {Tags = 1, PreferredAlias = 2, TagNamePreferredAlias = 4}
 export const tagGroupAdditionalItems = Object.keys(TagGroupAdditionalItem).filter(k => typeof TagGroupAdditionalItem[k] === 'number').map(t => ({label: t, value: TagGroupAdditionalItem[t]}));
-export enum EnhancementAdditionalItem {None = 0, GeneratedCustomPropertyValue = 1}
-export const enhancementAdditionalItems = Object.keys(EnhancementAdditionalItem).filter(k => typeof EnhancementAdditionalItem[k] === 'number').map(t => ({label: t, value: EnhancementAdditionalItem[t]}));
-export enum EnhancerId {Bakabase = 1}
+export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3}
 export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
-export enum EnhancerTargetOptionsItem {IntegrateWithAlias = 1, AutoMatchMultilevelString = 2}
-export const enhancerTargetOptionsItems = Object.keys(EnhancerTargetOptionsItem).filter(k => typeof EnhancerTargetOptionsItem[k] === 'number').map(t => ({label: t, value: EnhancerTargetOptionsItem[t]}));
-export enum ExHentaiEnhancerTarget {Rating = 1, Tags = 2}
+export enum ExHentaiEnhancerTarget {Name = 1, Introduction = 2, Rating = 3, Tags = 4, Cover = 5}
 export const exHentaiEnhancerTargets = Object.keys(ExHentaiEnhancerTarget).filter(k => typeof ExHentaiEnhancerTarget[k] === 'number').map(t => ({label: t, value: ExHentaiEnhancerTarget[t]}));
-export enum BangumiEnhancerTarget {Name = 1, Tag = 2, Original = 3, Rating = 4}
+export enum BangumiEnhancerTarget {Name = 1, Tag = 2, Introduction = 3, Rating = 4, OtherPropertiesInLeftPanel = 5, Cover = 6}
 export const bangumiEnhancerTargets = Object.keys(BangumiEnhancerTarget).filter(k => typeof BangumiEnhancerTarget[k] === 'number').map(t => ({label: t, value: BangumiEnhancerTarget[t]}));
 export enum BakabaseEnhancerTarget {Name = 1, Publisher = 2, ReleaseDt = 3, VolumeName = 4, VolumeTitle = 5, Originals = 6, Language = 7}
 export const bakabaseEnhancerTargets = Object.keys(BakabaseEnhancerTarget).filter(k => typeof BakabaseEnhancerTarget[k] === 'number').map(t => ({label: t, value: BakabaseEnhancerTarget[t]}));
+export enum EnhancementAdditionalItem {None = 0, GeneratedCustomPropertyValue = 1}
+export const enhancementAdditionalItems = Object.keys(EnhancementAdditionalItem).filter(k => typeof EnhancementAdditionalItem[k] === 'number').map(t => ({label: t, value: EnhancementAdditionalItem[t]}));
+export enum EnhancerTargetOptionsItem {IntegrateWithAlias = 1, AutoMatchMultilevelString = 2, AutoGenerateProperties = 3}
+export const enhancerTargetOptionsItems = Object.keys(EnhancerTargetOptionsItem).filter(k => typeof EnhancerTargetOptionsItem[k] === 'number').map(t => ({label: t, value: EnhancerTargetOptionsItem[t]}));
+export enum EnhancerTargetType {Data = 1, File = 2}
+export const enhancerTargetTypes = Object.keys(EnhancerTargetType).filter(k => typeof EnhancerTargetType[k] === 'number').map(t => ({label: t, value: EnhancerTargetType[t]}));
+export enum ExHentaiCategory {Unknown = 0, Misc = 1, Doushijin = 2, Manga = 4, ArtistCG = 8, GameCG = 16, ImageSet = 32, Cosplay = 64, AsianPorn = 128, NonH = 256, Western = 512}
+export const exHentaiCategories = Object.keys(ExHentaiCategory).filter(k => typeof ExHentaiCategory[k] === 'number').map(t => ({label: t, value: ExHentaiCategory[t]}));
+export enum ExHentaiConnectionStatus {Ok = 1, InvalidCookie = 2, IpBanned = 3, UnknownError = 4}
+export const exHentaiConnectionStatuses = Object.keys(ExHentaiConnectionStatus).filter(k => typeof ExHentaiConnectionStatus[k] === 'number').map(t => ({label: t, value: ExHentaiConnectionStatus[t]}));
+export enum ThirdPartyRequestResultType {Succeed = 1, TimedOut = 2, Banned = 3, Canceled = 4, Failed = 1000}
+export const thirdPartyRequestResultTypes = Object.keys(ThirdPartyRequestResultType).filter(k => typeof ThirdPartyRequestResultType[k] === 'number').map(t => ({label: t, value: ThirdPartyRequestResultType[t]}));
 export enum LogLevel {Trace = 0, Debug = 1, Information = 2, Warning = 3, Error = 4, Critical = 5, None = 6}
 export const logLevels = Object.keys(LogLevel).filter(k => typeof LogLevel[k] === 'number').map(t => ({label: t, value: LogLevel[t]}));
 export enum OpenDialogProperty {openFile = 0, openDirectory = 1, multiSelections = 2, showHiddenFiles = 3, createDirectory = 4, promptToCreate = 5, noResolveAliases = 6, treatPackageAsDirectory = 7}

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Models.Input;
 using Bootstrap.Models.ResponseModels;
@@ -119,6 +121,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return new ListResponse<CategoryResourceDisplayNameViewModel>(result);
         }
 
+        [HttpGet("{id:int}/enhancer/{enhancerId:int}/options")]
+        [SwaggerOperation(OperationId = "GetCategoryEnhancerOptions")]
+        public async Task<SingletonResponse<CategoryEnhancerOptions?>> GetEnhancerOptions(int id, int enhancerId)
+        {
+            return new SingletonResponse<CategoryEnhancerOptions?>(
+                await categoryEnhancerOptionsService.GetByCategoryAndEnhancer(id, enhancerId));
+        }
+
         [HttpPatch("{id:int}/enhancer/{enhancerId:int}/options")]
         [SwaggerOperation(OperationId = "PatchCategoryEnhancerOptions")]
         public async Task<BaseResponse> PatchEnhancerOptions(int id, int enhancerId,
@@ -126,5 +136,23 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             return await categoryEnhancerOptionsService.Patch(id, enhancerId, model);
         }
+
+        [HttpDelete("{id:int}/enhancer/{enhancerId:int}/options/target")]
+        [SwaggerOperation(OperationId = "DeleteCategoryEnhancerTargetOptions")]
+        public async Task<BaseResponse> DeleteEnhancerTargetOptions(int id, int enhancerId, int target,
+            string? dynamicTarget)
+        {
+            return await categoryEnhancerOptionsService.DeleteTarget(id, enhancerId, target, dynamicTarget);
+        }
+
+        [HttpPatch("{id:int}/enhancer/{enhancerId:int}/options/target")]
+        [SwaggerOperation(OperationId = "PatchCategoryEnhancerTargetOptions")]
+        public async Task<BaseResponse> PatchEnhancerTargetOptions(int id, int enhancerId, [Required] int target,
+            string? dynamicTarget,
+            [FromBody] CategoryEnhancerTargetOptionsPatchInputModel patches)
+        {
+            return await categoryEnhancerOptionsService.PatchTarget(id, enhancerId, target, dynamicTarget, patches);
+        }
+
     }
 }

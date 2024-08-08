@@ -6,6 +6,7 @@ import Psc from './cases/Psc';
 import Tour from './cases/Tour';
 import Sortable from './cases/Sortable';
 import MediaPreviewer from './cases/MediaPreviewer';
+import CategoryEnhancerOptionsDialog from './cases/CategoryEnhancerOptionsDialog';
 import { Button, Divider, Listbox } from '@/components/bakaui';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
@@ -17,6 +18,7 @@ import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector
 
 
 const components = {
+  CategoryEnhancerOptions: <CategoryEnhancerOptionsDialog />,
   Psc: <Psc />,
   Tour: <Tour />,
   ResourceOrderSelector: <OrderSelector />,

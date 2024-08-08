@@ -25,6 +25,7 @@ import {
   TableColumn,
   TableRow,
   TableCell,
+  TableRowProps,
 } from './components/Table';
 import Checkbox from './components/Checkbox';
 import Badge from './components/Badge';
@@ -101,4 +102,5 @@ export {
   Radio,
   Rating,
   Image,
+  TableRowProps,
 };

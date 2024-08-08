@@ -6,13 +6,14 @@ export default () => {
   const { t } = useTranslation();
   return (
     <Tooltip content={t('This is not a fixed enhancement target, which will be replaced with other content when data is collected')}>
-      <Chip
-        size={'sm'}
-        radius={'sm'}
-        className={'flex items-center gap-1'}
-      >
-        {t('Dynamic target')}
-      </Chip>
+      <ApartmentOutlined className={'text-sm'} />
+      {/* <Chip */}
+      {/*   size={'sm'} */}
+      {/*   radius={'sm'} */}
+      {/*   className={'flex items-center gap-1'} */}
+      {/* > */}
+      {/*   {t('Dynamic target')} */}
+      {/* </Chip> */}
     </Tooltip>
   );
 };

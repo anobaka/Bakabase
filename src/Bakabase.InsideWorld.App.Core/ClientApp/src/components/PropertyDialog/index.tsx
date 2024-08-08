@@ -118,7 +118,7 @@ const PropertyDialog = ({
                 onChange={choices => {
                   setProperty({
                     ...property,
-                    options: {
+                    subOptions: {
                       ...options,
                       choices,
                     },
@@ -132,7 +132,7 @@ const PropertyDialog = ({
                 onValueChange={c => {
                   setProperty({
                     ...property,
-                    options: {
+                    subOptions: {
                       ...options,
                       allowAddingNewOptionsWhileChoosing: c,
                     },
@@ -152,7 +152,7 @@ const PropertyDialog = ({
                   const array = Array.from((c as Set<Key>).values());
                   setProperty({
                     ...property,
-                    options: {
+                    subOptions: {
                       ...options,
                       defaultValue: multiple ? array : array[0],
                     },
@@ -177,7 +177,7 @@ const PropertyDialog = ({
                 onSelectionChange={c => {
                   setProperty({
                     ...property,
-                    options: {
+                    subOptions: {
                       ...options,
                       precision: (c as Set<Key>).values().next().value,
                     },
@@ -206,7 +206,7 @@ const PropertyDialog = ({
                 onSelectionChange={c => {
                   setProperty({
                     ...property,
-                    options: {
+                    subOptions: {
                       ...options,
                       precision: (c as Set<Key>).values().next().value,
                     },
@@ -219,7 +219,7 @@ const PropertyDialog = ({
                 onValueChange={c => {
                   setProperty({
                     ...property,
-                    options: {
+                    subOptions: {
                       ...options,
                       showProgressbar: c,
                     },
@@ -257,7 +257,7 @@ const PropertyDialog = ({
                 onSelectionChange={c => {
                   setProperty({
                     ...property,
-                    options: {
+                    subOptions: {
                       ...options,
                       maxValue: (c as Set<Key>).values().next().value,
                     },
@@ -315,7 +315,7 @@ const PropertyDialog = ({
                 onChange={tags => {
                   setProperty({
                     ...property,
-                    options: {
+                    subOptions: {
                       ...options,
                       tags,
                     },
@@ -329,7 +329,7 @@ const PropertyDialog = ({
                 onValueChange={c => {
                   setProperty({
                     ...property,
-                    options: {
+                    subOptions: {
                       ...options,
                       allowAddingNewOptionsWhileChoosing: c,
                     },

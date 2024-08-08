@@ -4,4 +4,5 @@ public enum EnhancerTargetOptionsItem
 {
     IntegrateWithAlias = 1,
     AutoMatchMultilevelString = 2,
+    AutoGenerateProperties = 3
 }

@@ -9,6 +9,28 @@
  * ---------------------------------------------------------------
  */
 
+export interface BakabaseAbstractionsComponentsEnhancerIEnhancerDescriptor {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  description?: string | null;
+  targets?: BakabaseAbstractionsComponentsEnhancerIEnhancerTargetDescriptor[] | null;
+  /** @format int32 */
+  propertyValueScope?: number;
+}
+
+export interface BakabaseAbstractionsComponentsEnhancerIEnhancerTargetDescriptor {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  enumId?: SystemEnum;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  isDynamic?: boolean;
+  description?: string | null;
+  optionsItems?: number[] | null;
+}
+
 export interface BakabaseAbstractionsModelsDbCategoryComponent {
   /** @format int32 */
   id?: number;
@@ -81,10 +103,10 @@ export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
 export type BakabaseAbstractionsModelsDomainConstantsInitializationContentType = 1 | 2;
 
 /**
- * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer]
+ * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 | 1000;
+export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 | 1000 | 1001 | 1002;
 
 /**
  * [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
@@ -139,31 +161,13 @@ export interface BakabaseAbstractionsModelsDomainEnhancement {
   valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** @format int32 */
   target?: number;
+  dynamicTarget?: string | null;
   value?: any;
   /** @format date-time */
   createdAt?: string;
   /** @format int32 */
   customPropertyValueId?: number;
   customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
-}
-
-export interface BakabaseAbstractionsModelsDomainEnhancerDescriptor {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  description?: string | null;
-  targets?: BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor[] | null;
-  /** @format int32 */
-  customPropertyScope?: number;
-}
-
-export interface BakabaseAbstractionsModelsDomainEnhancerTargetDescriptor {
-  id?: SystemEnum;
-  name?: string | null;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
-  valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
-  description?: string | null;
-  optionsItems?: number[] | null;
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibrary {
@@ -1505,22 +1509,35 @@ export type BakabaseModulesCustomPropertyModelsDomainConstantsCustomPropertyType
  * [0: None, 1: GeneratedCustomPropertyValue]
  * @format int32
  */
-export type BakabaseModulesEnhancerModelsDomainConstantsEnhancementAdditionalItem = 0 | 1;
+export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementAdditionalItem = 0 | 1;
 
-export interface BakabaseModulesEnhancerModelsDomainEnhancerFullOptions {
-  targetOptionsMap?: Record<string, BakabaseModulesEnhancerModelsDomainEnhancerTargetFullOptions>;
+export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions {
+  targetOptions?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions[] | null;
 }
 
-export interface BakabaseModulesEnhancerModelsDomainEnhancerTargetFullOptions {
+export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions {
   /** @format int32 */
-  propertyId?: number;
+  target?: number;
+  dynamicTarget?: string | null;
   integrateWithAlias?: boolean | null;
   autoMatchMultilevelString?: boolean | null;
+  autoGenerateProperties?: boolean | null;
+  /** @format int32 */
+  propertyId?: number | null;
 }
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
-  options?: BakabaseModulesEnhancerModelsDomainEnhancerFullOptions;
+  options?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions;
   active?: boolean | null;
+}
+
+export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptionsPatchInputModel {
+  integrateWithAlias?: boolean | null;
+  autoMatchMultilevelString?: boolean | null;
+  autoGenerateProperties?: boolean | null;
+  /** @format int32 */
+  propertyId?: number | null;
+  dynamicTarget?: string | null;
 }
 
 export interface BakabaseModulesEnhancerModelsViewResourceEnhancements {
@@ -1558,6 +1575,13 @@ export interface BootstrapModelsResponseModelsBaseResponse {
   message?: string | null;
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsComponentsEnhancerIEnhancerDescriptor {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsComponentsEnhancerIEnhancerDescriptor[] | null;
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory {
   /** @format int32 */
   code?: number;
@@ -1577,13 +1601,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code?: number;
   message?: string | null;
   data?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainEnhancerDescriptor {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseAbstractionsModelsDomainEnhancerDescriptor[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibrary {
@@ -1757,6 +1774,13 @@ export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponents
   pageIndex?: number;
   /** @format int32 */
   pageSize?: number;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategoryEnhancerOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseAbstractionsModelsDomainCategoryEnhancerOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory {
@@ -3703,6 +3727,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Category
+     * @name GetCategoryEnhancerOptions
+     * @request GET:/category/{id}/enhancer/{enhancerId}/options
+     */
+    getCategoryEnhancerOptions: (id: number, enhancerId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategoryEnhancerOptions,
+        any
+      >({
+        path: `/category/${id}/enhancer/${enhancerId}/options`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
      * @name PatchCategoryEnhancerOptions
      * @request PATCH:/category/{id}/enhancer/{enhancerId}/options
      */
@@ -3715,6 +3757,59 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/${id}/enhancer/${enhancerId}/options`,
         method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name DeleteCategoryEnhancerTargetOptions
+     * @request DELETE:/category/{id}/enhancer/{enhancerId}/options/target
+     */
+    deleteCategoryEnhancerTargetOptions: (
+      id: number,
+      enhancerId: number,
+      query?: {
+        /** @format int32 */
+        target?: number;
+        dynamicTarget?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}/enhancer/${enhancerId}/options/target`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name PatchCategoryEnhancerTargetOptions
+     * @request PATCH:/category/{id}/enhancer/{enhancerId}/options/target
+     */
+    patchCategoryEnhancerTargetOptions: (
+      id: number,
+      enhancerId: number,
+      query: {
+        /** @format int32 */
+        target: number;
+        dynamicTarget?: string;
+      },
+      data: BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}/enhancer/${enhancerId}/options/target`,
+        method: "PATCH",
+        query: query,
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -4278,7 +4373,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       resourceId: number,
       query?: {
         /** [0: None, 1: GeneratedCustomPropertyValue] */
-        additionalItem?: BakabaseModulesEnhancerModelsDomainConstantsEnhancementAdditionalItem;
+        additionalItem?: BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
@@ -4803,7 +4898,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/enhancer/descriptor
      */
     getAllEnhancerDescriptors: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainEnhancerDescriptor, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsComponentsEnhancerIEnhancerDescriptor,
+        any
+      >({
         path: `/enhancer/descriptor`,
         method: "GET",
         format: "json",

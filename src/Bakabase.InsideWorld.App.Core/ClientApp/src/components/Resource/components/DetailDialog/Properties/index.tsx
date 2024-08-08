@@ -70,7 +70,7 @@ export default (props: Props) => {
             dbValueType: t.dbValueType!,
             isCustom: true,
             type: t.type!,
-            options: t.options,
+            subOptions: t.options,
           };
           return s;
         }, {}));

@@ -41,7 +41,7 @@ const Navigation = () => {
   return (
     <div className={`${styles.nav} ${isCollapsed ? `${styles.collapsed}` : ''}`}>
       <Loading fullScreen visible={loading} />
-      <Link to={'/'} className={styles.top}>{isCollapsed ? 'IW' : 'Inside World'}</Link>
+      <Link to={'/'} className={styles.top}>{isCollapsed ? 'B' : 'Bakabase'}</Link>
       <div className={styles.menu}>
         <AntdMenu collapsed={isCollapsed} />
       </div>

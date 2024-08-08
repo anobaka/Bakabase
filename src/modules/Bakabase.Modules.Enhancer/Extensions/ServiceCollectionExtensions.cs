@@ -55,6 +55,7 @@ public static class ServiceCollectionExtensions
                     var targetAttr = target.GetAttribute<EnhancerTargetAttribute>();
                     return new EnhancerTargetDescriptor(target,
                         enhancerId,
+                        targetAttr.Type,
                         localizer,
                         targetAttr.ValueType,
                         targetAttr.IsDynamic,

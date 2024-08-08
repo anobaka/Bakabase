@@ -5,6 +5,7 @@ import {
   TableColumn,
   TableRow,
   TableCell,
+  TableRowProps,
 } from '@nextui-org/react';
 
 export {
@@ -14,4 +15,5 @@ export {
   TableColumn,
   TableRow,
   TableCell,
+  TableRowProps,
 };

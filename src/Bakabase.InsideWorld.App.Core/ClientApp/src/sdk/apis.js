@@ -1853,6 +1853,57 @@ export const PreviewCategoryDisplayNameTemplateURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetCategoryEnhancerOptions
+ * url: GetCategoryEnhancerOptionsURL
+ * method: GetCategoryEnhancerOptions_TYPE
+ * raw_url: GetCategoryEnhancerOptions_RAW_URL
+ * @param id - 
+ * @param enhancerId - 
+ */
+export const GetCategoryEnhancerOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/enhancer/{enhancerId}/options'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetCategoryEnhancerOptions_RAW_URL = function() {
+  return '/category/{id}/enhancer/{enhancerId}/options'
+}
+export const GetCategoryEnhancerOptions_TYPE = function() {
+  return 'get'
+}
+export const GetCategoryEnhancerOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/enhancer/{enhancerId}/options'
+  path = path.replace('{id}', `${parameters['id']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: PatchCategoryEnhancerOptions
  * url: PatchCategoryEnhancerOptionsURL
  * method: PatchCategoryEnhancerOptions_TYPE
@@ -1898,6 +1949,143 @@ export const PatchCategoryEnhancerOptionsURL = function(parameters = {}) {
   let path = '/category/{id}/enhancer/{enhancerId}/options'
   path = path.replace('{id}', `${parameters['id']}`)
   path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DeleteCategoryEnhancerTargetOptions
+ * url: DeleteCategoryEnhancerTargetOptionsURL
+ * method: DeleteCategoryEnhancerTargetOptions_TYPE
+ * raw_url: DeleteCategoryEnhancerTargetOptions_RAW_URL
+ * @param id - 
+ * @param enhancerId - 
+ * @param target - 
+ * @param dynamicTarget - 
+ */
+export const DeleteCategoryEnhancerTargetOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/enhancer/{enhancerId}/options/target'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters['target'] !== undefined) {
+    queryParameters['target'] = parameters['target']
+  }
+  if (parameters['dynamicTarget'] !== undefined) {
+    queryParameters['dynamicTarget'] = parameters['dynamicTarget']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteCategoryEnhancerTargetOptions_RAW_URL = function() {
+  return '/category/{id}/enhancer/{enhancerId}/options/target'
+}
+export const DeleteCategoryEnhancerTargetOptions_TYPE = function() {
+  return 'delete'
+}
+export const DeleteCategoryEnhancerTargetOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/enhancer/{enhancerId}/options/target'
+  path = path.replace('{id}', `${parameters['id']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['target'] !== undefined) {
+    queryParameters['target'] = parameters['target']
+  }
+  if (parameters['dynamicTarget'] !== undefined) {
+    queryParameters['dynamicTarget'] = parameters['dynamicTarget']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PatchCategoryEnhancerTargetOptions
+ * url: PatchCategoryEnhancerTargetOptionsURL
+ * method: PatchCategoryEnhancerTargetOptions_TYPE
+ * raw_url: PatchCategoryEnhancerTargetOptions_RAW_URL
+ * @param id - 
+ * @param enhancerId - 
+ * @param target - 
+ * @param dynamicTarget - 
+ * @param model - 
+ */
+export const PatchCategoryEnhancerTargetOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/enhancer/{enhancerId}/options/target'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters['target'] !== undefined) {
+    queryParameters['target'] = parameters['target']
+  }
+  if (parameters['target'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: target'))
+  }
+  if (parameters['dynamicTarget'] !== undefined) {
+    queryParameters['dynamicTarget'] = parameters['dynamicTarget']
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('patch', domain + path, body, queryParameters, form, config)
+}
+export const PatchCategoryEnhancerTargetOptions_RAW_URL = function() {
+  return '/category/{id}/enhancer/{enhancerId}/options/target'
+}
+export const PatchCategoryEnhancerTargetOptions_TYPE = function() {
+  return 'patch'
+}
+export const PatchCategoryEnhancerTargetOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/enhancer/{enhancerId}/options/target'
+  path = path.replace('{id}', `${parameters['id']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['target'] !== undefined) {
+    queryParameters['target'] = parameters['target']
+  }
+  if (parameters['dynamicTarget'] !== undefined) {
+    queryParameters['dynamicTarget'] = parameters['dynamicTarget']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

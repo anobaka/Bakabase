@@ -7,21 +7,26 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 
 public enum BangumiEnhancerTarget
 {
-    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.String, [EnhancerTargetOptionsItem.IntegrateWithAlias])]
+    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.String,
+        [EnhancerTargetOptionsItem.IntegrateWithAlias, EnhancerTargetOptionsItem.AutoGenerateProperties])]
     Name = 1,
 
-    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.ListString, [EnhancerTargetOptionsItem.IntegrateWithAlias])]
+    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.ListString,
+        [EnhancerTargetOptionsItem.IntegrateWithAlias, EnhancerTargetOptionsItem.AutoGenerateProperties])]
     Tag = 2,
 
-    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.String)]
+    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.String,
+        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
     Introduction = 3,
 
-    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.Decimal)]
+    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.Decimal,
+        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
     Rating = 4,
 
-    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.ListString, [EnhancerTargetOptionsItem.IntegrateWithAlias], true)]
+    [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.ListString,
+        [EnhancerTargetOptionsItem.AutoGenerateProperties, EnhancerTargetOptionsItem.IntegrateWithAlias], true)]
     OtherPropertiesInLeftPanel = 5,
 
-    [EnhancerTarget(EnhancerTargetType.File, StandardValueType.ListString, [EnhancerTargetOptionsItem.IntegrateWithAlias], true)]
+    [EnhancerTarget(EnhancerTargetType.File, StandardValueType.ListString, [], true)]
     Cover = 6,
 }

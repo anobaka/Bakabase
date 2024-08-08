@@ -20,7 +20,7 @@ export default ({ options, enhancer }: IProps) => {
     return null;
   }
 
-  const tom = options?.options?.targetOptionsMap ?? {};
+  const tom = options?.options?.targetOptions ?? {};
 
   const configuredTargets = Object.keys(tom).filter(x => tom[x].propertyId > 0).map(x => parseInt(x, 10));
 

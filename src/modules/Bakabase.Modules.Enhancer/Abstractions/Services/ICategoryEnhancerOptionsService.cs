@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using Bakabase.Abstractions.Models.Db;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Input;
 using Bootstrap.Models.ResponseModels;
@@ -8,8 +9,11 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Services
 {
     public interface ICategoryEnhancerOptionsService
     {
+        Task<CategoryEnhancerFullOptions?> GetByCategoryAndEnhancer(int cId, int eId);
         public Task<List<CategoryEnhancerFullOptions>> GetAll(Expression<Func<CategoryEnhancerOptions, bool>>? exp);
         public Task<BaseResponse> Patch(int categoryId, int enhancerId, CategoryEnhancerOptionsPatchInputModel model);
+        public Task<BaseResponse> PatchTarget(int categoryId, int enhancerId, int target, string? dynamicTarget, CategoryEnhancerTargetOptionsPatchInputModel patches);
+        public Task<BaseResponse> DeleteTarget(int categoryId, int enhancerId, int target, string? dynamicTarget);
         public Task<BaseResponse> PutAll(CategoryEnhancerFullOptions[] options);
 
         // /// <summary>
