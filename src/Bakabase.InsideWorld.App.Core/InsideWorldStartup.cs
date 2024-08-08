@@ -33,6 +33,7 @@ using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.DependencyInjection;
+using Bootstrap.Components.Doc.Swagger;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage.OneDrive;
 using Bootstrap.Components.Tasks.Progressor;
@@ -47,7 +48,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace Bakabase.InsideWorld.App.Core
 {
-    public class InsideWorldStartup : AppStartup
+    public class InsideWorldStartup : AppStartup<SwaggerCustomModelDocumentFilter>
     {
         public InsideWorldStartup(IConfiguration configuration, IWebHostEnvironment env) : base(configuration, env)
         {
