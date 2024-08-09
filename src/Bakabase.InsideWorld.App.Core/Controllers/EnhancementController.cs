@@ -8,6 +8,7 @@ using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Components;
@@ -28,10 +29,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly ICategoryService _categoryService;
         private readonly IResourceService _resourceService;
         private readonly ICategoryEnhancerOptionsService _categoryEnhancerOptionsService;
-        private readonly IEnumerable<EnhancerDescriptor> _enhancerDescriptors;
+        private readonly IEnhancerDescriptors _enhancerDescriptors;
 
         public EnhancementController(IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
-            IResourceService resourceService, IEnhancementService enhancementService, IEnhancerService enhancerService, ICategoryEnhancerOptionsService categoryEnhancerOptionsService, IEnumerable<EnhancerDescriptor> enhancerDescriptors)
+            IResourceService resourceService, IEnhancementService enhancementService, IEnhancerService enhancerService, ICategoryEnhancerOptionsService categoryEnhancerOptionsService, IEnhancerDescriptors enhancerDescriptors)
         {
             _mediaLibraryService = mediaLibraryService;
             _categoryService = categoryService;
@@ -61,17 +62,16 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             var enhancements = await _enhancementService.GetAll(x => x.ResourceId == resourceId, additionalItem);
             var categoryEnhancerOptions = await _categoryEnhancerOptionsService.GetByCategory(resource.CategoryId);
 
-            var edMap = _enhancerDescriptors.ToDictionary(d => d.Id, d => d);
             var res = categoryEnhancerOptions.Where(o => o.Active).Select(o =>
             {
-                var ed = edMap.GetValueOrDefault(o.EnhancerId);
-                var es = enhancements.Where(e => e.EnhancerId == o.Id).ToList();
+                var ed = _enhancerDescriptors[o.EnhancerId];
+                var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
                 var re = new ResourceEnhancements
                 {
                     EnhancerId = o.EnhancerId,
-                    EnhancerName = ed?.Name ?? o.EnhancerId.ToString(),
+                    EnhancerName = ed.Name,
                     EnhancedAt = es.FirstOrDefault()?.CreatedAt,
-                    Targets = ed?.Targets.Select(t =>
+                    Targets = ed.Targets.Select(t =>
                     {
                         var targetId = Convert.ToInt32(t.Id);
                         var e = es.FirstOrDefault(e => e.Target == targetId);

@@ -1,4 +1,5 @@
-﻿using Bakabase.InsideWorld.Models.Models.Aos;
+﻿using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
 
 namespace Bakabase.Abstractions.Models.Domain
 {
@@ -11,7 +12,15 @@ namespace Bakabase.Abstractions.Models.Domain
         {
             return new PathConfiguration
             {
-                Path = rootPath
+                Path = rootPath,
+                RpmValues =
+                [
+                    new PropertyPathSegmentMatcherValue
+                    {
+                        Layer = 1, ValueType = ResourceMatcherValueType.Layer,
+                        PropertyId = (int) ResourceProperty.Resource
+                    }
+                ]
             };
         }
     }

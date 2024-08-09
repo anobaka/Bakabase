@@ -30,18 +30,22 @@ const EnhancerSelector = ({
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
   const [categoryEnhancerOptionsList, setCategoryEnhancerOptionsList] = useState<CategoryEnhancerFullOptions[]>([]);
 
-  useEffect(() => {
-    BApi.enhancer.getAllEnhancerDescriptors().then(r => {
+  const init = async () => {
+    await BApi.enhancer.getAllEnhancerDescriptors().then(r => {
       const data = r.data || [];
       // @ts-ignore
       setEnhancers(data);
     });
 
     // @ts-ignore
-    BApi.category.getCategory(categoryId, { additionalItems: CategoryAdditionalItem.EnhancerOptions | CategoryAdditionalItem.CustomProperties }).then(r => {
+    await BApi.category.getCategory(categoryId, { additionalItems: CategoryAdditionalItem.EnhancerOptions | CategoryAdditionalItem.CustomProperties }).then(r => {
       const data = r.data || {};
       setCategoryEnhancerOptionsList(data.enhancerOptions?.map(eo => (eo as CategoryEnhancerFullOptions)) || []);
     });
+  };
+
+  useEffect(() => {
+    init();
   }, []);
 
   // console.log(createPortal, 1234567);
@@ -167,6 +171,7 @@ const EnhancerSelector = ({
                       createPortal(CategoryEnhancerOptionsDialog, {
                         enhancer: e,
                         categoryId,
+                        onDestroyed: init,
                       });
                     }}
                   >

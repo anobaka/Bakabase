@@ -48,6 +48,9 @@ export default ({
       trigger={(
         <ProductOutlined className={'text-base absolute top-1 right-1 z-10 hidden group-hover:block'} />
       )}
+      style={{
+        zIndex: 10,
+      }}
     >
       <div className={'grid grid-cols-2 gap-1 rounded'}>
         <Button

@@ -138,6 +138,13 @@ export default (props: Props) => {
                     category={category}
                     propertyMap={propertyMap}
                     enhancer={enhancer}
+                    onDeleted={() => {
+                      const idx = options.targetOptions?.findIndex(x => x == data);
+                      if (idx != undefined) {
+                        options.targetOptions?.splice(idx, 1);
+                        setOptions({ ...options });
+                      }
+                    }}
                   />
                 );
               })}

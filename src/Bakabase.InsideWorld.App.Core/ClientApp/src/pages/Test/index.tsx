@@ -77,6 +77,7 @@ export default () => {
   const { t } = useTranslation();
 
   const { createPortal } = useBakabaseContext();
+  const [testingKey, setTestingKey] = useState<string>(Object.keys(components)[0]);
 
   useEffect(() => {
   }, []);
@@ -84,10 +85,13 @@ export default () => {
   return (
     <div className={'flex items-start gap-2 max-h-full h-full'}>
       <div className={'border-small px-1 py-2 rounded-small border-default-200 dark:border-default-100'}>
-        <Listbox onAction={k => {
-          const tk: keyof typeof components = k as any;
-          document.getElementById(tk)?.scrollIntoView();
+        <Listbox
+          onAction={k => {
+          // const tk: keyof typeof components = k as any;
+          // document.getElementById(tk)?.scrollIntoView();
+            setTestingKey(k as string);
         }}
+          selectedKeys={[testingKey]}
         >
           {Object.keys(components).map(c => {
             return (
@@ -97,16 +101,19 @@ export default () => {
         </Listbox>
       </div>
       <div className={'flex flex-col gap-2 grow max-h-full h-full overflow-auto'}>
-        {Object.keys(components).map(c => {
-          return (
-            <>
-              <div id={c} className={''}>
-                {components[c]}
-              </div>
-              <Divider />
-            </>
-          );
-        })}
+        {/* {Object.keys(components).map(c => { */}
+        {/*   return ( */}
+        {/*     <> */}
+        {/*       <div id={c} className={''}> */}
+        {/*         {components[c]} */}
+        {/*       </div> */}
+        {/*       <Divider /> */}
+        {/*     </> */}
+        {/*   ); */}
+        {/* })} */}
+        <div id={testingKey} className={''}>
+          {components[testingKey]}
+        </div>
       </div>
     </div>
   );

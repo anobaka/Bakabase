@@ -13,7 +13,7 @@ public enum BangumiEnhancerTarget
 
     [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.ListString,
         [EnhancerTargetOptionsItem.IntegrateWithAlias, EnhancerTargetOptionsItem.AutoGenerateProperties])]
-    Tag = 2,
+    Tags = 2,
 
     [EnhancerTarget(EnhancerTargetType.Data, StandardValueType.String,
         [EnhancerTargetOptionsItem.AutoGenerateProperties])]
@@ -27,6 +27,6 @@ public enum BangumiEnhancerTarget
         [EnhancerTargetOptionsItem.AutoGenerateProperties, EnhancerTargetOptionsItem.IntegrateWithAlias], true)]
     OtherPropertiesInLeftPanel = 5,
 
-    [EnhancerTarget(EnhancerTargetType.File, StandardValueType.ListString, [], true)]
+    [EnhancerTarget(EnhancerTargetType.File, StandardValueType.ListString, [], false)]
     Cover = 6,
 }

@@ -60,7 +60,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Update="Resources\SharedResource.zh-cn.resx">
+		<EmbeddedResource Update="Resources\SharedResource.zh-Hans.resx">
 			<LastGenOutput>SharedResource.zh-cn.Designer.cs</LastGenOutput>
 			<Generator>ResXFileCodeGenerator</Generator>
 		</EmbeddedResource>

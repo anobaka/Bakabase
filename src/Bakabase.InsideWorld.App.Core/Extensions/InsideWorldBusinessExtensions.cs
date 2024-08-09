@@ -37,6 +37,7 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Extensions;
+using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.DependencyInjection;
@@ -137,8 +138,8 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddCustomProperty<CustomPropertyService, CustomPropertyValueService,
                 CategoryCustomPropertyMappingService, InsideWorldLocalizer>();
             services
-                .AddEnhancers<InsideWorldDbContext, EnhancementService, EnhancerService, CategoryEnhancerOptionsService,
-                    InsideWorldLocalizer>();
+                .AddEnhancers<InsideWorldDbContext, EnhancementService, EnhancerService,
+                    CategoryEnhancerOptionsService>();
             services.AddStandardValue<SpecialTextService, InsideWorldLocalizer>();
             services.AddBuiltinProperty();
 

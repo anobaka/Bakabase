@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Reflection;
 using Bakabase.Abstractions.Components.Enhancer;
-using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
@@ -19,18 +18,17 @@ namespace Bakabase.Modules.Enhancer.Extensions;
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddEnhancers<TDbContext, TEnhancementService, TEnhancerService,
-        TCategoryEnhancerOptionsService, TLocalizer>(this IServiceCollection services)
+        TCategoryEnhancerOptionsService>(this IServiceCollection services)
         where TEnhancerService : class, IEnhancerService
         where TEnhancementService : class, IEnhancementService
         where TCategoryEnhancerOptionsService : class, ICategoryEnhancerOptionsService
-        where TLocalizer : class, IEnhancerLocalizer
         where TDbContext : DbContext
     {
         services.TryAddScoped<IEnhancerService, TEnhancerService>();
         services.TryAddScoped<IEnhancementService, TEnhancementService>();
         services.TryAddScoped<ResourceService<TDbContext, CategoryEnhancerOptions, int>>();
         services.TryAddScoped<ICategoryEnhancerOptionsService, TCategoryEnhancerOptionsService>();
-        services.AddTransient<IEnhancerLocalizer, TLocalizer>(x => x.GetRequiredService<TLocalizer>());
+        services.AddTransient<IEnhancerLocalizer, EnhancerLocalizer>();
 
 
         var currentAssemblyTypes = Assembly.GetExecutingAssembly().GetTypes();

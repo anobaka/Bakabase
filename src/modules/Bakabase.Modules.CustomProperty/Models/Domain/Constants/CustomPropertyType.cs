@@ -50,7 +50,7 @@ namespace Bakabase.Modules.CustomProperty.Models.Domain.Constants
         [CustomProperty(StandardValueType.ListString, StandardValueType.ListListString)]
         Multilevel,
 
-        [CustomProperty(StandardValueType.ListTag, StandardValueType.ListString)]
+        [CustomProperty(StandardValueType.ListString, StandardValueType.ListTag)]
         Tags,
     }
 }

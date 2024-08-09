@@ -7,6 +7,7 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 import { Button, Modal, Tab, Table, Tabs, TableBody, TableCell, TableColumn, TableHeader, TableRow, Snippet } from '@/components/bakaui';
 import type { Enhancement } from '@/components/Enhancer/models';
 import { EnhancementAdditionalItem } from '@/sdk/constants';
+import StandardValueRenderer from '@/components/StandardValue/ValueRenderer';
 
 interface Props extends DestroyableProps{
   resourceId: number;
@@ -106,7 +107,18 @@ function ResourceEnhancementsDialog({ resourceId, ...props }: Props) {
                       <TableRow>
                         <TableCell>{e.targetName}</TableCell>
                         <TableCell>{JSON.stringify(e.enhancement?.value)}</TableCell>
-                        <TableCell>{JSON.stringify(e.enhancement?.customPropertyValue?.value)}</TableCell>
+                        <TableCell>
+                          {e.enhancement?.valueType == undefined ? (
+                            JSON.stringify(e.enhancement?.value)
+                          ) : (
+                            <StandardValueRenderer
+                              value={e.enhancement?.customPropertyValue?.value}
+                              type={e.enhancement.valueType}
+                              variant={'light'}
+                            />
+                          )}
+
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

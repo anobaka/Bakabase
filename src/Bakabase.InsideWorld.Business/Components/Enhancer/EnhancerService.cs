@@ -31,19 +31,19 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
         private readonly ICustomPropertyService _customPropertyService;
         private readonly IResourceService _resourceService;
         private readonly ICustomPropertyValueService _customPropertyValueService;
-        private readonly ConcurrentDictionary<int, IEnhancer> _enhancers;
         private readonly IEnhancementService _enhancementService;
         private readonly ICategoryEnhancerOptionsService _categoryEnhancerService;
         private readonly IStandardValueService _standardValueService;
         private readonly LogService _logService;
         private readonly IEnhancerDescriptors _enhancerDescriptors;
         private readonly IEnhancerLocalizer _enhancerLocalizer;
+        private readonly Dictionary<int, IEnhancer> _enhancers;
 
         public EnhancerService(ICustomPropertyService customPropertyService, IResourceService resourceService,
-            ICustomPropertyValueService customPropertyValueService, IEnumerable<IEnhancer> enhancers,
+            ICustomPropertyValueService customPropertyValueService,
             IEnhancementService enhancementService, ICategoryEnhancerOptionsService categoryEnhancerService,
             IStandardValueService standardValueService, LogService logService, IEnhancerLocalizer enhancerLocalizer,
-            IEnhancerDescriptors enhancerDescriptors)
+            IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers)
         {
             _customPropertyService = customPropertyService;
             _resourceService = resourceService;
@@ -54,7 +54,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             _logService = logService;
             _enhancerLocalizer = enhancerLocalizer;
             _enhancerDescriptors = enhancerDescriptors;
-            _enhancers = new ConcurrentDictionary<int, IEnhancer>(enhancers.ToDictionary(d => d.Id, d => d));
+            _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 
         protected async Task ApplyEnhancementsToResources(List<Enhancement> enhancements)
@@ -134,7 +134,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     continue;
                 }
 
-                if (!targetOptions.PropertyId.HasValue && targetOptions.AutoGenerateProperties == true)
+                if (!(targetOptions.PropertyId > 0) && targetOptions.AutoGenerateProperties == true)
                 {
                     var propertyCandidate = propertyMap.Values.FirstOrDefault(p =>
                         p.BizValueType == targetDescriptor.ValueType && p.Name == targetDescriptor.Name);
@@ -198,9 +198,6 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             //     }
             // }
 
-            var enhancerCustomPropertyValueLayerMap =
-                _enhancers.ToDictionary(d => d.Key, d => _enhancerDescriptors[d.Key].PropertyValueScope);
-
             var pvs = new List<CustomPropertyValue>();
             var addedPvKeys = new HashSet<string>();
             var enhancementCpvMap = enhancements.ToDictionary(d => d, d => (CustomPropertyValue?) null);
@@ -215,15 +212,15 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     continue;
                 }
                 
-                // 
                 // use first not null enhancement for enhancements with same properties;
+                var enhancerDescriptor = _enhancerDescriptors[enhancement.EnhancerId];
                 var pvKey =
-                    $"{enhancement.ResourceId}-{property.Id}-{enhancerCustomPropertyValueLayerMap[enhancement.EnhancerId]}";
+                    $"{enhancement.ResourceId}-{property.Id}-{enhancerDescriptor.PropertyValueScope}";
                 if (addedPvKeys.Add(pvKey))
                 {
                     var result = await _customPropertyValueService.Create(enhancement.Value, enhancement.ValueType,
                         property,
-                        enhancement.ResourceId, enhancerCustomPropertyValueLayerMap[enhancement.EnhancerId]);
+                        enhancement.ResourceId, enhancerDescriptor.PropertyValueScope);
                     if (result.HasValue)
                     {
                         var (pv, propertyChanged) = result.Value;

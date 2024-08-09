@@ -210,9 +210,6 @@
   <data name="Enhancer_Bakabase_Target_Originals_Description" xml:space="preserve">
     <value>资源涉及的原作</value>
   </data>
-  <data name="Enhancer_Bakabase_Target_Originals_Name" xml:space="preserve">
-    <value>原作</value>
-  </data>
   <data name="Enhancer_Bakabase_Target_Publisher_Description" xml:space="preserve">
     <value>资源的作者列表</value>
   </data>
@@ -347,5 +344,53 @@
   </data>
   <data name="ValueIsNotSet" xml:space="preserve">
     <value>未设置{0}</value>
+  </data>
+  <data name="Enhancer_ExHentai_Name" xml:space="preserve">
+    <value>ExHentai</value>
+  </data>
+  <data name="Enhancer_ExHentai_Target_Name_Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Enhancer_ExHentai_Target_Cover_Name" xml:space="preserve">
+    <value>封面</value>
+  </data>
+  <data name="Enhancer_ExHentai_Target_Tags_Name" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Enhancer_ExHentai_Target_Rating_Name" xml:space="preserve">
+    <value>评分(0~5)</value>
+  </data>
+  <data name="Enhancer_ExHentai_Target_Introduction_Name" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="Enhancer_ExHentai_Description" xml:space="preserve">
+    <value>1. 必须先在系统设置里设置ExHentai的Cookie
+2. 会使用搜索结果的第一个资源作为目标资源
+3. 您也可以设置需要排除哪些标签</value>
+  </data>
+  <data name="Enhancer_Bangumi_Name" xml:space="preserve">
+    <value>Bangumi</value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="Enhancer_Bangumi_Description" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="Enhancer_Bangumi_Target_Name_Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Enhancer_Bangumi_Target_Tags_Name" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Enhancer_Bangumi_Target_Introduction_Name" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="Enhancer_Bangumi_Target_Rating_Name" xml:space="preserve">
+    <value>评分(0~10)</value>
+  </data>
+  <data name="Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name" xml:space="preserve">
+    <value>左边栏其他属性</value>
+  </data>
+  <data name="Enhancer_Bangumi_Target_Cover_Name" xml:space="preserve">
+    <value>封面</value>
   </data>
 </root>

@@ -71,7 +71,7 @@ public class BangumiEnhancer(
                 {
                     BangumiEnhancerTarget.Name => new StringValueBuilder(context.Name),
                     BangumiEnhancerTarget.Rating => new DecimalValueBuilder(context.Rating),
-                    BangumiEnhancerTarget.Tag => new ListTagValueBuilder(context.Tags),
+                    BangumiEnhancerTarget.Tags => new ListTagValueBuilder(context.Tags),
                     BangumiEnhancerTarget.Introduction => new StringValueBuilder(context.Introduction),
                     BangumiEnhancerTarget.OtherPropertiesInLeftPanel => throw new ArgumentOutOfRangeException(),
                     _ => throw new ArgumentOutOfRangeException()

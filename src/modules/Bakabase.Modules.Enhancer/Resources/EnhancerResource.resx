@@ -117,78 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Category_ComponentWithTypeHasNotBeenConfigured" xml:space="preserve">
-    <value>Component with type [{0}] has not been configured for category [{1}]</value>
-  </data>
-  <data name="Category_Invalid" xml:space="preserve">
-    <value>Invalid categories: {0}</value>
-  </data>
-  <data name="Category_MediaLibraryExistsOnDeletion" xml:space="preserve">
-    <value>Category can not be deleted when its media libraries exists</value>
-  </data>
-  <data name="Chinese" xml:space="preserve">
-    <value>Chinese</value>
-  </data>
-  <data name="Component_DuplicatesAreFound" xml:space="preserve">
-    <value>Duplicate components are found: {0}</value>
-  </data>
-  <data name="Component_Invalid" xml:space="preserve">
-    <value>Component [{0}] is invalid</value>
-  </data>
-  <data name="Component_KeyCanNotBeEmpty" xml:space="preserve">
-    <value>Key of component can not be empty</value>
-  </data>
-  <data name="Component_NotDeletableWhenUsingByCategories" xml:space="preserve">
-    <value>Component can not be deleted if it is being used by categories: {0}</value>
-  </data>
-  <data name="Component_OptionsAppliedToWrongTypeDescriptor" xml:space="preserve">
-    <value>Options can not be applied to [{0}] type component [{1}]</value>
-  </data>
-  <data name="Component_OptionsAreNotConfigured" xml:space="preserve">
-    <value>Options of component [{0}] are not configured</value>
-  </data>
-  <data name="Component_OptionsWithIdAreNotFound" xml:space="preserve">
-    <value>Options with id [{0}] are not found</value>
-  </data>
-  <data name="Component_TypeMismatch" xml:space="preserve">
-    <value>Type wanted: [{0}], but got [{1}] from [{2}]</value>
-  </data>
-  <data name="CookieValidation_Fail" xml:space="preserve">
-    <value>Failed to validate cookie. Requested url: {0}, message: {1}, content: {2}</value>
-  </data>
-  <data name="CustomProperty_DescriptorNotFound" xml:space="preserve">
-    <value>Descriptor for property with type:{0} is not found</value>
-  </data>
-  <data name="Downloader_BilibiliCookieIsInvalid" xml:space="preserve">
-    <value>Can not get mid from cookie, please make sure cookie is correct</value>
-  </data>
-  <data name="Downloader_BilibiliFavoritesIsMissing" xml:space="preserve">
-    <value>Bilibili favorites is missing</value>
-  </data>
-  <data name="Downloader_DownloaderCountExceeded" xml:space="preserve">
-    <value>Downloader limits exceeded, [{0}] downloader is being used by other task(s) [{1}]</value>
-  </data>
-  <data name="Downloader_DownloaderOptionsValidatorNotRegistered" xml:space="preserve">
-    <value>Downloader options validator is registered for third party {0}:{1}</value>
-  </data>
-  <data name="Downloader_FailedToStart" xml:space="preserve">
-    <value>Failed to start [{0}]: {1}</value>
-  </data>
-  <data name="Downloader_KeyIsMissing" xml:space="preserve">
-    <value>Key is missing</value>
-  </data>
-  <data name="Downloader_MayBeDuplicate" xml:space="preserve">
-    <value>The following tasks may exist: {0}, sure to create?</value>
-  </data>
-  <data name="Downloader_UnknownThirdPartyId" xml:space="preserve">
-    <value>Unknown third party id: {0}</value>
-  </data>
-  <data name="Downloader_UnknownType" xml:space="preserve">
-    <value>Unknown type: {0}</value>
-  </data>
-  <data name="English" xml:space="preserve">
-    <value>English</value>
-  </data>
   <data name="Enhancer_Bakabase_Description" xml:space="preserve">
     <value>Analyze a filename similar to [(20)191202][Publisher1(Publisher2,Publisher3),Publisher4(Publisher5),Publisher6]Title Part 2(Original)[CN]</value>
   </data>
@@ -234,117 +162,6 @@
   <data name="Enhancer_Bakabase_Target_VolumeTitle_Name" xml:space="preserve">
     <value>Volume title</value>
   </data>
-  <data name="FileDoesNotExistInPath" xml:space="preserve">
-    <value>{0} does not exist in {1}</value>
-  </data>
-  <data name="FileMover_DuplicateSourcesAreFound" xml:space="preserve">
-    <value>Duplicate sources are found: {0}</value>
-  </data>
-  <data name="FileMover_DuplicateTargetsAreFound" xml:space="preserve">
-    <value>Duplicate targets are found: {0}</value>
-  </data>
-  <data name="FileMover_SourcesCantBeSubOfSources" xml:space="preserve">
-    <value>Sources can not be sub path of sources: {0}</value>
-  </data>
-  <data name="FileMover_TargetsCantBeSubOfSources" xml:space="preserve">
-    <value>Targets can not be sub path of sources: {0}</value>
-  </data>
-  <data name="FilesDoNotExistInPath" xml:space="preserve">
-    <value>{0} do not exist in {1}</value>
-  </data>
-  <data name="French" xml:space="preserve">
-    <value>French</value>
-  </data>
-  <data name="German" xml:space="preserve">
-    <value>German</value>
-  </data>
-  <data name="Japanese" xml:space="preserve">
-    <value>Japanese</value>
-  </data>
-  <data name="Korean" xml:space="preserve">
-    <value>Korean</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_CustomProperty" xml:space="preserve">
-    <value>CustomProperty</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Favorites" xml:space="preserve">
-    <value>Favorites</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Language" xml:space="preserve">
-    <value>Language</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Name" xml:space="preserve">
-    <value>Name</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Original" xml:space="preserve">
-    <value>Original</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Publisher" xml:space="preserve">
-    <value>Publisher</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_ReleaseDt" xml:space="preserve">
-    <value>ReleaseDt</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Series" xml:space="preserve">
-    <value>Series</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Tag" xml:space="preserve">
-    <value>Tag</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Volume_Index" xml:space="preserve">
-    <value>VolumeIndex</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Volume_Name" xml:space="preserve">
-    <value>VolumeName</value>
-  </data>
-  <data name="Migration_V190_DefaultPropertyName_Volume_Title" xml:space="preserve">
-    <value>VolumeTitle</value>
-  </data>
-  <data name="NewFolderName" xml:space="preserve">
-    <value>New Folder</value>
-  </data>
-  <data name="PathIsNotFound" xml:space="preserve">
-    <value>{0} is not found</value>
-  </data>
-  <data name="PathsShouldBeInSameDirectory" xml:space="preserve">
-    <value>Paths should be in same directory</value>
-  </data>
-  <data name="Resource_CannotSaveCoverToCurrentDirectoryForSingleFileResource" xml:space="preserve">
-    <value>Cover file can not be saved to resource directory for single-file-resource</value>
-  </data>
-  <data name="Resource_CoverMustBeInDirectory" xml:space="preserve">
-    <value>The cover must be stored in a directory</value>
-  </data>
-  <data name="Resource_MovingTaskSummary" xml:space="preserve">
-    <value>Moving {0} to {1}</value>
-  </data>
-  <data name="Resource_MovingTaskSummaryForSingleResource" xml:space="preserve">
-    <value>Moving to {0}</value>
-  </data>
-  <data name="Resource_MovingTaskSummaryForSingleResourceWithMediaLibrary" xml:space="preserve">
-    <value>Moving to media library {0}:{1}</value>
-  </data>
-  <data name="Resource_MovingTaskSummaryWithMediaLibrary" xml:space="preserve">
-    <value>Moving {0} to media library {1}:{2}</value>
-  </data>
-  <data name="Resource_NotFound" xml:space="preserve">
-    <value>Resource with id:{0} is not found</value>
-  </data>
-  <data name="Russian" xml:space="preserve">
-    <value>Russian</value>
-  </data>
-  <data name="Spanish" xml:space="preserve">
-    <value>Spanish</value>
-  </data>
-  <data name="StandardValue_HandlerNotFound" xml:space="preserve">
-    <value>Handler for standard value with type:{0} is not found</value>
-  </data>
-  <data name="TypeIsNotFound" xml:space="preserve">
-    <value>Type {0} is not found</value>
-  </data>
-  <data name="ValueIsNotSet" xml:space="preserve">
-    <value>{0} is not set</value>
-  </data>
   <data name="Enhancer_ExHentai_Name" xml:space="preserve">
     <value>ExHentai</value>
   </data>
@@ -371,9 +188,6 @@
   <data name="Enhancer_Bangumi_Name" xml:space="preserve">
     <value>Bangumi</value>
   </data>
-  <data name="Enhancer_Bangumi_Description" xml:space="preserve">
-    <value />
-  </data>
   <data name="Enhancer_Bangumi_Target_Name_Name" xml:space="preserve">
     <value>Name</value>
   </data>
@@ -391,5 +205,8 @@
   </data>
   <data name="Enhancer_Bangumi_Target_Cover_Name" xml:space="preserve">
     <value>Cover</value>
+  </data>
+  <data name="Enhancer_Bakabase_Target_Originals_Name" xml:space="preserve">
+    <value>Originals</value>
   </data>
 </root>

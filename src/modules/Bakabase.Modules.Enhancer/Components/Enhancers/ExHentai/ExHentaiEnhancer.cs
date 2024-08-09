@@ -126,7 +126,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
             return null;
         }
 
-        protected override EnhancerId TypedId => EnhancerId.Bakabase;
+        protected override EnhancerId TypedId => EnhancerId.ExHentai;
         protected override async Task<List<EnhancementTargetValue<ExHentaiEnhancerTarget>>> ConvertContextByTargets(
             ExHentaiEnhancerContext context)
         {

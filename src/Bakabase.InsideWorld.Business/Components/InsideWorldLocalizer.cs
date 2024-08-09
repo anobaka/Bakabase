@@ -16,7 +16,8 @@ namespace Bakabase.InsideWorld.Business.Components
     /// todo: Redirect raw <see cref="IStringLocalizer"/> callings to here
     /// </summary>
     public class InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
-        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, IEnhancerLocalizer, ICustomPropertyLocalizer, IStandardValueLocalizer
+        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, ICustomPropertyLocalizer,
+            IStandardValueLocalizer
     {
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
             localizer.GetAllStrings(includeParentCultures);
@@ -95,26 +96,6 @@ namespace Bakabase.InsideWorld.Business.Components
 
         public string SpecialText_HistoricalLanguageValue2ShouldBeModified() =>
             this[nameof(SpecialText_HistoricalLanguageValue2ShouldBeModified)];
-
-        public string Enhancer_Name(EnhancerId enhancerId)
-        {
-            return this[$"Enhancer_{enhancerId}_Name"];
-        }
-
-        public string Enhancer_Description(EnhancerId enhancerId)
-        {
-            return this[$"Enhancer_{enhancerId}_Description"];
-        }
-
-        public string Enhancer_TargetName(EnhancerId enhancerId, Enum target)
-        {
-            return this[$"Enhancer_{enhancerId}_Target_{target}_Name"];
-        }
-
-        public string Enhancer_TargetDescription(EnhancerId enhancerId, Enum target)
-        {
-            return this[$"Enhancer_{enhancerId}_Target_{target}_Description"];
-        }
 
         public string CustomProperty_DescriptorNotFound(int propertyType)
         {

@@ -5,7 +5,7 @@ using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 
 namespace Bakabase.Modules.Enhancer.Components;
 
-public record EnhancerDescriptors : IEnhancerDescriptors
+internal record EnhancerDescriptors : IEnhancerDescriptors
 {
     private readonly Dictionary<int, IEnhancerDescriptor> _descriptors;
 

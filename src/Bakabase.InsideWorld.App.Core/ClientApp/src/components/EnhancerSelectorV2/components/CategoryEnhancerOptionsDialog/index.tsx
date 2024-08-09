@@ -103,7 +103,7 @@ const CategoryEnhancerOptionsDialog = ({
       }}
     >
       {options && (
-        <div>
+        <div className={'flex flex-col gap-y-4'}>
           <FixedTargets
             category={category}
             enhancer={enhancer}

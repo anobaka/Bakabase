@@ -1,4 +1,4 @@
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EnhancerTargetFullOptions } from '../../models';
@@ -111,12 +111,15 @@ export default (props: Props) => {
               <Button
                 size={'sm'}
                 variant={'light'}
-                // color={(dynamicTarget != undefined && dynamicTarget.length > 0) ? 'warning' : 'default'}
+                // color={'success'}
                 onClick={() => {
                   dynamicTargetInputValueRef.current = dynamicTarget;
                   setEditingDynamicTarget(true);
                 }}
-              >{targetLabel ?? t('Click to specify target')}</Button>
+              >
+                {targetLabel ?? t('Click to specify target')}
+                <EditOutlined className={'text-base'} />
+              </Button>
             ) : (
               <>
                 {targetLabel}
