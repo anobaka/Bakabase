@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
+using Bakabase.InsideWorld.Models.Constants;
 using Newtonsoft.Json;
 
 namespace Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
@@ -13,4 +14,5 @@ public record EnhancerTargetFullOptions() : EnhancerTargetOptions
     public bool? AutoMatchMultilevelString { get; set; }
     public bool? AutoGenerateProperties { get; set; }
     public int? PropertyId { get; set; }
+    public CoverSelectOrder? CoverSelectOrder { get; set; }
 }

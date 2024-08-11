@@ -132,8 +132,6 @@ export default (props: Props) => {
           />
         );
       }
-      // case ResourceProperty.Category:
-      //   break;
       case ResourceProperty.MediaLibrary: {
         // const v = dbValue == undefined ? undefined : JSON.parse(dbValue) as number[];
         const categoryMap = dataPool?.categoryMap || {};

@@ -1,5 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
+using Bakabase.Abstractions.Components.Cover;
+using Bakabase.Abstractions.Components.FileManager;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Domain;
@@ -16,6 +18,7 @@ using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bootstrap.Components.Miscellaneous;
 using Bootstrap.Extensions;
 using Bootstrap.Models;
 using Microsoft.Extensions.Logging;
@@ -26,13 +29,15 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         IEnumerable<IStandardValueHandler> valueConverters,
         ILoggerFactory loggerFactory,
         ISpecialTextService specialTextService,
-        IBakabaseLocalizer localizer)
-        : AbstractEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(valueConverters, loggerFactory)
+        IBakabaseLocalizer localizer,
+        IFileManager fileManager,
+        ICoverDiscoverer coverDiscoverer)
+        : AbstractEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(valueConverters, loggerFactory, fileManager)
     {
         protected override EnhancerId TypedId => EnhancerId.Bakabase;
         private readonly IBakabaseLocalizer _localizer = localizer;
 
-        protected override async Task<BakabaseEnhancerContext?> BuildContext(Resource resource)
+        protected override async Task<BakabaseEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options)
         {
             var name = resource.FileName;
             if (name.IsNullOrEmpty())
@@ -97,6 +102,16 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             }
 
             ctx.Name = name;
+
+            var coverSelectionOrder =
+                options.TargetOptions?.FirstOrDefault(to => to.Target == (int) BakabaseEnhancerTarget.Cover)
+                    ?.CoverSelectOrder ?? CoverSelectOrder.FilenameAscending;
+            var cover = await coverDiscoverer.DiscoverCover(resource.Path, new CancellationToken(),
+                coverSelectionOrder);
+            if (cover != null)
+            {
+                await cover.SaveTo($"{resource.Id}", true, CancellationToken.None);
+            }
 
             return ctx;
         }

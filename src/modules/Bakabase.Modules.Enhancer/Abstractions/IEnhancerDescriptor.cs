@@ -1,7 +1,4 @@
-﻿using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Domain.Constants;
-
-namespace Bakabase.Abstractions.Components.Enhancer;
+﻿namespace Bakabase.Modules.Enhancer.Abstractions;
 
 public interface IEnhancerDescriptor
 {

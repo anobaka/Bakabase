@@ -3,7 +3,14 @@ import { Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
-import { DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  FolderOpenOutlined,
+  PlusCircleOutlined,
+  SyncOutlined,
+  UnorderedListOutlined,
+} from '@ant-design/icons';
+import { useUpdate } from 'react-use';
 import CustomIcon from '@/components/CustomIcon';
 import DragHandle from '@/components/DragHandle';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
@@ -41,8 +48,7 @@ export default (({
     transition,
   };
 
-  const [, forceUpdate] = useReducer((x) => x + 1, 0);
-  const [pathConfiguration, setPathConfiguration] = useState();
+  const forceUpdate = useUpdate();
   useEffect(() => {
 
   }, []);
@@ -174,6 +180,19 @@ export default (({
             </Tooltip>
           )}
           <div>
+            <Tooltip content={t('Sync now')}>
+              <Button
+                isIconOnly
+                variant={'light'}
+                color={'secondary'}
+                size={'sm'}
+                onClick={() => {
+                  BApi.mediaLibrary.startSyncingMediaLibraryResources(library.id);
+                }}
+              >
+                <SyncOutlined className={'text-base'} />
+              </Button>
+            </Tooltip>
             <Dropdown
               trigger={(
                 <Button

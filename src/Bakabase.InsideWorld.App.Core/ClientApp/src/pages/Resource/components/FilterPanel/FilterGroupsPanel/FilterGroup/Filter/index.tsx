@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
-import { useUpdateEffect } from 'react-use';
+import { useEffect, useState } from 'react';
+import { useUpdate, useUpdateEffect } from 'react-use';
 import { DropdownItem, DropdownMenu, DropdownTrigger } from '@nextui-org/react';
 import groupStyles from '../index.module.scss';
 import type { DataPool, IFilter } from '../../models';
 import PropertySelector from '@/components/PropertySelector';
 import ClickableIcon from '@/components/ClickableIcon';
-import { ResourceProperty, SearchOperation } from '@/sdk/constants';
+import { ResourceProperty as EnumResourceProperty, ResourceProperty, SearchOperation } from '@/sdk/constants';
 import store from '@/store';
 import type { IProperty } from '@/components/Property/models';
 import { Button, Dropdown, Tooltip } from '@/components/bakaui';
@@ -38,10 +38,28 @@ export default ({
   const standardValueTypeSearchOperationsMap = internalOptions?.resource?.customPropertyValueSearchOperationsMap || {};
 
   const [filter, setFilter] = useState<IFilter>(propsFilter);
+  const [property, setProperty] = useState<IProperty>();
 
   useUpdateEffect(() => {
     onChange?.(filter);
   }, [filter]);
+
+  useEffect(() => {
+    if (filter.propertyId) {
+      if (!filter.isCustomProperty) {
+        const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
+        setProperty({
+          id: filter.propertyId,
+          name: t(EnumResourceProperty[filter.propertyId]),
+          dbValueType: map[filter.propertyId].dbValueType,
+          isCustom: false,
+          bizValueType: map[filter.propertyId].bizValueType,
+        });
+      } else {
+        setProperty(propertyMap[filter.propertyId]);
+      }
+    }
+  }, [filter, internalOptions]);
 
   useUpdateEffect(() => {
     setFilter(propsFilter);
@@ -68,7 +86,6 @@ export default ({
     }
 
     let operations: SearchOperation[] | undefined;
-    const property = propertyMap?.[filter.propertyId!];
     if (property) {
       operations = property.isCustom ? standardValueTypeSearchOperationsMap[property.dbValueType] : SearchableReservedPropertySearchOperationsMap[property.id];
     }
@@ -124,7 +141,7 @@ export default ({
   };
 
   const noValue = filter.operation == SearchOperation.IsNull || filter.operation == SearchOperation.IsNotNull;
-  const property = propertyMap[filter.propertyId!];
+  console.log('rendering filter', filter, property, propertyMap, dataPool, internalOptions.resource.reservedResourcePropertyAndValueTypesMap);
 
   return (
     <div
@@ -167,7 +184,7 @@ export default ({
             });
           }}
         >
-          {(filter.propertyId ? filter.isCustomProperty ? t(ResourceProperty[filter.propertyId]) : propertyMap[filter.propertyId]?.name : t('Property')) ?? t('Unknown property')}
+          {(filter.propertyId ? filter.isCustomProperty ? propertyMap[filter.propertyId]?.name : t(ResourceProperty[filter.propertyId]) : t('Property')) ?? t('Unknown property')}
         </Button>
       </div>
       <div className={''}>

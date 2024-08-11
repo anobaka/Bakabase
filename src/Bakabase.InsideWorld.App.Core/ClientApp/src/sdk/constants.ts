@@ -200,7 +200,7 @@ export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3}
 export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
 export enum ExHentaiEnhancerTarget {Name = 1, Introduction = 2, Rating = 3, Tags = 4, Cover = 5}
 export const exHentaiEnhancerTargets = Object.keys(ExHentaiEnhancerTarget).filter(k => typeof ExHentaiEnhancerTarget[k] === 'number').map(t => ({label: t, value: ExHentaiEnhancerTarget[t]}));
-export enum BangumiEnhancerTarget {Name = 1, Tag = 2, Introduction = 3, Rating = 4, OtherPropertiesInLeftPanel = 5, Cover = 6}
+export enum BangumiEnhancerTarget {Name = 1, Tags = 2, Introduction = 3, Rating = 4, OtherPropertiesInLeftPanel = 5, Cover = 6}
 export const bangumiEnhancerTargets = Object.keys(BangumiEnhancerTarget).filter(k => typeof BangumiEnhancerTarget[k] === 'number').map(t => ({label: t, value: BangumiEnhancerTarget[t]}));
 export enum BakabaseEnhancerTarget {Name = 1, Publisher = 2, ReleaseDt = 3, VolumeName = 4, VolumeTitle = 5, Originals = 6, Language = 7}
 export const bakabaseEnhancerTargets = Object.keys(BakabaseEnhancerTarget).filter(k => typeof BakabaseEnhancerTarget[k] === 'number').map(t => ({label: t, value: BakabaseEnhancerTarget[t]}));

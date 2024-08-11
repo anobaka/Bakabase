@@ -18,6 +18,7 @@ using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Models.Input;
+using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -27,7 +28,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     [Route("~/category")]
     public class CategoryController(
         ICategoryService service,
-        ICategoryEnhancerOptionsService categoryEnhancerOptionsService)
+        ICategoryEnhancerOptionsService categoryEnhancerOptionsService,
+        IMediaLibraryService mediaLibraryService
+        )
         : Controller
     {
         [HttpGet("{id:int}")]
@@ -37,7 +40,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         {
             return new SingletonResponse<Category?>(await service.Get(id, additionalItems));
         }
-
 
         [HttpGet]
         [SwaggerOperation(OperationId = "GetAllCategories")]
@@ -154,5 +156,12 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return await categoryEnhancerOptionsService.PatchTarget(id, enhancerId, target, dynamicTarget, patches);
         }
 
+        [HttpPut("{id:int}/synchronization")]
+        [SwaggerOperation(OperationId = "StartSyncingCategoryResources")]
+        public async Task<BaseResponse> StartSyncing(int id)
+        {
+            mediaLibraryService.StartSyncing([id], null);
+            return BaseResponseBuilder.Ok;
+        }
     }
 }

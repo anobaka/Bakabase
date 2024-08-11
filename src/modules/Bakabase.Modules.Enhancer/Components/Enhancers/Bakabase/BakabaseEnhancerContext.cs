@@ -10,5 +10,6 @@
         public string? VolumeTitle { get; set; }
         public List<string>? Originals { get; set; }
         public string? Language { get; set; }
+        public byte[]? Cover { get; set; }
     }
 }

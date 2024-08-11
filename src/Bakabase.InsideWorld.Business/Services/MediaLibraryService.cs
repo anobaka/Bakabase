@@ -417,12 +417,12 @@ namespace Bakabase.InsideWorld.Business.Services
         /// 
         /// </summary>
         /// <returns></returns>
-        public void StartSyncing()
+        public void StartSyncing(int[]? categoryIds, int[]? mediaLibraryIds)
         {
             BackgroundTaskHelper.RunInNewScope<IMediaLibraryService>(SyncTaskBackgroundTaskName,
                 async (service, task) =>
                 {
-                    var rsp = await service.Sync(process => task.CurrentProcess = process,
+                    var rsp = await service.Sync(categoryIds, mediaLibraryIds, process => task.CurrentProcess = process,
                         progress => task.Percentage = progress);
 
                     var result = rsp.Data;
@@ -526,11 +526,37 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<SingletonResponse<SyncResultViewModel>> Sync(Action<string> onProcessChange, Action<int> onProgressChange)
+        public async Task<SingletonResponse<SyncResultViewModel>> Sync(int[]? categoryIds, int[]? mediaLibraryIds,
+            Action<string> onProcessChange, Action<int> onProgressChange)
         {
-            // Make log and error can show in background task info.
-            var libraries = await GetAll(null, MediaLibraryAdditionalItem.None);
-            var categories = (await ResourceCategoryService.GetAll()).ToDictionary(a => a.Id, a => a);
+            var isPartialSynchronization = categoryIds?.Any() == true || mediaLibraryIds?.Any() == true;
+            List<MediaLibrary> libraries;
+            Dictionary<int, Category> categories;
+            if (mediaLibraryIds?.Any() == true)
+            {
+                // ignore categoryIds
+                libraries = await GetAll(x => mediaLibraryIds.Contains(x.Id), MediaLibraryAdditionalItem.None);
+                var cIds = libraries.Select(l => l.CategoryId).ToHashSet();
+                categories =
+                    (await ResourceCategoryService.GetByKeys(cIds, CategoryAdditionalItem.None)).ToDictionary(a => a.Id,
+                        a => a);
+            }
+            else
+            {
+                if (categoryIds?.Any() == true)
+                {
+                    categories =
+                        (await ResourceCategoryService.GetByKeys(categoryIds, CategoryAdditionalItem.None))
+                        .ToDictionary(a => a.Id,
+                            a => a);
+                    libraries = await GetAll(x => categoryIds.Contains(x.CategoryId), MediaLibraryAdditionalItem.None);
+                }
+                else
+                {
+                    libraries = await GetAll(null, MediaLibraryAdditionalItem.None);
+                    categories = (await ResourceCategoryService.GetAll()).ToDictionary(a => a.Id, a => a);
+                }
+            }
 
             // Validation
             {
@@ -624,7 +650,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                         if (pathConfiguration.RpmValues?.Any() ==
                                             true)
                                         {
-                                            SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr, parentResources, pscResult.Data.CustomPropertyMap);
+                                            SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr, parentResources,
+                                                pscResult.Data.CustomPropertyMap);
                                         }
 
                                         patchingResources.TryAdd(pr.Path, pr);
@@ -662,7 +689,25 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                     case MediaLibrarySyncStep.CleanResources:
                     {
-                        var prevResources = await ResourceService.GetAll(null, ResourceAdditionalItem.All);
+                        List<Resource> prevResources;
+                        if (isPartialSynchronization)
+                        {
+                            if (mediaLibraryIds?.Any() == true)
+                            {
+                                prevResources = await ResourceService.GetAll(
+                                    x => mediaLibraryIds.Contains(x.MediaLibraryId), ResourceAdditionalItem.All);
+                            }
+                            else
+                            {
+                                prevResources = await ResourceService.GetAll(x => categoryIds!.Contains(x.CategoryId),
+                                    ResourceAdditionalItem.All);
+                            }
+                        }
+                        else
+                        {
+                            prevResources = await ResourceService.GetAll(null, ResourceAdditionalItem.All);
+                        }
+
                         // Delete resources with unknown paths
                         invalidResources.AddRange(prevResources.Where(x => !patchingResources.Keys.Contains(x.Path)));
 

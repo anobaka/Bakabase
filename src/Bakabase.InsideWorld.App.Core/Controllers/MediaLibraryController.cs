@@ -72,7 +72,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         [SwaggerOperation(OperationId = "StartSyncMediaLibrary")]
         public async Task<BaseResponse> Sync()
         {
-            service.StartSyncing();
+            service.StartSyncing(null, null);
             return BaseResponseBuilder.Ok;
         }
 
@@ -169,6 +169,14 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             library.PathConfigurations = library.PathConfigurations?.Where((t, i) => i != model.Index).ToList();
 
             return await service.Put(library);
+        }
+
+        [HttpPut("{id:int}/synchronization")]
+        [SwaggerOperation(OperationId = "StartSyncingMediaLibraryResources")]
+        public async Task<BaseResponse> StartSyncing(int id)
+        {
+            service.StartSyncing(null, [id]);
+            return BaseResponseBuilder.Ok;
         }
     }
 }

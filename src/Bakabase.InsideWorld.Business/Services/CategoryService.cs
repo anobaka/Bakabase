@@ -522,7 +522,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (model.SyncAfterSaving)
             {
-                MediaLibraryService.StartSyncing();
+                MediaLibraryService.StartSyncing([categoryId], null);
             }
 
             return BaseResponseBuilder.Ok;

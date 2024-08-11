@@ -1,6 +1,4 @@
-﻿using Bakabase.Abstractions.Components.Enhancer;
-
-namespace Bakabase.Modules.Enhancer.Abstractions;
+﻿namespace Bakabase.Modules.Enhancer.Abstractions;
 
 public interface IEnhancerDescriptors
 {

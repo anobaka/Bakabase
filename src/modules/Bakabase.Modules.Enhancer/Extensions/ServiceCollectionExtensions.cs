@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using System.Reflection;
-using Bakabase.Abstractions.Components.Enhancer;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
@@ -38,7 +37,7 @@ public static class ServiceCollectionExtensions
             .ToList();
         foreach (var et in enhancerTypes)
         {
-            services.TryAddScoped(SpecificTypeUtils<IEnhancer>.Type, et);
+            services.AddScoped(SpecificTypeUtils<IEnhancer>.Type, et);
         }
 
         services.AddSingleton<IEnhancerDescriptors>(sp =>
@@ -53,7 +52,6 @@ public static class ServiceCollectionExtensions
                     var targetAttr = target.GetAttribute<EnhancerTargetAttribute>();
                     return new EnhancerTargetDescriptor(target,
                         enhancerId,
-                        targetAttr.Type,
                         localizer,
                         targetAttr.ValueType,
                         targetAttr.IsDynamic,

@@ -38,9 +38,9 @@ public interface IMediaLibraryService
     Task<BaseResponse> DuplicateAllInCategory(int fromCategoryId, int toCategoryId);
     Task StopSyncing();
     // BackgroundTaskDto? SyncTaskInformation { get; }
-    void StartSyncing();
+    void StartSyncing(int[]? categoryIds, int[]? mediaLibraryIds);
 
-    Task<SingletonResponse<SyncResultViewModel>> Sync(Action<string> onProcessChange, Action<int> onProgressChange);
+    Task<SingletonResponse<SyncResultViewModel>> Sync(int[]? categoryIds, int[]? mediaLibraryIds, Action<string> onProcessChange, Action<int> onProgressChange);
 
     Task<SingletonResponse<PathConfigurationTestResult>>
         Test(PathConfiguration pc, int maxResourceCount = int.MaxValue);

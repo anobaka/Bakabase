@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="Components\FileManager\" />
     <Folder Include="Components\Text\" />
     <Folder Include="Helpers\" />
   </ItemGroup>

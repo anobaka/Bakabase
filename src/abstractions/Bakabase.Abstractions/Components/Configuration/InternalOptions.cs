@@ -132,6 +132,9 @@ namespace Bakabase.Abstractions.Components.Configuration
         public const string TempDirectoryName = "temp";
         public const string ComponentInfoFileName = "i.json";
 
+        public const int MaxCoverWidth = 300;
+        public const int MaxCoverHeight = 300;
+
         public record SearchableReservedPropertyValueTypes(
             StandardValueType DbValueType,
             StandardValueType BizValueType)

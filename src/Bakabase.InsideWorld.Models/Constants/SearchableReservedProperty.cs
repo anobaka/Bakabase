@@ -7,6 +7,7 @@ public enum SearchableReservedProperty
 	CreatedAt = ResourceProperty.CreatedAt,
 	FileCreatedAt = ResourceProperty.FileCreatedAt,
 	FileModifiedAt = ResourceProperty.FileModifiedAt,
+	Category = ResourceProperty.Category,
 	MediaLibrary = ResourceProperty.MediaLibrary,
 	Introduction = ResourceProperty.Introduction,
 	Rating = ResourceProperty.Rating

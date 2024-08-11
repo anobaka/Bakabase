@@ -8,6 +8,7 @@ using Bakabase.Modules.CustomProperty.Components;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase;
+using Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -39,7 +40,7 @@ public class BangumiEnhancer(
                 Introduction = detail.Introduction,
                 OtherPropertiesInLeftPanel = detail.OtherPropertiesInLeftPanel,
                 Rating = detail.Rating,
-                Tags = detail.Tags
+                Tags = detail.Tags,
             };
         }
 
@@ -54,33 +55,51 @@ public class BangumiEnhancer(
         var enhancements = new List<EnhancementTargetValue<BangumiEnhancerTarget>>();
         foreach (var target in SpecificEnumUtils<BangumiEnhancerTarget>.Values)
         {
-            if (target == BangumiEnhancerTarget.OtherPropertiesInLeftPanel)
+            switch (target)
             {
-                if (context.OtherPropertiesInLeftPanel != null)
+                case BangumiEnhancerTarget.Name:
+                case BangumiEnhancerTarget.Tags:
+                case BangumiEnhancerTarget.Introduction:
+                case BangumiEnhancerTarget.Rating:
+                case BangumiEnhancerTarget.Cover:
                 {
-                    foreach (var (key, values) in context.OtherPropertiesInLeftPanel)
+                    IStandardValueBuilder valueBuilder = target switch
                     {
-                        enhancements.Add(new EnhancementTargetValue<BangumiEnhancerTarget>(
-                            BangumiEnhancerTarget.OtherPropertiesInLeftPanel, key, new ListStringValueBuilder(values)));
-                    }
-                }
-            }
-            else
-            {
-                IStandardValueBuilder valueBuilder = target switch
-                {
-                    BangumiEnhancerTarget.Name => new StringValueBuilder(context.Name),
-                    BangumiEnhancerTarget.Rating => new DecimalValueBuilder(context.Rating),
-                    BangumiEnhancerTarget.Tags => new ListTagValueBuilder(context.Tags),
-                    BangumiEnhancerTarget.Introduction => new StringValueBuilder(context.Introduction),
-                    BangumiEnhancerTarget.OtherPropertiesInLeftPanel => throw new ArgumentOutOfRangeException(),
-                    _ => throw new ArgumentOutOfRangeException()
-                };
+                        BangumiEnhancerTarget.Name => new StringValueBuilder(context.Name),
+                        BangumiEnhancerTarget.Rating => new DecimalValueBuilder(context.Rating),
+                        BangumiEnhancerTarget.Tags => new ListTagValueBuilder(context.Tags),
+                        BangumiEnhancerTarget.Introduction => new StringValueBuilder(context.Introduction),
+                        BangumiEnhancerTarget.OtherPropertiesInLeftPanel => throw new ArgumentOutOfRangeException(),
+                        BangumiEnhancerTarget.Cover => new ListStringValueBuilder(string.IsNullOrEmpty(context.CoverUrl)
+                            ? null
+                            : [context.CoverUrl]),
 
-                if (valueBuilder.Value != null)
-                {
-                    enhancements.Add(new EnhancementTargetValue<BangumiEnhancerTarget>(target, null, valueBuilder));
+                        _ => throw new ArgumentOutOfRangeException()
+                    };
+
+                    if (valueBuilder.Value != null)
+                    {
+                        enhancements.Add(new EnhancementTargetValue<BangumiEnhancerTarget>(target, null, valueBuilder));
+                    }
+
+                    break;
                 }
+                case BangumiEnhancerTarget.OtherPropertiesInLeftPanel:
+                {
+                    if (context.OtherPropertiesInLeftPanel != null)
+                    {
+                        foreach (var (key, values) in context.OtherPropertiesInLeftPanel)
+                        {
+                            enhancements.Add(new EnhancementTargetValue<BangumiEnhancerTarget>(
+                                BangumiEnhancerTarget.OtherPropertiesInLeftPanel, key,
+                                new ListStringValueBuilder(values)));
+                        }
+                    }
+
+                    break;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 

@@ -19,7 +19,13 @@ using Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 {
-    public class ExHentaiEnhancer(IEnumerable<IStandardValueHandler> valueConverters, ILoggerFactory loggerFactory, ExHentaiClient exHentaiClient, IServiceProvider services, IOptions<ExHentaiOptions> options, ISpecialTextService specialTextService)
+    public class ExHentaiEnhancer(
+        IEnumerable<IStandardValueHandler> valueConverters,
+        ILoggerFactory loggerFactory,
+        ExHentaiClient exHentaiClient,
+        IServiceProvider services,
+        IOptions<ExHentaiOptions> options,
+        ISpecialTextService specialTextService)
         : AbstractEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(valueConverters, loggerFactory)
     {
         private readonly ExHentaiClient _exHentaiClient = exHentaiClient;
@@ -127,6 +133,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         }
 
         protected override EnhancerId TypedId => EnhancerId.ExHentai;
+
         protected override async Task<List<EnhancementTargetValue<ExHentaiEnhancerTarget>>> ConvertContextByTargets(
             ExHentaiEnhancerContext context)
         {
@@ -138,8 +145,11 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
                     ExHentaiEnhancerTarget.Name => new StringValueBuilder(context.Name),
                     ExHentaiEnhancerTarget.Introduction => new StringValueBuilder(context.Introduction),
                     ExHentaiEnhancerTarget.Rating => new DecimalValueBuilder(context.Rating),
-                    ExHentaiEnhancerTarget.Tags => new ListTagValueBuilder(context.Tags?.SelectMany(d => d.Value.Select(x => new TagValue(d.Key, x))).ToList()),
-                    ExHentaiEnhancerTarget.Cover => new StringValueBuilder(context.CoverUrl),
+                    ExHentaiEnhancerTarget.Tags => new ListTagValueBuilder(context.Tags
+                        ?.SelectMany(d => d.Value.Select(x => new TagValue(d.Key, x))).ToList()),
+                    ExHentaiEnhancerTarget.Cover => new ListStringValueBuilder(string.IsNullOrEmpty(context.CoverUrl)
+                        ? null
+                        : [context.CoverUrl]),
                     _ => throw new ArgumentOutOfRangeException()
                 };
 

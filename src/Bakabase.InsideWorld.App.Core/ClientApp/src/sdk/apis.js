@@ -2096,6 +2096,51 @@ export const PatchCategoryEnhancerTargetOptionsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: StartSyncingCategoryResources
+ * url: StartSyncingCategoryResourcesURL
+ * method: StartSyncingCategoryResources_TYPE
+ * raw_url: StartSyncingCategoryResources_RAW_URL
+ * @param id - 
+ */
+export const StartSyncingCategoryResources = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/synchronization'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const StartSyncingCategoryResources_RAW_URL = function() {
+  return '/category/{id}/synchronization'
+}
+export const StartSyncingCategoryResources_TYPE = function() {
+  return 'put'
+}
+export const StartSyncingCategoryResourcesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/synchronization'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetComponentDescriptors
  * url: GetComponentDescriptorsURL
  * method: GetComponentDescriptors_TYPE
@@ -5843,6 +5888,51 @@ export const AddMediaLibraryRootPathsInBulkURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library/{mlId}/path-configuration/root-paths'
   path = path.replace('{mlId}', `${parameters['mlId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: StartSyncingMediaLibraryResources
+ * url: StartSyncingMediaLibraryResourcesURL
+ * method: StartSyncingMediaLibraryResources_TYPE
+ * raw_url: StartSyncingMediaLibraryResources_RAW_URL
+ * @param id - 
+ */
+export const StartSyncingMediaLibraryResources = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library/{id}/synchronization'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const StartSyncingMediaLibraryResources_RAW_URL = function() {
+  return '/media-library/{id}/synchronization'
+}
+export const StartSyncingMediaLibraryResources_TYPE = function() {
+  return 'put'
+}
+export const StartSyncingMediaLibraryResourcesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library/{id}/synchronization'
+  path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

@@ -4,7 +4,7 @@ import { SketchPicker } from 'react-color';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
-import { EditOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { EditOutlined, SyncOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import AddMediaLibraryInBulkDialog from './AddMediaLibraryInBulkDialog';
 import DisplayNameTemplateEditorDialog from './DisplayNameTemplateEditorDialog';
 import CustomIcon from '@/components/CustomIcon';
@@ -332,7 +332,20 @@ export default (({
           )}
 
         </div>
-        <div className="right">
+        <div className="right flex items-center gap-2">
+          <Tooltip content={t('Sync now')}>
+            <Button
+              isIconOnly
+              color={'secondary'}
+              size={'sm'}
+              variant={'light'}
+              onClick={() => {
+                BApi.category.startSyncingCategoryResources(category.id);
+              }}
+            >
+              <SyncOutlined className={'text-base'} />
+            </Button>
+          </Tooltip>
           <Button
             variant={'bordered'}
             color={'default'}

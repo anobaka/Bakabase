@@ -39,6 +39,7 @@ using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
+using Bakabase.Modules.ThirdParty.Bangumi;
 using Bakabase.Modules.ThirdParty.ExHentai;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
@@ -110,6 +111,10 @@ namespace Bakabase.InsideWorld.App.Core
             services.AddTransient<PixivFollowingDownloader>();
             services.TryAddSingleton<PixivDownloaderOptionsValidator>();
             services.TryAddSingleton<PixivCookieValidator>();
+
+            services.AddBakabaseHttpClient<BilibiliThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
+                .Bangumi);
+            services.TryAddSingleton<BangumiClient>();
 
             services.RegisterAllRegisteredTypeAs<IDownloader>();
             services.RegisterAllRegisteredTypeAs<IDownloaderOptionsValidator>();

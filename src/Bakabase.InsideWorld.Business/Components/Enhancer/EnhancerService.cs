@@ -22,7 +22,7 @@ using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.Logging.LogService.Services;
-using IEnhancer = Bakabase.Abstractions.Components.Enhancer.IEnhancer;
+using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.IEnhancer;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancer
 {

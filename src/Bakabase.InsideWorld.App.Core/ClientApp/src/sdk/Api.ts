@@ -3819,6 +3819,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags Category
+     * @name StartSyncingCategoryResources
+     * @request PUT:/category/{id}/synchronization
+     */
+    startSyncingCategoryResources: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}/synchronization`,
+        method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags Enhancement
      * @name DeleteEnhancementsByCategory
      * @request DELETE:/category/{categoryId}/enhancement
@@ -4885,6 +4900,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibrary
+     * @name StartSyncingMediaLibraryResources
+     * @request PUT:/media-library/{id}/synchronization
+     */
+    startSyncingMediaLibraryResources: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library/${id}/synchronization`,
+        method: "PUT",
         format: "json",
         ...params,
       }),

@@ -1,4 +1,4 @@
-﻿using Bakabase.Abstractions.Components.Enhancer;
+﻿using Bakabase.Abstractions.Components.FileManager;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
@@ -21,21 +21,23 @@ namespace Bakabase.Modules.Enhancer.Abstractions
     {
         protected readonly IEnumerable<IStandardValueHandler> ValueConverters;
         protected readonly ILogger Logger;
+        private readonly IFileManager _fileManager;
 
         protected AbstractEnhancer(IEnumerable<IStandardValueHandler> valueConverters,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory, IFileManager fileManager)
         {
             ValueConverters = valueConverters;
+            _fileManager = fileManager;
             Logger = loggerFactory.CreateLogger(GetType());
         }
 
-        protected abstract Task<TContext?> BuildContext(Resource resource);
+        protected abstract Task<TContext?> BuildContext(Resource resource, EnhancerFullOptions options);
         public int Id => (int) TypedId;
         protected abstract EnhancerId TypedId { get; }
 
-        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource)
+        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options)
         {
-            var context = await BuildContext(resource);
+            var context = await BuildContext(resource, options);
             if (context == null)
             {
                 return null;
@@ -72,6 +74,21 @@ namespace Bakabase.Modules.Enhancer.Abstractions
 
             return enhancements;
         }
+
+        /// <summary>
+        /// Save files for enhancer
+        /// </summary>
+        /// <param name="fileName">{EnhancerId}/ will always be added to prefix.</param>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        protected async Task<string> SaveFile(string fileName, byte[] data)
+        {
+            return await _fileManager.Save($"{FileStorageDir}/{fileName.TrimStart('/')}", data,
+                new CancellationToken());
+        }
+
+        protected string FileStorageDir =>
+            $"{_fileManager.BuildAbsolutePath(Path.Combine(nameof(Enhancer), Id.ToString()))}";
 
         /// <summary>
         /// 

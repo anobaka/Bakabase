@@ -84,7 +84,7 @@ export default () => {
     } else {
       setResources(newResources);
     }
-    searching(false);
+    setSearching(false);
   };
 
   useEffect(() => {

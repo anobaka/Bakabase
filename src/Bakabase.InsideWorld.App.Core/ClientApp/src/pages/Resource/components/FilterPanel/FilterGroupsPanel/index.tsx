@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
+import { data } from 'autoprefixer';
 import type { DataPool, DataPoolCategory, DataPoolMediaLibrary, IGroup } from './models';
 import { GroupCombinator } from './models';
 import FilterGroup from './FilterGroup';
@@ -23,26 +24,13 @@ export default ({
   const { t } = useTranslation();
 
   const [group, setGroup] = useState<IGroup>(propsGroup ?? { combinator: GroupCombinator.And });
-  const [propertyMap, setPropertyMap] = useState<Record<number, IProperty>>({});
+  const [propertyMap, setPropertyMap] = useState<Record<number, IProperty>>();
   const [dataPool, setDataPool] = useState<DataPool>();
   const internalOptions = store.useModelState('internalOptions');
   const initializedRef = useRef(false);
 
   const loadProperties = async () => {
     const arr: IProperty[] = [];
-    const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
-    arr.push(
-      ...Object.keys(map).map<IProperty>(pStr => {
-        const p = parseInt(pStr, 10) as EnumResourceProperty;
-        return {
-          id: p,
-          name: t(EnumResourceProperty[p]),
-          dbValueType: map[p].dbValueType,
-          isCustom: false,
-          bizValueType: map[p].bizValueType,
-        };
-      }),
-    );
     const rsp = await BApi.customProperty.getAllCustomProperties();
     // @ts-ignore
     arr.push(...(rsp.data || []).map(d => ({
@@ -99,17 +87,19 @@ export default ({
 
   return (
     <div className={'group flex flex-wrap gap-2 item-center mt-2'}>
-      <FilterGroup
-        dataPool={dataPool}
-        propertyMap={propertyMap}
-        group={group}
-        isRoot
-        portalContainer={portalContainer}
-        onChange={group => {
-          setGroup(group);
-          onChange?.(group);
-        }}
-      />
+      {propertyMap && dataPool && (
+        <FilterGroup
+          dataPool={dataPool}
+          propertyMap={propertyMap}
+          group={group}
+          isRoot
+          portalContainer={portalContainer}
+          onChange={group => {
+            setGroup(group);
+            onChange?.(group);
+          }}
+        />
+      )}
     </div>
   );
 };

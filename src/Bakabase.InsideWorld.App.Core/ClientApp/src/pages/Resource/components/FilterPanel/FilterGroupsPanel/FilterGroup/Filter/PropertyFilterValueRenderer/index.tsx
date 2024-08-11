@@ -27,7 +27,7 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
 
-  console.log('rendering PropertyFilterValueRenderer', bizValue, dbValue);
+  console.log('rendering PropertyFilterValueRenderer', bizValue, dbValue, property, operation);
 
   if (operation == SearchOperation.IsNull || operation == SearchOperation.IsNotNull) {
     return null;
