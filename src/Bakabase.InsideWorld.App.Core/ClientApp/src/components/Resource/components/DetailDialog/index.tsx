@@ -247,7 +247,7 @@ const ResourceDetailDialog = (props: IProps) => {
           if (!(k in propertyComponents)) {
             propertyComponents[k] = (
               <Property
-                renderValue={() => JSON.stringify(resource.customProperties[k])}
+                renderValue={() => resource.customProperties[k].value}
                 resourceId={resource.id}
                 reloadResource={reload}
                 requestKey={k}

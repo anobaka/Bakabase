@@ -622,7 +622,7 @@ namespace Bakabase.InsideWorld.Business.Services
 				var stepPercentage = MediaLibrarySyncStepExtensions.Percentages[step];
 				var resourceCountPerPercentage = patchingResources.Any()
 					? patchingResources.Count / (decimal) stepPercentage
-					: decimal.MaxValue;
+					: 0;
 				task.Percentage = basePercentage;
 				task.CurrentProcess = step.ToString();
 				switch (step)
@@ -646,7 +646,7 @@ namespace Bakabase.InsideWorld.Business.Services
 							{
 								var pathConfiguration = library.PathConfigurations[j];
 								var resourceMatcher =
-									pathConfiguration.RpmValues.FirstOrDefault(m =>
+									pathConfiguration.RpmValues?.FirstOrDefault(m =>
 										m.Property == ResourceProperty.Resource);
 								if (!Directory.Exists(pathConfiguration.Path) || resourceMatcher == null)
 								{
@@ -656,8 +656,8 @@ namespace Bakabase.InsideWorld.Business.Services
 								var pscResult = await Test(pathConfiguration, int.MaxValue);
 								if (pscResult.Code == (int) ResponseCode.Success)
 								{
-									var percentagePerItem =
-										(decimal) 1 / pscResult.Data.Entries.Count * percentagePerPathConfiguration;
+									var percentagePerItem = pscResult.Data.Entries.Any() ? 
+                                        (decimal) 1 / pscResult.Data.Entries.Count * percentagePerPathConfiguration : 0;
 									var count = 0;
 									foreach (var e in pscResult.Data.Entries)
 									{
