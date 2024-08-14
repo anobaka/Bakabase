@@ -38,6 +38,8 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using Bakabase.Abstractions.Components;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Cover;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -69,7 +71,9 @@ using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
+using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Helpers;
+using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -98,6 +102,8 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IBuiltinPropertyValueService _builtinPropertyValueService;
         private readonly Dictionary<int, IStandardValueHandler> _standardValueHandlers;
         private readonly Dictionary<int, ICustomPropertyDescriptor> _customPropertyDescriptors;
+        private readonly IFileManager _fileManager;
+        private readonly ICoverDiscoverer _coverDiscoverer;
 
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
@@ -109,7 +115,7 @@ namespace Bakabase.InsideWorld.Business.Services
             IResourceSearchContextProcessor resourceSearchContextProcessor,
             IBuiltinPropertyValueService builtinPropertyValueService,
             IEnumerable<IStandardValueHandler> standardValueHandlers,
-            IEnumerable<ICustomPropertyDescriptor> customPropertyDescriptors)
+            IEnumerable<ICustomPropertyDescriptor> customPropertyDescriptors, IFileManager fileManager, ICoverDiscoverer coverDiscoverer)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -127,6 +133,8 @@ namespace Bakabase.InsideWorld.Business.Services
             _customPropertyValueService = customPropertyValueService;
             _resourceSearchContextProcessor = resourceSearchContextProcessor;
             _builtinPropertyValueService = builtinPropertyValueService;
+            _fileManager = fileManager;
+            _coverDiscoverer = coverDiscoverer;
             _customPropertyDescriptors = customPropertyDescriptors.ToDictionary(d => d.Type, d => d);
             _standardValueHandlers = standardValueHandlers.ToDictionary(d => (int) d.Type, d => d);
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(
@@ -835,11 +843,77 @@ namespace Bakabase.InsideWorld.Business.Services
             return null;
         }
 
-        public async Task<byte[]> GetCover(int id, bool thumbnail)
+        private static string? _findCoverInAttachmentProperty(Resource.Property pvs)
         {
-            CoverDiscoverer
-            var r = await Get(id, ResourceAdditionalItem.CustomProperties);
-            var c = await _categoryService.Get(id, CategoryAdditionalItem.EnhancerOptions);
+            if (pvs.Values != null)
+            {
+                foreach (var value in pvs.Values)
+                {
+                    if (value.BizValue is List<string> list)
+                    {
+                        foreach (var l in list.Where(p => p.InferMediaType() == MediaType.Image))
+                        {
+                            if (File.Exists(l))
+                            {
+                                return l;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public async Task<string?> GetCover(int id, bool thumbnail, CancellationToken ct)
+        {
+            if (thumbnail)
+            {
+                var coverDir = _fileManager.BuildAbsolutePath("cover");
+                var coverPath = Directory.GetFiles(coverDir, $"{id}.*").FirstOrDefault();
+                if (!string.IsNullOrEmpty(coverPath))
+                {
+                    return coverPath;
+                }
+            }
+
+            var r = await Get(id, ResourceAdditionalItem.CustomProperties | ResourceAdditionalItem.Category);
+            if (r == null)
+            {
+                return null;
+            }
+
+            string? coverFile = null;
+            var customPropertyValues = r.Properties?.GetValueOrDefault((int) ResourcePropertyType.Custom);
+            var propertyIds = customPropertyValues?.Keys.ToHashSet();
+            if (propertyIds?.Any() == true)
+            {
+                var propertyMap =
+                    (await _customPropertyService.GetByKeys(propertyIds, CustomPropertyAdditionalItem.None))
+                    .ToDictionary(
+                        d => d.Id, d => d);
+                foreach (var (pId, pvs) in customPropertyValues!)
+                {
+                    if (propertyMap.GetValueOrDefault(pId)?.EnumType == CustomPropertyType.Attachment)
+                    {
+                        coverFile = _findCoverInAttachmentProperty(pvs);
+                        if (!string.IsNullOrEmpty(coverFile))
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(coverFile))
+            {
+                var discoveryResult = await _coverDiscoverer.Discover(r.Path, ct,
+                    r.Category?.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending);
+                if (discoveryResult != null)
+                {
+                    discoveryResult.SaveTo()
+                }
+            }
         }
 
         public async Task<string[]> GetPlayableFiles(int id, CancellationToken ct)

@@ -88,9 +88,10 @@ public interface IResourceService
     /// 
     /// </summary>
     /// <param name="id"></param>
-    /// <param name="thumbnail"></param>
+    /// <param name="ct"></param>
     /// <returns>File path</returns>
-    Task<string?> GetCover(int id, bool thumbnail);
+    Task<string?> GetCover(int id, CancellationToken ct);
+    Task<string?> GetCoverThumbnail(int id, CancellationToken ct);
 
     Task<BaseResponse> Play(int resourceId, string file);
 }
