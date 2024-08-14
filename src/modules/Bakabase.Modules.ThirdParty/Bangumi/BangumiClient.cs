@@ -40,7 +40,7 @@ public class BangumiClient : BakabaseHttpClient
         if (coverUrl.IsNotEmpty())
         {
             coverUrl = Regex.Replace(coverUrl, @"r\/\d+\/", string.Empty).AddSchemaSafely();
-            ctx.CoverUrl = coverUrl;
+            ctx.CoverPath = coverUrl;
             // var coverData = await client.GetByteArrayAsync(coverUrl);
             // var ext = Path.GetExtension(coverUrl);
             // enhancements.Add(Enhancement.BuildReservedFile(ReservedResourceFileType.Cover,

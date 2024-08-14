@@ -10,7 +10,11 @@ using System.Runtime.Caching;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions;
+using Bakabase.Abstractions.Components;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Cover;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -94,6 +98,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly ICategoryService _categoryService;
         private readonly ICustomPropertyService _customPropertyService;
+        private readonly ICoverDiscoverer _coverManager;
 
         public ResourceController(IResourceService service, IServiceProvider serviceProvider,
             ISpecialTextService specialTextService, IMediaLibraryService mediaLibraryService,
@@ -102,7 +107,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions,
             Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
             ILogger<ResourceController> logger, ICustomPropertyValueService customPropertyValueService,
-            ICategoryService categoryService, ICustomPropertyService customPropertyService)
+            ICategoryService categoryService, ICustomPropertyService customPropertyService, ICoverDiscoverer coverManager)
         {
             _service = service;
             _serviceProvider = serviceProvider;
@@ -121,6 +126,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _customPropertyValueService = customPropertyValueService;
             _categoryService = categoryService;
             _customPropertyService = customPropertyService;
+            _coverManager = coverManager;
         }
 
         [HttpGet("search-criteria")]
@@ -434,9 +440,23 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        [HttpGet("{id}/thumbnail")]
+        [SwaggerOperation(OperationId = "GetResourceCoverThumbnail")]
+        [ResponseCache(Duration = 20 * 60)]
+        public async Task<IActionResult> GetCoverThumbnail(int id)
+        {
+            var thumbnail = await _coverManager.GetThumbnail(id);
+            if (!string.IsNullOrEmpty(thumbnail))
+            {
+                return File(System.IO.File.OpenRead(thumbnail), MimeTypes.GetMimeType(".jpg"));
+            }
+
+            return NotFound();
+        }
+        
+
         [HttpGet("{id}/cover")]
         [SwaggerOperation(OperationId = "GetResourceCover")]
-        [ResponseCache(Duration = 20 * 60)]
         public async Task<IActionResult> GetCover(int id)
         {
             var r = await _service.DiscoverCover(id, HttpContext.RequestAborted);

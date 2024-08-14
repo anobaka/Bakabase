@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Cover;
-using Bakabase.Abstractions.Components.FileManager;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Domain;
@@ -32,12 +32,14 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         IBakabaseLocalizer localizer,
         IFileManager fileManager,
         ICoverDiscoverer coverDiscoverer)
-        : AbstractEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(valueConverters, loggerFactory, fileManager)
+        : AbstractEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(valueConverters, loggerFactory,
+            fileManager)
     {
         protected override EnhancerId TypedId => EnhancerId.Bakabase;
         private readonly IBakabaseLocalizer _localizer = localizer;
 
-        protected override async Task<BakabaseEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options)
+        protected override async Task<BakabaseEnhancerContext?> BuildContext(Resource resource,
+            EnhancerFullOptions options)
         {
             var name = resource.FileName;
             if (name.IsNullOrEmpty())
@@ -106,11 +108,18 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             var coverSelectionOrder =
                 options.TargetOptions?.FirstOrDefault(to => to.Target == (int) BakabaseEnhancerTarget.Cover)
                     ?.CoverSelectOrder ?? CoverSelectOrder.FilenameAscending;
-            var cover = await coverDiscoverer.DiscoverCover(resource.Path, new CancellationToken(),
+            var cover = await coverDiscoverer.Discover(resource.Path, new CancellationToken(),
                 coverSelectionOrder);
             if (cover != null)
             {
-                await cover.SaveTo($"{resource.Id}", true, CancellationToken.None);
+                if (string.IsNullOrEmpty(cover.Path))
+                {
+                    ctx.CoverPath = await cover.SaveTo(BuildFilePath(resource.Id, "cover"), true, CancellationToken.None);
+                }
+                else
+                {
+                    ctx.CoverPath = cover.Path;
+                }
             }
 
             return ctx;
@@ -131,6 +140,9 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                     BakabaseEnhancerTarget.VolumeTitle => new StringValueBuilder(context.VolumeTitle),
                     BakabaseEnhancerTarget.Originals => new ListStringValueBuilder(context.Originals),
                     BakabaseEnhancerTarget.Language => new StringValueBuilder(context.Language),
+                    BakabaseEnhancerTarget.Cover => new ListStringValueBuilder(string.IsNullOrEmpty(context.CoverPath)
+                        ? null
+                        : [context.CoverPath]),
                     _ => throw new ArgumentOutOfRangeException()
                 };
 
@@ -161,10 +173,12 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
 
 
 
-        private async Task<(string? Language, string RestName)> GetAndRemoveLanguageWithWrapper(string name, IEnumerable<WrappedContent> wcs)
+        private async Task<(string? Language, string RestName)> GetAndRemoveLanguageWithWrapper(string name,
+            IEnumerable<WrappedContent> wcs)
         {
             var languageWords =
-                (await specialTextService.GetAll(x => x.Type == SpecialTextType.Language, false)).ToDictionary(t => t.Value1,
+                (await specialTextService.GetAll(x => x.Type == SpecialTextType.Language, false)).ToDictionary(
+                    t => t.Value1,
                     t => t.Value2!);
 
             foreach (var wc in wcs)
@@ -220,7 +234,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                     {
                         var originals = name.Substring(i + 1, name.Length - i - 2);
                         name = name.Substring(0, i);
-                        return originals.Split(new[] { '、' }, StringSplitOptions.RemoveEmptyEntries)
+                        return originals.Split(new[] {'、'}, StringSplitOptions.RemoveEmptyEntries)
                             .Select(t => t.Trim()).Distinct().ToList();
                     }
                 }

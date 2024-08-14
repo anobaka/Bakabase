@@ -4,8 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Bakabase.Abstractions.Components.Cover;
 
-
-public record CoverDiscoveryResult(string Path, byte[]? Data)
+public record CoverDiscoveryResult(string Path, string Ext, byte[]? Data = null)
 {
     /// <summary>
     /// The path may be an inner path inside a compressed file, video, etc. You should check its existence before apply io operations on it.
@@ -13,16 +12,17 @@ public record CoverDiscoveryResult(string Path, byte[]? Data)
     public string Path { get; set; } = Path;
 
     public byte[]? Data { get; set; } = Data;
+    private readonly string _ext = Ext;
 
-    public async Task SaveTo(string path, bool overwrite, CancellationToken ct)
+    public async Task<string> SaveTo(string pathWithoutExtension, bool overwrite, CancellationToken ct)
     {
+        var path = $"{pathWithoutExtension}{_ext}";
+
         if (!overwrite && File.Exists(path))
         {
             throw new Exception(
                 $"Failed to save cover, since there is already a file exists in [{path}] and {nameof(overwrite)} is not set to true.");
         }
-
-        var image = Data != null ? Image.Load<Rgb24>(Data) : await Image.LoadAsync<Rgb24>(Path, ct);
 
         if (Data != null)
         {
@@ -34,5 +34,7 @@ public record CoverDiscoveryResult(string Path, byte[]? Data)
             await using var to = new FileStream(path, FileMode.Truncate);
             await fs.CopyToAsync(to, ct);
         }
+
+        return path;
     }
 }

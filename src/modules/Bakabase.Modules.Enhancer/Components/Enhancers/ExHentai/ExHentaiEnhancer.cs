@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
+using Bakabase.Abstractions.Components.FileSystem;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 {
@@ -25,8 +26,9 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         ExHentaiClient exHentaiClient,
         IServiceProvider services,
         IOptions<ExHentaiOptions> options,
-        ISpecialTextService specialTextService)
-        : AbstractEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(valueConverters, loggerFactory)
+        ISpecialTextService specialTextService,
+        IFileManager fileManager)
+        : AbstractEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(valueConverters, loggerFactory, fileManager)
     {
         private readonly ExHentaiClient _exHentaiClient = exHentaiClient;
         private readonly IServiceProvider _services = services;
@@ -34,9 +36,9 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         private readonly ISpecialTextService _specialTextService = specialTextService;
         private const string UrlKeywordRegex = "[a-zA-Z0-9]{10,}";
 
-        protected override async Task<ExHentaiEnhancerContext?> BuildContext(Resource resource)
+        protected override async Task<ExHentaiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options)
         {
-            var options = _options.Value;
+            var exHentaiOptions = _options.Value;
 
             var name = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
             var urlKeywords = new HashSet<string>();
@@ -92,9 +94,9 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
                     if (detail.Tags.IsNotEmpty())
                     {
                         var tagGroups = detail.Tags.ToDictionary(t => t.Key, t => t.Value.ToList());
-                        if (options.Enhancer?.ExcludedTags?.Any() == true)
+                        if (exHentaiOptions.Enhancer?.ExcludedTags?.Any() == true)
                         {
-                            foreach (var t in options.Enhancer.ExcludedTags.Where(t => t.IsNotEmpty()))
+                            foreach (var t in exHentaiOptions.Enhancer.ExcludedTags.Where(t => t.IsNotEmpty()))
                             {
                                 var segments = t.Split(':', StringSplitOptions.RemoveEmptyEntries);
 
@@ -125,6 +127,14 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
                         ctx.Tags = tagGroups;
                     }
 
+                    if (!string.IsNullOrEmpty(detail.CoverUrl))
+                    {
+                        var imageData = await _exHentaiClient.DownloadImage(detail.CoverUrl);
+                        var queryIdx = detail.CoverUrl.IndexOf('?');
+                        var coverUrl = queryIdx == -1 ? detail.CoverUrl : detail.CoverUrl[..queryIdx];
+                        ctx.CoverPath = await SaveFile(resource.Id, $"cover{Path.GetExtension(coverUrl)}", imageData);
+                    }
+
                     return ctx;
                 }
             }
@@ -147,9 +157,9 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
                     ExHentaiEnhancerTarget.Rating => new DecimalValueBuilder(context.Rating),
                     ExHentaiEnhancerTarget.Tags => new ListTagValueBuilder(context.Tags
                         ?.SelectMany(d => d.Value.Select(x => new TagValue(d.Key, x))).ToList()),
-                    ExHentaiEnhancerTarget.Cover => new ListStringValueBuilder(string.IsNullOrEmpty(context.CoverUrl)
+                    ExHentaiEnhancerTarget.Cover => new ListStringValueBuilder(string.IsNullOrEmpty(context.CoverPath)
                         ? null
-                        : [context.CoverUrl]),
+                        : [context.CoverPath]),
                     _ => throw new ArgumentOutOfRangeException()
                 };
 

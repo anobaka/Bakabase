@@ -4,7 +4,7 @@ namespace Bakabase.Modules.ThirdParty.Bangumi.Models;
 
 public record BangumiDetail()
 {
-    public string? CoverUrl { get; set; }
+    public string? CoverPath { get; set; }
     public string? Introduction { get; set; }
     public string? Name { get; set; }
     public List<TagValue>? Tags { get; set; }

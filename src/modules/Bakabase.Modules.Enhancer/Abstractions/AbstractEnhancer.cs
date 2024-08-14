@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Components.FileManager;
+﻿using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
@@ -83,12 +84,28 @@ namespace Bakabase.Modules.Enhancer.Abstractions
         /// <returns></returns>
         protected async Task<string> SaveFile(string fileName, byte[] data)
         {
-            return await _fileManager.Save($"{FileStorageDir}/{fileName.TrimStart('/')}", data,
-                new CancellationToken());
+            var path = BuildFilePath(fileName);
+            return await _fileManager.Save(path, data, new CancellationToken());
         }
 
-        protected string FileStorageDir =>
-            $"{_fileManager.BuildAbsolutePath(Path.Combine(nameof(Enhancer), Id.ToString()))}";
+        /// <summary>
+        /// Save files for enhancer
+        /// </summary>
+        /// <param name="resourceId"></param>
+        /// <param name="fileName">{EnhancerId}/{resourceId}/ will always be added to prefix.</param>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        protected async Task<string> SaveFile(int resourceId, string fileName, byte[] data)
+        {
+            var path = BuildFilePath(resourceId, fileName);
+            return await _fileManager.Save(path, data, new CancellationToken());
+        }
+
+        protected string BuildFilePath(string fileName) =>
+            _fileManager.BuildAbsolutePath(nameof(Enhancer), Id.ToString(), fileName);
+
+        protected string BuildFilePath(int resourceId, string fileName) =>
+            _fileManager.BuildAbsolutePath(nameof(Enhancer), Id.ToString(), resourceId.ToString(), fileName);
 
         /// <summary>
         /// 

@@ -9,6 +9,6 @@
         /// </summary>
         public Dictionary<string, List<string>>? Tags { get; set; }
         public string? Introduction { get; set; }
-        public string? CoverUrl { get; set; }
+        public string? CoverPath { get; set; }
     }
 }

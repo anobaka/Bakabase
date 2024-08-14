@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.RegularExpressions;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
@@ -23,25 +24,35 @@ public class BangumiEnhancer(
     IEnumerable<IStandardValueHandler> valueConverters,
     ILoggerFactory loggerFactory,
     ISpecialTextService specialTextService,
-    BangumiClient client)
-    : AbstractEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>(valueConverters, loggerFactory)
+    BangumiClient client,
+    IFileManager fileManager)
+    : AbstractEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>(valueConverters, loggerFactory, fileManager)
 {
-    protected override async Task<BangumiEnhancerContext?> BuildContext(Resource resource)
+    protected override async Task<BangumiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options)
     {
         var keyword = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
         var detail = await client.SearchAndParseFirst(keyword);
 
         if (detail != null)
         {
-            return new BangumiEnhancerContext
+            var ctx= new BangumiEnhancerContext
             {
                 Name = detail.Name,
-                CoverUrl = detail.CoverUrl,
                 Introduction = detail.Introduction,
                 OtherPropertiesInLeftPanel = detail.OtherPropertiesInLeftPanel,
                 Rating = detail.Rating,
                 Tags = detail.Tags,
             };
+
+            if (!string.IsNullOrEmpty(detail.CoverPath))
+            {
+                var imageData = await client.HttpClient.GetByteArrayAsync(detail.CoverPath);
+                var queryIdx = detail.CoverPath.IndexOf('?');
+                var coverUrl = queryIdx == -1 ? detail.CoverPath : detail.CoverPath[..queryIdx];
+                ctx.CoverPath = await SaveFile(resource.Id, $"cover{Path.GetExtension(coverUrl)}", imageData);
+            }
+
+            return ctx;
         }
 
         return null;
@@ -70,9 +81,9 @@ public class BangumiEnhancer(
                         BangumiEnhancerTarget.Tags => new ListTagValueBuilder(context.Tags),
                         BangumiEnhancerTarget.Introduction => new StringValueBuilder(context.Introduction),
                         BangumiEnhancerTarget.OtherPropertiesInLeftPanel => throw new ArgumentOutOfRangeException(),
-                        BangumiEnhancerTarget.Cover => new ListStringValueBuilder(string.IsNullOrEmpty(context.CoverUrl)
+                        BangumiEnhancerTarget.Cover => new ListStringValueBuilder(string.IsNullOrEmpty(context.CoverPath)
                             ? null
-                            : [context.CoverUrl]),
+                            : [context.CoverPath]),
 
                         _ => throw new ArgumentOutOfRangeException()
                     };

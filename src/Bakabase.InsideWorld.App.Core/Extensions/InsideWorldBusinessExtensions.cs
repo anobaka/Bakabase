@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
@@ -154,6 +155,9 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddScoped<ICategoryService, CategoryService>();
 
             services.AddScoped<IThirdPartyService, ThirdPartyService>();
+
+            // todo: this can be moved into abstraction layer.
+            services.AddSingleton<Abstractions.Components.Cover.ICoverDiscoverer, CoverDiscoverer>();
 
             #endregion
 

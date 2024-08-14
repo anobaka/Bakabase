@@ -273,7 +273,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 (await _categoryEnhancerService.GetAll(x => categoryIds.Contains(x.CategoryId)))
                 .GroupBy(d => d.CategoryId)
                 .ToDictionary(d => d.Key, d => d.ToList());
-            var tasks = new Dictionary<IEnhancer, List<Bakabase.Abstractions.Models.Domain.Resource>>();
+            var tasks = new Dictionary<IEnhancer, Dictionary<EnhancerFullOptions, List<Bakabase.Abstractions.Models.Domain.Resource>>>();
             foreach (var tr in targetResources)
             {
                 var enhancerOptions = categoryIdEnhancerOptionsMap.GetValueOrDefault(tr.CategoryId);
@@ -281,14 +281,20 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 {
                     foreach (var eo in enhancerOptions)
                     {
-                        if (restrictedEnhancerIds == null || restrictedEnhancerIds.Contains(eo.EnhancerId))
+                        if (eo.Options != null && (restrictedEnhancerIds == null ||
+                                                   restrictedEnhancerIds.Contains(eo.EnhancerId)))
                         {
                             var enhancer = _enhancers.GetValueOrDefault(eo.EnhancerId);
                             if (enhancer != null)
                             {
-                                if (!tasks.TryGetValue(enhancer, out var resources))
+                                if (!tasks.TryGetValue(enhancer, out var optionsAndResources))
                                 {
-                                    tasks[enhancer] = resources = [];
+                                    tasks[enhancer] = optionsAndResources = [];
+                                }
+
+                                if (!optionsAndResources.TryGetValue(eo.Options!, out var resources))
+                                {
+                                    optionsAndResources[eo.Options] = resources = [];
                                 }
 
                                 resources.Add(tr);
@@ -306,47 +312,50 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     d => d.GroupBy(c => c.EnhancerId).ToDictionary(e => e.Key, e => e.ToList()));
 
             var asyncTasks = new List<Task>();
-            foreach (var (enhancer, resources) in tasks)
+            foreach (var (enhancer, optionsAndResources) in tasks)
             {
                 asyncTasks.Add(Task.Run(async () =>
                 {
-                    foreach (var resource in resources)
+                    foreach (var (options, resources) in optionsAndResources)
                     {
-                        var dbEnhancements = resourceIdEnhancerIdEnhancementsMap.GetValueOrDefault(resource.Id)
-                            ?.GetValueOrDefault(enhancer.Id) ?? [];
-                        if (dbEnhancements.Any())
+                        foreach (var resource in resources)
                         {
-                            continue;
-                        }
-
-                        var enhancementRawValues = await enhancer.CreateEnhancements(resource);
-                        if (enhancementRawValues?.Any() == true)
-                        {
-                            var enhancements = enhancementRawValues.Select(v =>
-                                new Enhancement
-                                {
-                                    Target = v.Target,
-                                    CreatedAt = DateTime.Now,
-                                    EnhancerId = enhancer.Id,
-                                    ResourceId = resource.Id,
-                                    Value = v.Value,
-                                    ValueType = v.ValueType
-                                }).ToList();
-
-                            var enhancementsToAdd = enhancements
-                                .Except(dbEnhancements, Enhancement.BizKeyComparer)
-                                .ToList();
-                            var enhancementsToUpdate = enhancements.Except(enhancementsToAdd).ToList();
-                            foreach (var e in enhancementsToUpdate)
+                            var dbEnhancements = resourceIdEnhancerIdEnhancementsMap.GetValueOrDefault(resource.Id)
+                                ?.GetValueOrDefault(enhancer.Id) ?? [];
+                            if (dbEnhancements.Any())
                             {
-                                e.Id = dbEnhancements.First(x => Enhancement.BizKeyComparer.Equals(x, e))
-                                    .Id;
+                                continue;
                             }
 
-                            await _enhancementService.AddRange(enhancementsToAdd);
-                            await _enhancementService.UpdateRange(enhancementsToUpdate);
+                            var enhancementRawValues = await enhancer.CreateEnhancements(resource, options);
+                            if (enhancementRawValues?.Any() == true)
+                            {
+                                var enhancements = enhancementRawValues.Select(v =>
+                                    new Enhancement
+                                    {
+                                        Target = v.Target,
+                                        CreatedAt = DateTime.Now,
+                                        EnhancerId = enhancer.Id,
+                                        ResourceId = resource.Id,
+                                        Value = v.Value,
+                                        ValueType = v.ValueType
+                                    }).ToList();
 
-                            await ApplyEnhancementsToResources(enhancements);
+                                var enhancementsToAdd = enhancements
+                                    .Except(dbEnhancements, Enhancement.BizKeyComparer)
+                                    .ToList();
+                                var enhancementsToUpdate = enhancements.Except(enhancementsToAdd).ToList();
+                                foreach (var e in enhancementsToUpdate)
+                                {
+                                    e.Id = dbEnhancements.First(x => Enhancement.BizKeyComparer.Equals(x, e))
+                                        .Id;
+                                }
+
+                                await _enhancementService.AddRange(enhancementsToAdd);
+                                await _enhancementService.UpdateRange(enhancementsToUpdate);
+
+                                await ApplyEnhancementsToResources(enhancements);
+                            }
                         }
                     }
                 }));

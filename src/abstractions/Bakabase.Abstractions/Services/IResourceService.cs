@@ -14,15 +14,20 @@ public interface IResourceService
     Task DeleteByKeys(int[] ids);
 
     // Task LogicallyRemoveByCategoryId(int categoryId);
-    Task<List<Resource>> GetAll(Expression<Func<Models.Db.Resource, bool>>? selector = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
+    Task<List<Resource>> GetAll(Expression<Func<Models.Db.Resource, bool>>? selector = null,
+        ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
+
     //
     // Task<List<Abstractions.Models.Db.Resource>> GetAll(Expression<Func<Abstractions.Models.Db.Resource, bool>> selector = null,
     //     bool asNoTracking = true);
     //
     Task<SearchResponse<Resource>> Search(ResourceSearchDto model, bool saveSearchCriteria, bool asNoTracking);
+
     // Task<Abstractions.Models.Db.Resource?> GetByKey(int id, bool asNoTracking);
     Task<Resource?> Get(int id, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
+
     Task<List<Resource>> GetByKeys(int[] ids, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
+
     //
     // Task<Resource> ToDomainModel(Abstractions.Models.Db.Resource resource,
     //     ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
@@ -30,8 +35,10 @@ public interface IResourceService
     // Task<List<Resource>> ToDomainModel(Abstractions.Models.Db.Resource[] resources,
     //     ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
     //
-    Task<List<Abstractions.Models.Db.Resource>> GetAllDbModels(Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
+    Task<List<Abstractions.Models.Db.Resource>> GetAllDbModels(
+        Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
         bool asNoTracking = true);
+
     //
     /// <summary>
     /// <para>All properties of resources will be saved, including null values.</para>
@@ -40,6 +47,7 @@ public interface IResourceService
     /// <param name="resources"></param>
     /// <returns></returns>
     Task<List<DataChangeViewModel>> AddOrPutRange(List<Resource> resources);
+
     //
     // Task<(string Ext, Stream Stream)?> DiscoverAndPopulateCoverStream(int id, CancellationToken ct);
     Task<string[]> GetPlayableFiles(int id, CancellationToken ct);
@@ -75,5 +83,14 @@ public interface IResourceService
         CancellationToken ct);
 
     Task<(string Ext, Stream Stream)?> DiscoverCover(int id, CancellationToken ct);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="thumbnail"></param>
+    /// <returns>File path</returns>
+    Task<string?> GetCover(int id, bool thumbnail);
+
     Task<BaseResponse> Play(int resourceId, string file);
 }
