@@ -41,6 +41,7 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
@@ -74,6 +75,13 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infras
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Helpers;
 using NPOI.SS.Formula.Functions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using Image = SixLabors.ImageSharp.Image;
+using ElectronNET.API.Entities;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -92,7 +100,6 @@ namespace Bakabase.InsideWorld.Business.Services
         private static readonly SemaphoreSlim FindCoverInVideoSm = new SemaphoreSlim(2, 2);
         private readonly IBOptionsManager<ResourceOptions> _optionsManager;
         private readonly IBOptions<ThirdPartyOptions> _thirdPartyOptions;
-        private readonly TempFileManager _tempFileManager;
         private readonly FfMpegService _ffMpegService;
         private readonly InsideWorldLocalizer _localizer;
         private readonly ICustomPropertyService _customPropertyService;
@@ -110,7 +117,7 @@ namespace Bakabase.InsideWorld.Business.Services
             ILogger<ResourceService> logger,
             BackgroundTaskManager backgroundTaskManager, BackgroundTaskHelper backgroundTaskHelper,
             IBOptionsManager<ResourceOptions> optionsManager, IBOptions<ThirdPartyOptions> thirdPartyOptions,
-            TempFileManager tempFileManager, FfMpegService ffMpegService, InsideWorldLocalizer localizer,
+            FfMpegService ffMpegService, InsideWorldLocalizer localizer,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IResourceSearchContextProcessor resourceSearchContextProcessor,
             IBuiltinPropertyValueService builtinPropertyValueService,
@@ -126,7 +133,6 @@ namespace Bakabase.InsideWorld.Business.Services
             _backgroundTaskHelper = backgroundTaskHelper;
             _optionsManager = optionsManager;
             _thirdPartyOptions = thirdPartyOptions;
-            _tempFileManager = tempFileManager;
             _ffMpegService = ffMpegService;
             _localizer = localizer;
             _customPropertyService = customPropertyService;
@@ -816,33 +822,6 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<(string Ext, Stream Stream)?> DiscoverCover(int id, CancellationToken ct)
-        {
-            var r = await Get(id, ResourceAdditionalItem.None);
-            if (r != null)
-            {
-                var tmpCover = await _tempFileManager.GetCover(id);
-                if (!string.IsNullOrEmpty(tmpCover))
-                {
-                    return (Path.GetExtension(tmpCover), File.OpenRead(tmpCover));
-                }
-
-                var options = _optionsManager.Value;
-                var c = await _categoryService.Get(r.CategoryId, CategoryAdditionalItem.None);
-                var result = await DiscoverCover(r.Path, ct,
-                    c?.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending,
-                    options.AdditionalCoverDiscoveringSources);
-                if (result.HasValue)
-                {
-                    var (stream, ext, shouldSave) = result.Value;
-                    await _tempFileManager.SaveCover(id, stream, ct);
-                    return (ext, stream);
-                }
-            }
-
-            return null;
-        }
-
         private static string? _findCoverInAttachmentProperty(Resource.Property pvs)
         {
             if (pvs.Values != null)
@@ -865,18 +844,70 @@ namespace Bakabase.InsideWorld.Business.Services
             return null;
         }
 
-        public async Task<string?> GetCover(int id, bool thumbnail, CancellationToken ct)
+        private string ThumbnailDir => _fileManager.BuildAbsolutePath("cover");
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="resourceId"></param>
+        /// <returns></returns>
+        private string BuildThumbnailPathWithoutExtension(int resourceId) => $"{ThumbnailDir}/{resourceId}/cover";
+
+        public async Task<string?> GetThumbnail(int id, CancellationToken ct)
         {
-            if (thumbnail)
+            var thumbnailDir = ThumbnailDir;
+            var thumbnailPath = Directory.GetFiles(thumbnailDir, $"{id}.*").FirstOrDefault();
+            if (string.IsNullOrEmpty(thumbnailPath))
             {
-                var coverDir = _fileManager.BuildAbsolutePath("cover");
-                var coverPath = Directory.GetFiles(coverDir, $"{id}.*").FirstOrDefault();
-                if (!string.IsNullOrEmpty(coverPath))
+                // We do not save icon as thumbnail, since it will prevent other source (such as enhancer) from creating thumbnails.
+                var cover = await GetCover(id, false, ct);
+                if (cover.HasValue)
                 {
-                    return coverPath;
+                    var (path, imageBytes) = cover.Value;
+
+                    var image = !string.IsNullOrEmpty(path)
+                        ? await Image.LoadAsync<Rgba32>(path, ct)
+                        : await Image.LoadAsync<Rgba32>(new MemoryStream(imageBytes!), ct);
+
+                    await image.SaveAsThumbnail(BuildThumbnailPathWithoutExtension(id), ct);
                 }
             }
 
+            return thumbnailPath;
+        }
+
+        public async Task<BaseResponse> SaveThumbnail(int id, bool overwrite, byte[] imageBytes, CancellationToken ct)
+        {
+            var finalOverwrite = _optionsManager.Value.CoverOptions.Overwrite ?? overwrite;
+
+            var pathPrefix = BuildThumbnailPathWithoutExtension(id);
+
+            var file = Directory.GetFiles(Path.GetDirectoryName(pathPrefix)!, $"{Path.GetFileName(pathPrefix)}.*")
+                .FirstOrDefault();
+
+            if (!string.IsNullOrEmpty(file))
+            {
+                if (!finalOverwrite)
+                {
+                    return SingletonResponseBuilder<(string Path, byte[] Data)>.Build(ResponseCode.Conflict,
+                        pathPrefix);
+                }
+            }
+
+            var image = await Image.LoadAsync<Rgba32>(new MemoryStream(imageBytes), ct);
+            await image.SaveAsThumbnail(BuildThumbnailPathWithoutExtension(id), ct);
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<(string? Path, byte[]? ImageBytes)?> GetCover(int id, CancellationToken ct)
+        {
+            return await GetCover(id, true, ct);
+        }
+
+        protected async Task<(string? Path, byte[]? ImageBytes)?> GetCover(int id, bool useIconAsFallback,
+            CancellationToken ct)
+        {
             var r = await Get(id, ResourceAdditionalItem.CustomProperties | ResourceAdditionalItem.Category);
             if (r == null)
             {
@@ -899,7 +930,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         coverFile = _findCoverInAttachmentProperty(pvs);
                         if (!string.IsNullOrEmpty(coverFile))
                         {
-                            break;
+                            return (coverFile, null);
                         }
                     }
                 }
@@ -907,13 +938,22 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (string.IsNullOrEmpty(coverFile))
             {
-                var discoveryResult = await _coverDiscoverer.Discover(r.Path, ct,
-                    r.Category?.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending);
+                var discoveryResult = await _coverDiscoverer.Discover(r.Path,
+                    r.Category?.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending, useIconAsFallback, ct);
                 if (discoveryResult != null)
                 {
-                    discoveryResult.SaveTo()
+                    if (discoveryResult.Data != null)
+                    {
+                        return (null, discoveryResult.Data);
+                    }
+                    else
+                    {
+                        return (discoveryResult.Path, null);
+                    }
                 }
             }
+
+            return null;
         }
 
         public async Task<string[]> GetPlayableFiles(int id, CancellationToken ct)
@@ -1029,217 +1069,6 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name="ct"></param>
-        /// <param name="order"></param>
-        /// <param name="additionalSources"></param>
-        /// <returns>If ShouldSave is true, it usually means the cost of discovering cover is high, and we should save the result for better performance.</returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        private async Task<(Stream Stream, string Ext, bool ShouldSave)?> DiscoverCover(string path,
-            CancellationToken ct, CoverSelectOrder order,
-            AdditionalCoverDiscoveringSource[] additionalSources)
-        {
-            var imageExtensions = InternalOptions.ImageExtensions;
-
-            if (!File.Exists(path) && !Directory.Exists(path))
-            {
-                return null;
-            }
-
-            var attr = File.GetAttributes(path);
-            var files = attr.HasFlag(FileAttributes.Directory)
-                ? new DirectoryInfo(path).GetFiles("*.*", SearchOption.AllDirectories)
-                : new[] {new FileInfo(path)};
-            switch (order)
-            {
-                case CoverSelectOrder.FileModifyDtDescending:
-                    files = files.OrderByDescending(a => a.LastWriteTime).ToArray();
-                    break;
-                case CoverSelectOrder.FilenameAscending:
-                default:
-                    break;
-            }
-
-            // Find cover.{ext}
-            var coverImg = files.FirstOrDefault(t =>
-                imageExtensions.Any(e => t.Name.Equals($"cover{e}", StringComparison.OrdinalIgnoreCase)));
-            if (coverImg != null)
-            {
-                return (ImageHelpers.OpenAsImage(coverImg.FullName), Path.GetExtension(coverImg.FullName), false);
-            }
-
-            // Find first image
-            var firstImage =
-                files.FirstOrDefault(a => imageExtensions.Contains(a.Extension));
-            if (firstImage != null)
-            {
-                return (ImageHelpers.OpenAsImage(firstImage.FullName), Path.GetExtension(firstImage.FullName), false);
-            }
-
-            // additional sources
-            if (additionalSources.Any())
-            {
-                foreach (var @as in additionalSources)
-                {
-                    switch (@as)
-                    {
-                        case AdditionalCoverDiscoveringSource.Video:
-                        {
-                            if (_ffMpegService.Status != DependentComponentStatus.Installed)
-                            {
-                                continue;
-                            }
-
-                            var firstVideoFile = files.FirstOrDefault(t =>
-                                InternalOptions.VideoExtensions.Contains(Path.GetExtension(t.Name)));
-                            if (firstVideoFile == null)
-                            {
-                                break;
-                            }
-
-                            await FindCoverInVideoSm.WaitAsync(ct);
-                            try
-                            {
-                                var durationSeconds = await _ffMpegService.GetDuration(firstVideoFile.FullName, ct);
-                                var duration = TimeSpan.FromSeconds(durationSeconds);
-                                var screenshotTime = duration * 0.2;
-                                var ms = await _ffMpegService.CaptureFrame(firstVideoFile.FullName, screenshotTime, ct);
-                                return (ms, ".jpg", true);
-                            }
-                            catch (Exception e)
-                            {
-                                _logger.LogError(e, "An error occurred during capture a frame from video file");
-                            }
-                            finally
-                            {
-                                FindCoverInVideoSm.Release();
-                            }
-
-                            break;
-                        }
-                        case AdditionalCoverDiscoveringSource.CompressedFile:
-                        {
-                            // todo: catch exception
-                            const int maxTryTimes = 1;
-                            var tryTimes = 0;
-                            for (var i = 0; i < files.Length && tryTimes < maxTryTimes; i++)
-                            {
-                                var file = files[i];
-                                if (file.Length > 0)
-                                {
-                                    if (InternalOptions.CompressedFileExtensions.Contains(file.Extension))
-                                    {
-                                        try
-                                        {
-                                            MemoryStream imageStream = null;
-                                            string key = null;
-
-                                            if (InternalOptions.SevenZipCompressedFileExtension.Equals(file.Extension,
-                                                    StringComparison.OrdinalIgnoreCase))
-                                            {
-                                                var archive = SevenZipArchive.Open(file.FullName);
-                                                var imageFile = archive.Entries
-                                                    .OrderBy(t => t.Key, StringComparer.OrdinalIgnoreCase)
-                                                    .FirstOrDefault(a =>
-                                                        imageExtensions.Contains(Path.GetExtension(a.Key)));
-                                                if (imageFile != null)
-                                                {
-                                                    key = imageFile.Key;
-                                                    await using var s = imageFile.OpenEntryStream();
-                                                    await s.CopyToAsync(imageStream = new MemoryStream(), ct);
-                                                    imageStream.Seek(0, SeekOrigin.Begin);
-                                                }
-                                            }
-                                            else
-                                            {
-                                                string firstFileKey = null;
-                                                await using (Stream stream = file.OpenRead())
-                                                {
-                                                    // reader.MoveToNextEntry will be broken after reader.OpenEntryStream being called,
-                                                    // so we do not store entry stream there.
-                                                    using (var reader = ReaderFactory.Open(stream))
-                                                    {
-                                                        while (reader.MoveToNextEntry())
-                                                        {
-                                                            if (imageExtensions.Contains(
-                                                                    Path.GetExtension(reader.Entry.Key)))
-                                                            {
-                                                                if (firstFileKey == null ||
-                                                                    string.Compare(reader.Entry.Key, firstFileKey,
-                                                                        StringComparison.OrdinalIgnoreCase) < 0)
-                                                                {
-                                                                    firstFileKey = reader.Entry.Key;
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-
-                                                if (firstFileKey != null)
-                                                {
-                                                    key = firstFileKey;
-                                                    await using Stream stream = file.OpenRead();
-                                                    using var reader = ReaderFactory.Open(stream);
-                                                    while (reader.MoveToNextEntry())
-                                                    {
-                                                        if (reader.Entry.Key == firstFileKey)
-                                                        {
-                                                            await using var entryStream = reader.OpenEntryStream();
-                                                            await entryStream.CopyToAsync(
-                                                                imageStream = new MemoryStream(), ct);
-                                                            imageStream.Seek(0, SeekOrigin.Begin);
-                                                            break;
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                            if (imageStream != null)
-                                            {
-                                                return (imageStream, Path.GetExtension(key)!, true);
-                                            }
-                                        }
-                                        catch (Exception e)
-                                        {
-                                            _logger.LogError(e,
-                                                $"An error occurred during discovering covers from compressed files: {e.Message}");
-                                        }
-                                        finally
-                                        {
-                                            tryTimes++;
-                                        }
-
-                                    }
-                                }
-                            }
-
-                            break;
-                        }
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                }
-            }
-
-            using var icon = File.Exists(path) ? Icon.ExtractAssociatedIcon(path) : DefaultIcons.GetStockIcon(3, 0x04);
-
-            if (icon != null)
-            {
-                var ms = new MemoryStream();
-                // Ico encoder is not found.
-                icon.ToBitmap().Save(ms, ImageFormat.Png);
-                icon.Dispose();
-                ms.Seek(0, SeekOrigin.Begin);
-                return (ms, ".png", false);
-            }
-
-            return null;
-        }
-
 
         // public async Task<List<Resource>> GetNfoGenerationNeededResources(int[] resourceIds)
         // {
@@ -1417,38 +1246,10 @@ namespace Bakabase.InsideWorld.Business.Services
         	}
         }
 
-        public async Task<SingletonResponse<(string Path, byte[] Data)>> SaveCover(int id, bool overwrite,
-            Func<byte[]> getImageData, CancellationToken ct)
-        {
-            var resource = await Get(id, ResourceAdditionalItem.None);
-            if (resource == null)
-            {
-                return SingletonResponseBuilder<(string Path, byte[] Data)>.BuildBadRequest(
-                    _localizer.Resource_NotFound(id));
-            }
-
-            var finalOverwrite = _optionsManager.Value.CoverOptions.Overwrite ?? overwrite;
-
-            var currentPath = await _tempFileManager.GetCover(id);
-            if (!string.IsNullOrEmpty(currentPath))
-            {
-                if (!finalOverwrite)
-                {
-                    return SingletonResponseBuilder<(string Path, byte[] Data)>.Build(ResponseCode.Conflict,
-                        currentPath);
-                }
-            }
-
-            var bytes = getImageData();
-            var path = await _tempFileManager.SaveCover(id, new MemoryStream(bytes), ct);
-            return new SingletonResponse<(string Path, byte[] Data)>((path, bytes));
-        }
-
         // public async Task<BaseResponse> Patch(int id, ResourceUpdateRequestModel model)
         // {
         //     throw new NotImplementedException();
         // }
-
 
         public async Task<BaseResponse> Play(int resourceId, string file)
         {

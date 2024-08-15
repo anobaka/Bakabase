@@ -6,7 +6,6 @@ import type {
   EnhancerTargetFullOptions,
 } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
-import { EnhancerTargetType } from '@/sdk/constants';
 
 interface IProps {
   options?: CategoryEnhancerFullOptions;
@@ -36,31 +35,22 @@ export default ({ options, enhancer }: IProps) => {
   const setTargets: number[] = [];
 
   for (const target of enhancer.targets) {
-    switch (target.type) {
-      case EnhancerTargetType.Data: {
-        if (target.isDynamic) {
-          const tos = tom.filter(x => x.target == target.id);
-          let bad = false;
-          for (const to of tos) {
-            if (!isSet(to, to.dynamicTarget == undefined)) {
-              bad = true;
-              break;
-            }
-          }
-          if (!bad) {
-            setTargets.push(target.id);
-          }
-        } else {
-          const to = tom.find(x => x.target == target.id);
-          if (isSet(to, false)) {
-            setTargets.push(target.id);
-          }
+    if (target.isDynamic) {
+      const tos = tom.filter(x => x.target == target.id);
+      let bad = false;
+      for (const to of tos) {
+        if (!isSet(to, to.dynamicTarget == undefined)) {
+          bad = true;
+          break;
         }
-        break;
       }
-      case EnhancerTargetType.File: {
+      if (!bad) {
         setTargets.push(target.id);
-        break;
+      }
+    } else {
+      const to = tom.find(x => x.target == target.id);
+      if (isSet(to, false)) {
+        setTargets.push(target.id);
       }
     }
   }

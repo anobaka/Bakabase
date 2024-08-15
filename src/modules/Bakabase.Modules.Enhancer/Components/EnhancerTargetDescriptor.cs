@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
@@ -10,11 +11,13 @@ public class EnhancerTargetDescriptor(
     EnhancerId enhancerId,
     IEnhancerLocalizer localizer,
     StandardValueType valueType,
+    CustomPropertyType customPropertyType,
     bool isDynamic,
     int[]? optionsItems) : IEnhancerTargetDescriptor
 {
     public int Id { get; } = (int)(object)id;
     public Enum EnumId { get; } = id;
+    public CustomPropertyType CustomPropertyType { get; } = customPropertyType;
     public string Name => localizer.Enhancer_TargetName(enhancerId, EnumId);
     public StandardValueType ValueType => valueType;
     public bool IsDynamic { get; } = isDynamic;

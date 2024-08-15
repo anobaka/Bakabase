@@ -1,13 +1,21 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Abstractions;
 
 namespace Bakabase.Modules.Enhancer.Models.View;
 
 public record ResourceEnhancements
 {
-    public int EnhancerId { get; set; }
-    public string EnhancerName { get; set; } = null!;
+    public IEnhancerDescriptor Enhancer { get; set; }
     public DateTime? EnhancedAt { get; set; }
     public TargetEnhancement[] Targets { get; set; } = [];
+    public DynamicTargetEnhancements[] DynamicTargets { get; set; } = [];
+
+    public record DynamicTargetEnhancements
+    {
+        public int Target { get; set; }
+        public string TargetName { get; set; } = null!;
+        public List<Enhancement>? Enhancements { get; set; }
+    }
 
     public record TargetEnhancement
     {

@@ -32,13 +32,13 @@ namespace Bakabase.Modules.Enhancer.Abstractions
             Logger = loggerFactory.CreateLogger(GetType());
         }
 
-        protected abstract Task<TContext?> BuildContext(Resource resource, EnhancerFullOptions options);
+        protected abstract Task<TContext?> BuildContext(Resource resource, EnhancerFullOptions options, CancellationToken ct);
         public int Id => (int) TypedId;
         protected abstract EnhancerId TypedId { get; }
 
-        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options)
+        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options, CancellationToken ct)
         {
-            var context = await BuildContext(resource, options);
+            var context = await BuildContext(resource, options, ct);
             if (context == null)
             {
                 return null;
@@ -46,7 +46,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions
 
             Logger.LogInformation($"Got context: {context.ToJson()}");
 
-            var targetValues = await ConvertContextByTargets(context);
+            var targetValues = await ConvertContextByTargets(context, ct);
             if (targetValues?.Any(x => x.ValueBuilder != null) != true)
             {
                 return null;
@@ -114,6 +114,6 @@ namespace Bakabase.Modules.Enhancer.Abstractions
         /// <returns>
         /// The value of the dictionary MUST be the standard value, which can be generated safely via <see cref="IStandardValueBuilder{TValue}"/>
         /// </returns>
-        protected abstract Task<List<EnhancementTargetValue<TEnumTarget>>> ConvertContextByTargets(TContext context);
+        protected abstract Task<List<EnhancementTargetValue<TEnumTarget>>> ConvertContextByTargets(TContext context, CancellationToken ct);
     }
 }

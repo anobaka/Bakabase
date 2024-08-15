@@ -27,7 +27,7 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
       !propertyChoiceOptions.allowAddingNewDataDynamically;
     if (allowAddingNewDataDynamicallyDisabled) {
       tips.push(
-        <React.Fragment key={1}>
+        <div className={'flex items-center gap-1'} key={1}>
           {t('Adding new data dynamically is disabled for this property, new data will not be saved.')}
           <Button
             size={'sm'}
@@ -46,13 +46,13 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
           >
             {t('Click to enable')}
           </Button>
-        </React.Fragment>,
+        </div>,
       );
     }
 
     if (category.customPropertyIds?.includes(property.id) != true) {
       tips.push(
-        <React.Fragment key={2}>
+        <div className={'flex items-center gap-1'} key={2}>
           {t('This property is not bound to the category, its data will not be displayed.')}
           <Button
             size={'sm'}
@@ -74,7 +74,7 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
           >
             {t('Bind now')}
           </Button>
-        </React.Fragment>,
+        </div>,
       );
     }
 
@@ -86,7 +86,7 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
     return (
       <Tooltip
         content={(
-          <div className={'flex items-center gap-1'}>
+          <div className={'flex flex-col gap-1'}>
             {tips}
           </div>
         )}

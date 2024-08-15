@@ -2,7 +2,7 @@
 
 public interface IEnhancerService
 {
-    Task EnhanceResource(int resourceId, HashSet<int>? enhancerIds);
-    Task EnhanceAll();
-    Task ReapplyEnhancementsToResources(int categoryId);
+    Task EnhanceResource(int resourceId, HashSet<int>? enhancerIds, CancellationToken ct);
+    Task EnhanceAll(CancellationToken ct);
+    Task ReapplyEnhancementsToResources(int categoryId, CancellationToken ct);
 }

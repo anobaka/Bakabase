@@ -54,6 +54,7 @@ public static class ServiceCollectionExtensions
                         enhancerId,
                         localizer,
                         targetAttr.ValueType,
+                        targetAttr.CustomPropertyType,
                         targetAttr.IsDynamic,
                         targetAttr.Options?.Cast<int>().ToArray());
                 }).ToArray();

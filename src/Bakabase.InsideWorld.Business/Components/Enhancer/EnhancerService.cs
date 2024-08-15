@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Extensions;
@@ -12,8 +14,12 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
+using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
+using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
+using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Helpers;
+using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
@@ -22,6 +28,7 @@ using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.Logging.LogService.Services;
+using Newtonsoft.Json;
 using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.IEnhancer;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancer
@@ -57,7 +64,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 
-        protected async Task ApplyEnhancementsToResources(List<Enhancement> enhancements)
+        protected async Task ApplyEnhancementsToResources(List<Enhancement> enhancements, CancellationToken ct)
         {
             var resourceIds = enhancements.Select(s => s.ResourceId).ToHashSet();
             var resourceMap = (await _resourceService.GetByKeys(resourceIds.ToArray())).ToDictionary(d => d.Id, d => d);
@@ -77,7 +84,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
             var enhancementTargetOptionsMap = new Dictionary<Enhancement, EnhancerTargetFullOptions>();
             var changedCategoryEnhancerOptions = new HashSet<CategoryEnhancerFullOptions>();
-            var newPropertyAddModels = new List<(Enhancement Enhancement, CustomPropertyAddOrPutDto PropertyAddModel)>();
+            var newPropertyAddModels = new List<(CustomPropertyAddOrPutDto PropertyAddModel, List<Enhancement> Enhancements)>();
             foreach (var enhancement in enhancements)
             {
                 var resource = resourceMap.GetValueOrDefault(enhancement.ResourceId);
@@ -125,7 +132,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     else
                     {
                         throw new DevException(
-                            $"Found dynamic target {enhancement.DynamicTarget} for a static target: {targetDescriptor.Id}:{targetDescriptor.Name} of enhancer: {_enhancerDescriptors[enhancement.EnhancerId].Name}");
+                            $"Found dynamic target {enhancement.DynamicTarget} for a static target: {targetDescriptor.Id}:{targetDescriptor.Name} in enhancer:{_enhancerDescriptors[enhancement.EnhancerId].Name}");
                     }
                 }
 
@@ -134,29 +141,87 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     continue;
                 }
 
-                if (!(targetOptions.PropertyId > 0) && targetOptions.AutoGenerateProperties == true)
+                if (targetOptions.PropertyId > 0)
                 {
-                    var propertyCandidate = propertyMap.Values.FirstOrDefault(p =>
-                        p.BizValueType == targetDescriptor.ValueType && p.Name == targetDescriptor.Name);
-                    if (propertyCandidate == null)
+                    if (!propertyMap.TryGetValue(targetOptions.PropertyId.Value, out var property))
                     {
-                        var compatibleCustomPropertyTypes =
-                            targetDescriptor.ValueType.GetCompatibleCustomPropertyTypes();
-                        if (compatibleCustomPropertyTypes?.Any() == true)
-                        {
-                            newPropertyAddModels.Add((enhancement, new CustomPropertyAddOrPutDto
-                            {
-                                Name = targetDescriptor.Name,
-                                Type = (int) compatibleCustomPropertyTypes[0]
-                            }));
-                        }
+                        throw new Exception(
+                            $"Couldn't find a property with id: {targetOptions.PropertyId} for target:{targetDescriptor.Name} in enhancer:{_enhancerDescriptors[enhancement.EnhancerId].Name}");
                     }
                     else
                     {
-                        targetOptions.PropertyId = propertyCandidate.Id;
+                        if (property.EnumType != targetDescriptor.CustomPropertyType)
+                        {
+                            throw new Exception(
+                                $"Property {property.Id}:{property.Name} is not compatible with enhancement of target:{targetDescriptor.Name} in enhancer:{_enhancerDescriptors[enhancement.EnhancerId].Name}");
+                        }
                     }
+                }
+                else
+                {
+                    if (targetOptions.AutoGenerateProperties == true)
+                    {
+                        var name = targetDescriptor.IsDynamic ? enhancement.DynamicTarget : targetDescriptor.Name;
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            var propertyCandidate = propertyMap.Values.FirstOrDefault(p =>
+                                p.EnumType == targetDescriptor.CustomPropertyType && p.Name == name);
+                            if (propertyCandidate == null)
+                            {
+                                var kv = newPropertyAddModels.FirstOrDefault(x =>
+                                    x.PropertyAddModel.Name == name && x.PropertyAddModel.Type ==
+                                    (int) targetDescriptor.CustomPropertyType);
+                                if (kv == default)
+                                {
+                                    kv = (new CustomPropertyAddOrPutDto
+                                    {
+                                        Name = name,
+                                        Type = (int) targetDescriptor.CustomPropertyType
+                                    }, []);
 
-                    changedCategoryEnhancerOptions.Add(categoryOptions!);
+                                    object? options = null;
+
+                                    switch (targetDescriptor.CustomPropertyType)
+                                    {
+                                        case CustomPropertyType.SingleChoice:
+                                        {
+                                            options = new ChoicePropertyOptions<string>
+                                                {AllowAddingNewDataDynamically = true};
+                                            kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
+                                            break;
+                                        }
+                                        case CustomPropertyType.MultipleChoice:
+                                        {
+                                            options = new ChoicePropertyOptions<List<string>>
+                                                {AllowAddingNewDataDynamically = true};
+                                            break;
+                                        }
+                                        case CustomPropertyType.Multilevel:
+                                        {
+                                            options = new MultilevelPropertyOptions
+                                                {AllowAddingNewDataDynamically = true};
+                                            break;
+                                        }
+                                    }
+
+                                    if (options != null)
+                                    {
+                                        kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
+                                    }
+
+                                    newPropertyAddModels.Add(kv);
+                                }
+
+                                kv.Enhancements.Add(enhancement);
+                            }
+                            else
+                            {
+                                targetOptions.PropertyId = propertyCandidate.Id;
+                            }
+
+                            changedCategoryEnhancerOptions.Add(categoryOptions!);
+                        }
+                    }
                 }
 
                 enhancementTargetOptionsMap[enhancement] = targetOptions;
@@ -169,9 +234,13 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                         newPropertyAddModels.Select(x => x.PropertyAddModel).ToArray());
                 for (var i = 0; i < properties.Count; i++)
                 {
-                    var enhancement = newPropertyAddModels[i].Enhancement;
+                    var es = newPropertyAddModels[i].Enhancements;
                     var property = properties[i];
-                    enhancementTargetOptionsMap[enhancement].PropertyId = property.Id;
+                    foreach (var e in es)
+                    {
+                        enhancementTargetOptionsMap[e].PropertyId = property.Id;
+                    }
+
                     propertyMap[property.Id] = property;
                 }
             }
@@ -266,7 +335,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
         }
 
         protected async Task Enhance(List<Bakabase.Abstractions.Models.Domain.Resource> targetResources,
-            HashSet<int>? restrictedEnhancerIds = null)
+            HashSet<int>? restrictedEnhancerIds, CancellationToken ct)
         {
             var categoryIds = targetResources.Select(c => c.CategoryId).ToHashSet();
             var categoryIdEnhancerOptionsMap =
@@ -327,7 +396,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                 continue;
                             }
 
-                            var enhancementRawValues = await enhancer.CreateEnhancements(resource, options);
+                            var enhancementRawValues = await enhancer.CreateEnhancements(resource, options, ct);
                             if (enhancementRawValues?.Any() == true)
                             {
                                 var enhancements = enhancementRawValues.Select(v =>
@@ -338,50 +407,40 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                         EnhancerId = enhancer.Id,
                                         ResourceId = resource.Id,
                                         Value = v.Value,
-                                        ValueType = v.ValueType
+                                        ValueType = v.ValueType,
+                                        DynamicTarget = v.DynamicTarget
                                     }).ToList();
 
-                                var enhancementsToAdd = enhancements
-                                    .Except(dbEnhancements, Enhancement.BizKeyComparer)
-                                    .ToList();
-                                var enhancementsToUpdate = enhancements.Except(enhancementsToAdd).ToList();
-                                foreach (var e in enhancementsToUpdate)
-                                {
-                                    e.Id = dbEnhancements.First(x => Enhancement.BizKeyComparer.Equals(x, e))
-                                        .Id;
-                                }
+                                await _enhancementService.AddRange(enhancements);
 
-                                await _enhancementService.AddRange(enhancementsToAdd);
-                                await _enhancementService.UpdateRange(enhancementsToUpdate);
-
-                                await ApplyEnhancementsToResources(enhancements);
+                                await ApplyEnhancementsToResources(enhancements, ct);
                             }
                         }
                     }
-                }));
+                }, ct));
             }
 
             await Task.WhenAll(asyncTasks);
         }
 
-        public async Task EnhanceResource(int resourceId, HashSet<int>? enhancerIds)
+        public async Task EnhanceResource(int resourceId, HashSet<int>? enhancerIds, CancellationToken ct)
         {
             var resource = (await _resourceService.Get(resourceId, ResourceAdditionalItem.None))!;
-            await Enhance([resource], enhancerIds);
+            await Enhance([resource], enhancerIds, ct);
         }
 
-        public async Task EnhanceAll()
+        public async Task EnhanceAll(CancellationToken ct)
         {
             var resources = await _resourceService.GetAll(null, ResourceAdditionalItem.None);
-            await Enhance(resources);
+            await Enhance(resources, null, ct);
         }
 
-        public async Task ReapplyEnhancementsToResources(int categoryId)
+        public async Task ReapplyEnhancementsToResources(int categoryId, CancellationToken ct)
         {
             var resources = await _resourceService.GetAll(x => x.CategoryId == categoryId);
             var resourceIds = resources.Select(r => r.Id).ToList();
             var enhancements = await _enhancementService.GetAll(x => resourceIds.Contains(x.ResourceId));
-            await ApplyEnhancementsToResources(enhancements);
+            await ApplyEnhancementsToResources(enhancements, ct);
         }
     }
 }

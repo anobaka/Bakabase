@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using Bakabase.Abstractions.Components.Cover;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
@@ -112,8 +113,6 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
 
             services.TryAddSingleton<IwFsWatcher>();
 
-            services.TryAddSingleton<TempFileManager>();
-
             services.AddScoped<BmCategoryProcessor>();
             services.AddScoped<BmMediaLibraryProcessor>();
             // services.AddScoped<BmTagProcessor>();
@@ -130,6 +129,8 @@ namespace Bakabase.InsideWorld.App.Core.Extensions
             services.AddSingleton<IResourceSearchContextProcessor, DefaultResourceSearchContextProcessor>();
 
             #region Optimized after V190
+
+            services.AddBakabaseComponents();
 
             services.AddScoped<V190Migrator>();
 

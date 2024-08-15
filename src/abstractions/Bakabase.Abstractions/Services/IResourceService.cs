@@ -48,8 +48,6 @@ public interface IResourceService
     /// <returns></returns>
     Task<List<DataChangeViewModel>> AddOrPutRange(List<Resource> resources);
 
-    //
-    // Task<(string Ext, Stream Stream)?> DiscoverAndPopulateCoverStream(int id, CancellationToken ct);
     Task<string[]> GetPlayableFiles(int id, CancellationToken ct);
 
     Task<bool> Any(Func<Models.Db.Resource, bool>? selector = null);
@@ -79,19 +77,23 @@ public interface IResourceService
     // Task<BaseResponse> StartGeneratingNfo(BackgroundTask task);
     // Task PopulateStatistics(DashboardStatistics statistics);
     //
-    Task<SingletonResponse<(string Path, byte[] Data)>> SaveCover(int id, bool overwrite, Func<byte[]> getImageData,
-        CancellationToken ct);
-
-    Task<(string Ext, Stream Stream)?> DiscoverCover(int id, CancellationToken ct);
+    Task<BaseResponse> SaveThumbnail(int id, bool overwrite, byte[] imageBytes, CancellationToken ct);
 
     /// <summary>
-    /// 
+    /// Raw cover, no cache.
     /// </summary>
     /// <param name="id"></param>
     /// <param name="ct"></param>
     /// <returns>File path</returns>
-    Task<string?> GetCover(int id, CancellationToken ct);
-    Task<string?> GetCoverThumbnail(int id, CancellationToken ct);
+    Task<(string? Path, byte[]? ImageBytes)?> GetCover(int id, CancellationToken ct);
+
+    /// <summary>
+    /// Optimized cover, with cache.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
+    Task<string?> GetThumbnail(int id, CancellationToken ct);
 
     Task<BaseResponse> Play(int resourceId, string file);
 }

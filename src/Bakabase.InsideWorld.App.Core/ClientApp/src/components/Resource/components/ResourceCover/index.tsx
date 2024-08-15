@@ -77,8 +77,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     loadCover(false);
   }, []);
 
-  const saveCoverInternal = useCallback((base64Image: string, overwrite?: boolean, saveLocation?: CoverSaveLocation) => {
-    return BApi.resource.saveCover(resourceId, {
+  const saveThumbnailInternal = useCallback((base64Image: string, overwrite?: boolean, saveLocation?: CoverSaveLocation) => {
+    return BApi.resource.saveThumbnail(resourceId, {
       base64Image,
       overwrite,
       saveLocation,
@@ -99,8 +99,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       });
   }, []);
 
-  const saveCover = useCallback(async (base64Image: string, saveLocation?: CoverSaveLocation) => {
-    const rsp = await saveCoverInternal(base64Image, undefined, saveLocation);
+  const saveThumbnail = useCallback(async (base64Image: string, saveLocation?: CoverSaveLocation) => {
+    const rsp = await saveThumbnailInternal(base64Image, undefined, saveLocation);
     if (rsp.code == ResponseCode.Conflict) {
       let remember = false;
       Dialog.confirm({
@@ -124,7 +124,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
               },
             });
           }
-          await saveCoverInternal(base64Image, true, saveLocation);
+          await saveThumbnailInternal(base64Image, true, saveLocation);
         },
       });
     }
@@ -132,10 +132,10 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   useImperativeHandle(ref, (): IResourceCoverRef => {
     return {
-      save: saveCover,
+      save: saveThumbnail,
       load: loadCover,
     };
-  }, [saveCover]);
+  }, [saveThumbnail]);
 
   useTraceUpdate(props, '[ResourceCover]');
 

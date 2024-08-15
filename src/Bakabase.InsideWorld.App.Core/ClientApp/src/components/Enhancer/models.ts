@@ -7,6 +7,7 @@ export type Enhancement = {
   enhancerName?: string;
   target: number;
   targetName?: string;
+  dynamicTarget?: string;
   valueType: StandardValueType;
   value?: any;
   customPropertyValue?: {

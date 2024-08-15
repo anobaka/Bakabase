@@ -75,6 +75,33 @@ namespace Bakabase.Modules.Enhancer.Services
             return new SingletonResponse<CategoryEnhancerFullOptions>(data.ToDomainModel());
         }
 
+        public async Task<BaseResponse> UnbindTargetProperty(int categoryId, int enhancerId, int target,
+            string? dynamicTarget)
+        {
+            var targetDescriptor = enhancerDescriptors[enhancerId].Targets.FirstOrDefault(t => t.Id == target);
+            if (targetDescriptor == null)
+            {
+                return BaseResponseBuilder.BuildBadRequest(
+                    $"Target descriptor for target:{target} of enhancer:{enhancerId} is not found.");
+            }
+
+            var data = await GetByCategoryAndEnhancer(categoryId, enhancerId) ?? (await Patch(categoryId, enhancerId,
+                    new CategoryEnhancerOptionsPatchInputModel(null, true)))
+                .Data;
+
+            var targetOptions =
+                data.Options?.TargetOptions?.FirstOrDefault(x =>
+                    x.Target == target && x.DynamicTarget == dynamicTarget);
+            if (targetOptions != null)
+            {
+                targetOptions.PropertyId = null;
+            }
+
+            await orm.Update(data.ToDbModel());
+
+            return BaseResponseBuilder.Ok;
+        }
+
         public async Task<BaseResponse> DeleteTarget(int categoryId, int enhancerId, int target, string? dynamicTarget)
         {
             var data = await GetByCategoryAndEnhancer(categoryId, enhancerId);

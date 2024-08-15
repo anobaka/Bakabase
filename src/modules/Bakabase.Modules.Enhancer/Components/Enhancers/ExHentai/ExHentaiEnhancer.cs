@@ -36,7 +36,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         private readonly ISpecialTextService _specialTextService = specialTextService;
         private const string UrlKeywordRegex = "[a-zA-Z0-9]{10,}";
 
-        protected override async Task<ExHentaiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options)
+        protected override async Task<ExHentaiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options, CancellationToken ct)
         {
             var exHentaiOptions = _options.Value;
 
@@ -145,7 +145,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         protected override EnhancerId TypedId => EnhancerId.ExHentai;
 
         protected override async Task<List<EnhancementTargetValue<ExHentaiEnhancerTarget>>> ConvertContextByTargets(
-            ExHentaiEnhancerContext context)
+            ExHentaiEnhancerContext context, CancellationToken ct)
         {
             var enhancements = new List<EnhancementTargetValue<ExHentaiEnhancerTarget>>();
             foreach (var target in SpecificEnumUtils<ExHentaiEnhancerTarget>.Values)

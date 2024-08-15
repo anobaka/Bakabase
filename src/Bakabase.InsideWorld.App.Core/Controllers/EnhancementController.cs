@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
@@ -68,10 +69,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                 var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
                 var re = new ResourceEnhancements
                 {
-                    EnhancerId = o.EnhancerId,
-                    EnhancerName = ed.Name,
+                    Enhancer = ed,
                     EnhancedAt = es.FirstOrDefault()?.CreatedAt,
-                    Targets = ed.Targets.Select(t =>
+                    Targets = ed.Targets.Where(x => !x.IsDynamic).Select(t =>
                     {
                         var targetId = Convert.ToInt32(t.Id);
                         var e = es.FirstOrDefault(e => e.Target == targetId);
@@ -81,7 +81,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                             Target = targetId,
                             TargetName = t.Name
                         };
-                    }).ToArray() ?? []
+                    }).ToArray(),
+                    DynamicTargets = ed.Targets.Where(x => x.IsDynamic).Select(t =>
+                    {
+                        var targetId = Convert.ToInt32(t.Id);
+                        var e = es.Where(e => e.Target == targetId).ToList();
+                        return new ResourceEnhancements.DynamicTargetEnhancements()
+                        {
+                            Enhancements = e,
+                            Target = targetId,
+                            TargetName = t.Name
+                        };
+                    }).ToArray()
                 };
                 return re;
             }).ToList();
@@ -102,7 +113,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         public async Task<BaseResponse> CreateEnhancementForResourceByEnhancer(int resourceId, int enhancerId)
         {
             await _enhancementService.RemoveAll(x => x.EnhancerId == enhancerId && x.ResourceId == resourceId, true);
-            await _enhancerService.EnhanceResource(resourceId, [enhancerId]);
+            await _enhancerService.EnhanceResource(resourceId, [enhancerId], CancellationToken.None);
             return BaseResponseBuilder.Ok;
         }
 

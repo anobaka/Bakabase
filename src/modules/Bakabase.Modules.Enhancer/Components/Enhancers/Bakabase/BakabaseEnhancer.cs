@@ -39,7 +39,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         private readonly IBakabaseLocalizer _localizer = localizer;
 
         protected override async Task<BakabaseEnhancerContext?> BuildContext(Resource resource,
-            EnhancerFullOptions options)
+            EnhancerFullOptions options, CancellationToken ct)
         {
             var name = resource.FileName;
             if (name.IsNullOrEmpty())
@@ -108,8 +108,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             var coverSelectionOrder =
                 options.TargetOptions?.FirstOrDefault(to => to.Target == (int) BakabaseEnhancerTarget.Cover)
                     ?.CoverSelectOrder ?? CoverSelectOrder.FilenameAscending;
-            var cover = await coverDiscoverer.Discover(resource.Path, new CancellationToken(),
-                coverSelectionOrder);
+            var cover = await coverDiscoverer.Discover(resource.Path, coverSelectionOrder, false, ct);
             if (cover != null)
             {
                 if (string.IsNullOrEmpty(cover.Path))
@@ -126,7 +125,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         }
 
         protected override async Task<List<EnhancementTargetValue<BakabaseEnhancerTarget>>> ConvertContextByTargets(
-            BakabaseEnhancerContext context)
+            BakabaseEnhancerContext context, CancellationToken ct)
         {
             var dict = new Dictionary<BakabaseEnhancerTarget, IStandardValueBuilder>();
             foreach (var target in SpecificEnumUtils<BakabaseEnhancerTarget>.Values)

@@ -6,5 +6,5 @@ namespace Bakabase.Modules.Enhancer.Abstractions;
 public interface IEnhancer
 {
     int Id { get; }
-    Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options);
+    Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options, CancellationToken ct);
 }

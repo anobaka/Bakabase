@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Jobs;
 using Bakabase.InsideWorld.Business.Services;
@@ -18,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.Jobs.Triggers
 
         public override async Task Execute(AsyncServiceScope scope)
         {
-            await EnhancerService.EnhanceAll();
+            await EnhancerService.EnhanceAll(CancellationToken.None);
         }
     }
 }

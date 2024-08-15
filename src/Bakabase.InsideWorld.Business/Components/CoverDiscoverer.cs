@@ -28,12 +28,13 @@ using Bakabase.Abstractions.Services;
 
 namespace Bakabase.InsideWorld.Business.Components;
 
-public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegService, IFileManager fileManager) : ICoverDiscoverer
+public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegService) : ICoverDiscoverer
 {
     private readonly ILogger<CoverDiscoverer> _logger = loggerFactory.CreateLogger<CoverDiscoverer>();
     private static readonly SemaphoreSlim FindCoverInVideoSm = new SemaphoreSlim(2, 2);
 
-    public async Task<CoverDiscoveryResult?> Discover(string path, CancellationToken ct, CoverSelectOrder order)
+    public async Task<CoverDiscoveryResult?> Discover(string path, CoverSelectOrder order, bool useIconAsFallback,
+        CancellationToken ct)
     {
         var imageExtensions = InternalOptions.ImageExtensions;
 
@@ -199,8 +200,8 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
                                 }
                                 catch (Exception e)
                                 {
-                                    _logger.LogError(e,
-                                        $"An error occurred during discovering covers from compressed files: {e.Message}");
+                                    _logger.LogWarning(e,
+                                        $"An error occurred during discovering covers from compressed files: {e.Message}.");
                                 }
                                 finally
                                 {
@@ -218,69 +219,23 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
             }
         }
 
-        using var icon = File.Exists(path) ? Icon.ExtractAssociatedIcon(path) : DefaultIcons.GetStockIcon(3, 0x04);
-
-        if (icon != null)
+        if (useIconAsFallback)
         {
-            var ms = new MemoryStream();
-            // Ico encoder is not found.
-            icon.ToBitmap().Save(ms, ImageFormat.Png);
-            icon.Dispose();
-            ms.Seek(0, SeekOrigin.Begin);
-            const string ext = ".png";
-            return new CoverDiscoveryResult(_buildCoverPath(path, $"icon{ext}"), ext, ms.ToArray());
+            using var icon = File.Exists(path) ? Icon.ExtractAssociatedIcon(path) : DefaultIcons.GetStockIcon(3, 0x04);
+
+            if (icon != null)
+            {
+                var ms = new MemoryStream();
+                // Ico encoder is not found.
+                icon.ToBitmap().Save(ms, ImageFormat.Png);
+                icon.Dispose();
+                ms.Seek(0, SeekOrigin.Begin);
+                const string ext = ".png";
+                return new CoverDiscoveryResult(_buildCoverPath(path, $"icon{ext}"), ext, ms.ToArray());
+            }
         }
 
         return null;
-    }
-
-    public string BuildThumbnailPath(string keyWithoutExtension)
-    {
-        return fileManager.BuildAbsolutePath("cover", "thumbnail", $"{keyWithoutExtension}");
-    }
-
-    public async Task<string?> GetThumbnail(int resourceId, CancellationToken ct)
-    {
-        var thumbnail = fileManager.BuildAbsolutePath("cover", $"{resourceId}.jpg");
-        if (File.Exists(thumbnail))
-        {
-            return thumbnail;
-        }
-
-        var r = await DiscoverCover(id, HttpContext.RequestAborted);
-        if (r.HasValue)
-        {
-            var (ext, stream) = r.Value;
-            if (stream is not MemoryStream ms)
-            {
-                ms = new MemoryStream();
-                await stream.CopyToAsync(ms);
-                ms.Seek(0, SeekOrigin.Begin);
-            }
-
-            byte[]? data = null;
-            string? mimeType = null;
-            try
-            {
-                var image = await Image.LoadAsync<Rgb24>(ms, HttpContext.RequestAborted);
-                if (image.Width >= 800 || image.Height >= 800)
-                {
-                    var scale = Math.Min(800m / image.Width, 800m / image.Height);
-                    image.Mutate(t => t.Resize((int) (image.Width * scale), (int) (image.Height * scale)));
-                    data = await image.SaveAsync(JpegFormat.Instance);
-                    mimeType = MimeTypes.GetMimeType(".jpg");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"An error occurred during loading cover: {ex.Message}");
-            }
-
-            data ??= ms.ToArray();
-            mimeType ??= MimeTypes.GetMimeType(ext);
-
-            return File(data, mimeType);
-        }
     }
 
     private static string _buildCoverPath(string filePath, string? innerPath = null)

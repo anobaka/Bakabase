@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <Folder Include="Components\Text\" />
-    <Folder Include="Helpers\" />
   </ItemGroup>
 
   <ItemGroup>

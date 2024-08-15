@@ -162,6 +162,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("Target")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("DynamicTarget")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Value")
                         .HasColumnType("TEXT");
 

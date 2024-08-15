@@ -82,7 +82,8 @@ public static class EnhancementExtensions
             Target = dbModel.Target,
             Value = dbModel.Value?.DeserializeAsStandardValue(dbModel.ValueType),
             ValueType = dbModel.ValueType,
-            CustomPropertyValueId = dbModel.CustomPropertyValueId
+            CustomPropertyValueId = dbModel.CustomPropertyValueId,
+            DynamicTarget = dbModel.DynamicTarget
         };
     }
 
@@ -102,7 +103,8 @@ public static class EnhancementExtensions
             Target = domainModel.Target,
             Value = domainModel.Value.SerializeAsStandardValue(),
             ValueType = domainModel.ValueType,
-            CustomPropertyValueId = domainModel.CustomPropertyValueId
+            CustomPropertyValueId = domainModel.CustomPropertyValueId,
+            DynamicTarget = domainModel.DynamicTarget
         };
     }
 }

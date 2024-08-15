@@ -28,7 +28,7 @@ public class BangumiEnhancer(
     IFileManager fileManager)
     : AbstractEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>(valueConverters, loggerFactory, fileManager)
 {
-    protected override async Task<BangumiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options)
+    protected override async Task<BangumiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options, CancellationToken ct)
     {
         var keyword = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
         var detail = await client.SearchAndParseFirst(keyword);
@@ -46,7 +46,7 @@ public class BangumiEnhancer(
 
             if (!string.IsNullOrEmpty(detail.CoverPath))
             {
-                var imageData = await client.HttpClient.GetByteArrayAsync(detail.CoverPath);
+                var imageData = await client.HttpClient.GetByteArrayAsync(detail.CoverPath, ct);
                 var queryIdx = detail.CoverPath.IndexOf('?');
                 var coverUrl = queryIdx == -1 ? detail.CoverPath : detail.CoverPath[..queryIdx];
                 ctx.CoverPath = await SaveFile(resource.Id, $"cover{Path.GetExtension(coverUrl)}", imageData);
@@ -61,7 +61,7 @@ public class BangumiEnhancer(
     protected override EnhancerId TypedId => EnhancerId.Bangumi;
 
     protected override async Task<List<EnhancementTargetValue<BangumiEnhancerTarget>>> ConvertContextByTargets(
-        BangumiEnhancerContext context)
+        BangumiEnhancerContext context, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<BangumiEnhancerTarget>>();
         foreach (var target in SpecificEnumUtils<BangumiEnhancerTarget>.Values)

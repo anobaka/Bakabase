@@ -4,5 +4,5 @@ namespace Bakabase.Abstractions.Components.Cover;
 
 public interface ICoverDiscoverer
 {
-    Task<CoverDiscoveryResult?> Discover(string path, CancellationToken ct, CoverSelectOrder order);
+    Task<CoverDiscoveryResult?> Discover(string path, CoverSelectOrder order, bool useIconAsFallback, CancellationToken ct);
 }

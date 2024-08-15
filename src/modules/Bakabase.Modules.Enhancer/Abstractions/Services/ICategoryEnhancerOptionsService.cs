@@ -13,6 +13,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Services
         public Task<List<CategoryEnhancerFullOptions>> GetAll(Expression<Func<CategoryEnhancerOptions, bool>>? exp);
         public Task<SingletonResponse<CategoryEnhancerFullOptions>> Patch(int categoryId, int enhancerId, CategoryEnhancerOptionsPatchInputModel model);
         public Task<BaseResponse> PatchTarget(int categoryId, int enhancerId, int target, string? dynamicTarget, CategoryEnhancerTargetOptionsPatchInputModel patches);
+        public Task<BaseResponse> UnbindTargetProperty(int categoryId, int enhancerId, int target, string? dynamicTarget);
         public Task<BaseResponse> DeleteTarget(int categoryId, int enhancerId, int target, string? dynamicTarget);
         public Task<BaseResponse> PutAll(CategoryEnhancerFullOptions[] options);
 

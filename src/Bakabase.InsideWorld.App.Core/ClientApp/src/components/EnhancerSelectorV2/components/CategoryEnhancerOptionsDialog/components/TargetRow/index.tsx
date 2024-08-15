@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EnhancerTargetFullOptions } from '../../models';
 import { defaultCategoryEnhancerTargetOptions } from '../../models';
@@ -78,6 +78,15 @@ export default (props: Props) => {
     }, patches);
   };
 
+  const unbindProperty = async () => {
+    await BApi.category.unbindCategoryEnhancerTargetProperty(category.id, enhancer.id, {
+      target: target,
+      dynamicTarget: dynamicTarget,
+    });
+    options.propertyId = undefined;
+    setOptions({ ...options });
+  };
+
   const targetLabel = descriptor.isDynamic ? dynamicTarget ?? t('Default') : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dynamicTarget == undefined;
   const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
@@ -136,7 +145,7 @@ export default (props: Props) => {
         </div>
       </div>
       <div className={'w-1/4'}>
-        {(isDefaultTargetOfDynamic || descriptor.type != EnhancerTargetType.Data) ? (
+        {(isDefaultTargetOfDynamic) ? (
           '/'
         ) : (
           <div className={'flex items-center gap-1'}>
@@ -164,12 +173,24 @@ export default (props: Props) => {
               ) : t('Select a property')}
             </Button>
             {property && (
-              <PropertyTip
-                property={property}
-                category={category}
-                onAllowAddingNewDataDynamicallyEnabled={onPropertyChanged}
-                onPropertyBoundToCategory={onCategoryChanged}
-              />
+              <>
+                <PropertyTip
+                  property={property}
+                  category={category}
+                  onAllowAddingNewDataDynamicallyEnabled={onPropertyChanged}
+                  onPropertyBoundToCategory={onCategoryChanged}
+                />
+                <Button
+                  isIconOnly
+                  color={'danger'}
+                  variant={'light'}
+                  onClick={() => {
+                    unbindProperty();
+                  }}
+                >
+                  <DeleteOutlined className={'text-base'} />
+                </Button>
+              </>
             )}
           </div>
         )}

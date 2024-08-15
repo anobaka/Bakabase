@@ -17,7 +17,7 @@ import {
 } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
-import { CategoryAdditionalItem, EnhancerTargetType, SpecialTextType, StandardValueType } from '@/sdk/constants';
+import { CategoryAdditionalItem, SpecialTextType, StandardValueType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import type { EnhancerFullOptions } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
 import type { IProperty } from '@/components/Property/models';
@@ -91,7 +91,7 @@ const CategoryEnhancerOptionsDialog = ({
 
   return (
     <Modal
-      size={'xl'}
+      size={'full'}
       title={t('Configure enhancer:{{enhancerName}} for category:{{categoryName}}', {
         enhancerName: enhancer.name,
         categoryName: category.name,

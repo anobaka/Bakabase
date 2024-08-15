@@ -37,6 +37,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     ResourceId = table.Column<int>(type: "INTEGER", nullable: false),
                     EnhancerId = table.Column<int>(type: "INTEGER", nullable: false),
                     Target = table.Column<int>(type: "INTEGER", nullable: false),
+                    DynamicTarget = table.Column<int>(type: "TEXT", nullable: true),
                     ValueType = table.Column<int>(type: "INTEGER", nullable: false),
                     Value = table.Column<string>(type: "TEXT", nullable: true),
                     CustomPropertyValueId = table.Column<int>(type: "INTEGER", nullable: false),

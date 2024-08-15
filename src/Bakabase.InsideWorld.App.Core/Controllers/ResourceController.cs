@@ -91,7 +91,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
         private readonly InsideWorldLocalizer _localizer;
         private readonly FfMpegService _ffMpegService;
-        private readonly TempFileManager _tempFileManager;
         private readonly IBOptions<ResourceOptions> _resourceOptions;
         private readonly Business.Components.Dependency.Implementations.FfMpeg.FfMpegService _ffMpegInstaller;
         private readonly ILogger<ResourceController> _logger;
@@ -104,7 +103,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             ISpecialTextService specialTextService, IMediaLibraryService mediaLibraryService,
             ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            FfMpegService ffMpegService, TempFileManager tempFileManager, IBOptions<ResourceOptions> resourceOptions,
+            FfMpegService ffMpegService, IBOptions<ResourceOptions> resourceOptions,
             Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
             ILogger<ResourceController> logger, ICustomPropertyValueService customPropertyValueService,
             ICategoryService categoryService, ICustomPropertyService customPropertyService, ICoverDiscoverer coverManager)
@@ -119,7 +118,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _insideWorldOptionsManager = insideWorldOptionsManager;
             _localizer = localizer;
             _ffMpegService = ffMpegService;
-            _tempFileManager = tempFileManager;
             _resourceOptions = resourceOptions;
             _ffMpegInstaller = ffMpegInstaller;
             _logger = logger;
@@ -441,60 +439,38 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         }
 
         [HttpGet("{id}/thumbnail")]
-        [SwaggerOperation(OperationId = "GetResourceCoverThumbnail")]
+        [SwaggerOperation(OperationId = "GetResourceThumbnail")]
         [ResponseCache(Duration = 20 * 60)]
-        public async Task<IActionResult> GetCoverThumbnail(int id)
+        public async Task<IActionResult> GetThumbnail(int id)
         {
-            var thumbnail = await _coverManager.GetThumbnail(id);
+            var thumbnail = await _service.GetThumbnail(id, HttpContext.RequestAborted);
             if (!string.IsNullOrEmpty(thumbnail))
             {
-                return File(System.IO.File.OpenRead(thumbnail), MimeTypes.GetMimeType(".jpg"));
+                return File(System.IO.File.OpenRead(thumbnail), MimeTypes.GetMimeType(thumbnail));
             }
 
             return NotFound();
         }
-        
+
 
         [HttpGet("{id}/cover")]
         [SwaggerOperation(OperationId = "GetResourceCover")]
         public async Task<IActionResult> GetCover(int id)
         {
-            var r = await _service.DiscoverCover(id, HttpContext.RequestAborted);
-            if (r.HasValue)
+            var cover = await _service.GetCover(id, HttpContext.RequestAborted);
+            if (!cover.HasValue)
             {
-                var (ext, stream) = r.Value;
-                if (stream is not MemoryStream ms)
-                {
-                    ms = new MemoryStream();
-                    await stream.CopyToAsync(ms);
-                    ms.Seek(0, SeekOrigin.Begin);
-                }
-
-                byte[]? data = null;
-                string? mimeType = null;
-                try
-                {
-                    var image = await Image.LoadAsync<Rgb24>(ms, HttpContext.RequestAborted);
-                    if (image.Width >= 800 || image.Height >= 800)
-                    {
-                        var scale = Math.Min(800m / image.Width, 800m / image.Height);
-                        image.Mutate(t => t.Resize((int) (image.Width * scale), (int) (image.Height * scale)));
-                        data = await image.SaveAsync(JpegFormat.Instance);
-                        mimeType = MimeTypes.GetMimeType(".jpg");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"An error occurred during loading cover: {ex.Message}");
-                }
-
-                data ??= ms.ToArray();
-                mimeType ??= MimeTypes.GetMimeType(ext);
-
-                return File(data, mimeType);
+                return NotFound();
             }
 
-            return NotFound();
+            var (path, bytes) = cover.Value;
+            if (!string.IsNullOrEmpty(path))
+            {
+                return File(System.IO.File.OpenRead(path), MimeTypes.GetMimeType(path));
+            }
+
+            var format = await Image.DetectFormatAsync(new MemoryStream(bytes!));
+            return File(bytes!, format.DefaultMimeType);
         }
 
         [HttpGet("{id}/playable-files")]
@@ -590,21 +566,13 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        [HttpPost("{id}/cover")]
-        [SwaggerOperation(OperationId = "SaveCover")]
-        public async Task<BaseResponse> SaveCover(int id, [FromBody] CoverSaveRequestModel model)
+        [HttpPost("{id}/thumbnail")]
+        [SwaggerOperation(OperationId = "SaveThumbnail")]
+        public async Task<BaseResponse> SaveThumbnail(int id, [FromBody] CoverSaveRequestModel model)
         {
-            var rsp = await _service.SaveCover(id, model.Overwrite, () =>
-            {
-                var data = model.Base64Image.Split(',')[1];
-                var bytes = Convert.FromBase64String(data);
-                return bytes;
-            }, HttpContext.RequestAborted);
-            // if (rsp.Code == (int) ResponseCode.Success)
-            // {
-            //     CoverCache.Set(id.ToString(), rsp.Data.Data, CoverCacheItemPolicy);
-            // }
-
+            var data = model.Base64Image.Split(',')[1];
+            var bytes = Convert.FromBase64String(data);
+            var rsp = await _service.SaveThumbnail(id, model.Overwrite, bytes, HttpContext.RequestAborted);
             return rsp;
         }
 

@@ -2096,6 +2096,74 @@ export const PatchCategoryEnhancerTargetOptionsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: UnbindCategoryEnhancerTargetProperty
+ * url: UnbindCategoryEnhancerTargetPropertyURL
+ * method: UnbindCategoryEnhancerTargetProperty_TYPE
+ * raw_url: UnbindCategoryEnhancerTargetProperty_RAW_URL
+ * @param id - 
+ * @param enhancerId - 
+ * @param target - 
+ * @param dynamicTarget - 
+ */
+export const UnbindCategoryEnhancerTargetProperty = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/enhancer/{enhancerId}/options/target/property'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters['target'] !== undefined) {
+    queryParameters['target'] = parameters['target']
+  }
+  if (parameters['target'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: target'))
+  }
+  if (parameters['dynamicTarget'] !== undefined) {
+    queryParameters['dynamicTarget'] = parameters['dynamicTarget']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const UnbindCategoryEnhancerTargetProperty_RAW_URL = function() {
+  return '/category/{id}/enhancer/{enhancerId}/options/target/property'
+}
+export const UnbindCategoryEnhancerTargetProperty_TYPE = function() {
+  return 'delete'
+}
+export const UnbindCategoryEnhancerTargetPropertyURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/enhancer/{enhancerId}/options/target/property'
+  path = path.replace('{id}', `${parameters['id']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['target'] !== undefined) {
+    queryParameters['target'] = parameters['target']
+  }
+  if (parameters['dynamicTarget'] !== undefined) {
+    queryParameters['dynamicTarget'] = parameters['dynamicTarget']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: StartSyncingCategoryResources
  * url: StartSyncingCategoryResourcesURL
  * method: StartSyncingCategoryResources_TYPE
@@ -7355,6 +7423,100 @@ export const OpenResourceDirectoryURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetResourceThumbnail
+ * url: GetResourceThumbnailURL
+ * method: GetResourceThumbnail_TYPE
+ * raw_url: GetResourceThumbnail_RAW_URL
+ * @param id - 
+ */
+export const GetResourceThumbnail = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/{id}/thumbnail'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetResourceThumbnail_RAW_URL = function() {
+  return '/resource/{id}/thumbnail'
+}
+export const GetResourceThumbnail_TYPE = function() {
+  return 'get'
+}
+export const GetResourceThumbnailURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/{id}/thumbnail'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: SaveThumbnail
+ * url: SaveThumbnailURL
+ * method: SaveThumbnail_TYPE
+ * raw_url: SaveThumbnail_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const SaveThumbnail = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/{id}/thumbnail'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const SaveThumbnail_RAW_URL = function() {
+  return '/resource/{id}/thumbnail'
+}
+export const SaveThumbnail_TYPE = function() {
+  return 'post'
+}
+export const SaveThumbnailURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/{id}/thumbnail'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetResourceCover
  * url: GetResourceCoverURL
  * method: GetResourceCover_TYPE
@@ -7386,55 +7548,6 @@ export const GetResourceCover_TYPE = function() {
   return 'get'
 }
 export const GetResourceCoverURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/cover'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: SaveCover
- * url: SaveCoverURL
- * method: SaveCover_TYPE
- * raw_url: SaveCover_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const SaveCover = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/{id}/cover'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const SaveCover_RAW_URL = function() {
-  return '/resource/{id}/cover'
-}
-export const SaveCover_TYPE = function() {
-  return 'post'
-}
-export const SaveCoverURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/{id}/cover'

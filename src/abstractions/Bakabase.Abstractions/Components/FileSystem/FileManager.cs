@@ -15,6 +15,8 @@ public class FileManager : IFileManager
     public async Task<string> Save(string filename, byte[] data, CancellationToken ct)
     {
         var path = BuildAbsolutePath(filename);
+        var dir = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(dir);
         await File.WriteAllBytesAsync(path, data, ct);
         return path;
     }

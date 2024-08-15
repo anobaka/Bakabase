@@ -107,7 +107,6 @@ export default (props: Props) => {
           descriptor,
           subOptions,
         } = g;
-        const isDataTarget = descriptor.type == EnhancerTargetType.Data;
 
         return (
           <div>
@@ -149,24 +148,22 @@ export default (props: Props) => {
                 );
               })}
             </div>
-            {isDataTarget && (
-              <Button
-                size={'sm'}
-                variant={'light'}
-                color={'success'}
-                onClick={async () => {
-                  const newTargetOptions = createNewOptions(descriptor, subOptions);
-                  await BApi.category.patchCategoryEnhancerTargetOptions(category.id, enhancer.id, { target: descriptor.id, dynamicTarget: newTargetOptions.dynamicTarget }, newTargetOptions);
-                  options.targetOptions ??= [];
-                  options.targetOptions.push(newTargetOptions);
-                  setOptions({ ...options });
-                  console.log('updating options', options);
-                }}
-              >
-                <PlusCircleOutlined className={'text-sm'} />
-                {t('Specify dynamic target')}
-              </Button>
-            )}
+            <Button
+              size={'sm'}
+              variant={'light'}
+              color={'success'}
+              onClick={async () => {
+                const newTargetOptions = createNewOptions(descriptor, subOptions);
+                await BApi.category.patchCategoryEnhancerTargetOptions(category.id, enhancer.id, { target: descriptor.id, dynamicTarget: newTargetOptions.dynamicTarget }, newTargetOptions);
+                options.targetOptions ??= [];
+                options.targetOptions.push(newTargetOptions);
+                setOptions({ ...options });
+                console.log('updating options', options);
+              }}
+            >
+              <PlusCircleOutlined className={'text-sm'} />
+              {t('Specify dynamic target')}
+            </Button>
           </div>
         );
       })}
