@@ -25,7 +25,7 @@ interface IProps {
   selectedResourceIds?: number[];
   maxResourceColCount?: number;
   searchForm?: Partial<ISearchForm>;
-  onSearch?: (form: Partial<ISearchForm>) => any;
+  onSearch?: (form: Partial<ISearchForm>) => Promise<any>;
   reloadResources: (ids: number[]) => any;
 }
 
@@ -52,6 +52,7 @@ export default ({
   const colCount = uiOptions.resource?.colCount ?? DefaultResourceColCount;
 
   const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>(propsSearchForm || {});
+  const [searching, setSearching] = useState(false);
 
   const filterGroupPortalRef = React.useRef<HTMLButtonElement>(null);
 
@@ -77,6 +78,20 @@ export default ({
   useUpdateEffect(() => {
     console.log('Search form changed', searchForm);
   }, [searchForm]);
+
+  const search = async (form: Partial<ISearchForm>) => {
+    if (onSearch) {
+      setSearching(true);
+
+      try {
+        await onSearch(form);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setSearching(false);
+      }
+    }
+  };
 
   const renderBulkOperations = useCallback(() => {
     if (bulkOperationMode) {
@@ -147,6 +162,21 @@ export default ({
           )}
           className={'w-1/4'}
           placeholder={t('Search everything')}
+          onValueChange={v => {
+            setSearchForm({
+              ...searchForm,
+              keyword: v,
+            });
+          }}
+          value={searchForm.keyword}
+          onKeyDown={e => {
+            if (e.key == 'Enter') {
+              search({
+                ...searchForm,
+                pageIndex: 1,
+              });
+            }
+          }}
         />
         <Button
           ref={filterGroupPortalRef}
@@ -170,11 +200,12 @@ export default ({
             color={'primary'}
             size={'sm'}
             onClick={async () => {
-              onSearch?.({
+              search({
                 ...searchForm,
                 pageIndex: 1,
               });
             }}
+            isLoading={searching}
           >
             {t('Search')}
           </Button>
@@ -189,7 +220,7 @@ export default ({
                 orders,
               };
               setSearchForm(nf);
-              onSearch?.(nf);
+              search(nf);
             }}
           />
           <Dropdown

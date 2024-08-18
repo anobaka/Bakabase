@@ -15,26 +15,31 @@ export default ({ value, format, as, variant, editor, ...props }: DateTimeValueR
     setEditing(true);
   } : undefined;
 
-  if (value == undefined) {
-    return (
-      <NotSet onClick={startEditing} />
-    );
-  }
-
   const f = format == undefined ? as == 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'HH:mm:ss' : format;
-
-  if (variant == 'light' && !editing) {
-    return (
-      <span onClick={startEditing}>{value?.format(f)}</span>
-    );
+  if (!editing) {
+    if (value == undefined) {
+      return (
+        <NotSet onClick={startEditing} />
+      );
+    }
+    if (variant == 'light') {
+      return (
+        <span onClick={startEditing}>{value?.format(f)}</span>
+      );
+    }
   }
+
+  // console.log(as);
 
   return (
     <DateInput
       granularity={as == 'datetime' ? 'second' : 'day'}
       value={value}
       isReadOnly={!editor}
-      onChange={d => editor?.onValueChange?.(d, d)}
+      onChange={d => {
+        console.log(d);
+        editor?.onValueChange?.(d, d);
+      }}
     />
   );
 };

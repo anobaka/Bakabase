@@ -166,7 +166,6 @@ namespace Bakabase.Modules.Enhancer.Services
             }
 
             targetOptions.PropertyId = patches.PropertyId ?? targetOptions.PropertyId;
-            targetOptions.IntegrateWithAlias = patches.IntegrateWithAlias ?? targetOptions.IntegrateWithAlias;
             targetOptions.AutoMatchMultilevelString =
                 patches.AutoMatchMultilevelString ?? targetOptions.AutoMatchMultilevelString;
             targetOptions.AutoGenerateProperties =

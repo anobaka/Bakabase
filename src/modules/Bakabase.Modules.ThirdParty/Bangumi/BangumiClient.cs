@@ -22,14 +22,21 @@ public class BangumiClient : BakabaseHttpClient
     protected override string HttpClientName => InternalOptions.HttpClientNames.Bangumi;
     private static char[] PropertyValueSeparators = ['、', '/', '(', ')', '\u3000', '（', '）', '；'];
 
-    public async Task<BangumiDetail> ParseDetail(string detailUrl)
+    public async Task<BangumiDetail?> ParseDetail(string detailUrl)
     {
         var detailHtml = await HttpClient.GetStringAsync(detailUrl);
         var detailCq = new CQ(detailHtml);
         var ctx = new BangumiDetail();
 
+        // Name
+        ctx.Name = detailCq[".nameSingle>a"]?.Text();
+        if (string.IsNullOrEmpty(ctx.Name))
+        {
+            return null;
+        }
+
         // Introduction
-        var intro = detailCq["#subject_summary"]?[0].InnerHTML;
+        var intro = detailCq["#subject_summary"]?[0]?.InnerHTML;
         if (!string.IsNullOrEmpty(intro))
         {
             ctx.Introduction = WebUtility.HtmlDecode(intro);
@@ -46,9 +53,6 @@ public class BangumiClient : BakabaseHttpClient
             // enhancements.Add(Enhancement.BuildReservedFile(ReservedResourceFileType.Cover,
             //     new EnhancementFile { Data = coverData, RelativePath = $"cover{ext}" }));
         }
-
-        // Name
-        ctx.Name = detailCq[".nameSingle>a"].Text();
 
         // Tag
         var tags = detailCq[".subject_tag_section>.inner>a>span"].Select(a => a.Cq().Text()?.Trim())

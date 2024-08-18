@@ -28,6 +28,7 @@ using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.Logging.LogService.Services;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.IEnhancer;
 
@@ -45,12 +46,14 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
         private readonly IEnhancerDescriptors _enhancerDescriptors;
         private readonly IEnhancerLocalizer _enhancerLocalizer;
         private readonly Dictionary<int, IEnhancer> _enhancers;
+        private readonly ILogger<EnhancerService> _logger;
+        private readonly ICategoryService _categoryService;
 
         public EnhancerService(ICustomPropertyService customPropertyService, IResourceService resourceService,
             ICustomPropertyValueService customPropertyValueService,
             IEnhancementService enhancementService, ICategoryEnhancerOptionsService categoryEnhancerService,
             IStandardValueService standardValueService, LogService logService, IEnhancerLocalizer enhancerLocalizer,
-            IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers)
+            IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger, ICategoryService categoryService)
         {
             _customPropertyService = customPropertyService;
             _resourceService = resourceService;
@@ -61,6 +64,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             _logService = logService;
             _enhancerLocalizer = enhancerLocalizer;
             _enhancerDescriptors = enhancerDescriptors;
+            _logger = logger;
+            _categoryService = categoryService;
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 
@@ -145,16 +150,22 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 {
                     if (!propertyMap.TryGetValue(targetOptions.PropertyId.Value, out var property))
                     {
-                        throw new Exception(
+                        _logger.LogError(
                             $"Couldn't find a property with id: {targetOptions.PropertyId} for target:{targetDescriptor.Name} in enhancer:{_enhancerDescriptors[enhancement.EnhancerId].Name}");
-                    }
-                    else
-                    {
-                        if (property.EnumType != targetDescriptor.CustomPropertyType)
+                        if (targetOptions.AutoGenerateProperties == true)
                         {
-                            throw new Exception(
-                                $"Property {property.Id}:{property.Name} is not compatible with enhancement of target:{targetDescriptor.Name} in enhancer:{_enhancerDescriptors[enhancement.EnhancerId].Name}");
+                            targetOptions.PropertyId = null;
                         }
+                    }
+                }
+
+                if (targetOptions.PropertyId > 0)
+                {
+                    var property = propertyMap[targetOptions.PropertyId!.Value];
+                    if (property.EnumType != targetDescriptor.CustomPropertyType)
+                    {
+                        throw new Exception(
+                            $"Property {property.Id}:{property.Name} is not compatible with enhancement of target:{targetDescriptor.Name} in enhancer:{_enhancerDescriptors[enhancement.EnhancerId].Name}");
                     }
                 }
                 else
@@ -180,7 +191,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                     }, []);
 
                                     object? options = null;
-
+                                    // todo: Standardize serialization of options
                                     switch (targetDescriptor.CustomPropertyType)
                                     {
                                         case CustomPropertyType.SingleChoice:
@@ -339,19 +350,18 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
         {
             var categoryIds = targetResources.Select(c => c.CategoryId).ToHashSet();
             var categoryIdEnhancerOptionsMap =
-                (await _categoryEnhancerService.GetAll(x => categoryIds.Contains(x.CategoryId)))
-                .GroupBy(d => d.CategoryId)
-                .ToDictionary(d => d.Key, d => d.ToList());
+                (await _categoryService.GetByKeys(categoryIds, CategoryAdditionalItem.EnhancerOptions)).ToDictionary(
+                    d => d.Id, d => d.EnhancerOptions);
             var tasks = new Dictionary<IEnhancer, Dictionary<EnhancerFullOptions, List<Bakabase.Abstractions.Models.Domain.Resource>>>();
             foreach (var tr in targetResources)
             {
                 var enhancerOptions = categoryIdEnhancerOptionsMap.GetValueOrDefault(tr.CategoryId);
                 if (enhancerOptions != null)
                 {
-                    foreach (var eo in enhancerOptions)
+                    foreach (var eo in enhancerOptions.Cast<CategoryEnhancerFullOptions>())
                     {
-                        if (eo.Options != null && (restrictedEnhancerIds == null ||
-                                                   restrictedEnhancerIds.Contains(eo.EnhancerId)))
+                        if (eo is {Active: true, Options: not null} && (restrictedEnhancerIds == null ||
+                                                                        restrictedEnhancerIds.Contains(eo.EnhancerId)))
                         {
                             var enhancer = _enhancers.GetValueOrDefault(eo.EnhancerId);
                             if (enhancer != null)

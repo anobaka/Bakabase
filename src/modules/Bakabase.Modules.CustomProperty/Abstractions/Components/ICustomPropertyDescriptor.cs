@@ -22,5 +22,8 @@ namespace Bakabase.Modules.CustomProperty.Abstractions.Components
 
         bool IsMatch(CustomPropertyValue? value, ResourceSearchFilter filter);
         SearchOperation[] SearchOperations { get; }
+
+        ResourceSearchFilter? BuildSearchFilterByKeyword(Bakabase.Abstractions.Models.Domain.CustomProperty property,
+            string keyword);
     }
 }

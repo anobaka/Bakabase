@@ -149,6 +149,9 @@ export default () => {
             columnCount={columnCount}
             scrollElement={pageContainerRef.current}
             renderCell={(index, style) => {
+              if (index >= resources.length) {
+                return null;
+              }
               const resource = resources[index];
               const selected = selectedResourceIds.includes(resource.id);
               return (

@@ -8,12 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
-    <ProjectReference Include="..\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
+    <Compile Remove="Abstractions\Models\**" />
+    <EmbeddedResource Remove="Abstractions\Models\**" />
+    <None Remove="Abstractions\Models\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Abstractions\Models\" />
+    <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
+    <ProjectReference Include="..\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
   </ItemGroup>
 
 </Project>

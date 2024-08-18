@@ -1,4 +1,5 @@
 import type { StandardValueType } from '@/sdk/constants';
+import type { IProperty } from '@/components/Property/models';
 
 export type Enhancement = {
   id: number;
@@ -13,6 +14,8 @@ export type Enhancement = {
   customPropertyValue?: {
     id: number;
     value: any;
+    property?: IProperty;
+    bizValue?: any;
   };
   createdAt: string;
 };

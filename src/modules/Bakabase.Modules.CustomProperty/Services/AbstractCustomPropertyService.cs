@@ -24,7 +24,7 @@ using Newtonsoft.Json;
 
 namespace Bakabase.Modules.CustomProperty.Services
 {
-    public abstract class AbstractCustomPropertyService<TDbContext>(IServiceProvider serviceProvider)
+    public abstract class AbstractCustomPropertyService<TDbContext>(IServiceProvider serviceProvider, ICustomPropertyDescriptors propertyDescriptors)
         : FullMemoryCacheResourceService<TDbContext, Bakabase.Abstractions.Models.Db.CustomProperty, int>(
                 serviceProvider),
             ICustomPropertyService where TDbContext : DbContext
@@ -37,9 +37,6 @@ namespace Bakabase.Modules.CustomProperty.Services
 
         protected IStandardValueService StandardValueService => GetRequiredService<IStandardValueService>();
         protected ICategoryService CategoryService => GetRequiredService<ICategoryService>();
-
-        protected Dictionary<int, ICustomPropertyDescriptor> PropertyDescriptors =>
-            GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>().ToDictionary(d => d.Type, d => d);
 
         protected Dictionary<StandardValueType, IStandardValueHandler> StdValueHandlers =>
             GetRequiredService<IEnumerable<IStandardValueHandler>>().ToDictionary(d => d.Type, d => d);
@@ -84,11 +81,14 @@ namespace Bakabase.Modules.CustomProperty.Services
                 x => x.Select(y => propertyMap.GetValueOrDefault(y.PropertyId)).Where(y => y != null).ToList())!;
         }
 
+        private Models.CustomProperty? ToDomainModel(Bakabase.Abstractions.Models.Db.CustomProperty? property) =>
+            property == null ? null : propertyDescriptors[property.Type].ToDomainModel(property);
+
         private async Task<List<Modules.CustomProperty.Models.CustomProperty>> ToDomainModels(
             List<Bakabase.Abstractions.Models.Db.CustomProperty> properties,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
         {
-            var dtoList = properties.Select(p => p.ToDomainModel()!).ToList();
+            var dtoList = properties.Select(p => ToDomainModel(p)!).ToList();
             foreach (var ai in SpecificEnumUtils<CustomPropertyAdditionalItem>.Values)
             {
                 if (additionalItems.HasFlag(ai))
@@ -136,7 +136,7 @@ namespace Bakabase.Modules.CustomProperty.Services
                 Type = model.Type
             });
 
-            return data.Data.ToDomainModel()!;
+            return ToDomainModel(data.Data)!;
         }
 
         public async Task<List<Models.CustomProperty>> AddRange(CustomPropertyAddOrPutDto[] models)
@@ -149,7 +149,7 @@ namespace Bakabase.Modules.CustomProperty.Services
                 Options = model.Options,
                 Type = model.Type
             }).ToList());
-            return data.Data.Select(d => d.ToDomainModel()!).ToList();
+            return data.Data.Select(d => ToDomainModel(d)!).ToList();
         }
 
         public async Task<Modules.CustomProperty.Models.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model)
@@ -161,7 +161,7 @@ namespace Bakabase.Modules.CustomProperty.Services
                 cp.Type = model.Type;
             });
 
-            return rsp.Data.ToDomainModel()!;
+            return ToDomainModel(rsp.Data)!;
         }
 
         public override async Task<BaseResponse> RemoveByKey(int id)
@@ -177,7 +177,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             var property = await GetByKey(sourcePropertyId);
             var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == sourcePropertyId,
                 CustomPropertyValueAdditionalItem.None, false);
-            var propertyDescriptor = PropertyDescriptors[property.Type];
+            var propertyDescriptor = propertyDescriptors[property.Type];
             var stdValueHandler = StdValueHandlers[property.DbValueType];
 
             var typedValues = values.Select(v => propertyDescriptor.ConvertDbValueToBizValue(property, v)).ToList();

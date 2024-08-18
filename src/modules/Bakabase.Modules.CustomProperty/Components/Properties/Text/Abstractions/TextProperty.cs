@@ -2,7 +2,10 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Text.Abstractions;
 
@@ -11,7 +14,9 @@ public record TextProperty : Models.CustomProperty;
 public record TextPropertyValue : CustomPropertyValue<string>;
 
 public abstract class
-    TextPropertyDescriptor<TPropertyValue, TInnerValue> : AbstractCustomPropertyDescriptor<TextProperty, TPropertyValue, TInnerValue, TInnerValue> where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
+    TextPropertyDescriptor<TPropertyValue, TInnerValue>(IStandardValueHelper standardValueHelper)
+    : AbstractCustomPropertyDescriptor<TextProperty, TPropertyValue, TInnerValue, TInnerValue>(standardValueHelper)
+    where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
 {
 
     public override SearchOperation[] SearchOperations { get; } =
@@ -30,12 +35,18 @@ public abstract class
         SearchOperation.NotMatches
     ];
 
+    protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeyword(TextProperty property,
+        string keyword)
+    {
+        return (keyword, SearchOperation.Contains);
+    }
+
     protected abstract string[] GetMatchSources(TInnerValue? value);
 
-    protected override bool IsMatch(TInnerValue? value, CustomPropertyValueSearchRequestModel model)
+    protected override bool IsMatch(TInnerValue? value, SearchOperation operation, object? filterValue)
     {
         var candidates = GetMatchSources(value);
-        switch (model.Operation)
+        switch (operation)
         {
             case SearchOperation.Equals:
             case SearchOperation.NotEquals:
@@ -47,31 +58,31 @@ public abstract class
             case SearchOperation.NotEndsWith:
             case SearchOperation.Matches:
             case SearchOperation.NotMatches:
+            {
+                var typedTarget = filterValue as string;
+                if (string.IsNullOrEmpty(typedTarget))
                 {
-                    var typedTarget = model.DeserializeValue<string>();
-                    if (string.IsNullOrEmpty(typedTarget))
-                    {
-                        return true;
-                    }
-
-                    return candidates.Any(c =>
-                    {
-                        return model.Operation switch
-                        {
-                            SearchOperation.Equals => c.Equals(typedTarget),
-                            SearchOperation.NotEquals => !c.Equals(typedTarget),
-                            SearchOperation.Contains => c.Contains(typedTarget),
-                            SearchOperation.NotContains => !c.Contains(typedTarget),
-                            SearchOperation.StartsWith => c.StartsWith(typedTarget),
-                            SearchOperation.NotStartsWith => !c.StartsWith(typedTarget),
-                            SearchOperation.EndsWith => c.EndsWith(typedTarget),
-                            SearchOperation.NotEndsWith => !c.EndsWith(typedTarget),
-                            SearchOperation.Matches => Regex.IsMatch(c, typedTarget),
-                            SearchOperation.NotMatches => !Regex.IsMatch(c, typedTarget),
-                            _ => false
-                        };
-                    });
+                    return true;
                 }
+
+                return candidates.Any(c =>
+                {
+                    return operation switch
+                    {
+                        SearchOperation.Equals => c.Equals(typedTarget),
+                        SearchOperation.NotEquals => !c.Equals(typedTarget),
+                        SearchOperation.Contains => c.Contains(typedTarget),
+                        SearchOperation.NotContains => !c.Contains(typedTarget),
+                        SearchOperation.StartsWith => c.StartsWith(typedTarget),
+                        SearchOperation.NotStartsWith => !c.StartsWith(typedTarget),
+                        SearchOperation.EndsWith => c.EndsWith(typedTarget),
+                        SearchOperation.NotEndsWith => !c.EndsWith(typedTarget),
+                        SearchOperation.Matches => Regex.IsMatch(c, typedTarget),
+                        SearchOperation.NotMatches => !Regex.IsMatch(c, typedTarget),
+                        _ => false
+                    };
+                });
+            }
             case SearchOperation.IsNull:
                 return !candidates.Any();
             case SearchOperation.IsNotNull:

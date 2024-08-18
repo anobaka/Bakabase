@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Extensions;
+﻿using Bakabase.Abstractions.Exceptions;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
@@ -8,13 +9,15 @@ using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Models;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
-using Bakabase.Modules.StandardValue.Helpers;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Newtonsoft.Json;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties
 {
     public abstract class
-        AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TDbValue, TBizValue> : ICustomPropertyDescriptor
+        AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TDbValue, TBizValue>(
+            IStandardValueHelper standardValueHelper) : ICustomPropertyDescriptor
         where TProperty : Models.CustomProperty, new()
         where TPropertyValue : CustomPropertyValue<TDbValue>, new()
     {
@@ -52,7 +55,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
                 return null;
             }
 
-            var innerValue = value.Value?.DeserializeAsStandardValue(DbValueType);
+            var innerValue = standardValueHelper.Deserialize(value.Value, DbValueType);
 
             var dto = new TPropertyValue
             {
@@ -81,12 +84,6 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
         protected virtual (TDbValue? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(TProperty property,
             TBizValue bizValue) => (bizValue is TDbValue x ? x : default, false);
 
-        public bool IsMatch(CustomPropertyValue? value, ResourceSearchFilter filter)
-        {
-            throw new NotImplementedException();
-        }
-
-
         public object? ConvertDbValueToBizValue(Bakabase.Abstractions.Models.Domain.CustomProperty property,
             object? dbValue)
         {
@@ -99,28 +96,58 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
             value is TBizValue bizValue ? bizValue : default;
 
         public abstract SearchOperation[] SearchOperations { get; }
-        public bool IsMatch(CustomPropertyValue? value, CustomPropertyValueSearchRequestModel model)
+
+        public ResourceSearchFilter? BuildSearchFilterByKeyword(
+            Bakabase.Abstractions.Models.Domain.CustomProperty property, string keyword)
+        {
+            if (property.Type != Type || property is not TProperty typedProperty)
+            {
+                throw new DevException(
+                    $"Property is not compatible with descriptor. Property: {JsonConvert.SerializeObject(property)}. Descriptor: {EnumType}");
+            }
+
+            var sf = BuildSearchFilterByKeyword(typedProperty, keyword);
+            if (!sf.HasValue)
+            {
+                return null;
+            }
+
+            return new ResourceSearchFilter
+            {
+                Operation = sf.Value.Operation,
+                DbValue = sf.Value.DbValue.SerializeAsStandardValue(),
+                IsCustomProperty = true,
+                PropertyId = property.Id
+            };
+        }
+
+        protected virtual (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeyword(TProperty property, string keyword) => null;
+
+        public bool IsMatch(CustomPropertyValue? value, ResourceSearchFilter filter)
         {
             var typedValue = value as TPropertyValue;
 
             // simple pre-check
             if (typedValue == null || typedValue.TypedValue == null)
             {
-                if (model.Operation == SearchOperation.IsNull)
+                if (filter.Operation == SearchOperation.IsNull)
                 {
                     return true;
                 }
             }
 
-            return IsMatch(typedValue == null ? default : typedValue.TypedValue, model);
+            var filterValue = filter.DbValue?.DeserializeAsStandardValue(DbValueType);
+
+            return IsMatch(typedValue == null ? default : typedValue.TypedValue, filter.Operation, filterValue);
         }
 
-        protected abstract bool IsMatch(TDbValue? value, CustomPropertyValueSearchRequestModel model);
+        protected abstract bool IsMatch(TDbValue? value, SearchOperation operation, object? filterValue);
     }
 
     public abstract class
-        AbstractCustomPropertyDescriptor<TProperty, TPropertyOptions, TPropertyValue, TDbValue, TBizValue> :
-        AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TDbValue, TBizValue>
+        AbstractCustomPropertyDescriptor<TProperty, TPropertyOptions, TPropertyValue, TDbValue, TBizValue>(
+            IStandardValueHelper standardValueHelper) :
+        AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TDbValue, TBizValue>(standardValueHelper)
         where TProperty : CustomProperty<TPropertyOptions>, new()
         where TPropertyValue : CustomPropertyValue<TDbValue>, new()
         where TPropertyOptions : new()

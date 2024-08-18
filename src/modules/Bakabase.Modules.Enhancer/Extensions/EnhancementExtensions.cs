@@ -3,7 +3,6 @@ using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
-using Bakabase.Modules.StandardValue.Helpers;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -64,47 +63,5 @@ public static class EnhancementExtensions
         };
 
         return model;
-    }
-
-    public static Enhancement? ToDomainModel(this Bakabase.Abstractions.Models.Db.Enhancement? dbModel)
-    {
-        if (dbModel == null)
-        {
-            return null;
-        }
-
-        return new Enhancement
-        {
-            CreatedAt = dbModel.CreatedAt,
-            EnhancerId = dbModel.EnhancerId,
-            Id = dbModel.Id,
-            ResourceId = dbModel.ResourceId,
-            Target = dbModel.Target,
-            Value = dbModel.Value?.DeserializeAsStandardValue(dbModel.ValueType),
-            ValueType = dbModel.ValueType,
-            CustomPropertyValueId = dbModel.CustomPropertyValueId,
-            DynamicTarget = dbModel.DynamicTarget
-        };
-    }
-
-    public static Bakabase.Abstractions.Models.Db.Enhancement? ToDbModel(this Enhancement? domainModel)
-    {
-        if (domainModel == null)
-        {
-            return null;
-        }
-
-        return new Bakabase.Abstractions.Models.Db.Enhancement
-        {
-            CreatedAt = domainModel.CreatedAt,
-            EnhancerId = domainModel.EnhancerId,
-            Id = domainModel.Id,
-            ResourceId = domainModel.ResourceId,
-            Target = domainModel.Target,
-            Value = domainModel.Value.SerializeAsStandardValue(),
-            ValueType = domainModel.ValueType,
-            CustomPropertyValueId = domainModel.CustomPropertyValueId,
-            DynamicTarget = domainModel.DynamicTarget
-        };
     }
 }

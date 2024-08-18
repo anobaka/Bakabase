@@ -73,7 +73,6 @@ using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
-using Bakabase.Modules.StandardValue.Helpers;
 using NPOI.SS.Formula.Functions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
@@ -108,9 +107,10 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IAliasService _aliasService;
         private readonly IBuiltinPropertyValueService _builtinPropertyValueService;
         private readonly Dictionary<int, IStandardValueHandler> _standardValueHandlers;
-        private readonly Dictionary<int, ICustomPropertyDescriptor> _customPropertyDescriptors;
+        private readonly ICustomPropertyDescriptors _customPropertyDescriptors;
         private readonly IFileManager _fileManager;
         private readonly ICoverDiscoverer _coverDiscoverer;
+        private readonly IStandardValueHelper _standardValueHelper;
 
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
@@ -122,7 +122,7 @@ namespace Bakabase.InsideWorld.Business.Services
             IResourceSearchContextProcessor resourceSearchContextProcessor,
             IBuiltinPropertyValueService builtinPropertyValueService,
             IEnumerable<IStandardValueHandler> standardValueHandlers,
-            IEnumerable<ICustomPropertyDescriptor> customPropertyDescriptors, IFileManager fileManager, ICoverDiscoverer coverDiscoverer)
+            ICustomPropertyDescriptors customPropertyDescriptors, IFileManager fileManager, ICoverDiscoverer coverDiscoverer, IStandardValueHelper standardValueHelper)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -141,7 +141,8 @@ namespace Bakabase.InsideWorld.Business.Services
             _builtinPropertyValueService = builtinPropertyValueService;
             _fileManager = fileManager;
             _coverDiscoverer = coverDiscoverer;
-            _customPropertyDescriptors = customPropertyDescriptors.ToDictionary(d => d.Type, d => d);
+            _standardValueHelper = standardValueHelper;
+            _customPropertyDescriptors = customPropertyDescriptors;
             _standardValueHandlers = standardValueHandlers.ToDictionary(d => (int) d.Type, d => d);
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(
                 serviceProvider);
@@ -168,14 +169,62 @@ namespace Bakabase.InsideWorld.Business.Services
             var allResources = await GetAll();
             var context = new ResourceSearchContext(allResources);
 
-            var resourceIds = await SearchResourceIds(model.Group, context);
-            var ordersForSearch = model.Orders.BuildForSearch();
+            var searchModel = model.Copy();
+
+            if (!string.IsNullOrEmpty(model.Keyword))
+            {
+                var properties = await _customPropertyService.GetAll();
+                context.PropertiesDataPool = properties.ToDictionary(d => d.Id, d => d);
+
+                var newGroup = new ResourceSearchFilterGroup
+                {
+                    Combinator = Combinator.Or, Filters =
+                    [
+                        new ResourceSearchFilter
+                        {
+                            DbValue = JsonConvert.SerializeObject(model.Keyword),
+                            Operation = SearchOperation.Contains,
+                            IsCustomProperty = false,
+                            PropertyId = (int) ResourceProperty.FileName
+                        }
+                    ]
+                };
+
+                foreach (var p in properties)
+                {
+                    if (_customPropertyDescriptors.TryGet(p.Type, out var pd))
+                    {
+                        var filter = pd.BuildSearchFilterByKeyword(p, model.Keyword);
+                        if (filter != null)
+                        {
+                            newGroup.Filters.Add(filter);
+                        }
+                    }
+                }
+
+                if (searchModel.Group == null)
+                {
+                    searchModel.Group = newGroup;
+                }
+                else
+                {
+                    searchModel.Group = new ResourceSearchFilterGroup
+                    {
+                        Combinator = Combinator.And,
+                        Groups = [newGroup, searchModel.Group]
+                    };
+                }
+            }
+
+            var resourceIds = await SearchResourceIds(searchModel.Group, context);
+            var ordersForSearch = searchModel.Orders.BuildForSearch();
 
             Func<Abstractions.Models.Db.Resource, bool>? exp = resourceIds == null
                 ? null
                 : r => resourceIds.Contains(r.Id);
 
-            var resources = await _orm.Search(exp, model.PageIndex, model.PageSize, ordersForSearch, asNoTracking);
+            var resources = await _orm.Search(exp, searchModel.PageIndex, searchModel.PageSize, ordersForSearch,
+                asNoTracking);
             var dtoList = await ToDomainModel(resources.Data.ToArray(), ResourceAdditionalItem.All);
 
             if (save)
@@ -183,7 +232,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 await _optionsManager.SaveAsync(a => a.LastSearchV2 = model);
             }
 
-            return model.BuildResponse(dtoList, resources.TotalCount);
+            return searchModel.BuildResponse(dtoList, resources.TotalCount);
         }
 
         /// <summary>
@@ -413,7 +462,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                             () => new Resource.Property(property.Name, property.DbValueType,
                                                 property.BizValueType, []));
                                         p.Values ??= [];
-                                        var cpd = _customPropertyDescriptors.GetValueOrDefault(property.Type);
+                                        _customPropertyDescriptors.TryGet(property.Type, out var cpd);
                                         foreach (var v in values)
                                         {
                                             var bizValue = cpd?.ConvertDbValueToBizValue(property, v.Value) ?? v.Value;
@@ -1033,15 +1082,12 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             if (property == ResourceProperty.Introduction)
                             {
-                                scopeValue.Introduction =
-                                    model.Value?.DeserializeAsStandardValue(StandardValueType.String) as string;
+                                scopeValue.Introduction = _standardValueHelper.Deserialize<string>(model.Value, StandardValueType.String);
                             }
                             else
                             {
                                 scopeValue.Rating =
-                                    model.Value?.DeserializeAsStandardValue(StandardValueType.Decimal) is decimal x
-                                        ? x
-                                        : null;
+                                    _standardValueHelper.Deserialize<decimal?>(model.Value, StandardValueType.Decimal);
                             }
 
                             return noValue

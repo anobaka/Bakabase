@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Components.Properties.Text.Abstractions;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
 
@@ -12,7 +13,7 @@ public record LinkProperty() : Models.CustomProperty;
 
 public record LinkPropertyValue : CustomPropertyValue<LinkValue>;
 
-public class LinkPropertyDescriptor : TextPropertyDescriptor<LinkPropertyValue, LinkValue>
+public class LinkPropertyDescriptor(IStandardValueHelper standardValueHelper) : TextPropertyDescriptor<LinkPropertyValue, LinkValue>(standardValueHelper)
 {
     public override CustomPropertyType EnumType => CustomPropertyType.Link;
 

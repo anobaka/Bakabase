@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Formula;
 
@@ -10,7 +11,8 @@ public record FormulaProperty() : Models.CustomProperty;
 
 public record FormulaPropertyValue() : CustomPropertyValue<string>;
 
-public class FormulaPropertyDescriptor : AbstractCustomPropertyDescriptor<FormulaProperty, FormulaPropertyValue, string, string>
+public class FormulaPropertyDescriptor(IStandardValueHelper standardValueHelper)
+    : AbstractCustomPropertyDescriptor<FormulaProperty, FormulaPropertyValue, string, string>(standardValueHelper)
 {
     public override CustomPropertyType EnumType => CustomPropertyType.Formula;
 
@@ -20,9 +22,9 @@ public class FormulaPropertyDescriptor : AbstractCustomPropertyDescriptor<Formul
         SearchOperation.IsNotNull,
     ];
 
-    protected override bool IsMatch(string? value, CustomPropertyValueSearchRequestModel model)
+    protected override bool IsMatch(string? value, SearchOperation operation, object? filterValue)
     {
-        return model.Operation switch
+        return operation switch
         {
             SearchOperation.IsNull => string.IsNullOrEmpty(value),
             SearchOperation.IsNotNull => !string.IsNullOrEmpty(value),

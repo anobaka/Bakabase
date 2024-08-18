@@ -64,10 +64,29 @@ namespace Bakabase.Modules.CustomProperty.Extensions
                 .FirstOrDefault();
         }
 
-        public static MultilevelDataOptions? FindNode(this List<MultilevelDataOptions> branches,
+        public static MultilevelDataOptions? FindFirstNode(this List<MultilevelDataOptions> branches,
             Func<MultilevelDataOptions, bool> find)
         {
             return branches.Select(branch => branch.FindNode(find)).OfType<MultilevelDataOptions>().FirstOrDefault();
+        }
+
+        public static IEnumerable<string> ExtractValues(this List<MultilevelDataOptions> nodes, bool leafOnly)
+        {
+            foreach (var node in nodes)
+            {
+                if (!leafOnly || node.Children == null)
+                {
+                    yield return node.Value;
+                }
+
+                if (node.Children != null)
+                {
+                    foreach (var v in node.Children.ExtractValues(leafOnly))
+                    {
+                        yield return v;
+                    }
+                }
+            }
         }
 
         /// <summary>

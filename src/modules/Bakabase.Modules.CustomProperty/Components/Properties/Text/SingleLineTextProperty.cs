@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Components.Properties.Text.Abstractions;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Text
 {
@@ -8,7 +9,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties.Text
 
     public record SingleLineTextPropertyValue : TextPropertyValue;
 
-    public class SingleLineTextPropertyDescriptor : TextPropertyDescriptor<SingleLineTextPropertyValue, string>
+    public class SingleLineTextPropertyDescriptor(IStandardValueHelper standardValueHelper) : TextPropertyDescriptor<SingleLineTextPropertyValue, string>(standardValueHelper)
     {
         public override CustomPropertyType EnumType => CustomPropertyType.SingleLineText;
         protected override string[] GetMatchSources(string? value)

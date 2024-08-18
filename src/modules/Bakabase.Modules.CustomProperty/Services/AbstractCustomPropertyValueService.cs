@@ -11,9 +11,9 @@ using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Helpers;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
+using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -26,7 +26,7 @@ namespace Bakabase.Modules.CustomProperty.Services
         AbstractCustomPropertyValueService<TDbContext>(
             IServiceProvider serviceProvider,
             IEnumerable<IStandardValueHandler> converters,
-            IEnumerable<ICustomPropertyDescriptor> propertyDescriptors,
+            ICustomPropertyDescriptors propertyDescriptors,
             ICustomPropertyLocalizer localizer,
             IBuiltinPropertyValueService _builtinPropertyValueService,
             IStandardValueLocalizer standardValueLocalizer)
@@ -37,9 +37,6 @@ namespace Bakabase.Modules.CustomProperty.Services
 
         private readonly Dictionary<StandardValueType, IStandardValueHandler> _converters =
             converters.ToDictionary(d => d.Type, d => d);
-
-        private readonly Dictionary<int, ICustomPropertyDescriptor> _customPropertyDescriptors =
-            propertyDescriptors.ToDictionary(d => d.Type, d => d);
 
         private readonly ICustomPropertyLocalizer _localizer = localizer;
         private readonly IStandardValueLocalizer _standardValueLocalizer = standardValueLocalizer;
@@ -66,11 +63,36 @@ namespace Bakabase.Modules.CustomProperty.Services
                 await CustomPropertyService.GetAll(x => propertyIds.Contains(x.Id),
                     CustomPropertyAdditionalItem.None, returnCopy);
             var propertyMap = properties.ToDictionary(x => x.Id);
-            var dtoList = values
-                .Select(v =>
-                    CustomPropertyExtensions.Descriptors[(CustomPropertyType) propertyMap[v.PropertyId].Type]
-                        .ToDomainModel(v)!)
+            var dtoList = values.Select(v => propertyDescriptors[propertyMap[v.PropertyId].Type].ToDomainModel(v)!)
                 .ToList();
+
+            foreach (var ai in SpecificEnumUtils<CustomPropertyValueAdditionalItem>.Values)
+            {
+                if (additionalItems.HasFlag(ai))
+                {
+                    switch (ai)
+                    {
+                        case CustomPropertyValueAdditionalItem.None:
+                            break;
+                        case CustomPropertyValueAdditionalItem.BizValue:
+                        {
+                                foreach (var dto in dtoList)
+                                {
+                                    if (propertyMap.TryGetValue(dto.PropertyId, out var p))
+                                    {
+                                        if (propertyDescriptors.TryGet(p.Type, out var cpd))
+                                        {
+                                            dto.BizValue = cpd.ConvertDbValueToBizValue(p, dto.Value);
+                                        }
+                                    }
+                                }
+                                break;
+                        }
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
 
             foreach (var dto in dtoList)
             {
@@ -143,8 +165,7 @@ namespace Bakabase.Modules.CustomProperty.Services
                     var property = propertyMap.GetValueOrDefault(propertyId);
                     if (property != null)
                     {
-                        var pd = _customPropertyDescriptors.GetValueOrDefault(property.Type);
-                        if (pd == null)
+                        if (!propertyDescriptors.TryGet(property.Type, out var pd))
                         {
                             Logger.LogError(_localizer.CustomProperty_DescriptorNotFound(property.Type));
                             continue;
@@ -187,8 +208,7 @@ namespace Bakabase.Modules.CustomProperty.Services
 
         public async Task<(Bakabase.Abstractions.Models.Domain.CustomPropertyValue Value, bool PropertyChanged)?> Create(object? bizValue, StandardValueType bizValueType, Bakabase.Abstractions.Models.Domain.CustomProperty property, int resourceId, int scope)
         {
-            var pd = _customPropertyDescriptors.GetValueOrDefault(property.Type);
-            if (pd == null)
+            if (!propertyDescriptors.TryGet(property.Type, out var pd))
             {
                 Logger.LogError(_localizer.CustomProperty_DescriptorNotFound(property.Type));
                 return null;

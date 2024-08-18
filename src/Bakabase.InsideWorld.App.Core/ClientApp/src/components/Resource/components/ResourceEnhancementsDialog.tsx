@@ -10,6 +10,8 @@ import { EnhancementAdditionalItem } from '@/sdk/constants';
 import StandardValueRenderer from '@/components/StandardValue/ValueRenderer';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
+import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
+import { serializeStandardValue } from '@/components/StandardValue/helpers';
 
 interface Props extends DestroyableProps{
   resourceId: number;
@@ -129,24 +131,26 @@ function ResourceEnhancementsDialog({ resourceId, ...props }: Props) {
                       <TableColumn>{t('Generated custom property value')}</TableColumn>
                     </TableHeader>
                     <TableBody>
-                      {targets.map((e) => (
-                        <TableRow>
-                          <TableCell>{e.targetName}</TableCell>
-                          <TableCell>{JSON.stringify(e.enhancement?.value)}</TableCell>
-                          <TableCell>
-                            {e.enhancement?.valueType == undefined ? (
-                                JSON.stringify(e.enhancement?.value)
-                              ) : (
-                                <StandardValueRenderer
-                                  value={e.enhancement?.customPropertyValue?.value}
-                                  type={e.enhancement.valueType}
+                      {targets.map((e) => {
+                        const pv = e.enhancement?.customPropertyValue;
+                        const property = pv?.property;
+                        return (
+                          <TableRow>
+                            <TableCell>{e.targetName}</TableCell>
+                            <TableCell>{JSON.stringify(e.enhancement?.value)}</TableCell>
+                            <TableCell>
+                              {pv && (
+                                <PropertyValueRenderer
+                                  property={property!}
+                                  bizValue={serializeStandardValue(pv.value, property!.bizValueType)}
+                                  dbValue={serializeStandardValue(pv.bizValue, property!.dbValueType)}
                                   variant={'light'}
                                 />
                               )}
-
-                          </TableCell>
-                        </TableRow>
-                        ))}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
 
@@ -159,24 +163,26 @@ function ResourceEnhancementsDialog({ resourceId, ...props }: Props) {
                             <TableColumn>{t('Generated custom property value')}</TableColumn>
                           </TableHeader>
                           <TableBody>
-                            {dt.enhancements?.map((e) => (
-                              <TableRow>
-                                <TableCell>{e.dynamicTarget}</TableCell>
-                                <TableCell>{JSON.stringify(e.value)}</TableCell>
-                                <TableCell>
-                                  {e.valueType == undefined ? (
-                                    JSON.stringify(e.value)
-                                  ) : (
-                                    <StandardValueRenderer
-                                      value={e.customPropertyValue?.value}
-                                      type={e.valueType}
-                                      variant={'light'}
-                                    />
+                            {dt.enhancements?.map((e) => {
+                              const pv = e.customPropertyValue;
+                              const property = pv?.property;
+                              return (
+                                <TableRow>
+                                  <TableCell>{e.dynamicTarget}</TableCell>
+                                  <TableCell>{JSON.stringify(e.value)}</TableCell>
+                                  <TableCell>
+                                    {pv && (
+                                      <PropertyValueRenderer
+                                        property={property!}
+                                        variant={'light'}
+                                        bizValue={serializeStandardValue(pv.value, property!.bizValueType)}
+                                        dbValue={serializeStandardValue(pv.bizValue, property!.dbValueType)}
+                                      />
                                   )}
-
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       );

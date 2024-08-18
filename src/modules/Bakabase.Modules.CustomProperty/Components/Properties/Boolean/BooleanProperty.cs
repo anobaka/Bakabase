@@ -1,8 +1,10 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Newtonsoft.Json;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Boolean;
@@ -12,8 +14,8 @@ public record BooleanPropertyValue : CustomPropertyValue<bool>
 {
 }
 
-public class BooleanPropertyDescriptor : AbstractCustomPropertyDescriptor<BooleanProperty, BooleanPropertyValue,
-    bool, bool>
+public class BooleanPropertyDescriptor(IStandardValueHelper standardValueHelper) : AbstractCustomPropertyDescriptor<BooleanProperty, BooleanPropertyValue,
+    bool, bool>(standardValueHelper)
 {
     public override CustomPropertyType EnumType => CustomPropertyType.Boolean;
 
@@ -22,16 +24,19 @@ public class BooleanPropertyDescriptor : AbstractCustomPropertyDescriptor<Boolea
         SearchOperation.Equals, SearchOperation.NotEquals, SearchOperation.IsNull, SearchOperation.IsNotNull
     ];
 
-    protected override bool IsMatch(bool value, CustomPropertyValueSearchRequestModel model)
+    protected override bool IsMatch(bool value, SearchOperation operation, object? filterValue)
     {
-        switch (model.Operation)
+        switch (operation)
         {
             case SearchOperation.Equals:
             case SearchOperation.NotEquals:
+            {
+                if (filterValue is not bool b)
                 {
-                    var typedTarget = model.DeserializeValue<bool>();
-                    return model.Operation == SearchOperation.Equals ? value == typedTarget : value != typedTarget;
+                    return true;
                 }
+                return operation == SearchOperation.Equals ? value == b : value != b;
+            }
             case SearchOperation.IsNull:
                 return false;
             case SearchOperation.IsNotNull:

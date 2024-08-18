@@ -7,6 +7,8 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
+using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.BuiltinProperty;

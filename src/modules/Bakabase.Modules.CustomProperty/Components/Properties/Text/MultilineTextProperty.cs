@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Components.Properties.Text.Abstractions;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Text
 {
@@ -8,7 +9,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties.Text
 
     public record MultilineTextPropertyValue : TextPropertyValue;
 
-    public class MultilineTextPropertyDescriptor : TextPropertyDescriptor<MultilineTextPropertyValue, string>
+    public class MultilineTextPropertyDescriptor(IStandardValueHelper standardValueHelper) : TextPropertyDescriptor<MultilineTextPropertyValue, string>(standardValueHelper)
     {
         public override CustomPropertyType EnumType => CustomPropertyType.MultilineText;
         protected override string[] GetMatchSources(string? value)

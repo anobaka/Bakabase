@@ -19,29 +19,21 @@ using Bakabase.Modules.Alias.Models.Input;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
-using Bakabase.Modules.StandardValue.Helpers;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Newtonsoft.Json;
 using SQLitePCL;
 
 namespace Bakabase.InsideWorld.Business.Components.Search
 {
-    public class DefaultResourceSearchContextProcessor : IResourceSearchContextProcessor
-	{
-		private readonly ICustomPropertyValueService _customPropertyValueService;
-        private readonly IAliasService _aliasService;
-		private readonly ICustomPropertyService _customPropertyService;
-        private readonly Dictionary<int, ICustomPropertyDescriptor> _propertyDescriptors;
-
-		public DefaultResourceSearchContextProcessor(ICustomPropertyValueService customPropertyValueService,
-            IAliasService aliasService, ICustomPropertyService customPropertyService, IEnumerable<ICustomPropertyDescriptor> propertyDescriptors)
-		{
-			_customPropertyValueService = customPropertyValueService;
-			_aliasService = aliasService;
-			_customPropertyService = customPropertyService;
-            _propertyDescriptors = propertyDescriptors.ToDictionary(x => x.Type);
-        }
-
-		private async Task PrepareAliases(ResourceSearchFilter filter, ResourceSearchContext context)
+    public class DefaultResourceSearchContextProcessor(
+        ICustomPropertyValueService customPropertyValueService,
+        IAliasService aliasService,
+        ICustomPropertyService customPropertyService,
+        ICustomPropertyDescriptors propertyDescriptors,
+        IStandardValueHelper standardValueHelper)
+        : IResourceSearchContextProcessor
+    {
+        private async Task PrepareAliases(ResourceSearchFilter filter, ResourceSearchContext context)
         {
             if (filter.IsCustomProperty)
             {
@@ -51,7 +43,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                     if (property.EnumType.IntegratedWithAlias())
                     {
                         var allAliasGroups =
-                            (await _aliasService.SearchGroups(new AliasSearchInputModel {PageSize = int.MaxValue}))
+                            (await aliasService.SearchGroups(new AliasSearchInputModel {PageSize = int.MaxValue}))
                             .Data;
 
                         context.AliasCandidates ??= allAliasGroups.SelectMany(g =>
@@ -68,7 +60,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 		private async Task PrepareCustomProperties(ResourceSearchContext context)
 		{
 			context.PropertiesDataPool ??=
-				(await _customPropertyService.GetAll(null, CustomPropertyAdditionalItem.None, false))
+				(await customPropertyService.GetAll(null, CustomPropertyAdditionalItem.None, false))
 				.ToDictionary(x => x.Id, x => x);
 		}
 
@@ -79,7 +71,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 
             if (!context.CustomPropertyDataPool.TryGetValue(filter.PropertyId, out var propertyValues))
             {
-                var rawValues = await _customPropertyValueService.GetAll(x => x.PropertyId == filter.PropertyId,
+                var rawValues = await customPropertyValueService.GetAll(x => x.PropertyId == filter.PropertyId,
                     CustomPropertyValueAdditionalItem.None, false);
                 propertyValues = rawValues.ToDictionary(x => x.ResourceId, x => (CustomPropertyValue?) x);
                 var nullValueIds = context.AllResourceIds.Except(propertyValues.Keys);
@@ -431,8 +423,9 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                                 case SearchOperation.NotIn:
                                 {
                                     var filterValue =
-                                        (filter.DbValue?.DeserializeAsStandardValue(StandardValueType.ListString) as
-                                            List<string>)?.Select(int.Parse).ToList();
+                                        standardValueHelper
+                                            .Deserialize<List<string>>(filter.DbValue, StandardValueType.ListString)
+                                            ?.Select(int.Parse).ToList();
                                     switch (filter.Operation)
                                     {
                                         case SearchOperation.In:
@@ -482,8 +475,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                     var property = context.PropertiesDataPool![filter.PropertyId];
                     var propertyValues = await PrepareAndGetCustomPropertyValues(filter, context);
 
-                    var descriptor = _propertyDescriptors.GetValueOrDefault(property.Type);
-                    if (descriptor != null)
+                    if (propertyDescriptors.TryGet(property.Type, out var descriptor))
                     {
                         set = propertyValues?.Where(x => descriptor.IsMatch(x.Value, filter)).Select(x => x.Key)
                             .ToHashSet() ?? [];

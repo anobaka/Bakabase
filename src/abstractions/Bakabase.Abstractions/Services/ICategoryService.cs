@@ -19,7 +19,7 @@ public interface ICategoryService
     // Task<ListResponse<TComponent>> GetComponents<TComponent>(int id, ComponentType type)
     //     where TComponent : class, IComponent;
     //
-    Task<SingletonResponse<TComponent>> GetFirstComponent<TComponent>(int id, ComponentType type) where TComponent : class, IComponent;
+    Task<SingletonResponse<TComponent?>> GetFirstComponent<TComponent>(int id, ComponentType type) where TComponent : class, IComponent;
     //
     // Task<BaseResponse> Play(int id, string file);
 

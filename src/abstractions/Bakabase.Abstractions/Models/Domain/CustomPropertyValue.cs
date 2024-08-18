@@ -13,6 +13,7 @@ namespace Bakabase.Abstractions.Models.Domain
         public virtual object? Value => null;
         public int Scope { get; set; }
         public string BizKey => $"{ResourceId}-{PropertyId}-{Scope}";
+        public object? BizValue { get; set; }
 
         private sealed class CustomPropertyValueBizKeyComparer : IEqualityComparer<CustomPropertyValue>
         {

@@ -50,7 +50,7 @@ using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
 using Bakabase.Modules.CustomProperty.Components.Properties.Tags;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
-using Bakabase.Modules.StandardValue.Helpers;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -98,6 +98,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         private readonly ICategoryService _categoryService;
         private readonly ICustomPropertyService _customPropertyService;
         private readonly ICoverDiscoverer _coverManager;
+        private readonly IStandardValueHelper _standardValueHelper;
 
         public ResourceController(IResourceService service, IServiceProvider serviceProvider,
             ISpecialTextService specialTextService, IMediaLibraryService mediaLibraryService,
@@ -106,7 +107,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             FfMpegService ffMpegService, IBOptions<ResourceOptions> resourceOptions,
             Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
             ILogger<ResourceController> logger, ICustomPropertyValueService customPropertyValueService,
-            ICategoryService categoryService, ICustomPropertyService customPropertyService, ICoverDiscoverer coverManager)
+            ICategoryService categoryService, ICustomPropertyService customPropertyService, ICoverDiscoverer coverManager, IStandardValueHelper standardValueHelper)
         {
             _service = service;
             _serviceProvider = serviceProvider;
@@ -125,6 +126,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             _categoryService = categoryService;
             _customPropertyService = customPropertyService;
             _coverManager = coverManager;
+            _standardValueHelper = standardValueHelper;
         }
 
         [HttpGet("search-criteria")]
@@ -187,8 +189,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                         case SearchOperation.Equals:
                                         case SearchOperation.NotEquals:
                                         {
-                                            var value = filter.DbValue?.DeserializeAsStandardValue(StandardValueType
-                                                .String) as string;
+                                            var value = _standardValueHelper.Deserialize<string>(filter.DbValue,
+                                                StandardValueType.String);
                                             if (!string.IsNullOrEmpty(value))
                                             {
                                                 var choices = (propertyMap.GetValueOrDefault(filter.PropertyId) as
@@ -205,19 +207,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                         case SearchOperation.In:
                                         case SearchOperation.NotIn:
                                         {
-                                            var value =
-                                                (filter.DbValue?.DeserializeAsStandardValue(
-                                                    StandardValueType.ListString) as List<string>)?.OfType<string>()
-                                                .ToList();
+                                            var value = _standardValueHelper
+                                                .Deserialize<List<string>>(filter.DbValue, StandardValueType.ListString)
+                                                ?.OfType<string>().ToList();
                                             if (value?.Any() == true)
                                             {
                                                 var choices = (propertyMap.GetValueOrDefault(filter.PropertyId) as
                                                     SingleChoiceProperty)?.Options?.Choices;
                                                 if (choices?.Any() == true)
                                                 {
-                                                    filter.BizValue = value
+                                                    filter.BizValue = _standardValueHelper.Serialize(value
                                                         .Select(v => choices.FirstOrDefault(x => x.Value == v)?.Label)
-                                                        .OfType<string>().ToList().SerializeAsStandardValue();
+                                                        .OfType<string>().ToList());
                                                 }
                                                        
                                             }
@@ -235,18 +236,18 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                         case SearchOperation.Contains:
                                         case SearchOperation.NotContains:
                                         {
-                                            var value =
-                                                (filter.DbValue?.DeserializeAsStandardValue(
-                                                    StandardValueType.ListString) as List<string>)?.OfType<string>()
+                                            var value = _standardValueHelper
+                                                .Deserialize<List<string>>(filter.DbValue, StandardValueType.ListString)
+                                                ?.OfType<string>()
                                                 .ToList();
                                             if (value?.Any() == true)
                                             {
                                                 var choices = (propertyMap.GetValueOrDefault(filter.PropertyId) as MultipleChoiceProperty)?.Options?.Choices;
                                                 if (choices?.Any() == true)
                                                 {
-                                                    filter.BizValue = value
+                                                    filter.BizValue = _standardValueHelper.Serialize(value
                                                         .Select(v => choices.FirstOrDefault(x => x.Value == v)?.Label)
-                                                        .OfType<string>().ToList().SerializeAsStandardValue();
+                                                        .OfType<string>().ToList());
                                                 }
 
                                             }
@@ -264,9 +265,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                         case SearchOperation.Contains:
                                         case SearchOperation.NotContains:
                                         {
-                                            var value =
-                                                (filter.DbValue?.DeserializeAsStandardValue(
-                                                    StandardValueType.ListString) as List<string>)?.OfType<string>()
+                                            var value = _standardValueHelper
+                                                .Deserialize<List<string>>(filter.DbValue, StandardValueType.ListString)
+                                                ?.OfType<string>()
                                                 .ToList();
                                             if (value?.Any() == true)
                                             {
@@ -274,9 +275,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                                     MultilevelProperty)?.Options?.Data;
                                                 if (trees?.Any() == true)
                                                 {
-                                                    filter.BizValue = value
+                                                    filter.BizValue = _standardValueHelper.Serialize(value
                                                         .Select(v => trees.FindLabelChain(v)?.ToList())
-                                                        .OfType<List<string>>().ToList().SerializeAsStandardValue();
+                                                        .OfType<List<string>>().ToList());
                                                 }
                                             }
 
@@ -293,16 +294,16 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                         case SearchOperation.Contains:
                                         case SearchOperation.NotContains:
                                         {
-                                            var value =
-                                                (filter.DbValue?.DeserializeAsStandardValue(
-                                                    StandardValueType.ListString) as List<string>)?.OfType<string>()
+                                            var value = _standardValueHelper
+                                                .Deserialize<List<string>>(filter.DbValue, StandardValueType.ListString)
+                                                ?.OfType<string>()
                                                 .ToList();
                                             if (value?.Any() == true)
                                             {
                                                 var tags = (propertyMap.GetValueOrDefault(filter.PropertyId) as TagsProperty)?.Options?.Tags;
                                                 if (tags?.Any() == true)
                                                 {
-                                                    filter.BizValue = value
+                                                    filter.BizValue = _standardValueHelper.Serialize(value
                                                         .Select(v =>
                                                         {
                                                             var tag = tags.FirstOrDefault(x => x.Value == v);
@@ -314,7 +315,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                                             return new TagValue(tag.Group, tag.Name);
                                                         })
                                                         .OfType<TagValue>()
-                                                        .ToList().SerializeAsStandardValue();
+                                                        .ToList());
                                                 }
                                             }
 
@@ -348,8 +349,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                                 (await _categoryService.GetAll(null, CategoryAdditionalItem.None))
                                                 .ToDictionary(d => d.Id, d => d);
 
-                                            var ids = (filter.BizValue?.DeserializeAsStandardValue(StandardValueType
-                                                .ListString) as List<string>)?.Select(int.Parse) ?? [];
+                                            var ids = _standardValueHelper.Deserialize<List<string>>(filter.DbValue,
+                                                StandardValueType
+                                                    .ListString)?.Select(int.Parse) ?? [];
 
                                             var tMlMap = mediaLibraryMap;
                                             var tCMap = categoryMap;
@@ -371,7 +373,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                                 bizValue.Add([c.Name, ml.Name]);
                                             }
 
-                                            filter.BizValue = bizValue.SerializeAsStandardValue();
+                                            filter.BizValue = _standardValueHelper.Serialize(bizValue);
                                         }
 
                                         break;

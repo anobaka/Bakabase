@@ -5,16 +5,6 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
-using Bakabase.Modules.CustomProperty.Components.Properties.Attachment;
-using Bakabase.Modules.CustomProperty.Components.Properties.Boolean;
-using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
-using Bakabase.Modules.CustomProperty.Components.Properties.DateTime;
-using Bakabase.Modules.CustomProperty.Components.Properties.Formula;
-using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
-using Bakabase.Modules.CustomProperty.Components.Properties.Number;
-using Bakabase.Modules.CustomProperty.Components.Properties.Tags;
-using Bakabase.Modules.CustomProperty.Components.Properties.Text;
-using Bakabase.Modules.CustomProperty.Components.Properties.Time;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
@@ -26,26 +16,6 @@ namespace Bakabase.Modules.CustomProperty.Extensions;
 
 public static class CustomPropertyExtensions
 {
-    public static Dictionary<CustomPropertyType, ICustomPropertyDescriptor> Descriptors = new()
-    {
-        {CustomPropertyType.SingleLineText, new SingleLineTextPropertyDescriptor()},
-        {CustomPropertyType.MultilineText, new MultilineTextPropertyDescriptor()},
-        {CustomPropertyType.SingleChoice, new SingleChoicePropertyDescriptor()},
-        {CustomPropertyType.MultipleChoice, new MultipleChoicePropertyDescriptor()},
-        {CustomPropertyType.Number, new NumberPropertyDescriptor()},
-        {CustomPropertyType.Percentage, new PercentagePropertyDescriptor()},
-        {CustomPropertyType.Rating, new RatingPropertyDescriptor()},
-        {CustomPropertyType.Boolean, new BooleanPropertyDescriptor()},
-        {CustomPropertyType.Link, new LinkPropertyDescriptor()},
-        {CustomPropertyType.Attachment, new AttachmentPropertyDescriptor()},
-        {CustomPropertyType.Date, new DatePropertyDescriptor()},
-        {CustomPropertyType.DateTime, new DateTimePropertyDescriptor()},
-        {CustomPropertyType.Time, new TimePropertyDescriptor()},
-        {CustomPropertyType.Formula, new FormulaPropertyDescriptor()},
-        {CustomPropertyType.Multilevel, new MultilevelPropertyDescriptor()},
-        {CustomPropertyType.Tags, new TagsPropertyDescriptor()}
-    };
-
     private static readonly ConcurrentDictionary<CustomPropertyType, CustomPropertyAttribute>
         CustomPropertyAttributeMap =
             new(SpecificEnumUtils<CustomPropertyType>.Values.ToDictionary(d => d,
@@ -55,12 +25,6 @@ public static class CustomPropertyExtensions
         StandardValueTypeCustomPropertyTypesMap = new ConcurrentDictionary<StandardValueType, CustomPropertyType[]>(
             CustomPropertyAttributeMap.GroupBy(d => d.Value.BizValueType)
                 .ToDictionary(d => d.Key, d => d.Select(c => c.Key).ToArray()));
-
-    public static Models.CustomProperty? ToDomainModel(
-        this Bakabase.Abstractions.Models.Db.CustomProperty? entity)
-    {
-        return entity == null ? null : Descriptors[(CustomPropertyType) entity.Type].ToDomainModel(entity);
-    }
 
     public static StandardValueType GetDbValueType(this CustomPropertyType type) => CustomPropertyAttributeMap[type].DbValueType;
     public static StandardValueType GetBizValueType(this CustomPropertyType type) => CustomPropertyAttributeMap[type].BizValueType;

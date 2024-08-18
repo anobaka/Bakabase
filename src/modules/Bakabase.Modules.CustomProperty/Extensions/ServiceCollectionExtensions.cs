@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
+using Bakabase.Modules.CustomProperty.Components;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,6 +30,8 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton(SpecificTypeUtils<ICustomPropertyDescriptor>.Type, t);
         }
+
+        services.AddSingleton<ICustomPropertyDescriptors, CustomPropertyDescriptors>();
 
         services.AddTransient<ICustomPropertyLocalizer>(sp => sp.GetRequiredService<TCustomPropertyLocalizer>());
 

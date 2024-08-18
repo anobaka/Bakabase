@@ -5,6 +5,7 @@ using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Choice;
 
@@ -18,8 +19,9 @@ public record SingleChoicePropertyValue : CustomPropertyValue<string>
     // }
 }
 
-public class SingleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<SingleChoiceProperty,
-    ChoicePropertyOptions<string>, SingleChoicePropertyValue, string, string>
+public class SingleChoicePropertyDescriptor(IStandardValueHelper standardValueHelper)
+    : AbstractCustomPropertyDescriptor<SingleChoiceProperty,
+        ChoicePropertyOptions<string>, SingleChoicePropertyValue, string, string>(standardValueHelper)
 {
     public override CustomPropertyType EnumType => CustomPropertyType.SingleChoice;
 
@@ -33,7 +35,15 @@ public class SingleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<S
         SearchOperation.NotIn
     ];
 
-    protected override (string? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(SingleChoiceProperty property, string bizValue)
+    protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeyword(
+        SingleChoiceProperty property, string keyword)
+    {
+        var ids = property.Options?.Choices?.Where(c => c.Label.Contains(keyword)).Select(x => x.Value).ToList();
+        return ids?.Any() == true ? (ids, SearchOperation.In) : null;
+    }
+
+    protected override (string? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(
+        SingleChoiceProperty property, string bizValue)
     {
         if (!string.IsNullOrEmpty(bizValue))
         {
@@ -46,43 +56,43 @@ public class SingleChoicePropertyDescriptor : AbstractCustomPropertyDescriptor<S
         return (null, false);
     }
 
-    protected override bool IsMatch(string? id, CustomPropertyValueSearchRequestModel model)
+    protected override bool IsMatch(string? value, SearchOperation operation, object? filterValue)
     {
-        switch (model.Operation)
+        switch (operation)
         {
             case SearchOperation.Equals:
             case SearchOperation.NotEquals:
+            {
+
+                var searchId = filterValue as string;
+                // invalid filter
+                if (string.IsNullOrEmpty(searchId))
                 {
-
-                    var searchId = model.DeserializeValue<string>();
-                    // invalid filter
-                    if (string.IsNullOrEmpty(searchId))
-                    {
-                        return true;
-                    }
-
-                    return model.Operation == SearchOperation.Equals
-                        ? string.Equals(searchId, id)
-                        : !string.Equals(searchId, id);
-                }
-            case SearchOperation.IsNull:
-                return string.IsNullOrEmpty(id);
-            case SearchOperation.IsNotNull:
-                return !string.IsNullOrEmpty(id);
-            case SearchOperation.In:
-            case SearchOperation.NotIn:
-                {
-                    var searchIds = model.DeserializeValue<string[]>();
-                    if (searchIds?.Any() == true)
-                    {
-                        return model.Operation == SearchOperation.In
-                            ? searchIds.Contains(id)
-                            : !searchIds.Contains(id);
-                    }
-
-                    // invalid filter
                     return true;
                 }
+
+                return operation == SearchOperation.Equals
+                    ? string.Equals(searchId, value)
+                    : !string.Equals(searchId, value);
+            }
+            case SearchOperation.IsNull:
+                return string.IsNullOrEmpty(value);
+            case SearchOperation.IsNotNull:
+                return !string.IsNullOrEmpty(value);
+            case SearchOperation.In:
+            case SearchOperation.NotIn:
+            {
+                var searchIds = filterValue as List<string>;
+                if (searchIds?.Any() == true)
+                {
+                    return operation == SearchOperation.In
+                        ? searchIds.Contains(value)
+                        : !searchIds.Contains(value);
+                }
+
+                // invalid filter
+                return true;
+            }
             default:
                 throw new ArgumentOutOfRangeException();
         }

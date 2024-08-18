@@ -12,5 +12,14 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
         public Combinator Combinator { get; set; }
         public List<ResourceSearchFilterGroup>? Groups { get; set; }
         public List<ResourceSearchFilter>? Filters { get; set; }
+
+        public ResourceSearchFilterGroup Copy()
+        {
+            return this with
+            {
+                Groups = Groups?.Select(g => g.Copy()).ToList(),
+                Filters = Filters?.Select(f => f with { }).ToList()
+            };
+        }
     }
 }

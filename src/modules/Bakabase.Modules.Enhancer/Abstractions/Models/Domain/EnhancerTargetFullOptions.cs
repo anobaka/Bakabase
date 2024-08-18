@@ -10,7 +10,6 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
 public record EnhancerTargetFullOptions() : EnhancerTargetOptions
 {
-    public bool? IntegrateWithAlias { get; set; }
     public bool? AutoMatchMultilevelString { get; set; }
     public bool? AutoGenerateProperties { get; set; }
     public int? PropertyId { get; set; }

@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
+using Bakabase.Modules.StandardValue.Components;
 using Bakabase.Modules.StandardValue.Services;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +25,7 @@ namespace Bakabase.Modules.StandardValue.Extensions
             services.AddScoped<IStandardValueService, StandardValueService>();
             services.AddScoped<IDateTimeParser>(sp => sp.GetRequiredService<TDateTimeParser>());
             services.AddTransient<IStandardValueLocalizer>(sp => sp.GetRequiredService<TStandardValueLocalizer>());
+            services.AddSingleton<IStandardValueHelper, StandardValueHelper>();
 
             return services;
         }

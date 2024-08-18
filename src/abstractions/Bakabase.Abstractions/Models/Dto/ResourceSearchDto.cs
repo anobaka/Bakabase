@@ -13,5 +13,15 @@ namespace Bakabase.Abstractions.Models.Dto
     {
         public ResourceSearchFilterGroup? Group { get; set; }
         public ResourceSearchOrderInputModel[]? Orders { get; set; }
+        public string? Keyword { get; set; }
+
+        public ResourceSearchDto Copy() => new()
+        {
+            Group = Group?.Copy(), 
+            Orders = Orders?.Select(o => o with { }).ToArray(), 
+            Keyword = Keyword,
+            PageIndex = PageIndex,
+            PageSize = PageSize
+        };
     }
 }

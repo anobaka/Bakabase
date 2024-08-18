@@ -129,7 +129,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 
                     if (!string.IsNullOrEmpty(detail.CoverUrl))
                     {
-                        var imageData = await _exHentaiClient.DownloadImage(detail.CoverUrl);
+                        var imageData = await _exHentaiClient.HttpClient.GetByteArrayAsync(detail.CoverUrl, ct);
                         var queryIdx = detail.CoverUrl.IndexOf('?');
                         var coverUrl = queryIdx == -1 ? detail.CoverUrl : detail.CoverUrl[..queryIdx];
                         ctx.CoverPath = await SaveFile(resource.Id, $"cover{Path.GetExtension(coverUrl)}", imageData);

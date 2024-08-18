@@ -62,7 +62,6 @@ namespace Bakabase.InsideWorld.Business.Services
         ResourceService<InsideWorldDbContext, Bakabase.Abstractions.Models.Db.Category, int> orm)
         : BootstrapService(serviceProvider), ICategoryService
     {
-        private ResourceService<InsideWorldDbContext, Bakabase.Abstractions.Models.Db.Category, int> _orm = orm;
         protected IMediaLibraryService MediaLibraryService => GetRequiredService<IMediaLibraryService>();
 
         protected ICategoryCustomPropertyMappingService CategoryCustomPropertyMappingService =>
@@ -106,37 +105,54 @@ namespace Bakabase.InsideWorld.Business.Services
         }
 
         public async Task<ListResponse<TComponent>> GetComponents<TComponent>(int id, ComponentType type)
-            where TComponent : class, IComponent =>
-            await GetComponents<TComponent>(await Get(id, CategoryAdditionalItem.Components), type);
-
-        public async Task<SingletonResponse<TComponent>> GetFirstComponent<TComponent>(int id, ComponentType type)
             where TComponent : class, IComponent
         {
-            var rsp = await GetComponents<TComponent>(await Get(id, CategoryAdditionalItem.Components),
-                type);
+            var c = await Get(id, CategoryAdditionalItem.Components);
+            if (c == null)
+            {
+                return ListResponseBuilder<TComponent>.BadRequest;
+            }
+
+            return await GetComponents<TComponent>(c, type);
+        }
+
+        public async Task<SingletonResponse<TComponent?>> GetFirstComponent<TComponent>(int id, ComponentType type)
+            where TComponent : class, IComponent
+        {
+            var c = await Get(id, CategoryAdditionalItem.Components);
+            if (c == null)
+            {
+                return SingletonResponseBuilder<TComponent?>.BadRequest;
+            }
+
+            var rsp = await GetComponents<TComponent>(c, type);
+            var firstComponent = rsp.Data?.FirstOrDefault();
             return rsp.Code == 0
-                ? new SingletonResponse<TComponent>(rsp.Data.FirstOrDefault())
-                : SingletonResponseBuilder<TComponent>.Build((ResponseCode) rsp.Code, rsp.Message);
+                ? new SingletonResponse<TComponent?>(firstComponent)
+                : SingletonResponseBuilder<TComponent?>.Build((ResponseCode) rsp.Code, rsp.Message);
         }
 
         #endregion
 
         public async Task<List<Abstractions.Models.Domain.Category>> GetAll(
-            Expression<Func<Bakabase.Abstractions.Models.Db.Category, bool>> selector = null,
+            Expression<Func<Bakabase.Abstractions.Models.Db.Category, bool>>? selector = null,
             CategoryAdditionalItem additionalItems = CategoryAdditionalItem.None)
         {
-            var data = await _orm.GetAll(selector);
+            var data = await orm.GetAll(selector);
             var dtoList = data.Select(d => d.ToDomainModel()).ToArray();
             await Populate(dtoList, additionalItems);
             return dtoList.OrderBy(a => a.Order).ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         }
 
-        public async Task<Category> Get(int id,
+        public async Task<Category?> Get(int id,
             CategoryAdditionalItem additionalItems = CategoryAdditionalItem.None)
         {
-            var c = await _orm.GetByKey(id);
-            var dto = c.ToDomainModel();
-            await Populate(dto, additionalItems);
+            var c = await orm.GetByKey(id);
+            var dto = c?.ToDomainModel();
+            if (dto != null)
+            {
+                await Populate(dto, additionalItems);
+            }
             return dto;
         }
 
@@ -259,14 +275,14 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (componentKeys?.Any() == true)
             {
-                var externalTran = _orm.DbContext.Database.CurrentTransaction;
+                var externalTran = orm.DbContext.Database.CurrentTransaction;
                 IDbContextTransaction tran = null;
                 if (externalTran == null)
                 {
-                    tran = await _orm.DbContext.Database.BeginTransactionAsync();
+                    tran = await orm.DbContext.Database.BeginTransactionAsync();
                 }
 
-                category = (await _orm.Add(category.ToDbModel())).Data.ToDomainModel();
+                category = (await orm.Add(category.ToDbModel())).Data.ToDomainModel();
                 await CategoryComponentService.Configure(category.Id, componentKeys);
 
                 if (externalTran == null)
@@ -276,7 +292,7 @@ namespace Bakabase.InsideWorld.Business.Services
             }
             else
             {
-                category = (await _orm.Add(category.ToDbModel())).Data.ToDomainModel();
+                category = (await orm.Add(category.ToDbModel())).Data.ToDomainModel();
             }
 
             return new SingletonResponse<Category>(category);
@@ -286,9 +302,9 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             var category = await Get(id);
             var copy = category.Duplicate(model.Name);
-            await using var tran = await _orm.DbContext.Database.BeginTransactionAsync();
+            await using var tran = await orm.DbContext.Database.BeginTransactionAsync();
 
-            var newCategory = (await _orm.Add(copy.ToDbModel())).Data;
+            var newCategory = (await orm.Add(copy.ToDbModel())).Data;
             await MediaLibraryService.DuplicateAllInCategory(id, newCategory.Id);
             await CategoryComponentService.DuplicateAllInCategory(id, newCategory.Id);
 
@@ -322,7 +338,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 return validation;
             }
 
-            var category = await _orm.GetByKey(id);
+            var category = await orm.GetByKey(id);
             switch (model.Type)
             {
                 case ComponentType.Enhancer:
@@ -349,16 +365,16 @@ namespace Bakabase.InsideWorld.Business.Services
                     throw new ArgumentOutOfRangeException();
             }
 
-            await using var tran = await _orm.DbContext.Database.BeginTransactionAsync();
+            await using var tran = await orm.DbContext.Database.BeginTransactionAsync();
             await CategoryComponentService.Configure(id, componentKeys, model.Type);
-            await _orm.DbContext.SaveChangesAsync();
+            await orm.DbContext.SaveChangesAsync();
             await tran.CommitAsync();
             return BaseResponseBuilder.Ok;
         }
 
         public async Task<BaseResponse> Patch(int id, CategoryPatchInputModel model)
         {
-            var category = await _orm.GetByKey(id);
+            var category = await orm.GetByKey(id);
             if (model.Name.IsNotEmpty())
             {
                 category.Name = model.Name;
@@ -389,7 +405,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 category.ResourceDisplayNameTemplate = model.ResourceDisplayNameTemplate;
             }
 
-            await _orm.DbContext.SaveChangesAsync();
+            await orm.DbContext.SaveChangesAsync();
             return BaseResponseBuilder.Ok;
         }
 
@@ -403,7 +419,7 @@ namespace Bakabase.InsideWorld.Business.Services
             await MediaLibraryService.DeleteAll(x => x.CategoryId == id);
             await CategoryComponentService.RemoveAll(x => x.CategoryId == id);
 
-            return await _orm.RemoveByKey(id);
+            return await orm.RemoveByKey(id);
         }
 
         public async Task<BaseResponse> Sort(int[] ids)
@@ -420,7 +436,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            return await _orm.UpdateRange(changed.Select(c => c.ToDbModel()));
+            return await orm.UpdateRange(changed.Select(c => c.ToDbModel()));
         }
 
         public async Task<BaseResponse> SaveDataFromSetupWizard(CategorySetupWizardInputModel model)
@@ -439,7 +455,7 @@ namespace Bakabase.InsideWorld.Business.Services
             BaseResponse categoryOperationRsp;
             var categoryId = model.Category.Id;
 
-            await using var tran = await _orm.DbContext.Database.BeginTransactionAsync();
+            await using var tran = await orm.DbContext.Database.BeginTransactionAsync();
 
             if (model.Category.Id > 0)
             {
@@ -465,9 +481,9 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
 
                 await CategoryComponentService.Configure(model.Category.Id, componentKeys);
-                var category = await _orm.GetByKey(model.Category.Id);
+                var category = await orm.GetByKey(model.Category.Id);
                 category.EnhancementOptionsJson = eo == null ? null : JsonConvert.SerializeObject(eo);
-                await _orm.DbContext.SaveChangesAsync();
+                await orm.DbContext.SaveChangesAsync();
 
                 categoryOperationRsp = await Patch(model.Category.Id, categoryModel);
             }
@@ -653,7 +669,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<List<Abstractions.Models.Domain.Category>> GetByKeys(IEnumerable<int> keys,
             CategoryAdditionalItem additionalItems)
         {
-            var data = await _orm.GetByKeys(keys);
+            var data = await orm.GetByKeys(keys);
             var doList = data.Select(d => d.ToDomainModel()).ToArray();
             await Populate(doList, additionalItems);
             return doList.ToList();

@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Models;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Number.Abstractions;
 
@@ -15,10 +16,11 @@ public record NumberProperty() : CustomProperty<NumberPropertyOptions>;
 
 public record NumberPropertyValue : CustomPropertyValue<decimal>;
 
-public abstract class NumberPropertyDescriptor<TProperty, TOptions, TValue> : AbstractCustomPropertyDescriptor<
-    TProperty,
-    TOptions,
-    TValue, decimal, decimal> where TProperty : CustomProperty<TOptions>, new()
+public abstract class NumberPropertyDescriptor<TProperty, TOptions, TValue>(IStandardValueHelper standardValueHelper)
+    : AbstractCustomPropertyDescriptor<
+        TProperty,
+        TOptions,
+        TValue, decimal, decimal>(standardValueHelper) where TProperty : CustomProperty<TOptions>, new()
     where TOptions : new()
     where TValue : CustomPropertyValue<decimal>, new()
 {
@@ -34,9 +36,9 @@ public abstract class NumberPropertyDescriptor<TProperty, TOptions, TValue> : Ab
         SearchOperation.IsNotNull,
     ];
 
-    protected override bool IsMatch(decimal value, CustomPropertyValueSearchRequestModel model)
+    protected override bool IsMatch(decimal value, SearchOperation operation, object? filterValue)
     {
-        switch (model.Operation)
+        switch (operation)
         {
             case SearchOperation.Equals:
             case SearchOperation.NotEquals:
@@ -44,8 +46,12 @@ public abstract class NumberPropertyDescriptor<TProperty, TOptions, TValue> : Ab
             case SearchOperation.LessThan:
             case SearchOperation.GreaterThanOrEquals:
             case SearchOperation.LessThanOrEquals:
-                var typedTarget = model.DeserializeValue<decimal>();
-                return model.Operation switch
+                if (filterValue is not decimal typedTarget)
+                {
+                    return true;
+                }
+
+                return operation switch
                 {
                     SearchOperation.Equals => value == typedTarget,
                     SearchOperation.NotEquals => value != typedTarget,
