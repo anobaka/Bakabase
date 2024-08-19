@@ -1,4 +1,6 @@
-﻿namespace Bakabase.Modules.Enhancer.Abstractions;
+﻿using Bakabase.Abstractions.Models.Dto;
+
+namespace Bakabase.Modules.Enhancer.Abstractions.Components;
 
 public interface IEnhancerDescriptor
 {

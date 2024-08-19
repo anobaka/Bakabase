@@ -9,10 +9,10 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties.Time;
 
 public record TimeProperty : Models.CustomProperty;
 
-public record TimePropertyValue : CustomPropertyValue<TimeSpan>;
+public record TimePropertyValue : CustomPropertyValue<TimeSpan?>;
 
 public class TimePropertyDescriptor(IStandardValueHelper standardValueHelper)
-    : AbstractCustomPropertyDescriptor<TimeProperty, TimePropertyValue, TimeSpan, TimeSpan>(standardValueHelper)
+    : AbstractCustomPropertyDescriptor<TimeProperty, TimePropertyValue, TimeSpan?, TimeSpan?>(standardValueHelper)
 {
     public override CustomPropertyType EnumType => CustomPropertyType.Time;
 
@@ -28,7 +28,7 @@ public class TimePropertyDescriptor(IStandardValueHelper standardValueHelper)
         SearchOperation.IsNotNull
     ];
 
-    protected override bool IsMatch(TimeSpan value, SearchOperation operation, object? filterValue)
+    protected override bool IsMatch(TimeSpan? value, SearchOperation operation, object? filterValue)
     {
         switch (operation)
         {

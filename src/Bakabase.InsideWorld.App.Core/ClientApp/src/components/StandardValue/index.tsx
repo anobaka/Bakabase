@@ -13,7 +13,6 @@ import StringValueRenderer from './ValueRenderer/Renderers/StringValueRenderer';
 import NumberValueRenderer from './ValueRenderer/Renderers/NumberValueRenderer';
 import DateTimeValueRenderer from './ValueRenderer/Renderers/DateTimeValueRenderer';
 import ChoiceValueRenderer from './ValueRenderer/Renderers/ChoiceValueRenderer';
-import MultilineStringValueRenderer from './ValueRenderer/Renderers/MultilineStringValueRenderer';
 import FormulaValueRenderer from './ValueRenderer/Renderers/FormulaValueRenderer';
 import AttachmentValueRenderer from './ValueRenderer/Renderers/AttachmentValueRenderer';
 import RatingValueRenderer from './ValueRenderer/Renderers/RatingValueRenderer';
@@ -35,7 +34,6 @@ export {
   DateTimeValueRenderer,
   FormulaValueRenderer,
   MultilevelValueRenderer,
-  MultilineStringValueRenderer,
   NumberValueRenderer,
   RatingValueRenderer,
   StringValueRenderer,

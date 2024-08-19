@@ -26,8 +26,11 @@ public static class CustomPropertyExtensions
             CustomPropertyAttributeMap.GroupBy(d => d.Value.BizValueType)
                 .ToDictionary(d => d.Key, d => d.Select(c => c.Key).ToArray()));
 
-    public static StandardValueType GetDbValueType(this CustomPropertyType type) => CustomPropertyAttributeMap[type].DbValueType;
-    public static StandardValueType GetBizValueType(this CustomPropertyType type) => CustomPropertyAttributeMap[type].BizValueType;
+    public static StandardValueType GetDbValueType(this CustomPropertyType type) =>
+        CustomPropertyAttributeMap[type].DbValueType;
+
+    public static StandardValueType GetBizValueType(this CustomPropertyType type) =>
+        CustomPropertyAttributeMap[type].BizValueType;
 
     public static CustomPropertyType[]? GetCompatibleCustomPropertyTypes(this StandardValueType bizValueType) =>
         StandardValueTypeCustomPropertyTypesMap.GetValueOrDefault(bizValueType);
@@ -69,5 +72,40 @@ public static class CustomPropertyExtensions
         }
 
         return typedProperty;
+    }
+
+    public static string? SerializeAsCustomPropertyOptions(this object? options, bool throwOnError = false)
+    {
+        try
+        {
+            return options == null ? null : JsonConvert.SerializeObject(options);
+        }
+        catch (Exception)
+        {
+            if (throwOnError)
+            {
+                throw;
+            }
+
+            return null;
+        }
+    }
+
+    public static T? DeserializeAsCustomPropertyOptions<T>(this string options, bool throwOnError = false)
+        where T : class
+    {
+        try
+        {
+            return string.IsNullOrEmpty(options) ? null : JsonConvert.DeserializeObject<T>(options);
+        }
+        catch (Exception)
+        {
+            if (throwOnError)
+            {
+                throw;
+            }
+
+            return null;
+        }
     }
 }

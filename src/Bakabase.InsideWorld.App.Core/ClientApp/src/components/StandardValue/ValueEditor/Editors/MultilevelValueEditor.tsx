@@ -89,6 +89,8 @@ export default <V = string>({ getDataSource, selectable = buildDefaultSelectable
     );
   }, [value]);
 
+  const filteredData = filterMultilevelData(dataSource, keyword);
+
   return (
     <Modal
       defaultVisible
@@ -111,7 +113,11 @@ export default <V = string>({ getDataSource, selectable = buildDefaultSelectable
           />
         </div>
         <div className={'flex flex-wrap gap-1 w-full min-h-0 overflow-y-auto'}>
-          {renderTreeNodes(filterMultilevelData(dataSource, keyword))}
+          {filteredData.length > 0 ? renderTreeNodes(filteredData) : (
+            <div className={'m-2 flex items-center justify-center'}>
+              {t('No data')}
+            </div>
+          )}
         </div>
       </div>
     </Modal>

@@ -7,12 +7,12 @@ using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.DateTime;
 public record DateTimeProperty : Models.CustomProperty;
-public record DateTimePropertyValue : CustomPropertyValue<System.DateTime>;
+public record DateTimePropertyValue : CustomPropertyValue<System.DateTime?>;
 
 public class
     DateTimePropertyDescriptor(IStandardValueHelper standardValueHelper)
     : AbstractCustomPropertyDescriptor<DateTimeProperty, DateTimePropertyValue,
-        System.DateTime, System.DateTime>(standardValueHelper)
+        System.DateTime?, System.DateTime?>(standardValueHelper)
 {
     public override CustomPropertyType EnumType => CustomPropertyType.DateTime;
 
@@ -28,7 +28,7 @@ public class
         SearchOperation.IsNotNull
     ];
 
-    protected override bool IsMatch(System.DateTime value, SearchOperation operation, object? filterValue)
+    protected override bool IsMatch(System.DateTime? value, SearchOperation operation, object? filterValue)
     {
         switch (operation)
         {

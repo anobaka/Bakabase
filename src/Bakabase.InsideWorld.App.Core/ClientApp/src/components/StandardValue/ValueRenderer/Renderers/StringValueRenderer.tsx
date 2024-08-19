@@ -72,8 +72,14 @@ export default (props: StringValueRendererProps) => {
       );
     }
   } else {
-    return (
-      <span onClick={startEditing}>{value}</span>
-    );
+    if (multiline) {
+      return (
+        <pre onClick={startEditing}>{value}</pre>
+      );
+    } else {
+      return (
+        <span onClick={startEditing}>{value}</span>
+      );
+    }
   }
 };

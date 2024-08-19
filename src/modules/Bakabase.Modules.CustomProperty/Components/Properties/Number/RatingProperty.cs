@@ -10,15 +10,17 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties.Number;
 
 public record RatingPropertyOptions
 {
-    public int MaxValue { get; set; }
+    public const int DefaultMaxValue = 5;
+    public int MaxValue { get; set; } = DefaultMaxValue;
 }
 
 public record RatingProperty() : CustomProperty<RatingPropertyOptions>;
 
-public record RatingPropertyValue : CustomPropertyValue<decimal>;
+public record RatingPropertyValue : CustomPropertyValue<decimal?>;
 
-public class RatingPropertyDescriptor(IStandardValueHelper standardValueHelper) : NumberPropertyDescriptor<RatingProperty, RatingPropertyOptions,
-    RatingPropertyValue>(standardValueHelper)
+public class RatingPropertyDescriptor(IStandardValueHelper standardValueHelper)
+    : NumberPropertyDescriptor<RatingProperty, RatingPropertyOptions,
+        RatingPropertyValue>(standardValueHelper)
 {
     public override CustomPropertyType EnumType => CustomPropertyType.Rating;
 }

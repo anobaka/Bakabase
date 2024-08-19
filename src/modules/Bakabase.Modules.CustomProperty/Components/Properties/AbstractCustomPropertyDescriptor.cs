@@ -121,7 +121,8 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
             };
         }
 
-        protected virtual (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeyword(TProperty property, string keyword) => null;
+        protected virtual (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeyword(TProperty property,
+            string keyword) => null;
 
         public bool IsMatch(CustomPropertyValue? value, ResourceSearchFilter filter)
         {
@@ -150,7 +151,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
         AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TDbValue, TBizValue>(standardValueHelper)
         where TProperty : CustomProperty<TPropertyOptions>, new()
         where TPropertyValue : CustomPropertyValue<TDbValue>, new()
-        where TPropertyOptions : new()
+        where TPropertyOptions : class, new()
     {
         public override Models.CustomProperty? ToDomainModel(
             Bakabase.Abstractions.Models.Db.CustomProperty? customProperty)
@@ -158,17 +159,8 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
             var p = base.ToDomainModel(customProperty);
             if (p is TProperty sp)
             {
-                try
-                {
-                    sp.Options = string.IsNullOrEmpty(customProperty!.Options)
-                        ? new()
-                        : JsonConvert.DeserializeObject<TPropertyOptions>(customProperty.Options);
-                }
-                catch (Exception e)
-                {
-                    sp.Options = new();
-                }
-
+                sp.Options = customProperty!.Options?.DeserializeAsCustomPropertyOptions<TPropertyOptions>() ??
+                             new TPropertyOptions();
             }
 
             return p;

@@ -1,7 +1,9 @@
 import type { DateInputProps as NextUIDateInputProps } from '@nextui-org/react';
+import { CalendarDate } from '@nextui-org/react';
 import { DateInput } from '@nextui-org/react';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
+import type { CalendarDateTime } from '@internationalized/date';
 import { parseDateTime } from '@internationalized/date';
 
 interface DateInputProps extends Omit<NextUIDateInputProps, 'value' | 'onChange' | 'defaultValue'> {
@@ -11,8 +13,18 @@ interface DateInputProps extends Omit<NextUIDateInputProps, 'value' | 'onChange'
 }
 
 export default ({ value, onChange, defaultValue, ...props }: DateInputProps) => {
-  const dv = defaultValue ? parseDateTime(defaultValue.toISOString()) : undefined;
-  const v = value ? parseDateTime(value.toISOString()) : undefined;
+  let dv: CalendarDateTime | undefined;
+  let v: CalendarDateTime | undefined;
+  try {
+    if (defaultValue) {
+      dv = parseDateTime(defaultValue.toISOString());
+    }
+    if (value) {
+      v = parseDateTime(value.toISOString());
+    }
+  } catch (e) {
+    console.error(e);
+  }
 
   return (
     <DateInput

@@ -13,10 +13,10 @@ using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.ThirdParty.ExHentai;
 using Bakabase.Modules.ThirdParty.ExHentai.Models.RequestModels;
 using Microsoft.Extensions.Options;
-using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 {

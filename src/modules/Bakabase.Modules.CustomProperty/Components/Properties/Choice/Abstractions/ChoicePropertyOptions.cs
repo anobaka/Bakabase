@@ -1,6 +1,8 @@
-﻿namespace Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions
+﻿using Bakabase.Modules.CustomProperty.Abstractions.Components;
+
+namespace Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions
 {
-    public record ChoicePropertyOptions<TValue>
+    public record ChoicePropertyOptions<TValue> : IAllowAddingNewDataDynamically
     {
         public List<ChoiceOptions>? Choices { get; set; }
         public bool AllowAddingNewDataDynamically { get; set; }

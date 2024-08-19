@@ -9,7 +9,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Modules.Enhancer.Abstractions
+namespace Bakabase.Modules.Enhancer.Abstractions.Components
 {
     /// <summary>
     /// 
@@ -33,7 +33,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions
         }
 
         protected abstract Task<TContext?> BuildContext(Resource resource, EnhancerFullOptions options, CancellationToken ct);
-        public int Id => (int) TypedId;
+        public int Id => (int)TypedId;
         protected abstract EnhancerId TypedId { get; }
 
         public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options, CancellationToken ct)
@@ -59,7 +59,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions
                 if (value != null)
                 {
                     var targetAttr = tv.Target.GetAttribute<EnhancerTargetAttribute>();
-                    var intTarget = (int) (object) tv.Target;
+                    var intTarget = (int)(object)tv.Target;
                     var vt = targetAttr.ValueType;
                     var e = new EnhancementRawValue
                     {
@@ -111,9 +111,12 @@ namespace Bakabase.Modules.Enhancer.Abstractions
         /// 
         /// </summary>
         /// <param name="context"></param>
+        /// <param name="ct"></param>
         /// <returns>
         /// The value of the dictionary MUST be the standard value, which can be generated safely via <see cref="IStandardValueBuilder{TValue}"/>
         /// </returns>
         protected abstract Task<List<EnhancementTargetValue<TEnumTarget>>> ConvertContextByTargets(TContext context, CancellationToken ct);
+
+
     }
 }

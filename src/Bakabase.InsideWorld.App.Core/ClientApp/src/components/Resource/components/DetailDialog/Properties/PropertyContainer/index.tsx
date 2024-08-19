@@ -67,6 +67,8 @@ export default (props: Props) => {
         <Chip
           size={'sm'}
           radius={'sm'}
+          color={'secondary'}
+          // variant={'light'}
         >
           {property.isCustom ? property.name : t(ResourceProperty[property.id])}
         </Chip>

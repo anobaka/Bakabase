@@ -1,7 +1,7 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 
-namespace Bakabase.Modules.Enhancer.Abstractions;
+namespace Bakabase.Modules.Enhancer.Abstractions.Components;
 
 public interface IEnhancerTargetDescriptor
 {
@@ -13,4 +13,5 @@ public interface IEnhancerTargetDescriptor
     bool IsDynamic { get; }
     string? Description { get; }
     int[]? OptionsItems { get; }
+    IEnhancementConverter? EnhancementConverter { get; }
 }

@@ -104,7 +104,6 @@ export default ({
               setEditing(false);
               setValue(undefined);
             }}
-            warning
             className={'cancel'}
           />
         </div>

@@ -6,7 +6,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.Modules.CustomProperty.Components;
-using Bakabase.Modules.Enhancer.Abstractions;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase;
 using Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;

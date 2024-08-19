@@ -20,7 +20,7 @@ using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
-using Bakabase.Modules.Enhancer.Abstractions;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Components;
@@ -30,7 +30,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.Logging.LogService.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.IEnhancer;
+using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancer;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancer
 {
@@ -298,7 +298,12 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     $"{enhancement.ResourceId}-{property.Id}-{enhancerDescriptor.PropertyValueScope}";
                 if (addedPvKeys.Add(pvKey))
                 {
-                    var result = await _customPropertyValueService.Create(enhancement.Value, enhancement.ValueType,
+                    var targetDescriptor = _enhancerDescriptors[enhancement.EnhancerId][enhancement.Target];
+                    var value = targetDescriptor.EnhancementConverter == null
+                        ? enhancement.Value
+                        : targetDescriptor.EnhancementConverter.Convert(enhancement.Value, property);
+
+                    var result = await _customPropertyValueService.Create(value, enhancement.ValueType,
                         property,
                         enhancement.ResourceId, enhancerDescriptor.PropertyValueScope);
                     if (result.HasValue)

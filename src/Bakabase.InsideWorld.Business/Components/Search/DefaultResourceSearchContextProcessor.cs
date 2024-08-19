@@ -64,7 +64,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 				.ToDictionary(x => x.Id, x => x);
 		}
 
-        private async Task<Dictionary<int, CustomPropertyValue?>?> PrepareAndGetCustomPropertyValues(
+        private async Task<Dictionary<int, List<CustomPropertyValue>?>?> PrepareAndGetCustomPropertyValues(
             ResourceSearchFilter filter, ResourceSearchContext context)
         {
             context.CustomPropertyDataPool ??= new();
@@ -73,7 +73,8 @@ namespace Bakabase.InsideWorld.Business.Components.Search
             {
                 var rawValues = await customPropertyValueService.GetAll(x => x.PropertyId == filter.PropertyId,
                     CustomPropertyValueAdditionalItem.None, false);
-                propertyValues = rawValues.ToDictionary(x => x.ResourceId, x => (CustomPropertyValue?) x);
+                propertyValues = rawValues.GroupBy(x => x.ResourceId)
+                    .ToDictionary(x => x.Key, List<CustomPropertyValue>? (x) => x.ToList());
                 var nullValueIds = context.AllResourceIds.Except(propertyValues.Keys);
                 foreach (var id in nullValueIds)
                 {
@@ -477,7 +478,8 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 
                     if (propertyDescriptors.TryGet(property.Type, out var descriptor))
                     {
-                        set = propertyValues?.Where(x => descriptor.IsMatch(x.Value, filter)).Select(x => x.Key)
+                        set = propertyValues?.Where(x => x.Value?.Any(y => descriptor.IsMatch(y, filter)) == true)
+                            .Select(x => x.Key)
                             .ToHashSet() ?? [];
                     }
 

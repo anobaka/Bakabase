@@ -10,12 +10,12 @@ using Newtonsoft.Json;
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Boolean;
 
 public record BooleanProperty() : Models.CustomProperty;
-public record BooleanPropertyValue : CustomPropertyValue<bool>
+public record BooleanPropertyValue : CustomPropertyValue<bool?>
 {
 }
 
 public class BooleanPropertyDescriptor(IStandardValueHelper standardValueHelper) : AbstractCustomPropertyDescriptor<BooleanProperty, BooleanPropertyValue,
-    bool, bool>(standardValueHelper)
+    bool?, bool?>(standardValueHelper)
 {
     public override CustomPropertyType EnumType => CustomPropertyType.Boolean;
 
@@ -24,7 +24,7 @@ public class BooleanPropertyDescriptor(IStandardValueHelper standardValueHelper)
         SearchOperation.Equals, SearchOperation.NotEquals, SearchOperation.IsNull, SearchOperation.IsNotNull
     ];
 
-    protected override bool IsMatch(bool value, SearchOperation operation, object? filterValue)
+    protected override bool IsMatch(bool? value, SearchOperation operation, object? filterValue)
     {
         switch (operation)
         {

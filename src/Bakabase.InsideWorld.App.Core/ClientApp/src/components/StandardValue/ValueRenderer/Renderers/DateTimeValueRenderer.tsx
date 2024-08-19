@@ -11,6 +11,8 @@ type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
 export default ({ value, format, as, variant, editor, ...props }: DateTimeValueRendererProps) => {
   const [editing, setEditing] = useState(false);
 
+  console.log('rendering', value);
+
   const startEditing = editor ? () => {
     setEditing(true);
   } : undefined;

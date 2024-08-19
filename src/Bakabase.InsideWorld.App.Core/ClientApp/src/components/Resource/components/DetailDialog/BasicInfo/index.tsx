@@ -31,12 +31,12 @@ const dateTimes = [
 export default ({ resource }: Props) => {
   const { t } = useTranslation();
   return (
-    <div className={'grid gap-1 grid-cols-2'}>
+    <div className={'grid justify-evenly gap-y-1'} style={{ gridTemplateColumns: 'repeat(2, auto)' }}>
       {dateTimes.map((dateTime, i) => {
         const label = t(dateTime.label);
           const value = dayjs(resource[dateTime.key]).format('YYYY-MM-DD HH:mm:ss');
           return (
-            <div key={i}>
+            <div key={i} className={'flex flex-col'}>
               <div className={'text-xs opacity-60'}>{label}</div>
               <div>{value}</div>
             </div>

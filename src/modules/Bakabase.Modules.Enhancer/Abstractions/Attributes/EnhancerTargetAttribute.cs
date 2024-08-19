@@ -10,6 +10,7 @@ public class EnhancerTargetAttribute(
     CustomPropertyType customPropertyType,
     EnhancerTargetOptionsItem[]? options = null,
     bool isDynamic = false,
+    Type? converter = null,
     string? description = null) : Attribute
 {
     public StandardValueType ValueType { get; } = valueType;
@@ -17,4 +18,5 @@ public class EnhancerTargetAttribute(
     public EnhancerTargetOptionsItem[]? Options { get; } = options;
     public bool IsDynamic { get; } = isDynamic;
     public string? Description { get; } = description;
+    public Type? Converter { get; } = converter;
 }

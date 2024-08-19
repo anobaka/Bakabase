@@ -1,5 +1,5 @@
 ﻿using Bakabase.Abstractions.Exceptions;
-using Bakabase.Modules.Enhancer.Abstractions;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 
 namespace Bakabase.Modules.Enhancer.Components;

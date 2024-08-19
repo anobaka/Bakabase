@@ -5,6 +5,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Storage.Services;
@@ -19,12 +20,16 @@ using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using MimeKit;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
+using Image = SixLabors.ImageSharp.Image;
 
 namespace Bakabase.InsideWorld.App.Core.Controllers
 {
     [Route("~/tool")]
-    public class ToolController() : Controller
+    public class ToolController(ICoverDiscoverer coverDiscoverer) : Controller
     {
         [HttpGet("open")]
         [SwaggerOperation(OperationId = "OpenFileOrDirectory")]
@@ -70,6 +75,58 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
             var result = await candidates.FirstOrDefault()!.Validate(cookie);
             return result;
+        }
+
+        [HttpGet("thumbnail")]
+        [SwaggerOperation(OperationId = "GetThumbnail")]
+        [ResponseCache(VaryByQueryKeys = [nameof(path), nameof(w), nameof(h)], Duration = 30 * 60)]
+        public async Task<IActionResult> GetThumbnail(string path, int? w, int? h)
+        {
+            var result = await coverDiscoverer.Discover(path, CoverSelectOrder.FilenameAscending, true,
+                HttpContext.RequestAborted);
+            if (result == null)
+            {
+                return NotFound();
+            }
+            else
+            {
+                if (!w.HasValue && !h.HasValue)
+                {
+                    var contentType = MimeTypes.GetMimeType(result.Ext);
+                    if (result.Data != null)
+                    {
+                        return File(result.Data, contentType);
+                    }
+
+                    return File(System.IO.File.OpenRead(result.Path), contentType);
+                }
+
+                var img = result.Data != null
+                    ? await Image.LoadAsync<Argb32>(new MemoryStream(result.Data))
+                    : await Image.LoadAsync<Argb32>(result.Path);
+
+                var scale = 1m;
+                if (w > 0 && img.Width > w)
+                {
+                    scale = Math.Min(scale, (decimal) w / img.Width);
+                }
+
+                if (h > 0 && img.Height > h)
+                {
+                    scale = Math.Min(scale, (decimal) h / img.Height);
+                }
+
+                var ms = new MemoryStream();
+
+                if (scale < 1)
+                {
+                    img.Mutate(x => x.Resize((int) (img.Width * scale), (int) (img.Height * scale)));
+                }
+
+                await img.SaveAsPngAsync(ms, HttpContext.RequestAborted);
+                ms.Seek(0, SeekOrigin.Begin);
+                return File(ms, MimeTypes.GetMimeType(".png"));
+            }
         }
     }
 }

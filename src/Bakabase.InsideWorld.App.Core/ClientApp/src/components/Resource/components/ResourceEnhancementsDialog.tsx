@@ -11,7 +11,7 @@ import StandardValueRenderer from '@/components/StandardValue/ValueRenderer';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
-import { serializeStandardValue } from '@/components/StandardValue/helpers';
+import { convertFromApiValue, serializeStandardValue } from '@/components/StandardValue/helpers';
 
 interface Props extends DestroyableProps{
   resourceId: number;
@@ -56,9 +56,26 @@ function ResourceEnhancementsDialog({ resourceId, ...props }: Props) {
   const loadEnhancements = useCallback(async () => {
     const r = await BApi.resource.getResourceEnhancements(resourceId, { additionalItem: EnhancementAdditionalItem.GeneratedCustomPropertyValue });
     const data = r.data || [];
+
+    for (const d of data) {
+      d.dynamicTargets?.forEach(dt => {
+        dt.enhancements?.forEach(e => {
+          e.value = convertFromApiValue(e.value, e.valueType!);
+          const v = e.customPropertyValue;
+          const p = v?.property;
+          if (p) {
+            v.value = convertFromApiValue(v.value, p.dbValueType!);
+            v.bizValue = convertFromApiValue(v.bizValue, p.bizValueType!);
+          }
+        });
+      });
+    }
+
     // @ts-ignore
     setEnhancements(data);
   }, []);
+
+  console.log(enhancements);
 
   return (
     <Modal
@@ -141,9 +158,9 @@ function ResourceEnhancementsDialog({ resourceId, ...props }: Props) {
                             <TableCell>
                               {pv && (
                                 <PropertyValueRenderer
-                                  property={property!}
-                                  bizValue={serializeStandardValue(pv.value, property!.bizValueType)}
-                                  dbValue={serializeStandardValue(pv.bizValue, property!.dbValueType)}
+                                  property={{ ...property!, isCustom: true }}
+                                  bizValue={serializeStandardValue(pv.bizValue, property!.bizValueType)}
+                                  dbValue={serializeStandardValue(pv.value, property!.dbValueType)}
                                   variant={'light'}
                                 />
                               )}
@@ -173,10 +190,10 @@ function ResourceEnhancementsDialog({ resourceId, ...props }: Props) {
                                   <TableCell>
                                     {pv && (
                                       <PropertyValueRenderer
-                                        property={property!}
+                                        property={{ ...property!, isCustom: true }}
                                         variant={'light'}
-                                        bizValue={serializeStandardValue(pv.value, property!.bizValueType)}
-                                        dbValue={serializeStandardValue(pv.bizValue, property!.dbValueType)}
+                                        bizValue={serializeStandardValue(pv.bizValue, property!.bizValueType)}
+                                        dbValue={serializeStandardValue(pv.value, property!.dbValueType)}
                                       />
                                   )}
                                   </TableCell>

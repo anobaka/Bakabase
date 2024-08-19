@@ -3,6 +3,7 @@ using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Enhancer.Components.EnhancementConverters;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 
@@ -21,7 +22,7 @@ public enum BangumiEnhancerTarget
     Introduction = 3,
 
     [EnhancerTarget(StandardValueType.Decimal, CustomPropertyType.Rating,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoGenerateProperties], false, typeof(RatingMax10))]
     Rating = 4,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.MultipleChoice,

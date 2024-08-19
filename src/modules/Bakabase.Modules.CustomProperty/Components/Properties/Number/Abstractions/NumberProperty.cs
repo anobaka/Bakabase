@@ -14,15 +14,15 @@ public record NumberPropertyOptions
 
 public record NumberProperty() : CustomProperty<NumberPropertyOptions>;
 
-public record NumberPropertyValue : CustomPropertyValue<decimal>;
+public record NumberPropertyValue : CustomPropertyValue<decimal?>;
 
 public abstract class NumberPropertyDescriptor<TProperty, TOptions, TValue>(IStandardValueHelper standardValueHelper)
     : AbstractCustomPropertyDescriptor<
         TProperty,
         TOptions,
-        TValue, decimal, decimal>(standardValueHelper) where TProperty : CustomProperty<TOptions>, new()
-    where TOptions : new()
-    where TValue : CustomPropertyValue<decimal>, new()
+        TValue, decimal?, decimal?>(standardValueHelper) where TProperty : CustomProperty<TOptions>, new()
+    where TOptions : class, new()
+    where TValue : CustomPropertyValue<decimal?>, new()
 {
     public override SearchOperation[] SearchOperations { get; } =
     [
@@ -36,7 +36,7 @@ public abstract class NumberPropertyDescriptor<TProperty, TOptions, TValue>(ISta
         SearchOperation.IsNotNull,
     ];
 
-    protected override bool IsMatch(decimal value, SearchOperation operation, object? filterValue)
+    protected override bool IsMatch(decimal? value, SearchOperation operation, object? filterValue)
     {
         switch (operation)
         {

@@ -18,7 +18,7 @@ import Operations from '@/components/Resource/components/Operations';
 import TaskCover from '@/components/Resource/components/TaskCover';
 import type { Property, Resource as ResourceModel } from '@/core/models/Resource';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Button, Tooltip } from '@/components/bakaui';
+import { Button, Link, Tooltip } from '@/components/bakaui';
 import { ResourceAdditionalItem, ResourcePropertyType, StandardValueType } from '@/sdk/constants';
 import type { TagValue } from '@/components/StandardValue/models';
 
@@ -305,15 +305,22 @@ const Resource = React.forwardRef((props: Props, ref) => {
       {firstTagsValue && firstTagsValue.length > 0 && (
         <div className={styles.info}>
           <div
-            className={`select-text mt-2 ${styles.limitedContent}`}
+            className={`select-text ${styles.limitedContent} flex gap-1 flex-wrap`}
           >
             {firstTagsValue.map(v => {
               return (
-                <Button
-                  onClick={() => onTagClick?.(firstTagsValuePropertyId!, v.value)}
+                <Link
+                  color={'foreground'}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onTagClick?.(firstTagsValuePropertyId!, v.value);
+                  }}
+                  className={'text-xs cursor-pointer'}
+                  underline={'none'}
                   size={'sm'}
-                  variant={'light'}
-                >#{v.group == undefined ? '' : `${v.group}:`}{v.name}</Button>
+                  // variant={'light'}
+                >#{v.group == undefined ? '' : `${v.group}:`}{v.name}</Link>
               );
             })}
           </div>

@@ -24,7 +24,9 @@ using Newtonsoft.Json;
 
 namespace Bakabase.Modules.CustomProperty.Services
 {
-    public abstract class AbstractCustomPropertyService<TDbContext>(IServiceProvider serviceProvider, ICustomPropertyDescriptors propertyDescriptors)
+    public abstract class AbstractCustomPropertyService<TDbContext>(
+        IServiceProvider serviceProvider,
+        ICustomPropertyDescriptors propertyDescriptors)
         : FullMemoryCacheResourceService<TDbContext, Bakabase.Abstractions.Models.Db.CustomProperty, int>(
                 serviceProvider),
             ICustomPropertyService where TDbContext : DbContext
@@ -227,39 +229,15 @@ namespace Bakabase.Modules.CustomProperty.Services
         public async Task<BaseResponse> EnableAddingNewDataDynamically(int id)
         {
             var property = await GetByKey(id, CustomPropertyAdditionalItem.None);
-            object newOptions;
-            switch (property.EnumType)
+            if (property.Options is IAllowAddingNewDataDynamically a)
             {
-                case CustomPropertyType.SingleChoice:
-                {
-                    var options = (property as SingleChoiceProperty)?.Options ?? new ChoicePropertyOptions<string>();
-                    options.AllowAddingNewDataDynamically = true;
-                    newOptions = options;
-                    break;
-                }
-                case CustomPropertyType.MultipleChoice:
-                {
-                    var options = (property as MultipleChoiceProperty)?.Options ??
-                                  new ChoicePropertyOptions<List<string>>();
-                    options.AllowAddingNewDataDynamically = true;
-                    newOptions = options;
-                    break;
-                }
-                case CustomPropertyType.Multilevel:
-                {
-                    var options = (property as MultilevelProperty)?.Options ?? new MultilevelPropertyOptions();
-                    options.AllowAddingNewDataDynamically = true;
-                    newOptions = options;
-                    break;
-                }
-                default:
-                    return BaseResponseBuilder.BuildBadRequest($"Bad type for current property: {property.EnumType}");
+                a.AllowAddingNewDataDynamically = true;
             }
 
             await Put(id, new CustomPropertyAddOrPutDto
             {
                 Name = property.Name,
-                Options = JsonConvert.SerializeObject(newOptions),
+                Options = JsonConvert.SerializeObject(property.Options),
                 Type = property.Type
             });
             return BaseResponseBuilder.Ok;

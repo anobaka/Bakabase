@@ -12,28 +12,29 @@ using System.Net;
 
 namespace Bakabase.Modules.ThirdParty.Bangumi;
 
-public class BangumiClient : BakabaseHttpClient
+public class BangumiClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
+    : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
-    public BangumiClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) : base(httpClientFactory,
-        loggerFactory)
-    {
-    }
-
     protected override string HttpClientName => InternalOptions.HttpClientNames.Bangumi;
-    private static char[] PropertyValueSeparators = ['、', '/', '(', ')', '\u3000', '（', '）', '；'];
+    private static readonly char[] PropertyValueSeparators = ['、', '/', '(', ')', '\u3000', '（', '）', '；'];
+    /// <summary>
+    /// For data such as http://xxxx
+    /// </summary>
+    private static readonly string[] SeparatorExceptions = ["//"];
 
     public async Task<BangumiDetail?> ParseDetail(string detailUrl)
     {
         var detailHtml = await HttpClient.GetStringAsync(detailUrl);
         var detailCq = new CQ(detailHtml);
-        var ctx = new BangumiDetail();
 
         // Name
-        ctx.Name = detailCq[".nameSingle>a"]?.Text();
-        if (string.IsNullOrEmpty(ctx.Name))
+        var name = detailCq[".nameSingle>a"]?.Text();
+        if (string.IsNullOrEmpty(name))
         {
             return null;
         }
+
+        var ctx = new BangumiDetail {Name = name};
 
         // Introduction
         var intro = detailCq["#subject_summary"]?[0]?.InnerHTML;
@@ -71,8 +72,39 @@ public class BangumiClient : BakabaseHttpClient
         var infoList = infoBox.GroupBy(a => a.ChildNodes[0].Cq().Text().Trim().Trim(':')).ToDictionary(
             a => a.Key,
             a => a.SelectMany(b =>
-                    string.Concat(b.ChildNodes.Skip(1).Select(x => x.Cq().Text()))
-                        .Split(PropertyValueSeparators, StringSplitOptions.RemoveEmptyEntries).Select(y => y.Trim()))
+                {
+                    var fullStr = string.Concat(b.ChildNodes.Skip(1).Select(x => x.Cq().Text()));
+                    Dictionary<string, string>? separatorExceptionMap = null;
+                    for (var i = 0; i < SeparatorExceptions.Length; i++)
+                    {
+                        var se = SeparatorExceptions[i];
+                        if (fullStr.Contains(se))
+                        {
+                            separatorExceptionMap ??= new Dictionary<string, string>();
+                            if (!separatorExceptionMap.TryGetValue(se, out var replacement))
+                            {
+                                separatorExceptionMap[se] = replacement = $"{i}{Guid.NewGuid().ToString("N")[..6]}";
+                            }
+
+                            fullStr = fullStr.Replace(se, replacement);
+                        }
+                    }
+
+                    return fullStr.Split(PropertyValueSeparators, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(y =>
+                        {
+                            var r = y.Trim();
+                            if (separatorExceptionMap != null)
+                            {
+                                foreach (var (org, replacement) in separatorExceptionMap)
+                                {
+                                    r = r.Replace(replacement, org);
+                                }
+                            }
+
+                            return r;
+                        });
+                })
                 .ToList());
 
         ctx.OtherPropertiesInLeftPanel = infoList.Where(x => !string.IsNullOrEmpty(x.Key) && x.Value.Any())

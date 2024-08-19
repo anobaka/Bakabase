@@ -1,4 +1,4 @@
-﻿using Bakabase.Modules.Enhancer.Abstractions;
+﻿using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Microsoft.Extensions.Localization;
 

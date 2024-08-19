@@ -16,7 +16,7 @@ public record PercentagePropertyOptions
 
 public record PercentageProperty() : CustomProperty<PercentagePropertyOptions>;
 
-public record PercentagePropertyValue : CustomPropertyValue<decimal>;
+public record PercentagePropertyValue : CustomPropertyValue<decimal?>;
 
 public class PercentagePropertyDescriptor(IStandardValueHelper standardValueHelper) : NumberPropertyDescriptor<PercentageProperty, PercentagePropertyOptions,
     PercentagePropertyValue>(standardValueHelper)

@@ -29,6 +29,42 @@ public class TagsPropertyDescriptor(IStandardValueHelper standardValueHelper)
         return values?.Any() == true ? (values, SearchOperation.In) : null;
     }
 
+    protected override List<TagValue>? TypedConvertDbValueToBizValue(TagsProperty property, List<string> value)
+    {
+        return property.Options?.Tags?.Where(t => value.Contains(t.Value)).Select(s => s.ToTagValue()).ToList();
+    }
+
+    protected override (List<string>? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(TagsProperty property, List<TagValue> bizValue)
+    {
+        if (!bizValue.Any())
+        {
+            return (null, false);
+        }
+
+        var dbValue = new List<string>();
+        var propertyChanged = false;
+        property.Options ??= new();
+        property.Options.Tags ??= [];
+        foreach (var tag in bizValue)
+        {
+            var definedTag = property.Options.Tags.FirstOrDefault(x => x.Name == tag.Name && x.Group == tag.Group);
+            if (definedTag == null && property.Options.AllowAddingNewDataDynamically)
+            {
+                definedTag = new TagsPropertyOptions.TagOptions(tag.Group, tag.Name)
+                    {Value = TagsPropertyOptions.TagOptions.GenerateValue()};
+                property.Options.Tags.Add(definedTag);
+                propertyChanged = true;
+            }
+
+            if (definedTag != null)
+            {
+                dbValue.Add(definedTag.Value);
+            }
+        }
+
+        return (dbValue, propertyChanged);
+    }
+
     protected override bool IsMatch(List<string>? value, SearchOperation operation, object? filterValue)
     {
         switch (operation)

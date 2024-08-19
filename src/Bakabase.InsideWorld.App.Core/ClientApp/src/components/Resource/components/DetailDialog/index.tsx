@@ -12,6 +12,7 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 import FileSystemEntries from '@/components/Resource/components/DetailDialog/FileSystemEntries';
 import BApi from '@/sdk/BApi';
 import { ResourceAdditionalItem } from '@/sdk/constants';
+import { convertFromApiValue } from '@/components/StandardValue/helpers';
 
 
 interface Props extends DestroyableProps {
@@ -37,14 +38,29 @@ export default ({
       ids: [id],
       additionalItems: ResourceAdditionalItem.All,
     });
-    const d = r.data || [];
+    const d = (r.data || [])?.[0] ?? {};
+    if (d.properties) {
+      Object.values(d.properties).forEach(a => {
+        Object.values(a).forEach(b => {
+          if (b.values) {
+            for (const v of b.values) {
+              v.bizValue = convertFromApiValue(v.bizValue, b.bizValueType!);
+              v.aliasAppliedBizValue = convertFromApiValue(v.aliasAppliedBizValue, b.bizValueType!);
+              v.value = convertFromApiValue(v.value, b.dbValueType!);
+            }
+          }
+        });
+      });
+    }
     // @ts-ignore
-    setResource(d[0] || {});
+    setResource(d);
   };
 
   useEffect(() => {
     loadResource();
   }, []);
+
+  console.log(resource);
 
   return (
     <Modal
@@ -56,23 +72,15 @@ export default ({
     >
       {resource && (
         <>
-          <div className="flex gap-5">
-            <div
-              className="rounded flex items-center justify-center w-[400px] h-[400px] max-w-[400px] max-h-[400px] overflow-hidden"
-            >
-              <ResourceCover
-                resourceId={resource.id}
-                showBiggerOnHover={false}
-              />
-            </div>
-            <div className="flex flex-col gap-5 grow">
-              <div className={'grow'}>
-                <Properties
-                  resource={resource}
-                  reload={loadResource}
+          <div className="flex gap-4">
+            <div className="min-w-[400px] w-[400px] max-w-[400px] flex flex-col gap-4">
+              <div className={'h-[400px] max-h-[400px] overflow-hidden rounded flex items-center justify-center'}>
+                <ResourceCover
+                  resourceId={resource.id}
+                  showBiggerOnHover={false}
                 />
               </div>
-              <div className={''}>
+              <div className={'flex items-center justify-center'}>
                 <ButtonGroup size={'sm'}>
                   <Button
                     color="primary"
@@ -103,6 +111,14 @@ export default ({
                 </ButtonGroup>
               </div>
               <BasicInfo resource={resource} />
+            </div>
+            <div className="flex flex-col gap-5 grow">
+              <div className={'grow'}>
+                <Properties
+                  resource={resource}
+                  reload={loadResource}
+                />
+              </div>
             </div>
           </div>
           {/* <Divider /> */}

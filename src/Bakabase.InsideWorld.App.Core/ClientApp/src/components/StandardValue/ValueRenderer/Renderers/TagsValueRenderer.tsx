@@ -82,18 +82,20 @@ export default ({
     );
   } else {
     return (
-      <Card onClick={editor ? showEditor : undefined}>
-        <CardBody className={'flex flex-wrap gap-1'}>
-          {simpleLabels?.map(l => {
-            return (
-              <Chip
-                size={'sm'}
-                radius={'sm'}
-              >
-                {l}
-              </Chip>
-            );
-          })}
+      <Card>
+        <CardBody>
+          <div className={'flex flex-wrap gap-1'} onClick={editor ? showEditor : undefined}>
+            {simpleLabels?.map(l => {
+              return (
+                <Chip
+                  size={'sm'}
+                  radius={'sm'}
+                >
+                  {l}
+                </Chip>
+              );
+            })}
+          </div>
         </CardBody>
       </Card>
     );

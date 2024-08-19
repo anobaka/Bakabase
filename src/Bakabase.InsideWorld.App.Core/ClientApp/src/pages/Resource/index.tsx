@@ -36,7 +36,7 @@ export default () => {
   const [columnCount, setColumnCount] = useState<number>(0);
   const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>();
 
-  const [searching, setSearching] = useState(false);
+  const [searching, setSearching] = useState(true);
 
   const [bulkOperationMode, setBulkOperationMode] = useState<boolean>(false);
   const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);

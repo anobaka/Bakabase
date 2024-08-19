@@ -1,5 +1,5 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Modules.Enhancer.Abstractions;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 
 namespace Bakabase.Modules.Enhancer.Models.View;
 

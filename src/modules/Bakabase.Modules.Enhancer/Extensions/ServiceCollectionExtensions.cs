@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Reflection;
-using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
@@ -50,13 +50,18 @@ public static class ServiceCollectionExtensions
                 var targetDescriptors = targets.Select(target =>
                 {
                     var targetAttr = target.GetAttribute<EnhancerTargetAttribute>();
+                    var converter = targetAttr.Converter == null
+                        ? null
+                        : Activator.CreateInstance(targetAttr.Converter) as IEnhancementConverter;
                     return new EnhancerTargetDescriptor(target,
                         enhancerId,
                         localizer,
                         targetAttr.ValueType,
                         targetAttr.CustomPropertyType,
                         targetAttr.IsDynamic,
-                        targetAttr.Options?.Cast<int>().ToArray());
+                        targetAttr.Options?.Cast<int>().ToArray(),
+                        converter
+                    );
                 }).ToArray();
 
                 return (IEnhancerDescriptor) new EnhancerDescriptor(enhancerId, localizer, targetDescriptors,

@@ -15,6 +15,13 @@ interface IProps {
   category: {name: string; id: number; customPropertyIds?: number[]};
 }
 
+const CustomPropertyTypesWithDynamicData = [
+  CustomPropertyType.Multilevel,
+  CustomPropertyType.MultipleChoice,
+  CustomPropertyType.SingleChoice,
+  CustomPropertyType.Tags,
+];
+
 export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCategory, property, category }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -22,8 +29,8 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
   const renderTips = () => {
     const tips: ReactElement[] = [];
     const propertyChoiceOptions = property?.options as {allowAddingNewDataDynamically: boolean};
-    const allowAddingNewDataDynamicallyDisabled =
-      (property?.type == CustomPropertyType.Multilevel || property?.type == CustomPropertyType.MultipleChoice || property?.type == CustomPropertyType.SingleChoice) &&
+    const allowAddingNewDataDynamicallyDisabled = property &&
+      CustomPropertyTypesWithDynamicData.includes(property.type!) &&
       !propertyChoiceOptions.allowAddingNewDataDynamically;
     if (allowAddingNewDataDynamicallyDisabled) {
       tips.push(

@@ -22,7 +22,10 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 		/// </summary>
 		public Dictionary<string, HashSet<string>>? AliasCandidates;
 
-		public Dictionary<int, Dictionary<int, CustomPropertyValue?>?>? CustomPropertyDataPool;
+		/// <summary>
+		/// PropertyId - ResourceId - ScopeValues
+		/// </summary>
+		public Dictionary<int, Dictionary<int, List<CustomPropertyValue>?>?>? CustomPropertyDataPool;
 
 		public Dictionary<int, Abstractions.Models.Domain.Resource>? ResourcesPool { get; }
 

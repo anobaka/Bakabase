@@ -12,7 +12,6 @@ import {
   FormulaValueRenderer,
   LinkValueRenderer,
   MultilevelValueRenderer,
-  MultilineStringValueRenderer,
   NumberValueRenderer,
   RatingValueRenderer,
   StringValueRenderer,

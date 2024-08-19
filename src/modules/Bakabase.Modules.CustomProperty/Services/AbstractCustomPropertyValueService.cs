@@ -221,8 +221,6 @@ namespace Bakabase.Modules.CustomProperty.Services
                 return null;
             }
 
-            var (nv, _) = await stdValueConverter.Convert(bizValue, property.DbValueType);
-
             var (dbInnerValue, propertyChanged) = pd.PrepareDbValueFromBizValue(property, bizValue);
 
             var pv = CustomPropertyValueHelper.CreateFromImplicitValue(dbInnerValue, property.Type, resourceId,

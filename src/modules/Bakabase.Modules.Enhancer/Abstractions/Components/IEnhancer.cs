@@ -1,7 +1,7 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 
-namespace Bakabase.Modules.Enhancer.Abstractions;
+namespace Bakabase.Modules.Enhancer.Abstractions.Components;
 
 public interface IEnhancer
 {

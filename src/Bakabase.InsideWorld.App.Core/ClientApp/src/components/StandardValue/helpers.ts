@@ -44,6 +44,27 @@ export const findNodeChainInMultilevelData = <V>(data: MultilevelData<V>[], valu
   return;
 };
 
+export const convertFromApiValue = (value: any | null, type: StandardValueType): any | undefined => {
+  if (value == undefined) {
+    return undefined;
+  }
+
+  switch (type) {
+    case StandardValueType.String:
+    case StandardValueType.ListString:
+    case StandardValueType.Decimal:
+    case StandardValueType.Link:
+    case StandardValueType.Boolean:
+    case StandardValueType.ListListString:
+    case StandardValueType.ListTag:
+      return value;
+    case StandardValueType.DateTime:
+      return dayjs(value);
+    case StandardValueType.Time:
+      return dayjs.duration(value);
+  }
+};
+
 export const deserializeStandardValue = (value: string | null, type: StandardValueType): any | undefined => {
   if (value == undefined) {
     return undefined;

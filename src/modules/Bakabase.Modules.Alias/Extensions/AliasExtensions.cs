@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.Alias.Extensions;
 
@@ -55,24 +56,24 @@ public static class AliasExtensions
         switch (bizValueType)
         {
             case StandardValueType.String:
+            {
+                if (bizValue is string tv)
                 {
-                    if (bizValue is string tv)
-                    {
-                        return ([tv], aMap => aMap[tv]);
-                    }
-
-                    break;
+                    return ([tv], aMap => aMap[tv]);
                 }
+
+                break;
+            }
             case StandardValueType.ListString:
+            {
+                if (bizValue is List<string> tv)
                 {
-                    if (bizValue is List<string> tv)
-                    {
-                        var set = tv.ToHashSet();
-                        return (set, aMap => tv.Select(s => aMap[s]).ToList());
-                    }
-
-                    break;
+                    var set = tv.ToHashSet();
+                    return (set, aMap => tv.Select(s => aMap[s]).ToList());
                 }
+
+                break;
+            }
             case StandardValueType.Boolean:
                 break;
             case StandardValueType.Link:
@@ -82,17 +83,36 @@ public static class AliasExtensions
             case StandardValueType.Time:
                 break;
             case StandardValueType.ListListString:
+            {
+                if (bizValue is List<List<string>> tv)
                 {
-                    if (bizValue is List<List<string>> tv)
-                    {
-                        var set = tv.SelectMany(v => v).ToHashSet();
-                        return (set, aMap => tv.Select(vl => vl.Select(v => aMap[v]).ToList()).ToList());
-                    }
-
-                    break;
+                    var set = tv.SelectMany(v => v).ToHashSet();
+                    return (set, aMap => tv.Select(vl => vl.Select(v => aMap[v]).ToList()).ToList());
                 }
+
+                break;
+            }
             case StandardValueType.Decimal:
                 break;
+            case StandardValueType.ListTag:
+            {
+                if (bizValue is List<TagValue> tv)
+                {
+                    var set = tv.SelectMany(v => new[] {v.Group, v.Name}).OfType<string>().ToHashSet();
+                    return (set, aMap =>
+                            {
+                                return tv.Select(v =>
+                                {
+                                    var group = string.IsNullOrEmpty(v.Group) ? null : aMap.GetValueOrDefault(v.Group);
+                                    var name = aMap[v.Name];
+                                    return new TagValue(group, name);
+                                }).ToList();
+                            }
+                        );
+                }
+
+                break;
+            }
             default:
                 throw new ArgumentOutOfRangeException();
         }

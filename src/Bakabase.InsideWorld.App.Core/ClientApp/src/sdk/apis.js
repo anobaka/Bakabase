@@ -8243,6 +8243,66 @@ export const ValidateCookieURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetThumbnail
+ * url: GetThumbnailURL
+ * method: GetThumbnail_TYPE
+ * raw_url: GetThumbnail_RAW_URL
+ * @param path - 
+ * @param w - 
+ * @param h - 
+ */
+export const GetThumbnail = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/tool/thumbnail'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
+  if (parameters['w'] !== undefined) {
+    queryParameters['w'] = parameters['w']
+  }
+  if (parameters['h'] !== undefined) {
+    queryParameters['h'] = parameters['h']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetThumbnail_RAW_URL = function() {
+  return '/tool/thumbnail'
+}
+export const GetThumbnail_TYPE = function() {
+  return 'get'
+}
+export const GetThumbnailURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/tool/thumbnail'
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
+  if (parameters['w'] !== undefined) {
+    queryParameters['w'] = parameters['w']
+  }
+  if (parameters['h'] !== undefined) {
+    queryParameters['h'] = parameters['h']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetNewAppVersion
  * url: GetNewAppVersionURL
  * method: GetNewAppVersion_TYPE
