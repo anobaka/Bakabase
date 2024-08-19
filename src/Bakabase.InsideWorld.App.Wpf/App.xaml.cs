@@ -20,11 +20,6 @@ namespace Bakabase.InsideWorld.App.Wpf
 
         public App()
         {
-            var c = Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare);
-            var l = new List<string> {"a", "b"};
-            var y = l.OrderBy(x => x, c).ToList();
-
-
             _guiAdapter = GuiAdapterCreator.Create<WpfGuiAdapter>(this);
             _systemService = new WindowsSystemService();
 

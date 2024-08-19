@@ -27,18 +27,21 @@ export default (props: RatingValueRendererProps) => {
   const startEditing = editor ? () => setEditing(true) : undefined;
   const changeValue = (v: number) => {
     setValue(v);
+    setEditing(false);
+    // console.log('changeValue', v);
     editor?.onValueChange?.(v, v);
   };
 
-  if (variant == 'light') {
-    if (editing) {
-      return (
-        <NumberValueEditor
-          value={value}
-          onValueChange={changeValue}
-        />
-      );
-    } else {
+  if (editing) {
+    return (
+      <NumberValueEditor
+        value={value}
+        onValueChange={changeValue}
+        placeholder={t('Set rating')}
+      />
+    );
+  } else {
+    if (variant == 'light') {
       if (value != undefined && value > 0) {
         return (
           <span
@@ -50,15 +53,16 @@ export default (props: RatingValueRendererProps) => {
           <NotSet onClick={startEditing} />
         );
       }
+    } else {
+      return (
+        <Rating
+          value={value}
+          onChange={() => {
+            setEditing(true);
+          }}
+          allowHalf={allowHalf}
+        />
+      );
     }
-  } else {
-    return (
-      <Rating
-        value={value}
-        disabled={!editor}
-        allowHalf={allowHalf}
-        onChange={changeValue}
-      />
-    );
   }
 };

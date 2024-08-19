@@ -19,8 +19,11 @@ const buildDefaultSelectable: (<V>() => Selectable<V>) = () => {
   return (data, depth, index) => data.children == undefined || data.children.length == 0;
 };
 
-export default <V = string>({ getDataSource, selectable = buildDefaultSelectable<V>(), value: propsValue, onValueChange, onCancel, multiple }: MultilevelValueEditorProps<V>) => {
+export default <V = string>(props: MultilevelValueEditorProps<V>) => {
   const { t } = useTranslation();
+
+  const { getDataSource, selectable = buildDefaultSelectable<V>(), value: propsValue, onValueChange, onCancel, multiple } = props;
+  console.log(props);
 
   const [dataSource, setDataSource] = useState<MultilevelData<V>[]>([]);
   const [keyword, setKeyword] = useState('');

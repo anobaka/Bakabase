@@ -27,6 +27,7 @@ export default ({
 
   const showEditor = () => {
     createPortal(MultilevelValueEditor<string>, {
+      value: editor?.value,
       getDataSource: async () => {
         const ds = await getDataSource?.() || [];
         const data: MultilevelData<string>[] = [];

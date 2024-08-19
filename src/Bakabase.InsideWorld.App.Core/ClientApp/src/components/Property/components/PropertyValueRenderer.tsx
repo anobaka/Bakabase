@@ -346,6 +346,9 @@ export default (props: Props) => {
             value={bv}
             variant={variant}
             editor={simpleEditor}
+            getDataSource={async () => {
+              return property?.options?.data || [];
+            }}
           />
         );
       }
@@ -355,6 +358,9 @@ export default (props: Props) => {
             value={bv}
             variant={variant}
             editor={simpleEditor}
+            getDataSource={async () => {
+              return property?.options?.tags || [];
+            }}
           />
         );
       }

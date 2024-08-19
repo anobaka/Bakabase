@@ -905,6 +905,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<string?> GetThumbnail(int id, CancellationToken ct)
         {
             var thumbnailDir = ThumbnailDir;
+            Directory.CreateDirectory(thumbnailDir);
             var thumbnailPath = Directory.GetFiles(thumbnailDir, $"{id}.*").FirstOrDefault();
             if (string.IsNullOrEmpty(thumbnailPath))
             {
@@ -918,7 +919,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         ? await Image.LoadAsync<Rgba32>(path, ct)
                         : await Image.LoadAsync<Rgba32>(new MemoryStream(imageBytes!), ct);
 
-                    await image.SaveAsThumbnail(BuildThumbnailPathWithoutExtension(id), ct);
+                    thumbnailPath = await image.SaveAsThumbnail(BuildThumbnailPathWithoutExtension(id), ct);
                 }
             }
 

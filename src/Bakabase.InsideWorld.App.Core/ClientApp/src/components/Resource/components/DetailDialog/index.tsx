@@ -78,6 +78,7 @@ export default ({
                 <ResourceCover
                   resourceId={resource.id}
                   showBiggerOnHover={false}
+                  useThumbnail={false}
                 />
               </div>
               <div className={'flex items-center justify-center'}>

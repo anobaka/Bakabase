@@ -22,6 +22,8 @@ public static class ImageHelpers
         }
 
         var thumbnailPath = pathWithoutExtension + (hasAlpha ? ".png" : ".jpg");
+        var dir = Path.GetDirectoryName(thumbnailPath)!;
+        Directory.CreateDirectory(dir);
         if (hasAlpha)
         {
             await image.SaveAsPngAsync(thumbnailPath, ct);

@@ -60,6 +60,7 @@ export default (props: StringValueRendererProps) => {
           value={value}
           onValueChange={setValue}
           onBlur={completeEditing}
+          autoFocus
         />
       );
     } else {
@@ -68,6 +69,7 @@ export default (props: StringValueRendererProps) => {
           value={value}
           onValueChange={setValue}
           onBlur={completeEditing}
+          autoFocus
         />
       );
     }

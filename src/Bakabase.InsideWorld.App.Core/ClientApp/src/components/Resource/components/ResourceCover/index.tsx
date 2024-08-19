@@ -37,6 +37,7 @@ interface Props {
   disableCache?: boolean;
   disableMediaPreviewer?: boolean;
   biggerCoverPlacement?: TooltipPlacement;
+  useThumbnail?: boolean;
 }
 
 export interface IResourceCoverRef {
@@ -52,6 +53,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     disableCache = false,
     disableMediaPreviewer = false,
     biggerCoverPlacement,
+    useThumbnail = true
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -141,7 +143,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const loadCover = useCallback((refresh: boolean) => {
     const serverAddress = appContext.serverAddresses?.[1] ?? serverConfig.apiEndpoint;
-    let url = `${serverAddress}${GetResourceCoverURL({ id: resourceId })}`;
+    let url = `${serverAddress}/resource/${resourceId}/${useThumbnail ? 'thumbnail' : 'cover'}`;
     if (refresh) {
       url += `?${uuidv4()}`;
     }
@@ -160,7 +162,10 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       return (
         <Img
           style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-          src={[url]}
+          src={url}
+          onError={e => {
+            console.log(e);
+          }}
           onLoad={(e) => {
             setLoaded(true);
             const img = e.target as HTMLImageElement;
