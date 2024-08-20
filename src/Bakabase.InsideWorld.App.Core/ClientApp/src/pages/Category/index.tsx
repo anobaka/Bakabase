@@ -15,6 +15,7 @@ import SimpleOneStepDialog from '@/components/SimpleOneStepDialog';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Button, Input, Modal } from '@/components/bakaui';
+import DeleteUnknownResources from '@/components/DeleteUnknownResources';
 
 export default () => {
   const { t } = useTranslation();
@@ -79,18 +80,20 @@ export default () => {
     init();
   }, []);
 
-  useEffect(() => {
-    if (categoriesLoadedRef.current) {
-      const noCategory = !(categories?.length > 0);
-      if (noCategory) {
-        gotoNewCategoryPage(true);
-      }
-    }
-  }, [categories]);
+  // useEffect(() => {
+  //   if (categoriesLoadedRef.current) {
+  //     const noCategory = !(categories?.length > 0);
+  //     if (noCategory) {
+  //       gotoNewCategoryPage(true);
+  //     }
+  //   }
+  // }, [categories]);
+
+  // console.log(categories);
 
   return (
     <div className={'category-page'}>
-      <div className="header">
+      <div className="header mb-1">
         <div className="left">
           <Button
             color={'primary'}
@@ -157,6 +160,7 @@ export default () => {
           )}
         </div>
         <div className="right">
+          <DeleteUnknownResources />
           <Button
             color={'default'}
             size={'small'}

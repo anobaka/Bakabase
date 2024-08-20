@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Checkbox, Dialog, Input, Message } from '@alifd/next';
+import { Dialog, Input, Message } from '@alifd/next';
 import { SketchPicker } from 'react-color';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -17,17 +17,18 @@ import ClickableIcon from '@/components/ClickableIcon';
 import CategoryCustomPropertyBinderDialog from '@/pages/Category/components/CustomPropertyBinder';
 import {
   Button,
+  Checkbox,
   Chip,
   Dropdown,
   DropdownItem,
   DropdownMenu,
   DropdownTrigger,
   Modal,
-  Spacer,
   Tooltip,
 } from '@/components/bakaui';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import FeatureStatusTip from '@/components/FeatureStatusTip';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -124,6 +125,10 @@ export default (({
   };
 
   const resourceCount = libraries.reduce((s, t) => s + t.resourceCount, 0);
+
+  if (category.id == 14) {
+    console.log(category);
+  }
 
   return (
     <div
@@ -456,7 +461,12 @@ export default (({
         </div>
         <div className={'setting'}>
           <Tooltip
-            content={t('You can share tags and rate of same physical filesystem item from different app instances by enabling this option, but it may cause poor performance of tag-related operations.')}
+            content={
+              <div>
+                {t('You can share tags and rate of same physical filesystem item from different app instances by enabling this option, but it may cause poor performance of tag-related operations.')}
+                <FeatureStatusTip status={'developing'} name={t('NFO generator')} />
+              </div>
+            }
           >
             <Chip
               size={'sm'}
@@ -465,21 +475,22 @@ export default (({
           </Tooltip>
           &emsp;
           <Checkbox
+            isDisabled
             checked={category.generateNfo}
-            onChange={(checked) => {
-              BApi.category.patchCategory(
-                category.id,
-                {
-                  generateNfo: checked,
-                },
-              )
-                .then((t) => {
-                  if (!t.code) {
-                    category.generateNfo = checked;
-                    forceUpdate();
-                  }
-                });
-            }}
+            onValueChange={(checked) => {
+                BApi.category.patchCategory(
+                  category.id,
+                  {
+                    generateNfo: checked,
+                  },
+                )
+                  .then((t) => {
+                    if (!t.code) {
+                      category.generateNfo = checked;
+                      forceUpdate();
+                    }
+                  });
+              }}
           />
         </div>
         <div className={'col-span-3'}>
@@ -611,6 +622,9 @@ export default (({
               onClick={() => {
                 createPortal(DisplayNameTemplateEditorDialog, {
                   categoryId: category.id,
+                  onSaved: () => {
+                    loadAllCategories();
+                  },
                 });
               }}
             >

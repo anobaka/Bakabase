@@ -8,7 +8,6 @@ import FilterGroup from './FilterGroup';
 import type { IProperty } from '@/components/Property/models';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
-import { ResourceProperty as EnumResourceProperty } from '@/sdk/constants';
 
 interface IProps {
   group?: IGroup;

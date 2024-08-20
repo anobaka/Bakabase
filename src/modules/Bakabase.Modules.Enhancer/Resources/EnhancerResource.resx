@@ -209,4 +209,10 @@
   <data name="Enhancer_Bakabase_Target_Originals_Name" xml:space="preserve">
     <value>Originals</value>
   </data>
+  <data name="Enhancer_Bakabase_Target_Cover_Name" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="Enhancer_Bangumi_Target_Rating_Description" xml:space="preserve">
+    <value>Will be scaled correspoding the range of target rating property</value>
+  </data>
 </root>

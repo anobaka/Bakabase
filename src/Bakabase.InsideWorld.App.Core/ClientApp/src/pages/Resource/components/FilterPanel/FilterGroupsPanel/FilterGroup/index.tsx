@@ -3,14 +3,18 @@ import React, { useEffect, useRef } from 'react';
 import { useUpdateEffect } from 'react-use';
 import type { Root } from 'react-dom/client';
 import { createRoot } from 'react-dom/client';
-import type { DataPool, IGroup } from '../models';
+import { AppstoreOutlined, FilterOutlined, SearchOutlined } from '@ant-design/icons';
+import type { DataPool, IFilter, IGroup } from '../models';
 import { GroupCombinator } from '../models';
 import styles from './index.module.scss';
 import Filter from './Filter';
 import ClickableIcon from '@/components/ClickableIcon';
-import CustomIcon from '@/components/CustomIcon';
 import type { IProperty } from '@/components/Property/models';
-import { Button, Chip, Dropdown, Popover } from '@/components/bakaui';
+import { Button, Popover } from '@/components/bakaui';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';
+import { ResourceProperty, SearchOperation, StandardValueType } from '@/sdk/constants';
+import { serializeStandardValue } from '@/components/StandardValue/helpers';
 
 interface IProps {
   group: IGroup;
@@ -32,18 +36,21 @@ const FilterGroup = ({
                        dataPool,
                      }: IProps) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
+
   const [group, setGroup] = React.useState<IGroup>(propsGroup);
   const groupRef = useRef(group);
 
+
   useEffect(() => {
-    let root: Root;
+    let portal: Root;
     if (portalContainer) {
-      root = createRoot(portalContainer);
-      root.render(renderAddHandler());
+      portal = createRoot(portalContainer);
+      portal.render(renderAddHandler());
     }
 
     return () => {
-      root?.unmount();
+      portal?.unmount();
     };
   }, []);
 
@@ -54,7 +61,7 @@ const FilterGroup = ({
 
   useUpdateEffect(() => {
     setGroup(propsGroup);
-    console.log(propsGroup, 123);
+    // console.log(propsGroup, 123);
   }, [propsGroup]);
 
   const {
@@ -148,48 +155,94 @@ const FilterGroup = ({
           </Button>
         )}
         placement={'bottom'}
+        style={{ zIndex: 10 }}
       >
-        <div className={'flex items-center gap-2'}>
-          <Button
-            size={'sm'}
-            onClick={() => {
-              setGroup({
-                ...groupRef.current,
-                filters: [
-                  ...(groupRef.current.filters || []),
-                  {},
-                ],
-              });
-            }}
-          >
-            <div className={styles.text}>
-              <CustomIcon
-                className={'text-small'}
-                type={'filter-records'}
-              />
+        <div
+          className={'grid items-center gap-2 my-3 mx-1'}
+          style={{ gridTemplateColumns: 'auto auto' }}
+        >
+          <div>{t('Quick filter')}</div>
+          <div className={'flex items-center gap-2 flex-wrap'}>
+            <Button
+              size={'sm'}
+              onClick={() => {
+                createPortal(MediaLibrarySelectorV2, {
+                  onSelected: (dbValue, bizValue) => {
+                    const newFilter: IFilter = {
+                      propertyId: ResourceProperty.MediaLibrary,
+                      dbValue: serializeStandardValue(dbValue, StandardValueType.ListString),
+                      operation: SearchOperation.In,
+                      isCustomProperty: false,
+                      bizValue: serializeStandardValue(bizValue, StandardValueType.ListListString),
+                    };
+                    setGroup({
+                      ...groupRef.current,
+                      filters: [
+                        ...(groupRef.current.filters || []),
+                        newFilter,
+                      ],
+                    });
+                  },
+                });
+              }}
+            >
+              <SearchOutlined className={'text-base'} />
+              {t('Media library')}
+            </Button>
+            <Button
+              size={'sm'}
+              onClick={() => {
+                const newFilter: IFilter = {
+                  propertyId: ResourceProperty.FileName,
+                  operation: SearchOperation.Contains,
+                  isCustomProperty: false,
+                };
+                setGroup({
+                  ...groupRef.current,
+                  filters: [
+                    ...(groupRef.current.filters || []),
+                    newFilter,
+                  ],
+                });
+              }}
+            >
+              <SearchOutlined className={'text-base'} />
+              {t('Filename')}
+            </Button>
+          </div>
+          <div>{t('Advance filter')}</div>
+          <div className={'flex items-center gap-2'}>
+            <Button
+              size={'sm'}
+              onClick={() => {
+                setGroup({
+                  ...groupRef.current,
+                  filters: [
+                    ...(groupRef.current.filters || []),
+                    {},
+                  ],
+                });
+              }}
+            >
+              <FilterOutlined className={'text-base'} />
               {t('Filter')}
-            </div>
-          </Button>
-          <Button
-            size={'sm'}
-            onClick={() => {
-              setGroup({
-                ...groupRef.current,
-                groups: [
-                  ...(groupRef.current.groups || []),
-                  { combinator: GroupCombinator.And },
-                ],
-              });
-            }}
-          >
-            <div className={styles.text}>
-              <CustomIcon
-                className={'text-small'}
-                type={'unorderedlist'}
-              />
+            </Button>
+            <Button
+              size={'sm'}
+              onClick={() => {
+                setGroup({
+                  ...groupRef.current,
+                  groups: [
+                    ...(groupRef.current.groups || []),
+                    { combinator: GroupCombinator.And },
+                  ],
+                });
+              }}
+            >
+              <AppstoreOutlined className={'text-base'} />
               {t('Filter group')}
-            </div>
-          </Button>
+            </Button>
+          </div>
         </div>
       </Popover>
     );

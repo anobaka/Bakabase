@@ -52,11 +52,11 @@ export default ({
   const proxies = [
     {
       label: t('Do not use proxy'),
-      value: ProxyMode.DoNotUse,
+      value: ProxyMode.DoNotUse.toString(),
     },
     {
       label: t('Use system proxy'),
-      value: ProxyMode.UseSystem,
+      value: ProxyMode.UseSystem.toString(),
     },
     ...(networkOptions.customProxies?.map(c => ({
       label: c.address!,
@@ -70,9 +70,11 @@ export default ({
     if (p.mode == ProxyMode.UseCustom) {
       selectedProxy = p.customProxyId!;
     } else {
-      selectedProxy = p.mode;
+      selectedProxy = p.mode?.toString();
     }
   }
+
+  selectedProxy ??= ProxyMode.DoNotUse.toString();
 
   // console.log('xxxxxx', selectedProxy, proxies);
 

@@ -374,39 +374,38 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<BaseResponse> Patch(int id, CategoryPatchInputModel model)
         {
-            var category = await orm.GetByKey(id);
-            if (model.Name.IsNotEmpty())
+            return await orm.UpdateByKey(id, category =>
             {
-                category.Name = model.Name;
-            }
+                if (model.Name.IsNotEmpty())
+                {
+                    category.Name = model.Name;
+                }
 
-            if (model.Order.HasValue)
-            {
-                category.Order = model.Order.Value;
-            }
+                if (model.Order.HasValue)
+                {
+                    category.Order = model.Order.Value;
+                }
 
-            if (model.Color.IsNotEmpty())
-            {
-                category.Color = model.Color;
-            }
+                if (model.Color.IsNotEmpty())
+                {
+                    category.Color = model.Color;
+                }
 
-            if (model.CoverSelectionOrder.HasValue)
-            {
-                category.CoverSelectionOrder = model.CoverSelectionOrder.Value;
-            }
+                if (model.CoverSelectionOrder.HasValue)
+                {
+                    category.CoverSelectionOrder = model.CoverSelectionOrder.Value;
+                }
 
-            if (model.GenerateNfo.HasValue)
-            {
-                category.GenerateNfo = model.GenerateNfo.Value;
-            }
+                if (model.GenerateNfo.HasValue)
+                {
+                    category.GenerateNfo = model.GenerateNfo.Value;
+                }
 
-            if (!string.IsNullOrEmpty(model.ResourceDisplayNameTemplate))
-            {
-                category.ResourceDisplayNameTemplate = model.ResourceDisplayNameTemplate;
-            }
-
-            await orm.DbContext.SaveChangesAsync();
-            return BaseResponseBuilder.Ok;
+                if (!string.IsNullOrEmpty(model.ResourceDisplayNameTemplate))
+                {
+                    category.ResourceDisplayNameTemplate = model.ResourceDisplayNameTemplate;
+                }
+            });
         }
 
         /// <summary>
@@ -574,7 +573,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     var value = d.Value.Values?.FirstOrDefault()?.BizValue;
                     if (value != null)
                     {
-                        var stdValueHandler = StandardValueHandlerMap[d.Value.DbValueType];
+                        var stdValueHandler = StandardValueHandlerMap[d.Value.BizValueType];
                         return stdValueHandler.BuildDisplayValue(value);
                     }
 

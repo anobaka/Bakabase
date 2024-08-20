@@ -106,6 +106,9 @@ export default ({
         </Tooltip>
       );
     } else {
+      if (filter.operation == undefined) {
+        filter.operation = operations[0];
+      }
       return (
         <Dropdown placement={'bottom-start'}>
           <DropdownTrigger>

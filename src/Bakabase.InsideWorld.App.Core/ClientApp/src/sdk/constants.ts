@@ -206,7 +206,7 @@ export enum BakabaseEnhancerTarget {Name = 1, Publisher = 2, ReleaseDt = 3, Volu
 export const bakabaseEnhancerTargets = Object.keys(BakabaseEnhancerTarget).filter(k => typeof BakabaseEnhancerTarget[k] === 'number').map(t => ({label: t, value: BakabaseEnhancerTarget[t]}));
 export enum EnhancementAdditionalItem {None = 0, GeneratedCustomPropertyValue = 1}
 export const enhancementAdditionalItems = Object.keys(EnhancementAdditionalItem).filter(k => typeof EnhancementAdditionalItem[k] === 'number').map(t => ({label: t, value: EnhancementAdditionalItem[t]}));
-export enum EnhancerTargetOptionsItem {IntegrateWithAlias = 1, AutoMatchMultilevelString = 2, AutoGenerateProperties = 3}
+export enum EnhancerTargetOptionsItem {AutoGenerateProperties = 1, AutoMatchMultilevelString = 2}
 export const enhancerTargetOptionsItems = Object.keys(EnhancerTargetOptionsItem).filter(k => typeof EnhancerTargetOptionsItem[k] === 'number').map(t => ({label: t, value: EnhancerTargetOptionsItem[t]}));
 export enum ExHentaiCategory {Unknown = 0, Misc = 1, Doushijin = 2, Manga = 4, ArtistCG = 8, GameCG = 16, ImageSet = 32, Cosplay = 64, AsianPorn = 128, NonH = 256, Western = 512}
 export const exHentaiCategories = Object.keys(ExHentaiCategory).filter(k => typeof ExHentaiCategory[k] === 'number').map(t => ({label: t, value: ExHentaiCategory[t]}));

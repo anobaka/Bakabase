@@ -1351,5 +1351,9 @@
   "This field is required": "该字段为必填字段",
   "If checked, a default property for this target will be created automatically.": "如果勾选本项，会自动为该目标创建一个属性。",
   "If checked in default options of a dynamic target, multiple properties will be created for all unlisted dynamic targets.": "如果在动态目标的默认选项中勾选了此项，则会自动为所有未指定的动态目标创建对应的属性。",
-  "Check configuration": "检查配置"
+  "Check configuration": "检查配置",
+  "Delete unknown resources": "删除未知资源",
+  "Delete all resources bound to unknown category or media library": "删除所有未知分类或媒体库绑定的资源",
+  "Unbind": "取消绑定",
+  "Advance filter": "高级筛选"
 }

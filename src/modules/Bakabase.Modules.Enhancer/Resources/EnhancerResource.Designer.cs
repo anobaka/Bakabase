@@ -79,6 +79,15 @@ namespace Bakabase.Modules.Enhancer.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cover.
+        /// </summary>
+        public static string Enhancer_Bakabase_Target_Cover_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bakabase_Target_Cover_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Main language of the resource.
         /// </summary>
         public static string Enhancer_Bakabase_Target_Language_Description {
@@ -246,6 +255,15 @@ namespace Bakabase.Modules.Enhancer.Resources {
         public static string Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name {
             get {
                 return ResourceManager.GetString("Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Will be scaled correspoding the range of target rating property.
+        /// </summary>
+        public static string Enhancer_Bangumi_Target_Rating_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bangumi_Target_Rating_Description", resourceCulture);
             }
         }
         

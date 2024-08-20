@@ -1,48 +1,30 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Runtime.Caching;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions;
-using Bakabase.Abstractions.Components;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
-using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Storage.Services;
-using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
-using Bakabase.InsideWorld.Business.Components.FileExplorer;
-using Bakabase.InsideWorld.Business.Components.Legacy.Services;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
-using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Business.Models.Input;
-using Bakabase.InsideWorld.Business.Resources;
-using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
@@ -54,25 +36,10 @@ using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
-using Bootstrap.Components.Storage;
-using Bootstrap.Extensions;
-using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
-using ElectronNET.API.Entities;
-using Google.Apis.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Org.BouncyCastle.Utilities;
-using SharpCompress.IO;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
 using Image = SixLabors.ImageSharp.Image;
 
@@ -82,7 +49,6 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
     public class ResourceController : Controller
     {
         private readonly IResourceService _service;
-        private readonly IServiceProvider _serviceProvider;
         private readonly ISpecialTextService _specialTextService;
         private readonly IMediaLibraryService _mediaLibraryService;
         private readonly ResourceTaskManager _resourceTaskManager;
@@ -107,10 +73,10 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
             FfMpegService ffMpegService, IBOptions<ResourceOptions> resourceOptions,
             Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
             ILogger<ResourceController> logger, ICustomPropertyValueService customPropertyValueService,
-            ICategoryService categoryService, ICustomPropertyService customPropertyService, ICoverDiscoverer coverManager, IStandardValueHelper standardValueHelper)
+            ICategoryService categoryService, ICustomPropertyService customPropertyService,
+            ICoverDiscoverer coverManager, IStandardValueHelper standardValueHelper)
         {
             _service = service;
-            _serviceProvider = serviceProvider;
             _specialTextService = specialTextService;
             _mediaLibraryService = mediaLibraryService;
             _resourceTaskManager = resourceTaskManager;
@@ -220,7 +186,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                                         .Select(v => choices.FirstOrDefault(x => x.Value == v)?.Label)
                                                         .OfType<string>().ToList());
                                                 }
-                                                       
+
                                             }
 
                                             break;
@@ -242,7 +208,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                                 .ToList();
                                             if (value?.Any() == true)
                                             {
-                                                var choices = (propertyMap.GetValueOrDefault(filter.PropertyId) as MultipleChoiceProperty)?.Options?.Choices;
+                                                var choices =
+                                                    (propertyMap.GetValueOrDefault(filter.PropertyId) as
+                                                        MultipleChoiceProperty)?.Options?.Choices;
                                                 if (choices?.Any() == true)
                                                 {
                                                     filter.BizValue = _standardValueHelper.Serialize(value
@@ -254,7 +222,7 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
                                             break;
                                         }
-                                        }
+                                    }
 
                                     break;
                                 }
@@ -300,7 +268,9 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
                                                 .ToList();
                                             if (value?.Any() == true)
                                             {
-                                                var tags = (propertyMap.GetValueOrDefault(filter.PropertyId) as TagsProperty)?.Options?.Tags;
+                                                var tags =
+                                                    (propertyMap.GetValueOrDefault(filter.PropertyId) as TagsProperty)
+                                                    ?.Options?.Tags;
                                                 if (tags?.Any() == true)
                                                 {
                                                     filter.BizValue = _standardValueHelper.Serialize(value
@@ -410,7 +380,8 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
 
         [HttpGet("keys")]
         [SwaggerOperation(OperationId = "GetResourcesByKeys")]
-        public async Task<ListResponse<Resource>> GetByKeys([FromQuery] int[] ids, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
+        public async Task<ListResponse<Resource>> GetByKeys([FromQuery] int[] ids,
+            ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
             return new ListResponse<Resource>(await _service.GetByKeys(ids, additionalItems));
         }
@@ -668,6 +639,21 @@ namespace Bakabase.InsideWorld.App.Core.Controllers
         public async Task<BaseResponse> Play(int resourceId, string file)
         {
             return await _service.Play(resourceId, file);
+        }
+
+        [HttpDelete("unknown")]
+        [SwaggerOperation(OperationId = "DeleteUnknownResources")]
+        public async Task<BaseResponse> DeleteUnknown()
+        {
+            await _service.DeleteUnknown();
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("unknown/count")]
+        [SwaggerOperation(OperationId = "GetUnknownResourcesCount")]
+        public async Task<SingletonResponse<int>> GetUnknownCount()
+        {
+            return new SingletonResponse<int>(data: await _service.GetUnknownCount());
         }
     }
 }

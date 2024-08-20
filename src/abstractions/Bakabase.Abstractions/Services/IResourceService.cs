@@ -96,4 +96,6 @@ public interface IResourceService
     Task<string?> GetThumbnail(int id, CancellationToken ct);
 
     Task<BaseResponse> Play(int resourceId, string file);
+    Task DeleteUnknown();
+    Task<int> GetUnknownCount();
 }

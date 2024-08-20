@@ -24,6 +24,7 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface IProps extends DestroyableProps {
   categoryId: number;
+  onSaved?: () => any;
 }
 
 interface ICategory {
@@ -53,6 +54,7 @@ const renderDisplayNameSegment = (p: ResourceDisplayNameTemplateSegment) => {
 
 export default ({
                   categoryId,
+                  onSaved,
                   ...props
                 }: IProps) => {
   const { t } = useTranslation();
@@ -122,6 +124,7 @@ export default ({
         await BApi.category.patchCategory(categoryId, {
           resourceDisplayNameTemplate: templateRef.current,
         });
+        onSaved?.();
       }}
     >
       <div>

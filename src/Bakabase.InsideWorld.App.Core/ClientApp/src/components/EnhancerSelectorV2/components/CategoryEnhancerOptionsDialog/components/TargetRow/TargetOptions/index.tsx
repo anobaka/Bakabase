@@ -5,9 +5,6 @@ import AutoGenerateProperties from './AutoGenerateProperties';
 import type {
   EnhancerTargetFullOptions,
 } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
-import {
-  defaultCategoryEnhancerTargetOptions,
-} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
 import { EnhancerTargetOptionsItem } from '@/sdk/constants';
 
 type Options = {
@@ -47,14 +44,6 @@ export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
     <>
       {optionsItems?.map((item, index) => {
         switch (item) {
-          case EnhancerTargetOptionsItem.IntegrateWithAlias:
-            return (
-              <IntegrateWithAlias
-                key={item}
-                integrateWithAlias={finalOptions.integrateWithAlias ?? false}
-                onChange={o => patchOptions({ integrateWithAlias: o })}
-              />
-            );
           case EnhancerTargetOptionsItem.AutoMatchMultilevelString:
             return (
               <AutoMatchMultilevelString

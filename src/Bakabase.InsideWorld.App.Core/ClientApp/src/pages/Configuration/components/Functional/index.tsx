@@ -56,93 +56,93 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
   console.log('rerender', tmpExHentaiOptions, exhentaiOptions);
 
   const functionSettings = [
-    {
-      label: 'Try discovering cover from',
-      renderCell: () => {
-        return (
-          <Checkbox.Group
-            value={resourceOptions?.additionalCoverDiscoveringSources}
-            onChange={(list) => {
-              applyPatches(PatchResourceOptions, {
-                additionalCoverDiscoveringSources: list.filter((s) => s),
-              });
-            }}
-          >
-            {additionalCoverDiscoveringSources.map((s) => {
-              if (s.value == AdditionalCoverDiscoveringSource.Video) {
-                if (ffmpegState?.status != DependentComponentStatus.Installed) {
-                  return (
-                    <Balloon.Tooltip
-                      key={s.value}
-                      trigger={(
-                        <Checkbox value={s.value} disabled>{t(s.label)}</Checkbox>
-                      )}
-                      align={'t'}
-                    >
-                      {t('FFmpeg bin directory must be set to enable this options.')}
-                    </Balloon.Tooltip>
-                  );
-                }
-              }
-
-              return (
-                <Checkbox key={s.value} value={s.value}>{t(s.label)}</Checkbox>
-              );
-            })}
-          </Checkbox.Group>
-        );
-      },
-    },
-    {
-      label: 'Cover save location',
-      renderCell: () => {
-        return (
-          <Radio.Group
-            value={resourceOptions?.coverOptions?.saveLocation ?? undefined}
-            onChange={(v) => {
-              applyPatches(PatchResourceOptions, {
-                coverOptions: {
-                  ...(resourceOptions?.coverOptions ?? {}),
-                  saveLocation: v,
-                },
-              });
-            }}
-            dataSource={[
-              { label: t('Prompt'), value: undefined },
-              ...coverSaveLocations.map(c => ({
-                label: t(c.label),
-                value: c.value,
-              })),
-            ]}
-          />
-        );
-      },
-    },
-    {
-      label: 'Overwrite existed cover',
-      tip: 'Overwrite existed cover when save a new cover',
-      renderCell: () => {
-        return (
-          // @ts-ignore
-          <Radio.Group
-            value={resourceOptions?.coverOptions?.overwrite ?? undefined}
-            onChange={(v) => {
-              applyPatches(PatchResourceOptions, {
-                coverOptions: {
-                  ...(resourceOptions?.coverOptions ?? {}),
-                  overwrite: v,
-                },
-              });
-            }}
-            dataSource={[
-              { label: t('Prompt'), value: undefined },
-              { label: t('Yes'), value: true },
-              { label: t('No'), value: false },
-            ]}
-          />
-        );
-      },
-    },
+    // {
+    //   label: 'Try discovering cover from',
+    //   renderCell: () => {
+    //     return (
+    //       <Checkbox.Group
+    //         value={resourceOptions?.additionalCoverDiscoveringSources}
+    //         onChange={(list) => {
+    //           applyPatches(PatchResourceOptions, {
+    //             additionalCoverDiscoveringSources: list.filter((s) => s),
+    //           });
+    //         }}
+    //       >
+    //         {additionalCoverDiscoveringSources.map((s) => {
+    //           if (s.value == AdditionalCoverDiscoveringSource.Video) {
+    //             if (ffmpegState?.status != DependentComponentStatus.Installed) {
+    //               return (
+    //                 <Balloon.Tooltip
+    //                   key={s.value}
+    //                   trigger={(
+    //                     <Checkbox value={s.value} disabled>{t(s.label)}</Checkbox>
+    //                   )}
+    //                   align={'t'}
+    //                 >
+    //                   {t('FFmpeg bin directory must be set to enable this options.')}
+    //                 </Balloon.Tooltip>
+    //               );
+    //             }
+    //           }
+    //
+    //           return (
+    //             <Checkbox key={s.value} value={s.value}>{t(s.label)}</Checkbox>
+    //           );
+    //         })}
+    //       </Checkbox.Group>
+    //     );
+    //   },
+    // },
+    // {
+    //   label: 'Cover save location',
+    //   renderCell: () => {
+    //     return (
+    //       <Radio.Group
+    //         value={resourceOptions?.coverOptions?.saveLocation ?? undefined}
+    //         onChange={(v) => {
+    //           applyPatches(PatchResourceOptions, {
+    //             coverOptions: {
+    //               ...(resourceOptions?.coverOptions ?? {}),
+    //               saveLocation: v,
+    //             },
+    //           });
+    //         }}
+    //         dataSource={[
+    //           { label: t('Prompt'), value: undefined },
+    //           ...coverSaveLocations.map(c => ({
+    //             label: t(c.label),
+    //             value: c.value,
+    //           })),
+    //         ]}
+    //       />
+    //     );
+    //   },
+    // },
+    // {
+    //   label: 'Overwrite existed cover',
+    //   tip: 'Overwrite existed cover when save a new cover',
+    //   renderCell: () => {
+    //     return (
+    //       // @ts-ignore
+    //       <Radio.Group
+    //         value={resourceOptions?.coverOptions?.overwrite ?? undefined}
+    //         onChange={(v) => {
+    //           applyPatches(PatchResourceOptions, {
+    //             coverOptions: {
+    //               ...(resourceOptions?.coverOptions ?? {}),
+    //               overwrite: v,
+    //             },
+    //           });
+    //         }}
+    //         dataSource={[
+    //           { label: t('Prompt'), value: undefined },
+    //           { label: t('Yes'), value: true },
+    //           { label: t('No'), value: false },
+    //         ]}
+    //       />
+    //     );
+    //   },
+    // },
     {
       label: 'External search engines',
       tip: 'You can set external search engines for searching resource by name quickly in resource list, ' +

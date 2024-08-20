@@ -369,12 +369,13 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 							break;
 						}
                         case SearchableReservedProperty.MediaLibrary:
+                        case SearchableReservedProperty.Category:
                         {
                             var getValue = property switch
                             {
                                 SearchableReservedProperty.MediaLibrary => (Func<Abstractions.Models.Domain.Resource, int>)
                                     (x => x.MediaLibraryId),
-                                // SearchableReservedProperty.Category => x => x.CategoryId,
+                                SearchableReservedProperty.Category => x => x.CategoryId,
                                 _ => null!
                             };
 

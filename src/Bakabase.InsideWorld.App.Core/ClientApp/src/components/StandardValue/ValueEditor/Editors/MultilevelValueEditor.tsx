@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import { DoubleRightOutlined, SearchOutlined } from '@ant-design/icons';
+import { useUpdateEffect } from 'react-use';
 import type { ValueEditorProps } from '../models';
 import { Button, Input, Modal } from '@/components/bakaui';
 import type { MultilevelData } from '@/components/StandardValue/models';
@@ -23,7 +24,7 @@ export default <V = string>(props: MultilevelValueEditorProps<V>) => {
   const { t } = useTranslation();
 
   const { getDataSource, selectable = buildDefaultSelectable<V>(), value: propsValue, onValueChange, onCancel, multiple } = props;
-  console.log(props);
+  // console.log(props);
 
   const [dataSource, setDataSource] = useState<MultilevelData<V>[]>([]);
   const [keyword, setKeyword] = useState('');
@@ -32,6 +33,10 @@ export default <V = string>(props: MultilevelValueEditorProps<V>) => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useUpdateEffect(() => {
+    loadData();
+  }, [getDataSource]);
 
   useEffect(() => {
     setValue(propsValue ?? []);

@@ -1,43 +1,23 @@
-﻿using Bakabase.InsideWorld.Business.Components.Resource.Nfo;
-using Bakabase.InsideWorld.Business.Components.Tasks;
-using Bakabase.InsideWorld.Business.Configurations;
+﻿using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Constants.Aos;
-using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
-using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
-using Humanizer.Localisation;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using SharpCompress.Archives.SevenZip;
-using SharpCompress.Readers;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bootstrap.Components.Configuration.Abstractions;
-using SearchOption = System.IO.SearchOption;
-using System.Drawing.Imaging;
-using System.Drawing;
-using System.Runtime.InteropServices;
-using Bakabase.Abstractions.Components;
-using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Extensions;
@@ -48,39 +28,21 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
-using Bakabase.InsideWorld.Business.Components.BuiltinProperty;
-using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
-using Bakabase.InsideWorld.Business.Helpers;
-using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bootstrap.Models.Constants;
-using CliWrap;
-using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using StackExchange.Redis;
-using IComparer = System.Collections.IComparer;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using Bakabase.Modules.Alias.Abstractions.Services;
-using Bakabase.InsideWorld.Business.Components.Legacy.Services;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.Alias.Extensions;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
-using NPOI.SS.Formula.Functions;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using Image = SixLabors.ImageSharp.Image;
-using ElectronNET.API.Entities;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Processing;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -122,7 +84,8 @@ namespace Bakabase.InsideWorld.Business.Services
             IResourceSearchContextProcessor resourceSearchContextProcessor,
             IBuiltinPropertyValueService builtinPropertyValueService,
             IEnumerable<IStandardValueHandler> standardValueHandlers,
-            ICustomPropertyDescriptors customPropertyDescriptors, IFileManager fileManager, ICoverDiscoverer coverDiscoverer, IStandardValueHelper standardValueHelper)
+            ICustomPropertyDescriptors customPropertyDescriptors, IFileManager fileManager,
+            ICoverDiscoverer coverDiscoverer, IStandardValueHelper standardValueHelper)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -152,6 +115,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task DeleteByKeys(int[] ids)
         {
+            await DeleteRelatedData(ids.ToList());
             await _orm.RemoveByKeys(ids);
         }
 
@@ -410,14 +374,17 @@ namespace Bakabase.InsideWorld.Business.Services
                             foreach (var r in doList)
                             {
                                 r.Properties ??= [];
-                                var builtinProperties = r.Properties.GetOrAdd((int)ResourcePropertyType.Reserved, () => []);
+                                var builtinProperties =
+                                    r.Properties.GetOrAdd((int) ResourcePropertyType.Reserved, () => []);
                                 var dbBuiltinProperties = builtinPropertyValueMap.GetValueOrDefault(r.Id);
-                                builtinProperties[(int)ResourceProperty.Rating] = new Resource.Property(null, StandardValueType.Decimal,
+                                builtinProperties[(int) ResourceProperty.Rating] = new Resource.Property(null,
+                                    StandardValueType.Decimal,
                                     StandardValueType.Decimal,
                                     dbBuiltinProperties?.Select(s =>
                                         new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating,
                                             s.Rating)).ToList());
-                                builtinProperties[(int)ResourceProperty.Introduction] = new Resource.Property(null, StandardValueType.String,
+                                builtinProperties[(int) ResourceProperty.Introduction] = new Resource.Property(null,
+                                    StandardValueType.String,
                                     StandardValueType.String,
                                     dbBuiltinProperties?.Select(s =>
                                         new Resource.Property.PropertyValue(s.Scope, s.Introduction, s.Introduction,
@@ -441,12 +408,15 @@ namespace Bakabase.InsideWorld.Business.Services
                                 .ToDictionary(d => d.Id, d => d);
 
                             var categoryMap = (await _categoryService.GetByKeys(
-                                doList.Select(d => d.CategoryId).ToHashSet(), CategoryAdditionalItem.CustomProperties)).ToDictionary(d => d.Id, d => d);
+                                    doList.Select(d => d.CategoryId).ToHashSet(),
+                                    CategoryAdditionalItem.CustomProperties))
+                                .ToDictionary(d => d.Id, d => d);
 
                             foreach (var r in doList)
                             {
                                 r.Properties ??= [];
-                                var customProperties = r.Properties.GetOrAdd((int)ResourcePropertyType.Custom, () => []);
+                                var customProperties =
+                                    r.Properties.GetOrAdd((int) ResourcePropertyType.Custom, () => []);
                                 var pValues = customPropertiesValuesMap.GetValueOrDefault(r.Id);
                                 if (pValues != null)
                                 {
@@ -472,6 +442,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                         }
                                     }
                                 }
+
                                 var properties = categoryMap.GetValueOrDefault(r.CategoryId)?.CustomProperties;
                                 if (properties != null)
                                 {
@@ -1028,7 +999,8 @@ namespace Bakabase.InsideWorld.Business.Services
             return await _orm.Any(selector);
         }
 
-        public async Task<List<Abstractions.Models.Db.Resource>> AddAll(IEnumerable<Abstractions.Models.Db.Resource> resources)
+        public async Task<List<Abstractions.Models.Db.Resource>> AddAll(
+            IEnumerable<Abstractions.Models.Db.Resource> resources)
         {
             return (await _orm.AddRange(resources.ToList())).Data;
         }
@@ -1048,7 +1020,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         ResourceId = resourceId,
                         PropertyId = model.PropertyId,
                         Value = model.Value,
-                        Scope = (int)PropertyValueScope.Manual
+                        Scope = (int) PropertyValueScope.Manual
                     };
                     return await _customPropertyValueService.AddDbModel(value);
                 }
@@ -1060,7 +1032,7 @@ namespace Bakabase.InsideWorld.Business.Services
             }
             else
             {
-                var property = (ResourceProperty)model.PropertyId;
+                var property = (ResourceProperty) model.PropertyId;
                 switch (property)
                 {
                     // case ResourceProperty.RootPath:
@@ -1071,30 +1043,31 @@ namespace Bakabase.InsideWorld.Business.Services
                     //     break;
                     case ResourceProperty.Introduction:
                     case ResourceProperty.Rating:
+                    {
+                        var scopeValue = await _builtinPropertyValueService.GetFirst(x =>
+                            x.ResourceId == resourceId && x.Scope == (int) PropertyValueScope.Manual);
+                        var noValue = scopeValue == null;
+                        scopeValue ??= new BuiltinPropertyValue
                         {
-                            var scopeValue = await _builtinPropertyValueService.GetFirst(x =>
-                                x.ResourceId == resourceId && x.Scope == (int)PropertyValueScope.Manual);
-                            var noValue = scopeValue == null;
-                            scopeValue ??= new BuiltinPropertyValue
-                            {
-                                ResourceId = resourceId,
-                                Scope = (int)PropertyValueScope.Manual
-                            };
+                            ResourceId = resourceId,
+                            Scope = (int) PropertyValueScope.Manual
+                        };
 
-                            if (property == ResourceProperty.Introduction)
-                            {
-                                scopeValue.Introduction = _standardValueHelper.Deserialize<string>(model.Value, StandardValueType.String);
-                            }
-                            else
-                            {
-                                scopeValue.Rating =
-                                    _standardValueHelper.Deserialize<decimal?>(model.Value, StandardValueType.Decimal);
-                            }
-
-                            return noValue
-                                ? await _builtinPropertyValueService.Add(scopeValue)
-                                : await _builtinPropertyValueService.Update(scopeValue);
+                        if (property == ResourceProperty.Introduction)
+                        {
+                            scopeValue.Introduction =
+                                _standardValueHelper.Deserialize<string>(model.Value, StandardValueType.String);
                         }
+                        else
+                        {
+                            scopeValue.Rating =
+                                _standardValueHelper.Deserialize<decimal?>(model.Value, StandardValueType.Decimal);
+                        }
+
+                        return noValue
+                            ? await _builtinPropertyValueService.Add(scopeValue)
+                            : await _builtinPropertyValueService.Update(scopeValue);
+                    }
                     // case ResourceProperty.CustomProperty:
                     //     break;
                     // case ResourceProperty.FileName:
@@ -1184,21 +1157,21 @@ namespace Bakabase.InsideWorld.Business.Services
 
         // public async Task RunBatchSaveNfoBackgroundTask(int[] resourceIds, string backgroundTaskName, bool overwrite)
         // {
-            // var resources = await GetNfoGenerationNeededResources(resourceIds);
-            // if (resources.Any())
-            // {
-            // 	_backgroundTaskHelper.RunInNewScope<ResourceService>(backgroundTaskName, async (service, task) =>
-            // 	{
-            // 		for (var i = 0; i < resources.Count; i++)
-            // 		{
-            // 			var resource = resources[i];
-            // 			await service.SaveNfo(resource, overwrite, task.Cts.Token);
-            // 			task.Percentage = (i + 1) * 100 / resources.Count;
-            // 		}
-            //
-            // 		return BaseResponseBuilder.Ok;
-            // 	}, BackgroundTaskLevel.Critical);
-            // }
+        // var resources = await GetNfoGenerationNeededResources(resourceIds);
+        // if (resources.Any())
+        // {
+        // 	_backgroundTaskHelper.RunInNewScope<ResourceService>(backgroundTaskName, async (service, task) =>
+        // 	{
+        // 		for (var i = 0; i < resources.Count; i++)
+        // 		{
+        // 			var resource = resources[i];
+        // 			await service.SaveNfo(resource, overwrite, task.Cts.Token);
+        // 			task.Percentage = (i + 1) * 100 / resources.Count;
+        // 		}
+        //
+        // 		return BaseResponseBuilder.Ok;
+        // 	}, BackgroundTaskLevel.Critical);
+        // }
         // }
 
         // public async Task<BaseResponse> StartGeneratingNfo(BackgroundTask task)
@@ -1230,67 +1203,67 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task PopulateStatistics(DashboardStatistics statistics)
         {
-        	var categories = (await _categoryService.GetAll()).ToDictionary(a => a.Id, a => a.Name);
-        	var allEntities = await GetAllDbModels();
-        
-        	var allEntitiesMap = allEntities.ToDictionary(a => a.Id, a => a);
-        
-        	var totalCounts = allEntities.GroupBy(a => a.CategoryId)
-        		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-        		.ToList();
-        
-        	statistics.CategoryResourceCounts = totalCounts;
-        
-        	var today = DateTime.Today;
-        	var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
-        		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-        		.Where(a => a.Count > 0)
-        		.OrderByDescending(a => a.Count)
-        		.ToList();
-        
-        	statistics.TodayAddedCategoryResourceCounts = todayCounts;
-        
-        	var weekdayDiff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
-        	var monday = today.AddDays(-1 * weekdayDiff);
-        	var thisWeekCounts = allEntities.Where(a => a.CreateDt >= monday).GroupBy(a => a.CategoryId)
-        		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-        		.Where(a => a.Count > 0)
-        		.OrderByDescending(a => a.Count)
-        		.ToList();
-        
-        	statistics.ThisWeekAddedCategoryResourceCounts = thisWeekCounts;
-        
-        	var thisMonth = today.GetFirstDayOfMonth();
-        	var thisMonthCounts = allEntities.Where(a => a.CreateDt >= thisMonth).GroupBy(a => a.CategoryId)
-        		.Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-        		.Where(a => a.Count > 0)
-        		.OrderByDescending(a => a.Count)
-        		.ToList();
-        
-        	statistics.ThisMonthAddedCategoryResourceCounts = thisMonthCounts;
-        
-        	// 12 weeks added counts trending
-        	{
-        		var total = allEntities.Count;
-        		for (var i = 0; i < 12; i++)
-        		{
-        			var offset = -i * 7;
-        			var weekStart = today.AddDays(offset - weekdayDiff);
-        			var weekEnd = weekStart.AddDays(7);
-        			var count = allEntities.Count(a => a.CreateDt >= weekStart && a.CreateDt < weekEnd);
-        			statistics.ResourceTrending.Add(new DashboardStatistics.WeekCount(-i, total));
-        			total -= count;
-        		}
-        
-        		statistics.ResourceTrending.Reverse();
-        	}
-        
-        	const int maxPropertyCount = 30;
-            
-        	// Properties
-        	{
-        		var propertyCountList = new List<DashboardStatistics.PropertyAndCount>();
-        	}
+            var categories = (await _categoryService.GetAll()).ToDictionary(a => a.Id, a => a.Name);
+            var allEntities = await GetAllDbModels();
+
+            var allEntitiesMap = allEntities.ToDictionary(a => a.Id, a => a);
+
+            var totalCounts = allEntities.GroupBy(a => a.CategoryId)
+                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+                .ToList();
+
+            statistics.CategoryResourceCounts = totalCounts;
+
+            var today = DateTime.Today;
+            var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
+                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+                .Where(a => a.Count > 0)
+                .OrderByDescending(a => a.Count)
+                .ToList();
+
+            statistics.TodayAddedCategoryResourceCounts = todayCounts;
+
+            var weekdayDiff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+            var monday = today.AddDays(-1 * weekdayDiff);
+            var thisWeekCounts = allEntities.Where(a => a.CreateDt >= monday).GroupBy(a => a.CategoryId)
+                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+                .Where(a => a.Count > 0)
+                .OrderByDescending(a => a.Count)
+                .ToList();
+
+            statistics.ThisWeekAddedCategoryResourceCounts = thisWeekCounts;
+
+            var thisMonth = today.GetFirstDayOfMonth();
+            var thisMonthCounts = allEntities.Where(a => a.CreateDt >= thisMonth).GroupBy(a => a.CategoryId)
+                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+                .Where(a => a.Count > 0)
+                .OrderByDescending(a => a.Count)
+                .ToList();
+
+            statistics.ThisMonthAddedCategoryResourceCounts = thisMonthCounts;
+
+            // 12 weeks added counts trending
+            {
+                var total = allEntities.Count;
+                for (var i = 0; i < 12; i++)
+                {
+                    var offset = -i * 7;
+                    var weekStart = today.AddDays(offset - weekdayDiff);
+                    var weekEnd = weekStart.AddDays(7);
+                    var count = allEntities.Count(a => a.CreateDt >= weekStart && a.CreateDt < weekEnd);
+                    statistics.ResourceTrending.Add(new DashboardStatistics.WeekCount(-i, total));
+                    total -= count;
+                }
+
+                statistics.ResourceTrending.Reverse();
+            }
+
+            const int maxPropertyCount = 30;
+
+            // Properties
+            {
+                var propertyCountList = new List<DashboardStatistics.PropertyAndCount>();
+            }
         }
 
         // public async Task<BaseResponse> Patch(int id, ResourceUpdateRequestModel model)
@@ -1308,6 +1281,42 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await playerRsp.Data.Play(file);
             return BaseResponseBuilder.Ok;
+        }
+
+        public async Task DeleteUnknown()
+        {
+            var unknownResources = await GetUnknownResources();
+
+            if (unknownResources.Any())
+            {
+                var unknownResourceIds = unknownResources.Select(r => r.Id).ToList();
+                await DeleteRelatedData(unknownResourceIds);
+                await _orm.RemoveRange(unknownResources);
+            }
+        }
+
+        private async Task<List<Abstractions.Models.Db.Resource>> GetUnknownResources()
+        {
+            var categories = await _categoryService.GetAll();
+            var mediaLibraries = await _mediaLibraryService.GetAll();
+
+            var categoryIds = categories.Select(c => c.Id).ToHashSet();
+            var mediaLibraryIds = mediaLibraries.Select(m => m.Id).ToHashSet();
+
+            var unknownResources = await GetAllDbModels(x =>
+                !categoryIds.Contains(x.CategoryId) || !mediaLibraryIds.Contains(x.MediaLibraryId));
+            return unknownResources;
+        }
+
+        public async Task<int> GetUnknownCount()
+        {
+            var unknownResources = await GetUnknownResources();
+            return unknownResources.Count;
+        }
+
+        private async Task DeleteRelatedData(List<int> ids)
+        {
+            await _customPropertyValueService.RemoveAll(x => ids.Contains(x.ResourceId));
         }
     }
 }

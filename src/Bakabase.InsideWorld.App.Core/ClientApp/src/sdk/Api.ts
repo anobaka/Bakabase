@@ -4689,6 +4689,36 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name DeleteUnknownResources
+     * @request DELETE:/resource/unknown
+     */
+    deleteUnknownResources: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/unknown`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetUnknownResourcesCount
+     * @request GET:/resource/unknown/count
+     */
+    getUnknownResourcesCount: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/resource/unknown/count`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
   };
   mediaLibrary = {
     /**

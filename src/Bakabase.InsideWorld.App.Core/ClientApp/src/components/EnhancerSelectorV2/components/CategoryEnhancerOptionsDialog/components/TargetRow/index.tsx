@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DisconnectOutlined, EditOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EnhancerTargetFullOptions } from '../../models';
@@ -6,7 +6,7 @@ import { defaultCategoryEnhancerTargetOptions } from '../../models';
 import type { EnhancerDescriptor, EnhancerTargetDescriptor } from '../../../../models';
 import PropertyTip from './PropertyTip';
 import TargetOptions from './TargetOptions';
-import { Button, Input } from '@/components/bakaui';
+import { Button, Input, Tooltip } from '@/components/bakaui';
 import PropertySelector from '@/components/PropertySelector';
 import BApi from '@/sdk/BApi';
 import { PropertyLabel } from '@/components/Property';
@@ -135,6 +135,14 @@ export default (props: Props) => {
                 {integratedSpecialTextType && (
                   <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
                 )}
+                {descriptor.description && (
+                  <Tooltip
+                    content={descriptor.description}
+                    placement={'right'}
+                  >
+                    <InfoCircleOutlined className={'text-base'} />
+                  </Tooltip>
+                )}
               </>
             )}
           </div>
@@ -180,16 +188,20 @@ export default (props: Props) => {
                   onAllowAddingNewDataDynamicallyEnabled={onPropertyChanged}
                   onPropertyBoundToCategory={onCategoryChanged}
                 />
-                <Button
-                  isIconOnly
-                  color={'danger'}
-                  variant={'light'}
-                  onClick={() => {
-                    unbindProperty();
-                  }}
+                <Tooltip
+                  content={t('Unbind')}
                 >
-                  <DeleteOutlined className={'text-base'} />
-                </Button>
+                  <Button
+                    isIconOnly
+                    color={'danger'}
+                    variant={'light'}
+                    onClick={() => {
+                      unbindProperty();
+                    }}
+                  >
+                    <DisconnectOutlined className={'text-base'} />
+                  </Button>
+                </Tooltip>
               </>
             )}
           </div>

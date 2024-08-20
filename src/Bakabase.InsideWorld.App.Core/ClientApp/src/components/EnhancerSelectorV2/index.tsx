@@ -77,6 +77,9 @@ const EnhancerSelector = ({
       size={'xl'}
       onDestroyed={onDestroyed}
       onClose={onClose}
+      footer={{
+        actions: ['cancel'],
+      }}
     >
       <div className={'flex flex-wrap justify-evenly items-start gap-1'}>
         {enhancers.map(e => {

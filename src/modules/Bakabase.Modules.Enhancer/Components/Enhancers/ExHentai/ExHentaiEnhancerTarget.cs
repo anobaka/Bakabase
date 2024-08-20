@@ -9,7 +9,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;
 public enum ExHentaiEnhancerTarget
 {
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.SingleLineText,
-        [EnhancerTargetOptionsItem.IntegrateWithAlias, EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
     Name = 1,
 
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.MultilineText,
@@ -21,7 +21,7 @@ public enum ExHentaiEnhancerTarget
     Rating,
 
     [EnhancerTarget(StandardValueType.ListTag, CustomPropertyType.Tags,
-        [EnhancerTargetOptionsItem.IntegrateWithAlias, EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
     Tags,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.Attachment,

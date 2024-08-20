@@ -10,11 +10,11 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 public enum BangumiEnhancerTarget
 {
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.SingleLineText,
-        [EnhancerTargetOptionsItem.IntegrateWithAlias, EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
     Name = 1,
 
     [EnhancerTarget(StandardValueType.ListTag, CustomPropertyType.Tags,
-        [EnhancerTargetOptionsItem.IntegrateWithAlias, EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
     Tags = 2,
 
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.MultilineText,
@@ -26,7 +26,7 @@ public enum BangumiEnhancerTarget
     Rating = 4,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.MultipleChoice,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties, EnhancerTargetOptionsItem.IntegrateWithAlias], true)]
+        [EnhancerTargetOptionsItem.AutoGenerateProperties], true)]
     OtherPropertiesInLeftPanel = 5,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.Attachment,

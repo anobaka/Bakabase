@@ -2,7 +2,7 @@ import { Balloon, Dropdown, Overlay } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useUpdateEffect } from 'react-use';
-import { OrderedListOutlined, SearchOutlined } from '@ant-design/icons';
+import { DatabaseOutlined, OrderedListOutlined, SearchOutlined } from '@ant-design/icons';
 import { PopoverContent, PopoverTrigger } from '@nextui-org/react';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './FilterGroupsPanel';
@@ -17,6 +17,7 @@ import { PlaylistCollection } from '@/components/Playlist';
 import type { ISearchForm } from '@/pages/Resource/models';
 import { Button, Icon, Input, Popover, Tooltip } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
+import DeleteUnknownResources from '@/components/DeleteUnknownResources';
 
 const { Popup } = Overlay;
 
@@ -79,12 +80,12 @@ export default ({
     console.log('Search form changed', searchForm);
   }, [searchForm]);
 
-  const search = async (form: Partial<ISearchForm>) => {
+  const search = async (patches: Partial<ISearchForm>) => {
     if (onSearch) {
       setSearching(true);
 
       try {
-        await onSearch(form);
+        await onSearch(patches);
       } catch (e) {
         console.error(e);
       } finally {
@@ -211,6 +212,7 @@ export default ({
           </Button>
         </div>
         <div className={'flex items-center gap-2'}>
+          <DeleteUnknownResources onDeleted={() => search({})} />
           <OrderSelector
             className={'mr-2'}
             value={searchForm.orders}
