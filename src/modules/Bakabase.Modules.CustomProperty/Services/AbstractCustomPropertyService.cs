@@ -6,12 +6,12 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
 using Bakabase.Modules.CustomProperty.Extensions;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Services;
@@ -43,7 +43,7 @@ namespace Bakabase.Modules.CustomProperty.Services
         protected Dictionary<StandardValueType, IStandardValueHandler> StdValueHandlers =>
             GetRequiredService<IEnumerable<IStandardValueHandler>>().ToDictionary(d => d.Type, d => d);
 
-        public async Task<List<Modules.CustomProperty.Models.CustomProperty>> GetAll(
+        public async Task<List<Abstractions.Models.CustomProperty>> GetAll(
             Expression<Func<Bakabase.Abstractions.Models.Db.CustomProperty, bool>>? selector = null,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
             bool returnCopy = true)
@@ -53,7 +53,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             return dtoList;
         }
 
-        public async Task<Modules.CustomProperty.Models.CustomProperty> GetByKey(int id,
+        public async Task<Abstractions.Models.CustomProperty> GetByKey(int id,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
             bool returnCopy = true)
         {
@@ -62,7 +62,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             return dtoList.First();
         }
 
-        public async Task<List<Modules.CustomProperty.Models.CustomProperty>> GetByKeys(IEnumerable<int> ids,
+        public async Task<List<Abstractions.Models.CustomProperty>> GetByKeys(IEnumerable<int> ids,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
             bool returnCopy = true)
         {
@@ -71,7 +71,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             return dtoList;
         }
 
-        public async Task<Dictionary<int, List<Modules.CustomProperty.Models.CustomProperty>>>
+        public async Task<Dictionary<int, List<Abstractions.Models.CustomProperty>>>
             GetByCategoryIds(int[] ids)
         {
             var mappings = await CategoryCustomPropertyMappingService.GetAll(x => ids.Contains(x.CategoryId));
@@ -83,10 +83,10 @@ namespace Bakabase.Modules.CustomProperty.Services
                 x => x.Select(y => propertyMap.GetValueOrDefault(y.PropertyId)).Where(y => y != null).ToList())!;
         }
 
-        private Models.CustomProperty? ToDomainModel(Bakabase.Abstractions.Models.Db.CustomProperty? property) =>
+        private Abstractions.Models.CustomProperty? ToDomainModel(Bakabase.Abstractions.Models.Db.CustomProperty? property) =>
             property == null ? null : propertyDescriptors[property.Type].ToDomainModel(property);
 
-        private async Task<List<Modules.CustomProperty.Models.CustomProperty>> ToDomainModels(
+        private async Task<List<Abstractions.Models.CustomProperty>> ToDomainModels(
             List<Bakabase.Abstractions.Models.Db.CustomProperty> properties,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
         {
@@ -128,7 +128,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             return dtoList;
         }
 
-        public async Task<Modules.CustomProperty.Models.CustomProperty> Add(CustomPropertyAddOrPutDto model)
+        public async Task<Abstractions.Models.CustomProperty> Add(CustomPropertyAddOrPutDto model)
         {
             var data = await Add(new Bakabase.Abstractions.Models.Db.CustomProperty
             {
@@ -141,7 +141,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             return ToDomainModel(data.Data)!;
         }
 
-        public async Task<List<Models.CustomProperty>> AddRange(CustomPropertyAddOrPutDto[] models)
+        public async Task<List<Abstractions.Models.CustomProperty>> AddRange(CustomPropertyAddOrPutDto[] models)
         {
             var now = DateTime.Now;
             var data = await AddRange(models.Select(model => new Bakabase.Abstractions.Models.Db.CustomProperty
@@ -154,7 +154,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             return data.Data.Select(d => ToDomainModel(d)!).ToList();
         }
 
-        public async Task<Modules.CustomProperty.Models.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model)
+        public async Task<Abstractions.Models.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model)
         {
             var rsp = await UpdateByKey(id, cp =>
             {

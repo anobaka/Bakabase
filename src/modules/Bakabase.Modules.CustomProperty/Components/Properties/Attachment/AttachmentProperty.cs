@@ -3,12 +3,12 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Attachment;
 
-public record AttachmentProperty() : Models.CustomProperty;
+public record AttachmentProperty() : Abstractions.Models.CustomProperty;
 public record AttachmentPropertyValue : CustomPropertyValue<List<string>>;
 
 public class

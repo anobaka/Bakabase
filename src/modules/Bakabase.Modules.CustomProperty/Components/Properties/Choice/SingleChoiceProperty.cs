@@ -2,9 +2,9 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.CustomProperty.Extensions;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Choice;

@@ -9,7 +9,7 @@ using Bakabase.Modules.StandardValue.Extensions;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Text.Abstractions;
 
-public record TextProperty : Models.CustomProperty;
+public record TextProperty : CustomProperty.Abstractions.Models.CustomProperty;
 
 public record TextPropertyValue : CustomPropertyValue<string>;
 

@@ -1,5 +1,4 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;

@@ -1,10 +1,13 @@
-﻿using Bakabase.InsideWorld.Models.Constants;
+﻿using System.Text.Json;
+using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Schema;
+using Newtonsoft.Json.Schema.Generation;
 using Newtonsoft.Json.Serialization;
-using NJsonSchema;
 using NJsonSchema.Generation;
+using JsonSchema = NJsonSchema.JsonSchema;
 
 namespace Bakabase.Abstractions.Models.Domain
 {
@@ -25,6 +28,12 @@ namespace Bakabase.Abstractions.Models.Domain
 
         private Type _optionsType;
 
+        private static readonly SystemTextJsonSchemaGeneratorSettings JsonSchemaGeneratorSettings =
+            new SystemTextJsonSchemaGeneratorSettings
+            {
+                SerializerOptions = new JsonSerializerOptions
+                    {PropertyNamingPolicy = JsonNamingPolicy.CamelCase}
+            };
         public Type OptionsType
         {
             get => _optionsType;
@@ -33,12 +42,15 @@ namespace Bakabase.Abstractions.Models.Domain
                 _optionsType = value;
                 if (value != null)
                 {
-                    OptionsJsonSchema = JsonSchema.FromType(value,
-                        new JsonSchemaGeneratorSettings
-                        {
-                            SerializerSettings = new JsonSerializerSettings
-                            { ContractResolver = new CamelCasePropertyNamesContractResolver() }
-                        }).ToJson();
+                    // OptionsJsonSchema = JsonSchema.FromType(value, 
+                    //     new JsonSchemaGeneratorSettings
+                    //     {
+                    //         SerializerSettings = new JsonSerializerSettings
+                    //         { ContractResolver = new CamelCasePropertyNamesContractResolver() }
+                    //     }).ToJson();
+                    // OptionsJsonSchema = new JSchemaGenerator()
+                    // {ContractResolver = new CamelCasePropertyNamesContractResolver()}.Generate(value).ToString();
+                    OptionsJsonSchema = JsonSchema.FromType(value, JsonSchemaGeneratorSettings).ToJson();
                 }
             }
         }

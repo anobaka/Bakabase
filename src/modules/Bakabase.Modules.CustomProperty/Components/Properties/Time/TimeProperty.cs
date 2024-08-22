@@ -2,12 +2,12 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Time;
 
-public record TimeProperty : Models.CustomProperty;
+public record TimeProperty : Abstractions.Models.CustomProperty;
 
 public record TimePropertyValue : CustomPropertyValue<TimeSpan?>;
 

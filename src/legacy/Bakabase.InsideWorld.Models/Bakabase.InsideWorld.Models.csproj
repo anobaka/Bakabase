@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <LangVersion>preview</LangVersion>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\Bakabase.Infrastructures\Bakabase.Infrastructures\Bakabase.Infrastructures.csproj" />
+        <ProjectReference Include="..\..\..\..\LazyMortal\src\Bootstrap\Bootstrap.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NJsonSchema" Version="11.0.2" />
+    </ItemGroup>
+
+</Project>

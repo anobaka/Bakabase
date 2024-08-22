@@ -1,0 +1,79 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+        <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+        <Nullable>enable</Nullable>
+        <UseWPF>true</UseWPF>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Version>1.8.0</Version>
+        <SpaRoot>ClientApp\</SpaRoot>
+        <ApplicationIcon>Assets/favicon.ico</ApplicationIcon>
+        <AssemblyName>Bakabase</AssemblyName>
+        <UseWindowsForms>True</UseWindowsForms>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
+        <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Bakabase.Service\Bakabase.Service.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Remove="Assets\favicon.ico" />
+        <None Remove="Assets\favicon.png" />
+        <None Remove="Assets\loading.gif" />
+        <None Remove="Assets\tray-running.ico" />
+    </ItemGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="Assets\favicon.ico">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Assets\favicon.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Assets\loading.gif">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Assets\tray-running.ico">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
+        <Message Text="Executing 'yarn install' in ..\$(SpaRoot)" Importance="high" />
+        <Exec WorkingDirectory="..\$(SpaRoot)" Command="yarn install" />
+        <Message Text="Executing 'yarn run build' in ..\$(SpaRoot)" Importance="high" />
+        <Exec WorkingDirectory="..\$(SpaRoot)" Command="yarn run build" />
+        <ItemGroup>
+            <DistFiles Include="..\$(SpaRoot)build\**" />
+            <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+                <RelativePath>$([System.String]::Copy('%(Identity)').Replace('..\',''))</RelativePath>
+                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            </ResolvedFileToPublish>
+
+            <!-- <WebView2Env Include=".\Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64\**" /> -->
+            <!-- <ResolvedFileToPublish Include="@(WebView2Env->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)"> -->
+            <!--     <RelativePath>%(WebView2Env.Identity)</RelativePath> -->
+            <!--     <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory> -->
+            <!-- </ResolvedFileToPublish> -->
+        </ItemGroup>
+        <!-- <Message Text="??? %(DistFiles.Identity)" Importance="high" /> -->
+        <!-- <Message Text="??? @(DistFiles)->'$([System.String]::Copy('%(Identity)').Replace('..','123'))'" Importance="high" /> -->
+    </Target>
+
+    <Target Name="CreateWwwRoot" AfterTargets="Publish">
+        <Message Text="Try create wwwroot folder" Importance="high" />
+        <MakeDir Directories="$(PublishDir)wwwroot" Condition="!Exists('$(PublishDir)wwwroot')" />
+    </Target>
+</Project>

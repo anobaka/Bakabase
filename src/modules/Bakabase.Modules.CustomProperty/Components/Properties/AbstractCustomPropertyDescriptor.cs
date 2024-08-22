@@ -6,9 +6,9 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
+using Bakabase.Modules.CustomProperty.Abstractions.Models;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Extensions;
-using Bakabase.Modules.CustomProperty.Models;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Extensions;
 using Newtonsoft.Json;
@@ -18,7 +18,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
     public abstract class
         AbstractCustomPropertyDescriptor<TProperty, TPropertyValue, TDbValue, TBizValue>(
             IStandardValueHelper standardValueHelper) : ICustomPropertyDescriptor
-        where TProperty : Models.CustomProperty, new()
+        where TProperty : Abstractions.Models.CustomProperty, new()
         where TPropertyValue : CustomPropertyValue<TDbValue>, new()
     {
         public StandardValueType DbValueType => EnumType.GetDbValueType();
@@ -27,7 +27,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
 
         public int Type => (int) EnumType;
 
-        public virtual Models.CustomProperty? ToDomainModel(
+        public virtual Abstractions.Models.CustomProperty? ToDomainModel(
             Bakabase.Abstractions.Models.Db.CustomProperty? customProperty)
         {
             if (customProperty == null)
@@ -153,7 +153,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
         where TPropertyValue : CustomPropertyValue<TDbValue>, new()
         where TPropertyOptions : class, new()
     {
-        public override Models.CustomProperty? ToDomainModel(
+        public override Abstractions.Models.CustomProperty? ToDomainModel(
             Bakabase.Abstractions.Models.Db.CustomProperty? customProperty)
         {
             var p = base.ToDomainModel(customProperty);

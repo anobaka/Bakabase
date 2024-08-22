@@ -2,14 +2,11 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Helpers;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
@@ -17,7 +14,6 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using CustomPropertyExtensions = Bakabase.Modules.CustomProperty.Extensions.CustomPropertyExtensions;
 using CustomPropertyValue = Bakabase.Abstractions.Models.Db.CustomPropertyValue;
 
 namespace Bakabase.Modules.CustomProperty.Services

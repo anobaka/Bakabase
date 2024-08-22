@@ -1,6 +1,6 @@
 ﻿using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Models.Domain;
 

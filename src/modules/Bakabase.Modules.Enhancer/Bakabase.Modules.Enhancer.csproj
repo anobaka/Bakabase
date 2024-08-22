@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -12,11 +12,6 @@
     <ProjectReference Include="..\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.ThirdParty\Bakabase.Modules.ThirdParty.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Extensions\" />
-    <Folder Include="Models\View\" />
   </ItemGroup>
 
   <ItemGroup>

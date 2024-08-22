@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Org.BouncyCastle.Asn1.Cms;
 
-namespace Bakabase.InsideWorld.Models.RequestModels
+namespace Bakabase.Abstractions.Models.Input
 {
     public class CategoryAddInputModel : CategoryPatchInputModel
     {

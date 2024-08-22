@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
+    <ProjectReference Include="..\..\legacy\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
+  </ItemGroup>
+
+</Project>

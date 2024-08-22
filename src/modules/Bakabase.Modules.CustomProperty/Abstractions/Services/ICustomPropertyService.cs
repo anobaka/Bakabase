@@ -3,7 +3,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Modules.CustomProperty.Abstractions.Services;

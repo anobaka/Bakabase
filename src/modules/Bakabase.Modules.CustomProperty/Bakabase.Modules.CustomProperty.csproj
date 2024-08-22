@@ -1,17 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Abstractions\Models\**" />
-    <EmbeddedResource Remove="Abstractions\Models\**" />
-    <None Remove="Abstractions\Models\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />

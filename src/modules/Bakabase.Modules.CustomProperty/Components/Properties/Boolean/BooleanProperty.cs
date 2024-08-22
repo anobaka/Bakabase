@@ -3,13 +3,13 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Newtonsoft.Json;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Boolean;
 
-public record BooleanProperty() : Models.CustomProperty;
+public record BooleanProperty() : Abstractions.Models.CustomProperty;
 public record BooleanPropertyValue : CustomPropertyValue<bool?>
 {
 }

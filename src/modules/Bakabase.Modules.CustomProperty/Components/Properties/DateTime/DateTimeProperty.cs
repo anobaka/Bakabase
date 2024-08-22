@@ -2,11 +2,11 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.Modules.CustomProperty.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.DateTime;
-public record DateTimeProperty : Models.CustomProperty;
+public record DateTimeProperty : Abstractions.Models.CustomProperty;
 public record DateTimePropertyValue : CustomPropertyValue<System.DateTime?>;
 
 public class

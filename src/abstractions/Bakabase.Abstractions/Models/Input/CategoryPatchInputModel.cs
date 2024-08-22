@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
+﻿using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Models.RequestModels
+namespace Bakabase.Abstractions.Models.Input
 {
     public class CategoryPatchInputModel
     {
