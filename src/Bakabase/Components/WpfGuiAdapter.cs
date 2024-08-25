@@ -186,7 +186,6 @@ namespace Bakabase.Components
 
             try
             {
-                throw new Exception();
                 _mainWindow.Show();
                 _mainWindow.Title = title;
                 await _mainWindow.WebView2.EnsureCoreWebView2Async();

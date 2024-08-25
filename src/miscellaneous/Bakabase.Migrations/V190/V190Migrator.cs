@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.Alias.Abstractions.Models.Db;
 using Bakabase.Modules.Alias.Abstractions.Services;
+using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -144,6 +145,9 @@ namespace Bakabase.Migrations.V190
                 });
 
             await _customPropertyService.EnableAddingNewDataDynamically(cp.Id);
+
+            cp = await _customPropertyService.GetByKey(cp.Id);
+
             return cp;
         }
 
@@ -426,6 +430,6 @@ namespace Bakabase.Migrations.V190
             return valueMap;
         }
 
-        protected override string ApplyOnVersionEqualsOrBeforeString => "1.8.0";
+        protected override string ApplyOnVersionEqualsOrBeforeString => "1.8.999";
     }
 }

@@ -5,14 +5,17 @@ import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
 import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
 import DragHandle from '@/components/DragHandle';
-import { Button, ColorPicker, Input } from '@/components/bakaui';
+import { Button, ColorPicker, Input, Modal } from '@/components/bakaui';
 import type { IChoice } from '@/components/Property/models';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 interface IProps {
   id: string;
   choice: IChoice;
   onRemove?: (choice: IChoice) => any;
   onChange?: (choice: IChoice) => any;
+  style?: any;
+  checkUsage?: (value: string) => Promise<number>;
 }
 
 export function SortableChoice({
@@ -20,6 +23,8 @@ export function SortableChoice({
                                  choice: propsChoice,
                                  onRemove,
                                  onChange,
+                                 style: propsStyle,
+                                 checkUsage,
                                }: IProps) {
   const { t } = useTranslation();
   const {
@@ -29,6 +34,7 @@ export function SortableChoice({
     transform,
     transition,
   } = useSortable({ id: id });
+  const { createPortal } = useBakabaseContext();
 
   const [choice, setChoice] = useState(propsChoice);
 
@@ -43,6 +49,7 @@ export function SortableChoice({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    ...propsStyle,
   };
 
   return (
@@ -79,7 +86,22 @@ export function SortableChoice({
           size={'sm'}
           radius={'sm'}
           isIconOnly
-          onClick={() => {
+          onClick={async () => {
+            if (checkUsage) {
+              const count = await checkUsage(choice.value);
+              if (count > 0) {
+                createPortal(Modal, {
+                  defaultVisible: true,
+                  size: 'sm',
+                  title: t('Value is being referenced in {{count}} places', { count }),
+                  children: t('Sure to delete?'),
+                  onOk: async () => {
+                    onRemove?.(choice);
+                  },
+                });
+                return;
+              }
+            }
             onRemove?.(choice);
           }}
           variant={'light'}

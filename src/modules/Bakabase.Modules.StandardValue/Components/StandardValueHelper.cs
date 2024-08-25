@@ -35,5 +35,6 @@ public class StandardValueHelper(ILogger<StandardValueHelper> logger) : IStandar
         return v is T v1 ? v1 : default;
     }
 
-    public string? Serialize(object? rawValue) => rawValue?.SerializeAsStandardValue();
+    public string? Serialize(object? rawValue, StandardValueType valueType) =>
+        rawValue?.SerializeAsStandardValue(valueType);
 }

@@ -340,15 +340,6 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Originals.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_Originals_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_Originals_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Publishers of the resource.
         /// </summary>
         internal static string Enhancer_Bakabase_Target_Publisher_Description {
@@ -417,6 +408,143 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string Enhancer_Bakabase_Target_VolumeTitle_Name {
             get {
                 return ResourceManager.GetString("Enhancer_Bakabase_Target_VolumeTitle_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        internal static string Enhancer_Bangumi_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Bangumi_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Bangumi.
+        /// </summary>
+        internal static string Enhancer_Bangumi_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bangumi_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cover.
+        /// </summary>
+        internal static string Enhancer_Bangumi_Target_Cover_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bangumi_Target_Cover_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Introduction.
+        /// </summary>
+        internal static string Enhancer_Bangumi_Target_Introduction_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bangumi_Target_Introduction_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        internal static string Enhancer_Bangumi_Target_Name_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bangumi_Target_Name_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Other properties in left panel.
+        /// </summary>
+        internal static string Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rating(0~10).
+        /// </summary>
+        internal static string Enhancer_Bangumi_Target_Rating_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bangumi_Target_Rating_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tags.
+        /// </summary>
+        internal static string Enhancer_Bangumi_Target_Tags_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Bangumi_Target_Tags_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 1. Cookie of ExHentai must be set in system configurations.
+        ///2. The first item of search result will be treated as matched resource.
+        ///3. You can set excluding tags also..
+        /// </summary>
+        internal static string Enhancer_ExHentai_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_ExHentai_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ExHentai.
+        /// </summary>
+        internal static string Enhancer_ExHentai_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_ExHentai_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cover.
+        /// </summary>
+        internal static string Enhancer_ExHentai_Target_Cover_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_ExHentai_Target_Cover_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Introduction.
+        /// </summary>
+        internal static string Enhancer_ExHentai_Target_Introduction_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_ExHentai_Target_Introduction_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        internal static string Enhancer_ExHentai_Target_Name_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_ExHentai_Target_Name_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rating(0~5).
+        /// </summary>
+        internal static string Enhancer_ExHentai_Target_Rating_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_ExHentai_Target_Rating_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tags.
+        /// </summary>
+        internal static string Enhancer_ExHentai_Target_Tags_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_ExHentai_Target_Tags_Name", resourceCulture);
             }
         }
         

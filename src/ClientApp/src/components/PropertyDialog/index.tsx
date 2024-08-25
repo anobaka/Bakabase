@@ -100,6 +100,11 @@ const PropertyDialog = ({
 
   // console.log(6666, property);
 
+  const checkValueUsage = property.id ? async (value: string) => {
+    const rsp = await BApi.customProperty.getCustomPropertyValueUsage(property.id!, { value: value });
+    return rsp.data!;
+  } : undefined;
+
   const renderOptions = () => {
     if (property.type != undefined) {
       switch (property.type) {
@@ -115,10 +120,11 @@ const PropertyDialog = ({
               <ChoiceList
                 className={'mt-4'}
                 choices={options?.choices}
+                checkUsage={checkValueUsage}
                 onChange={choices => {
                   setProperty({
                     ...property,
-                    subOptions: {
+                    options: {
                       ...options,
                       choices,
                     },
@@ -132,7 +138,7 @@ const PropertyDialog = ({
                 onValueChange={c => {
                   setProperty({
                     ...property,
-                    subOptions: {
+                    options: {
                       ...options,
                       allowAddingNewOptionsWhileChoosing: c,
                     },
@@ -152,7 +158,7 @@ const PropertyDialog = ({
                   const array = Array.from((c as Set<Key>).values());
                   setProperty({
                     ...property,
-                    subOptions: {
+                    options: {
                       ...options,
                       defaultValue: multiple ? array : array[0],
                     },
@@ -177,7 +183,7 @@ const PropertyDialog = ({
                 onSelectionChange={c => {
                   setProperty({
                     ...property,
-                    subOptions: {
+                    options: {
                       ...options,
                       precision: (c as Set<Key>).values().next().value,
                     },
@@ -206,7 +212,7 @@ const PropertyDialog = ({
                 onSelectionChange={c => {
                   setProperty({
                     ...property,
-                    subOptions: {
+                    options: {
                       ...options,
                       precision: (c as Set<Key>).values().next().value,
                     },
@@ -219,7 +225,7 @@ const PropertyDialog = ({
                 onValueChange={c => {
                   setProperty({
                     ...property,
-                    subOptions: {
+                    options: {
                       ...options,
                       showProgressbar: c,
                     },
@@ -257,7 +263,7 @@ const PropertyDialog = ({
                 onSelectionChange={c => {
                   setProperty({
                     ...property,
-                    subOptions: {
+                    options: {
                       ...options,
                       maxValue: (c as Set<Key>).values().next().value,
                     },
@@ -315,12 +321,13 @@ const PropertyDialog = ({
                 onChange={tags => {
                   setProperty({
                     ...property,
-                    subOptions: {
+                    options: {
                       ...options,
                       tags,
                     },
                   });
                 }}
+                checkUsage={checkValueUsage}
               />
               <Switch
                 className={'mt-4'}
@@ -329,7 +336,7 @@ const PropertyDialog = ({
                 onValueChange={c => {
                   setProperty({
                     ...property,
-                    subOptions: {
+                    options: {
                       ...options,
                       allowAddingNewOptionsWhileChoosing: c,
                     },

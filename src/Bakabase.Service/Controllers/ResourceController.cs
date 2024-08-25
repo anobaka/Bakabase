@@ -185,7 +185,7 @@ namespace Bakabase.Service.Controllers
                                                 {
                                                     filter.BizValue = _standardValueHelper.Serialize(value
                                                         .Select(v => choices.FirstOrDefault(x => x.Value == v)?.Label)
-                                                        .OfType<string>().ToList());
+                                                        .OfType<string>().ToList(), StandardValueType.ListString);
                                                 }
 
                                             }
@@ -216,7 +216,7 @@ namespace Bakabase.Service.Controllers
                                                 {
                                                     filter.BizValue = _standardValueHelper.Serialize(value
                                                         .Select(v => choices.FirstOrDefault(x => x.Value == v)?.Label)
-                                                        .OfType<string>().ToList());
+                                                        .OfType<string>().ToList(), StandardValueType.ListString);
                                                 }
 
                                             }
@@ -246,7 +246,7 @@ namespace Bakabase.Service.Controllers
                                                 {
                                                     filter.BizValue = _standardValueHelper.Serialize(value
                                                         .Select(v => trees.FindLabelChain(v)?.ToList())
-                                                        .OfType<List<string>>().ToList());
+                                                        .OfType<List<string>>().ToList(), StandardValueType.ListListString);
                                                 }
                                             }
 
@@ -286,7 +286,7 @@ namespace Bakabase.Service.Controllers
                                                             return new TagValue(tag.Group, tag.Name);
                                                         })
                                                         .OfType<TagValue>()
-                                                        .ToList());
+                                                        .ToList(), StandardValueType.ListTag);
                                                 }
                                             }
 
@@ -344,7 +344,7 @@ namespace Bakabase.Service.Controllers
                                                 bizValue.Add([c.Name, ml.Name]);
                                             }
 
-                                            filter.BizValue = _standardValueHelper.Serialize(bizValue);
+                                            filter.BizValue = _standardValueHelper.Serialize(bizValue, StandardValueType.ListListString);
                                         }
 
                                         break;

@@ -6,5 +6,5 @@ public interface IStandardValueHelper
 {
     object? Deserialize(string? serializedValue, StandardValueType valueType);
     T? Deserialize<T>(string? serializedValue, StandardValueType valueType);
-    string? Serialize(object? rawValue);
+    string? Serialize(object? rawValue, StandardValueType valueType);
 }

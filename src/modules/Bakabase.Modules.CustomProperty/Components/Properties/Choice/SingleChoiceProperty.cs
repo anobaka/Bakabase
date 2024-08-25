@@ -63,7 +63,6 @@ public class SingleChoicePropertyDescriptor(IStandardValueHelper standardValueHe
             case SearchOperation.Equals:
             case SearchOperation.NotEquals:
             {
-
                 var searchId = filterValue as string;
                 // invalid filter
                 if (string.IsNullOrEmpty(searchId))
@@ -82,6 +81,11 @@ public class SingleChoicePropertyDescriptor(IStandardValueHelper standardValueHe
             case SearchOperation.In:
             case SearchOperation.NotIn:
             {
+                if (string.IsNullOrEmpty(value))
+                {
+                    return false;
+                }
+
                 var searchIds = filterValue as List<string>;
                 if (searchIds?.Any() == true)
                 {

@@ -15,19 +15,19 @@ public class CustomPropertyDescriptors : ICustomPropertyDescriptors
         _descriptorMap = Descriptors.ToDictionary(d => d.Type, d => d);
     }
 
-    public ICustomPropertyDescriptor this[int id]
+    public ICustomPropertyDescriptor this[int type]
     {
         get
         {
-            if (TryGet(id, out var cpd))
+            if (TryGet(type, out var cpd))
             {
                 return cpd;
             }
 
-            throw new DevException($"{nameof(ICustomPropertyDescriptor)} for {id} is not found");
+            throw new DevException($"{nameof(ICustomPropertyDescriptor)} for {type} is not found");
         }
     }
 
-    public bool TryGet(int id, [MaybeNullWhen(false)] out ICustomPropertyDescriptor propertyDescriptor) =>
-        _descriptorMap.TryGetValue(id, out propertyDescriptor);
+    public bool TryGet(int type, [MaybeNullWhen(false)] out ICustomPropertyDescriptor propertyDescriptor) =>
+        _descriptorMap.TryGetValue(type, out propertyDescriptor);
 }

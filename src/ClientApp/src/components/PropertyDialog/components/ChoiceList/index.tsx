@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -8,6 +8,15 @@ import {
 } from '@dnd-kit/sortable';
 import { Input, Overlay } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
+import {
+  AutoSizer,
+  CellMeasurer,
+  CellMeasurerCache,
+  createMasonryCellPositioner,
+  Masonry,
+  WindowScroller,
+  List,
+} from 'react-virtualized';
 import type { IChoice } from '../../../Property/models';
 import { SortableChoice } from './components/SortableChoice';
 import CustomIcon from '@/components/CustomIcon';
@@ -20,9 +29,12 @@ interface IProps {
   choices?: IChoice[];
   onChange?: (choices: IChoice[]) => void;
   className?: string;
+  checkUsage?: (value: string) => Promise<number>;
 }
 
-export default function ChoiceList({ choices: propsChoices, onChange, className }: IProps) {
+const lineHeight = 35;
+
+export default function ChoiceList({ choices: propsChoices, onChange, className, checkUsage }: IProps) {
   const { t } = useTranslation();
   const [choices, setChoices] = useState<IChoice[]>(propsChoices || []);
   const [addInBulkPopupVisible, setAddInBulkPopupVisible] = useState(false);
@@ -33,6 +45,8 @@ export default function ChoiceList({ choices: propsChoices, onChange, className 
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  const virtualListRef = useRef<any>();
 
   useEffect(() => {
     onChange?.(choices);
@@ -63,21 +77,64 @@ export default function ChoiceList({ choices: propsChoices, onChange, className 
             items={choices?.map(c => ({ ...c, id: c.value }))}
             strategy={verticalListSortingStrategy}
           >
-            {choices?.map((sc, index) => (
-              <SortableChoice
-                key={sc.value}
-                id={sc.value}
-                choice={sc}
-                onRemove={t => {
-                  choices.splice(index, 1);
-                  setChoices([...choices]);
-                }}
-                onChange={t => {
-                  choices[index] = t;
-                  setChoices([...choices]);
-                }}
-              />
-            ))}
+            <div style={{ height: Math.min(choices.length, 6) * lineHeight }}>
+              <AutoSizer>
+                {({
+                    width,
+                    height,
+                  }) => (
+                    <List
+                      ref={virtualListRef}
+                    // className={styles.List}
+                      height={height}
+                      rowCount={choices.length}
+                      rowHeight={lineHeight}
+                      rowRenderer={(ctx) => {
+                      const {
+                        key,
+                        index,
+                        style,
+                      } = ctx;
+                      const sc = choices[index];
+                      return (
+                        <SortableChoice
+                          key={key}
+                          style={style}
+                          checkUsage={checkUsage}
+                          // key={sc.value}
+                          id={sc.value}
+                          choice={sc}
+                          onRemove={t => {
+                            choices.splice(index, 1);
+                            setChoices([...choices]);
+                          }}
+                          onChange={t => {
+                            choices[index] = t;
+                            setChoices([...choices]);
+                          }}
+                        />
+                      );
+                    }}
+                      width={width}
+                    />
+                )}
+              </AutoSizer>
+            </div>
+            {/* {choices?.map((sc, index) => ( */}
+            {/*   <SortableChoice */}
+            {/*     key={sc.value} */}
+            {/*     id={sc.value} */}
+            {/*     choice={sc} */}
+            {/*     onRemove={t => { */}
+            {/*       choices.splice(index, 1); */}
+            {/*       setChoices([...choices]); */}
+            {/*     }} */}
+            {/*     onChange={t => { */}
+            {/*       choices[index] = t; */}
+            {/*       setChoices([...choices]); */}
+            {/*     }} */}
+            {/*   /> */}
+            {/* ))} */}
           </SortableContext>
         </DndContext>
       </div>
@@ -85,7 +142,12 @@ export default function ChoiceList({ choices: propsChoices, onChange, className 
         <Button
           size={'sm'}
           onClick={() => {
-            setChoices([...choices, { value: uuidv4() }]);
+            const newChoices = [...choices, { label: '', value: uuidv4() }];
+            setChoices(newChoices);
+            setTimeout(() => {
+              virtualListRef.current?.scrollToRow(newChoices.length - 1);
+            }, 100);
+            // console.log(`scroll to ${newChoices.length}`, virtualListRef.current?.scrollToRow);
           }}
         >
           <CustomIcon

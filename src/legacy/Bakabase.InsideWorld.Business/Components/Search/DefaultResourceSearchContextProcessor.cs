@@ -20,6 +20,7 @@ using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Newtonsoft.Json;
 using SQLitePCL;
 
@@ -100,10 +101,10 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 					{
 						case SearchableReservedProperty.FileName:
 						case SearchableReservedProperty.DirectoryPath:
-						{
-							var filterValue = string.IsNullOrEmpty(filter.DbValue)
-								? null
-								: JsonConvert.DeserializeObject<string>(filter.DbValue);
+                        {
+                            var filterValue = string.IsNullOrEmpty(filter.DbValue)
+                                ? null
+                                : filter.DbValue?.DeserializeAsStandardValue<string>(StandardValueType.String);
 
 							var getValue = property switch
 							{
@@ -267,10 +268,10 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 						// case SearchableReservedProperty.ModifiedAt:
 						case SearchableReservedProperty.FileCreatedAt:
 						case SearchableReservedProperty.FileModifiedAt:
-						{
-							var filterValue = string.IsNullOrEmpty(filter.DbValue)
-								? null
-								: JsonConvert.DeserializeObject<DateTime?>(filter.DbValue);
+                        {
+                            var filterValue = string.IsNullOrEmpty(filter.DbValue)
+                                ? null
+                                : filter.DbValue?.DeserializeAsStandardValue<DateTime>(StandardValueType.DateTime);
 
 							var getValue = property switch
 							{
@@ -384,9 +385,11 @@ namespace Bakabase.InsideWorld.Business.Components.Search
                                 case SearchOperation.Equals:
                                 case SearchOperation.NotEquals:
                                 {
-                                    var filterValue = string.IsNullOrEmpty(filter.DbValue)
-                                        ? null
-                                        : JsonConvert.DeserializeObject<int?>(filter.DbValue);
+                                    var filterValue =
+                                        filter.DbValue?.DeserializeAsStandardValue<decimal>(StandardValueType.Decimal)
+                                            is { } d
+                                            ? (int?) d
+                                            : null;
                                     switch (filter.Operation)
                                     {
                                         case SearchOperation.Equals:

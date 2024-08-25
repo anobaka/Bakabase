@@ -311,6 +311,56 @@ export interface BakabaseAbstractionsModelsDtoResourceSearchDto {
   keyword?: string | null;
 }
 
+export interface BakabaseAbstractionsModelsInputCategoryAddInputModel {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  color?: string | null;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  /** @format int32 */
+  order?: number | null;
+  generateNfo?: boolean | null;
+  resourceDisplayNameTemplate?: string | null;
+  componentsData?: BakabaseAbstractionsModelsInputCategoryAddInputModelSimpleCategoryComponent[] | null;
+  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
+}
+
+export interface BakabaseAbstractionsModelsInputCategoryAddInputModelSimpleCategoryComponent {
+  /** @minLength 1 */
+  componentKey: string;
+  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
+  componentType: BakabaseInsideWorldModelsConstantsComponentType;
+}
+
+export interface BakabaseAbstractionsModelsInputCategoryComponentConfigureInputModel {
+  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
+  type: BakabaseInsideWorldModelsConstantsComponentType;
+  componentKeys: string[];
+  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
+}
+
+export interface BakabaseAbstractionsModelsInputCategoryCustomPropertyBindInputModel {
+  customPropertyIds?: number[] | null;
+}
+
+export interface BakabaseAbstractionsModelsInputCategoryDuplicateInputModel {
+  name?: string | null;
+}
+
+export interface BakabaseAbstractionsModelsInputCategoryPatchInputModel {
+  /** @format int32 */
+  id?: number;
+  name?: string | null;
+  color?: string | null;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  /** @format int32 */
+  order?: number | null;
+  generateNfo?: boolean | null;
+  resourceDisplayNameTemplate?: string | null;
+}
+
 export interface BakabaseAbstractionsModelsInputMediaLibraryAddInBulkInputModel {
   nameAndPaths: Record<string, string[] | null>;
 }
@@ -322,6 +372,13 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryPathConfigurationAdd
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryRootPathsAddInBulkInputModel {
   rootPaths?: string[] | null;
+}
+
+export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel {
+  /** @format int32 */
+  propertyId?: number;
+  isCustomProperty?: boolean;
+  value?: string | null;
 }
 
 export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
@@ -402,7 +459,7 @@ export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersi
 
 export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller {
   osPlatform?: SystemRuntimeInteropServicesOSPlatform;
-  /** [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x] */
+  /** [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x, 6: LoongArch64, 7: Armv6, 8: Ppc64le] */
   osArchitecture?: SystemRuntimeInteropServicesArchitecture;
   name?: string | null;
   url?: string | null;
@@ -1297,56 +1354,6 @@ export interface BakabaseInsideWorldModelsModelsEntitiesPassword {
   lastUsedAt?: string;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsCategoryAddInputModel {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  color?: string | null;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
-  /** @format int32 */
-  order?: number | null;
-  generateNfo?: boolean | null;
-  resourceDisplayNameTemplate?: string | null;
-  componentsData?: BakabaseInsideWorldModelsRequestModelsCategoryAddInputModelSimpleCategoryComponent[] | null;
-  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsCategoryAddInputModelSimpleCategoryComponent {
-  /** @minLength 1 */
-  componentKey: string;
-  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-  componentType: BakabaseInsideWorldModelsConstantsComponentType;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsCategoryComponentConfigureInputModel {
-  /** [1: Enhancer, 2: PlayableFileSelector, 3: Player] */
-  type: BakabaseInsideWorldModelsConstantsComponentType;
-  componentKeys: string[];
-  enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsCategoryCustomPropertyBindInputModel {
-  customPropertyIds?: number[] | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsCategoryDuplicateInputModel {
-  name?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsCategoryPatchInputModel {
-  /** @format int32 */
-  id?: number;
-  name?: string | null;
-  color?: string | null;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
-  /** @format int32 */
-  order?: number | null;
-  generateNfo?: boolean | null;
-  resourceDisplayNameTemplate?: string | null;
-}
-
 export interface BakabaseInsideWorldModelsRequestModelsComponentOptionsAddRequestModel {
   /** @minLength 1 */
   name: string;
@@ -1433,13 +1440,6 @@ export interface BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingD
   entryPath?: string | null;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsResourcePropertyValuePutInputModel {
-  /** @format int32 */
-  propertyId?: number;
-  isCustomProperty?: boolean;
-  value?: string | null;
-}
-
 export interface BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel {
   resource?: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
   /** [0: Default, 1: Resource] */
@@ -1468,7 +1468,7 @@ export interface BakabaseModulesAliasModelsInputAliasPatchInputModel {
  * [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags]
  * @format int32
  */
-export type BakabaseModulesCustomPropertyModelsDomainConstantsCustomPropertyType =
+export type BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType =
   | 1
   | 2
   | 3
@@ -1506,7 +1506,7 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   valueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
-  customPropertyType?: BakabaseModulesCustomPropertyModelsDomainConstantsCustomPropertyType;
+  customPropertyType?: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType;
   isDynamic?: boolean;
   description?: string | null;
   optionsItems?: number[] | null;
@@ -2098,6 +2098,7 @@ export interface SystemModuleHandle {
 export interface SystemReflectionAssembly {
   definedTypes?: SystemReflectionTypeInfo[] | null;
   exportedTypes?: SystemType[] | null;
+  /** @deprecated */
   codeBase?: string | null;
   entryPoint?: SystemReflectionMethodInfo;
   fullName?: string | null;
@@ -2108,6 +2109,7 @@ export interface SystemReflectionAssembly {
   isCollectible?: boolean;
   isFullyTrusted?: boolean;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
+  /** @deprecated */
   escapedCodeBase?: string | null;
   manifestModule?: SystemReflectionModule;
   modules?: SystemReflectionModule[] | null;
@@ -2134,9 +2136,9 @@ export interface SystemReflectionConstructorInfo {
   isCollectible?: boolean;
   /** @format int32 */
   metadataToken?: number;
-  /** [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
+  /** [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
   attributes?: SystemReflectionMethodAttributes;
-  /** [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
+  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
   methodImplementationFlags?: SystemReflectionMethodImplAttributes;
   /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
   callingConvention?: SystemReflectionCallingConventions;
@@ -2252,6 +2254,7 @@ export interface SystemReflectionFieldInfo {
   fieldType?: SystemType;
   isInitOnly?: boolean;
   isLiteral?: boolean;
+  /** @deprecated */
   isNotSerialized?: boolean;
   isPinvokeImpl?: boolean;
   isSpecialName?: boolean;
@@ -2279,9 +2282,9 @@ export type SystemReflectionICustomAttributeProvider = object;
 export interface SystemReflectionMemberInfo {
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType?: SystemReflectionMemberTypes;
+  name?: string | null;
   declaringType?: SystemType;
   reflectedType?: SystemType;
-  name?: string | null;
   module?: SystemReflectionModule;
   customAttributes?: SystemReflectionCustomAttributeData[] | null;
   isCollectible?: boolean;
@@ -2296,7 +2299,7 @@ export interface SystemReflectionMemberInfo {
 export type SystemReflectionMemberTypes = 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128 | 191;
 
 /**
- * [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask]
+ * [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask]
  * @format int32
  */
 export type SystemReflectionMethodAttributes =
@@ -2334,9 +2337,9 @@ export interface SystemReflectionMethodBase {
   isCollectible?: boolean;
   /** @format int32 */
   metadataToken?: number;
-  /** [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
+  /** [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
   attributes?: SystemReflectionMethodAttributes;
-  /** [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
+  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
   methodImplementationFlags?: SystemReflectionMethodImplAttributes;
   /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
   callingConvention?: SystemReflectionCallingConventions;
@@ -2364,7 +2367,7 @@ export interface SystemReflectionMethodBase {
 }
 
 /**
- * [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal]
+ * [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal]
  * @format int32
  */
 export type SystemReflectionMethodImplAttributes =
@@ -2392,9 +2395,9 @@ export interface SystemReflectionMethodInfo {
   isCollectible?: boolean;
   /** @format int32 */
   metadataToken?: number;
-  /** [0: ReuseSlot, 0: ReuseSlot, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
+  /** [0: PrivateScope, 0: PrivateScope, 1: Private, 2: FamANDAssem, 3: Assembly, 4: Family, 5: FamORAssem, 6: Public, 7: MemberAccessMask, 8: UnmanagedExport, 16: Static, 32: Final, 64: Virtual, 128: HideBySig, 256: VtableLayoutMask, 256: VtableLayoutMask, 512: CheckAccessOnOverride, 1024: Abstract, 2048: SpecialName, 4096: RTSpecialName, 8192: PinvokeImpl, 16384: HasSecurity, 32768: RequireSecObject, 53248: ReservedMask] */
   attributes?: SystemReflectionMethodAttributes;
-  /** [0: Managed, 0: Managed, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: Unmanaged, 4: Unmanaged, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
+  /** [0: IL, 0: IL, 1: Native, 2: OPTIL, 3: CodeTypeMask, 3: CodeTypeMask, 4: ManagedMask, 4: ManagedMask, 8: NoInlining, 16: ForwardRef, 32: Synchronized, 64: NoOptimization, 128: PreserveSig, 256: AggressiveInlining, 512: AggressiveOptimization, 4096: InternalCall, 65535: MaxMethodImplVal] */
   methodImplementationFlags?: SystemReflectionMethodImplAttributes;
   /** [1: Standard, 2: VarArgs, 3: Any, 32: HasThis, 64: ExplicitThis] */
   callingConvention?: SystemReflectionCallingConventions;
@@ -2496,7 +2499,7 @@ export interface SystemReflectionPropertyInfo {
 }
 
 /**
- * [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: VisibilityMask, 7: VisibilityMask, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: StringFormatMask, 196608: StringFormatMask, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask]
+ * [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: NestedFamORAssem, 7: NestedFamORAssem, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: CustomFormatClass, 196608: CustomFormatClass, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask]
  * @format int32
  */
 export type SystemReflectionTypeAttributes =
@@ -2559,13 +2562,15 @@ export interface SystemReflectionTypeInfo {
   isSZArray?: boolean;
   isVariableBoundArray?: boolean;
   isByRefLike?: boolean;
+  isFunctionPointer?: boolean;
+  isUnmanagedFunctionPointer?: boolean;
   hasElementType?: boolean;
   genericTypeArguments?: SystemType[] | null;
   /** @format int32 */
   genericParameterPosition?: number;
   /** [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask] */
   genericParameterAttributes?: SystemReflectionGenericParameterAttributes;
-  /** [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: VisibilityMask, 7: VisibilityMask, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: StringFormatMask, 196608: StringFormatMask, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask] */
+  /** [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: NestedFamORAssem, 7: NestedFamORAssem, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: CustomFormatClass, 196608: CustomFormatClass, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask] */
   attributes?: SystemReflectionTypeAttributes;
   isAbstract?: boolean;
   isImport?: boolean;
@@ -2602,6 +2607,7 @@ export interface SystemReflectionTypeInfo {
   /** @format uuid */
   guid?: string;
   baseType?: SystemType;
+  /** @deprecated */
   isSerializable?: boolean;
   containsGenericParameters?: boolean;
   isVisible?: boolean;
@@ -2617,10 +2623,10 @@ export interface SystemReflectionTypeInfo {
 }
 
 /**
- * [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x]
+ * [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x, 6: LoongArch64, 7: Armv6, 8: Ppc64le]
  * @format int32
  */
-export type SystemRuntimeInteropServicesArchitecture = 0 | 1 | 2 | 3 | 4 | 5;
+export type SystemRuntimeInteropServicesArchitecture = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 /**
  * [0: Sequential, 2: Explicit, 3: Auto]
@@ -2664,6 +2670,10 @@ export interface SystemTimeSpan {
   /** @format int32 */
   milliseconds?: number;
   /** @format int32 */
+  microseconds?: number;
+  /** @format int32 */
+  nanoseconds?: number;
+  /** @format int32 */
   minutes?: number;
   /** @format int32 */
   seconds?: number;
@@ -2673,6 +2683,10 @@ export interface SystemTimeSpan {
   totalHours?: number;
   /** @format double */
   totalMilliseconds?: number;
+  /** @format double */
+  totalMicroseconds?: number;
+  /** @format double */
+  totalNanoseconds?: number;
   /** @format double */
   totalMinutes?: number;
   /** @format double */
@@ -2711,13 +2725,15 @@ export interface SystemType {
   isSZArray?: boolean;
   isVariableBoundArray?: boolean;
   isByRefLike?: boolean;
+  isFunctionPointer?: boolean;
+  isUnmanagedFunctionPointer?: boolean;
   hasElementType?: boolean;
   genericTypeArguments?: SystemType[] | null;
   /** @format int32 */
   genericParameterPosition?: number;
   /** [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask] */
   genericParameterAttributes?: SystemReflectionGenericParameterAttributes;
-  /** [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: VisibilityMask, 7: VisibilityMask, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: StringFormatMask, 196608: StringFormatMask, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask] */
+  /** [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: NestedFamORAssem, 7: NestedFamORAssem, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: CustomFormatClass, 196608: CustomFormatClass, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask] */
   attributes?: SystemReflectionTypeAttributes;
   isAbstract?: boolean;
   isImport?: boolean;
@@ -2754,6 +2770,7 @@ export interface SystemType {
   /** @format uuid */
   guid?: string;
   baseType?: SystemType;
+  /** @deprecated */
   isSerializable?: boolean;
   containsGenericParameters?: boolean;
   isVisible?: boolean;
@@ -3547,7 +3564,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     patchCategory: (
       id: number,
-      data: BakabaseInsideWorldModelsRequestModelsCategoryPatchInputModel,
+      data: BakabaseAbstractionsModelsInputCategoryPatchInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -3603,7 +3620,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddCategory
      * @request POST:/category
      */
-    addCategory: (data: BakabaseInsideWorldModelsRequestModelsCategoryAddInputModel, params: RequestParams = {}) =>
+    addCategory: (data: BakabaseAbstractionsModelsInputCategoryAddInputModel, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category`,
         method: "POST",
@@ -3622,7 +3639,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     duplicateCategory: (
       id: number,
-      data: BakabaseInsideWorldModelsRequestModelsCategoryDuplicateInputModel,
+      data: BakabaseAbstractionsModelsInputCategoryDuplicateInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -3643,7 +3660,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     configureCategoryComponents: (
       id: number,
-      data: BakabaseInsideWorldModelsRequestModelsCategoryComponentConfigureInputModel,
+      data: BakabaseAbstractionsModelsInputCategoryComponentConfigureInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -3681,7 +3698,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     bindCustomPropertiesToCategory: (
       id: number,
-      data: BakabaseInsideWorldModelsRequestModelsCategoryCustomPropertyBindInputModel,
+      data: BakabaseAbstractionsModelsInputCategoryCustomPropertyBindInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -4207,7 +4224,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     calculateCustomPropertyTypeConversionLoss: (
       id: number,
-      type: BakabaseModulesCustomPropertyModelsDomainConstantsCustomPropertyType,
+      type: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType,
       params: RequestParams = {},
     ) =>
       this.request<
@@ -4231,6 +4248,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/custom-property/${id}/options/adding-new-data-dynamically`,
         method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name GetCustomPropertyValueUsage
+     * @request GET:/custom-property/{id}/value-usage
+     */
+    getCustomPropertyValueUsage: (
+      id: number,
+      query?: {
+        value?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/custom-property/${id}/value-usage`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -4656,7 +4695,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     putResourcePropertyValue: (
       id: number,
-      data: BakabaseInsideWorldModelsRequestModelsResourcePropertyValuePutInputModel,
+      data: BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({

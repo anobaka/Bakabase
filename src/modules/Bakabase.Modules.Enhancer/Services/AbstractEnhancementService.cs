@@ -73,7 +73,7 @@ namespace Bakabase.Modules.Enhancer.Services
                 Id = domainModel.Id,
                 ResourceId = domainModel.ResourceId,
                 Target = domainModel.Target,
-                Value = standardValueHelper.Serialize(domainModel.Value),
+                Value = standardValueHelper.Serialize(domainModel.Value, domainModel.ValueType),
                 ValueType = domainModel.ValueType,
                 CustomPropertyValueId = domainModel.CustomPropertyValueId,
                 DynamicTarget = domainModel.DynamicTarget

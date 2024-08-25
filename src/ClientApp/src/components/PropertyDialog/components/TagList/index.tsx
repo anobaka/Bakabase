@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -8,6 +8,15 @@ import {
 } from '@dnd-kit/sortable';
 import { Input, Overlay } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
+import {
+  AutoSizer,
+  CellMeasurer,
+  CellMeasurerCache,
+  createMasonryCellPositioner,
+  Masonry,
+  WindowScroller,
+  List,
+} from 'react-virtualized';
 import type { Tag } from '../../../Property/models';
 import { IChoice } from '../../../Property/models';
 import { SortableTag } from './components/SortableTag';
@@ -19,9 +28,15 @@ interface IProps {
   tags?: Tag[];
   onChange?: (tags: Tag[]) => void;
   className?: string;
+  checkUsage?: (value: string) => Promise<number>;
 }
 
-export default function TagList({ tags: propsTags, onChange, className }: IProps) {
+export default function TagList({
+                                  tags: propsTags,
+                                  onChange,
+                                  className,
+                                  checkUsage,
+                                }: IProps) {
   const { t } = useTranslation();
   const [tags, setTags] = useState<Tag[]>(propsTags || []);
   const [addInBulkPopupVisible, setAddInBulkPopupVisible] = useState(false);
@@ -32,6 +47,8 @@ export default function TagList({ tags: propsTags, onChange, className }: IProps
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  const virtualListRef = useRef<any>();
 
   useEffect(() => {
     onChange?.(tags);
@@ -59,24 +76,70 @@ export default function TagList({ tags: propsTags, onChange, className }: IProps
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={tags?.map(c => ({ ...c, id: c.value }))}
+            items={tags?.map(c => ({
+              ...c,
+              id: c.value,
+            }))}
             strategy={verticalListSortingStrategy}
           >
-            {tags?.map((sc, index) => (
-              <SortableTag
-                key={sc.value}
-                id={sc.value}
-                tag={sc}
-                onRemove={t => {
-                  tags.splice(index, 1);
-                  setTags([...tags]);
-                }}
-                onChange={t => {
-                  tags[index] = t;
-                  setTags([...tags]);
-                }}
-              />
-            ))}
+            <div style={{ height: Math.min(tags.length, 6) * 30 }}>
+              <AutoSizer>
+                {({
+                    width,
+                    height,
+                  }) => (
+                    <List
+                      ref={virtualListRef}
+                    // className={styles.List}
+                      height={height}
+                    // height={Math.min(tags.length, 6) * 30}
+                      rowCount={tags.length}
+                      rowHeight={30}
+                      rowRenderer={(ctx) => {
+                      const {
+                        key,
+                        index,
+                        style,
+                      } = ctx;
+                      const sc = tags[index];
+                      return (
+                        <SortableTag
+                          checkUsage={checkUsage}
+                          key={key}
+                          id={sc.value}
+                          tag={sc}
+                          onRemove={t => {
+                            tags.splice(index, 1);
+                            setTags([...tags]);
+                          }}
+                          onChange={t => {
+                            tags[index] = t;
+                            setTags([...tags]);
+                          }}
+                          style={style}
+                        />
+                      );
+                    }}
+                      width={width}
+                    />
+                )}
+              </AutoSizer>
+            </div>
+            {/* {tags?.map((sc, index) => ( */}
+            {/*   <SortableTag */}
+            {/*     key={sc.value} */}
+            {/*     id={sc.value} */}
+            {/*     tag={sc} */}
+            {/*     onRemove={t => { */}
+            {/*       tags.splice(index, 1); */}
+            {/*       setTags([...tags]); */}
+            {/*     }} */}
+            {/*     onChange={t => { */}
+            {/*       tags[index] = t; */}
+            {/*       setTags([...tags]); */}
+            {/*     }} */}
+            {/*   /> */}
+            {/* ))} */}
           </SortableContext>
         </DndContext>
       </div>
@@ -84,7 +147,11 @@ export default function TagList({ tags: propsTags, onChange, className }: IProps
         <Button
           size={'sm'}
           onClick={() => {
-            setTags([...tags, { value: uuidv4() }]);
+            const newTags = [...tags, { value: uuidv4() }];
+            setTags(newTags);
+            setTimeout(() => {
+              virtualListRef.current?.scrollToRow(newTags.length - 1);
+            }, 100);
           }}
         >
           <CustomIcon
@@ -131,7 +198,10 @@ export default function TagList({ tags: propsTags, onChange, className }: IProps
                 onClick={() => {
                   const newTags: Tag[] = addInBulkText.split('\n').map(c => {
                     const segments = c.split(':');
-                    const t: Tag = { name: c, value: uuidv4() };
+                    const t: Tag = {
+                      name: c,
+                      value: uuidv4(),
+                    };
                     if (segments.length == 1) {
                       t.name = segments[0];
                     } else {

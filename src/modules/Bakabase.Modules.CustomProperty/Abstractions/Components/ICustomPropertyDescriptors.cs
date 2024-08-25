@@ -5,6 +5,6 @@ namespace Bakabase.Modules.CustomProperty.Abstractions.Components;
 public interface ICustomPropertyDescriptors
 {
     ICustomPropertyDescriptor[] Descriptors { get; }
-    ICustomPropertyDescriptor this[int id] { get; }
-    bool TryGet(int id, [MaybeNullWhen(false)] out ICustomPropertyDescriptor propertyDescriptor);
+    ICustomPropertyDescriptor this[int type] { get; }
+    bool TryGet(int type, [MaybeNullWhen(false)] out ICustomPropertyDescriptor propertyDescriptor);
 }

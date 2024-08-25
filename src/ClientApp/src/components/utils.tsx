@@ -617,3 +617,48 @@ export function splitPathIntoSegments(path: string): string[] {
   }
   return segments;
 }
+
+export function splitStringWithEscapeChar(str: string, separator: string, escapeChar: string): string[] | null {
+  if (str.length === 0) {
+    return null;
+  }
+
+  const result: string[] = [];
+  let idx = 0;
+  while (idx <= str.length) {
+    let nextIdx = idx;
+    while (true) {
+      nextIdx = str.indexOf(separator, nextIdx);
+      if (nextIdx > 0) {
+        if (str[nextIdx - 1] === escapeChar) {
+          nextIdx++;
+          continue;
+        }
+      }
+      break;
+    }
+
+    if (nextIdx === -1) {
+      result.push(str.substring(idx));
+      break;
+    }
+
+    result.push(str.substring(idx, nextIdx));
+    idx = nextIdx + 1;
+  }
+
+  return result;
+}
+
+export function splitStringWithEscapeCharNested(str: string, highLevelSeparator: string, lowLevelSeparator: string, escapeChar: string): string[][] | null {
+  const lowLevelStrings = splitStringWithEscapeChar(str, highLevelSeparator, escapeChar);
+  if (lowLevelStrings === null) {
+    return null;
+  }
+
+  return lowLevelStrings.map(x => splitStringWithEscapeChar(x, lowLevelSeparator, escapeChar) ?? []);
+}
+
+export function joinWithEscapeChar(data: (string | null | undefined)[], separator: string, escapeChar: string): string {
+  return data.map(d => d?.replace(new RegExp(separator, 'g'), `${escapeChar}${separator}`)).join(separator);
+}

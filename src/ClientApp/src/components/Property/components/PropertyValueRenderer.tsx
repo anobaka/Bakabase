@@ -1,8 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import React from 'react';
-import type { Dayjs } from 'dayjs';
-import type { Duration } from 'dayjs/plugin/duration';
-import type { ChoicePropertyOptions, IProperty } from '@/components/Property/models';
+import type { IProperty } from '@/components/Property/models';
 import { CustomPropertyType, ResourceProperty, StandardValueType } from '@/sdk/constants';
 import {
   AttachmentValueRenderer,
@@ -21,8 +19,6 @@ import {
 import type { MultilevelData } from '@/components/StandardValue/models';
 import { deserializeStandardValue, serializeStandardValue } from '@/components/StandardValue/helpers';
 import { buildLogger } from '@/components/utils';
-import BApi from '@/sdk/BApi';
-import property from '@/components/Property';
 
 
 export type DataPool = {};
@@ -198,8 +194,8 @@ export default (props: Props) => {
       case CustomPropertyType.SingleChoice: {
         const oc = onValueChange == undefined ? undefined : (dbValue?: string[], bizValue?: string[]) => {
           onValueChange(
-            (dbValue && dbValue.length > 0) ? JSON.stringify(dbValue[0]) : undefined,
-            (bizValue && bizValue.length > 0) ? JSON.stringify(bizValue[0]) : undefined,
+            (dbValue && dbValue.length > 0) ? serializeStandardValue(dbValue[0], StandardValueType.String) : undefined,
+            (bizValue && bizValue.length > 0) ? serializeStandardValue(bizValue[0], StandardValueType.String) : undefined,
           );
         };
 

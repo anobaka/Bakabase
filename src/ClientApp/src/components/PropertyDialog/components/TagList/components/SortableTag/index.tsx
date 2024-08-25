@@ -5,22 +5,27 @@ import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
 import { DeleteOutlined, EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
 import DragHandle from '@/components/DragHandle';
-import { Button, ColorPicker, Input } from '@/components/bakaui';
+import { Button, ColorPicker, Input, Modal } from '@/components/bakaui';
 import type { Tag } from '@/components/Property/models';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 interface IProps {
   id: string;
   tag: Tag;
   onRemove?: (choice: Tag) => any;
   onChange?: (choice: Tag) => any;
+  style?: any;
+  checkUsage?: (value: string) => Promise<number>;
 }
 
 export function SortableTag({
-                                 id,
-                                 tag: propsTag,
-                                 onRemove,
-                                 onChange,
-                               }: IProps) {
+                              id,
+                              tag: propsTag,
+                              onRemove,
+                              onChange,
+                              style: propsStyle,
+                              checkUsage,
+                            }: IProps) {
   const { t } = useTranslation();
   const {
     attributes,
@@ -29,6 +34,7 @@ export function SortableTag({
     transform,
     transition,
   } = useSortable({ id: id });
+  const { createPortal } = useBakabaseContext();
 
   const [tag, setTag] = useState(propsTag);
 
@@ -43,6 +49,7 @@ export function SortableTag({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    ...propsStyle,
   };
 
   return (
@@ -91,7 +98,22 @@ export function SortableTag({
           size={'sm'}
           radius={'sm'}
           isIconOnly
-          onClick={() => {
+          onClick={async () => {
+            if (checkUsage) {
+              const count = await checkUsage(tag.value);
+              if (count > 0) {
+                createPortal(Modal, {
+                  defaultVisible: true,
+                  size: 'sm',
+                  title: t('Value is being referenced in {{count}} places', { count }),
+                  children: t('Sure to delete?'),
+                  onOk: async () => {
+                    onRemove?.(tag);
+                  },
+                });
+                return;
+              }
+            }
             onRemove?.(tag);
           }}
           variant={'light'}

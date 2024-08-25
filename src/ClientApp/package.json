@@ -74,7 +74,7 @@
     "react-input-autosize": "^3.0.0",
     "react-json-view": "^1.21.3",
     "react-konva": "^16.13.0-3",
-    "react-player": "^2.10.1",
+    "react-player": "^3.0.0-canary.4",
     "react-portal": "^4.2.2",
     "react-router": "^5.2.0",
     "react-router-dom": "^5.2.0",

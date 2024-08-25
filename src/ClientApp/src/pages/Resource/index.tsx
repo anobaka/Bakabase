@@ -35,6 +35,7 @@ export default () => {
 
   const [columnCount, setColumnCount] = useState<number>(0);
   const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>();
+  const searchFormRef = useRef(searchForm);
 
   const [searching, setSearching] = useState(true);
 
@@ -48,10 +49,14 @@ export default () => {
     }
   }, [uiOptions]);
 
+  useEffect(() => {
+    searchFormRef.current = searchForm;
+  }, [searchForm]);
+
   const pageContainerRef = useRef<any>();
 
   const search = async (partialForm: Partial<ISearchForm>, renderMode: 'append' | 'replace', replaceSearchCriteria: boolean = false) => {
-    const baseForm = replaceSearchCriteria ? {} : partialForm;
+    const baseForm = replaceSearchCriteria ? {} : searchForm;
 
     const newForm = {
       ...baseForm,
@@ -68,6 +73,10 @@ export default () => {
       group: convertFilterGroupToDto(newForm.group),
       saveSearchCriteria: true,
     };
+
+    if (renderMode == 'replace') {
+      setResources([]);
+    }
 
     setSearching(true);
     const rsp = await BApi.resource.searchResources(dto);
@@ -172,8 +181,8 @@ export default () => {
                         }
                       }}
                     >
-                      {selected ? <CheckCircleTwoTone className={'text-5xl'} />
-                        : <CheckCircleOutlined className={'text-5xl opacity-80'} />}
+                      {selected ? <CheckCircleTwoTone className={'text-5xl'}/>
+                        : <CheckCircleOutlined className={'text-5xl opacity-80'}/>}
                     </div>
                   )}
                   <Resource
@@ -196,28 +205,27 @@ export default () => {
             }}
           />
         </>
-      ) || (
-        <div className={'mt-10 flex items-center gap-2 justify-center'}>
-          {searching ? (
-            <Spinner label={t('Searching...')} />
-          ) : (
-            <>
-              {t('Resource not found')}
-              <Button
-                size={'sm'}
-                variant={'light'}
-                radius={'sm'}
-                color={'primary'}
-                onClick={() => {
-                  search({ pageIndex: 1 }, 'replace', true);
-                }}
-              >
-                {t('Reset search criteria')}
-              </Button>
-            </>
-          )}
-        </div>
       )}
+      <div className={'mt-10 flex items-center gap-2 justify-center'}>
+        {searching ? (
+          <Spinner label={t('Searching...')} />
+        ) : (resources.length == 0) && (
+          <>
+            {t('Resource not found')}
+            <Button
+              size={'sm'}
+              variant={'light'}
+              radius={'sm'}
+              color={'primary'}
+              onClick={() => {
+                search({ pageIndex: 1 }, 'replace', true);
+              }}
+            >
+              {t('Reset search criteria')}
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 };

@@ -182,7 +182,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             var propertyDescriptor = propertyDescriptors[property.Type];
             var stdValueHandler = StdValueHandlers[property.DbValueType];
 
-            var typedValues = values.Select(v => propertyDescriptor.ConvertDbValueToBizValue(property, v)).ToList();
+            var typedValues = values.Select(v => propertyDescriptor.ConvertDbValueToBizValue(property, v.Value)).ToList();
 
             var lossMap = new Dictionary<StandardValueConversionLoss, List<string>>();
             var result = new CustomPropertyTypeConversionLossViewModel

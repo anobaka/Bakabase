@@ -148,7 +148,7 @@ export default (props: Props) => {
                       <PropertyValueRenderer
                         variant={'light'}
                         property={property}
-                        bizValue={JSON.stringify(sbv)}
+                        bizValue={serializeStandardValue(sbv, property.bizValueType)}
                         dataPool={dataPool}
                       />
                     </ListboxItem>

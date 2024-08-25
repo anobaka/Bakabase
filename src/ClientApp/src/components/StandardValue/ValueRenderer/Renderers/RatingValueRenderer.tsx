@@ -55,13 +55,16 @@ export default (props: RatingValueRendererProps) => {
       }
     } else {
       return (
-        <Rating
-          value={value}
-          onChange={() => {
-            setEditing(true);
-          }}
-          allowHalf={allowHalf}
-        />
+        <div className={'flex gap-1'}>
+          <Rating
+            value={value}
+            onChange={() => {
+              setEditing(true);
+            }}
+            allowHalf={allowHalf}
+          />
+          {value}
+        </div>
       );
     }
   }

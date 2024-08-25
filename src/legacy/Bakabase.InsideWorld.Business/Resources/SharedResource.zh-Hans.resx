@@ -371,10 +371,6 @@
   <data name="Enhancer_Bangumi_Name" xml:space="preserve">
     <value>Bangumi</value>
   </data>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="Enhancer_Bangumi_Description" type="System.Resources.ResXNullRef, System.Windows.Forms">
-    <value />
-  </data>
   <data name="Enhancer_Bangumi_Target_Name_Name" xml:space="preserve">
     <value>名称</value>
   </data>

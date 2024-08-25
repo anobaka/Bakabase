@@ -10,6 +10,7 @@ import { Chip, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { CustomPropertyType, ResourceProperty } from '@/sdk/constants';
 import { StandardValueIcon } from '@/components/StandardValue';
+import { LinkOutlined } from "@ant-design/icons";
 
 interface IProps {
   property: IProperty;
@@ -60,11 +61,15 @@ export default ({
             })}
           </div>}
           >
-            <Chip
-              radius={'sm'}
-              size={'sm'}
-              classNames={{}}
-            >{t('{{count}} categories', { count: categories.length })}</Chip>
+            <div className={'flex gap-1 items-center'}>
+              <LinkOutlined className={'text-base'} />
+              {categories.length}
+            </div>
+            {/* <Chip */}
+            {/*   radius={'sm'} */}
+            {/*   size={'sm'} */}
+            {/*   classNames={{}} */}
+            {/* >{t('{{count}} categories', { count: categories.length })}</Chip> */}
           </Tooltip>
         ) : t('No category bound')}
       </div>

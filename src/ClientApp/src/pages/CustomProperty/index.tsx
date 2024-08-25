@@ -66,7 +66,7 @@ export default () => {
       </div>
       <div
         className={'grid gap-2 items-center'}
-        style={{ gridTemplateColumns: 'auto auto' }}
+        style={{ gridTemplateColumns: 'auto 1fr' }}
       >
         {Object.keys(groupedFilteredProperties).map(k => {
           const type = parseInt(k, 10);

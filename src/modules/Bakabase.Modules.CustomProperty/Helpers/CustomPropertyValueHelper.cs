@@ -66,20 +66,5 @@ namespace Bakabase.Modules.CustomProperty.Helpers
             pv.PropertyId = propertyId;
             return pv;
         }
-
-        public static string? SerializeValue(object? value)
-        {
-            return value?.ToJson();
-        }
-
-        public static object? DeserializeValue<T>(string? value)
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                return null;
-            }
-
-            return JsonConvert.DeserializeObject<T>(value);
-        }
     }
 }

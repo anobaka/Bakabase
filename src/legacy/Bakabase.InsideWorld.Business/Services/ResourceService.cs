@@ -44,6 +44,7 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infras
 using SixLabors.ImageSharp.PixelFormats;
 using Image = SixLabors.ImageSharp.Image;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -147,7 +148,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     [
                         new ResourceSearchFilter
                         {
-                            DbValue = JsonConvert.SerializeObject(model.Keyword),
+                            DbValue = model.Keyword.SerializeAsStandardValue(StandardValueType.String),
                             Operation = SearchOperation.Contains,
                             IsCustomProperty = false,
                             PropertyId = (int) ResourceProperty.FileName
@@ -176,7 +177,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     searchModel.Group = new ResourceSearchFilterGroup
                     {
                         Combinator = Combinator.And,
-                        Groups = [newGroup, searchModel.Group]
+                        Groups = [searchModel.Group, newGroup]
                     };
                 }
             }

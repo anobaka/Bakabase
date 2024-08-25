@@ -3007,6 +3007,58 @@ export const EnableAddingNewDataDynamicallyForCustomPropertyURL = function(param
 }
 /**
  * 
+ * request: GetCustomPropertyValueUsage
+ * url: GetCustomPropertyValueUsageURL
+ * method: GetCustomPropertyValueUsage_TYPE
+ * raw_url: GetCustomPropertyValueUsage_RAW_URL
+ * @param id - 
+ * @param value - 
+ */
+export const GetCustomPropertyValueUsage = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property/{id}/value-usage'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['value'] !== undefined) {
+    queryParameters['value'] = parameters['value']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetCustomPropertyValueUsage_RAW_URL = function() {
+  return '/custom-property/{id}/value-usage'
+}
+export const GetCustomPropertyValueUsage_TYPE = function() {
+  return 'get'
+}
+export const GetCustomPropertyValueUsageURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property/{id}/value-usage'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['value'] !== undefined) {
+    queryParameters['value'] = parameters['value']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetStatistics
  * url: GetStatisticsURL
  * method: GetStatistics_TYPE

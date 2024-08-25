@@ -8,6 +8,7 @@ using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
@@ -52,14 +53,15 @@ public static class CustomPropertyExtensions
         };
     }
 
-    public static Bakabase.Abstractions.Models.Db.CustomPropertyValue ToDbModel(this CustomPropertyValue domain)
+    public static Bakabase.Abstractions.Models.Db.CustomPropertyValue ToDbModel(this CustomPropertyValue domain,
+        StandardValueType valueType)
     {
         return new Bakabase.Abstractions.Models.Db.CustomPropertyValue
         {
             Id = domain.Id,
             PropertyId = domain.PropertyId,
             ResourceId = domain.ResourceId,
-            Value = CustomPropertyValueHelper.SerializeValue(domain.Value),
+            Value = domain.Value?.SerializeAsStandardValue(valueType),
             Scope = domain.Scope
         };
     }
@@ -107,5 +109,19 @@ public static class CustomPropertyExtensions
 
             return null;
         }
+    }
+
+    public static bool IsReferenceValueType(this CustomPropertyType type)
+    {
+        return type switch
+        {
+            CustomPropertyType.SingleLineText or CustomPropertyType.MultilineText or CustomPropertyType.Number
+                or CustomPropertyType.Percentage or CustomPropertyType.Rating or CustomPropertyType.Boolean
+                or CustomPropertyType.Link or CustomPropertyType.Attachment or CustomPropertyType.Date
+                or CustomPropertyType.DateTime or CustomPropertyType.Time or CustomPropertyType.Formula => false,
+            CustomPropertyType.Multilevel or CustomPropertyType.Tags or CustomPropertyType.SingleChoice
+                or CustomPropertyType.MultipleChoice => true,
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+        };
     }
 }

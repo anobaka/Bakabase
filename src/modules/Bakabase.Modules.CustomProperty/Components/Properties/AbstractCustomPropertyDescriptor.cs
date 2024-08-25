@@ -115,7 +115,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
             return new ResourceSearchFilter
             {
                 Operation = sf.Value.Operation,
-                DbValue = sf.Value.DbValue.SerializeAsStandardValue(),
+                DbValue = sf.Value.DbValue.SerializeAsStandardValue(property.DbValueType),
                 IsCustomProperty = true,
                 PropertyId = property.Id
             };

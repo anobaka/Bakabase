@@ -8,13 +8,13 @@ using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using CustomPropertyValue = Bakabase.Abstractions.Models.Db.CustomPropertyValue;
 
 namespace Bakabase.Modules.CustomProperty.Services
 {
@@ -26,7 +26,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             ICustomPropertyLocalizer localizer,
             IBuiltinPropertyValueService _builtinPropertyValueService,
             IStandardValueLocalizer standardValueLocalizer)
-        : FullMemoryCacheResourceService<TDbContext, CustomPropertyValue, int>(
+        : FullMemoryCacheResourceService<TDbContext, Bakabase.Abstractions.Models.Db.CustomPropertyValue, int>(
             serviceProvider), ICustomPropertyValueService where TDbContext : DbContext
     {
         protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
@@ -34,11 +34,7 @@ namespace Bakabase.Modules.CustomProperty.Services
         private readonly Dictionary<StandardValueType, IStandardValueHandler> _converters =
             converters.ToDictionary(d => d.Type, d => d);
 
-        private readonly ICustomPropertyLocalizer _localizer = localizer;
-        private readonly IStandardValueLocalizer _standardValueLocalizer = standardValueLocalizer;
-
-        public async Task<List<Bakabase.Abstractions.Models.Domain.CustomPropertyValue>> GetAll(
-            Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>>? exp,
+        public async Task<List<CustomPropertyValue>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>>? exp,
             CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
         {
             var data = await GetAll(exp, returnCopy);
@@ -98,10 +94,12 @@ namespace Bakabase.Modules.CustomProperty.Services
             return dtoList;
         }
 
-        public async Task<BaseResponse> AddRange(IEnumerable<Bakabase.Abstractions.Models.Domain.CustomPropertyValue> values)
+        public async Task<BaseResponse> AddRange(IEnumerable<CustomPropertyValue> values)
         {
-            var dbModelsMap = values.ToDictionary(v => v.ToDbModel()!,
-                v => v);
+            var customPropertyValues = values as CustomPropertyValue[] ?? values.ToArray();
+            var pIds = customPropertyValues.Select(v => v.PropertyId).ToHashSet();
+            var propertyMap = (await CustomPropertyService.GetByKeys(pIds)).ToDictionary(d => d.Id, d => d);
+            var dbModelsMap = customPropertyValues.ToDictionary(v => v.ToDbModel(propertyMap[v.PropertyId].DbValueType)!, v => v);
             await AddRange(dbModelsMap.Keys.ToList());
             foreach (var (k, v) in dbModelsMap)
             {
@@ -111,19 +109,22 @@ namespace Bakabase.Modules.CustomProperty.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> UpdateRange(IEnumerable<Bakabase.Abstractions.Models.Domain.CustomPropertyValue> values)
+        public async Task<BaseResponse> UpdateRange(IEnumerable<CustomPropertyValue> values)
         {
-            var dbModels = values.Select(v => v.ToDbModel()!).ToList();
+            var customPropertyValues = values as CustomPropertyValue[] ?? values.ToArray();
+            var pIds = customPropertyValues.Select(v => v.PropertyId).ToHashSet();
+            var propertyMap = (await CustomPropertyService.GetByKeys(pIds)).ToDictionary(d => d.Id, d => d);
+            var dbModels = values.Select(v => v.ToDbModel(propertyMap[v.PropertyId].DbValueType)!).ToList();
             await UpdateRange(dbModels);
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<SingletonResponse<CustomPropertyValue>> AddDbModel(CustomPropertyValue resource)
+        public async Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomPropertyValue>> AddDbModel(Bakabase.Abstractions.Models.Db.CustomPropertyValue resource)
         {
             return await base.Add(resource);
         }
 
-        public async Task<BaseResponse> UpdateDbModel(CustomPropertyValue resource)
+        public async Task<BaseResponse> UpdateDbModel(Bakabase.Abstractions.Models.Db.CustomPropertyValue resource)
         {
             return await base.Update(resource);
         }
@@ -163,7 +164,7 @@ namespace Bakabase.Modules.CustomProperty.Services
                     {
                         if (!propertyDescriptors.TryGet(property.Type, out var pd))
                         {
-                            Logger.LogError(_localizer.CustomProperty_DescriptorNotFound(property.Type));
+                            Logger.LogError(localizer.CustomProperty_DescriptorNotFound(property.Type));
                             continue;
                         }
 
@@ -179,11 +180,11 @@ namespace Bakabase.Modules.CustomProperty.Services
                                 {
                                     var pv = CustomPropertyValueHelper.CreateFromImplicitValue(rawDbValue,
                                         property.Type, resourceId, propertyId, v.Scope);
-                                    valuesToAdd.Add(pv.ToDbModel()!);
+                                    valuesToAdd.Add(pv.ToDbModel(property.DbValueType)!);
                                 }
                                 else
                                 {
-                                    dbPv.Value = CustomPropertyValueHelper.SerializeValue(rawDbValue);
+                                    dbPv.Value = rawDbValue?.SerializeAsStandardValue(property.DbValueType);
                                     valuesToUpdate.Add(dbPv);
                                 }
 
@@ -206,14 +207,14 @@ namespace Bakabase.Modules.CustomProperty.Services
         {
             if (!propertyDescriptors.TryGet(property.Type, out var pd))
             {
-                Logger.LogError(_localizer.CustomProperty_DescriptorNotFound(property.Type));
+                Logger.LogError(localizer.CustomProperty_DescriptorNotFound(property.Type));
                 return null;
             }
 
             var stdValueConverter = _converters.GetValueOrDefault(bizValueType);
             if (stdValueConverter == null)
             {
-                Logger.LogError(_standardValueLocalizer.StandardValue_HandlerNotFound(bizValueType));
+                Logger.LogError(standardValueLocalizer.StandardValue_HandlerNotFound(bizValueType));
                 return null;
             }
 
