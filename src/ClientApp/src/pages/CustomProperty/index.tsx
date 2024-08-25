@@ -84,6 +84,7 @@ export default () => {
                     <Property
                       property={p}
                       onSaved={loadProperties}
+                      editablePortal={'click'}
                       key={p.id}
                       editable
                       removable

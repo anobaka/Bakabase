@@ -303,7 +303,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                         ? enhancement.Value
                         : targetDescriptor.EnhancementConverter.Convert(enhancement.Value, property);
 
-                    var result = await _customPropertyValueService.Create(value, enhancement.ValueType,
+                    var result = await _customPropertyValueService.CreateTransient(value, enhancement.ValueType,
                         property,
                         enhancement.ResourceId, enhancerDescriptor.PropertyValueScope);
                     if (result.HasValue)

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
+import { LinkOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import type { IProperty } from './models';
 import { PropertyTypeIconMap } from './models';
@@ -10,7 +11,6 @@ import { Chip, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { CustomPropertyType, ResourceProperty } from '@/sdk/constants';
 import { StandardValueIcon } from '@/components/StandardValue';
-import { LinkOutlined } from "@ant-design/icons";
 
 interface IProps {
   property: IProperty;
@@ -18,6 +18,7 @@ interface IProps {
 
   removable?: boolean;
   editable?: boolean;
+  editablePortal?: 'click' | 'edit-icon';
   onSaved?: (property: IProperty) => any;
   onRemoved?: () => any;
 }
@@ -29,6 +30,7 @@ export {
 export default ({
                   property,
                   onClick,
+                  editablePortal = 'edit-icon',
                   onSaved,
                   onRemoved,
                   ...props
@@ -47,8 +49,10 @@ export default ({
     return (
       <div className={`${styles.categories} flex flex-wrap gap-1`}>
         {categories.length > 0 ? (
-          <Tooltip content={<div className={'flex flex-wrap gap-1 max-w-[600px]'}>
-            {categories.map(c => {
+          <Tooltip
+            placement={'bottom'}
+            content={<div className={'flex flex-wrap gap-1 max-w-[600px]'}>
+              {categories.map(c => {
               return (
                 <Chip
                   size={'sm'}
@@ -59,7 +63,7 @@ export default ({
                 </Chip>
               );
             })}
-          </div>}
+            </div>}
           >
             <div className={'flex gap-1 items-center'}>
               <LinkOutlined className={'text-base'} />
@@ -76,11 +80,29 @@ export default ({
     );
   };
 
+  const showDetail = () => {
+    PropertyDialog.show({
+      value: {
+        ...property,
+        type: property.type as unknown as CustomPropertyType,
+      },
+      onSaved: p => onSaved?.({
+        ...p,
+        isCustom: property.isCustom,
+      }),
+    });
+  };
+
   return (
     <div
       key={property.id}
       className={`${styles.property} group`}
-      onClick={onClick}
+      onClick={() => {
+        if (editable && editablePortal == 'click') {
+          showDetail();
+        }
+        onClick?.();
+      }}
     >
       <Modal
         visible={removeConfirmingDialogVisible}
@@ -120,7 +142,7 @@ export default ({
           )}
         </div>
         <div className={'flex gap-0.5 items-center invisible group-hover:visible'}>
-          {editable && (
+          {editable && editablePortal == 'edit-icon' && (
             <ClickableIcon
               colorType={'normal'}
               className={'text-medium'}
@@ -128,16 +150,7 @@ export default ({
               onClick={e => {
                 e.preventDefault();
                 e.stopPropagation();
-                PropertyDialog.show({
-                  value: {
-                    ...property,
-                    type: property.type as unknown as CustomPropertyType,
-                  },
-                  onSaved: p => onSaved?.({
-                    ...p,
-                    isCustom: property.isCustom,
-                  }),
-                });
+                showDetail();
               }}
             />
           )}

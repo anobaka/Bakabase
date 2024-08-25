@@ -332,7 +332,7 @@ namespace Bakabase.Migrations.V190
                     var propertyChanged = false;
                     foreach (var (rId, bizValue) in rbMap)
                     {
-                        var result = await _customPropertyValueService.Create(bizValue, property.BizValueType, property,
+                        var result = await _customPropertyValueService.CreateTransient(bizValue, property.BizValueType, property,
                             rId, (int) PropertyValueScope.Manual);
                         if (result.HasValue)
                         {

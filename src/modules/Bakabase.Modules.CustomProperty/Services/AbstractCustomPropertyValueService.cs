@@ -1,4 +1,6 @@
-﻿using System.Linq.Expressions;
+﻿using System.Collections.Concurrent;
+using System.Linq;
+using System.Linq.Expressions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
@@ -12,9 +14,11 @@ using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
+using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bakabase.Modules.CustomProperty.Services
 {
@@ -30,11 +34,13 @@ namespace Bakabase.Modules.CustomProperty.Services
             serviceProvider), ICustomPropertyValueService where TDbContext : DbContext
     {
         protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
+        private static readonly ConcurrentDictionary<int, object?> DbValueCache = new();
 
         private readonly Dictionary<StandardValueType, IStandardValueHandler> _converters =
             converters.ToDictionary(d => d.Type, d => d);
 
-        public async Task<List<CustomPropertyValue>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>>? exp,
+        public async Task<List<CustomPropertyValue>> GetAll(
+            Expression<Func<Bakabase.Abstractions.Models.Db.CustomPropertyValue, bool>>? exp,
             CustomPropertyValueAdditionalItem additionalItems, bool returnCopy)
         {
             var data = await GetAll(exp, returnCopy);
@@ -55,7 +61,17 @@ namespace Bakabase.Modules.CustomProperty.Services
                 await CustomPropertyService.GetAll(x => propertyIds.Contains(x.Id),
                     CustomPropertyAdditionalItem.None, returnCopy);
             var propertyMap = properties.ToDictionary(x => x.Id);
-            var dtoList = values.Select(v => propertyDescriptors[propertyMap[v.PropertyId].Type].ToDomainModel(v)!)
+            // var dtoList = values.Select(v => new CustomPropertyValue
+            // {
+            //     Id = v.Id, 
+            //     Property = propertyMap[v.PropertyId], 
+            //     PropertyId = v.PropertyId, 
+            //     ResourceId = v.ResourceId,
+            //     Scope = v.Scope,
+            //     Value = DictionaryExtensions.GetOrAdd(DbValueCache, v.Id,
+            //         () => v.Value?.DeserializeAsStandardValue(propertyMap[v.PropertyId].DbValueType))
+            // }).ToList();
+            var dtoList = values.Select(v => propertyDescriptors[propertyMap[v.PropertyId].Type].ToDomainModel(v))
                 .ToList();
 
             foreach (var ai in SpecificEnumUtils<CustomPropertyValueAdditionalItem>.Values)
@@ -68,17 +84,18 @@ namespace Bakabase.Modules.CustomProperty.Services
                             break;
                         case CustomPropertyValueAdditionalItem.BizValue:
                         {
-                                foreach (var dto in dtoList)
+                            foreach (var dto in dtoList)
+                            {
+                                if (propertyMap.TryGetValue(dto.PropertyId, out var p))
                                 {
-                                    if (propertyMap.TryGetValue(dto.PropertyId, out var p))
+                                    if (propertyDescriptors.TryGet(p.Type, out var cpd))
                                     {
-                                        if (propertyDescriptors.TryGet(p.Type, out var cpd))
-                                        {
-                                            dto.BizValue = cpd.ConvertDbValueToBizValue(p, dto.Value);
-                                        }
+                                        dto.BizValue = cpd.ConvertDbValueToBizValue(p, dto.Value);
                                     }
                                 }
-                                break;
+                            }
+
+                            break;
                         }
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -99,11 +116,13 @@ namespace Bakabase.Modules.CustomProperty.Services
             var customPropertyValues = values as CustomPropertyValue[] ?? values.ToArray();
             var pIds = customPropertyValues.Select(v => v.PropertyId).ToHashSet();
             var propertyMap = (await CustomPropertyService.GetByKeys(pIds)).ToDictionary(d => d.Id, d => d);
-            var dbModelsMap = customPropertyValues.ToDictionary(v => v.ToDbModel(propertyMap[v.PropertyId].DbValueType)!, v => v);
+            var dbModelsMap =
+                customPropertyValues.ToDictionary(v => v.ToDbModel(propertyMap[v.PropertyId].DbValueType)!, v => v);
             await AddRange(dbModelsMap.Keys.ToList());
             foreach (var (k, v) in dbModelsMap)
             {
                 v.Id = k.Id;
+                DbValueCache[v.Id] = v.Value;
             }
 
             return BaseResponseBuilder.Ok;
@@ -114,19 +133,44 @@ namespace Bakabase.Modules.CustomProperty.Services
             var customPropertyValues = values as CustomPropertyValue[] ?? values.ToArray();
             var pIds = customPropertyValues.Select(v => v.PropertyId).ToHashSet();
             var propertyMap = (await CustomPropertyService.GetByKeys(pIds)).ToDictionary(d => d.Id, d => d);
-            var dbModels = values.Select(v => v.ToDbModel(propertyMap[v.PropertyId].DbValueType)!).ToList();
+            var dbModels = customPropertyValues.Select(v => v.ToDbModel(propertyMap[v.PropertyId].DbValueType)!)
+                .ToList();
             await UpdateRange(dbModels);
+            foreach (var v in customPropertyValues)
+            {
+                DbValueCache[v.Id] = v.Value;
+            }
+
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomPropertyValue>> AddDbModel(Bakabase.Abstractions.Models.Db.CustomPropertyValue resource)
+        public async Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomPropertyValue>> AddDbModel(
+            Bakabase.Abstractions.Models.Db.CustomPropertyValue resource)
         {
-            return await base.Add(resource);
+            var rsp = await base.Add(resource);
+            if (rsp.Code != (int)ResponseCode.Success)
+            {
+                return rsp;
+            }
+
+            var property = await CustomPropertyService.GetByKey(resource.PropertyId);
+            DbValueCache[rsp.Data!.Id] = rsp.Data.Value?.DeserializeAsStandardValue(property.DbValueType);
+
+            return rsp;
         }
 
         public async Task<BaseResponse> UpdateDbModel(Bakabase.Abstractions.Models.Db.CustomPropertyValue resource)
         {
-            return await base.Update(resource);
+            var rsp = await base.Update(resource);
+            if (rsp.Code != (int) ResponseCode.Success)
+            {
+                return rsp;
+            }
+
+            var property = await CustomPropertyService.GetByKey(resource.PropertyId);
+            DbValueCache[resource.Id] = resource.Value?.DeserializeAsStandardValue(property.DbValueType);
+
+            return rsp;
         }
 
         /// <summary>
@@ -136,7 +180,7 @@ namespace Bakabase.Modules.CustomProperty.Services
         public async Task SaveByResources(List<Resource> data)
         {
             var resourceProperties =
-                data.ToDictionary(d => d.Id, d => d.Properties?.GetValueOrDefault((int)ResourcePropertyType.Custom))
+                data.ToDictionary(d => d.Id, d => d.Properties?.GetValueOrDefault((int) ResourcePropertyType.Custom))
                     .Where(d => d.Value != null).ToDictionary(d => d.Key, d => d.Value!);
 
             var propertyIds = resourceProperties.SelectMany(d => d.Value.Select(c => c.Key)).ToHashSet();
@@ -154,6 +198,10 @@ namespace Bakabase.Modules.CustomProperty.Services
             var valuesToAdd = new List<Bakabase.Abstractions.Models.Db.CustomPropertyValue>();
             var valuesToUpdate = new List<Bakabase.Abstractions.Models.Db.CustomPropertyValue>();
             var changedProperties = new HashSet<Bakabase.Abstractions.Models.Domain.CustomProperty>();
+
+            var newValuesDbValuesMap = new Dictionary<Bakabase.Abstractions.Models.Db.CustomPropertyValue, object?>();
+            var existedValuesDbValuesMap =
+                new Dictionary<Bakabase.Abstractions.Models.Db.CustomPropertyValue, object?>();
 
             foreach (var (resourceId, propertyValues) in resourceProperties)
             {
@@ -180,12 +228,15 @@ namespace Bakabase.Modules.CustomProperty.Services
                                 {
                                     var pv = CustomPropertyValueHelper.CreateFromImplicitValue(rawDbValue,
                                         property.Type, resourceId, propertyId, v.Scope);
-                                    valuesToAdd.Add(pv.ToDbModel(property.DbValueType)!);
+                                    var t = pv.ToDbModel(property.DbValueType)!;
+                                    valuesToAdd.Add(t);
+                                    newValuesDbValuesMap[t] = rawDbValue;
                                 }
                                 else
                                 {
                                     dbPv.Value = rawDbValue?.SerializeAsStandardValue(property.DbValueType);
                                     valuesToUpdate.Add(dbPv);
+                                    existedValuesDbValuesMap[dbPv] = rawDbValue;
                                 }
 
                                 if (propertyChanged)
@@ -199,11 +250,26 @@ namespace Bakabase.Modules.CustomProperty.Services
             }
 
             await CustomPropertyService.UpdateRange(changedProperties.Select(p => p.ToDbModel()!).ToList());
-            await AddRange(valuesToAdd);
+            var added = await AddRange(valuesToAdd);
             await UpdateRange(valuesToUpdate);
+
+            if (added.Data != null)
+            {
+                for (var i = 0; i < added.Data.Count; i++)
+                {
+                    DbValueCache[added.Data[i].Id] = newValuesDbValuesMap[valuesToAdd[i]];
+                }
+            }
+
+            foreach (var t in valuesToUpdate)
+            {
+                DbValueCache[t.Id] = existedValuesDbValuesMap[t];
+            }
         }
 
-        public async Task<(Bakabase.Abstractions.Models.Domain.CustomPropertyValue Value, bool PropertyChanged)?> Create(object? bizValue, StandardValueType bizValueType, Bakabase.Abstractions.Models.Domain.CustomProperty property, int resourceId, int scope)
+        public async Task<(CustomPropertyValue Value, bool PropertyChanged)?> CreateTransient(object? bizValue,
+            StandardValueType bizValueType, Bakabase.Abstractions.Models.Domain.CustomProperty property, int resourceId,
+            int scope)
         {
             if (!propertyDescriptors.TryGet(property.Type, out var pd))
             {
@@ -224,86 +290,6 @@ namespace Bakabase.Modules.CustomProperty.Services
                 property.Id, scope);
 
             return (pv, propertyChanged);
-
-            // var propertyChanged = false;
-            // switch ((CustomPropertyType) property.Type)
-            // {
-            //     case CustomPropertyType.SingleLineText:
-            //     case CustomPropertyType.MultilineText:
-            //         break;
-            //     case CustomPropertyType.SingleChoice:
-            //     {
-            //         var typedProperty = property.Cast<SingleChoiceProperty>();
-            //         var typedValue = bizValue as string;
-            //         if (!string.IsNullOrEmpty(typedValue))
-            //         {
-            //             propertyChanged =
-            //                 (typedProperty.Options ??= new ChoicePropertyOptions<string>())
-            //                 .AddChoices(true, typedValue);
-            //             nv = new StringValueBuilder(typedProperty.Options.Choices!.First(x => x.Label == typedValue)
-            //                 .Value);
-            //         }
-            //
-            //         break;
-            //     }
-            //     case CustomPropertyType.MultipleChoice:
-            //     {
-            //         var typedProperty = property.Cast<MultipleChoiceProperty>();
-            //         var typedValue = bizValue as string[];
-            //
-            //         if (typedValue?.Any() == true)
-            //         {
-            //             propertyChanged = (typedProperty.Options ??= new ChoicePropertyOptions<List<string>>())
-            //                 .AddChoices(true,
-            //                     typedValue);
-            //             nv = typedValue
-            //                 .Select(v => typedProperty.Options.Choices!.First(x => x.Label == v).Value).ToArray();
-            //         }
-            //
-            //         break;
-            //     }
-            //     case CustomPropertyType.Number:
-            //     case CustomPropertyType.Percentage:
-            //     case CustomPropertyType.Rating:
-            //     case CustomPropertyType.Boolean:
-            //     case CustomPropertyType.Link:
-            //     case CustomPropertyType.Attachment:
-            //     case CustomPropertyType.Date:
-            //     case CustomPropertyType.DateTime:
-            //     case CustomPropertyType.Time:
-            //     case CustomPropertyType.Formula:
-            //         break;
-            //     case CustomPropertyType.Multilevel:
-            //     {
-            //         var typedProperty = property.Cast<MultilevelProperty>();
-            //         var typedValue = nv as List<List<string>>;
-            //         if (typedValue?.Any() == true)
-            //         {
-            //             var options = typedProperty.Options ??= new MultilevelPropertyOptions();
-            //             propertyChanged = options.AddBranchOptions(typedValue);
-            //             options.Data ??= [];
-            //             MultilevelDataOptions? parent = null;
-            //             foreach (var tv in typedValue)
-            //             {
-            //                 var children = parent == null ? options.Data : (parent.Children ??= []);
-            //                 var child = children.FirstOrDefault(x => x.Label == tv) ??
-            //                             new MultilevelDataOptions {Label = tv};
-            //                 children.Add(child);
-            //                 parent = child;
-            //             }
-            //         }
-            //
-            //         break;
-            //     }
-            //     default:
-            //         throw new ArgumentOutOfRangeException();
-            // }
-            //
-            //
-            // var pv = CustomPropertyValueHelper.CreateFromImplicitValue(nv, (CustomPropertyType) property.Type, scope);
-            // pv.PropertyId = property.Id;
-            //
-            // return (propertyChanged, pv);
         }
     }
 }

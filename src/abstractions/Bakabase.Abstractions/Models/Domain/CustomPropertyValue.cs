@@ -10,7 +10,7 @@ namespace Bakabase.Abstractions.Models.Domain
         public int PropertyId { get; set; }
         public int ResourceId { get; set; }
         public CustomProperty? Property { get; set; }
-        public virtual object? Value => null;
+        public virtual object? Value { get; set; }
         public int Scope { get; set; }
         public string BizKey => $"{ResourceId}-{PropertyId}-{Scope}";
         public object? BizValue { get; set; }
@@ -40,6 +40,10 @@ namespace Bakabase.Abstractions.Models.Domain
     {
         public TDbValue? TypedValue { get; set; }
 
-        public override object? Value => TypedValue;
+        public override object? Value
+        {
+            get => TypedValue;
+            set => TypedValue = value is TDbValue dbValue ? dbValue : default;
+        }
     }
 }

@@ -15,7 +15,7 @@ public interface ICustomPropertyValueService
 
     Task SaveByResources(List<Resource> data);
 
-    Task<(CustomPropertyValue Value, bool PropertyChanged)?> Create(object? bizValue, StandardValueType bizValueType,
+    Task<(CustomPropertyValue Value, bool PropertyChanged)?> CreateTransient(object? bizValue, StandardValueType bizValueType,
         Bakabase.Abstractions.Models.Domain.CustomProperty property, int resourceId, int scope);
 
     Task<List<Bakabase.Abstractions.Models.Db.CustomPropertyValue>> GetAllDbModels(
