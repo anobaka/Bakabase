@@ -76,7 +76,7 @@ export default (props: Props) => {
       {/* <Card> */}
       {/*   <CardBody> */}
       <div
-        className={'flex items-center gap-2'}
+        className={'flex items-center gap-2 break-all'}
       >
         <PropertyValueRenderer
           variant={'default'}

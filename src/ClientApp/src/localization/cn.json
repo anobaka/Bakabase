@@ -1356,5 +1356,6 @@
   "Delete all resources bound to unknown category or media library": "删除所有未知分类或媒体库绑定的资源",
   "Unbind": "取消绑定",
   "Advance filter": "高级筛选",
-  "Value is being referenced in {{count}} places": "该值当前在{{count}}处被引用"
+  "Value is being referenced in {{count}} places": "该值当前在{{count}}处被引用",
+  "{{count}} values": "{{count}}个值"
 }

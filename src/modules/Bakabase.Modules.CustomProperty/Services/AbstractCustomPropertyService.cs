@@ -119,6 +119,21 @@ namespace Bakabase.Modules.CustomProperty.Services
 
                             break;
                         }
+                        case CustomPropertyAdditionalItem.ValueCount:
+                        {
+                            var propertyIds = properties.Select(x => x.Id).ToHashSet();
+                            var values =
+                                await CustomPropertyValueService.GetAllDbModels(x =>
+                                    propertyIds.Contains(x.PropertyId));
+                            var valueCountMap = values.GroupBy(v => v.PropertyId)
+                                .ToDictionary(d => d.Key, d => d.Count());
+                            foreach (var d in dtoList)
+                            {
+                                d.ValueCount = valueCountMap.GetValueOrDefault(d.Id);
+                            }
+
+                            break;
+                        }
                         default:
                             throw new ArgumentOutOfRangeException();
                     }

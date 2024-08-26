@@ -184,7 +184,7 @@ export enum CategoryAdditionalItem {None = 0, Components = 1, Validation = 3, Cu
 export const categoryAdditionalItems = Object.keys(CategoryAdditionalItem).filter(k => typeof CategoryAdditionalItem[k] === 'number').map(t => ({label: t, value: CategoryAdditionalItem[t]}));
 export enum ComponentDescriptorAdditionalItem {None = 0, AssociatedCategories = 1}
 export const componentDescriptorAdditionalItems = Object.keys(ComponentDescriptorAdditionalItem).filter(k => typeof ComponentDescriptorAdditionalItem[k] === 'number').map(t => ({label: t, value: ComponentDescriptorAdditionalItem[t]}));
-export enum CustomPropertyAdditionalItem {None = 0, Category = 1}
+export enum CustomPropertyAdditionalItem {None = 0, Category = 1, ValueCount = 2}
 export const customPropertyAdditionalItems = Object.keys(CustomPropertyAdditionalItem).filter(k => typeof CustomPropertyAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyAdditionalItem[t]}));
 export enum CustomPropertyValueAdditionalItem {None = 0, BizValue = 1}
 export const customPropertyValueAdditionalItems = Object.keys(CustomPropertyValueAdditionalItem).filter(k => typeof CustomPropertyValueAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyValueAdditionalItem[t]}));

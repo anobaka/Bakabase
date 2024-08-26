@@ -7,6 +7,7 @@ import store from '@/store';
 import { useTranslation } from 'react-i18next';
 import { Button, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
+import { SyncOutlined } from '@ant-design/icons';
 
 const testData = {
   status: BackgroundTaskStatus.Running,
@@ -50,7 +51,9 @@ export default ({
               onClick={() => {
                 BApi.mediaLibrary.startSyncMediaLibrary();
               }}
-            >{t('Sync now')}
+            >
+              <SyncOutlined className={'text-base'} />
+              {t('Sync now')}
             </Button>
           )}
           {(failed || isComplete) && (

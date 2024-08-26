@@ -34,7 +34,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             serviceProvider), ICustomPropertyValueService where TDbContext : DbContext
     {
         protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
-        private static readonly ConcurrentDictionary<int, object?> DbValueCache = new();
+        // private static readonly ConcurrentDictionary<int, object?> DbValueCache = new();
 
         private readonly Dictionary<StandardValueType, IStandardValueHandler> _converters =
             converters.ToDictionary(d => d.Type, d => d);
@@ -119,11 +119,11 @@ namespace Bakabase.Modules.CustomProperty.Services
             var dbModelsMap =
                 customPropertyValues.ToDictionary(v => v.ToDbModel(propertyMap[v.PropertyId].DbValueType)!, v => v);
             await AddRange(dbModelsMap.Keys.ToList());
-            foreach (var (k, v) in dbModelsMap)
-            {
-                v.Id = k.Id;
-                DbValueCache[v.Id] = v.Value;
-            }
+            // foreach (var (k, v) in dbModelsMap)
+            // {
+            //     v.Id = k.Id;
+            //     DbValueCache[v.Id] = v.Value;
+            // }
 
             return BaseResponseBuilder.Ok;
         }
@@ -136,10 +136,10 @@ namespace Bakabase.Modules.CustomProperty.Services
             var dbModels = customPropertyValues.Select(v => v.ToDbModel(propertyMap[v.PropertyId].DbValueType)!)
                 .ToList();
             await UpdateRange(dbModels);
-            foreach (var v in customPropertyValues)
-            {
-                DbValueCache[v.Id] = v.Value;
-            }
+            // foreach (var v in customPropertyValues)
+            // {
+            //     DbValueCache[v.Id] = v.Value;
+            // }
 
             return BaseResponseBuilder.Ok;
         }
@@ -148,13 +148,13 @@ namespace Bakabase.Modules.CustomProperty.Services
             Bakabase.Abstractions.Models.Db.CustomPropertyValue resource)
         {
             var rsp = await base.Add(resource);
-            if (rsp.Code != (int)ResponseCode.Success)
+            if (rsp.Code != (int) ResponseCode.Success)
             {
                 return rsp;
             }
 
-            var property = await CustomPropertyService.GetByKey(resource.PropertyId);
-            DbValueCache[rsp.Data!.Id] = rsp.Data.Value?.DeserializeAsStandardValue(property.DbValueType);
+            // var property = await CustomPropertyService.GetByKey(resource.PropertyId);
+            // DbValueCache[rsp.Data!.Id] = rsp.Data.Value?.DeserializeAsStandardValue(property.DbValueType);
 
             return rsp;
         }
@@ -167,8 +167,8 @@ namespace Bakabase.Modules.CustomProperty.Services
                 return rsp;
             }
 
-            var property = await CustomPropertyService.GetByKey(resource.PropertyId);
-            DbValueCache[resource.Id] = resource.Value?.DeserializeAsStandardValue(property.DbValueType);
+            // var property = await CustomPropertyService.GetByKey(resource.PropertyId);
+            // DbValueCache[resource.Id] = resource.Value?.DeserializeAsStandardValue(property.DbValueType);
 
             return rsp;
         }
@@ -199,9 +199,9 @@ namespace Bakabase.Modules.CustomProperty.Services
             var valuesToUpdate = new List<Bakabase.Abstractions.Models.Db.CustomPropertyValue>();
             var changedProperties = new HashSet<Bakabase.Abstractions.Models.Domain.CustomProperty>();
 
-            var newValuesDbValuesMap = new Dictionary<Bakabase.Abstractions.Models.Db.CustomPropertyValue, object?>();
-            var existedValuesDbValuesMap =
-                new Dictionary<Bakabase.Abstractions.Models.Db.CustomPropertyValue, object?>();
+            // var newValuesDbValuesMap = new Dictionary<Bakabase.Abstractions.Models.Db.CustomPropertyValue, object?>();
+            // var existedValuesDbValuesMap =
+            // new Dictionary<Bakabase.Abstractions.Models.Db.CustomPropertyValue, object?>();
 
             foreach (var (resourceId, propertyValues) in resourceProperties)
             {
@@ -230,13 +230,13 @@ namespace Bakabase.Modules.CustomProperty.Services
                                         property.Type, resourceId, propertyId, v.Scope);
                                     var t = pv.ToDbModel(property.DbValueType)!;
                                     valuesToAdd.Add(t);
-                                    newValuesDbValuesMap[t] = rawDbValue;
+                                    // newValuesDbValuesMap[t] = rawDbValue;
                                 }
                                 else
                                 {
                                     dbPv.Value = rawDbValue?.SerializeAsStandardValue(property.DbValueType);
                                     valuesToUpdate.Add(dbPv);
-                                    existedValuesDbValuesMap[dbPv] = rawDbValue;
+                                    // existedValuesDbValuesMap[dbPv] = rawDbValue;
                                 }
 
                                 if (propertyChanged)
@@ -253,18 +253,18 @@ namespace Bakabase.Modules.CustomProperty.Services
             var added = await AddRange(valuesToAdd);
             await UpdateRange(valuesToUpdate);
 
-            if (added.Data != null)
-            {
-                for (var i = 0; i < added.Data.Count; i++)
-                {
-                    DbValueCache[added.Data[i].Id] = newValuesDbValuesMap[valuesToAdd[i]];
-                }
-            }
-
-            foreach (var t in valuesToUpdate)
-            {
-                DbValueCache[t.Id] = existedValuesDbValuesMap[t];
-            }
+            // if (added.Data != null)
+            // {
+            //     for (var i = 0; i < added.Data.Count; i++)
+            //     {
+            //         DbValueCache[added.Data[i].Id] = newValuesDbValuesMap[valuesToAdd[i]];
+            //     }
+            // }
+            //
+            // foreach (var t in valuesToUpdate)
+            // {
+            //     DbValueCache[t.Id] = existedValuesDbValuesMap[t];
+            // }
         }
 
         public async Task<(CustomPropertyValue Value, bool PropertyChanged)?> CreateTransient(object? bizValue,

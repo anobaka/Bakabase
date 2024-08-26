@@ -112,6 +112,8 @@ export interface BakabaseAbstractionsModelsDomainCustomProperty {
   createdAt?: string;
   categories?: BakabaseAbstractionsModelsDomainCategory[] | null;
   options?: any;
+  /** @format int32 */
+  valueCount?: number | null;
 }
 
 export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
@@ -923,10 +925,10 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsCategoryAdditionalI
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem = 0 | 1;
 
 /**
- * [0: None, 1: Category]
+ * [0: None, 1: Category, 2: ValueCount]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 1;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 1 | 2;
 
 /**
  * [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationCustomProperties]
@@ -4126,7 +4128,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllCustomProperties: (
       query?: {
-        /** [0: None, 1: Category] */
+        /** [0: None, 1: Category, 2: ValueCount] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem;
       },
       params: RequestParams = {},
@@ -4149,7 +4151,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getCustomPropertyByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 1: Category] */
+        /** [0: None, 1: Category, 2: ValueCount] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem;
       },
       params: RequestParams = {},

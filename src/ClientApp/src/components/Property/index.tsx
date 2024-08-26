@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
-import { LinkOutlined } from '@ant-design/icons';
+import { DatabaseOutlined, DisconnectOutlined, LinkOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import type { IProperty } from './models';
 import { PropertyTypeIconMap } from './models';
@@ -44,10 +44,10 @@ export default ({
 
   const icon = property.type == undefined ? undefined : PropertyTypeIconMap[property.type];
 
-  const renderCategories = () => {
+  const renderBottom = () => {
     const categories = property.categories || [];
     return (
-      <div className={`${styles.categories} flex flex-wrap gap-1`}>
+      <div className={`${styles.bottom} mt-2 pt-2 flex flex-wrap gap-2`}>
         {categories.length > 0 ? (
           <Tooltip
             placement={'bottom'}
@@ -65,8 +65,8 @@ export default ({
             })}
             </div>}
           >
-            <div className={'flex gap-1 items-center'}>
-              <LinkOutlined className={'text-base'} />
+            <div className={'flex gap-0.5 items-center'}>
+              <LinkOutlined className={'text-sm'} />
               {categories.length}
             </div>
             {/* <Chip */}
@@ -75,7 +75,25 @@ export default ({
             {/*   classNames={{}} */}
             {/* >{t('{{count}} categories', { count: categories.length })}</Chip> */}
           </Tooltip>
-        ) : t('No category bound')}
+        ) : (
+          <Tooltip
+            placement={'bottom'}
+            content={t('No category bound')}
+          >
+            <DisconnectOutlined className={'text-sm'} />
+          </Tooltip>
+        )}
+        {property.valueCount != undefined && (
+          <Tooltip
+            placement={'bottom'}
+            content={t('{{count}} values', { count: property.valueCount })}
+          >
+            <div className={'flex gap-0.5 items-center'}>
+              <DatabaseOutlined className={'text-sm'} />
+              {property.valueCount}
+            </div>
+          </Tooltip>
+        )}
       </div>
     );
   };
@@ -168,7 +186,7 @@ export default ({
           )}
         </div>
       </div>
-      {renderCategories()}
+      {renderBottom()}
     </div>
   );
 };

@@ -13,6 +13,7 @@ export interface IProperty {
   options?: any;
   isCustom: boolean;
   type?: CustomPropertyType;
+  valueCount?: number;
 }
 
 export type PropertyValue = {

@@ -17,7 +17,8 @@ export default () => {
   const [keyword, setKeyword] = useState('');
 
   const loadProperties = async () => {
-    const rsp = await BApi.customProperty.getAllCustomProperties({ additionalItems: CustomPropertyAdditionalItem.Category });
+    // @ts-ignore
+    const rsp = await BApi.customProperty.getAllCustomProperties({ additionalItems: CustomPropertyAdditionalItem.Category | CustomPropertyAdditionalItem.ValueCount });
     // @ts-ignore
     setProperties((rsp.data || []).map(x => (
       {

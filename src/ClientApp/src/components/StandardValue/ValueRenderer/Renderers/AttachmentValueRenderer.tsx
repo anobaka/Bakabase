@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { ValueRendererProps } from '../models';
 import serverConfig from '@/serverConfig';
 import BApi from '@/sdk/BApi';
+import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
 
 type AttachmentValueRendererProps = Omit<ValueRendererProps<string[]>, 'variant'> & {
   variant: ValueRendererProps<string[]>['variant'];
@@ -13,7 +14,9 @@ export default ({ value, variant, editor, ...props }: AttachmentValueRendererPro
   const v = variant ?? 'default';
 
   if (!value || value.length == 0) {
-    return null;
+    return (
+      <NotSet />
+    );
   }
 
   switch (v) {
