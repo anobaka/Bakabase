@@ -502,6 +502,13 @@ const PropertyDialog = ({
                                             )}
                                           </div>
                                         ),
+                                        onOk: async () => {
+                                          await BApi.customProperty.changeCustomPropertyType(property.id!, type);
+                                          await BApi.customProperty.getCustomPropertyByKeys({ ids: [property.id!] }).then(r => {
+                                            // @ts-ignore
+                                            setProperty(r.data[0]);
+                                          });
+                                        },
                                         footer: {
                                           actions: ['ok', 'cancel'],
                                           okProps: {

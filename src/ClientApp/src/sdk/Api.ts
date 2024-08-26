@@ -4243,6 +4243,25 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags CustomProperty
+     * @name ChangeCustomPropertyType
+     * @request PUT:/custom-property/{id}/{type}
+     */
+    changeCustomPropertyType: (
+      id: number,
+      type: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/custom-property/${id}/${type}`,
+        method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
      * @name EnableAddingNewDataDynamicallyForCustomProperty
      * @request PUT:/custom-property/{id}/options/adding-new-data-dynamically
      */

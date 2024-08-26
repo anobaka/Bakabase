@@ -11,6 +11,7 @@ namespace Bakabase.Modules.CustomProperty.Abstractions.Services;
 public interface ICustomPropertyService
 {
     Task<BaseResponse> EnableAddingNewDataDynamically(int id);
+
     Task<List<Models.CustomProperty>> GetAll(
         Expression<Func<Bakabase.Abstractions.Models.Db.CustomProperty, bool>>? selector = null,
         CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
@@ -21,23 +22,30 @@ public interface ICustomPropertyService
     Task<Models.CustomProperty> GetByKey(int id,
         CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
         bool returnCopy = true);
+
     //
     // Task<Bakabase.Abstractions.Models.Db.CustomProperty> GetByKey(Int32 key, bool returnCopy = true);
     //
     Task<List<Models.CustomProperty>> GetByKeys(IEnumerable<int> ids,
         CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
         bool returnCopy = true);
+
     //
     // Task<Bakabase.Abstractions.Models.Db.CustomProperty[]> GetByKeys(IEnumerable<Int32> keys, bool returnCopy = true);
     Task<Dictionary<int, List<Models.CustomProperty>>> GetByCategoryIds(int[] ids);
     Task<Models.CustomProperty> Add(CustomPropertyAddOrPutDto model);
+
     Task<List<Models.CustomProperty>> AddRange(CustomPropertyAddOrPutDto[] models);
+
     // Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> Add(Bakabase.Abstractions.Models.Db.CustomProperty resource);
     Task<Models.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model);
     Task<BaseResponse> RemoveByKey(int id);
-    //
+
     Task<CustomPropertyTypeConversionLossViewModel> CalculateTypeConversionLoss(int sourcePropertyId,
         CustomPropertyType type);
+
+    Task<BaseResponse> ChangeType(int sourcePropertyId, CustomPropertyType type);
+
     // Task<Bakabase.Abstractions.Models.Db.CustomProperty> GetFirst(Expression<Func<Bakabase.Abstractions.Models.Db.CustomProperty, bool>> selector,
     //     Expression<Func<Bakabase.Abstractions.Models.Db.CustomProperty, object>> orderBy = null, bool asc = false, bool returnCopy = true);
     //
@@ -66,6 +74,7 @@ public interface ICustomPropertyService
     // Task<ListResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> AddRange(List<Bakabase.Abstractions.Models.Db.CustomProperty> resources);
     // Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> UpdateByKey(Int32 key, Action<Bakabase.Abstractions.Models.Db.CustomProperty> modify);
     Task<BaseResponse> Put(Bakabase.Abstractions.Models.Domain.CustomProperty resource);
+
     Task<BaseResponse> UpdateRange(IReadOnlyCollection<Bakabase.Abstractions.Models.Db.CustomProperty> resources);
     //
     // Task<ListResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> UpdateByKeys(IReadOnlyCollection<Int32> keys,

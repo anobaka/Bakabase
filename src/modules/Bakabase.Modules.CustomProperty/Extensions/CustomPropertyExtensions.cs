@@ -6,6 +6,9 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
+using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
+using Bakabase.Modules.CustomProperty.Components.Properties.Tags;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -123,5 +126,79 @@ public static class CustomPropertyExtensions
                 or CustomPropertyType.MultipleChoice => true,
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
+    }
+
+    public static void SetAllowAddingNewDataDynamically(this Abstractions.Models.CustomProperty property, bool enable)
+    {
+        switch (property.EnumType)
+        {
+            case CustomPropertyType.SingleLineText:
+                break;
+            case CustomPropertyType.MultilineText:
+                break;
+            case CustomPropertyType.SingleChoice:
+            {
+                if (property.Options is not ChoicePropertyOptions<string>)
+                {
+                    property.Options = new ChoicePropertyOptions<string>();
+                }
+
+                break;
+            }
+            case CustomPropertyType.MultipleChoice:
+            {
+                if (property.Options is not ChoicePropertyOptions<List<string>>)
+                {
+                    property.Options = new ChoicePropertyOptions<List<string>>();
+                }
+
+                break;
+            }
+            case CustomPropertyType.Number:
+                break;
+            case CustomPropertyType.Percentage:
+                break;
+            case CustomPropertyType.Rating:
+                break;
+            case CustomPropertyType.Boolean:
+                break;
+            case CustomPropertyType.Link:
+                break;
+            case CustomPropertyType.Attachment:
+                break;
+            case CustomPropertyType.Date:
+                break;
+            case CustomPropertyType.DateTime:
+                break;
+            case CustomPropertyType.Time:
+                break;
+            case CustomPropertyType.Formula:
+                break;
+            case CustomPropertyType.Multilevel:
+            {
+                if (property.Options is not MultilevelPropertyOptions)
+                {
+                    property.Options = new MultilevelPropertyOptions();
+                }
+
+                break;
+            }
+            case CustomPropertyType.Tags:
+            {
+                if (property.Options is not TagsPropertyOptions)
+                {
+                    property.Options = new TagsPropertyOptions();
+                }
+
+                break;
+            }
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+        if (property.Options is IAllowAddingNewDataDynamically options)
+        {
+            options.AllowAddingNewDataDynamically = enable;
+        }
     }
 }

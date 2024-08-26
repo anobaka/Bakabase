@@ -43,7 +43,6 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
                 Name = customProperty.Name,
                 Type = (int) EnumType,
                 DbValueType = DbValueType,
-                EnumType = EnumType,
                 BizValueType = BizValueType
             };
         }

@@ -2962,6 +2962,57 @@ export const CalculateCustomPropertyTypeConversionLossURL = function(parameters 
 }
 /**
  * 
+ * request: ChangeCustomPropertyType
+ * url: ChangeCustomPropertyTypeURL
+ * method: ChangeCustomPropertyType_TYPE
+ * raw_url: ChangeCustomPropertyType_RAW_URL
+ * @param id - 
+ * @param type - 
+ */
+export const ChangeCustomPropertyType = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property/{id}/{type}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  path = path.replace('{type}', `${parameters['type']}`)
+  if (parameters['type'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: type'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const ChangeCustomPropertyType_RAW_URL = function() {
+  return '/custom-property/{id}/{type}'
+}
+export const ChangeCustomPropertyType_TYPE = function() {
+  return 'put'
+}
+export const ChangeCustomPropertyTypeURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property/{id}/{type}'
+  path = path.replace('{id}', `${parameters['id']}`)
+  path = path.replace('{type}', `${parameters['type']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: EnableAddingNewDataDynamicallyForCustomProperty
  * url: EnableAddingNewDataDynamicallyForCustomPropertyURL
  * method: EnableAddingNewDataDynamicallyForCustomProperty_TYPE

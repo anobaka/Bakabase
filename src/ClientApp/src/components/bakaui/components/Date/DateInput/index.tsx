@@ -5,6 +5,7 @@ import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import type { CalendarDateTime } from '@internationalized/date';
 import { parseDateTime } from '@internationalized/date';
+import { useEffect, useState } from 'react';
 
 interface DateInputProps extends Omit<NextUIDateInputProps, 'value' | 'onChange' | 'defaultValue'> {
   value?: Dayjs;
@@ -12,15 +13,25 @@ interface DateInputProps extends Omit<NextUIDateInputProps, 'value' | 'onChange'
   onChange?: (value?: Dayjs) => void;
 }
 
-export default ({ value, onChange, defaultValue, ...props }: DateInputProps) => {
+export default ({ value: propsValue, onChange, defaultValue, ...props }: DateInputProps) => {
+  const [value, setValue] = useState<CalendarDateTime>();
+
+  console.log('1234567', propsValue, propsValue?.toISOString(), value);
+
+  useEffect(() => {
+    try {
+      if (propsValue) {
+        setValue(parseDateTime(propsValue.toISOString()));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [propsValue]);
+
   let dv: CalendarDateTime | undefined;
-  let v: CalendarDateTime | undefined;
   try {
     if (defaultValue) {
       dv = parseDateTime(defaultValue.toISOString());
-    }
-    if (value) {
-      v = parseDateTime(value.toISOString());
     }
   } catch (e) {
     console.error(e);
@@ -29,7 +40,7 @@ export default ({ value, onChange, defaultValue, ...props }: DateInputProps) => 
   return (
     <DateInput
       defaultValue={dv}
-      value={v}
+      value={value}
       onChange={v => {
         onChange?.(v ? dayjs(v.toString()) : undefined);
       }}

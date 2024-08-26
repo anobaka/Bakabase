@@ -83,7 +83,8 @@ namespace Bakabase.Modules.CustomProperty.Services
                 x => x.Select(y => propertyMap.GetValueOrDefault(y.PropertyId)).Where(y => y != null).ToList())!;
         }
 
-        private Abstractions.Models.CustomProperty? ToDomainModel(Bakabase.Abstractions.Models.Db.CustomProperty? property) =>
+        private Abstractions.Models.CustomProperty? ToDomainModel(
+            Bakabase.Abstractions.Models.Db.CustomProperty? property) =>
             property == null ? null : propertyDescriptors[property.Type].ToDomainModel(property);
 
         private async Task<List<Abstractions.Models.CustomProperty>> ToDomainModels(
@@ -197,7 +198,8 @@ namespace Bakabase.Modules.CustomProperty.Services
             var propertyDescriptor = propertyDescriptors[property.Type];
             var stdValueHandler = StdValueHandlers[property.DbValueType];
 
-            var typedValues = values.Select(v => propertyDescriptor.ConvertDbValueToBizValue(property, v.Value)).ToList();
+            var typedValues = values.Select(v => propertyDescriptor.ConvertDbValueToBizValue(property, v.Value))
+                .ToList();
 
             var lossMap = new Dictionary<StandardValueConversionLoss, List<string>>();
             var result = new CustomPropertyTypeConversionLossViewModel
@@ -208,7 +210,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             foreach (var d in typedValues)
             {
                 var (nv, loss) =
-                    await StandardValueService.CheckConversionLoss(d, property.DbValueType, type.GetDbValueType());
+                    await StandardValueService.CheckConversionLoss(d, property.BizValueType, type.GetBizValueType());
                 var list = SpecificEnumUtils<StandardValueConversionLoss>.Values.Where(s => loss?.HasFlag(s) == true)
                     .ToList();
                 foreach (var l in list)
@@ -234,6 +236,36 @@ namespace Bakabase.Modules.CustomProperty.Services
             result.LossData = lossMap.Any() ? lossMap.ToDictionary(x => (int) x.Key, x => x.Value.ToArray()) : null;
 
             return result;
+        }
+
+        public async Task<BaseResponse> ChangeType(int sourcePropertyId, CustomPropertyType type)
+        {
+            var property = await GetByKey(sourcePropertyId);
+            var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == sourcePropertyId,
+                CustomPropertyValueAdditionalItem.None, false);
+            var propertyDescriptor = propertyDescriptors[property.Type];
+
+            property.Type = (int) type;
+            // clear previous options
+            var allowAddingNewDataDynamically =
+                (property.Options as IAllowAddingNewDataDynamically)?.AllowAddingNewDataDynamically ?? false;
+            property.Options = null;
+            property.SetAllowAddingNewDataDynamically(true);
+
+            foreach (var v in values)
+            {
+                var bizValue = propertyDescriptor.ConvertDbValueToBizValue(property, v.Value);
+                var (nv, loss) =
+                    await StandardValueService.CheckConversionLoss(bizValue, property.BizValueType,
+                        type.GetBizValueType());
+                var (dbValue, _) = propertyDescriptor.PrepareDbValueFromBizValue(property, nv);
+                v.Value = dbValue;
+            }
+
+            property.SetAllowAddingNewDataDynamically(allowAddingNewDataDynamically);
+            await Put(property);
+            await CustomPropertyValueService.UpdateRange(values);
+            return BaseResponseBuilder.Ok;
         }
 
         public async Task<BaseResponse> Put(Bakabase.Abstractions.Models.Domain.CustomProperty resource)

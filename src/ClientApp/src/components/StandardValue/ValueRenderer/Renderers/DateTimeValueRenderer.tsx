@@ -1,19 +1,24 @@
 import type { Dayjs } from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ValueRendererProps } from '../models';
 import { DateInput, TimeInput } from '@/components/bakaui';
 import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
+import { buildLogger } from '@/components/utils';
 type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
   format?: string;
   as: 'datetime' | 'date';
 };
 
-export default ({ value, format, as, variant, editor, ...props }: DateTimeValueRendererProps) => {
-  const [editing, setEditing] = useState(false);
+const log = buildLogger('DateTimeValueRenderer');
 
-  console.log('rendering', value);
+export default (props: DateTimeValueRendererProps) => {
+  const { value, format, as, variant, editor } = props;
+  log(props);
+  const [editing, setEditing] = useState(false);
+  const valueRef = useRef<Dayjs>();
 
   const startEditing = editor ? () => {
+    valueRef.current = value;
     setEditing(true);
   } : undefined;
 
@@ -38,9 +43,21 @@ export default ({ value, format, as, variant, editor, ...props }: DateTimeValueR
       granularity={as == 'datetime' ? 'second' : 'day'}
       value={value}
       isReadOnly={!editor}
+      onBlur={() => {
+        log('onBlur', valueRef.current);
+        editor?.onValueChange?.(valueRef.current, valueRef.current);
+        setEditing(false);
+      }}
+      onKeyDown={e => {
+        if (e.key == 'Enter') {
+          log('onEnter', valueRef.current);
+          editor?.onValueChange?.(valueRef.current, valueRef.current);
+          setEditing(false);
+        }
+      }}
       onChange={d => {
-        console.log(d);
-        editor?.onValueChange?.(d, d);
+        log('OnChange', d);
+        valueRef.current = d;
       }}
     />
   );

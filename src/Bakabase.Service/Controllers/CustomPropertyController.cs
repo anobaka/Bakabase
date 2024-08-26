@@ -73,6 +73,13 @@ namespace Bakabase.Service.Controllers
                 await service.CalculateTypeConversionLoss(id, type));
         }
 
+        [HttpPut("{id:int}/{type}")]
+        [SwaggerOperation(OperationId = "ChangeCustomPropertyType")]
+        public async Task<BaseResponse> ChangeType(int id, CustomPropertyType type)
+        {
+            return await service.ChangeType(id, type);
+        }
+
         [HttpPut("{id:int}/options/adding-new-data-dynamically")]
         [SwaggerOperation(OperationId = "EnableAddingNewDataDynamicallyForCustomProperty")]
         public async Task<BaseResponse> EnableAddingNewDataDynamically(int id)
