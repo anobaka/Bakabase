@@ -12,7 +12,7 @@ import {
 } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
-import { Button, Chip, Modal, Spacer } from '@/components/bakaui';
+import { Button, Chip, Modal, Spacer, Tabs, Tab } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface IKey {
@@ -227,20 +227,32 @@ const PropertySelector = ({
             {t('Add a property')}
           </Button>
         )}
-        <div className={'flex gap-2'}>
-          <div className={'border-1 rounded p-2'}>
-            <div className={'font-bold'}>{t('Selected')}</div>
-            <div className={'mt-2 flex flex-wrap gap-2 items-start'}>
+
+        <Tabs aria-label="Selectable" isVertical>
+          <Tab key="selected" title={`${t('Selected')}(${selectedProperties.length})`}>
+            <div className={'flex flex-wrap gap-2 items-start'}>
               {selectedProperties.map(p => renderProperty(p))}
             </div>
-          </div>
-          <div className={'border-1 rounded p-2 flex-1 border-dashed'}>
-            <div className={'font-bold'}>{t('Not selected')}</div>
-            <div className={'mt-2 flex flex-wrap gap-2 items-start'}>
+          </Tab>
+          <Tab key="notSelected" title={`${t('Not selected')}(${unselectedProperties.length})`}>
+            <div className={'flex flex-wrap gap-2 items-start'}>
               {unselectedProperties.map(p => renderProperty(p))}
             </div>
-          </div>
-        </div>
+          </Tab>
+        </Tabs>
+
+        {/* <div className={'flex gap-2'}> */}
+        {/*   <div className={'border-1 rounded p-2'}> */}
+        {/*     <div className={'font-bold'}>{t('Selected')}</div> */}
+
+        {/*   </div> */}
+        {/*   <div className={'border-1 rounded p-2 flex-1 border-dashed'}> */}
+        {/*     <div className={'font-bold'}>{t('Not selected')}</div> */}
+        {/*     <div className={'mt-2 flex flex-wrap gap-2 items-start'}> */}
+        {/*       {unselectedProperties.map(p => renderProperty(p))} */}
+        {/*     </div> */}
+        {/*   </div> */}
+        {/* </div> */}
       </>
     );
   };

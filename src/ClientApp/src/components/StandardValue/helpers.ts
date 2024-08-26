@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import type { Duration } from 'dayjs/plugin/duration';
 import type { LinkValue, MultilevelData, TagValue } from './models';
 import { StandardValueType } from '@/sdk/constants';
-import { joinWithEscapeChar, splitStringWithEscapeChar } from "@/components/utils";
+import { joinWithEscapeChar, splitStringWithEscapeChar } from '@/components/utils';
 
 export const filterMultilevelData = <V>(data: MultilevelData<V>[], keyword: string): MultilevelData<V>[] => {
   if (!keyword) {
@@ -21,7 +21,7 @@ export const filterMultilevelData = <V>(data: MultilevelData<V>[], keyword: stri
         if (children.length > 0) {
           result.push({
             ...d,
-            children
+            children,
           });
         }
       }
@@ -113,12 +113,18 @@ export const deserializeStandardValue = (value: string | null, type: StandardVal
       return undefined;
     }
     case StandardValueType.ListTag: {
-      const parts = splitStringWithEscapeChar(value, Serialization.LowLevelSeparator, Serialization.EscapeChar);
+      const parts = splitStringWithEscapeChar(value, Serialization.HighLevelSeparator, Serialization.EscapeChar);
       if (parts) {
-        return {
-          group: parts[0],
-          name: parts[1],
-        };
+        return parts.map(p => {
+          const tagSegments = splitStringWithEscapeChar(p, Serialization.LowLevelSeparator, Serialization.EscapeChar);
+          if (tagSegments) {
+            return {
+              group: tagSegments[0],
+              name: tagSegments[1],
+            };
+          }
+          return null;
+        }).filter(p => p != null);
       }
       return undefined;
     }

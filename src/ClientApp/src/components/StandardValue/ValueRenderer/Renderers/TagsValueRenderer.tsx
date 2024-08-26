@@ -3,20 +3,25 @@ import type { MultilevelData, TagValue } from '../../models';
 import MultilevelValueEditor from '../../ValueEditor/Editors/MultilevelValueEditor';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Card, CardBody, Chip } from '@/components/bakaui';
-import { uuidv4 } from '@/components/utils';
+import { buildLogger, uuidv4 } from '@/components/utils';
 
 type TagsValueRendererProps = ValueRendererProps<TagValue[], string[]> & {
   getDataSource?: () => Promise<(TagValue & {value: string})[]>;
 };
 
-export default ({
-                  value,
-                  editor,
-                  variant,
-                  getDataSource,
-                  ...props
-                }: TagsValueRendererProps) => {
+const log = buildLogger('TagsValueRenderer');
+
+export default (props: TagsValueRendererProps) => {
   const { createPortal } = useBakabaseContext();
+
+  log(props);
+
+  const {
+    value,
+    editor,
+    variant,
+    getDataSource,
+  } = props;
 
   const simpleLabels = value?.map(v => {
     if (v.group != undefined && v.group.length > 0) {
