@@ -4,7 +4,9 @@ import { useHistory } from 'react-router-dom';
 import { history } from 'ice';
 import { createPortal } from 'react-dom';
 import { SyncOutlined } from '@ant-design/icons';
-import { Button, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+import { Button, DateInput, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
 import ClickableIcon from '@/components/ClickableIcon';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -12,6 +14,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 export default () => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
+  const [date, setDate] = useState<Dayjs>(dayjs(new Date(2005, 2, 2)));
 
   useEffect(() => {
     createPortal(<Modal
@@ -21,6 +24,13 @@ export default () => {
 
   return (
     <>
+      <DateInput
+        value={date}
+        onChange={v => {
+        console.log(v?.valueOf());
+        setDate(v);
+      }}
+      />
       <Tooltip
         content={t('Bulk operations')}
       >

@@ -36,7 +36,7 @@ public static class StandardValueExtensions
                     return data == null ? null : new LinkValue() {Text = data[0], Url = data[1]};
                 }
                 case StandardValueType.DateTime:
-                    return DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(serializedValue)).DateTime;
+                    return DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(serializedValue)).ToLocalTime().DateTime;
                 case StandardValueType.Time:
                     return TimeSpan.FromMilliseconds(long.Parse(serializedValue));
                 case StandardValueType.ListListString:
@@ -120,7 +120,7 @@ public static class StandardValueExtensions
                 }
                 case StandardValueType.Time:
                 {
-                    return rawValue is TimeSpan ts ? ((int)ts.TotalMilliseconds).ToString() : null;
+                    return rawValue is TimeSpan ts ? ((int) ts.TotalMilliseconds).ToString() : null;
                 }
                 case StandardValueType.ListListString:
                 {

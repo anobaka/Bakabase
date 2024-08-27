@@ -3,9 +3,9 @@ import { CalendarDate } from '@nextui-org/react';
 import { DateInput } from '@nextui-org/react';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import type { CalendarDateTime } from '@internationalized/date';
-import { parseDateTime } from '@internationalized/date';
+import { CalendarDateTime } from '@internationalized/date';
 import { useEffect, useState } from 'react';
+import { buildLogger } from '@/components/utils';
 
 interface DateInputProps extends Omit<NextUIDateInputProps, 'value' | 'onChange' | 'defaultValue'> {
   value?: Dayjs;
@@ -13,32 +13,30 @@ interface DateInputProps extends Omit<NextUIDateInputProps, 'value' | 'onChange'
   onChange?: (value?: Dayjs) => void;
 }
 
+const log = buildLogger('DateInput');
+
+const convertToCalendarDateTime = (value: Dayjs | undefined): CalendarDateTime | undefined => {
+  if (!value) {
+    return;
+  }
+  const date = value.toDate();
+  return new CalendarDateTime(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds());
+};
+
 export default ({ value: propsValue, onChange, defaultValue, ...props }: DateInputProps) => {
   const [value, setValue] = useState<CalendarDateTime>();
 
-  console.log('1234567', propsValue, propsValue?.toISOString(), value);
+  log(propsValue, propsValue?.toISOString(), value, propsValue?.toDate());
 
   useEffect(() => {
-    try {
-      if (propsValue) {
-        setValue(parseDateTime(propsValue.toISOString()));
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    setValue(convertToCalendarDateTime(propsValue));
   }, [propsValue]);
 
-  let dv: CalendarDateTime | undefined;
-  try {
-    if (defaultValue) {
-      dv = parseDateTime(defaultValue.toISOString());
-    }
-  } catch (e) {
-    console.error(e);
-  }
+  const dv = convertToCalendarDateTime(defaultValue);
 
   return (
     <DateInput
+      aria-label={'Date Input'}
       defaultValue={dv}
       value={value}
       onChange={v => {

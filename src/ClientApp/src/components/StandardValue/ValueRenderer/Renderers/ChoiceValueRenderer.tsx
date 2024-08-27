@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ValueRendererProps } from '../models';
 import ChoiceValueEditor from '../../ValueEditor/Editors/ChoiceValueEditor';
@@ -24,6 +24,7 @@ export default (props: ListStringValueRendererProps) => {
   log(props);
 
   const startEditing = editor ? async () => {
+    console.log(editor, getDataSource);
     createPortal(ChoiceValueEditor, {
       value: editor?.value,
       getDataSource: getDataSource ?? (async () => []),

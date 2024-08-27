@@ -322,22 +322,22 @@ export default ({
               }}
             />
           </Tooltip>
-          <div className={'flex gap-2 items-center'}>
-            {renderBulkOperations()}
-            <Tooltip
-              content={t(bulkOperationMode ? 'Exit bulk operations mode' : 'Bulk operations mode')}
-              placement={'left'}
-            >
-              <ClickableIcon
-                className={'text-xl'}
-                colorType={bulkOperationMode ? 'danger' : 'normal'}
-                type={bulkOperationMode ? 'exit' : 'Multiselect'}
-                onClick={() => {
-                  setBulkOperationMode(!bulkOperationMode);
-                }}
-              />
-            </Tooltip>
-          </div>
+          {/* <div className={'flex gap-2 items-center'}> */}
+          {/*   {renderBulkOperations()} */}
+          {/*   <Tooltip */}
+          {/*     content={t(bulkOperationMode ? 'Exit bulk operations mode' : 'Bulk operations mode')} */}
+          {/*     placement={'left'} */}
+          {/*   > */}
+          {/*     <ClickableIcon */}
+          {/*       className={'text-xl'} */}
+          {/*       colorType={bulkOperationMode ? 'danger' : 'normal'} */}
+          {/*       type={bulkOperationMode ? 'exit' : 'Multiselect'} */}
+          {/*       onClick={() => { */}
+          {/*         setBulkOperationMode(!bulkOperationMode); */}
+          {/*       }} */}
+          {/*     /> */}
+          {/*   </Tooltip> */}
+          {/* </div> */}
         </div>
       </div>
     </div>

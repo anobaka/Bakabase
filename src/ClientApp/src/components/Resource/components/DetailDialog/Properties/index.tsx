@@ -1,22 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
-import type { Resource } from '@/core/models/Resource';
+import type { Property, Resource } from '@/core/models/Resource';
 import type { ResourceProperty as EnumResourceProperty } from '@/sdk/constants';
-import { PropertyValueScope } from '@/sdk/constants';
-import { propertyValueScopes, ResourceProperty, ResourcePropertyType, StandardValueType } from '@/sdk/constants';
+import { PropertyValueScope, propertyValueScopes, ResourcePropertyType } from '@/sdk/constants';
 import store from '@/store';
 import PropertyContainer from '@/components/Resource/components/DetailDialog/Properties/PropertyContainer';
 import BApi from '@/sdk/BApi';
 import type { IProperty } from '@/components/Property/models';
 import { buildLogger } from '@/components/utils';
 import { deserializeStandardValue } from '@/components/StandardValue/helpers';
+import { Button } from '@/components/bakaui';
 
 type Props = {
   resource: Resource;
   reload: () => Promise<any>;
   className?: string;
 };
+
+type RenderContext = {
+  property: IProperty;
+  propertyValues: Property;
+  propertyType: ResourcePropertyType;
+  visible: boolean;
+}[];
 
 const log = buildLogger('Properties');
 
@@ -34,6 +41,7 @@ export default (props: Props) => {
   const internalOptions = store.useModelState('internalOptions');
   const [reservedPropertyMap, setReservedPropertyMap] = useState<Record<number, IProperty>>({});
   const [customPropertyMap, setCustomPropertyMap] = useState<Record<number, IProperty>>({});
+  const [showInvisibleProperties, setShowInvisibleProperties] = useState(false);
 
   useEffect(() => {
     const c = resourceOptions.propertyValueScopePriority;
@@ -97,48 +105,64 @@ export default (props: Props) => {
 
   log(props, 'reserved property map', reservedPropertyMap);
 
-  return (
-    <div
-      className={`grid gap-x-4 gap-y-1 ${className} items-center`}
-      style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}
-    >
-      {Object.keys(resource.properties ?? {}).map(propertyTypeStr => {
-        const pt = parseInt(propertyTypeStr, 10) as ResourcePropertyType;
-        const propertyMap = resource.properties?.[pt] ?? {};
-        return Object.keys(propertyMap).map(idStr => {
-          const pId = parseInt(idStr, 10);
-          const sp = propertyMap[pId];
-          const { values } = sp;
-          let property: IProperty | undefined;
-          switch (pt) {
-            case ResourcePropertyType.Internal:
-              break;
-            case ResourcePropertyType.Reserved:
-              property = reservedPropertyMap[pId];
-              break;
-            case ResourcePropertyType.Custom:
-            {
-              const p = customPropertyMap?.[pId];
-              property = {
-                ...p,
-                id: pId,
-                isCustom: true,
-                dbValueType: sp.dbValueType,
-                bizValueType: sp.bizValueType,
-                name: sp.name,
-              };
-              break;
-            }
+  const buildRenderContext = () => {
+    const renderContext: RenderContext = [];
+    Object.keys(resource.properties ?? {}).forEach(propertyTypeStr => {
+      const pt = parseInt(propertyTypeStr, 10) as ResourcePropertyType;
+      const propertyMap = resource.properties?.[pt] ?? {};
+      Object.keys(propertyMap).forEach(idStr => {
+        const pId = parseInt(idStr, 10);
+        const sp = propertyMap[pId];
+        let property: IProperty | undefined;
+        switch (pt) {
+          case ResourcePropertyType.Internal:
+            break;
+          case ResourcePropertyType.Reserved:
+            property = reservedPropertyMap[pId];
+            break;
+          case ResourcePropertyType.Custom: {
+            const p = customPropertyMap?.[pId];
+            property = {
+              ...p,
+              id: pId,
+              isCustom: true,
+              dbValueType: sp.dbValueType,
+              bizValueType: sp.bizValueType,
+              name: sp.name,
+            };
+            break;
           }
+        }
 
-          if (!property) {
-            return null;
-          }
+        if (property) {
+          renderContext.push({
+            property,
+            propertyType: pt,
+            propertyValues: sp,
+            visible: sp.visible ?? false,
+          });
+        }
+      });
+    });
+    return renderContext.sort((a, b) => (a.visible ? 0 : 1) - (b.visible ? 0 : 1));
+  };
+
+  const renderProperties = (renderContext: RenderContext) => {
+    return (
+      <div
+        className={`grid gap-x-4 gap-y-1 ${className} items-center`}
+        style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}
+      >
+        {renderContext.filter(x => showInvisibleProperties || x.visible).map(({
+                              property,
+                              propertyValues,
+                              propertyType,
+                            }) => {
           return (
             <PropertyContainer
-              key={`${propertyTypeStr}-${idStr}`}
+              key={`${propertyType}-${property.id}`}
               property={property}
-              values={values}
+              values={propertyValues.values}
               valueScopePriority={valueScopePriority}
               onValueScopePriorityChange={reload}
               onValueChange={(sdv, sbv) => {
@@ -147,24 +171,46 @@ export default (props: Props) => {
 
                 log('OnValueChange', 'dv', dv, 'bv', bv, 'sdv', sdv, 'sbv', sbv);
 
-                let manualValue = sp.values?.find(v => v.scope == PropertyValueScope.Manual);
+                let manualValue = propertyValues.values?.find(v => v.scope == PropertyValueScope.Manual);
                 if (!manualValue) {
                   manualValue = {
                     scope: PropertyValueScope.Manual,
                   };
-                  (sp.values ??= []).push(manualValue);
+                  (propertyValues.values ??= []).push(manualValue);
                 }
                 manualValue.bizValue = bv;
                 manualValue.aliasAppliedBizValue = bv;
                 manualValue.value = dv;
                 forceUpdate();
 
-                onValueChange(pId, property!.isCustom, sdv);
+                onValueChange(property.id, property!.isCustom, sdv);
               }}
             />
           );
-        });
-      })}
+        })}
+      </div>
+    );
+  };
+
+  const visibleContext = buildRenderContext();
+
+  return (
+    <div>
+      {renderProperties(visibleContext)}
+      {!showInvisibleProperties && (
+        <div className={'flex items-center justify-center my-2'}>
+          <Button
+            onClick={() => {
+              setShowInvisibleProperties(true);
+            }}
+            variant={'light'}
+            size={'sm'}
+            color={'primary'}
+          >
+            {t('Show hidden properties')}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

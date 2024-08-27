@@ -13,6 +13,7 @@ export type Property = {
   dbValueType: StandardValueType;
   bizValueType: StandardValueType;
   values?: Value[];
+  visible?: boolean;
 };
 
 export type Resource = {

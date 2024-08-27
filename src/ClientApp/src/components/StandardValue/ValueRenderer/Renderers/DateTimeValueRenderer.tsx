@@ -1,9 +1,10 @@
 import type { Dayjs } from 'dayjs';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ValueRendererProps } from '../models';
-import { DateInput, TimeInput } from '@/components/bakaui';
+import { DateInput } from '@/components/bakaui';
 import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
 import { buildLogger } from '@/components/utils';
+
 type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
   format?: string;
   as: 'datetime' | 'date';
@@ -12,28 +13,35 @@ type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
 const log = buildLogger('DateTimeValueRenderer');
 
 export default (props: DateTimeValueRendererProps) => {
-  const { value, format, as, variant, editor } = props;
+  const {
+    value: propsValue,
+    format,
+    as,
+    variant,
+    editor,
+  } = props;
   log(props);
   const [editing, setEditing] = useState(false);
-  const valueRef = useRef<Dayjs>();
+  const [value, setValue] = useState(propsValue);
+
+  useEffect(() => {
+    setValue(propsValue);
+  }, [propsValue]);
 
   const startEditing = editor ? () => {
-    valueRef.current = value;
     setEditing(true);
   } : undefined;
 
-  const f = format == undefined ? as == 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'HH:mm:ss' : format;
+  const f = format == undefined ? as == 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD' : format;
   if (!editing) {
     if (value == undefined) {
       return (
         <NotSet onClick={startEditing} />
       );
     }
-    if (variant == 'light') {
-      return (
-        <span onClick={startEditing}>{value?.format(f)}</span>
-      );
-    }
+    return (
+      <span onClick={startEditing}>{value?.format(f)}</span>
+    );
   }
 
   // console.log(as);
@@ -44,20 +52,20 @@ export default (props: DateTimeValueRendererProps) => {
       value={value}
       isReadOnly={!editor}
       onBlur={() => {
-        log('onBlur', valueRef.current);
-        editor?.onValueChange?.(valueRef.current, valueRef.current);
+        log('onBlur', value);
+        editor?.onValueChange?.(value);
         setEditing(false);
       }}
       onKeyDown={e => {
         if (e.key == 'Enter') {
-          log('onEnter', valueRef.current);
-          editor?.onValueChange?.(valueRef.current, valueRef.current);
+          log('onEnter', value);
+          editor?.onValueChange?.(value, value);
           setEditing(false);
         }
       }}
       onChange={d => {
         log('OnChange', d);
-        valueRef.current = d;
+        setValue(d);
       }}
     />
   );

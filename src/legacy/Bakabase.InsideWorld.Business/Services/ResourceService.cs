@@ -347,7 +347,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                             StandardValueType.Decimal,
                                             scopeRatings.Select(s =>
                                                 new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating,
-                                                    s.Rating)).ToList());
+                                                    s.Rating)).ToList(), true);
                                         return p;
                                     }
 
@@ -366,7 +366,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                             scopeIntroductions.Select(s =>
                                                 new Resource.Property.PropertyValue(s.Scope, s.Introduction,
                                                     s.Introduction,
-                                                    s.Introduction)).ToList());
+                                                    s.Introduction)).ToList(), true);
                                         return p;
                                     }
 
@@ -384,13 +384,13 @@ namespace Bakabase.InsideWorld.Business.Services
                                     StandardValueType.Decimal,
                                     dbBuiltinProperties?.Select(s =>
                                         new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating,
-                                            s.Rating)).ToList());
+                                            s.Rating)).ToList(), true);
                                 builtinProperties[(int) ResourceProperty.Introduction] = new Resource.Property(null,
                                     StandardValueType.String,
                                     StandardValueType.String,
                                     dbBuiltinProperties?.Select(s =>
                                         new Resource.Property.PropertyValue(s.Scope, s.Introduction, s.Introduction,
-                                            s.Introduction)).ToList());
+                                            s.Introduction)).ToList(), true);
                             }
 
                             SortPropertyValuesByScope(doList);
@@ -414,11 +414,15 @@ namespace Bakabase.InsideWorld.Business.Services
                                     CategoryAdditionalItem.CustomProperties))
                                 .ToDictionary(d => d.Id, d => d);
 
+                            var categoryIdCustomPropertyIdsMap = categoryMap.ToDictionary(d => d.Key,
+                                d => d.Value.CustomProperties?.Select(x => x.Id).ToHashSet());
+
                             foreach (var r in doList)
                             {
                                 r.Properties ??= [];
                                 var customProperties =
                                     r.Properties.GetOrAdd((int) ResourcePropertyType.Custom, () => []);
+
                                 var pValues = customPropertiesValuesMap.GetValueOrDefault(r.Id);
                                 if (pValues != null)
                                 {
@@ -430,9 +434,12 @@ namespace Bakabase.InsideWorld.Business.Services
                                             continue;
                                         }
 
+                                        var visible = categoryIdCustomPropertyIdsMap.GetValueOrDefault(r.CategoryId)
+                                            ?.Contains(pId) == true;
+
                                         var p = customProperties.GetOrAdd(pId,
                                             () => new Resource.Property(property.Name, property.DbValueType,
-                                                property.BizValueType, []));
+                                                property.BizValueType, [], visible));
                                         p.Values ??= [];
                                         _customPropertyDescriptors.TryGet(property.Type, out var cpd);
                                         foreach (var v in values)
@@ -444,20 +451,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                         }
                                     }
                                 }
-
-                                var properties = categoryMap.GetValueOrDefault(r.CategoryId)?.CustomProperties;
-                                if (properties != null)
-                                {
-                                    foreach (var p in properties)
-                                    {
-                                        customProperties.TryAdd(p.Id,
-                                            new Resource.Property(p.Name, p.DbValueType, p.BizValueType, null));
-                                    }
-                                }
                             }
 
                             SortPropertyValuesByScope(doList);
-
                             break;
                         }
                         case ResourceAdditionalItem.Alias:

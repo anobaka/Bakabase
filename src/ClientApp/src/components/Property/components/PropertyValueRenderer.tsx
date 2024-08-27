@@ -204,6 +204,8 @@ export default (props: Props) => {
           onValueChange: oc,
         } : undefined;
 
+        console.log(editor, property);
+
         return (
           <ChoiceValueRenderer
             value={bv == undefined ? undefined : [bv]}

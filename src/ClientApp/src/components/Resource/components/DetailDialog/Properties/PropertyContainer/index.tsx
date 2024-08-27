@@ -134,7 +134,7 @@ export default (props: Props) => {
                   return (
                     <ListboxItem
                       classNames={{ selectedIcon: 'w-auto h-auto' }}
-                      className={index == -1 ? 'opacity-30' : ''}
+                      className={`${index == -1 ? 'opacity-30' : ''} `}
                       key={item.key.toString()}
                       description={`${t('Created by:')}${t(`PropertyValueScope.${PropertyValueScope[item.scope]}`)}`}
                       // onClick={e => {
@@ -145,12 +145,14 @@ export default (props: Props) => {
                       // }}
                       selectedIcon={selectedIcon}
                     >
-                      <PropertyValueRenderer
-                        variant={'light'}
-                        property={property}
-                        bizValue={serializeStandardValue(sbv, property.bizValueType)}
-                        dataPool={dataPool}
-                      />
+                      <div className={'max-w-[600px] break-all text-ellipsis overflow-hidden'}>
+                        <PropertyValueRenderer
+                          variant={'light'}
+                          property={property}
+                          bizValue={serializeStandardValue(sbv, property.bizValueType)}
+                          dataPool={dataPool}
+                        />
+                      </div>
                     </ListboxItem>
                   );
                 }}

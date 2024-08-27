@@ -111,12 +111,14 @@ public record Resource
         string? Name,
         StandardValueType DbValueType,
         StandardValueType BizValueType,
-        List<Property.PropertyValue>? Values)
+        List<Property.PropertyValue>? Values,
+        bool Visible = false)
     {
         public string? Name { get; set; } = Name;
         public List<PropertyValue>? Values { get; set; } = Values;
         public StandardValueType DbValueType { get; set; } = DbValueType;
         public StandardValueType BizValueType { get; set; } = BizValueType;
+        public bool Visible { get; set; } = Visible;
 
         public record PropertyValue(
             int Scope,

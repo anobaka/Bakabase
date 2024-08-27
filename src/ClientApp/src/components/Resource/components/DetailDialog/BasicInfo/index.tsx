@@ -2,8 +2,6 @@ import dayjs from 'dayjs';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Resource } from '@/core/models/Resource';
-import Property from '@/components/Resource/components/DetailDialog/PropertyValue';
-import { Input } from '@/components/bakaui';
 
 type Props = {
   resource: Resource;
