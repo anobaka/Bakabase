@@ -76,6 +76,8 @@ const EditableText = memo((props: Props) => {
             return;
           }
           break;
+        case 'Delete':
+          break;
         default:
           return;
       }

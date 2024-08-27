@@ -575,7 +575,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 var stepPercentage = MediaLibrarySyncStepExtensions.Percentages[step];
                 var resourceCountPerPercentage = patchingResources.Any()
                     ? patchingResources.Count / (decimal) stepPercentage
-                    : decimal.MaxValue;
+                    : 0;
                 onProgressChange(basePercentage);
                 onProcessChange(step.ToString());
                 switch (step)
@@ -606,7 +606,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 }
 
                                 var pscResult = await Test(pathConfiguration, int.MaxValue);
-                                if (pscResult.Code == (int) ResponseCode.Success && pscResult.Data.Resources.Any())
+                                if (pscResult.Code == (int) ResponseCode.Success && pscResult.Data?.Resources.Any() == true)
                                 {
                                     var percentagePerItem =
                                         (decimal) 1 / pscResult.Data.Resources.Count * percentagePerPathConfiguration;
