@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -154,7 +155,9 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
                 "--new-files-dir",
                 newFilesDir,
                 "--executable",
-                executable
+                executable,
+                "--culture",
+                CultureInfo.CurrentUICulture.Name
             };
 
             if (installer != null)
