@@ -12,6 +12,5 @@ namespace Bakabase.Abstractions.Models.Db
         public StandardValueType ValueType { get; set; }
         public string? Value { get; set; }
         public int CustomPropertyValueId { get; set; }
-        public DateTime CreatedAt { get; set; }
     }
 }

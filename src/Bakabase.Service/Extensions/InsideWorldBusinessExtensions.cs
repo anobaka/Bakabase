@@ -128,8 +128,8 @@ namespace Bakabase.Service.Extensions
             services.AddCustomProperty<CustomPropertyService, CustomPropertyValueService,
                 CategoryCustomPropertyMappingService, InsideWorldLocalizer>();
             services
-                .AddEnhancers<InsideWorldDbContext, EnhancementService, EnhancerService,
-                    CategoryEnhancerOptionsService>();
+                .AddEnhancers<InsideWorldDbContext, EnhancementService, EnhancerService, CategoryEnhancerOptionsService,
+                    EnhancementRecordService>();
             services.AddStandardValue<SpecialTextService, InsideWorldLocalizer>();
             services.AddBuiltinProperty();
 

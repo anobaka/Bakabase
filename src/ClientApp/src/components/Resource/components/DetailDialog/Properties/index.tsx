@@ -192,12 +192,12 @@ export default (props: Props) => {
     );
   };
 
-  const visibleContext = buildRenderContext();
+  const renderContext = buildRenderContext();
 
   return (
     <div>
-      {renderProperties(visibleContext)}
-      {!showInvisibleProperties && (
+      {renderProperties(renderContext)}
+      {!showInvisibleProperties && renderContext.some(r => !r.visible) && (
         <div className={'flex items-center justify-center my-2'}>
           <Button
             onClick={() => {
@@ -207,7 +207,7 @@ export default (props: Props) => {
             size={'sm'}
             color={'primary'}
           >
-            {t('Show hidden properties')}
+            {t('Show attributes not bound to categories')}
           </Button>
         </div>
       )}

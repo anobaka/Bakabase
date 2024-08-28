@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
     public enum ResourceAdditionalItem
     {
         None = 0,
-        CustomProperties = 1 << 5,
+        CustomProperties = 1 << 5 | Category,
         Alias = 1 << 6,
         Category = 1 << 7,
         DisplayName = 1 << 8 | CustomProperties | Category,

@@ -23,7 +23,6 @@ public static class LegacyExtensions
         services.AddScoped<LegacyTagService>();
         services.AddScoped<LegacyTagGroupService>();
         services.AddScoped<LegacyResourcePropertyService>();
-        services.AddScoped<LegacyEnhancementRecordService>();
         services.AddScoped<LegacyFavoritesService>();
 
         services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, TagGroup, int>>();

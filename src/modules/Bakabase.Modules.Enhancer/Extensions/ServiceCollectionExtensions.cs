@@ -1,5 +1,5 @@
-﻿using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
@@ -10,23 +10,25 @@ using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions;
 
 namespace Bakabase.Modules.Enhancer.Extensions;
 
 public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddEnhancers<TDbContext, TEnhancementService, TEnhancerService,
-        TCategoryEnhancerOptionsService>(this IServiceCollection services)
+        TCategoryEnhancerOptionsService, TEnhancementRecordService>(this IServiceCollection services)
         where TEnhancerService : class, IEnhancerService
         where TEnhancementService : class, IEnhancementService
         where TCategoryEnhancerOptionsService : class, ICategoryEnhancerOptionsService
         where TDbContext : DbContext
+        where TEnhancementRecordService : class, IEnhancementRecordService
     {
         services.TryAddScoped<IEnhancerService, TEnhancerService>();
         services.TryAddScoped<IEnhancementService, TEnhancementService>();
         services.TryAddScoped<ResourceService<TDbContext, CategoryEnhancerOptions, int>>();
         services.TryAddScoped<ICategoryEnhancerOptionsService, TCategoryEnhancerOptionsService>();
+        services.TryAddScoped<ResourceService<TDbContext, EnhancementRecord, int>>();
+        services.TryAddScoped<IEnhancementRecordService, TEnhancementRecordService>();
         services.AddTransient<IEnhancerLocalizer, EnhancerLocalizer>();
 
 

@@ -30,6 +30,7 @@ using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
+using Bakabase.InsideWorld.Business.Components.Modules.CustomProperty;
 using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
@@ -45,6 +46,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using Image = SixLabors.ImageSharp.Image;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Extensions;
+using CustomProperty = Bakabase.Modules.CustomProperty.Abstractions.Models.CustomProperty;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -75,6 +77,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IFileManager _fileManager;
         private readonly ICoverDiscoverer _coverDiscoverer;
         private readonly IStandardValueHelper _standardValueHelper;
+        private readonly ICategoryCustomPropertyMappingService _categoryCustomPropertyMappingService;
 
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
@@ -87,7 +90,7 @@ namespace Bakabase.InsideWorld.Business.Services
             IBuiltinPropertyValueService builtinPropertyValueService,
             IEnumerable<IStandardValueHandler> standardValueHandlers,
             ICustomPropertyDescriptors customPropertyDescriptors, IFileManager fileManager,
-            ICoverDiscoverer coverDiscoverer, IStandardValueHelper standardValueHelper)
+            ICoverDiscoverer coverDiscoverer, IStandardValueHelper standardValueHelper, ICategoryCustomPropertyMappingService categoryCustomPropertyMappingService)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -107,6 +110,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _fileManager = fileManager;
             _coverDiscoverer = coverDiscoverer;
             _standardValueHelper = standardValueHelper;
+            _categoryCustomPropertyMappingService = categoryCustomPropertyMappingService;
             _customPropertyDescriptors = customPropertyDescriptors;
             _standardValueHandlers = standardValueHandlers.ToDictionary(d => (int) d.Type, d => d);
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(
@@ -324,7 +328,7 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             var doList = resources.Select(r => r.ToDomainModel()!).ToList();
             var resourceIds = resources.Select(a => a.Id).ToList();
-            foreach (var i in SpecificEnumUtils<ResourceAdditionalItem>.Values)
+            foreach (var i in SpecificEnumUtils<ResourceAdditionalItem>.Values.OrderBy(x => x))
             {
                 if (additionalItems.HasFlag(i))
                 {
@@ -399,23 +403,34 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
                         case ResourceAdditionalItem.CustomProperties:
                         {
+                            var categoryIds = resources.Select(r => r.CategoryId).ToHashSet();
                             // ResourceId - PropertyId - Values
                             var customPropertiesValuesMap = (await _customPropertyValueService.GetAll(
                                 x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
                                 true)).GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
                                 x => x.GroupBy(y => y.PropertyId).ToDictionary(y => y.Key, y => y.ToList()));
-                            var propertyIds = customPropertiesValuesMap.Values.SelectMany(x => x.Keys).ToHashSet();
+                            var categoryMap =
+                                (await _categoryService.GetByKeys(categoryIds, CategoryAdditionalItem.CustomProperties))
+                                .ToDictionary(d => d.Id, d => d);
+                            var categoryIdCustomPropertyIdsMap = categoryMap.ToDictionary(d => d.Key, d => d.Value.CustomProperties?.Select(x => x.Id).ToHashSet());
+
+                            var propertyIdsOfNotEmptyProperties =
+                                customPropertiesValuesMap.Values.SelectMany(x => x.Keys).ToHashSet();
+                            var loadedPropertyIds = categoryMap.Values
+                                .SelectMany(x => x.CustomProperties?.Select(y => y.Id) ?? []).ToHashSet();
+
+                            var unknownPropertyIds =
+                                propertyIdsOfNotEmptyProperties.Except(loadedPropertyIds).ToHashSet();
+
                             var propertyMap =
-                                (await _customPropertyService.GetByKeys(propertyIds, CustomPropertyAdditionalItem.None))
-                                .ToDictionary(d => d.Id, d => d);
-
-                            var categoryMap = (await _categoryService.GetByKeys(
-                                    doList.Select(d => d.CategoryId).ToHashSet(),
-                                    CategoryAdditionalItem.CustomProperties))
-                                .ToDictionary(d => d.Id, d => d);
-
-                            var categoryIdCustomPropertyIdsMap = categoryMap.ToDictionary(d => d.Key,
-                                d => d.Value.CustomProperties?.Select(x => x.Id).ToHashSet());
+                                (await _customPropertyService.GetByKeys(unknownPropertyIds,
+                                    CustomPropertyAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
+                            var loadedProperties = categoryMap.Values.SelectMany(x => x.CustomProperties ?? [])
+                                .GroupBy(d => d.Id).Select(d => d.First());
+                            foreach (var p in loadedProperties)
+                            {
+                                propertyMap[p.Id] = (p as CustomProperty)!;
+                            }
 
                             foreach (var r in doList)
                             {
@@ -423,23 +438,33 @@ namespace Bakabase.InsideWorld.Business.Services
                                 var customProperties =
                                     r.Properties.GetOrAdd((int) ResourcePropertyType.Custom, () => []);
 
-                                var pValues = customPropertiesValuesMap.GetValueOrDefault(r.Id);
-                                if (pValues != null)
+                                var propertyIds = new List<int>();
+                                if (categoryIdCustomPropertyIdsMap.TryGetValue(r.CategoryId, out var boundPropertyIds) && boundPropertyIds != null)
                                 {
-                                    foreach (var (pId, values) in pValues)
+                                    propertyIds.AddRange(boundPropertyIds);
+                                }
+
+                                if (customPropertiesValuesMap.TryGetValue(r.Id, out var pValues))
+                                {
+                                    propertyIds.AddRange(pValues.Keys.Except(propertyIds));
+                                }
+
+                                foreach (var pId in propertyIds)
+                                {
+                                    var property = propertyMap.GetValueOrDefault(pId);
+                                    if (property == null)
                                     {
-                                        var property = propertyMap.GetValueOrDefault(pId);
-                                        if (property == null)
-                                        {
-                                            continue;
-                                        }
+                                        continue;
+                                    }
 
-                                        var visible = categoryIdCustomPropertyIdsMap.GetValueOrDefault(r.CategoryId)
-                                            ?.Contains(pId) == true;
+                                    var values = pValues?.GetValueOrDefault(pId);
+                                    var visible = boundPropertyIds?.Contains(pId) == true;
 
-                                        var p = customProperties.GetOrAdd(pId,
-                                            () => new Resource.Property(property.Name, property.DbValueType,
-                                                property.BizValueType, [], visible));
+                                    var p = customProperties.GetOrAdd(pId,
+                                        () => new Resource.Property(property.Name, property.DbValueType,
+                                            property.BizValueType, [], visible));
+                                    if (values != null)
+                                    {
                                         p.Values ??= [];
                                         _customPropertyDescriptors.TryGet(property.Type, out var cpd);
                                         foreach (var v in values)

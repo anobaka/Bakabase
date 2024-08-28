@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,61 +11,54 @@ using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
+using Humanizer.Localisation;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
 {
     [Route("~/enhancement")]
-    public class EnhancementController : Controller
+    public class EnhancementController(
+        ICategoryService categoryService,
+        IResourceService resourceService,
+        IEnhancementService enhancementService,
+        IEnhancerService enhancerService,
+        ICategoryEnhancerOptionsService categoryEnhancerOptionsService,
+        IEnhancerDescriptors enhancerDescriptors,
+        IEnhancementRecordService enhancementRecordService)
+        : Controller
     {
-        private readonly IEnhancementService _enhancementService;
-        private readonly IEnhancerService _enhancerService;
-        private readonly IMediaLibraryService _mediaLibraryService;
-        private readonly ICategoryService _categoryService;
-        private readonly IResourceService _resourceService;
-        private readonly ICategoryEnhancerOptionsService _categoryEnhancerOptionsService;
-        private readonly IEnhancerDescriptors _enhancerDescriptors;
-
-        public EnhancementController(IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
-            IResourceService resourceService, IEnhancementService enhancementService, IEnhancerService enhancerService, ICategoryEnhancerOptionsService categoryEnhancerOptionsService, IEnhancerDescriptors enhancerDescriptors)
-        {
-            _mediaLibraryService = mediaLibraryService;
-            _categoryService = categoryService;
-            _resourceService = resourceService;
-            _enhancementService = enhancementService;
-            _enhancerService = enhancerService;
-            _categoryEnhancerOptionsService = categoryEnhancerOptionsService;
-            _enhancerDescriptors = enhancerDescriptors;
-        }
-
         [HttpGet("~/resource/{resourceId:int}/enhancement")]
         [SwaggerOperation(OperationId = "GetResourceEnhancements")]
-        public async Task<ListResponse<ResourceEnhancements>> GetResourceEnhancementRecords(int resourceId, EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None)
+        public async Task<ListResponse<ResourceEnhancements>> GetResourceEnhancementRecords(int resourceId,
+            EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None)
         {
-            var resource = await _resourceService.Get(resourceId, ResourceAdditionalItem.None);
+            var resource = await resourceService.Get(resourceId, ResourceAdditionalItem.None);
             if (resource == null)
             {
                 return ListResponseBuilder<ResourceEnhancements>.NotFound;
             }
 
-            var category = await _categoryService.Get(resource.CategoryId, CategoryAdditionalItem.None);
+            var category = await categoryService.Get(resource.CategoryId, CategoryAdditionalItem.None);
             if (category == null)
             {
                 return ListResponseBuilder<ResourceEnhancements>.NotFound;
             }
 
-            var enhancements = await _enhancementService.GetAll(x => x.ResourceId == resourceId, additionalItem);
-            var categoryEnhancerOptions = await _categoryEnhancerOptionsService.GetByCategory(resource.CategoryId);
+            var enhancements = await enhancementService.GetAll(x => x.ResourceId == resourceId, additionalItem);
+            var categoryEnhancerOptions = await categoryEnhancerOptionsService.GetByCategory(resource.CategoryId);
+            var enhancementRecords =
+                (await enhancementRecordService.GetAll(x => x.ResourceId == resourceId)).ToDictionary(
+                    d => d.EnhancerId, d => d);
 
             var res = categoryEnhancerOptions.Where(o => o.Active).Select(o =>
             {
-                var ed = _enhancerDescriptors[o.EnhancerId];
+                var ed = enhancerDescriptors[o.EnhancerId];
                 var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
                 var re = new ResourceEnhancements
                 {
                     Enhancer = ed,
-                    EnhancedAt = es.FirstOrDefault()?.CreatedAt,
+                    EnhancedAt = enhancementRecords.GetValueOrDefault(o.EnhancerId)?.EnhancedAt,
                     Targets = ed.Targets.Where(x => !x.IsDynamic).Select(t =>
                     {
                         var targetId = Convert.ToInt32(t.Id);
@@ -96,18 +90,19 @@ namespace Bakabase.Service.Controllers
 
         [HttpDelete("~/resource/{resourceId:int}/enhancer/{enhancerId:int}/enhancement")]
         [SwaggerOperation(OperationId = "DeleteResourceEnhancement")]
-        public async Task<BaseResponse> RemoveResourceEnhancementRecords(int resourceId, int enhancerId)
+        public async Task<BaseResponse> DeleteResourceEnhancementRecords(int resourceId, int enhancerId)
         {
-            return await _enhancementService.RemoveAll(x => x.ResourceId == resourceId && x.EnhancerId == enhancerId,
-                true);
+            await enhancementService.RemoveAll(x => x.ResourceId == resourceId && x.EnhancerId == enhancerId, true);
+            await enhancementRecordService.DeleteAll(t => resourceId == t.ResourceId && enhancerId == t.EnhancerId);
+            return BaseResponseBuilder.Ok;
         }
 
         [HttpPost("~/resource/{resourceId:int}/enhancer/{enhancerId:int}/enhancement")]
         [SwaggerOperation(OperationId = "CreateEnhancementForResourceByEnhancer")]
         public async Task<BaseResponse> CreateEnhancementForResourceByEnhancer(int resourceId, int enhancerId)
         {
-            await _enhancementService.RemoveAll(x => x.EnhancerId == enhancerId && x.ResourceId == resourceId, true);
-            await _enhancerService.EnhanceResource(resourceId, [enhancerId], CancellationToken.None);
+            await DeleteResourceEnhancementRecords(resourceId, enhancerId);
+            await enhancerService.EnhanceResource(resourceId, [enhancerId], CancellationToken.None);
             return BaseResponseBuilder.Ok;
         }
 
@@ -115,18 +110,22 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "DeleteByEnhancementsMediaLibrary")]
         public async Task<BaseResponse> RemoveMediaLibraryEnhancementRecords(int mediaLibraryId)
         {
-            var resourceIds = (await _resourceService.GetAll(t => t.MediaLibraryId == mediaLibraryId))
+            var resourceIds = (await resourceService.GetAll(t => t.MediaLibraryId == mediaLibraryId))
                 .Select(t => t.Id).ToArray();
-            return await _enhancementService.RemoveAll(t => resourceIds.Contains(t.Id), true);
+            await enhancementService.RemoveAll(t => resourceIds.Contains(t.Id), true);
+            await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
+            return BaseResponseBuilder.Ok;
         }
 
         [HttpDelete("~/category/{categoryId:int}/enhancement")]
         [SwaggerOperation(OperationId = "DeleteEnhancementsByCategory")]
         public async Task<BaseResponse> RemoveCategoryEnhancementRecords(int categoryId)
         {
-            var resourceIds = (await _resourceService.GetAll(t => t.CategoryId == categoryId))
+            var resourceIds = (await resourceService.GetAll(t => t.CategoryId == categoryId))
                 .Select(t => t.Id).ToArray();
-            return await _enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
+            await enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
+            await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
+            return BaseResponseBuilder.Ok;
         }
     }
 }

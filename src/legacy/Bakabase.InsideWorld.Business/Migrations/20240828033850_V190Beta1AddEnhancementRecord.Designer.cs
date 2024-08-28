@@ -3,6 +3,7 @@ using System;
 using Bakabase.InsideWorld.Business;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bakabase.InsideWorld.Business.Migrations
 {
     [DbContext(typeof(InsideWorldDbContext))]
-    partial class InsideWorldDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240828033850_V190Beta1AddEnhancementRecord")]
+    partial class V190Beta1AddEnhancementRecord
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");

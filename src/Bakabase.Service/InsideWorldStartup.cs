@@ -105,7 +105,7 @@ namespace Bakabase.Service
             services.TryAddSingleton<PixivDownloaderOptionsValidator>();
             services.TryAddSingleton<PixivCookieValidator>();
 
-            services.AddBakabaseHttpClient<BilibiliThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
+            services.AddBakabaseHttpClient<BangumiThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
                 .Bangumi);
             services.TryAddSingleton<BangumiClient>();
 

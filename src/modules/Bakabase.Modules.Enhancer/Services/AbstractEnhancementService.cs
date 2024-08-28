@@ -47,7 +47,6 @@ namespace Bakabase.Modules.Enhancer.Services
 
             return new Enhancement
             {
-                CreatedAt = dbModel.CreatedAt,
                 EnhancerId = dbModel.EnhancerId,
                 Id = dbModel.Id,
                 ResourceId = dbModel.ResourceId,
@@ -68,7 +67,6 @@ namespace Bakabase.Modules.Enhancer.Services
 
             return new Bakabase.Abstractions.Models.Db.Enhancement
             {
-                CreatedAt = domainModel.CreatedAt,
                 EnhancerId = domainModel.EnhancerId,
                 Id = domainModel.Id,
                 ResourceId = domainModel.ResourceId,

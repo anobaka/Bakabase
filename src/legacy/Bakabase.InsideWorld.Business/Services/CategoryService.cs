@@ -32,6 +32,7 @@ using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm.Infrastructures;
@@ -590,7 +591,8 @@ namespace Bakabase.InsideWorld.Business.Services
             (string Left, string Right)[] wrappers)
         {
             var segments = BuildDisplayNameSegmentsForResource(resource, template, wrappers);
-            return string.Join("", segments.Select(a => a.Text));
+            var displayName = string.Join("", segments.Select(a => a.Text));
+            return displayName.IsNullOrEmpty() ? resource.FileName : displayName;
         }
 
         public async Task<List<CategoryResourceDisplayNameViewModel>> PreviewResourceDisplayNameTemplate(int id,
@@ -608,7 +610,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             IsCustomProperty = false,
                             Operation = SearchOperation.In,
                             PropertyId = (int) ResourceProperty.Category,
-                            DbValue = new[] {id}.ToJson()
+                            DbValue = new[] {id.ToString()}.SerializeAsStandardValue(StandardValueType.ListString)
                         }
                     ]
                 },

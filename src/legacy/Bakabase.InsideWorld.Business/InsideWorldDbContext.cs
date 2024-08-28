@@ -5,6 +5,7 @@ using Bakabase.InsideWorld.Business.Components.Legacy.Models;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
 using LegacyAlias = Bakabase.InsideWorld.Models.Models.Entities.LegacyAlias;
 using Tag = Bakabase.InsideWorld.Models.Models.Entities.Tag;
 
@@ -54,6 +55,7 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<Enhancement> Enhancements { get; set; }
         public DbSet<CategoryEnhancerOptions> CategoryEnhancerOptions { get; set; }
+        public DbSet<EnhancementRecord> EnhancementRecords { get; set; }
 
         public DbSet<Resource> ResourcesV2 { get; set; }
         public DbSet<BuiltinPropertyValue> BuiltinPropertyValues { get; set; }
@@ -177,9 +179,13 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => new {x.ResourceId, x.Scope}).IsUnique();
             });
 
-            modelBuilder.Entity<Resource>(r =>
+            modelBuilder.Entity<Resource>(r => { r.HasIndex(x => x.Path).IsUnique(); });
+
+            modelBuilder.Entity<EnhancementRecord>(er =>
             {
-                r.HasIndex(x => x.Path).IsUnique();
+                er.HasIndex(x => x.EnhancerId);
+                er.HasIndex(x => x.ResourceId);
+                er.HasIndex(x => new {x.EnhancerId, x.ResourceId}).IsUnique();
             });
         }
     }

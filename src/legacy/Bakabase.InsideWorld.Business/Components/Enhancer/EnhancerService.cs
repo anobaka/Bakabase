@@ -48,12 +48,13 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
         private readonly Dictionary<int, IEnhancer> _enhancers;
         private readonly ILogger<EnhancerService> _logger;
         private readonly ICategoryService _categoryService;
+        private readonly IEnhancementRecordService _enhancementRecordService;
 
         public EnhancerService(ICustomPropertyService customPropertyService, IResourceService resourceService,
             ICustomPropertyValueService customPropertyValueService,
             IEnhancementService enhancementService, ICategoryEnhancerOptionsService categoryEnhancerService,
             IStandardValueService standardValueService, LogService logService, IEnhancerLocalizer enhancerLocalizer,
-            IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger, ICategoryService categoryService)
+            IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger, ICategoryService categoryService, IEnhancementRecordService enhancementRecordService)
         {
             _customPropertyService = customPropertyService;
             _resourceService = resourceService;
@@ -66,6 +67,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             _enhancerDescriptors = enhancerDescriptors;
             _logger = logger;
             _categoryService = categoryService;
+            _enhancementRecordService = enhancementRecordService;
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 
@@ -389,11 +391,13 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             }
 
             var resourceIds = targetResources.Select(r => r.Id).ToHashSet();
-            var resourceIdEnhancerIdEnhancementsMap =
-                (await _enhancementService.GetAll(x => resourceIds.Contains(x.ResourceId))).GroupBy(d => d.ResourceId)
+            // ResourceId - EnhancerId - Record
+            var resourceEnhancementRecordMap =
+                (await _enhancementRecordService.GetAll(x => resourceIds.Contains(x.ResourceId)))
+                .GroupBy(d => d.ResourceId)
                 .ToDictionary(
                     d => d.Key,
-                    d => d.GroupBy(c => c.EnhancerId).ToDictionary(e => e.Key, e => e.ToList()));
+                    d => d.GroupBy(c => c.EnhancerId).ToDictionary(e => e.Key, e => e.FirstOrDefault()));
 
             var asyncTasks = new List<Task>();
             foreach (var (enhancer, optionsAndResources) in tasks)
@@ -404,21 +408,20 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     {
                         foreach (var resource in resources)
                         {
-                            var dbEnhancements = resourceIdEnhancerIdEnhancementsMap.GetValueOrDefault(resource.Id)
-                                ?.GetValueOrDefault(enhancer.Id) ?? [];
-                            if (dbEnhancements.Any())
+                            var record = resourceEnhancementRecordMap.GetValueOrDefault(resource.Id)
+                                ?.GetValueOrDefault(enhancer.Id);
+                            if (record != null)
                             {
                                 continue;
                             }
 
                             var enhancementRawValues = await enhancer.CreateEnhancements(resource, options, ct);
-                            if (enhancementRawValues?.Any() == true)
+                           if (enhancementRawValues?.Any() == true)
                             {
                                 var enhancements = enhancementRawValues.Select(v =>
                                     new Enhancement
                                     {
                                         Target = v.Target,
-                                        CreatedAt = DateTime.Now,
                                         EnhancerId = enhancer.Id,
                                         ResourceId = resource.Id,
                                         Value = v.Value,
@@ -430,6 +433,15 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
                                 await ApplyEnhancementsToResources(enhancements, ct);
                             }
+
+                            record = new EnhancementRecord
+                            {
+                                EnhancedAt = DateTime.Now,
+                                EnhancerId = enhancer.Id,
+                                ResourceId = resource.Id
+                            };
+
+                            await _enhancementRecordService.Add(record);
                         }
                     }
                 }, ct));
