@@ -24,6 +24,7 @@ import {
 } from '@/components/bakaui';
 import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel } from '@/sdk/Api';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import FeatureStatusTip from '@/components/FeatureStatusTip';
 
 const cookies = new Cookies();
 
@@ -241,38 +242,39 @@ export default ({
       tip: 'Move core data to another directory',
       renderValue: () => {
         return (
-          <FileSelector
-            size={'small'}
-            value={appOptions.dataPath}
-            type={'folder'}
-            // multiple
-            onChange={(path) => {
-              if (path) {
-                const dialog = Dialog.show({
-                  title: i18n.t('Moving files'),
-                  closeable: false,
-                  closeMode: [],
-                  footer: false,
-                });
-                MoveCoreData({
-                  model: {
-                    dataPath: path,
-                  },
-                }).invoke((a) => {
-                  if (!a.code) {
-                    Dialog.show({
-                      title: i18n.t('Moving files successfully, please restart app'),
-                      closeable: false,
-                      closeMode: [],
-                      footer: false,
-                    });
-                  }
-                }).finally(() => {
-                  dialog.hide();
-                });
-              }
-            }}
-          />
+          <FeatureStatusTip status={'deprecated'} name={t('Move core data')} />
+          // <FileSelector
+          //   size={'small'}
+          //   value={appOptions.dataPath}
+          //   type={'folder'}
+          //   // multiple
+          //   onChange={(path) => {
+          //     if (path) {
+          //       const dialog = Dialog.show({
+          //         title: i18n.t('Moving files'),
+          //         closeable: false,
+          //         closeMode: [],
+          //         footer: false,
+          //       });
+          //       MoveCoreData({
+          //         model: {
+          //           dataPath: path,
+          //         },
+          //       }).invoke((a) => {
+          //         if (!a.code) {
+          //           Dialog.show({
+          //             title: i18n.t('Moving files successfully, please restart app'),
+          //             closeable: false,
+          //             closeMode: [],
+          //             footer: false,
+          //           });
+          //         }
+          //       }).finally(() => {
+          //         dialog.hide();
+          //       });
+          //     }
+          //   }}
+          // />
         );
       },
     },
