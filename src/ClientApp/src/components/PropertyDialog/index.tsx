@@ -88,7 +88,7 @@ const PropertyDialog = ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [visible, setVisible] = useState(true);
-  const [property, setProperty] = useState<CustomPropertyForm>(value || {});
+  const [property, setProperty] = useState<CustomPropertyForm>(JSON.parse(JSON.stringify(value || {})));
 
   const [typeGroupsVisible, setTypeGroupsVisible] = useState(false);
 
@@ -489,7 +489,7 @@ const PropertyDialog = ({
                                                       <div className={'flex flex-wrap gap-2'}>
                                                         {data.map(d => {
                                                           return (
-                                                            <Chip size={'sm'}>
+                                                            <Chip size={'sm'} className={'whitespace-break-spaces h-auto py-1'}>
                                                               {d}
                                                             </Chip>
                                                           );

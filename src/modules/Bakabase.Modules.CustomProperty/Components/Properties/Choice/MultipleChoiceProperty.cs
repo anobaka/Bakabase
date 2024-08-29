@@ -5,8 +5,12 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
+using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
+using Bakabase.Modules.CustomProperty.Components.Properties.Tags;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Services;
+using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
 
@@ -16,7 +20,9 @@ public record MultipleChoiceProperty : ChoiceProperty<List<string>>;
 
 public record MultipleChoicePropertyValue : CustomPropertyValue<List<string>>;
 
-public class MultipleChoicePropertyDescriptor(IStandardValueHelper standardValueHelper)
+public class MultipleChoicePropertyDescriptor(
+    IStandardValueHelper standardValueHelper,
+    IStandardValueHandlers standardValueHandlers)
     : AbstractCustomPropertyDescriptor<MultipleChoiceProperty,
         ChoicePropertyOptions<List<string>>, MultipleChoicePropertyValue, List<string>, List<string>>(
         standardValueHelper)
@@ -45,7 +51,8 @@ public class MultipleChoicePropertyDescriptor(IStandardValueHelper standardValue
         if (bizValue.Any())
         {
             var propertyChanged =
-                (property.Options ??= new ChoicePropertyOptions<List<string>>()).AddChoices(true, bizValue.ToArray());
+                (property.Options ??= new ChoicePropertyOptions<List<string>>()).AddChoices(true, bizValue.ToArray(),
+                    null);
             var stringValues = bizValue.Select(v => property.Options.Choices?.Find(c => c.Label == v)?.Value)
                 .OfType<string>().ToList();
             var nv = stringValues.Any() ? new ListStringValueBuilder(stringValues).Value : null;
@@ -98,4 +105,70 @@ public class MultipleChoicePropertyDescriptor(IStandardValueHelper standardValue
     {
         return value.Select(v => property.Options?.Choices?.FirstOrDefault(c => c.Value == v)?.Label ?? v).ToList();
     }
+
+    // protected override async Task<object?> TypedConvertOptions(ChoicePropertyOptions<List<string>> current,
+    //     CustomPropertyType newType)
+    // {
+    //     switch (newType)
+    //     {
+    //         case CustomPropertyType.SingleLineText:
+    //         case CustomPropertyType.MultilineText:
+    //             return null;
+    //         case CustomPropertyType.SingleChoice:
+    //         {
+    //             return new ChoicePropertyOptions<string>
+    //             {
+    //                 AllowAddingNewDataDynamically = current.AllowAddingNewDataDynamically,
+    //                 Choices = current.Choices?.Select(c => new ChoicePropertyOptions<string>.ChoiceOptions
+    //                     {Color = c.Color, Label = c.Label, Value = c.Value}).ToList(),
+    //                 DefaultValue = current.DefaultValue?.FirstOrDefault()
+    //             };
+    //         }
+    //         case CustomPropertyType.MultipleChoice:
+    //             return current;
+    //         case CustomPropertyType.Number:
+    //         case CustomPropertyType.Percentage:
+    //         case CustomPropertyType.Rating:
+    //         case CustomPropertyType.Boolean:
+    //         case CustomPropertyType.Link:
+    //         case CustomPropertyType.Attachment:
+    //         case CustomPropertyType.Date:
+    //         case CustomPropertyType.DateTime:
+    //         case CustomPropertyType.Time:
+    //         case CustomPropertyType.Formula:
+    //             return null;
+    //         case CustomPropertyType.Multilevel:
+    //         {
+    //             var data = current.Choices?.Select(c => c.Label).ToList();
+    //             var multipleData = (await standardValueHandlers[BizValueType]
+    //                 .Convert<List<List<string>>>(data, StandardValueType.ListListString)).NewValue?.Select((x, i) =>
+    //                 new MultilevelDataOptions
+    //                 {
+    //                     Value = current.Choices![i].Value,
+    //                     Color = current.Choices![i].Color,
+    //                     Label = x[0]
+    //                 }).ToList();
+    //             return new MultilevelPropertyOptions()
+    //             {
+    //                 AllowAddingNewDataDynamically = current.AllowAddingNewDataDynamically,
+    //                 DefaultValue = current.DefaultValue?.FirstOrDefault(),
+    //                 Data = multipleData
+    //             };
+    //         }
+    //         case CustomPropertyType.Tags:
+    //         {
+    //             var data = current.Choices?.Select(c => c.Label).ToList();
+    //             var tags = (await standardValueHandlers[BizValueType]
+    //                 .Convert<List<TagValue>>(data, StandardValueType.ListTag)).NewValue;
+    //             return new TagsPropertyOptions
+    //             {
+    //                 AllowAddingNewDataDynamically = current.AllowAddingNewDataDynamically,
+    //                 Tags = tags?.Select((c, i) => new TagsPropertyOptions.TagOptions(c.Group, c.Name)
+    //                     {Value = current.Choices![i].Value}).ToList()
+    //             };
+    //         }
+    //         default:
+    //             throw new ArgumentOutOfRangeException();
+    //     }
+    // }
 }

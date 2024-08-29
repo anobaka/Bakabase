@@ -15,9 +15,11 @@ import AntdMenu from '@/layouts/BasicLayout/components/PageNav/components/AntdMe
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
 import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector';
+import VirtualList from '@/pages/Test/cases/VirtualList';
 
 
 const components = {
+  VirtualList: <VirtualList />,
   CategoryEnhancerOptions: <CategoryEnhancerOptionsDialog />,
   Psc: <Psc />,
   Tour: <Tour />,

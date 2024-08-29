@@ -89,6 +89,34 @@ namespace Bakabase.Modules.CustomProperty.Extensions
             }
         }
 
+        public static List<(List<string> Branch, string Value)> ExtractBranches(this List<MultilevelDataOptions> nodes,
+            bool includeIntermediate)
+        {
+            var branches = new List<(List<string> Branch, string Value)>();
+            foreach (var node in nodes)
+            {
+                if (node.Children != null)
+                {
+                    if (includeIntermediate)
+                    {
+                        branches.Add(([node.Label], node.Value));
+                    }
+
+                    var childrenBranches = node.Children.ExtractBranches(includeIntermediate);
+                    foreach (var cb in childrenBranches)
+                    {
+                        branches.Add(([node.Label, .. cb.Branch], cb.Value));
+                    }
+                }
+                else
+                {
+                    branches.Add(([node.Label], node.Value));
+                }
+            }
+
+            return branches;
+        }
+
         /// <summary>
         /// 
         /// </summary>

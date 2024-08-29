@@ -98,7 +98,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
                       const sc = choices[index];
                       return (
                         <SortableChoice
-                          key={key}
+                          key={sc.value}
                           style={style}
                           checkUsage={checkUsage}
                           // key={sc.value}

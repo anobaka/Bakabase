@@ -22,6 +22,7 @@ namespace Bakabase.Modules.StandardValue.Extensions
                 services.AddScoped(SpecificTypeUtils<IStandardValueHandler>.Type, t);
             }
 
+            services.AddScoped<IStandardValueHandlers, StandardValueHandlers>();
             services.AddScoped<IStandardValueService, StandardValueService>();
             services.AddScoped<IDateTimeParser>(sp => sp.GetRequiredService<TDateTimeParser>());
             services.AddTransient<IStandardValueLocalizer>(sp => sp.GetRequiredService<TStandardValueLocalizer>());

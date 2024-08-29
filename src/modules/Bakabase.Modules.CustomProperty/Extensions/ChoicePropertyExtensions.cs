@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.CustomProperty.Extensions
 {
@@ -17,9 +18,10 @@ namespace Bakabase.Modules.CustomProperty.Extensions
         /// <param name="options"></param>
         /// <param name="ignoreSameValue"></param>
         /// <param name="values"></param>
+        /// <param name="dbValues"></param>
         /// <returns>Whether options have been changed.</returns>
         public static bool AddChoices<T>(this ChoicePropertyOptions<T> options, bool ignoreSameValue,
-            params string[] values)
+            string[] values, string[]? dbValues)
         {
             if (options.AllowAddingNewDataDynamically)
             {
@@ -32,10 +34,25 @@ namespace Bakabase.Modules.CustomProperty.Extensions
 
                 if (values.Any())
                 {
-                    options.Choices.AddRange(values.Select(v => new ChoicePropertyOptions<T>.ChoiceOptions
+                    if (dbValues != null && dbValues.Length != values.Length)
                     {
-                        Value = Guid.NewGuid().ToString(),
-                        Label = v
+                        throw new Exception(
+                            $"Count of {nameof(values)} and {nameof(dbValues)} must be same if {nameof(dbValues)} is specified");
+                    }
+
+                    options.Choices.AddRange(values.Select((v, i) =>
+                    {
+                        var o = new ChoicePropertyOptions<T>.ChoiceOptions
+                        {
+                            Label = v
+                        };
+                        var id = dbValues?[i];
+                        if (id.IsNotEmpty())
+                        {
+                            o.Value = id;
+                        }
+
+                        return o;
                     }));
                     return true;
                 }

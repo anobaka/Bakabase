@@ -1,4 +1,5 @@
 ﻿using Bakabase.Modules.CustomProperty.Abstractions.Components;
+using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions
 {
@@ -10,7 +11,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstracti
 
         public record ChoiceOptions
         {
-            public string Value { get; set; } = null!;
+            public string Value { get; set; } = Guid.NewGuid().ToString();
             public string Label { get; set; } = null!;
             public string Color { get; set; } = null!;
         }

@@ -1,8 +1,5 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 
@@ -12,12 +9,14 @@ public record AttachmentProperty() : Abstractions.Models.CustomProperty;
 public record AttachmentPropertyValue : CustomPropertyValue<List<string>>;
 
 public class
-    AttachmentPropertyDescriptor(IStandardValueHelper standardValueHelper) : AbstractCustomPropertyDescriptor<AttachmentProperty, AttachmentPropertyValue,
-    List<string>, List<string>>(standardValueHelper)
+    AttachmentPropertyDescriptor(IStandardValueHelper standardValueHelper)
+    : AbstractCustomPropertyDescriptor<AttachmentProperty, AttachmentPropertyValue,
+        List<string>, List<string>>(standardValueHelper)
 {
     public override CustomPropertyType EnumType => CustomPropertyType.Attachment;
 
     public override SearchOperation[] SearchOperations { get; } = [SearchOperation.IsNotNull, SearchOperation.IsNull];
+
     protected override bool IsMatch(List<string>? value, SearchOperation operation, object? filterValue)
     {
         return operation switch

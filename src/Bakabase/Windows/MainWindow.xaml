@@ -10,6 +10,7 @@
     Height="768"
     MinWidth="1366"
     MinHeight="768"
+    Background="{StaticResource WindowBackgroundBrush}"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
     <DockPanel>

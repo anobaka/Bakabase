@@ -6,6 +6,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="WebView2 is required"
     MaxWidth="400"
+    Background="{StaticResource WindowBackgroundBrush}"
+    Foreground="{StaticResource FontBrush}"
     ResizeMode="NoResize"
     SizeToContent="WidthAndHeight"
     Topmost="True"

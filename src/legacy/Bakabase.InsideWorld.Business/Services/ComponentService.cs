@@ -232,7 +232,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 var categories =
                                     await ResourceCategoryService.GetAll(a => categoryIds.Contains(a.Id));
                                 var categoryMap = categories.ToDictionary(x => x.Id, x => x);
-                                foreach (var d in dtoList)
+                                foreach (var d in dtoList.Where(x => x.Id.IsNotEmpty()))
                                 {
                                     if (componentKeyCategoryIdMap.TryGetValue(d.Id, out var ids))
                                     {

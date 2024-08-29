@@ -1,12 +1,17 @@
 ﻿using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.Infrastructures.Resources;
+using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.Windows;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
+using Application = System.Windows.Application;
 using Brushes = System.Windows.Media.Brushes;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
@@ -22,6 +27,7 @@ namespace Bakabase.Components
         private MainWindow? _mainWindow;
         private ExitConfirmationDialog? _exitConfirmationDialog;
         private MissingWebView2Dialog? _missingWebView2Dialog;
+        private bool _isDarkMode = false;
 
         public WpfGuiAdapter(App app)
         {
@@ -76,7 +82,7 @@ namespace Bakabase.Components
             string? folder = null;
             using var dialog = new FolderBrowserDialog
             {
-                InitialDirectory = initialDirectory
+                InitialDirectory = initialDirectory,
             };
             var result = dialog.ShowDialog();
             if (result == DialogResult.OK)
@@ -136,8 +142,8 @@ namespace Bakabase.Components
         {
             if (_tray != null)
             {
-                const int SystemLimit = 127;
-                _tray.Text = text.Substring(0, Math.Min(SystemLimit, text.Length));
+                const int systemLimit = 127;
+                _tray.Text = text.Substring(0, Math.Min(systemLimit, text.Length));
             }
         }
 
@@ -154,6 +160,7 @@ namespace Bakabase.Components
         public override void ShowFatalErrorWindow(string message, string title = "Fatal Error")
         {
             _errorWindow ??= new ErrorWindow();
+            RegisterApplyingUiThemeOnVisibilityChange(_errorWindow);
 
             _errorWindow.Title.Text = title;
             _errorWindow.StackTrace.Text = message;
@@ -168,7 +175,7 @@ namespace Bakabase.Components
         public override void ShowInitializationWindow(string processName)
         {
             _initializationWindow ??= new InitializationWindow();
-
+            RegisterApplyingUiThemeOnVisibilityChange(_initializationWindow);
             _initializationWindow.ProcessName.Text = processName;
             _initializationWindow.Show();
         }
@@ -183,10 +190,13 @@ namespace Bakabase.Components
         public override async void ShowMainWebView(string url, string title, Func<Task> onClosing)
         {
             _mainWindow ??= new MainWindow();
+            RegisterApplyingUiThemeOnVisibilityChange(_mainWindow);
 
             try
             {
                 _mainWindow.Show();
+
+
                 _mainWindow.Title = title;
                 await _mainWindow.WebView2.EnsureCoreWebView2Async();
                 _mainWindow.WebView2.CoreWebView2.Navigate(url);
@@ -201,6 +211,7 @@ namespace Bakabase.Components
                 _mainWindow.Close();
                 _missingWebView2Dialog ??=
                     new MissingWebView2Dialog(_app.Host.Host.Services.GetRequiredService<AppLocalizer>());
+                RegisterApplyingUiThemeOnVisibilityChange(_missingWebView2Dialog);
                 _missingWebView2Dialog.Show();
             }
         }
@@ -272,21 +283,106 @@ namespace Bakabase.Components
                     onClosed(CloseBehavior.Cancel, false);
                     _exitConfirmationDialog = null;
                 };
+                RegisterApplyingUiThemeOnVisibilityChange(_exitConfirmationDialog);
             }
 
             _exitConfirmationDialog.RememberCheckBox.IsChecked = false;
             _exitConfirmationDialog.Show();
         }
 
+        [GuiContextInterceptor]
         public override bool ShowConfirmDialog(string message, string caption)
         {
             var result = MessageBox.Show(message, caption, MessageBoxButton.OKCancel);
             return result == MessageBoxResult.OK;
         }
 
+        [GuiContextInterceptor]
         public override void ChangeUiTheme(UiTheme theme)
         {
-            // todo: implement
+            _isDarkMode = theme == UiTheme.Dark;
+
+            var windows = new Window?[]
+                {_mainWindow, _errorWindow, _exitConfirmationDialog, _initializationWindow, _missingWebView2Dialog};
+
+            foreach (var window in windows)
+            {
+                ApplyUiTheme(window);
+            }
         }
+
+        [GuiContextInterceptor]
+        private void ApplyUiTheme(Window? window)
+        {
+            if (window != null)
+            {
+                try
+                {
+                    UseImmersiveDarkMode(new WindowInteropHelper(window).Handle, _isDarkMode);
+                    // Console.WriteLine(
+                    //     $"Change color of title bar for {window.Title} to {(_isDarkMode ? "dark" : "light")}");
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
+        }
+
+        private void RegisterApplyingUiThemeOnVisibilityChange(Window window)
+        {
+            window.IsVisibleChanged -= ApplyUiThemeOnWindowVisibilityChange;
+            window.IsVisibleChanged += ApplyUiThemeOnWindowVisibilityChange;
+        }
+
+        private void ApplyUiThemeOnWindowVisibilityChange(object sender, DependencyPropertyChangedEventArgs args)
+        {
+            if (args is {NewValue: true, OldValue: false} && sender is Window window)
+            {
+                ApplyUiTheme(window);
+            }
+        }
+
+        #region WIN32 API to change title bar background color
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+        private static bool UseImmersiveDarkMode(IntPtr handle, bool enabled)
+        {
+            int attributeValue = enabled ? 1 : 0;
+            var r = DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref attributeValue, sizeof(int)) == 0;
+            // if (r)
+            // {
+            //     InvalidateWindow(handle);
+            // }
+            return r;
+        }
+
+        private static void InvalidateWindow(IntPtr hwnd)
+        {
+            // Force the window to refresh
+            var rect = new RECT();
+            GetWindowRect(hwnd, ref rect);
+            InvalidateRect(hwnd, ref rect, true);
+        }
+
+        [DllImport("user32.dll")]
+        private static extern bool InvalidateRect(IntPtr hWnd, ref RECT lpRect, bool bErase);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, ref RECT lpRect);
+
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        #endregion
     }
 }

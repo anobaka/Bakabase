@@ -9,6 +9,8 @@
     MinHeight="600"
     MaxWidth="1000"
     MaxHeight="800"
+    Background="{StaticResource WindowBackgroundBrush}"
+    Foreground="{StaticResource FontBrush}"
     SizeToContent="WidthAndHeight"
     Topmost="True"
     WindowStartupLocation="CenterScreen"
@@ -19,14 +21,18 @@
                 x:Name="Title"
                 Margin="0,0,0,30"
                 HorizontalAlignment="Left"
+                Background="{StaticResource WindowBackgroundBrush}"
                 FontSize="32"
                 FontWeight="Bold"
+                Foreground="{StaticResource FontBrush}"
                 Text="[DesignTime]Error" />
             <TextBox
                 x:Name="StackTrace"
                 HorizontalAlignment="Left"
+                Background="{StaticResource WindowBackgroundBrush}"
                 BorderThickness="0"
                 FontSize="14"
+                Foreground="{StaticResource FontBrush}"
                 Text="[DesignTime]Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail"
                 TextWrapping="Wrap" />
         </StackPanel>

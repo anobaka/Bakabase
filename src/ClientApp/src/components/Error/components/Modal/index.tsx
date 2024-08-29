@@ -83,7 +83,7 @@ const ErrorModal = ({}: IProps) => {
             </div>
             <div className={''}>
               <span className={'font-bold'}>
-                {t('If you have programming experience,')}
+                {t('If you have no programming experience,')}
               </span>
               &nbsp;
               {t('please provide the latest log file to the support team.')}

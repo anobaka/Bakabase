@@ -108,7 +108,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
     }
     const pRsp = await BApi.resource.getResourcePlayableFiles(resource.id, rp);
     setPlayableFiles(pRsp.data || []);
-    // setPlayableFiles([]);
   }, [disableCache]);
 
   const initialize = useCallback(async (ct: AbortSignal) => {
@@ -169,35 +168,22 @@ const Resource = React.forwardRef((props: Props, ref) => {
       Dialog.show({
         v2: true,
         content: (
-          <Tag.Group>
+          <div className={'flex flex-wrap gap-2'}>
             {playableFiles.map((a) => {
               const segments = splitPathIntoSegments(a);
               return (
-                <Tooltip
-                  key={a}
-                  content={t('Use player to play')}
+                <Button
+                  size={'sm'}
+                  onClick={() => {
+                    play(a);
+                  }}
                 >
-                  <Tag
-                    title={a}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => {
-                        play(a);
-                      }}
-                    >
-                      <CustomIcon type="play-circle" />
-                      {segments[segments.length - 1]}
-                    </div>
-                  </Tag>
-                </Tooltip>
+                  <PlayCircleOutlined className={'text-base'} />
+                  <span className={'break-all overflow-hidden text-ellipsis'}>{segments[segments.length - 1]}</span>
+                </Button>
               );
             })}
-          </Tag.Group>
+          </div>
         ),
         footer: false,
         closeMode: ['esc', 'mask', 'close'],
@@ -305,7 +291,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
       {firstTagsValue && firstTagsValue.length > 0 && (
         <div className={styles.info}>
           <div
-            className={`select-text ${styles.limitedContent} flex gap-1 flex-wrap`}
+            className={`select-text ${styles.limitedContent} flex gap-1 flex-wrap opacity-70 leading-3`}
           >
             {firstTagsValue.map(v => {
               return (

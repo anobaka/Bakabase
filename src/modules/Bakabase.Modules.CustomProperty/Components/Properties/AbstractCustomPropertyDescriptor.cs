@@ -8,6 +8,17 @@ using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Models;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Components.Properties.Attachment;
+using Bakabase.Modules.CustomProperty.Components.Properties.Boolean;
+using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
+using Bakabase.Modules.CustomProperty.Components.Properties.DateTime;
+using Bakabase.Modules.CustomProperty.Components.Properties.Formula;
+using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
+using Bakabase.Modules.CustomProperty.Components.Properties.Number;
+using Bakabase.Modules.CustomProperty.Components.Properties.Number.Abstractions;
+using Bakabase.Modules.CustomProperty.Components.Properties.Tags;
+using Bakabase.Modules.CustomProperty.Components.Properties.Text;
+using Bakabase.Modules.CustomProperty.Components.Properties.Time;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -120,6 +131,90 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
             };
         }
 
+        // public async Task<Bakabase.Abstractions.Models.Domain.CustomProperty> ChangeType(
+        //     Bakabase.Abstractions.Models.Domain.CustomProperty property, int newType)
+        // {
+        //     if (newType == property.Type)
+        //     {
+        //         return property;
+        //     }
+        //
+        //     Bakabase.Abstractions.Models.Domain.CustomProperty newProperty = null!;
+        //
+        //     switch ((CustomPropertyType) newType)
+        //     {
+        //         case CustomPropertyType.SingleLineText:
+        //             newProperty = new SingleLineTextProperty();
+        //             break;
+        //         case CustomPropertyType.MultilineText:
+        //             newProperty = new MultilineTextProperty();
+        //             break;
+        //         case CustomPropertyType.SingleChoice:
+        //             newProperty = new SingleChoiceProperty();
+        //             break;
+        //         case CustomPropertyType.MultipleChoice:
+        //             newProperty = new MultipleChoiceProperty();
+        //             break;
+        //         case CustomPropertyType.Number:
+        //             newProperty = new NumberProperty();
+        //             break;
+        //         case CustomPropertyType.Percentage:
+        //             newProperty = new PercentageProperty();
+        //             break;
+        //         case CustomPropertyType.Rating:
+        //             newProperty = new RatingProperty();
+        //             break;
+        //         case CustomPropertyType.Boolean:
+        //             newProperty = new BooleanProperty();
+        //             break;
+        //         case CustomPropertyType.Link:
+        //             newProperty = new LinkProperty();
+        //             break;
+        //         case CustomPropertyType.Attachment:
+        //             newProperty = new AttachmentProperty();
+        //             break;
+        //         case CustomPropertyType.Date:
+        //         case CustomPropertyType.DateTime:
+        //             newProperty = new DateTimeProperty();
+        //             break;
+        //         case CustomPropertyType.Time:
+        //             newProperty = new TimeProperty();
+        //             break;
+        //         case CustomPropertyType.Formula:
+        //             newProperty = new FormulaProperty();
+        //             break;
+        //         case CustomPropertyType.Multilevel:
+        //             newProperty = new MultilevelProperty();
+        //             break;
+        //         case CustomPropertyType.Tags:
+        //             newProperty = new TagsProperty();
+        //             break;
+        //         default:
+        //             throw new ArgumentOutOfRangeException(nameof(newType), newType, null);
+        //     }
+        //
+        //     newProperty.Id = property.Id;
+        //     newProperty.Name = property.Name;
+        //     newProperty.Type = newType;
+        //     newProperty.DbValueType = property.DbValueType;
+        //     newProperty.BizValueType = property.BizValueType;
+        //     newProperty.CreatedAt = property.CreatedAt;
+        //     newProperty.Categories = property.Categories;
+        //     newProperty.ValueCount = property.ValueCount;
+        //
+        //     if (property.Options != null)
+        //     {
+        //         newProperty.Options = await ConvertOptions(property.Options, (CustomPropertyType) newType);
+        //     }
+        //
+        //     return newProperty;
+        // }
+        //
+        // protected virtual Task<object?> ConvertOptions(object current, CustomPropertyType newType)
+        // {
+        //     return Task.FromResult<object?>(null);
+        // }
+
         protected virtual (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeyword(TProperty property,
             string keyword) => null;
 
@@ -164,5 +259,15 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
 
             return p;
         }
+
+        // protected override Task<object?> ConvertOptions(object current, CustomPropertyType newType)
+        // {
+        //     return TypedConvertOptions((current as TPropertyOptions)!, newType);
+        // }
+        //
+        // protected virtual Task<object?> TypedConvertOptions(TPropertyOptions current, CustomPropertyType newType)
+        // {
+        //     return Task.FromResult<object?>(null);
+        // }
     }
 }

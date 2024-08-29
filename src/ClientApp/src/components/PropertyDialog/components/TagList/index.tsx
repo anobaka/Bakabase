@@ -105,7 +105,7 @@ export default function TagList({
                       return (
                         <SortableTag
                           checkUsage={checkUsage}
-                          key={key}
+                          key={sc.value}
                           id={sc.value}
                           tag={sc}
                           onRemove={t => {

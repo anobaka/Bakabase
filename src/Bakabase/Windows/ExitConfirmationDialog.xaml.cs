@@ -20,5 +20,10 @@ namespace Bakabase.Windows
             this.RememberCheckBox.Content = _localizer.App_RememberMe();
             this.Tip.Text = _localizer.App_TipOnExit();
         }
+
+        private void RememberCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

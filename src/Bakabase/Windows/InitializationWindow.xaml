@@ -8,16 +8,18 @@
     Title="Initialing..."
     Width="500"
     Height="150"
+    Background="{StaticResource WindowBackgroundBrush}"
+    Foreground="{StaticResource FontBrush}"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal">
-            <Image
-                Width="80"
-                Height="80"
-                Margin="0,0,20,0"
-                gif:ImageBehavior.AnimatedSource="/Assets/loading.gif" />
+            <!--  <Image  -->
+            <!--  Width="80"  -->
+            <!--  Height="80"  -->
+            <!--  Margin="0,0,20,0"  -->
+            <!--  gif:ImageBehavior.AnimatedSource="/Assets/loading.gif" />  -->
             <TextBlock
                 x:Name="ProcessName"
                 MaxWidth="300"

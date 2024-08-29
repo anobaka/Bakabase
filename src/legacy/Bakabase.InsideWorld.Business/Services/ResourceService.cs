@@ -898,9 +898,10 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<string?> GetThumbnail(int id, CancellationToken ct)
         {
-            var thumbnailDir = ThumbnailDir;
-            Directory.CreateDirectory(thumbnailDir);
-            var thumbnailPath = Directory.GetFiles(thumbnailDir, $"{id}.*").FirstOrDefault();
+            var pathPrefix = BuildThumbnailPathWithoutExtension(id);
+            var dir = Path.GetDirectoryName(pathPrefix)!;
+            Directory.CreateDirectory(dir);
+            var thumbnailPath = Directory.GetFiles(dir, $"{Path.GetFileName(pathPrefix)}.*").FirstOrDefault();
             if (string.IsNullOrEmpty(thumbnailPath))
             {
                 // We do not save icon as thumbnail, since it will prevent other source (such as enhancer) from creating thumbnails.

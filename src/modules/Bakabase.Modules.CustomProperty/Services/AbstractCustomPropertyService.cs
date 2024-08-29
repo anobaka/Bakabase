@@ -196,7 +196,8 @@ namespace Bakabase.Modules.CustomProperty.Services
             var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == sourcePropertyId,
                 CustomPropertyValueAdditionalItem.None, false);
             var propertyDescriptor = propertyDescriptors[property.Type];
-            var stdValueHandler = StdValueHandlers[property.DbValueType];
+            var dbValueHandler = StdValueHandlers[property.DbValueType];
+            var bizValueHandler = StdValueHandlers[property.BizValueType];
 
             var typedValues = values.Select(v => propertyDescriptor.ConvertDbValueToBizValue(property, v.Value))
                 .ToList();
@@ -215,7 +216,7 @@ namespace Bakabase.Modules.CustomProperty.Services
                     .ToList();
                 foreach (var l in list)
                 {
-                    var str = stdValueHandler.BuildDisplayValue(d);
+                    var str = bizValueHandler.BuildDisplayValue(d);
                     if (!string.IsNullOrEmpty(str))
                     {
                         if (!lossMap.ContainsKey(l))
