@@ -1359,5 +1359,14 @@
   "Advance filter": "高级筛选",
   "Value is being referenced in {{count}} places": "该值当前在{{count}}处被引用",
   "{{count}} values": "{{count}}个值",
-  "Show attributes not bound to categories": "显示未与分类绑定的属性"
+  "Show attributes not bound to categories": "显示未与分类绑定的属性",
+  "Group of tag, optional": "标签组（非必填）",
+  "Add or delete tags in bulk": "批量添加或删除标签",
+  "Add or delete in bulk": "批量添加或删除",
+  "Colon can be added between group and name, and tags will be separated by line breaks.": "英文冒号:可以被用来分隔标签组和标签名，也可以用换行分隔多个标签。",
+  "Once you click the submit button, new tags will be added to the list, and missing tags will be deleted.": "一旦您点击了提交按钮，新的标签将会被加入到列表中，而缺失的标签将会被删除。",
+  "Be cautions: once you modify the text in one line, it will be treated as a new tag, and the original tag will be deleted.": "请注意：一旦您修改了一行中的文本，它将会被视为一个新的标签，原有的标签将会被删除。",
+  "{{count}} data will be deleted": "{{count}}条数据将会被删除",
+  "{{count}} data will be added": "{{count}}条数据将会被添加",
+  "Tags will be changed": "标签即将变更"
 }

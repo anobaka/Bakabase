@@ -152,6 +152,9 @@ const Modal = (props: ModalProps) => {
         }
         domRef.current = r;
       }}
+      classNames={props.classNames}
+      className={props.className}
+      style={props.style}
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">{props.title}</ModalHeader>

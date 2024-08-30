@@ -37,8 +37,8 @@ const lineHeight = 35;
 export default function ChoiceList({ choices: propsChoices, onChange, className, checkUsage }: IProps) {
   const { t } = useTranslation();
   const [choices, setChoices] = useState<IChoice[]>(propsChoices || []);
-  const [addInBulkPopupVisible, setAddInBulkPopupVisible] = useState(false);
-  const [addInBulkText, setAddInBulkText] = useState('');
+  const [editInBulkPopupVisible, setEditInBulkPopupVisible] = useState(false);
+  const [editInBulkText, setEditInBulkText] = useState('');
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -162,20 +162,20 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
               variant={'light'}
               size={'sm'}
             >
-              {t('Add in bulk')}
+              {t('Edit in bulk')}
             </Button>
           )}
           placement={'right'}
-          visible={addInBulkPopupVisible}
+          visible={editInBulkPopupVisible}
           onVisibleChange={v => {
-            setAddInBulkPopupVisible(v);
+            setEditInBulkPopupVisible(v);
           }}
         >
           <div className={'flex flex-col gap-2 m-2 '}>
-            <div className="text-medium">{t('Add choices in bulk')}</div>
+            <div className="text-medium">{t('Edit choices in bulk')}</div>
             <Textarea
-              value={addInBulkText}
-              onValueChange={v => setAddInBulkText(v)}
+              value={editInBulkText}
+              onValueChange={v => setEditInBulkText(v)}
               placeholder={t('Please enter the data you want to add, separated by line breaks')}
             />
             <div className="flex justify-end items-center">
@@ -183,7 +183,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
                 variant={'light'}
                 size={'sm'}
                 onClick={() => {
-                  setAddInBulkPopupVisible(false);
+                  setEditInBulkPopupVisible(false);
                 }}
               >
                 {t('Cancel')}
@@ -192,9 +192,9 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
                 color={'primary'}
                 size={'sm'}
                 onClick={() => {
-                  const newChoices = addInBulkText.split('\n').map(c => ({ label: c, value: uuidv4() }));
+                  const newChoices = editInBulkText.split('\n').map(c => ({ label: c, value: uuidv4() }));
                   setChoices([...choices, ...newChoices]);
-                  setAddInBulkPopupVisible(false);
+                  setEditInBulkPopupVisible(false);
                 }}
               >
                 {t('Add')}
