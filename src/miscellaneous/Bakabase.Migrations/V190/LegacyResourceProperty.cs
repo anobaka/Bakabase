@@ -11,5 +11,6 @@ public enum LegacyResourceProperty
     Series = 10,
     Tag = 11,
     CustomProperty = 14,
-    Favorites = 22
+    Favorites = 22,
+    Cover
 }

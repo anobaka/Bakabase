@@ -12,8 +12,7 @@ import type { Tag } from '../../../Property/models';
 import { SortableTag } from './components/SortableTag';
 import CustomIcon from '@/components/CustomIcon';
 import { uuidv4 } from '@/components/utils';
-import { Button, Chip, Modal, Popover, Textarea } from '@/components/bakaui';
-import { createPortal } from '@/components/ContextProvider/helpers';
+import { Button, Chip, Popover, Textarea } from '@/components/bakaui';
 
 interface IProps {
   tags?: Tag[];
@@ -51,8 +50,12 @@ export default function TagList({
   }, [tags]);
 
   const buildTagsFromBulkText = (text: string): Tag[] => {
-    const newTags: Tag[] = editInBulkText.split('\n').map<Tag>(c => {
-      const segments = c.split(':');
+    return text.split('\n').map<Tag | null>(c => {
+      const str = c.trim();
+      if (str.length == 0) {
+        return null;
+      }
+      const segments = str.split(GroupAndNameSeparator);
       let name = '';
       let group: string | undefined;
       if (segments.length == 1) {
@@ -73,8 +76,7 @@ export default function TagList({
         name,
         value: uuidv4(),
       };
-    });
-    return newTags;
+    }).filter(x => x != null) as Tag[];
   };
 
   const calculateBulkEditSummary = (text: string) => {
@@ -232,6 +234,17 @@ export default function TagList({
               <div>{t('Once you click the submit button, new tags will be added to the list, and missing tags will be deleted.')}</div>
               <div>{t('Be cautions: once you modify the text in one line, it will be treated as a new tag, and the original tag will be deleted.')}</div>
             </div>
+            {bulkEditSummaries.length > 0 && (
+              <div className={'flex items-center gap-2 text-sm'}>
+                {bulkEditSummaries.map(s => (
+                  <Chip
+                    size={'sm'}
+                    variant={'light'}
+                    color={'success'}
+                  >{s}</Chip>
+                ))}
+              </div>
+            )}
             <Textarea
               value={editInBulkText}
               // onValueChange={v => setEditInBulkText(v)}
@@ -245,17 +258,6 @@ export default function TagList({
                 }, 1000);
               }}
             />
-            {bulkEditSummaries.length > 0 && (
-              <div className={'flex items-center gap-2 text-sm'}>
-                {bulkEditSummaries.map(s => (
-                  <Chip
-                    size={'sm'}
-                    variant={'light'}
-                    color={'success'}
-                  >{s}</Chip>
-                ))}
-              </div>
-            )}
             <div className="flex justify-end items-center">
               <Button
                 variant={'light'}

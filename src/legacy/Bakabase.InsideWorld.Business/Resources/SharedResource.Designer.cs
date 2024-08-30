@@ -639,6 +639,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cover.
+        /// </summary>
+        internal static string Migration_V190_DefaultPropertyName_Cover {
+            get {
+                return ResourceManager.GetString("Migration_V190_DefaultPropertyName_Cover", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to CustomProperty.
         /// </summary>
         internal static string Migration_V190_DefaultPropertyName_CustomProperty {

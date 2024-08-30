@@ -1,7 +1,9 @@
-﻿using Bakabase.Abstractions.Models.Db;
+﻿using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Services;
+using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Migrations;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Legacy.Services;
@@ -12,8 +14,10 @@ using Bakabase.Modules.Alias.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
+using Bakabase.Modules.CustomProperty.Components;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
+using Microsoft.Extensions.Logging;
 using CustomProperty = Bakabase.Abstractions.Models.Domain.CustomProperty;
 using CustomPropertyValue = Bakabase.Abstractions.Models.Domain.CustomPropertyValue;
 
@@ -45,6 +49,9 @@ namespace Bakabase.Migrations.V190
         private readonly ICategoryCustomPropertyMappingService _categoryCustomPropertyMappingService;
         private readonly ICategoryService _categoryService;
 
+        private readonly AppService _appService;
+        private readonly IFileManager _fileManager;
+
         private readonly InsideWorldDbContext _dbCtx;
 
         public V190Migrator(LegacyPublisherService publisherService, LegacyVolumeService volumeService,
@@ -60,7 +67,7 @@ namespace Bakabase.Migrations.V190
             IBuiltinPropertyValueService builtinPropertyValueService, IResourceService resourceService,
             IAliasService aliasService, LegacyAliasService legacyAliasService, InsideWorldDbContext dbCtx,
             ICategoryCustomPropertyMappingService categoryCustomPropertyMappingService,
-            ICategoryService categoryService) : base(serviceProvider)
+            ICategoryService categoryService, AppService appService, IFileManager fileManager) : base(serviceProvider)
         {
             _publisherService = publisherService;
             _volumeService = volumeService;
@@ -85,6 +92,8 @@ namespace Bakabase.Migrations.V190
             _dbCtx = dbCtx;
             _categoryCustomPropertyMappingService = categoryCustomPropertyMappingService;
             _categoryService = categoryService;
+            _appService = appService;
+            _fileManager = fileManager;
         }
 
         protected override async Task MigrateAfterDbMigrationInternal(object context)
@@ -182,9 +191,8 @@ namespace Bakabase.Migrations.V190
         private async Task MigrateCustomProperties()
         {
             var customPropertyMigrationContexts =
-                new List<(LegacyResourceProperty Property, string? SubProperty, Dictionary<int, object?>
-                    ResourceBizValue
-                    )>();
+                new List<(LegacyResourceProperty Property, string? SubProperty, Dictionary<int, object?>?
+                    ResourceBizValue)>();
 
             foreach (var property in SpecificEnumUtils<LegacyResourceProperty>.Values)
             {
@@ -226,7 +234,7 @@ namespace Bakabase.Migrations.V190
                 }
                 else
                 {
-                    Dictionary<int, object?> resourceBizValueMap;
+                    Dictionary<int, object?> resourceBizValueMap = null;
                     switch (property)
                     {
                         case LegacyResourceProperty.ReleaseDt:
@@ -310,6 +318,55 @@ namespace Bakabase.Migrations.V190
                                 .ToDictionary(d => d.Key, d => (object?) d.Value);
                             break;
                         }
+                        case LegacyResourceProperty.Cover:
+                        {
+                            var prevCoverRootDir = Path.Combine(_appService.TempFilesPath, "cover");
+                            if (Directory.Exists(prevCoverRootDir))
+                            {
+                                var files = Directory.GetFiles(prevCoverRootDir, "cover.*", SearchOption.AllDirectories);
+                                if (files.Any())
+                                {
+                                    resourceBizValueMap = new Dictionary<int, object?>();
+                                    var subDirs = Directory.GetDirectories(prevCoverRootDir);
+                                    var newCoverRootDir = _fileManager.BuildAbsolutePath("cover");
+                                    Directory.CreateDirectory(newCoverRootDir);
+                                    foreach (var sd in subDirs)
+                                    {
+                                        if (int.TryParse(Path.GetFileName(sd), out var resourceId))
+                                        {
+                                            var newResourceCoverDir =
+                                                Path.Combine(newCoverRootDir, resourceId.ToString());
+                                            var subFiles = Directory.GetFiles(sd, "*", SearchOption.AllDirectories);
+                                            try
+                                            {
+                                                foreach (var sf in subFiles)
+                                                {
+                                                    var nf = sf.Replace(sd, newResourceCoverDir);
+                                                    if (!File.Exists(nf))
+                                                    {
+                                                        File.Copy(sf, nf);
+                                                    }
+                                                }
+                                            }
+                                            catch (Exception e)
+                                            {
+                                                Logger.LogWarning(e,
+                                                    $"Failed to migrate cover files for resource {resourceId}.");
+                                            }
+
+                                            var covers = Directory.GetFiles(newResourceCoverDir);
+                                            if (covers.Any())
+                                            {
+                                                resourceBizValueMap[resourceId] =
+                                                    new ListStringValueBuilder(covers.ToList()).Value;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            break;
+                        }
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -318,7 +375,7 @@ namespace Bakabase.Migrations.V190
                 }
             }
 
-            customPropertyMigrationContexts.RemoveAll(x => !x.ResourceBizValue.Any());
+            customPropertyMigrationContexts.RemoveAll(x => x.ResourceBizValue?.Any() != true);
 
             var propertyIds = new List<int>();
             foreach (var (lp, sp, rbMap) in customPropertyMigrationContexts)
@@ -330,7 +387,7 @@ namespace Bakabase.Migrations.V190
                 {
                     var values = new List<CustomPropertyValue>();
                     var propertyChanged = false;
-                    foreach (var (rId, bizValue) in rbMap)
+                    foreach (var (rId, bizValue) in rbMap!)
                     {
                         var result = await _customPropertyValueService.CreateTransient(bizValue, property.BizValueType, property,
                             rId, (int) PropertyValueScope.Manual);
@@ -389,6 +446,7 @@ namespace Bakabase.Migrations.V190
                 LegacyResourceProperty.CustomProperty => CustomPropertyType.MultipleChoice,
                 LegacyResourceProperty.Favorites => CustomPropertyType.MultipleChoice,
                 LegacyResourceProperty.Tag => CustomPropertyType.Tags,
+                LegacyResourceProperty.Cover => CustomPropertyType.Attachment,
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }

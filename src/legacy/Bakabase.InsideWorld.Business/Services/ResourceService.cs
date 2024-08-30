@@ -306,13 +306,18 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<Resource?> Get(int id, ResourceAdditionalItem additionalItems)
         {
             var resource = await _orm.GetByKey(id);
+            if (resource == null)
+            {
+                return null;
+            }
+
             return await ToDomainModel(resource, additionalItems);
         }
 
         public async Task<List<Resource>> GetByKeys(int[] ids,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
-            var resources = await _orm.GetByKeys(ids);
+            var resources = (await _orm.GetByKeys(ids)) ?? [];
             var dtoList = await ToDomainModel(resources, additionalItems);
             return dtoList;
         }

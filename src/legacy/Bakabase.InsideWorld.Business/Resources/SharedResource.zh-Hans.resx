@@ -389,4 +389,7 @@
   <data name="Enhancer_Bangumi_Target_Cover_Name" xml:space="preserve">
     <value>封面</value>
   </data>
+  <data name="Migration_V190_DefaultPropertyName_Cover" xml:space="preserve">
+    <value>封面</value>
+  </data>
 </root>

@@ -21,7 +21,7 @@ import type { IChoice } from '../../../Property/models';
 import { SortableChoice } from './components/SortableChoice';
 import CustomIcon from '@/components/CustomIcon';
 import { uuidv4 } from '@/components/utils';
-import { Button, Popover, Textarea } from '@/components/bakaui';
+import { Button, Chip, Popover, Textarea } from '@/components/bakaui';
 
 const { Popup } = Overlay;
 
@@ -39,6 +39,9 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
   const [choices, setChoices] = useState<IChoice[]>(propsChoices || []);
   const [editInBulkPopupVisible, setEditInBulkPopupVisible] = useState(false);
   const [editInBulkText, setEditInBulkText] = useState('');
+  const [bulkEditSummaries, setBulkEditSummaries] = useState<string[]>([]);
+  const calculateBulkEditSummaryTimeoutRef = useRef<any>();
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -51,6 +54,40 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
   useEffect(() => {
     onChange?.(choices);
   }, [choices]);
+
+  const buildChoicesFromBulkText = (text: string): IChoice[] => {
+    return text.split('\n').map<IChoice | null>(c => {
+      const str = c.trim();
+      if (str.length == 0) {
+        return null;
+      }
+
+      const t = choices.find(x => x.label == str);
+
+      if (t) {
+        return t;
+      }
+
+      return {
+        label: str,
+        value: uuidv4(),
+      };
+    }).filter(x => x != null) as IChoice[];
+  };
+
+  const calculateBulkEditSummary = (text: string) => {
+    const ctxChoices = buildChoicesFromBulkText(text);
+    const addedChoicesCount = ctxChoices.filter(x => !choices.includes(x)).length;
+    const sameChoicesCount = ctxChoices.filter(x => choices.includes(x)).length;
+
+    const deletedChoicesCount = choices.length - sameChoicesCount;
+    if (deletedChoicesCount > 0 || addedChoicesCount > 0) {
+      const tips = [deletedChoicesCount > 0 ? t('{{count}} data will be deleted', { count: deletedChoicesCount }) : '', addedChoicesCount > 0 ? t('{{count}} data will be added', { count: addedChoicesCount }) : ''];
+      setBulkEditSummaries(tips.filter(t => t));
+    } else {
+      setBulkEditSummaries([]);
+    }
+  };
 
   return (
     <div className={className}>
@@ -162,21 +199,51 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
               variant={'light'}
               size={'sm'}
             >
-              {t('Edit in bulk')}
+              {t('Add or delete in bulk')}
             </Button>
           )}
+          style={{ zIndex: 100 }}
+          size={'lg'}
           placement={'right'}
           visible={editInBulkPopupVisible}
           onVisibleChange={v => {
+            if (v) {
+              const text = choices.map(t => t.label).join('\n');
+              setEditInBulkText(text);
+            }
             setEditInBulkPopupVisible(v);
           }}
         >
           <div className={'flex flex-col gap-2 m-2 '}>
-            <div className="text-medium">{t('Edit choices in bulk')}</div>
+            <div className="text-medium">{t('Add or delete choices in bulk')}</div>
+            <div className={'text-sm opacity-70'}>
+              <div>{t('Choices will be separated by line breaks.')}</div>
+              <div>{t('Once you click the submit button, new choices will be added to the list, and missing choices will be deleted.')}</div>
+              <div>{t('Be cautions: once you modify the text in one line, it will be treated as a new choice, and the original choice will be deleted.')}</div>
+            </div>
+            {bulkEditSummaries.length > 0 && (
+              <div className={'flex items-center gap-2 text-sm'}>
+                {bulkEditSummaries.map(s => (
+                  <Chip
+                    size={'sm'}
+                    variant={'light'}
+                    color={'success'}
+                  >{s}</Chip>
+                ))}
+              </div>
+            )}
             <Textarea
               value={editInBulkText}
-              onValueChange={v => setEditInBulkText(v)}
-              placeholder={t('Please enter the data you want to add, separated by line breaks')}
+              // onValueChange={v => setEditInBulkText(v)}
+              maxRows={16}
+              onValueChange={v => {
+                setEditInBulkText(v);
+                calculateBulkEditSummaryTimeoutRef.current && clearTimeout(calculateBulkEditSummaryTimeoutRef.current);
+                calculateBulkEditSummaryTimeoutRef.current = setTimeout(() => {
+                  calculateBulkEditSummary(v);
+                  calculateBulkEditSummaryTimeoutRef.current = undefined;
+                }, 1000);
+              }}
             />
             <div className="flex justify-end items-center">
               <Button
@@ -191,13 +258,13 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
               <Button
                 color={'primary'}
                 size={'sm'}
+                isLoading={!!calculateBulkEditSummaryTimeoutRef.current}
                 onClick={() => {
-                  const newChoices = editInBulkText.split('\n').map(c => ({ label: c, value: uuidv4() }));
-                  setChoices([...choices, ...newChoices]);
+                  setChoices(buildChoicesFromBulkText(editInBulkText));
                   setEditInBulkPopupVisible(false);
                 }}
               >
-                {t('Add')}
+                {t('Submit')}
               </Button>
             </div>
           </div>
