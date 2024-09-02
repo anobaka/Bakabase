@@ -76,7 +76,7 @@ export default (props: StringValueRendererProps) => {
   } else {
     if (multiline) {
       return (
-        <pre onClick={startEditing}>{value}</pre>
+        <pre dangerouslySetInnerHTML={{ __html: value! }} onClick={startEditing} />
       );
     } else {
       return (

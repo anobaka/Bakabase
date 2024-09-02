@@ -6,9 +6,9 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili.Models;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;

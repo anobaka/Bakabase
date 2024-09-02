@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -14,24 +12,15 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili.Models;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili.Models.Constants;
 using Bakabase.InsideWorld.Business.Configurations;
-using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
-using Bootstrap.Components.Storage;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Constants;
 using Bootstrap.Extensions;
-using Bootstrap.Models.ResponseModels;
-using CliWrap;
-using CsQuery.ExtensionMethods;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using SQLitePCL;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
 {
@@ -227,7 +216,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
                                                 DateTime.Now.ToString(
                                                     $"yyyyMMdd-HHmmssfff-{Guid.NewGuid().ToString("N")[..6]}");
 
-                                            var urlForLux = BiliBiliApiConstants.PostPartPage
+                                            var urlForLux = BiliBiliApiUrls.PostPartPage
                                                 .Replace("{aid}", postInfo.Aid.ToString())
                                                 .Replace("{part}", i.ToString());
 

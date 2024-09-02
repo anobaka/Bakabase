@@ -65,6 +65,7 @@ export default (props: Props) => {
     <>
       <div className={'flex justify-end'}>
         <Chip
+          className={'whitespace-break-spaces py-1 h-auto break-all'}
           size={'sm'}
           radius={'sm'}
           color={'secondary'}

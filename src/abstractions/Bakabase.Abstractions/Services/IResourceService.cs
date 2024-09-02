@@ -78,7 +78,7 @@ public interface IResourceService
     // Task<BaseResponse> StartGeneratingNfo(BackgroundTask task);
     // Task PopulateStatistics(DashboardStatistics statistics);
     //
-    Task<BaseResponse> SaveThumbnail(int id, bool overwrite, byte[] imageBytes, CancellationToken ct);
+    // Task<BaseResponse> SaveThumbnail(int id, bool overwrite, byte[] imageBytes, CancellationToken ct);
 
     /// <summary>
     /// Raw cover, no cache.
@@ -86,15 +86,7 @@ public interface IResourceService
     /// <param name="id"></param>
     /// <param name="ct"></param>
     /// <returns>File path</returns>
-    Task<(string? Path, byte[]? ImageBytes)?> GetCover(int id, CancellationToken ct);
-
-    /// <summary>
-    /// Optimized cover, with cache.
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="ct"></param>
-    /// <returns></returns>
-    Task<string?> GetThumbnail(int id, CancellationToken ct);
+    Task<(string? Path, byte[]? ImageBytes)?> DiscoverCover(int id, CancellationToken ct);
 
     Task<BaseResponse> Play(int resourceId, string file);
     Task DeleteUnknown();

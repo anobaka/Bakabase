@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili.Models;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;

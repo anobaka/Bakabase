@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ThirdParties\Bangumi\Models\Constants\**" />
+    <EmbeddedResource Remove="ThirdParties\Bangumi\Models\Constants\**" />
+    <None Remove="ThirdParties\Bangumi\Models\Constants\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CsQuery.NETStandard" Version="1.3.6.1" />
   </ItemGroup>
 
@@ -17,7 +23,27 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Bangumi\Models\Constants\" />
+    <Compile Update="Resources\ThirdPartyResource.zh-Hans.Designer.cs">
+      <DependentUpon>ThirdPartyResource.zh-Hans.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+    </Compile>
+    <Compile Update="Resources\ThirdPartyResource.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ThirdPartyResource.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\ThirdPartyResource.zh-Hans.resx">
+      <LastGenOutput>ThirdPartyResource.zh-Hans.Designer.cs</LastGenOutput>
+      <Generator>ResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\ThirdPartyResource.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>ThirdPartyResource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

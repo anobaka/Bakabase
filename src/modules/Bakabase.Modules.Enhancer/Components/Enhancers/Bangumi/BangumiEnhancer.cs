@@ -1,21 +1,13 @@
-﻿using System.Net;
-using System.Text.RegularExpressions;
-using Bakabase.Abstractions.Components.FileSystem;
+﻿using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
-using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.Modules.CustomProperty.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
-using Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase;
-using Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Models.Domain;
-using Bakabase.Modules.ThirdParty.Bangumi;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bootstrap.Extensions;
-using CsQuery;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
@@ -26,16 +18,18 @@ public class BangumiEnhancer(
     ISpecialTextService specialTextService,
     BangumiClient client,
     IFileManager fileManager)
-    : AbstractEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>(valueConverters, loggerFactory, fileManager)
+    : AbstractEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>(valueConverters, loggerFactory,
+        fileManager)
 {
-    protected override async Task<BangumiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options, CancellationToken ct)
+    protected override async Task<BangumiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options,
+        CancellationToken ct)
     {
         var keyword = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
         var detail = await client.SearchAndParseFirst(keyword);
 
         if (detail != null)
         {
-            var ctx= new BangumiEnhancerContext
+            var ctx = new BangumiEnhancerContext
             {
                 Name = detail.Name,
                 Introduction = detail.Introduction,
@@ -44,11 +38,11 @@ public class BangumiEnhancer(
                 Tags = detail.Tags,
             };
 
-            if (!string.IsNullOrEmpty(detail.CoverPath))
+            if (!string.IsNullOrEmpty(detail.CoverUrl))
             {
-                var imageData = await client.HttpClient.GetByteArrayAsync(detail.CoverPath, ct);
-                var queryIdx = detail.CoverPath.IndexOf('?');
-                var coverUrl = queryIdx == -1 ? detail.CoverPath : detail.CoverPath[..queryIdx];
+                var imageData = await client.HttpClient.GetByteArrayAsync(detail.CoverUrl, ct);
+                var queryIdx = detail.CoverUrl.IndexOf('?');
+                var coverUrl = queryIdx == -1 ? detail.CoverUrl : detail.CoverUrl[..queryIdx];
                 ctx.CoverPath = await SaveFile(resource.Id, $"cover{Path.GetExtension(coverUrl)}", imageData);
             }
 
@@ -81,9 +75,10 @@ public class BangumiEnhancer(
                         BangumiEnhancerTarget.Tags => new ListTagValueBuilder(context.Tags),
                         BangumiEnhancerTarget.Introduction => new StringValueBuilder(context.Introduction),
                         BangumiEnhancerTarget.OtherPropertiesInLeftPanel => throw new ArgumentOutOfRangeException(),
-                        BangumiEnhancerTarget.Cover => new ListStringValueBuilder(string.IsNullOrEmpty(context.CoverPath)
-                            ? null
-                            : [context.CoverPath]),
+                        BangumiEnhancerTarget.Cover => new ListStringValueBuilder(
+                            string.IsNullOrEmpty(context.CoverPath)
+                                ? null
+                                : [context.CoverPath]),
 
                         _ => throw new ArgumentOutOfRangeException()
                     };

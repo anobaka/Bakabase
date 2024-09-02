@@ -7,6 +7,7 @@ using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Extensions;
+using Humanizer;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Enhancer.Abstractions.Components
@@ -32,11 +33,14 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
             Logger = loggerFactory.CreateLogger(GetType());
         }
 
-        protected abstract Task<TContext?> BuildContext(Resource resource, EnhancerFullOptions options, CancellationToken ct);
-        public int Id => (int)TypedId;
+        protected abstract Task<TContext?> BuildContext(Resource resource, EnhancerFullOptions options,
+            CancellationToken ct);
+
+        public int Id => (int) TypedId;
         protected abstract EnhancerId TypedId { get; }
 
-        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options, CancellationToken ct)
+        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options,
+            CancellationToken ct)
         {
             var context = await BuildContext(resource, options, ct);
             if (context == null)
@@ -59,7 +63,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
                 if (value != null)
                 {
                     var targetAttr = tv.Target.GetAttribute<EnhancerTargetAttribute>();
-                    var intTarget = (int)(object)tv.Target;
+                    var intTarget = (int) (object) tv.Target;
                     var vt = targetAttr.ValueType;
                     var e = new EnhancementRawValue
                     {
@@ -102,10 +106,10 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
         }
 
         protected string BuildFilePath(string fileName) =>
-            _fileManager.BuildAbsolutePath(nameof(Enhancer), Id.ToString(), fileName);
+            _fileManager.BuildAbsolutePath(nameof(Enhancer).Camelize(), Id.ToString(), fileName);
 
         protected string BuildFilePath(int resourceId, string fileName) =>
-            _fileManager.BuildAbsolutePath(nameof(Enhancer), Id.ToString(), resourceId.ToString(), fileName);
+            _fileManager.BuildAbsolutePath(nameof(Enhancer).Camelize(), Id.ToString(), resourceId.ToString(), fileName);
 
         /// <summary>
         /// 
@@ -115,8 +119,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
         /// <returns>
         /// The value of the dictionary MUST be the standard value, which can be generated safely via <see cref="IStandardValueBuilder{TValue}"/>
         /// </returns>
-        protected abstract Task<List<EnhancementTargetValue<TEnumTarget>>> ConvertContextByTargets(TContext context, CancellationToken ct);
-
-
+        protected abstract Task<List<EnhancementTargetValue<TEnumTarget>>> ConvertContextByTargets(TContext context,
+            CancellationToken ct);
     }
 }

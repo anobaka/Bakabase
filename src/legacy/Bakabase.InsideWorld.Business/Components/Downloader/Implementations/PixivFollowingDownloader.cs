@@ -8,11 +8,12 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv.Models;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
+using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv.Models;
 using Bootstrap.Components.Configuration.Abstractions;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations

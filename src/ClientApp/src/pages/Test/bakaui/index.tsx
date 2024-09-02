@@ -6,10 +6,18 @@ import { createPortal } from 'react-dom';
 import { SyncOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { Button, DateInput, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
+import { Button, Carousel, DateInput, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
 import ClickableIcon from '@/components/ClickableIcon';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+
+const contentStyle: React.CSSProperties = {
+  margin: 0,
+  height: '100%',
+  color: '#fff',
+  textAlign: 'center',
+  background: '#364d79',
+};
 
 export default () => {
   const { t } = useTranslation();
@@ -24,12 +32,28 @@ export default () => {
 
   return (
     <>
+      <div className={'w-[400px] h-[400px]'}>
+        <Carousel>
+          <img
+            src={'http://localhost:5001/tool/thumbnail?path=C%3A%2FUsers%2Fanoba%2FAppData%2FRoaming%2FBakabase.Debugging%2Fdata%2Fenhancer%2F4%2F8907%2Fcover.5.RJ01248749_img_smp5.jpg'}
+          />
+          <img
+            src={'http://localhost:5001/tool/thumbnail?path=C%3A%2FUsers%2Fanoba%2FAppData%2FRoaming%2FBakabase.Debugging%2Fdata%2Fenhancer%2F4%2F8907%2Fcover.5.RJ01248749_img_smp5.jpg'}
+          />
+          <img
+            src={'http://localhost:5001/tool/thumbnail?path=C%3A%2FUsers%2Fanoba%2FAppData%2FRoaming%2FBakabase.Debugging%2Fdata%2Fenhancer%2F4%2F8907%2Fcover.5.RJ01248749_img_smp5.jpg'}
+          />
+          <img
+            src={'http://localhost:5001/tool/thumbnail?path=C%3A%2FUsers%2Fanoba%2FAppData%2FRoaming%2FBakabase.Debugging%2Fdata%2Fenhancer%2F4%2F8907%2Fcover.5.RJ01248749_img_smp5.jpg'}
+          />
+        </Carousel>
+      </div>
       <DateInput
         value={date}
         onChange={v => {
-        console.log(v?.valueOf());
-        setDate(v);
-      }}
+          console.log(v?.valueOf());
+          setDate(v);
+        }}
       />
       <Tooltip
         content={t('Bulk operations')}

@@ -17,6 +17,7 @@ using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using NPOI.HSSF.Util;

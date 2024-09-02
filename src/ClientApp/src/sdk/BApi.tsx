@@ -35,7 +35,7 @@ class BApi extends Api<any> {
             if ((typedRsp?.code >= 400 || typedRsp?.code < 200)) {
               if (!params.ignoreError) {
                 Message.error({
-                  duration: 0,
+                  duration: 5000,
                   title: `${params.path}: [${typedRsp.code}]`,
                   content: (
                     <pre>
@@ -44,6 +44,7 @@ class BApi extends Api<any> {
                     </pre>
                   ),
                   closeable: true,
+                  hasMask: true,
                 });
               }
             }
@@ -58,7 +59,7 @@ class BApi extends Api<any> {
 
         if (!params.signal?.aborted) {
           Message.error({
-            duration: 0,
+            duration: 5000,
             title: `${params.path}: 请求异常，请稍后再试。`,
             content: (
               <pre>
@@ -66,6 +67,7 @@ class BApi extends Api<any> {
               </pre>
             ),
             closeable: true,
+            hasMask: true,
           });
         }
 

@@ -33,6 +33,7 @@ using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.Modules.ThirdParty.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
@@ -148,20 +149,9 @@ namespace Bakabase.Service.Extensions
             // todo: this can be moved into abstraction layer.
             services.AddSingleton<Abstractions.Components.Cover.ICoverDiscoverer, CoverDiscoverer>();
 
+            services.AddThirdParty();
+
             #endregion
-
-            return services;
-        }
-
-        public static IServiceCollection AddBakabaseHttpClient<THttpClientHandler>(this IServiceCollection services,
-            string name) where THttpClientHandler : HttpClientHandler
-        {
-            services.TryAddSingleton<THttpClientHandler>();
-            services.AddHttpClient(name,
-                    t => { t.DefaultRequestHeaders.Add("User-Agent", InternalOptions.DefaultHttpUserAgent); })
-                // todo: let http client factory handle its lifetime automatically after changing queue mechanism of inside world handler 
-                .SetHandlerLifetime(TimeSpan.FromDays(30))
-                .ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<THttpClientHandler>());
 
             return services;
         }

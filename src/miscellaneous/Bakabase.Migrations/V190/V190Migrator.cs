@@ -54,6 +54,8 @@ namespace Bakabase.Migrations.V190
 
         private readonly InsideWorldDbContext _dbCtx;
 
+        protected override string ApplyOnVersionEqualsOrBeforeString => "1.9.0-beta";
+
         public V190Migrator(LegacyPublisherService publisherService, LegacyVolumeService volumeService,
             LegacySeriesService seriesService,
             LegacyOriginalService originalService, LegacyOriginalResourceMappingService originalResourceMappingService,
@@ -487,7 +489,5 @@ namespace Bakabase.Migrations.V190
             });
             return valueMap;
         }
-
-        protected override string ApplyOnVersionEqualsOrBeforeString => "1.8.999";
     }
 }

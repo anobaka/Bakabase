@@ -150,8 +150,8 @@ export default (props: Props) => {
   const renderProperties = (renderContext: RenderContext) => {
     return (
       <div
-        className={`grid gap-x-4 gap-y-1 ${className} items-center`}
-        style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}
+        className={`grid gap-x-4 gap-y-1 ${className} items-center overflow-hidden`}
+        style={{ gridTemplateColumns: 'max(120px) minmax(0, 1fr)' }}
       >
         {renderContext.filter(x => showInvisibleProperties || x.visible).map(({
                               property,

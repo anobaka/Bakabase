@@ -64,7 +64,7 @@ namespace Bakabase.Service.Controllers
         private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly ICategoryService _categoryService;
         private readonly ICustomPropertyService _customPropertyService;
-        private readonly ICoverDiscoverer _coverManager;
+        private readonly ICoverDiscoverer _coverDiscoverer;
         private readonly IStandardValueHelper _standardValueHelper;
 
         public ResourceController(IResourceService service, IServiceProvider serviceProvider,
@@ -75,7 +75,7 @@ namespace Bakabase.Service.Controllers
             InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
             ILogger<ResourceController> logger, ICustomPropertyValueService customPropertyValueService,
             ICategoryService categoryService, ICustomPropertyService customPropertyService,
-            ICoverDiscoverer coverManager, IStandardValueHelper standardValueHelper)
+            ICoverDiscoverer coverDiscoverer, IStandardValueHelper standardValueHelper)
         {
             _service = service;
             _specialTextService = specialTextService;
@@ -92,7 +92,7 @@ namespace Bakabase.Service.Controllers
             _customPropertyValueService = customPropertyValueService;
             _categoryService = categoryService;
             _customPropertyService = customPropertyService;
-            _coverManager = coverManager;
+            _coverDiscoverer = coverDiscoverer;
             _standardValueHelper = standardValueHelper;
         }
 
@@ -412,39 +412,32 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        [HttpGet("{id}/thumbnail")]
-        [SwaggerOperation(OperationId = "GetResourceThumbnail")]
-        [ResponseCache(Duration = 20 * 60)]
-        public async Task<IActionResult> GetThumbnail(int id)
-        {
-            var thumbnail = await _service.GetThumbnail(id, HttpContext.RequestAborted);
-            if (!string.IsNullOrEmpty(thumbnail))
-            {
-                return File(System.IO.File.OpenRead(thumbnail), MimeTypes.GetMimeType(thumbnail));
-            }
-
-            return NotFound();
-        }
-
-
         [HttpGet("{id}/cover")]
-        [SwaggerOperation(OperationId = "GetResourceCover")]
-        public async Task<IActionResult> GetCover(int id)
+        [SwaggerOperation(OperationId = "DiscoverResourceCover")]
+        public async Task<IActionResult> DiscoverCover(int id)
         {
-            var cover = await _service.GetCover(id, HttpContext.RequestAborted);
-            if (!cover.HasValue)
+            var resource = await _service.Get(id, ResourceAdditionalItem.None);
+            if (resource == null)
             {
                 return NotFound();
             }
 
-            var (path, bytes) = cover.Value;
-            if (!string.IsNullOrEmpty(path))
+            var category = await _categoryService.Get(resource.CategoryId, CategoryAdditionalItem.None);
+
+            var cover = await _coverDiscoverer.Discover(resource.Path,
+                category?.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending, true, HttpContext.RequestAborted);
+            if (cover == null)
             {
-                return File(System.IO.File.OpenRead(path), MimeTypes.GetMimeType(path));
+                return NotFound();
             }
 
-            var format = await Image.DetectFormatAsync(new MemoryStream(bytes!));
-            return File(bytes!, format.DefaultMimeType);
+            if (!string.IsNullOrEmpty(cover.Path))
+            {
+                return File(System.IO.File.OpenRead(cover.Path), MimeTypes.GetMimeType(cover.Path));
+            }
+
+            var format = await Image.DetectFormatAsync(new MemoryStream(cover.Data!));
+            return File(cover.Data!, format.DefaultMimeType);
         }
 
         [HttpGet("{id}/playable-files")]
@@ -538,16 +531,6 @@ namespace Bakabase.Service.Controllers
         {
             await _resourceTaskManager.Clear(id);
             return BaseResponseBuilder.Ok;
-        }
-
-        [HttpPost("{id}/thumbnail")]
-        [SwaggerOperation(OperationId = "SaveThumbnail")]
-        public async Task<BaseResponse> SaveThumbnail(int id, [FromBody] CoverSaveRequestModel model)
-        {
-            var data = model.Base64Image.Split(',')[1];
-            var bytes = Convert.FromBase64String(data);
-            var rsp = await _service.SaveThumbnail(id, model.Overwrite, bytes, HttpContext.RequestAborted);
-            return rsp;
         }
 
         // [HttpPost("nfo")]

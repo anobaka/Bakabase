@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Checkbox, Dialog, Icon, Message } from '@alifd/next';
+import { Checkbox, Dialog, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
 import { Img } from 'react-image';
 import { LoadingOutlined } from '@ant-design/icons';
 import serverConfig from '@/serverConfig';
-import { GetResourceCoverURL } from '@/sdk/apis';
 import { useTraceUpdate, uuidv4 } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import MediaPreviewer from '@/components/MediaPreviewer';
@@ -14,7 +13,7 @@ import store from '@/store';
 import type { CoverSaveLocation } from '@/sdk/constants';
 import { ResponseCode } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
-import { Image, Tooltip } from '@/components/bakaui';
+import { Carousel, Tooltip } from '@/components/bakaui';
 
 type TooltipPlacement =
   | 'top'
@@ -37,7 +36,7 @@ interface Props {
   disableCache?: boolean;
   disableMediaPreviewer?: boolean;
   biggerCoverPlacement?: TooltipPlacement;
-  useThumbnail?: boolean;
+  coverPaths?: string[];
 }
 
 export interface IResourceCoverRef {
@@ -53,13 +52,13 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     disableCache = false,
     disableMediaPreviewer = false,
     biggerCoverPlacement,
-    useThumbnail = true
+    coverPaths,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
-  const [url, setUrl] = useState<string>();
+  const [urls, setUrls] = useState<string[]>();
 
   const [previewerVisible, setPreviewerVisible] = useState(false);
   const previewerHoverTimerRef = useRef<any>();
@@ -69,7 +68,10 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const appContext = store.useModelState('appContext');
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const coverSizeRef = useRef<{w: number; h: number}>({ w: 0, h: 0 });
+  const maxCoverRawSizeRef = useRef<{ w: number; h: number }>({
+    w: 0,
+    h: 0,
+  });
 
   useEffect(() => {
     disableCacheRef.current = disableCache;
@@ -77,6 +79,13 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   useEffect(() => {
     loadCover(false);
+
+    const resizeObserver = new ResizeObserver(() => {
+      // Do what you want to do when the size of the element changes
+      forceUpdate();
+    });
+    resizeObserver.observe(containerRef.current!);
+    return () => resizeObserver.disconnect(); // clean up
   }, []);
 
   const saveThumbnailInternal = useCallback((base64Image: string, overwrite?: boolean, saveLocation?: CoverSaveLocation) => {
@@ -110,7 +119,11 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         content: (
           <div>
             <div>{t('Current cover file will be overwritten.')}</div>
-            <div style={{ wordBreak: 'break-word', marginBottom: 10 }}>{rsp.message}</div>
+            <div style={{
+              wordBreak: 'break-word',
+              marginBottom: 10,
+            }}
+            >{rsp.message}</div>
             <Checkbox label={t('Remember my choice')} onChange={c => remember = c} />
           </div>
         ),
@@ -143,11 +156,18 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const loadCover = useCallback((refresh: boolean) => {
     const serverAddress = appContext.serverAddresses?.[1] ?? serverConfig.apiEndpoint;
-    let url = `${serverAddress}/resource/${resourceId}/${useThumbnail ? 'thumbnail' : 'cover'}`;
-    if (refresh) {
-      url += `?${uuidv4()}`;
+    const urls: string[] = [];
+    if (coverPaths && coverPaths.length > 0) {
+      urls.push(...coverPaths.map(coverPath => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`));
+    } else {
+      urls.push(`${serverAddress}/resource/${resourceId}/cover`);
     }
-    setUrl(url);
+    if (refresh) {
+      for (let i = 0; i < urls.length; i++) {
+        urls[i] += `&v=${uuidv4()}`;
+      }
+    }
+    setUrls(urls);
   }, []);
 
   const onClick = useCallback(() => {
@@ -158,29 +178,60 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
 
   const renderCover = () => {
-    if (url) {
+    if (urls) {
       return (
-        <Img
-          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-          src={url}
-          onError={e => {
-            console.log(e);
-          }}
-          onLoad={(e) => {
-            setLoaded(true);
-            const img = e.target as HTMLImageElement;
-            if (img) {
-              coverSizeRef.current = { w: img.naturalWidth, h: img.naturalHeight };
-            }
-            // console.log('loaded', e);
-          }}
-          loader={(
-            <LoadingOutlined className={'text-2xl'} />
-          )}
-          unloader={(
-            <CustomIcon type={'image-slash'} className={'text-2xl'} />
-          )}
-        />
+        <Carousel
+          autoplay={urls && urls.length > 1}
+          // autoplay={false}
+          dots
+        >
+          {urls?.map(url => (
+            <div>
+              <div
+                style={{
+                  width: containerRef.current?.clientWidth,
+                  height: containerRef.current?.clientHeight,
+                }}
+                className={'flex items-center justify-center'}
+              >
+                <Img
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                  }}
+                  // style={{ maxWidth: containerRef.current?.clientWidth ?? '100%', maxHeight: containerRef.current?.clientHeight ?? '100%', objectFit: 'contain' }}
+                  src={[url]}
+                  onError={e => {
+                    console.log(e);
+                  }}
+                  onLoad={(e) => {
+                    setLoaded(true);
+                    const img = e.target as HTMLImageElement;
+                    if (img) {
+                      if (!maxCoverRawSizeRef.current) {
+                        maxCoverRawSizeRef.current = {
+                          w: img.naturalWidth,
+                          h: img.naturalHeight,
+                        };
+                      } else {
+                        maxCoverRawSizeRef.current.w = Math.max(maxCoverRawSizeRef.current.w, img.naturalWidth);
+                        maxCoverRawSizeRef.current.h = Math.max(maxCoverRawSizeRef.current.h, img.naturalHeight);
+                      }
+                      // console.log('loaded', e);
+                    }
+                  }}
+                  loader={(
+                    <LoadingOutlined className={'text-2xl'} />
+                  )}
+                  unloader={(
+                    <CustomIcon type={'image-slash'} className={'text-2xl'} />
+                  )}
+                />
+              </div>
+            </div>
+          ))}
+        </Carousel>
       );
     }
     return null;
@@ -191,7 +242,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       <div
         ref={containerRef}
         onClick={onClick}
-        className="resource-cover-container"
+        className="resource-cover-container overflow-hidden"
         onMouseOver={(e) => {
           // console.log('mouse over');
           if (!disableMediaPreviewer) {
@@ -226,28 +277,57 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   if (loaded) {
     if (showBiggerOnHover) {
       // ignore small cover
-      const containerWidth = containerRef.current?.clientWidth ?? Number.MAX_VALUE;
-      const containerHeight = containerRef.current?.clientHeight ?? Number.MAX_VALUE;
-      if (coverSizeRef.current.w > containerWidth && coverSizeRef.current.h > containerHeight) {
+      const containerWidth = containerRef.current?.clientWidth ?? 100;
+      const containerHeight = containerRef.current?.clientHeight ?? 100;
+      if (maxCoverRawSizeRef.current.w > containerWidth && maxCoverRawSizeRef.current.h > containerHeight) {
+        const tooltipScale = Math.min(window.innerWidth * 0.6 / maxCoverRawSizeRef.current.w, window.innerHeight * 0.6 / maxCoverRawSizeRef.current.h);
+        const tooltipWidth = maxCoverRawSizeRef.current.w * tooltipScale;
+        const tooltipHeight = maxCoverRawSizeRef.current.h * tooltipScale;
         return (
           <Tooltip
+            // isOpen
             placement={biggerCoverPlacement}
             content={(
-              <Img
-                src={[url!]}
-                loader={(
-                  <LoadingOutlined className={'text-2xl'} />
-                )}
-                unloader={(
-                  <CustomIcon type={'image-slash'} className={'text-2xl'} />
-                )}
-                // src={url}
-                alt={''}
-                style={{
-                  maxWidth: window.innerWidth * 0.6,
-                  maxHeight: window.innerHeight * 0.6,
-                }}
-              />
+              <div style={{
+                width: tooltipWidth,
+                height: tooltipHeight,
+              }}
+              >
+                <Carousel
+                  autoplay={urls && urls.length > 1}
+                  // autoplay={false}
+                  adaptiveHeight
+                  dots
+                >
+                  {urls?.map(url => (
+                    <div>
+                      <div
+                        style={{
+                          maxWidth: tooltipWidth,
+                          maxHeight: tooltipHeight,
+                        }}
+                        className={'flex items-center justify-center'}
+                      >
+                        <Img
+                          src={[url!]}
+                          loader={(
+                            <LoadingOutlined className={'text-2xl'} />
+                          )}
+                          unloader={(
+                            <CustomIcon type={'image-slash'} className={'text-2xl'} />
+                          )}
+                          // src={url}
+                          alt={''}
+                          style={{
+                            maxWidth: tooltipWidth,
+                            maxHeight: tooltipHeight,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </Carousel>
+              </div>
             )}
           >
             {renderContainer()}

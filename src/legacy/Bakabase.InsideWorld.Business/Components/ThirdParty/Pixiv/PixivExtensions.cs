@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv.Models;
+using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv.Models;
 using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv

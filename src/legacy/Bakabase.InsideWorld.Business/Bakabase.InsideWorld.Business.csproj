@@ -11,6 +11,7 @@
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.ThirdParty\Bakabase.Modules.ThirdParty.csproj" />
 		<ProjectReference Include="..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
 	</ItemGroup>
 

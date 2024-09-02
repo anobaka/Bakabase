@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -12,18 +11,13 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili;
-using Bakabase.InsideWorld.Business.Configurations;
-using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Entities;
-using Bakabase.Modules.ThirdParty.ExHentai;
+using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
-using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
 {

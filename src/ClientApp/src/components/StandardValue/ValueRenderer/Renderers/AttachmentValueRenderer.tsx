@@ -22,7 +22,7 @@ export default ({ value, variant, editor, ...props }: AttachmentValueRendererPro
   switch (v) {
     case 'default':
       return (
-        <div className={'flex items-center gap-2'}>
+        <div className={'flex items-center gap-2 flex-wrap'}>
           {value.map(v => {
             return (
               <img src={`${serverConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(v)}`} alt={v} />

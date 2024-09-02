@@ -5,10 +5,10 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv.Models;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
+using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv.Models;
 
 namespace Bakabase.InsideWorld.Business.Components.CookieValidation
 {

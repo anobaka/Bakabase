@@ -122,6 +122,7 @@ namespace Bakabase.Abstractions.Components.Configuration
             public const string ExHentai = nameof(ExHentai);
             public const string Pixiv = nameof(Pixiv);
             public const string Bangumi = nameof(Bangumi);
+            public const string DLsite = nameof(DLsite);
             public const string Default = nameof(Default);
         }
 

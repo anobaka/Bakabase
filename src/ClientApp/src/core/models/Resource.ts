@@ -33,4 +33,5 @@ export type Resource = {
   fileUpdateDt: string;
   parent?: Resource;
   properties?: Record<ResourcePropertyType, Record<number, Property>>;
+  coverPaths?: string[];
 };

@@ -78,7 +78,7 @@ export default ({
                 <ResourceCover
                   resourceId={resource.id}
                   showBiggerOnHover={false}
-                  useThumbnail={false}
+                  coverPaths={resource.coverPaths}
                 />
               </div>
               <div className={'flex items-center justify-center'}>

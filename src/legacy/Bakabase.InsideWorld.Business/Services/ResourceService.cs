@@ -417,7 +417,8 @@ namespace Bakabase.InsideWorld.Business.Services
                             var categoryMap =
                                 (await _categoryService.GetByKeys(categoryIds, CategoryAdditionalItem.CustomProperties))
                                 .ToDictionary(d => d.Id, d => d);
-                            var categoryIdCustomPropertyIdsMap = categoryMap.ToDictionary(d => d.Key, d => d.Value.CustomProperties?.Select(x => x.Id).ToHashSet());
+                            var categoryIdCustomPropertyIdsMap = categoryMap.ToDictionary(d => d.Key,
+                                d => d.Value.CustomProperties?.Select(x => x.Id).ToHashSet());
 
                             var propertyIdsOfNotEmptyProperties =
                                 customPropertiesValuesMap.Values.SelectMany(x => x.Keys).ToHashSet();
@@ -444,7 +445,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                     r.Properties.GetOrAdd((int) ResourcePropertyType.Custom, () => []);
 
                                 var propertyIds = new List<int>();
-                                if (categoryIdCustomPropertyIdsMap.TryGetValue(r.CategoryId, out var boundPropertyIds) && boundPropertyIds != null)
+                                if (categoryIdCustomPropertyIdsMap.TryGetValue(r.CategoryId,
+                                        out var boundPropertyIds) && boundPropertyIds != null)
                                 {
                                     propertyIds.AddRange(boundPropertyIds);
                                 }
@@ -484,6 +486,43 @@ namespace Bakabase.InsideWorld.Business.Services
                             }
 
                             SortPropertyValuesByScope(doList);
+                            foreach (var @do in doList)
+                            {
+                                var customPropertyValues =
+                                    @do.Properties?.GetValueOrDefault((int) ResourcePropertyType.Custom);
+                                var found = false;
+                                if (customPropertyValues != null)
+                                {
+                                    foreach (var (pId, pvs) in customPropertyValues)
+                                    {
+                                        if (found)
+                                        {
+                                            break;
+                                        }
+
+                                        if (propertyMap.GetValueOrDefault(pId)?.EnumType ==
+                                            CustomPropertyType.Attachment)
+                                        {
+                                            if (pvs.Values?.Any() == true)
+                                            {
+                                                foreach (var listString in pvs.Values.Select(v =>
+                                                             v.Value as List<string>))
+                                                {
+                                                    var images = listString?.Where(x =>
+                                                        x.InferMediaType() == MediaType.Image).ToArray();
+                                                    if (images?.Any() == true)
+                                                    {
+                                                        @do.CoverPaths = images;
+                                                        found = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             break;
                         }
                         case ResourceAdditionalItem.Alias:
@@ -892,65 +931,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return null;
         }
 
-        private string ThumbnailDir => _fileManager.BuildAbsolutePath("cover");
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="resourceId"></param>
-        /// <returns></returns>
-        private string BuildThumbnailPathWithoutExtension(int resourceId) => $"{ThumbnailDir}/{resourceId}/cover";
-
-        public async Task<string?> GetThumbnail(int id, CancellationToken ct)
-        {
-            var pathPrefix = BuildThumbnailPathWithoutExtension(id);
-            var dir = Path.GetDirectoryName(pathPrefix)!;
-            Directory.CreateDirectory(dir);
-            var thumbnailPath = Directory.GetFiles(dir, $"{Path.GetFileName(pathPrefix)}.*").FirstOrDefault();
-            if (string.IsNullOrEmpty(thumbnailPath))
-            {
-                // We do not save icon as thumbnail, since it will prevent other source (such as enhancer) from creating thumbnails.
-                var cover = await GetCover(id, false, ct);
-                if (cover.HasValue)
-                {
-                    var (path, imageBytes) = cover.Value;
-
-                    var image = !string.IsNullOrEmpty(path)
-                        ? await Image.LoadAsync<Rgba32>(path, ct)
-                        : await Image.LoadAsync<Rgba32>(new MemoryStream(imageBytes!), ct);
-
-                    thumbnailPath = await image.SaveAsThumbnail(BuildThumbnailPathWithoutExtension(id), ct);
-                }
-            }
-
-            return thumbnailPath;
-        }
-
-        public async Task<BaseResponse> SaveThumbnail(int id, bool overwrite, byte[] imageBytes, CancellationToken ct)
-        {
-            var finalOverwrite = _optionsManager.Value.CoverOptions.Overwrite ?? overwrite;
-
-            var pathPrefix = BuildThumbnailPathWithoutExtension(id);
-
-            var file = Directory.GetFiles(Path.GetDirectoryName(pathPrefix)!, $"{Path.GetFileName(pathPrefix)}.*")
-                .FirstOrDefault();
-
-            if (!string.IsNullOrEmpty(file))
-            {
-                if (!finalOverwrite)
-                {
-                    return SingletonResponseBuilder<(string Path, byte[] Data)>.Build(ResponseCode.Conflict,
-                        pathPrefix);
-                }
-            }
-
-            var image = await Image.LoadAsync<Rgba32>(new MemoryStream(imageBytes), ct);
-            await image.SaveAsThumbnail(BuildThumbnailPathWithoutExtension(id), ct);
-
-            return BaseResponseBuilder.Ok;
-        }
-
-        public async Task<(string? Path, byte[]? ImageBytes)?> GetCover(int id, CancellationToken ct)
+        public async Task<(string? Path, byte[]? ImageBytes)?> DiscoverCover(int id, CancellationToken ct)
         {
             return await GetCover(id, true, ct);
         }

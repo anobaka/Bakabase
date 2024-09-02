@@ -4,23 +4,16 @@ using Microsoft.Extensions.Localization;
 
 namespace Bakabase.Modules.Enhancer.Components;
 
-internal class EnhancerLocalizer : IEnhancerLocalizer
+internal class EnhancerLocalizer(IStringLocalizer<EnhancerResource> localizer) : IEnhancerLocalizer
 {
-    private IStringLocalizer<EnhancerResource> _localizer;
-
-    public EnhancerLocalizer(IStringLocalizer<EnhancerResource> localizer)
-    {
-        _localizer = localizer;
-    }
-
     public string Enhancer_Name(EnhancerId enhancerId)
     {
-        return _localizer[$"Enhancer_{enhancerId}_Name"];
+        return localizer[$"Enhancer_{enhancerId}_Name"];
     }
 
     public string? Enhancer_Description(EnhancerId enhancerId)
     {
-        var d = _localizer[$"Enhancer_{enhancerId}_Description"];
+        var d = localizer[$"Enhancer_{enhancerId}_Description"];
         if (d.ResourceNotFound)
         {
             return null;
@@ -31,12 +24,12 @@ internal class EnhancerLocalizer : IEnhancerLocalizer
 
     public string Enhancer_TargetName(EnhancerId enhancerId, Enum target)
     {
-        return _localizer[$"Enhancer_{enhancerId}_Target_{target}_Name"];
+        return localizer[$"Enhancer_{enhancerId}_Target_{target}_Name"];
     }
 
     public string? Enhancer_TargetDescription(EnhancerId enhancerId, Enum target)
     {
-        var d = _localizer[$"Enhancer_{enhancerId}_Target_{target}_Description"];
+        var d = localizer[$"Enhancer_{enhancerId}_Target_{target}_Description"];
         if (d.ResourceNotFound)
         {
             return null;

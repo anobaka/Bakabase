@@ -99,7 +99,10 @@ public record Resource
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
     public DateTime FileCreatedAt { get; set; }
     public DateTime FileModifiedAt { get; set; }
-
+    /// <summary>
+    /// Will be populated only when custom properties are loaded.
+    /// </summary>
+    public string[]? CoverPaths { get; set; }
 
     public Resource? Parent { get; set; }
     /// <summary>

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.ThirdParty.ExHentai;
+using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 
 namespace Bakabase.InsideWorld.Business.Components.CookieValidation
 {

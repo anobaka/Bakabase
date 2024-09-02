@@ -221,6 +221,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
               });
             }}
             resourceId={resource.id}
+            coverPaths={resource.coverPaths}
             ref={coverRef}
             showBiggerOnHover={showBiggerCoverOnHover}
           />

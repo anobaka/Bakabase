@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Bakabase.Service\Bakabase.Service.csproj" />
     <ProjectReference Include="..\..\legacy\Bakabase.InsideWorld.Business\Bakabase.InsideWorld.Business.csproj" />
   </ItemGroup>
 

@@ -8,7 +8,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Models.Entities;
-using Bakabase.Modules.ThirdParty.ExHentai;
+using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Hosting;

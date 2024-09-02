@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.Infrastructures.Components.Jobs;
@@ -24,15 +25,11 @@ using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
 using Bakabase.InsideWorld.Business.Components.Jobs;
 using Bakabase.InsideWorld.Business.Components.Tasks;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Bilibili;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.Migrations;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
-using Bakabase.Modules.ThirdParty.Bangumi;
-using Bakabase.Modules.ThirdParty.ExHentai;
 using Bakabase.Service.Components;
 using Bakabase.Service.Extensions;
 using Bootstrap.Components.DependencyInjection;
@@ -80,34 +77,21 @@ namespace Bakabase.Service
 
             services.TryAddSingleton<ThirdPartyHttpRequestLogger>();
 
-            services.AddBakabaseHttpClient<BilibiliThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
-                .Bilibili);
-            services.TryAddSingleton<BilibiliClient>();
             services.AddTransient<BilibiliDownloader>();
             services.TryAddSingleton<BilibiliDownloaderOptionsValidator>();
             services.TryAddSingleton<BilibiliCookieValidator>();
 
-            services.AddBakabaseHttpClient<ExHentaiThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
-                .ExHentai);
-            services.TryAddSingleton<ExHentaiClient>();
             services.AddTransient<ExHentaiSingleWorkDownloader>();
             services.AddTransient<ExHentaiListDownloader>();
             services.AddTransient<ExHentaiWatchedDownloader>();
             services.TryAddSingleton<ExHentaiDownloaderOptionsValidator>();
             services.TryAddSingleton<ExHentaiCookieValidator>();
 
-            services.AddBakabaseHttpClient<PixivThirdPartyHttpMessageHandler>(
-                InternalOptions.HttpClientNames.Pixiv);
-            services.TryAddSingleton<PixivClient>();
             services.AddTransient<PixivSearchDownloader>();
             services.AddTransient<PixivRankingDownloader>();
             services.AddTransient<PixivFollowingDownloader>();
             services.TryAddSingleton<PixivDownloaderOptionsValidator>();
             services.TryAddSingleton<PixivCookieValidator>();
-
-            services.AddBakabaseHttpClient<BangumiThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
-                .Bangumi);
-            services.TryAddSingleton<BangumiClient>();
 
             services.RegisterAllRegisteredTypeAs<IDownloader>();
             services.RegisterAllRegisteredTypeAs<IDownloaderOptionsValidator>();

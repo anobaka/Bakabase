@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
@@ -19,10 +18,11 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Cryptography;
 using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv.Models;
 using Bootstrap.Extensions;
-using static Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv.Models.PixivSearchResponse;
+using static Bakabase.Modules.ThirdParty.ThirdParties.Pixiv.Models.PixivSearchResponse;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
+using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
+using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
 {
