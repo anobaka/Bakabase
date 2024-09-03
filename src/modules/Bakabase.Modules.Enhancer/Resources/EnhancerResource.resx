@@ -181,9 +181,7 @@
     <value>Introduction</value>
   </data>
   <data name="Enhancer_ExHentai_Description" xml:space="preserve">
-    <value>1. Cookie of ExHentai must be set in system configurations.
-2. The first item of search result will be treated as matched resource.
-3. You can set excluding tags also.</value>
+    <value />
   </data>
   <data name="Enhancer_Bangumi_Name" xml:space="preserve">
     <value>Bangumi</value>
@@ -214,5 +212,35 @@
   </data>
   <data name="Enhancer_Bangumi_Target_Rating_Description" xml:space="preserve">
     <value>Will be scaled correspoding the range of target rating property</value>
+  </data>
+  <data name="Enhancer_DLsite_Name" xml:space="preserve">
+    <value>DLsite</value>
+  </data>
+  <data name="Enhancer_DLsite_Target_Name_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Enhancer_DLsite_Target_Cover_Name" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="Enhancer_DLsite_Target_PropertiesOnTheRightSideOfCover_Name" xml:space="preserve">
+    <value>Properties on the right side of cover</value>
+  </data>
+  <data name="Enhancer_DLsite_Target_Introduction_Name" xml:space="preserve">
+    <value>Introduction</value>
+  </data>
+  <data name="Enhancer_DLsite_Target_Rating_Name" xml:space="preserve">
+    <value>Rating</value>
+  </data>
+  <data name="Enhancer_Regex_Name" xml:space="preserve">
+    <value>Regex expression</value>
+  </data>
+  <data name="Enhancer_Regex_Target_CaptureGroups_Name" xml:space="preserve">
+    <value>Capture groups</value>
+  </data>
+  <data name="Enhancer_Regex_Description" xml:space="preserve">
+    <value>Extract information from file or folder name of each resource. Before you enable this enhancer, you must configure the regular expression on the configuration page.</value>
+  </data>
+  <data name="Enhancer_Regex_Target_CaptureGroups_Description" xml:space="preserve">
+    <value>You must first configure the correct capture groups on the configuration page, and then enter the group names here, otherwise the enhancement will not take effect.</value>
   </data>
 </root>

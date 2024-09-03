@@ -3,7 +3,7 @@ import type {
   BakabaseInfrastructuresComponentsConfigurationsAppAppOptions,
   BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions,
   BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel,
-  BakabaseInsideWorldModelsConfigsBilibiliOptions,
+  BakabaseInsideWorldModelsConfigsBilibiliOptions, BakabaseInsideWorldModelsConfigsEnhancerOptions,
   BakabaseInsideWorldModelsConfigsExHentaiOptions,
   BakabaseInsideWorldModelsConfigsFileSystemOptions,
   BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions,
@@ -14,7 +14,9 @@ import type {
   BakabaseInsideWorldModelsConfigsThirdPartyOptions,
   BakabaseInsideWorldModelsConfigsUIOptions,
   BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel,
-  BootstrapModelsResponseModelsBaseResponse,
+  BootstrapModelsResponseModelsBaseResponse } from '@/sdk/Api';
+import {
+  BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel,
 } from '@/sdk/Api';
 import BApi from '@/sdk/BApi';
 import type { SignalRData } from '@/components/SignalR/models';
@@ -71,4 +73,5 @@ export default {
   resourceOptions: buildModel<BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions, BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel>(BApi.options.patchResourceOptions),
   thirdPartyOptions: buildModel<BakabaseInsideWorldModelsConfigsThirdPartyOptions, BakabaseInsideWorldModelsConfigsThirdPartyOptions>(BApi.options.patchThirdPartyOptions),
   networkOptions: buildModel<BakabaseInsideWorldModelsConfigsNetworkOptions, BakabaseInsideWorldModelsConfigsNetworkOptions>(BApi.options.patchNetworkOptions),
+  enhancerOptions: buildModel<BakabaseInsideWorldModelsConfigsEnhancerOptions, BakabaseInsideWorldModelsConfigsEnhancerOptions>(BApi.options.patchEnhancerOptions),
 };

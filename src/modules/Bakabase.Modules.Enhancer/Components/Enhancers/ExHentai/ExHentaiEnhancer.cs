@@ -42,17 +42,17 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
             var urlKeywords = new HashSet<string>();
 
             var names = new List<string> {resource.FileName}.Where(a => a.IsNotEmpty()).ToArray();
-            if (names.Any(n => Regex.IsMatch(n, UrlKeywordRegex)))
+            if (names.Any(n => System.Text.RegularExpressions.Regex.IsMatch(n, UrlKeywordRegex)))
             {
                 var wrappers = await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper);
                 var urlKeywordCandidates = new List<(string Str, string Keyword)>();
                 foreach (var wrapper in wrappers)
                 {
-                    var el = Regex.Escape(wrapper.Value1);
-                    var er = Regex.Escape(wrapper.Value2!);
+                    var el = System.Text.RegularExpressions.Regex.Escape(wrapper.Value1);
+                    var er = System.Text.RegularExpressions.Regex.Escape(wrapper.Value2!);
                     foreach (var n in names)
                     {
-                        var match = Regex.Match(n, $"{el}(?<k>{UrlKeywordRegex}){er}");
+                        var match = System.Text.RegularExpressions.Regex.Match(n, $"{el}(?<k>{UrlKeywordRegex}){er}");
                         if (match.Success)
                         {
                             urlKeywordCandidates.AddRange(match.Groups["k"].Captures.Select(a => a.Value)

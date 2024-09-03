@@ -473,5 +473,26 @@ namespace Bakabase.Service.Controllers
             });
             return BaseResponseBuilder.Ok;
         }
+
+        [HttpGet("enhancer")]
+        [SwaggerOperation(OperationId = "GetEnhancerOptions")]
+        public async Task<SingletonResponse<EnhancerOptions>> GetEnhancerOptions()
+        {
+            return new SingletonResponse<EnhancerOptions>((_insideWorldOptionsManager.Enhancer).Value);
+        }
+
+        [HttpPatch("enhancer")]
+        [SwaggerOperation(OperationId = "PatchEnhancerOptions")]
+        public async Task<BaseResponse> PatchNetworkOptions([FromBody] EnhancerOptions model)
+        {
+            await _insideWorldOptionsManager.Enhancer.SaveAsync(options =>
+            {
+                if (model.RegexEnhancer != null)
+                {
+                    options.RegexEnhancer = model.RegexEnhancer;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
     }
 }

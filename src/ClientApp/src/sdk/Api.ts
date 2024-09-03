@@ -70,7 +70,7 @@ export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
   optionsType?: SystemType;
   optionsJsonSchema?: string | null;
   id?: string | null;
-  isInstanceable?: boolean;
+  canBeInstantiated?: boolean;
   associatedCategories?: BakabaseAbstractionsModelsDomainCategory[] | null;
 }
 
@@ -81,10 +81,10 @@ export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
 export type BakabaseAbstractionsModelsDomainConstantsInitializationContentType = 1 | 2;
 
 /**
- * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer]
+ * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 | 1000 | 1001 | 1002;
+export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004;
 
 /**
  * [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
@@ -144,8 +144,6 @@ export interface BakabaseAbstractionsModelsDomainEnhancement {
   target?: number;
   dynamicTarget?: string | null;
   value?: any;
-  /** @format date-time */
-  createdAt?: string;
   /** @format int32 */
   customPropertyValueId?: number;
   customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
@@ -244,6 +242,7 @@ export interface BakabaseAbstractionsModelsDomainResource {
   fileCreatedAt?: string;
   /** @format date-time */
   fileModifiedAt?: string;
+  coverPaths?: string[] | null;
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
   category?: BakabaseAbstractionsModelsDomainCategory;
@@ -256,6 +255,7 @@ export interface BakabaseAbstractionsModelsDomainResourceProperty {
   dbValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  visible?: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {
@@ -742,14 +742,6 @@ export interface BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
  */
 export type BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskLevel = 1 | 2;
 
-export interface BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites {
-  /** @format int64 */
-  id?: number;
-  title?: string | null;
-  /** @format int32 */
-  mediaCount?: number;
-}
-
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions {
   /** @format date-time */
   lastSyncDt?: string;
@@ -794,6 +786,14 @@ export interface BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel 
 export interface BakabaseInsideWorldModelsConfigsBilibiliOptions {
   downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
   cookie?: string | null;
+}
+
+export interface BakabaseInsideWorldModelsConfigsEnhancerOptions {
+  regexEnhancer?: BakabaseInsideWorldModelsConfigsEnhancerOptionsRegexEnhancerModel;
+}
+
+export interface BakabaseInsideWorldModelsConfigsEnhancerOptionsRegexEnhancerModel {
+  expressions?: string[] | null;
 }
 
 export interface BakabaseInsideWorldModelsConfigsExHentaiOptions {
@@ -937,14 +937,14 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAddit
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
- * [0: None, 32: CustomProperties, 64: Alias, 128: Category, 416: DisplayName, 512: HasChildren, 1024: BuiltinProperties, 2016: All]
+ * [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: BuiltinProperties, 2016: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
   | 0
-  | 32
   | 64
   | 128
+  | 160
   | 416
   | 512
   | 1024
@@ -1108,10 +1108,10 @@ export type BakabaseInsideWorldModelsConstantsSearchOperation =
 export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
 
 /**
- * [1: Bilibili, 2: ExHentai, 3: Pixiv]
+ * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsThirdPartyId = 1 | 2 | 3;
+export type BakabaseInsideWorldModelsConstantsThirdPartyId = 1 | 2 | 3 | 4;
 
 export interface BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
   fields?: BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitionsField[] | null;
@@ -1182,7 +1182,7 @@ export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup {
 }
 
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
   id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
   counts?: Record<string, number>;
 }
@@ -1202,7 +1202,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
   id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
   statusAndCounts?: Record<string, number>;
 }
@@ -1228,7 +1228,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCo
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
   id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   resultType?: number;
@@ -1248,7 +1248,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
   id?: number;
   key?: string | null;
   name?: string | null;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type?: number;
@@ -1324,7 +1324,7 @@ export interface BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
   /** @minLength 1 */
   key: string;
   name?: string | null;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type?: number;
@@ -1366,16 +1366,8 @@ export interface BakabaseInsideWorldModelsRequestModelsComponentOptionsAddReques
   json: string;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsCoverSaveRequestModel {
-  /** @minLength 1 */
-  base64Image: string;
-  overwrite?: boolean;
-  /** [1: ResourceDirectory, 2: TempDirectory] */
-  saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
-}
-
 export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -1573,6 +1565,14 @@ export interface BakabaseModulesEnhancerModelsViewResourceEnhancementsTargetEnha
   enhancement?: BakabaseAbstractionsModelsDomainEnhancement;
 }
 
+export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
+  /** @format int64 */
+  id?: number;
+  title?: string | null;
+  /** @format int32 */
+  mediaCount?: number;
+}
+
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   /** @format int32 */
   id?: number;
@@ -1664,13 +1664,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto[] | null;
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites[] | null;
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
   /** @format int32 */
   code?: number;
@@ -1711,6 +1704,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhanc
   code?: number;
   message?: string | null;
   data?: BakabaseModulesEnhancerModelsViewResourceEnhancements[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -1946,6 +1946,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsConfigsBilibiliOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsEnhancerOptions {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseInsideWorldModelsConfigsEnhancerOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsExHentaiOptions {
@@ -3302,7 +3309,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getBiliBiliFavorites: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsThirdPartyBilibiliModelsFavorites,
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites,
         any
       >({
         path: `/bilibili/favorites`,
@@ -4578,7 +4585,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 32: CustomProperties, 64: Alias, 128: Category, 416: DisplayName, 512: HasChildren, 1024: BuiltinProperties, 2016: All] */
+        /** [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: BuiltinProperties, 2016: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -4617,45 +4624,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name GetResourceThumbnail
-     * @request GET:/resource/{id}/thumbnail
-     */
-    getResourceThumbnail: (id: number, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/resource/${id}/thumbnail`,
-        method: "GET",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name SaveThumbnail
-     * @request POST:/resource/{id}/thumbnail
-     */
-    saveThumbnail: (
-      id: number,
-      data: BakabaseInsideWorldModelsRequestModelsCoverSaveRequestModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/thumbnail`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetResourceCover
+     * @name DiscoverResourceCover
      * @request GET:/resource/{id}/cover
      */
-    getResourceCover: (id: number, params: RequestParams = {}) =>
+    discoverResourceCover: (id: number, params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/resource/${id}/cover`,
         method: "GET",
@@ -6163,6 +6135,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/network`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetEnhancerOptions
+     * @request GET:/options/enhancer
+     */
+    getEnhancerOptions: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsEnhancerOptions, any>(
+        {
+          path: `/options/enhancer`,
+          method: "GET",
+          format: "json",
+          ...params,
+        },
+      ),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchEnhancerOptions
+     * @request PATCH:/options/enhancer
+     */
+    patchEnhancerOptions: (data: BakabaseInsideWorldModelsConfigsEnhancerOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/enhancer`,
         method: "PATCH",
         body: data,
         type: ContentType.Json,

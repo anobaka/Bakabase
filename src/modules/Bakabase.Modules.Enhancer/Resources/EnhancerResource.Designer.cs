@@ -286,9 +286,61 @@ namespace Bakabase.Modules.Enhancer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 1. Cookie of ExHentai must be set in system configurations.
-        ///2. The first item of search result will be treated as matched resource.
-        ///3. You can set excluding tags also..
+        ///   Looks up a localized string similar to DLsite.
+        /// </summary>
+        public static string Enhancer_DLsite_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_DLsite_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cover.
+        /// </summary>
+        public static string Enhancer_DLsite_Target_Cover_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_DLsite_Target_Cover_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Introduction.
+        /// </summary>
+        public static string Enhancer_DLsite_Target_Introduction_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_DLsite_Target_Introduction_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        public static string Enhancer_DLsite_Target_Name_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_DLsite_Target_Name_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Properties on the right side of cover.
+        /// </summary>
+        public static string Enhancer_DLsite_Target_PropertiesOnTheRightSideOfCover_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_DLsite_Target_PropertiesOnTheRightSideOfCover_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rating.
+        /// </summary>
+        public static string Enhancer_DLsite_Target_Rating_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_DLsite_Target_Rating_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to .
         /// </summary>
         public static string Enhancer_ExHentai_Description {
             get {
@@ -347,6 +399,42 @@ namespace Bakabase.Modules.Enhancer.Resources {
         public static string Enhancer_ExHentai_Target_Tags_Name {
             get {
                 return ResourceManager.GetString("Enhancer_ExHentai_Target_Tags_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Extract information from file or folder name of each resource. Before you enable this enhancer, you must configure the regular expression on the configuration page..
+        /// </summary>
+        public static string Enhancer_Regex_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Regex_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Regex expression.
+        /// </summary>
+        public static string Enhancer_Regex_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Regex_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You must first configure the correct capture groups on the configuration page, and then enter the group names here, otherwise the enhancement will not take effect..
+        /// </summary>
+        public static string Enhancer_Regex_Target_CaptureGroups_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_Regex_Target_CaptureGroups_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Capture groups.
+        /// </summary>
+        public static string Enhancer_Regex_Target_CaptureGroups_Name {
+            get {
+                return ResourceManager.GetString("Enhancer_Regex_Target_CaptureGroups_Name", resourceCulture);
             }
         }
     }

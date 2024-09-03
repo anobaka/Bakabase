@@ -15,18 +15,18 @@ namespace Bakabase.Abstractions.Models.Domain
     {
         public ComponentDescriptorType Type { get; set; }
         public ComponentType ComponentType { get; set; }
-        public string AssemblyQualifiedTypeName { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public string Message { get; set; }
+        public string AssemblyQualifiedTypeName { get; set; } = null!;
+        public string Name { get; set; } = null!;
+        public string? Description { get; set; }
+        public string? Message { get; set; }
 
-        public string OptionsJson { get; set; }
+        public string? OptionsJson { get; set; }
         public int? OptionsId { get; set; }
 
-        public string Version { get; set; }
-        public string DataVersion { get; set; }
+        public string Version { get; set; } = null!;
+        public string DataVersion { get; set; } = null!;
 
-        private Type _optionsType;
+        private Type? _optionsType;
 
         private static readonly SystemTextJsonSchemaGeneratorSettings JsonSchemaGeneratorSettings =
             new SystemTextJsonSchemaGeneratorSettings
@@ -34,7 +34,7 @@ namespace Bakabase.Abstractions.Models.Domain
                 SerializerOptions = new JsonSerializerOptions
                     {PropertyNamingPolicy = JsonNamingPolicy.CamelCase}
             };
-        public Type OptionsType
+        public Type? OptionsType
         {
             get => _optionsType;
             set
@@ -55,12 +55,12 @@ namespace Bakabase.Abstractions.Models.Domain
             }
         }
 
-        public string OptionsJsonSchema { get; private set; }
+        public string? OptionsJsonSchema { get; private set; }
 
         /// <summary>
         /// Components with same <see cref="Id"/> should produce same results. 
         /// </summary>
-        public string Id => Type switch
+        public string? Id => Type switch
         {
             ComponentDescriptorType.Fixed => AssemblyQualifiedTypeName,
             ComponentDescriptorType.Instance => OptionsId!.ToString(),
@@ -69,7 +69,7 @@ namespace Bakabase.Abstractions.Models.Domain
             _ => throw new ArgumentOutOfRangeException()
         };
 
-        public bool IsInstanceable => Type switch
+        public bool CanBeInstantiated => Type switch
         {
             ComponentDescriptorType.Fixed => true,
             ComponentDescriptorType.Instance => true,

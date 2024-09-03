@@ -25,6 +25,7 @@ const {
   resourceOptions,
   thirdPartyOptions,
   networkOptions,
+  enhancerOptions,
 } = Optionses;
 
 export default createStore({
@@ -51,4 +52,5 @@ export default createStore({
   resourceOptions,
   thirdPartyOptions,
   networkOptions,
+  enhancerOptions,
 });

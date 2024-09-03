@@ -54,7 +54,7 @@ export default () => {
           }}
         />
       )}
-      {componentTypes.map(ct => {
+      {componentTypes.filter(x => x.value != ComponentType.Enhancer).map(ct => {
         const components = allComponents.filter(c => c.componentType == ct.value && c.type == ComponentDescriptorType.Instance);
         return (
           <div className={'component-type'} key={ct.value}>
@@ -63,22 +63,18 @@ export default () => {
                 <CustomIcon type={ComponentTypeIcons[ct.value]} size={'large'} />
                 {t(ct.label)}
               </div>
-              {ct.value != ComponentType.Enhancer && (
-                <Button
-                  color={'primary'}
-                  variant={'light'}
-                  onClick={() => {
+              <Button
+                color={'primary'}
+                variant={'light'}
+                onClick={() => {
                     showDetail(ct.value);
                   }}
-                >
-                  <PlusCircleOutlined className={'text-base'} />
-                  {t('Add')}
-                </Button>
-              )}
+              >
+                <PlusCircleOutlined className={'text-base'} />
+                {t('Add')}
+              </Button>
             </div>
-            {ct.value == ComponentType.Enhancer && (
-              <FeatureStatusTip name={t('Custom enhancer')} status={'deprecated'} />
-            ) || (components.length > 0 ? (<div className="components">
+            {(components.length > 0 ? (<div className="components">
               {components.map(c => {
                 return (
                   <ComponentDescriptorCard

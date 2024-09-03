@@ -1,11 +1,11 @@
 import i18n from 'i18next';
-import { Balloon, Button, Checkbox, Input, List, Message, Radio, Select } from '@alifd/next';
+import { Balloon, Checkbox, Input, List, Message, Radio, Select } from '@alifd/next';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import CustomIcon from '@/components/CustomIcon';
 import Title from '@/components/Title';
 import {
-  PatchAppOptions,
+  PatchAppOptions, PatchEnhancerOptions,
   PatchExHentaiOptions,
   PatchResourceOptions,
   PatchThirdPartyOptions,
@@ -21,13 +21,23 @@ import {
   DependentComponentStatus,
   startupPages,
 } from '@/sdk/constants';
-import ConfirmationButton from '@/components/ConfirmationButton';
 import store from '@/store';
 import type { BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions } from '@/sdk/Api';
-import { uuidv4 } from '@/components/utils';
+import { findCapturingGroupsInRegex, uuidv4 } from '@/components/utils';
 import dependentComponentIds from '@/core/models/Constants/DependentComponentIds';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
-import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Tooltip } from '@/components/bakaui';
+import {
+  Button,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+  Textarea,
+  Tooltip,
+} from '@/components/bakaui';
 
 export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: any) => void}) => {
   const { t } = useTranslation();
@@ -36,11 +46,13 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
   const resourceOptions = store.useModelState('resourceOptions');
   const exhentaiOptions = store.useModelState('exHentaiOptions');
   const thirdPartyOptions = store.useModelState('thirdPartyOptions');
+  const enhancerOptions = store.useModelState('enhancerOptions');
   const [validatingExHentaiCookie, setValidatingExHentaiCookie] = useState(false);
   const uiOptions = store.useModelState('uiOptions');
 
   const [simpleSearchEngines, setSimpleSearchEngines] = useState<BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[]>([]);
   const [tmpExHentaiOptions, setTmpExHentaiOptions] = useState(exhentaiOptions || {});
+  const [tmpEnhancerOptions, setTmpEnhancerOptions] = useState(enhancerOptions || {});
 
   const ffmpegState = store.useModelState('dependentComponentContexts')?.find(d => d.id == dependentComponentIds.FFMpeg);
 
@@ -52,6 +64,11 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
     console.log('new exhentai options', exhentaiOptions);
     setTmpExHentaiOptions(JSON.parse(JSON.stringify(exhentaiOptions || {})));
   }, [exhentaiOptions]);
+
+  useEffect(() => {
+    console.log('new enhancer options', enhancerOptions);
+    setTmpEnhancerOptions(JSON.parse(JSON.stringify(enhancerOptions || {})));
+  }, [enhancerOptions]);
 
   console.log('rerender', tmpExHentaiOptions, exhentaiOptions);
 
@@ -143,6 +160,66 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
     //     );
     //   },
     // },
+    {
+      label: 'Regex enhancer',
+      renderCell: () => {
+        const expressions = tmpEnhancerOptions?.regexEnhancer?.expressions || [];
+        const captureGroups = expressions.reduce<string[]>((s, t) => {
+          s.push(...findCapturingGroupsInRegex(t));
+          return s;
+        }, []);
+        return (
+          <div>
+            <Textarea
+              minRows={3}
+              maxRows={10}
+              label={t('Regex expressions')}
+              value={tmpEnhancerOptions?.regexEnhancer?.expressions?.join('\n')}
+              onValueChange={v => {
+                setTmpEnhancerOptions({
+                  ...tmpEnhancerOptions,
+                  regexEnhancer: {
+                    ...(tmpEnhancerOptions?.regexEnhancer || {}),
+                    expressions: v.split('\n'),
+                  },
+                });
+              }}
+              description={(
+                <div>
+                  {captureGroups.length > 0 ? (
+                    <div>
+                      {t('Available capture groups:')}
+                      {captureGroups.map(g => {
+                        return (
+                          <Chip
+                            variant={'light'}
+                            size={'sm'}
+                          >{g}</Chip>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div>{t('No capture groups were found, so the enhancement will not take effect.')}</div>
+                    )}
+                  <div>{t('You can set multiple regex expressions to match the file or folder name of each resource.')}</div>
+                  <div>{t('After setting regex expressions, you must go to category page to configure regex enhancer for each category.')}</div>
+                  <div>{t('You need to use the same name as the capture group for the dynamic enhancement target, otherwise the resource may not be enhanced.')}</div>
+                </div>
+              )}
+            />
+            <Button
+              color={'primary'}
+              onClick={() => {
+              applyPatches(PatchEnhancerOptions, tmpEnhancerOptions);
+            }}
+              size={'sm'}
+            >
+              {t('Save')}
+            </Button>
+          </div>
+        );
+      },
+    },
     {
       label: 'External search engines',
       tip: 'You can set external search engines for searching resource by name quickly in resource list, ' +
@@ -285,7 +362,7 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
             </div>
             <div className={'operations'}>
               <Button
-                type={'primary'}
+                color={'primary'}
                 size={'small'}
                 onClick={() => {
                   applyPatches(PatchExHentaiOptions, tmpExHentaiOptions);
@@ -293,7 +370,6 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
               >{t('Save')}
               </Button>
               <Button
-                type={'normal'}
                 size={'small'}
                 disabled={!(tmpExHentaiOptions?.cookie?.length > 0) || validatingExHentaiCookie}
                 loading={validatingExHentaiCookie}

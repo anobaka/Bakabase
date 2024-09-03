@@ -19,7 +19,7 @@ public class DLsiteEnhancer : AbstractEnhancer<DLsiteEnhancerTarget, DLsiteEnhan
     /// <summary>
     /// BJ/VJ/RJ
     /// </summary>
-    private static readonly Regex IdRegex = new Regex(@"[BVR]J\d{6,10}");
+    private static readonly System.Text.RegularExpressions.Regex IdRegex = new System.Text.RegularExpressions.Regex(@"[BVR]J\d{6,10}");
 
     public DLsiteEnhancer(IEnumerable<IStandardValueHandler> valueConverters, ILoggerFactory loggerFactory,
         IFileManager fileManager, DLsiteClient client) : base(valueConverters, loggerFactory, fileManager)

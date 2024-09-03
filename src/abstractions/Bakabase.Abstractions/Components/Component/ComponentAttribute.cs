@@ -1,17 +1,15 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Business.Components.Resource.Components
+namespace Bakabase.Abstractions.Components.Component
 {
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
     public abstract class ComponentAttribute : Attribute
     {
         public abstract ComponentType Type { get; }
-        public string Description { get; set; }
-        public string Name { get; set; }
-        public Type OptionsType { get; set; }
+        public string? Description { get; set; }
+        public string Name { get; set; } = null!;
+        public Type? OptionsType { get; set; }
 
         /// <summary>
         /// Usually a <see cref="Version"/> is set according to the static codes, and its default value is 1.0.0.
@@ -26,13 +24,13 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components
         /// This type must inherit from <see cref="IComponentDataVersionGenerator"/> and its instances can be got from global <see cref="IServiceProvider"/>
         /// </para>
         /// </summary>
-        public Type DataVersionGeneratorType { get; set; }
+        public Type? DataVersionGeneratorType { get; set; }
 
         public virtual ComponentDescriptor ToDescriptor(Type type)
         {
             return new ComponentDescriptor
             {
-                AssemblyQualifiedTypeName = type.AssemblyQualifiedName,
+                AssemblyQualifiedTypeName = type.AssemblyQualifiedName!,
                 Name = Name ?? type.Name,
                 OptionsType = OptionsType,
                 ComponentType = Type,

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Component;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures
 {

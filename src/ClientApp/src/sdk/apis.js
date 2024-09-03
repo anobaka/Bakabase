@@ -6934,6 +6934,88 @@ export const PatchNetworkOptionsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetEnhancerOptions
+ * url: GetEnhancerOptionsURL
+ * method: GetEnhancerOptions_TYPE
+ * raw_url: GetEnhancerOptions_RAW_URL
+ */
+export const GetEnhancerOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/enhancer'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetEnhancerOptions_RAW_URL = function() {
+  return '/options/enhancer'
+}
+export const GetEnhancerOptions_TYPE = function() {
+  return 'get'
+}
+export const GetEnhancerOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/enhancer'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PatchEnhancerOptions
+ * url: PatchEnhancerOptionsURL
+ * method: PatchEnhancerOptions_TYPE
+ * raw_url: PatchEnhancerOptions_RAW_URL
+ * @param model - 
+ */
+export const PatchEnhancerOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/enhancer'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('patch', domain + path, body, queryParameters, form, config)
+}
+export const PatchEnhancerOptions_RAW_URL = function() {
+  return '/options/enhancer'
+}
+export const PatchEnhancerOptions_TYPE = function() {
+  return 'patch'
+}
+export const PatchEnhancerOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/enhancer'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: SearchPasswords
  * url: SearchPasswordsURL
  * method: SearchPasswords_TYPE
@@ -7526,107 +7608,13 @@ export const OpenResourceDirectoryURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetResourceThumbnail
- * url: GetResourceThumbnailURL
- * method: GetResourceThumbnail_TYPE
- * raw_url: GetResourceThumbnail_RAW_URL
+ * request: DiscoverResourceCover
+ * url: DiscoverResourceCoverURL
+ * method: DiscoverResourceCover_TYPE
+ * raw_url: DiscoverResourceCover_RAW_URL
  * @param id - 
  */
-export const GetResourceThumbnail = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/{id}/thumbnail'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetResourceThumbnail_RAW_URL = function() {
-  return '/resource/{id}/thumbnail'
-}
-export const GetResourceThumbnail_TYPE = function() {
-  return 'get'
-}
-export const GetResourceThumbnailURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/thumbnail'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: SaveThumbnail
- * url: SaveThumbnailURL
- * method: SaveThumbnail_TYPE
- * raw_url: SaveThumbnail_RAW_URL
- * @param id - 
- * @param model - 
- */
-export const SaveThumbnail = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/{id}/thumbnail'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const SaveThumbnail_RAW_URL = function() {
-  return '/resource/{id}/thumbnail'
-}
-export const SaveThumbnail_TYPE = function() {
-  return 'post'
-}
-export const SaveThumbnailURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/thumbnail'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetResourceCover
- * url: GetResourceCoverURL
- * method: GetResourceCover_TYPE
- * raw_url: GetResourceCover_RAW_URL
- * @param id - 
- */
-export const GetResourceCover = function(parameters = {}) {
+export const DiscoverResourceCover = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/resource/{id}/cover'
@@ -7644,13 +7632,13 @@ export const GetResourceCover = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetResourceCover_RAW_URL = function() {
+export const DiscoverResourceCover_RAW_URL = function() {
   return '/resource/{id}/cover'
 }
-export const GetResourceCover_TYPE = function() {
+export const DiscoverResourceCover_TYPE = function() {
   return 'get'
 }
-export const GetResourceCoverURL = function(parameters = {}) {
+export const DiscoverResourceCoverURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/{id}/cover'

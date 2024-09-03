@@ -178,7 +178,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             {
                 foreach (var (reg, languageValue) in languageWords)
                 {
-                    if (Regex.IsMatch(wc.Content, reg))
+                    if (System.Text.RegularExpressions.Regex.IsMatch(wc.Content, reg))
                     {
                         name = $"{name[..wc.Index]}{name[(wc.Index + wc.ContentWithWrapper.Length)..]}";
                         return (languageValue, name);
@@ -277,7 +277,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             var volumeTexts = await specialTextService.GetAll(x => x.Type == SpecialTextType.Volume, false);
             foreach (var v in volumeTexts)
             {
-                var reg = new Regex($"(?<volumeIndexName>{v.Value1})(?<volumeTitle>.*)$");
+                var reg = new System.Text.RegularExpressions.Regex($"(?<volumeIndexName>{v.Value1})(?<volumeTitle>.*)$");
                 var match = reg.Match(str);
                 if (match.Success)
                 {

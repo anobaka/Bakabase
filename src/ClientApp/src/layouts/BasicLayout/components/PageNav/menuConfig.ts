@@ -28,11 +28,11 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/customcomponent',
         icon: 'ControlOutlined',
       },
-      {
-        name: 'Favorites',
-        path: '/favorites',
-        icon: 'StarOutlined',
-      },
+      // {
+      //   name: 'Favorites',
+      //   path: '/favorites',
+      //   icon: 'StarOutlined',
+      // },
     ],
   },
   {
