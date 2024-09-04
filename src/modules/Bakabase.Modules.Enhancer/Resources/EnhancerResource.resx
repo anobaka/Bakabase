@@ -181,7 +181,9 @@
     <value>Introduction</value>
   </data>
   <data name="Enhancer_ExHentai_Description" xml:space="preserve">
-    <value />
+    <value>1. You must first set the ExHentai cookie in the system settings.
+2. The first resource from the search results will be used as the target resource.
+3. You can also specify which tags to exclude.</value>
   </data>
   <data name="Enhancer_Bangumi_Name" xml:space="preserve">
     <value>Bangumi</value>

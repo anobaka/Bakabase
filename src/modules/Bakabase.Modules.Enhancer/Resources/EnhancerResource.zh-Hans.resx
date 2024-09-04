@@ -233,9 +233,8 @@
   <data name="Enhancer_DLsite_Target_Rating_Name" xml:space="preserve">
     <value>评分</value>
   </data>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="Enhancer_Regex_Name" type="System.Resources.ResXNullRef, System.Windows.Forms">
-    <value />
+  <data name="Enhancer_Regex_Name" xml:space="preserve">
+    <value>正则表达式</value>
   </data>
   <data name="Enhancer_Regex_Target_CaptureGroups_Name" xml:space="preserve">
     <value>捕获组</value>

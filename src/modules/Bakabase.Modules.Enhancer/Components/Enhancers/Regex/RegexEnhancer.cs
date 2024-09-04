@@ -38,18 +38,22 @@ public class RegexEnhancer(
 
         foreach (var exp in expressions)
         {
-            var match = System.Text.RegularExpressions.Regex.Match(resource.FileName, exp, RegexOptions.IgnoreCase);
+            var regex = new System.Text.RegularExpressions.Regex(exp, RegexOptions.IgnoreCase);
+            var match = regex.Match(resource.FileName);
             if (match.Success)
             {
-                foreach (var key in match.Groups.Keys)
+                foreach (var name in regex.GetGroupNames())
                 {
-                    ctx.CaptureGroupsAndValues ??= [];
-                    if (!ctx.CaptureGroupsAndValues.TryGetValue(key, out var values))
+                    if (!int.TryParse(name, out _))
                     {
-                        ctx.CaptureGroupsAndValues[key] = values = new List<string>();
-                    }
+                        ctx.CaptureGroupsAndValues ??= [];
+                        if (!ctx.CaptureGroupsAndValues.TryGetValue(name, out var values))
+                        {
+                            ctx.CaptureGroupsAndValues[name] = values = new List<string>();
+                        }
 
-                    values.Add(match.Groups[key].Value);
+                        values.Add(match.Groups[name].Value);
+                    }
                 }
             }
         }

@@ -340,7 +340,9 @@ namespace Bakabase.Modules.Enhancer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to .
+        ///   Looks up a localized string similar to 1. You must first set the ExHentai cookie in the system settings.
+        ///2. The first resource from the search results will be used as the target resource.
+        ///3. You can also specify which tags to exclude..
         /// </summary>
         public static string Enhancer_ExHentai_Description {
             get {

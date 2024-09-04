@@ -1368,5 +1368,13 @@
   "Be cautions: once you modify the text in one line, it will be treated as a new tag, and the original tag will be deleted.": "请注意：一旦您修改了一行中的文本，它将会被视为一个新的标签，原有的标签将会被删除。",
   "{{count}} data will be deleted": "{{count}}条数据将会被删除",
   "{{count}} data will be added": "{{count}}条数据将会被添加",
-  "Tags will be changed": "标签即将变更"
+  "Tags will be changed": "标签即将变更",
+  "Regex expressions": "正则表达式",
+  "Available capture groups:": "有效的捕获组：",
+  "No named capture groups were found, so the enhancement will not take effect.": "没有发现任何捕获组名称，增强将不会生效。",
+  "You can set multiple regex expressions to match the file or folder name of each resource.": "您可以设置多个正则表达式作用于资源的文件(夹)名上。",
+  "Text matched by multiple capture groups with the same name will be merged into a list and deduplicated.":"被具有相同名称的捕获组匹配到的文本将会被合并成一个列表并去重。",
+  "After setting regex expressions, you must go to category page to configure regex enhancer for each category.":"在设置完正则表达式后，您需要在分类页面配置为分类配置正则表达式增强器。",
+  "You need to use the same name(index-based group name will be ignored) as the capture group for the dynamic enhancement target, otherwise the resource may not be enhanced.":"您需要在动态增强目标中配置和捕获组一样的名称（数字组名会被忽略），否则资源将不会被增强。",
+  "Regex enhancer": "正则增强器"
 }

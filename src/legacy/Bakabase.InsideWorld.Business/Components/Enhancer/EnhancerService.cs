@@ -339,9 +339,25 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             var valuesToAdd = pvs.Except(valuesToUpdate).ToList();
             await _customPropertyValueService.UpdateRange(valuesToUpdate);
             await _customPropertyValueService.AddRange(valuesToAdd);
-            var remainingPvKeys = pvs.Select(p => p.BizKey).ToHashSet();
-            var valueIdsToDelete = currentPropertyValues.Where(cpv => !remainingPvKeys.Contains(cpv.BizKey))
-                .Select(cpv => cpv.Id).ToList();
+
+            var remainingPvScopeKeys = enhancements
+                .Select(e => e.EnhancerId)
+                .ToHashSet()
+                .Select(x => _enhancerDescriptors.TryGet(x)?.PropertyValueScope ?? -1)
+                .Where(x => x > 0)
+                .ToDictionary(d => d, d => pvs.Where(pv => pv.Scope == d).Select(x => x.BizKey));
+
+            // var remainingPvScopeKeys = pvs.GroupBy(d => d.Scope)
+            //     .ToDictionary(d => d.Key, d => d.Select(p => p.BizKey).ToHashSet());
+            var valueIdsToDelete = new List<int>();
+            foreach (var scopeValues in currentPropertyValues.GroupBy(x => x.Scope))
+            {
+                if (remainingPvScopeKeys.TryGetValue(scopeValues.Key, out var bizKeys))
+                {
+                    valueIdsToDelete.AddRange(scopeValues.Where(x => !bizKeys.Contains(x.BizKey)).Select(v => v.Id));
+                }
+            }
+
             await _customPropertyValueService.RemoveByKeys(valueIdsToDelete);
 
             foreach (var (e, v) in enhancementCpvMap)
