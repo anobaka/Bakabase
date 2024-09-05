@@ -339,6 +339,7 @@ namespace Bakabase.Migrations.V190
                                             var newResourceCoverDir =
                                                 Path.Combine(newCoverRootDir, resourceId.ToString());
                                             var subFiles = Directory.GetFiles(sd, "*", SearchOption.AllDirectories);
+                                            Directory.CreateDirectory(newResourceCoverDir);
                                             try
                                             {
                                                 foreach (var sf in subFiles)
@@ -356,11 +357,14 @@ namespace Bakabase.Migrations.V190
                                                     $"Failed to migrate cover files for resource {resourceId}.");
                                             }
 
-                                            var covers = Directory.GetFiles(newResourceCoverDir);
-                                            if (covers.Any())
+                                            if (Directory.Exists(newResourceCoverDir))
                                             {
-                                                resourceBizValueMap[resourceId] =
-                                                    new ListStringValueBuilder(covers.ToList()).Value;
+                                                var covers = Directory.GetFiles(newResourceCoverDir);
+                                                if (covers.Any())
+                                                {
+                                                    resourceBizValueMap[resourceId] =
+                                                        new ListStringValueBuilder(covers.ToList()).Value;
+                                                }
                                             }
                                         }
                                     }
