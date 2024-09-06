@@ -13,7 +13,7 @@ import type { IProperty } from '@/components/Property/models';
 import { Button, Popover } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';
-import { ResourceProperty, SearchOperation, StandardValueType } from '@/sdk/constants';
+import { ResourceProperty, ResourcePropertyType, SearchOperation, StandardValueType } from '@/sdk/constants';
 import { serializeStandardValue } from '@/components/StandardValue/helpers';
 
 interface IProps {
@@ -172,7 +172,7 @@ const FilterGroup = ({
                       propertyId: ResourceProperty.MediaLibrary,
                       dbValue: serializeStandardValue(dbValue, StandardValueType.ListString),
                       operation: SearchOperation.In,
-                      isCustomProperty: false,
+                      propertyType: ResourcePropertyType.Internal,
                       bizValue: serializeStandardValue(bizValue, StandardValueType.ListListString),
                     };
                     setGroup({
@@ -195,7 +195,7 @@ const FilterGroup = ({
                 const newFilter: IFilter = {
                   propertyId: ResourceProperty.FileName,
                   operation: SearchOperation.Contains,
-                  isCustomProperty: false,
+                  propertyType: ResourcePropertyType.Internal,
                 };
                 setGroup({
                   ...groupRef.current,

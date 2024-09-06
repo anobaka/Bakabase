@@ -201,7 +201,7 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
     }
 
     pmvs!.filter(v => !v.property.isResource && !v.property.isRootPath).forEach((pmv) => {
-      const result = PscMatcher.match(segments, pmv.value, rootSegmentIndex, resourceSegmentIndex);
+      const result = PscMatcher.match(segments, pmv.value, rootSegmentIndex, resourceSegmentIndex == undefined ? undefined : resourceSegmentIndex + 1);
       allPropertyMatchResults.push({
         pmv,
         result,
@@ -309,7 +309,7 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
       }
     }
 
-    // 用于资源或其他属性正则匹配，从根路径右侧到资源路径左侧
+    // 用于资源或其他属性正则匹配，从根路径右侧到资源路径
     let resourceRegexTargetText = '';
     let commonRegexTargetText = '';
     if (rootSegmentIndex != undefined) {
@@ -317,7 +317,7 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
         .join('/');
 
       if (resourceSegmentIndex != undefined) {
-        commonRegexTargetText = segments.slice(rootSegmentIndex + 1, resourceSegmentIndex)
+        commonRegexTargetText = segments.slice(rootSegmentIndex + 1, resourceSegmentIndex + 1)
           .join('/');
       }
     }

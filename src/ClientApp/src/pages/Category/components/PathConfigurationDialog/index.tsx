@@ -92,6 +92,8 @@ export default ({
       [PscPropertyType.Resource]: false,
       [PscPropertyType.ParentResource]: false,
       [PscPropertyType.CustomProperty]: false,
+      [PscPropertyType.Rating]: false,
+      [PscPropertyType.Introduction]: false,
     };
     const matchers = Object.keys(simpleMatchers)
       .reduce<PathSegmentConfigurationPropsMatcherOptions[]>((ts, t) => {
@@ -276,7 +278,10 @@ export default ({
                           createPortal(Modal, {
                             defaultVisible: true,
                             title: t('Error'),
-                            children: t('You can select a file out of root path. If you want to change the root path of your library, you should click on your root path.'),
+                            children: t('You cannot select a file outside the root folder. If you want to change the root folder of your library, you should click on your root folder.'),
+                            footer: {
+                              actions: ['cancel'],
+                            },
                           });
                         }
                       },

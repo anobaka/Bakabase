@@ -3,7 +3,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
 import { Badge, Button, Chip, Listbox, ListboxItem, Popover } from '@/components/bakaui';
-import { PropertyValueScope, propertyValueScopes, ResourceProperty } from '@/sdk/constants';
+import { PropertyValueScope, propertyValueScopes, ResourceProperty, ResourcePropertyType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import type { Property } from '@/core/models/Resource';
 import type { Props as PropertyValueRendererProps } from '@/components/Property/components/PropertyValueRenderer';
@@ -71,7 +71,7 @@ export default (props: Props) => {
           color={'secondary'}
           // variant={'light'}
         >
-          {property.isCustom ? property.name : t(ResourceProperty[property.id])}
+          {property.type == ResourcePropertyType.Custom ? property.name : t(ResourceProperty[property.id])}
         </Chip>
       </div>
       {/* <Card> */}

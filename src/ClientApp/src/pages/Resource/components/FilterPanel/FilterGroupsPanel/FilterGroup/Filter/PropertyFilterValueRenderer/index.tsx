@@ -139,8 +139,8 @@ export default ({
 
     if (shouldRender()) {
       const tp = { ...property };
-      if (tp.type == CustomPropertyType.MultilineText) {
-        tp.type = CustomPropertyType.SingleLineText;
+      if (tp.customPropertyType == CustomPropertyType.MultilineText) {
+        tp.customPropertyType = CustomPropertyType.SingleLineText;
       }
 
       return (

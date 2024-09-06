@@ -30,7 +30,7 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
     const tips: ReactElement[] = [];
     const propertyChoiceOptions = property?.options as {allowAddingNewDataDynamically: boolean};
     const allowAddingNewDataDynamicallyDisabled = property &&
-      CustomPropertyTypesWithDynamicData.includes(property.type!) &&
+      CustomPropertyTypesWithDynamicData.includes(property.customPropertyType!) &&
       !propertyChoiceOptions.allowAddingNewDataDynamically;
     if (allowAddingNewDataDynamicallyDisabled) {
       tips.push(

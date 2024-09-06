@@ -4,27 +4,29 @@ import PropertyDialog from '../PropertyDialog';
 import type { IProperty } from '@/components/Property/models';
 import Property from '@/components/Property';
 import { createPortalOfComponent } from '@/components/utils';
-import type { CustomPropertyType,
+import type {
+  CustomPropertyType,
   ResourceProperty as EnumResourceProperty } from '@/sdk/constants';
 import {
   CustomPropertyAdditionalItem,
+  ResourcePropertyType,
   StandardValueType,
 } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
-import { Button, Chip, Modal, Spacer, Tabs, Tab } from '@/components/bakaui';
+import { Button, Chip, Modal, Spacer, Tab, Tabs } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface IKey {
   id: number;
-  isCustom: boolean;
+  type: ResourcePropertyType;
 }
 
 interface IProps extends DestroyableProps{
   selection?: IKey[];
   onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
   multiple?: boolean;
-  pool: 'reserved' | 'custom' | 'all';
+  pool: ResourcePropertyType;
   valueTypes?: StandardValueType[];
   editable?: boolean;
   addable?: boolean;
@@ -52,6 +54,8 @@ const PropertySelector = ({
   const initializedRef = useRef(false);
   const [selection, setSelection] = useState<IKey[]>(propsSelection || []);
 
+  const [currentTab, setCurrentTab] = useState<string>('selected');
+
   console.log('props selection', propsSelection, properties, addable, editable, removable);
 
   useEffect(() => {
@@ -65,7 +69,7 @@ const PropertySelector = ({
 
   const loadProperties = async () => {
     const arr: IProperty[] = [];
-    if (pool == 'all' || pool == 'reserved') {
+    if (pool & ResourcePropertyType.Reserved) {
       const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
       arr.push(
         ...Object.keys(map).map<IProperty>(pStr => {
@@ -73,21 +77,40 @@ const PropertySelector = ({
           return {
             id: p,
             dbValueType: map[p].dbValueType,
-            isCustom: false,
+            type: ResourcePropertyType.Reserved,
             bizValueType: map[p].bizValueType,
           };
         }),
       );
     }
-    if (pool == 'all' || pool == 'custom') {
+    if (pool & ResourcePropertyType.Internal) {
+      const map = internalOptions.resource.internalResourcePropertyAndValueTypesMap || {};
+      arr.push(
+        ...Object.keys(map).map<IProperty>(pStr => {
+          const p = parseInt(pStr, 10) as EnumResourceProperty;
+          return {
+            id: p,
+            dbValueType: map[p].dbValueType,
+            type: ResourcePropertyType.Internal,
+            bizValueType: map[p].bizValueType,
+          };
+        }),
+      );
+    }
+    if (pool & ResourcePropertyType.Custom) {
       const rsp = await BApi.customProperty.getAllCustomProperties({ additionalItems: CustomPropertyAdditionalItem.Category });
       // @ts-ignore
       arr.push(...(rsp.data || []).map(d => ({
         ...d,
-        isCustom: true,
+        type: ResourcePropertyType.Custom,
       })));
     }
     setProperties(arr);
+
+    if (selection.length == 0) {
+      setCurrentTab('notSelected');
+    }
+
     console.log('reloaded', arr);
   };
 
@@ -99,20 +122,20 @@ const PropertySelector = ({
   };
 
   const renderProperty = (property: IProperty) => {
-    const selected = selection.some(s => s.id == property.id && s.isCustom == property.isCustom);
-    // console.log(id, isReserved, reservedProperties, customProperties);
+    const selected = selection.some(s => s.id == property.id && s.type == property.type);
+    console.log(selection, property);
     return (
       <Property
-        key={`${property.id}-${property.isCustom}`}
+        key={`${property.id}-${property.type}`}
         property={property}
         onClick={async () => {
           if (multiple) {
             if (selected) {
-              setSelection(selection.filter(s => s.id != property.id && s.isCustom == property.isCustom));
+              setSelection(selection.filter(s => s.id != property.id && s.type == property.type));
             } else {
               setSelection([...selection, {
                 id: property.id,
-                isCustom: property.isCustom,
+                type: property.type,
               }]);
             }
           } else {
@@ -121,7 +144,7 @@ const PropertySelector = ({
             } else {
               const ns: IKey[] = [{
                 id: property.id,
-                isCustom: property.isCustom,
+                type: property.type,
               }];
               setSelection(ns);
               await onSubmit(ns);
@@ -139,7 +162,7 @@ const PropertySelector = ({
   const onSubmit = async (selection: IKey[]) => {
     // console.log(customProperties, selection);
     if (propsOnSubmit) {
-      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.isCustom == s.isCustom)).filter(x => x != undefined) as IProperty[]);
+      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.type == s.type)).filter(x => x != undefined) as IProperty[]);
     }
   };
 
@@ -147,13 +170,29 @@ const PropertySelector = ({
 
   const renderFilter = () => {
     const filters: any[] = [];
-    if (pool != 'all') {
-      filters.push(
-        <Chip
-          key={'pool'}
-          size={'sm'}
-        >{t(pool == 'reserved' ? 'Reserved properties' : 'Custom properties')}</Chip>,
-      );
+    if (pool != ResourcePropertyType.All) {
+      Object.keys(ResourcePropertyType).forEach(k => {
+        const v = parseInt(k, 10) as ResourcePropertyType;
+        if (Number.isNaN(v)) {
+          return;
+        }
+        if (pool & v) {
+          switch (v) {
+            case ResourcePropertyType.Internal:
+            case ResourcePropertyType.Reserved:
+            case ResourcePropertyType.Custom:
+              filters.push(
+                <Chip
+                  key={'pool'}
+                  size={'sm'}
+                >{t(ResourcePropertyType[v])}</Chip>,
+              );
+              break;
+            default:
+              break;
+          }
+        }
+      });
     }
     if (valueTypes) {
       filters.push(
@@ -183,8 +222,8 @@ const PropertySelector = ({
     }
     return true;
   });
-  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.isCustom == s.isCustom)).filter(x => x).map(x => x!);
-  const unselectedProperties = filteredProperties.filter(p => !selection.some(s => s.id == p.id && s.isCustom == p.isCustom));
+  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.type == s.type)).filter(x => x).map(x => x!);
+  const unselectedProperties = filteredProperties.filter(p => !selection.some(s => s.id == p.id && s.type == p.type));
   const propertyCount = selectedProperties.length + unselectedProperties.length;
 
   const renderProperties = () => {
@@ -212,23 +251,7 @@ const PropertySelector = ({
 
     return (
       <>
-        {addable && (
-          <Button
-            color={'primary'}
-            size={'sm'}
-            className={'mb-2'}
-            onClick={() => {
-              PropertyDialog.show({
-                onSaved: loadProperties,
-                validValueTypes: valueTypes?.map(v => v as unknown as CustomPropertyType),
-              });
-            }}
-          >
-            {t('Add a property')}
-          </Button>
-        )}
-
-        <Tabs aria-label="Selectable" isVertical>
+        <Tabs aria-label="Selectable" isVertical selectedKey={currentTab} onSelectionChange={key => setCurrentTab(key as string)}>
           <Tab key="selected" title={`${t('Selected')}(${selectedProperties.length})`}>
             <div className={'flex flex-wrap gap-2 items-start'}>
               {selectedProperties.map(p => renderProperty(p))}
@@ -253,6 +276,22 @@ const PropertySelector = ({
         {/*     </div> */}
         {/*   </div> */}
         {/* </div> */}
+
+        {addable && (
+          <Button
+            color={'primary'}
+            size={'sm'}
+            className={'mt-2'}
+            onClick={() => {
+              PropertyDialog.show({
+                onSaved: loadProperties,
+                validValueTypes: valueTypes?.map(v => v as unknown as CustomPropertyType),
+              });
+            }}
+          >
+            {t('Add a property')}
+          </Button>
+        )}
       </>
     );
   };

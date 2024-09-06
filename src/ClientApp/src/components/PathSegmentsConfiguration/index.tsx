@@ -63,7 +63,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
 
   const [value, setValue] = useState<IPscPropertyMatcherValue[]>(defaultValue ?? []);
   const valueRef = useRef(value);
-  const visibleMatchers = matchers.map((a) => allMatchers.find((b) => b.propertyType == a.propertyType)!)
+  const visibleMatchers = matchers.map((a) => allMatchers.find((b) => b.propertyType == a.propertyType)!).filter(x => x)
     .sort((a, b) => a.checkOrder - b.checkOrder);
   const configurableMatchers = matchers.filter((a) => !a.readonly)
     .map((a) => visibleMatchers.find((b) => b.propertyType == a.propertyType)!);

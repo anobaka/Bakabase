@@ -1,9 +1,9 @@
-import { Button, Dialog, Input, Overlay, Progress, Select, Switch } from '@alifd/next';
-import type { DialogProps } from '@alifd/next/types/dialog';
+import { Overlay } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import PropertySelector from '@/components/PropertySelector';
 import { createPortalOfComponent } from '@/components/utils';
 import BApi from '@/sdk/BApi';
+import { ResourcePropertyType } from '@/sdk/constants';
 
 const { Popup } = Overlay;
 
@@ -21,8 +21,8 @@ const CategoryCustomPropertyBinderDialog = ({
   return (
     <PropertySelector
       multiple
-      pool={'custom'}
-      selection={category.customProperties?.map(c => ({ id: c.id, isCustom: true }))}
+      pool={ResourcePropertyType.Custom}
+      selection={category.customProperties?.map(c => ({ id: c.id, type: ResourcePropertyType.Custom }))}
       title={t('Binding custom properties to category {{categoryName}}', { categoryName: category.name })}
       onSubmit={async (properties) => {
         const rsp = await BApi.category.bindCustomPropertiesToCategory(category.id, { customPropertyIds: properties?.map(p => p.id) });

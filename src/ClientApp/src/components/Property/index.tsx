@@ -7,9 +7,9 @@ import { PropertyTypeIconMap } from './models';
 import Label from './components/Label';
 import ClickableIcon from '@/components/ClickableIcon';
 import PropertyDialog from '@/components/PropertyDialog';
-import { Chip, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
+import { Chip, Icon, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
-import { CustomPropertyType, ResourceProperty } from '@/sdk/constants';
+import { CustomPropertyType, ResourceProperty, ResourcePropertyType } from '@/sdk/constants';
 import { StandardValueIcon } from '@/components/StandardValue';
 
 interface IProps {
@@ -39,10 +39,10 @@ export default ({
 
   const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] = useState(false);
 
-  const editable = property.isCustom && props.editable;
-  const removable = property.isCustom && props.removable;
+  const editable = property.type == ResourcePropertyType.Custom && props.editable;
+  const removable = property.type == ResourcePropertyType.Custom && props.removable;
 
-  const icon = property.type == undefined ? undefined : PropertyTypeIconMap[property.type];
+  const icon = property.customPropertyType == undefined ? undefined : PropertyTypeIconMap[property.customPropertyType];
 
   const renderBottom = () => {
     const categories = property.categories || [];
@@ -102,11 +102,10 @@ export default ({
     PropertyDialog.show({
       value: {
         ...property,
-        type: property.type as unknown as CustomPropertyType,
+        type: property.customPropertyType as unknown as CustomPropertyType,
       },
       onSaved: p => onSaved?.({
         ...p,
-        isCustom: property.isCustom,
       }),
     });
   };
@@ -136,13 +135,13 @@ export default ({
       <div className={styles.line1}>
         <div className={`${styles.left} mr-2`}>
           <div className={styles.name}>{
-            property.isCustom ? property.name : t(ResourceProperty[property.id])
+            property.type == ResourcePropertyType.Custom ? property.name : t(ResourceProperty[property.id])
           }</div>
-          {property.isCustom ? (
+          {property.type == ResourcePropertyType.Custom ? (
             icon != undefined && (
               <Tooltip
                 color={'foreground'}
-                content={t(CustomPropertyType[property.type!])}
+                content={t(CustomPropertyType[property.customPropertyType!])}
               >
                 <div className={styles.type}>
                   <Icon

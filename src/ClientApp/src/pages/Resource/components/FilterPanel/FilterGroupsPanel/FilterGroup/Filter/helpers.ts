@@ -1,5 +1,5 @@
 import type { Props as PropertyValueRendererProps } from '@/components/Property/components/PropertyValueRenderer';
-import type { SearchOperation } from '@/sdk/constants';
+import { ResourcePropertyType, SearchOperation } from '@/sdk/constants';
 import { CustomPropertyType } from '@/sdk/constants';
 import { ReservedResourceProperty, SearchableReservedProperty } from '@/sdk/constants';
 import { ResourceProperty } from '@/sdk/constants';
@@ -20,7 +20,7 @@ export enum FilterValueRendererType {
 
 
 export const getFilterValueRendererType = (property: IProperty): FilterValueRendererType | undefined => {
-  if (!property.isCustom) {
+  if (property.type != ResourcePropertyType.Custom) {
     const sp = property.id as SearchableReservedProperty;
     switch (sp) {
       case SearchableReservedProperty.Introduction:
@@ -39,8 +39,8 @@ export const getFilterValueRendererType = (property: IProperty): FilterValueRend
         return FilterValueRendererType.MediaLibrary;
     }
   } else {
-    if (property.type) {
-      switch (property.type) {
+    if (property.customPropertyType) {
+      switch (property.customPropertyType) {
         case CustomPropertyType.SingleLineText:
         case CustomPropertyType.MultilineText:
           return FilterValueRendererType.String;

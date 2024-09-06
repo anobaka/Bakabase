@@ -180,7 +180,7 @@ export default (({
             </Tooltip>
           )}
           <div>
-            <Tooltip content={t('Sync now')}>
+            <Tooltip content={t('Sync current media library')}>
               <Button
                 isIconOnly
                 variant={'light'}
@@ -319,7 +319,7 @@ export default (({
                 createPortal(PathConfigurationDialog, {
                   onSaved: (pc) => {
                     Object.assign(library.pathConfigurations[i], pc);
-                    forceUpdate();
+                    loadAllMediaLibraries();
                   },
                   libraryId: library.id,
                   pcIdx: i,

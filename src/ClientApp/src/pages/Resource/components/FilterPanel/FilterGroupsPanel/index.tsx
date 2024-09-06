@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
-import { data } from 'autoprefixer';
 import type { DataPool, DataPoolCategory, DataPoolMediaLibrary, IGroup } from './models';
 import { GroupCombinator } from './models';
 import FilterGroup from './FilterGroup';
 import type { IProperty } from '@/components/Property/models';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
+import { ResourcePropertyType } from '@/sdk/constants';
 
 interface IProps {
   group?: IGroup;
@@ -34,7 +34,7 @@ export default ({
     // @ts-ignore
     arr.push(...(rsp.data || []).map(d => ({
       ...d,
-      isCustom: true,
+      type: ResourcePropertyType.Custom,
     })));
     setPropertyMap(arr.reduce((s, p) => {
       // @ts-ignore

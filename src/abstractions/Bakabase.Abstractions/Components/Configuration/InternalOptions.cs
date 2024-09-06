@@ -144,8 +144,53 @@ namespace Bakabase.Abstractions.Components.Configuration
             public StandardValueType BizValueType { get; set; } = BizValueType;
         }
 
-        public static readonly ConcurrentDictionary<SearchableReservedProperty, SearchableReservedPropertyValueTypes>
+        public static readonly ConcurrentDictionary<ResourceProperty, SearchableReservedPropertyValueTypes>
+            InternalResourcePropertyAndValueTypesMap =
+                new(new Dictionary<ResourceProperty, SearchableReservedPropertyValueTypes>
+                {
+                    {
+                        ResourceProperty.FileName,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
+                    },
+                    {
+                        ResourceProperty.DirectoryPath,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
+                    },
+                    {
+                        ResourceProperty.CreatedAt,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
+                    },
+                    {
+                        ResourceProperty.FileCreatedAt,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
+                    },
+                    {
+                        ResourceProperty.FileModifiedAt,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
+                    },
+                    {
+                        ResourceProperty.MediaLibrary,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.ListString,
+                            StandardValueType.ListListString)
+                    },
+                });
+
+        public static readonly ConcurrentDictionary<ResourceProperty, SearchableReservedPropertyValueTypes>
             ReservedResourcePropertyAndValueTypesMap =
+                new(new Dictionary<ResourceProperty, SearchableReservedPropertyValueTypes>
+                {
+                    {
+                        ResourceProperty.Rating,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.Decimal, StandardValueType.Decimal)
+                    },
+                    {
+                        ResourceProperty.Introduction,
+                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
+                    },
+                });
+
+        public static readonly ConcurrentDictionary<SearchableReservedProperty, SearchableReservedPropertyValueTypes>
+            SearchableResourcePropertyAndValueTypesMap =
                 new(new Dictionary<SearchableReservedProperty, SearchableReservedPropertyValueTypes>
                 {
                     {

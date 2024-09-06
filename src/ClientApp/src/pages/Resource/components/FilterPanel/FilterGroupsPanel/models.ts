@@ -1,4 +1,5 @@
-import type { SearchOperation, StandardValueType } from '@/sdk/constants';
+import type { ResourcePropertyType, SearchOperation } from '@/sdk/constants';
+import { StandardValueType } from '@/sdk/constants';
 
 export type DataPoolCategory = {id: number; name: string};
 export type DataPoolMediaLibrary = {id: number; name: string; categoryId: number; resourceCount: number};
@@ -16,7 +17,7 @@ export enum GroupCombinator {
 
 export interface IFilter {
   propertyId?: number;
-  isCustomProperty?: boolean;
+  propertyType?: ResourcePropertyType;
   group?: IGroup;
   operation?: SearchOperation;
   dbValue?: string;

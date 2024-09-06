@@ -1,5 +1,4 @@
-import type { StandardValueType } from '@/sdk/constants';
-import { ResourceProperty } from '@/sdk/constants';
+import type { ResourcePropertyType, StandardValueType } from '@/sdk/constants';
 
 import { CustomPropertyType } from '@/sdk/constants';
 import type { MultilevelData } from '@/components/StandardValue/models';
@@ -11,8 +10,8 @@ export interface IProperty {
   name?: string;
   categories?: {id: number; name: string}[];
   options?: any;
-  isCustom: boolean;
-  type?: CustomPropertyType;
+  type: ResourcePropertyType;
+  customPropertyType?: CustomPropertyType;
   valueCount?: number;
 }
 

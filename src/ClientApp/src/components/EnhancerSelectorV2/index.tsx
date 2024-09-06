@@ -81,22 +81,28 @@ const EnhancerSelector = ({
         actions: ['cancel'],
       }}
     >
-      <div className={'grid gap-4 grid-cols-3 justify-items-center'}>
+      <div
+        className={'grid gap-4 flex-wrap justify-center justify-items-center'}
+        style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 300px)' }}
+      >
         {enhancers.map(e => {
             const ceo = categoryEnhancerOptionsList.find(x => x.enhancerId == e.id);
             return (
               <div
                 key={e.id}
-                className={'max-w-[280px] rounded border-1 pl-3 pr-3 pt-2 pb-2'}
+                className={'max-w-[280px] border-1 rounded-lg pl-3 pr-3 pt-2 pb-2 flex flex-col'}
+                style={{ borderColor: 'rgba(255, 255, 255, 0.3)' }}
               >
                 <div className={'text-medium font-bold'}>
                   {e.name}
                 </div>
-                <div className={'opacity-60'}>
-                  {e.description}
-                </div>
+                {e.description && (
+                  <div className={'opacity-60 grow'}>
+                    {e.description}
+                  </div>
+                )}
                 <Divider />
-                <div className={'mt-2 mb-2'}>
+                <div className={'mt-2 mb-2 grow'}>
                   <div className={' italic'}>
                     {t('This enhancer can produce the following property values')}
                   </div>

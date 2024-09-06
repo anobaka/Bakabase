@@ -27,6 +27,16 @@ const allMatchers = [
   }),
   ResourceMatcher,
   new PscMatcher({
+    propertyType: PscPropertyType.Rating,
+    multiple: false,
+    order: 1,
+  }),
+  new PscMatcher({
+    propertyType: PscPropertyType.Introduction,
+    multiple: false,
+    order: 1,
+  }),
+  new PscMatcher({
     propertyType: PscPropertyType.CustomProperty,
     multiple: true,
     order: 1,

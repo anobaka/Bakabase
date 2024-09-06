@@ -2,8 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
 import type { Property, Resource } from '@/core/models/Resource';
-import type { ResourceProperty as EnumResourceProperty } from '@/sdk/constants';
-import { PropertyValueScope, propertyValueScopes, ResourcePropertyType } from '@/sdk/constants';
+import type {
+  ResourceProperty as EnumResourceProperty } from '@/sdk/constants';
+import {
+  PropertyValueScope,
+  propertyValueScopes,
+  ResourcePropertyType,
+} from '@/sdk/constants';
 import store from '@/store';
 import PropertyContainer from '@/components/Resource/components/DetailDialog/Properties/PropertyContainer';
 import BApi from '@/sdk/BApi';
@@ -39,7 +44,7 @@ export default (props: Props) => {
   const resourceOptions = store.useModelState('resourceOptions');
   const [valueScopePriority, setValueScopePriority] = useState<PropertyValueScope[]>([]);
   const internalOptions = store.useModelState('internalOptions');
-  const [reservedPropertyMap, setReservedPropertyMap] = useState<Record<number, IProperty>>({});
+  const [internalAndReservedPropertyMap, setInternalAndReservedPropertyMap] = useState<Record<number, IProperty>>({});
   const [customPropertyMap, setCustomPropertyMap] = useState<Record<number, IProperty>>({});
   const [showInvisibleProperties, setShowInvisibleProperties] = useState(false);
 
@@ -50,17 +55,27 @@ export default (props: Props) => {
 
   useEffect(() => {
     if (internalOptions.initialized) {
-      const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
-      Object.keys(map).forEach(pStr => {
+      const map1 = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
+      Object.keys(map1).forEach(pStr => {
         const p = parseInt(pStr, 10) as EnumResourceProperty;
-        reservedPropertyMap[p] = {
+        internalAndReservedPropertyMap[p] = {
           id: p,
-          dbValueType: map[p].dbValueType,
+          dbValueType: map1[p].dbValueType,
           isCustom: false,
-          bizValueType: map[p].bizValueType,
+          bizValueType: map1[p].bizValueType,
         };
       });
-      setReservedPropertyMap({ ...reservedPropertyMap });
+      const map2 = internalOptions.resource.internalResourcePropertyAndValueTypesMap || {};
+      Object.keys(map2).forEach(pStr => {
+        const p = parseInt(pStr, 10) as EnumResourceProperty;
+        internalAndReservedPropertyMap[p] = {
+          id: p,
+          dbValueType: map2[p].dbValueType,
+          isCustom: false,
+          bizValueType: map2[p].bizValueType,
+        };
+      });
+      setInternalAndReservedPropertyMap({ ...internalAndReservedPropertyMap });
     }
   }, [internalOptions.initialized]);
 
@@ -76,8 +91,8 @@ export default (props: Props) => {
             name: t.name!,
             bizValueType: t.bizValueType!,
             dbValueType: t.dbValueType!,
-            isCustom: true,
-            type: t.type!,
+            type: ResourcePropertyType.Custom,
+            customPropertyType: t.type!,
             options: t.options,
           };
           return s;
@@ -103,7 +118,7 @@ export default (props: Props) => {
     reload();
   };
 
-  log(props, 'reserved property map', reservedPropertyMap);
+  log(props, 'reserved property map', internalAndReservedPropertyMap);
 
   const buildRenderContext = () => {
     const renderContext: RenderContext = [];
@@ -118,14 +133,14 @@ export default (props: Props) => {
           case ResourcePropertyType.Internal:
             break;
           case ResourcePropertyType.Reserved:
-            property = reservedPropertyMap[pId];
+            property = internalAndReservedPropertyMap[pId];
             break;
           case ResourcePropertyType.Custom: {
             const p = customPropertyMap?.[pId];
             property = {
               ...p,
               id: pId,
-              isCustom: true,
+              type: ResourcePropertyType.Custom,
               dbValueType: sp.dbValueType,
               bizValueType: sp.bizValueType,
               name: sp.name,
@@ -183,7 +198,7 @@ export default (props: Props) => {
                 manualValue.value = dv;
                 forceUpdate();
 
-                onValueChange(property.id, property!.isCustom, sdv);
+                onValueChange(property.id, property!.type == ResourcePropertyType.Custom, sdv);
               }}
             />
           );

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React from 'react';
 import type { IProperty } from '@/components/Property/models';
-import { CustomPropertyType, ResourceProperty, StandardValueType } from '@/sdk/constants';
+import { CustomPropertyType, ResourceProperty, ResourcePropertyType, StandardValueType } from '@/sdk/constants';
 import {
   AttachmentValueRenderer,
   BooleanValueRenderer,
@@ -76,7 +76,7 @@ export default (props: Props) => {
     onValueChange: simpleOnValueChange,
   } : undefined;
 
-  if (!property.isCustom) {
+  if (property.type != ResourcePropertyType.Custom) {
     switch (property.id as ResourceProperty) {
       // case ResourceProperty.RootPath:
       //   break;
@@ -171,7 +171,7 @@ export default (props: Props) => {
         );
     }
   } else {
-    switch (property.type!) {
+    switch (property.customPropertyType!) {
       case CustomPropertyType.SingleLineText: {
         return (
           <StringValueRenderer
@@ -302,7 +302,7 @@ export default (props: Props) => {
         return (
           <DateTimeValueRenderer
             value={bv}
-            as={property.type == CustomPropertyType.DateTime ? 'datetime' : 'date'}
+            as={property.customPropertyType == CustomPropertyType.DateTime ? 'datetime' : 'date'}
             variant={variant}
             editor={simpleEditor}
           />

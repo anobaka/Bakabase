@@ -1,19 +1,23 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import { useUpdate, useUpdateEffect } from 'react-use';
+import { useUpdateEffect } from 'react-use';
 import { DropdownItem, DropdownMenu, DropdownTrigger } from '@nextui-org/react';
 import groupStyles from '../index.module.scss';
 import type { DataPool, IFilter } from '../../models';
 import PropertySelector from '@/components/PropertySelector';
 import ClickableIcon from '@/components/ClickableIcon';
-import { ResourceProperty as EnumResourceProperty, ResourceProperty, SearchOperation } from '@/sdk/constants';
+import {
+  ResourceProperty as EnumResourceProperty,
+  ResourceProperty,
+  ResourcePropertyType,
+  SearchOperation,
+} from '@/sdk/constants';
 import store from '@/store';
 import type { IProperty } from '@/components/Property/models';
 import { Button, Dropdown, Tooltip } from '@/components/bakaui';
 import {
   SearchableReservedPropertySearchOperationsMap,
 } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/models';
-import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
 import PropertyFilterValueRenderer
   from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/PropertyFilterValueRenderer';
 
@@ -46,18 +50,34 @@ export default ({
 
   useEffect(() => {
     if (filter.propertyId) {
-      if (!filter.isCustomProperty) {
-        const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
-        setProperty({
-          id: filter.propertyId,
-          name: t(EnumResourceProperty[filter.propertyId]),
-          dbValueType: map[filter.propertyId].dbValueType,
-          isCustom: false,
-          bizValueType: map[filter.propertyId].bizValueType,
-        });
-      } else {
-        setProperty(propertyMap[filter.propertyId]);
-      }
+       switch (filter!.propertyType!) {
+         case ResourcePropertyType.Internal: {
+           const map = internalOptions.resource.internalResourcePropertyAndValueTypesMap || {};
+           setProperty({
+             id: filter.propertyId,
+             name: t(EnumResourceProperty[filter.propertyId]),
+             dbValueType: map[filter.propertyId].dbValueType,
+             type: ResourcePropertyType.Internal,
+             bizValueType: map[filter.propertyId].bizValueType,
+           });
+           break;
+         }
+         case ResourcePropertyType.Reserved: {
+           const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
+           setProperty({
+             id: filter.propertyId,
+             name: t(EnumResourceProperty[filter.propertyId]),
+             dbValueType: map[filter.propertyId].dbValueType,
+             type: ResourcePropertyType.Reserved,
+             bizValueType: map[filter.propertyId].bizValueType,
+           });
+           break;
+         }
+         case ResourcePropertyType.Custom: {
+           setProperty(propertyMap[filter.propertyId]);
+           break;
+         }
+       }
     }
   }, [filter, internalOptions]);
 
@@ -87,7 +107,7 @@ export default ({
 
     let operations: SearchOperation[] | undefined;
     if (property) {
-      operations = property.isCustom ? standardValueTypeSearchOperationsMap[property.dbValueType] : SearchableReservedPropertySearchOperationsMap[property.id];
+      operations = property.type == ResourcePropertyType.Custom ? standardValueTypeSearchOperationsMap[property.dbValueType] : SearchableReservedPropertySearchOperationsMap[property.id];
     }
     operations ??= [];
     if (operations.length == 0) {
@@ -144,7 +164,7 @@ export default ({
   };
 
   const noValue = filter.operation == SearchOperation.IsNull || filter.operation == SearchOperation.IsNotNull;
-  console.log('rendering filter', filter, property, propertyMap, dataPool, internalOptions.resource.reservedResourcePropertyAndValueTypesMap);
+  console.log('rendering filter', filter, property, propertyMap, dataPool, internalOptions.resource.reservedResourcePropertyAndValueTypesMap, internalOptions.resource.internalResourcePropertyAndValueTypesMap);
 
   return (
     <div
@@ -170,24 +190,24 @@ export default ({
                 ? undefined
                 : [{
                   id: filter.propertyId,
-                  isCustom: filter.isCustomProperty!,
+                  type: filter.propertyType!,
                 }],
               onSubmit: async (selectedProperties) => {
                 const property = selectedProperties[0]!;
                 setFilter({
                   ...filter,
                   propertyId: property.id,
-                  isCustomProperty: property.isCustom,
+                  propertyType: property.type,
                 });
               },
               multiple: false,
-              pool: 'all',
+              pool: ResourcePropertyType.All,
               addable: false,
               editable: false,
             });
           }}
         >
-          {(filter.propertyId ? filter.isCustomProperty ? propertyMap[filter.propertyId]?.name : t(ResourceProperty[filter.propertyId]) : t('Property')) ?? t('Unknown property')}
+          {(filter.propertyId ? filter.propertyType == ResourcePropertyType.Custom ? propertyMap[filter.propertyId]?.name : t(ResourceProperty[filter.propertyId]) : t('Property')) ?? t('Unknown property')}
         </Button>
       </div>
       <div className={''}>

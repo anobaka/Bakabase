@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import PropertySelector from '@/components/PropertySelector';
 import { Button } from '@/components/bakaui';
 import type { IFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
+import { ResourcePropertyType } from '@/sdk/constants';
 
 export default () => {
   const { t } = useTranslation();
@@ -14,7 +15,7 @@ export default () => {
       text
       onClick={() => {
         PropertySelector.show({
-          selection: { [filter.isCustomProperty ? 'reservedPropertyIds' : 'customPropertyIds']: filter.propertyId == undefined ? undefined : [filter.propertyId] },
+          selection: { [filter.propertyType == ResourcePropertyType.Custom ? 'reservedPropertyIds' : 'customPropertyIds']: filter.propertyId == undefined ? undefined : [filter.propertyId] },
           onSubmit: async (selectedProperties) => {
             const property = (selectedProperties.reservedProperties?.[0] ?? selectedProperties.customProperties?.[0])!;
             const cp = property as ICustomProperty;
@@ -22,7 +23,7 @@ export default () => {
               ...filter,
               propertyId: property.id,
               propertyName: property.name,
-              isCustomProperty: cp == undefined,
+              propertyType: cp == undefined,
             });
           },
           multiple: false,

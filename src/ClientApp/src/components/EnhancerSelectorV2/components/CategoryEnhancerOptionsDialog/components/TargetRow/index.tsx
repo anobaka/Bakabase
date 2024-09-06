@@ -11,8 +11,9 @@ import PropertySelector from '@/components/PropertySelector';
 import BApi from '@/sdk/BApi';
 import { PropertyLabel } from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
-import { EnhancerTargetType, SpecialTextType, StandardValueType } from '@/sdk/constants';
+import { ResourcePropertyType, SpecialTextType, StandardValueType } from '@/sdk/constants';
 import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
+import { buildLogger } from '@/components/utils';
 
 interface Props {
   target: number;
@@ -26,11 +27,14 @@ interface Props {
   onPropertyChanged?: () => any;
   onCategoryChanged?: () => any;
   enhancer: EnhancerDescriptor;
+  onChange?: (options: Partial<EnhancerTargetFullOptions>) => any;
 }
 
 const StdValueSpecialTextIntegrationMap: { [key in StandardValueType]?: SpecialTextType } = {
   [StandardValueType.DateTime]: SpecialTextType.DateTime,
 };
+
+const log = buildLogger('TargetRow');
 
 export default (props: Props) => {
   const { t } = useTranslation();
@@ -46,6 +50,7 @@ export default (props: Props) => {
     onPropertyChanged,
     onCategoryChanged,
     enhancer,
+    onChange,
   } = props;
 
   const [options, setOptions] = useState<Partial<EnhancerTargetFullOptions>>(propsOptions ?? defaultCategoryEnhancerTargetOptions(target, descriptor.optionsItems));
@@ -67,15 +72,24 @@ export default (props: Props) => {
     return error == undefined;
   };
 
-  const patchTargetOptions = (patches: Partial<EnhancerTargetFullOptions>) => {
-    setOptions({
+  const patchTargetOptions = async (patches: Partial<EnhancerTargetFullOptions>) => {
+    const newOptions = {
       ...options,
       ...patches,
-    });
-    return BApi.category.patchCategoryEnhancerTargetOptions(category.id, enhancer.id, {
+    };
+    setOptions(newOptions);
+
+    // log('Patch target options', {
+    //   ...options,
+    //   ...patches,
+    // });
+
+    await BApi.category.patchCategoryEnhancerTargetOptions(category.id, enhancer.id, {
       target: target,
       dynamicTarget: dynamicTarget,
     }, patches);
+
+    onChange?.(newOptions);
   };
 
   const unbindProperty = async () => {
@@ -85,10 +99,13 @@ export default (props: Props) => {
     });
     options.propertyId = undefined;
     setOptions({ ...options });
+    onChange?.(options);
   };
 
-  const targetLabel = descriptor.isDynamic ? dynamicTarget ?? t('Default') : descriptor.name;
-  const isDefaultTargetOfDynamic = descriptor.isDynamic && dynamicTarget == undefined;
+  const dt = options.dynamicTarget ?? dynamicTarget;
+
+  const targetLabel = descriptor.isDynamic ? dt ?? t('Default') : descriptor.name;
+  const isDefaultTargetOfDynamic = descriptor.isDynamic && dt == undefined;
   const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
   const property = propertyMap?.[options?.propertyId ?? 0];
 
@@ -122,7 +139,7 @@ export default (props: Props) => {
                 variant={'light'}
                 // color={'success'}
                 onClick={() => {
-                  dynamicTargetInputValueRef.current = dynamicTarget;
+                  dynamicTargetInputValueRef.current = dt;
                   setEditingDynamicTarget(true);
                 }}
               >
@@ -166,8 +183,9 @@ export default (props: Props) => {
                 PropertySelector.show({
                   addable: true,
                   editable: true,
-                  pool: 'custom',
+                  pool: ResourcePropertyType.Custom | ResourcePropertyType.Reserved,
                   multiple: false,
+                  selection: property ? [property] : [],
                   onSubmit: async properties => {
                     patchTargetOptions({
                       propertyId: properties[0].id,
@@ -227,7 +245,7 @@ export default (props: Props) => {
               onClick={() => {
                 BApi.category.deleteCategoryEnhancerTargetOptions(category.id, enhancer.id, {
                   target,
-                  dynamicTarget,
+                  dynamicTarget: dt,
                 });
                 onDeleted?.();
               }}

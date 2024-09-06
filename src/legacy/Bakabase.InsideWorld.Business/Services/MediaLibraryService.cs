@@ -804,7 +804,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     foreach (var m in otherMatchers)
                     {
                         var result = ResourcePropertyMatcher.Match(segments, m, rootSegments.Length - 1,
-                            segments.Length - 1);
+                            segments.Length);
                         if (result != null)
                         {
                             switch (result.Type)

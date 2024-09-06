@@ -3,9 +3,14 @@ import { useEffect, useState } from 'react';
 import { SearchOutlined } from '@ant-design/icons';
 import PropertyDialog from '@/components/PropertyDialog';
 import BApi from '@/sdk/BApi';
-import type { StandardValueType } from '@/sdk/constants';
-import { CustomPropertyType } from '@/sdk/constants';
-import { CustomPropertyAdditionalItem } from '@/sdk/constants';
+import type {
+  StandardValueType,
+} from '@/sdk/constants';
+import {
+  CustomPropertyAdditionalItem,
+  CustomPropertyType,
+  ResourcePropertyType,
+} from '@/sdk/constants';
 import { Button, Chip, Input } from '@/components/bakaui';
 import Property from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
@@ -23,7 +28,7 @@ export default () => {
     setProperties((rsp.data || []).map(x => (
       {
         ...x,
-        isCustom: true,
+        type: ResourcePropertyType.Custom,
       }
     )));
   };
@@ -34,7 +39,7 @@ export default () => {
 
   const filteredProperties = properties.filter(p => keyword == undefined || keyword.length == 0 || p.name!.toLowerCase().includes(keyword.toLowerCase()));
   const groupedFilteredProperties = filteredProperties.reduce<{[key in StandardValueType]?: IProperty[]}>((s, t) => {
-    (s[t.type!] ??= []).push(t);
+    (s[t.customPropertyType!] ??= []).push(t);
     return s;
   }, {});
 

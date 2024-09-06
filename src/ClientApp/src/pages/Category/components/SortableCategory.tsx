@@ -338,7 +338,7 @@ export default (({
 
         </div>
         <div className="right flex items-center gap-2">
-          <Tooltip content={t('Sync now')}>
+          <Tooltip content={t('Sync all media libraries in current category')}>
             <Button
               // isIconOnly
               color={'secondary'}

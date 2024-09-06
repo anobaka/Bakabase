@@ -21,23 +21,29 @@ const testData = {
   path: 'D:/test',
   rpmValues: [
     {
-      layer: 3,
+      layer: 1,
       propertyId: 3,
       isReservedProperty: true,
       valueType: ResourceMatcherValueType.Layer,
     },
-    {
-      regex: '^[^\\/]+\\/[^\\/]+\\/[^\\/]+\\/[^\\/]+$',
-      propertyId: 2,
-      isReservedProperty: true,
-      valueType: ResourceMatcherValueType.Regex,
-    },
+    // {
+    //   layer: 3,
+    //   propertyId: 3,
+    //   isReservedProperty: true,
+    //   valueType: ResourceMatcherValueType.Layer,
+    // },
+    // {
+    //   regex: '^[^\\/]+\\/[^\\/]+\\/[^\\/]+\\/[^\\/]+$',
+    //   propertyId: 2,
+    //   isReservedProperty: true,
+    //   valueType: ResourceMatcherValueType.Regex,
+    // },
   ],
 };
 
 export default () => {
   const { t } = useTranslation();
-  const [samplePath, setSamplePath] = useState('D:\\test\\new-media-library-path-configuration\\a\\bc\\New Text Document.txt');
+  const [samplePath, setSamplePath] = useState('D:\\test\\new-media-library-path-configuration\\a');
   const [value, setValue] = useState<IPscPropertyMatcherValue[]>(convertToPscValueFromPathConfigurationDto(testData));
   const segmentsRef = useRef(samplePath.split('\\'));
   const { createPortal } = useBakabaseContext();
@@ -46,6 +52,8 @@ export default () => {
     [PscPropertyType.Resource]: false,
     [PscPropertyType.RootPath]: false,
     [PscPropertyType.ParentResource]: false,
+    [PscPropertyType.Rating]: false,
+    [PscPropertyType.Introduction]: false,
     [PscPropertyType.CustomProperty]: false,
   };
   const matchers = Object.keys(simpleMatchers)

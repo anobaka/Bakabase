@@ -1,14 +1,13 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dropdown, DropdownMenu, DropdownItem, DropdownTrigger, RadioGroup, Radio } from '@nextui-org/react';
+import { Radio, RadioGroup } from '@nextui-org/react';
 import AceEditor from 'react-ace';
 import type { Key } from '@react-types/shared';
 import ChoiceList from './components/ChoiceList';
 import TagList from './components/TagList';
 import { createPortalOfComponent } from '@/components/utils';
-import { CustomPropertyType, StandardValueConversionLoss } from '@/sdk/constants';
+import { CustomPropertyType, ResourcePropertyType, StandardValueConversionLoss } from '@/sdk/constants';
 import './index.scss';
-import CustomIcon from '@/components/CustomIcon';
 import BApi from '@/sdk/BApi';
 import {
   Button,
@@ -26,10 +25,11 @@ import {
 } from '@/components/bakaui';
 import type {
   ChoicePropertyOptions,
+  IProperty,
   NumberPropertyOptions,
   PercentagePropertyOptions,
-  IProperty,
-  RatingPropertyOptions, TagsPropertyOptions,
+  RatingPropertyOptions,
+  TagsPropertyOptions,
 } from '@/components/Property/models';
 import { PropertyTypeIconMap } from '@/components/Property/models';
 import 'ace-builds/src-noconflict/mode-javascript';
@@ -40,7 +40,7 @@ import FeatureStatusTip from '@/components/FeatureStatusTip';
 
 interface IProps {
   value?: CustomPropertyForm;
-  onSaved?: (property: Omit<IProperty, 'isCustom'>) => any;
+  onSaved?: (property: IProperty) => any;
   validValueTypes?: CustomPropertyType[];
 }
 
@@ -373,7 +373,8 @@ const PropertyDialog = ({
             name: rsp.data!.name!,
             dbValueType: rsp.data!.dbValueType!,
             bizValueType: rsp.data!.bizValueType!,
-            type: rsp.data!.type!,
+            customPropertyType: rsp.data!.type!,
+            type: ResourcePropertyType.Custom,
           });
           close();
         }

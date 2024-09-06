@@ -7,16 +7,27 @@ using static Bakabase.Abstractions.Components.Configuration.InternalOptions;
 
 namespace Bakabase.InsideWorld.Business.Models.Dto
 {
-	public record InternalOptionsDto
-	{
-		public ResourceOptions Resource { get; set; } = new();
+    public record InternalOptionsDto
+    {
+        public ResourceOptions Resource { get; set; } = new();
 
-		public record ResourceOptions
-		{
-			public IDictionary<int, SearchableReservedPropertyValueTypes> ReservedResourcePropertyAndValueTypesMap { get; set; } =
-				InternalOptions.ReservedResourcePropertyAndValueTypesMap.ToDictionary(x => (int) x.Key, x => x.Value);
+        public record ResourceOptions
+        {
+            public IDictionary<int, SearchableReservedPropertyValueTypes> InternalResourcePropertyAndValueTypesMap
+            {
+                get;
+                set;
+            } =
+                InternalOptions.InternalResourcePropertyAndValueTypesMap.ToDictionary(x => (int) x.Key, x => x.Value);
+
+            public IDictionary<int, SearchableReservedPropertyValueTypes> ReservedResourcePropertyAndValueTypesMap
+            {
+                get;
+                set;
+            } =
+                InternalOptions.ReservedResourcePropertyAndValueTypesMap.ToDictionary(x => (int) x.Key, x => x.Value);
 
             public Dictionary<int, SearchOperation[]> CustomPropertyValueSearchOperationsMap { get; set; } = new();
         }
-	}
+    }
 }

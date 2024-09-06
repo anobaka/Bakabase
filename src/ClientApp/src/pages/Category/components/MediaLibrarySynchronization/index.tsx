@@ -53,7 +53,7 @@ export default ({
               }}
             >
               <SyncOutlined className={'text-base'} />
-              {t('Sync now')}
+              {t('Sync all media libraries')}
             </Button>
           )}
           {(failed || isComplete) && (

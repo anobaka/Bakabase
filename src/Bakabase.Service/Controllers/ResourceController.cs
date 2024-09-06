@@ -304,7 +304,7 @@ namespace Bakabase.Service.Controllers
                         {
                             var rp = (SearchableReservedProperty) filter.PropertyId;
                             var valueTypes =
-                                InternalOptions.ReservedResourcePropertyAndValueTypesMap.GetValueOrDefault(rp);
+                                InternalOptions.SearchableResourcePropertyAndValueTypesMap.GetValueOrDefault(rp);
                             if (valueTypes == null)
                             {
                                 switch (rp)

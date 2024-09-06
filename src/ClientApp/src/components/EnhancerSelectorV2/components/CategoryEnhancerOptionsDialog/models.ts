@@ -1,5 +1,5 @@
 import type { EnhancerId } from '@/sdk/constants';
-import { EnhancerTargetOptionsItem } from '@/sdk/constants';
+import type { EnhancerTargetOptionsItem } from '@/sdk/constants';
 
 export interface CategoryEnhancerFullOptions {
   categoryId: number;
@@ -27,9 +27,6 @@ export function defaultCategoryEnhancerTargetOptions(target: number, optionsItem
     target,
   };
   if (optionsItems != undefined) {
-    if (optionsItems.includes(EnhancerTargetOptionsItem.IntegrateWithAlias)) {
-      eto.integrateWithAlias = true;
-    }
   }
   return eto;
 }

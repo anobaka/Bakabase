@@ -8,6 +8,18 @@ Inside World 是一款离线媒体管理库，用于本地媒体快速处理、�
 
 更多内容请访问[项目首页](https://inside-world.anobaka.com/)
 
+## 功能预览
+
+![resource-filter-v190-1](./docs/img/resource-filter-v190-1.png)
+![resource-detail-v190-1](./docs/img/resource-detail-v190-1.png)
+![resource-quick-preview](./docs/img/resource-quick-preview.png)
+![custom-property-1](./docs/img/custom-property-1.png)
+![custom-property-2](./docs/img/custom-property-2.png)
+![category-resource-name-template-2](./docs/img/category-resource-name-template-2.png)
+![categary-path-segment-matcher-3-4](./docs/img/categary-path-segment-matcher-3-4.png)
+![file-processor-basic](./docs/img/file-processor-basic.png)
+![downloader-1](./docs/img/downloader-1.png)
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=anobaka/insideworld&type=Date)]([https://star-history.com/#anobaka/insideworld&Date](https://star-history.com/embed?secret=Z2l0aHViX3BhdF8xMUFBV0JJVkkwdVFWRGxmOE1HTHRuX1ZzblFNRnRiaThva0FnbmpvcE1mWFh4b0NMZ2pOOFB5bHBZRmlkQmJTSFkzWDNSTkJOQXNXazdaU0lV#anobaka/insideworld&Date))

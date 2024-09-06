@@ -3,6 +3,7 @@ import { useState } from 'react';
 import PropertySelector from '@/components/PropertySelector';
 import { Button } from '@/components/bakaui';
 import type { CustomPropertyType, StandardValueType } from '@/sdk/constants';
+import { ResourcePropertyType } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
 
 interface IProps {
@@ -26,7 +27,7 @@ export default (props: IProps) => {
           editable: true,
           removable: true,
           addable: true,
-          pool: 'custom',
+          pool: ResourcePropertyType.Custom | ResourcePropertyType.Reserved,
           multiple: false,
           valueTypes: props.valueTypes?.map(v => v as unknown as StandardValueType),
           onSubmit: async (selected) => {

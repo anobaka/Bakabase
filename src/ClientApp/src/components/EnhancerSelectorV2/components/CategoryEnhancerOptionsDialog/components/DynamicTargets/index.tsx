@@ -10,7 +10,6 @@ import TargetRow from '../TargetRow';
 import type { IProperty } from '@/components/Property/models';
 import { Button, Table, TableBody, TableColumn, TableHeader } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
-import { EnhancerTargetType } from '@/sdk/constants';
 
 const sortOptions = (a: EnhancerTargetFullOptions, b: EnhancerTargetFullOptions) => {
   if (a.dynamicTarget == undefined) {
@@ -36,6 +35,7 @@ type Group = {
 
 export default (props: Props) => {
   const { t } = useTranslation();
+  const forceUpdate = useUpdate();
 
   const {
     propertyMap,
@@ -144,6 +144,10 @@ export default (props: Props) => {
                         setOptions({ ...options });
                       }
                     }}
+                    // onChange={(newOptions) => {
+                    //   Object.assign(data, newOptions);
+                    //   forceUpdate();
+                    // }}
                   />
                 );
               })}
