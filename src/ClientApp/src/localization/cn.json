@@ -1350,12 +1350,13 @@
   "Enhancement target": "增强目标",
   "General": "通用",
   "Specify dynamic target": "指定动态目标",
-  "Auto generate properties": "自动创建属性",
+  "Auto bind property": "自动绑定属性",
   "Click to specify target": "点击指定目标",
   "Duplicate dynamic target is found": "有重复的动态目标",
   "This field is required": "该字段为必填字段",
-  "If checked, a default property for this target will be created automatically.": "如果勾选本项，会自动为该目标创建一个属性。",
-  "If checked in default options of a dynamic target, multiple properties will be created for all unlisted dynamic targets.": "如果在动态目标的默认选项中勾选了此项，则会自动为所有未指定的动态目标创建对应的属性。",
+  "If this option is checked, a property with the same name and type of the target will be bound automatically.": "如果勾选本项，系统会自动为当前目标绑定一个相同名称和类型的属性。",
+  "If there isn't such a property, a new property will be created and bound to this target.": "如果未找到该属性，则会自动创建一个新属性并绑定至当前目标",
+  "If this option is checked in default options of a dynamic target, all unlisted dynamic targets will be bound to properties of the same type with the same name.": "如果在动态目标的默认选项中勾选了此项，则会自动为所有未列出的动态目标分别绑定相同名称和类型的属性。",
   "Check configuration": "检查配置",
   "Delete unknown resources": "删除未知资源",
   "Delete all resources bound to unknown category or media library": "删除所有未知分类或媒体库绑定的资源",
@@ -1385,5 +1386,10 @@
   "Sync all media libraries": "同步全部媒体库",
   "Sync all media libraries in current category": "同步当前分类下的所有媒体库",
   "Sync current media library": "同步当前媒体库",
-  "You cannot select a file outside the root folder. If you want to change the root folder of your library, you should click on your root folder.": "您不能选择根目录之外的文件，如果您想更改媒体库的根目录，请点击根目录修改。"
+  "You cannot select a file outside the root folder. If you want to change the root folder of your library, you should click on your root folder.": "您不能选择根目录之外的文件，如果您想更改媒体库的根目录，请点击根目录修改。",
+  "CoverSelectOrder.FilenameAscending": "文件名升序",
+  "CoverSelectOrder.FileModifyDtDescending": "文件修改时间降序",
+  "ResourceProperty.Introduction": "介绍",
+  "ResourceProperty.Rating": "评分",
+  "You can bind properties in category page": "您可以在分类页面绑定属性"
 }

@@ -9,22 +9,24 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;
 public enum ExHentaiEnhancerTarget
 {
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.SingleLineText,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     Name = 1,
 
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.MultilineText,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty],
+        reservedResourcePropertyCandidate: ReservedResourceProperty.Introduction)]
     Introduction,
 
     [EnhancerTarget(StandardValueType.Decimal, CustomPropertyType.Rating,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty],
+        reservedResourcePropertyCandidate: ReservedResourceProperty.Rating)]
     Rating,
 
     [EnhancerTarget(StandardValueType.ListTag, CustomPropertyType.Tags,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     Tags,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.Attachment,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty, EnhancerTargetOptionsItem.CoverSelectOrder])]
     Cover
 }

@@ -47,5 +47,19 @@ export const SearchableReservedPropertySearchOperationsMap: { [key in Searchable
     SearchOperation.In,
     SearchOperation.NotIn,
   ],
+  [SearchableReservedProperty.Rating]: [
+    SearchOperation.Equals,
+    SearchOperation.NotEquals,
+    SearchOperation.GreaterThan,
+    SearchOperation.LessThan,
+    SearchOperation.GreaterThanOrEquals,
+    SearchOperation.LessThanOrEquals,
+  ],
+  [SearchableReservedProperty.Introduction]: [
+    SearchOperation.Contains,
+    SearchOperation.NotContains,
+    SearchOperation.IsNotNull,
+    SearchOperation.IsNull,
+  ],
 };
 

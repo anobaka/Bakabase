@@ -9,22 +9,24 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.DLsite;
 public enum DLsiteEnhancerTarget
 {
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.SingleLineText,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     Name,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.Attachment,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty, EnhancerTargetOptionsItem.CoverSelectOrder])]
     Cover,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.MultipleChoice,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties], true)]
+        [EnhancerTargetOptionsItem.AutoBindProperty], true)]
     PropertiesOnTheRightSideOfCover,
 
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.MultilineText,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty],
+        reservedResourcePropertyCandidate: ReservedResourceProperty.Introduction)]
     Introduction,
 
     [EnhancerTarget(StandardValueType.Decimal, CustomPropertyType.Rating,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties], false, typeof(RatingMax10))]
+        [EnhancerTargetOptionsItem.AutoBindProperty], false, typeof(RatingMax10),
+        reservedResourcePropertyCandidate: ReservedResourceProperty.Rating)]
     Rating
 }

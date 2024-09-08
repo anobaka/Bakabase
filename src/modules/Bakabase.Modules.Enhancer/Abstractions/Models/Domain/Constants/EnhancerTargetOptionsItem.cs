@@ -2,6 +2,7 @@
 
 public enum EnhancerTargetOptionsItem
 {
-    AutoGenerateProperties = 1,
-    AutoMatchMultilevelString = 2
+    AutoBindProperty = 1,
+    AutoMatchMultilevelString = 2,
+    CoverSelectOrder = 3
 }

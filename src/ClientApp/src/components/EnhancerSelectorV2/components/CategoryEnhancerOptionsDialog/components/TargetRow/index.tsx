@@ -11,9 +11,16 @@ import PropertySelector from '@/components/PropertySelector';
 import BApi from '@/sdk/BApi';
 import { PropertyLabel } from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
-import { ResourcePropertyType, SpecialTextType, StandardValueType } from '@/sdk/constants';
+import {
+  reservedResourceProperties,
+  ResourceProperty,
+  ResourcePropertyType,
+  SpecialTextType,
+  StandardValueType,
+} from '@/sdk/constants';
 import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
 import { buildLogger } from '@/components/utils';
+import store from '@/store';
 
 interface Props {
   target: number;
@@ -52,8 +59,9 @@ export default (props: Props) => {
     enhancer,
     onChange,
   } = props;
+  const internalOptions = store.useModelState('internalOptions');
 
-  const [options, setOptions] = useState<Partial<EnhancerTargetFullOptions>>(propsOptions ?? defaultCategoryEnhancerTargetOptions(target, descriptor.optionsItems));
+  const [options, setOptions] = useState<Partial<EnhancerTargetFullOptions>>(propsOptions ?? defaultCategoryEnhancerTargetOptions(descriptor));
   const [dynamicTargetError, setDynamicTargetError] = useState<string>();
   const dynamicTargetInputValueRef = useRef<string>();
   const [editingDynamicTarget, setEditingDynamicTarget] = useState(false);
@@ -107,7 +115,33 @@ export default (props: Props) => {
   const targetLabel = descriptor.isDynamic ? dt ?? t('Default') : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dt == undefined;
   const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
-  const property = propertyMap?.[options?.propertyId ?? 0];
+
+  let property: IProperty | undefined;
+  if (options.propertyType != undefined && options.propertyId != undefined) {
+    switch (options.propertyType!) {
+      case ResourcePropertyType.Reserved: {
+        const valueTypes = internalOptions.resource.reservedResourcePropertyAndValueTypesMap?.[options.propertyId];
+        if (valueTypes) {
+          property = {
+            id: options.propertyId,
+            dbValueType: valueTypes.dbValueType,
+            type: ResourcePropertyType.Reserved,
+            bizValueType: valueTypes.bizValueType,
+            name: t(`ResourceProperty.${ResourceProperty[options.propertyId]}`),
+          };
+        }
+        break;
+      }
+
+      case ResourcePropertyType.Custom:
+        property = propertyMap?.[options.propertyId];
+        break;
+      case ResourcePropertyType.Internal:
+        break;
+      case ResourcePropertyType.All:
+        break;
+    }
+  }
 
   return (
     <div className={'flex items-center gap-1'}>
@@ -189,6 +223,7 @@ export default (props: Props) => {
                   onSubmit: async properties => {
                     patchTargetOptions({
                       propertyId: properties[0].id,
+                      propertyType: properties[0].type,
                     });
                   },
                 });
@@ -226,7 +261,7 @@ export default (props: Props) => {
         )}
       </div>
       <div className={'w-1/4'}>
-        <div className={'flex flex-col gap-1'}>
+        <div className={'flex flex-col gap-2'}>
           <TargetOptions
             options={options}
             optionsItems={descriptor.optionsItems}

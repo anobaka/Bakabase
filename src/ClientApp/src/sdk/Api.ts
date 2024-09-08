@@ -87,6 +87,18 @@ export type BakabaseAbstractionsModelsDomainConstantsInitializationContentType =
 export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004;
 
 /**
+ * [12: Introduction, 13: Rating]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsReservedResourceProperty = 12 | 13;
+
+/**
+ * [1: Internal, 2: Reserved, 4: Custom, 7: All]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsResourcePropertyType = 1 | 2 | 4 | 7;
+
+/**
  * [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language]
  * @format int32
  */
@@ -1505,6 +1517,8 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
   description?: string | null;
   optionsItems?: number[] | null;
   enhancementConverter?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter;
+  /** [12: Introduction, 13: Rating] */
+  reservedResourcePropertyCandidate?: BakabaseAbstractionsModelsDomainConstantsReservedResourceProperty;
 }
 
 /**
@@ -1522,9 +1536,11 @@ export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFu
   target?: number;
   dynamicTarget?: string | null;
   autoMatchMultilevelString?: boolean | null;
-  autoGenerateProperties?: boolean | null;
+  autoBindProperty?: boolean | null;
   /** @format int32 */
   propertyId?: number | null;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyType?: BakabaseAbstractionsModelsDomainConstantsResourcePropertyType;
   /** [1: FilenameAscending, 2: FileModifyDtDescending] */
   coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
 }
@@ -1535,9 +1551,10 @@ export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchI
 }
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptionsPatchInputModel {
-  integrateWithAlias?: boolean | null;
   autoMatchMultilevelString?: boolean | null;
-  autoGenerateProperties?: boolean | null;
+  autoBindProperty?: boolean | null;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
   /** @format int32 */
   propertyId?: number | null;
   dynamicTarget?: string | null;

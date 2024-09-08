@@ -277,278 +277,6 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Analyze a filename similar to [(20)191202][Publisher1(Publisher2,Publisher3),Publisher4(Publisher5),Publisher6]Title Part 2(Original)[CN].
-        /// </summary>
-        internal static string Enhancer_Bakabase_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Bakabase.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Main language of the resource.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_Language_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_Language_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Language.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_Language_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_Language_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Name of the resource.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_Name_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_Name_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Name.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_Name_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_Name_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Original works of the resource.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_Originals_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_Originals_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Publishers of the resource.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_Publisher_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_Publisher_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Publisher(s).
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_Publisher_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_Publisher_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Release date of the resource.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_ReleaseDt_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_ReleaseDt_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Release date.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_ReleaseDt_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_ReleaseDt_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Volume name of the resource, such as &apos;episode 1&apos;.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_VolumeName_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_VolumeName_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Volume name.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_VolumeName_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_VolumeName_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Volume title of the resource, such as &apos;The beginning of the story&apos;.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_VolumeTitle_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_VolumeTitle_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Volume title.
-        /// </summary>
-        internal static string Enhancer_Bakabase_Target_VolumeTitle_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bakabase_Target_VolumeTitle_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to .
-        /// </summary>
-        internal static string Enhancer_Bangumi_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_Bangumi_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Bangumi.
-        /// </summary>
-        internal static string Enhancer_Bangumi_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bangumi_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Cover.
-        /// </summary>
-        internal static string Enhancer_Bangumi_Target_Cover_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bangumi_Target_Cover_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Introduction.
-        /// </summary>
-        internal static string Enhancer_Bangumi_Target_Introduction_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bangumi_Target_Introduction_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Name.
-        /// </summary>
-        internal static string Enhancer_Bangumi_Target_Name_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bangumi_Target_Name_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Other properties in left panel.
-        /// </summary>
-        internal static string Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Rating(0~10).
-        /// </summary>
-        internal static string Enhancer_Bangumi_Target_Rating_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bangumi_Target_Rating_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Tags.
-        /// </summary>
-        internal static string Enhancer_Bangumi_Target_Tags_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_Bangumi_Target_Tags_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 1. Cookie of ExHentai must be set in system configurations.
-        ///2. The first item of search result will be treated as matched resource.
-        ///3. You can set excluding tags also..
-        /// </summary>
-        internal static string Enhancer_ExHentai_Description {
-            get {
-                return ResourceManager.GetString("Enhancer_ExHentai_Description", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to ExHentai.
-        /// </summary>
-        internal static string Enhancer_ExHentai_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_ExHentai_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Cover.
-        /// </summary>
-        internal static string Enhancer_ExHentai_Target_Cover_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_ExHentai_Target_Cover_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Introduction.
-        /// </summary>
-        internal static string Enhancer_ExHentai_Target_Introduction_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_ExHentai_Target_Introduction_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Name.
-        /// </summary>
-        internal static string Enhancer_ExHentai_Target_Name_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_ExHentai_Target_Name_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Rating(0~5).
-        /// </summary>
-        internal static string Enhancer_ExHentai_Target_Rating_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_ExHentai_Target_Rating_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Tags.
-        /// </summary>
-        internal static string Enhancer_ExHentai_Target_Tags_Name {
-            get {
-                return ResourceManager.GetString("Enhancer_ExHentai_Target_Tags_Name", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to {0} does not exist in {1}.
         /// </summary>
         internal static string FileDoesNotExistInPath {
@@ -779,6 +507,24 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string PathsShouldBeInSameDirectory {
             get {
                 return ResourceManager.GetString("PathsShouldBeInSameDirectory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Introduction.
+        /// </summary>
+        internal static string Reserved_Resource_Property_Name_Introduction {
+            get {
+                return ResourceManager.GetString("Reserved_Resource_Property_Name_Introduction", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rating.
+        /// </summary>
+        internal static string Reserved_Resource_Property_Name_Rating {
+            get {
+                return ResourceManager.GetString("Reserved_Resource_Property_Name_Rating", resourceCulture);
             }
         }
         

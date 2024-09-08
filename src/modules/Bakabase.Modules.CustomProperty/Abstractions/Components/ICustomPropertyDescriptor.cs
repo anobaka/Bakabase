@@ -10,7 +10,7 @@ namespace Bakabase.Modules.CustomProperty.Abstractions.Components
         StandardValueType DbValueType { get; }
         StandardValueType BizValueType { get; }
         int Type { get; }
-
+        Type PropertyType { get; }
         Models.CustomProperty? ToDomainModel(Bakabase.Abstractions.Models.Db.CustomProperty? customProperty);
 
         CustomPropertyValue? ToDomainModel(Bakabase.Abstractions.Models.Db.CustomPropertyValue? value);

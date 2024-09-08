@@ -88,6 +88,8 @@ export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
 export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
 export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000, ExHentaiEnhancer = 1001, BangumiEnhancer = 1002, DLsiteEnhancer = 1003, RegexEnhancer = 1004}
 export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
+export enum ReservedResourceProperty {Introduction = 12, Rating = 13}
+export const reservedResourceProperties = Object.keys(ReservedResourceProperty).filter(k => typeof ReservedResourceProperty[k] === 'number').map(t => ({label: t, value: ReservedResourceProperty[t]}));
 export enum ResourcePropertyType {Internal = 1, Reserved = 2, Custom = 4, All = 7}
 export const resourcePropertyTypes = Object.keys(ResourcePropertyType).filter(k => typeof ResourcePropertyType[k] === 'number').map(t => ({label: t, value: ResourcePropertyType[t]}));
 export enum SpecialTextType {Useless = 1, Wrapper = 3, Standardization = 4, Volume = 6, Trim = 7, DateTime = 8, Language = 9}
@@ -148,8 +150,6 @@ export enum PlaylistItemType {Resource = 1, Video = 2, Image = 3, Audio = 4}
 export const playlistItemTypes = Object.keys(PlaylistItemType).filter(k => typeof PlaylistItemType[k] === 'number').map(t => ({label: t, value: PlaylistItemType[t]}));
 export enum ReservedResourceFileType {Cover = 1}
 export const reservedResourceFileTypes = Object.keys(ReservedResourceFileType).filter(k => typeof ReservedResourceFileType[k] === 'number').map(t => ({label: t, value: ReservedResourceFileType[t]}));
-export enum ReservedResourceProperty {ReleaseDt = 1, Publisher = 2, Name = 3, Language = 4, Volume = 5, Original = 6, Series = 7, Tag = 8, Introduction = 9, Rate = 10}
-export const reservedResourceProperties = Object.keys(ReservedResourceProperty).filter(k => typeof ReservedResourceProperty[k] === 'number').map(t => ({label: t, value: ReservedResourceProperty[t]}));
 export enum ResourceDiffProperty {Category = 0, MediaLibrary = 1, ReleaseDt = 2, Publisher = 3, Name = 4, Language = 5, Volume = 6, Original = 7, Series = 8, Tag = 9, Introduction = 10, Rate = 11, CustomProperty = 12}
 export const resourceDiffProperties = Object.keys(ResourceDiffProperty).filter(k => typeof ResourceDiffProperty[k] === 'number').map(t => ({label: t, value: ResourceDiffProperty[t]}));
 export enum ResourceDiffType {Added = 1, Removed = 2, Modified = 3}
@@ -216,7 +216,7 @@ export enum BakabaseEnhancerTarget {Name = 1, Publisher = 2, ReleaseDt = 3, Volu
 export const bakabaseEnhancerTargets = Object.keys(BakabaseEnhancerTarget).filter(k => typeof BakabaseEnhancerTarget[k] === 'number').map(t => ({label: t, value: BakabaseEnhancerTarget[t]}));
 export enum EnhancementAdditionalItem {None = 0, GeneratedCustomPropertyValue = 1}
 export const enhancementAdditionalItems = Object.keys(EnhancementAdditionalItem).filter(k => typeof EnhancementAdditionalItem[k] === 'number').map(t => ({label: t, value: EnhancementAdditionalItem[t]}));
-export enum EnhancerTargetOptionsItem {AutoGenerateProperties = 1, AutoMatchMultilevelString = 2}
+export enum EnhancerTargetOptionsItem {AutoBindProperty = 1, AutoMatchMultilevelString = 2, CoverSelectOrder = 3}
 export const enhancerTargetOptionsItems = Object.keys(EnhancerTargetOptionsItem).filter(k => typeof EnhancerTargetOptionsItem[k] === 'number').map(t => ({label: t, value: EnhancerTargetOptionsItem[t]}));
 export enum LegacyResourceProperty {ReleaseDt = 4, Publisher = 5, Name = 6, Language = 7, Volume = 8, Original = 9, Series = 10, Tag = 11, CustomProperty = 14, Favorites = 22, Cover = 23}
 export const legacyResourceProperties = Object.keys(LegacyResourceProperty).filter(k => typeof LegacyResourceProperty[k] === 'number').map(t => ({label: t, value: LegacyResourceProperty[t]}));

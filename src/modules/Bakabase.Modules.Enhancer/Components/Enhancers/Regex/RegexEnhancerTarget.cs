@@ -9,6 +9,6 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Regex;
 public enum RegexEnhancerTarget
 {
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.MultipleChoice,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties], true)]
+        [EnhancerTargetOptionsItem.AutoBindProperty], true)]
     CaptureGroups,
 }

@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Models.Models.Aos
+namespace Bakabase.Abstractions.Models.Domain
 {
     public record ResourceSearchFilter
     {
+        public ResourcePropertyType PropertyType { get; set; }
         public int PropertyId { get; set; }
         public bool IsCustomProperty { get; set; }
         public SearchOperation Operation { get; set; }

@@ -1,4 +1,5 @@
-﻿using Bakabase.Modules.Enhancer.Abstractions.Components;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Microsoft.Extensions.Localization;
 
@@ -36,5 +37,30 @@ internal class EnhancerLocalizer(IStringLocalizer<EnhancerResource> localizer) :
         }
 
         return d;
+    }
+
+    public string Enhancer_Target_Options_PropertyTypeIsNotSupported(ResourcePropertyType type)
+    {
+        return localizer[nameof(Enhancer_Target_Options_PropertyTypeIsNotSupported), $"{(int) type}:{type}"];
+    }
+
+    public string Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(ResourcePropertyType type)
+    {
+        return localizer[nameof(Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot), $"{(int)type}:{type}"];
+    }
+
+    public string Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot(int id)
+    {
+        return localizer[nameof(Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot), id];
+    }
+
+    public string Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties(int id)
+    {
+        return localizer[nameof(Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties), id];
+    }
+
+    public string Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties(int id)
+    {
+        return localizer[nameof(Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties), id];
     }
 }

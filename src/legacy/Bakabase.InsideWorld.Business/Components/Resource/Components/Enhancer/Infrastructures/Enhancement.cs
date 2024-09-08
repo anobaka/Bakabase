@@ -66,90 +66,90 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.
             }
         }
 
-        private static Enhancement BuildReservedProperty<TData>(ReservedResourceProperty property, TData data)
-        {
-            return new Enhancement
-            {
-                Key = $"p:{property}",
-                Data = data
-            };
-        }
+        // private static Enhancement BuildReservedProperty<TData>(ReservedResourceProperty property, TData data)
+        // {
+        //     return new Enhancement
+        //     {
+        //         Key = $"p:{property}",
+        //         Data = data
+        //     };
+        // }
+        //
+        // public static CustomEnhancement BuildCustomProperty(string property, CustomDataType dataType, object data,
+        //     bool isArray)
+        // {
+        //     if (!property.StartsWith("p:"))
+        //     {
+        //         property = $"p:{property}";
+        //     }
+        //
+        //     return new CustomEnhancement
+        //     {
+        //         Key = property,
+        //         DataType = dataType,
+        //         Data = data,
+        //         IsArray = isArray
+        //     };
+        // }
+        //
+        // public static Enhancement BuildReservedFile(ReservedResourceFileType type, EnhancementFile data)
+        // {
+        //     return new Enhancement
+        //     {
+        //         Key = $"f:{type}",
+        //         Data = data
+        //     };
+        // }
+        //
+        // public static Enhancement BuildReservedFile(ReservedResourceFileType type, IEnumerable<EnhancementFile> data)
+        // {
+        //     return new Enhancement
+        //     {
+        //         Key = $"f:{type}",
+        //         Data = data
+        //     };
+        // }
+        //
+        // public static Enhancement BuildCustomFile(string type, IEnumerable<EnhancementFile> files)
+        // {
+        //     if (!type.StartsWith("f:"))
+        //     {
+        //         type = $"f:{type}";
+        //     }
+        //
+        //     return new Enhancement
+        //     {
+        //         Key = type,
+        //         Data = files
+        //     };
+        // }
 
-        public static CustomEnhancement BuildCustomProperty(string property, CustomDataType dataType, object data,
-            bool isArray)
-        {
-            if (!property.StartsWith("p:"))
-            {
-                property = $"p:{property}";
-            }
-
-            return new CustomEnhancement
-            {
-                Key = property,
-                DataType = dataType,
-                Data = data,
-                IsArray = isArray
-            };
-        }
-
-        public static Enhancement BuildReservedFile(ReservedResourceFileType type, EnhancementFile data)
-        {
-            return new Enhancement
-            {
-                Key = $"f:{type}",
-                Data = data
-            };
-        }
-
-        public static Enhancement BuildReservedFile(ReservedResourceFileType type, IEnumerable<EnhancementFile> data)
-        {
-            return new Enhancement
-            {
-                Key = $"f:{type}",
-                Data = data
-            };
-        }
-
-        public static Enhancement BuildCustomFile(string type, IEnumerable<EnhancementFile> files)
-        {
-            if (!type.StartsWith("f:"))
-            {
-                type = $"f:{type}";
-            }
-
-            return new Enhancement
-            {
-                Key = type,
-                Data = files
-            };
-        }
-
-        public static Enhancement BuildReleaseDt(DateTime dt) =>
-            BuildReservedProperty(ReservedResourceProperty.ReleaseDt, dt);
-
-        public static Enhancement BuildPublisher(IEnumerable<PublisherDto> publishers) =>
-            BuildReservedProperty(ReservedResourceProperty.Publisher, publishers);
-
-        public static Enhancement BuildName(string name) => BuildReservedProperty(ReservedResourceProperty.Name, name);
-
-        public static Enhancement BuildVolume(VolumeDto volume) =>
-            BuildReservedProperty(ReservedResourceProperty.Volume, volume);
-
-        public static Enhancement BuildOriginal(IEnumerable<OriginalDto> originals) =>
-            BuildReservedProperty(ReservedResourceProperty.Original, originals);
-
-        public static Enhancement BuildSeries(SeriesDto series) =>
-            BuildReservedProperty(ReservedResourceProperty.Series, series);
-
-        public static Enhancement BuildIntroduction(string introduction) =>
-            BuildReservedProperty(ReservedResourceProperty.Introduction, introduction);
-
-        public static Enhancement BuildRate(decimal rate) => BuildReservedProperty(ReservedResourceProperty.Rate, rate);
-
-        public static Enhancement BuildTag(IEnumerable<TagDto> tags) =>
-            BuildReservedProperty(ReservedResourceProperty.Tag, tags);
-
-        public static Enhancement BuildLanguage(ResourceLanguage language) =>
-            BuildReservedProperty(ReservedResourceProperty.Language, language);
+        // public static Enhancement BuildReleaseDt(DateTime dt) =>
+        //     BuildReservedProperty(ReservedResourceProperty.ReleaseDt, dt);
+        //
+        // public static Enhancement BuildPublisher(IEnumerable<PublisherDto> publishers) =>
+        //     BuildReservedProperty(ReservedResourceProperty.Publisher, publishers);
+        //
+        // public static Enhancement BuildName(string name) => BuildReservedProperty(ReservedResourceProperty.Name, name);
+        //
+        // public static Enhancement BuildVolume(VolumeDto volume) =>
+        //     BuildReservedProperty(ReservedResourceProperty.Volume, volume);
+        //
+        // public static Enhancement BuildOriginal(IEnumerable<OriginalDto> originals) =>
+        //     BuildReservedProperty(ReservedResourceProperty.Original, originals);
+        //
+        // public static Enhancement BuildSeries(SeriesDto series) =>
+        //     BuildReservedProperty(ReservedResourceProperty.Series, series);
+        //
+        // public static Enhancement BuildIntroduction(string introduction) =>
+        //     BuildReservedProperty(ReservedResourceProperty.Introduction, introduction);
+        //
+        // public static Enhancement BuildRate(decimal rate) => BuildReservedProperty(ReservedResourceProperty.Rate, rate);
+        //
+        // public static Enhancement BuildTag(IEnumerable<TagDto> tags) =>
+        //     BuildReservedProperty(ReservedResourceProperty.Tag, tags);
+        //
+        // public static Enhancement BuildLanguage(ResourceLanguage language) =>
+        //     BuildReservedProperty(ReservedResourceProperty.Language, language);
     }
 }

@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import IntegrateWithAlias from './IntegrateWithAlias';
 import AutoMatchMultilevelString from './AutoMatchMultilevelString';
-import AutoGenerateProperties from './AutoGenerateProperties';
+import AutoBindProperty from './AutoBindProperty';
+import CoverSelectOrderComp from './CoverSelectOrder';
 import type {
   EnhancerTargetFullOptions,
 } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
+import type { CoverSelectOrder } from '@/sdk/constants';
 import { EnhancerTargetOptionsItem } from '@/sdk/constants';
 
 type Options = {
   integrateWithAlias?: boolean;
   autoMatchMultilevelString?: boolean;
-  autoGenerateProperties?: boolean;
+  autoBindProperty?: boolean;
+  coverSelectOrder?: CoverSelectOrder;
 };
 
 interface IProps {
@@ -52,12 +54,20 @@ export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
                 onChange={o => patchOptions({ autoMatchMultilevelString: o })}
               />
             );
-          case EnhancerTargetOptionsItem.AutoGenerateProperties:
+          case EnhancerTargetOptionsItem.AutoBindProperty:
             return (
-              <AutoGenerateProperties
+              <AutoBindProperty
                 key={item}
-                autoGenerateProperties={finalOptions.autoGenerateProperties ?? false}
-                onChange={o => patchOptions({ autoGenerateProperties: o })}
+                autoBindProperty={finalOptions.autoBindProperty ?? false}
+                onChange={o => patchOptions({ autoBindProperty: o })}
+              />
+            );
+          case EnhancerTargetOptionsItem.CoverSelectOrder:
+            return (
+              <CoverSelectOrderComp
+                key={item}
+                coverSelectOrder={finalOptions.coverSelectOrder}
+                onChange={o => patchOptions({ coverSelectOrder: o })}
               />
             );
         }

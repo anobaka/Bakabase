@@ -78,7 +78,12 @@ export default ({
         ) : (
           <Tooltip
             placement={'bottom'}
-            content={t('No category bound')}
+            content={(
+              <div>
+                <div>{t('No category bound')}</div>
+                <div>{t('You can bind properties in category page')}</div>
+              </div>
+            )}
           >
             <DisconnectOutlined className={'text-sm'} />
           </Tooltip>

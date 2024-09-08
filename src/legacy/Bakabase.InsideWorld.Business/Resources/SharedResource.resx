@@ -189,51 +189,6 @@
   <data name="English" xml:space="preserve">
     <value>English</value>
   </data>
-  <data name="Enhancer_Bakabase_Description" xml:space="preserve">
-    <value>Analyze a filename similar to [(20)191202][Publisher1(Publisher2,Publisher3),Publisher4(Publisher5),Publisher6]Title Part 2(Original)[CN]</value>
-  </data>
-  <data name="Enhancer_Bakabase_Name" xml:space="preserve">
-    <value>Bakabase</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_Language_Description" xml:space="preserve">
-    <value>Main language of the resource</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_Language_Name" xml:space="preserve">
-    <value>Language</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_Name_Description" xml:space="preserve">
-    <value>Name of the resource</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_Name_Name" xml:space="preserve">
-    <value>Name</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_Originals_Description" xml:space="preserve">
-    <value>Original works of the resource</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_Publisher_Description" xml:space="preserve">
-    <value>Publishers of the resource</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_Publisher_Name" xml:space="preserve">
-    <value>Publisher(s)</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_ReleaseDt_Description" xml:space="preserve">
-    <value>Release date of the resource</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_ReleaseDt_Name" xml:space="preserve">
-    <value>Release date</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_VolumeName_Description" xml:space="preserve">
-    <value>Volume name of the resource, such as 'episode 1'</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_VolumeName_Name" xml:space="preserve">
-    <value>Volume name</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_VolumeTitle_Description" xml:space="preserve">
-    <value>Volume title of the resource, such as 'The beginning of the story'</value>
-  </data>
-  <data name="Enhancer_Bakabase_Target_VolumeTitle_Name" xml:space="preserve">
-    <value>Volume title</value>
-  </data>
   <data name="FileDoesNotExistInPath" xml:space="preserve">
     <value>{0} does not exist in {1}</value>
   </data>
@@ -345,54 +300,13 @@
   <data name="ValueIsNotSet" xml:space="preserve">
     <value>{0} is not set</value>
   </data>
-  <data name="Enhancer_ExHentai_Name" xml:space="preserve">
-    <value>ExHentai</value>
-  </data>
-  <data name="Enhancer_ExHentai_Target_Name_Name" xml:space="preserve">
-    <value>Name</value>
-  </data>
-  <data name="Enhancer_ExHentai_Target_Cover_Name" xml:space="preserve">
-    <value>Cover</value>
-  </data>
-  <data name="Enhancer_ExHentai_Target_Tags_Name" xml:space="preserve">
-    <value>Tags</value>
-  </data>
-  <data name="Enhancer_ExHentai_Target_Rating_Name" xml:space="preserve">
-    <value>Rating(0~5)</value>
-  </data>
-  <data name="Enhancer_ExHentai_Target_Introduction_Name" xml:space="preserve">
-    <value>Introduction</value>
-  </data>
-  <data name="Enhancer_ExHentai_Description" xml:space="preserve">
-    <value>1. Cookie of ExHentai must be set in system configurations.
-2. The first item of search result will be treated as matched resource.
-3. You can set excluding tags also.</value>
-  </data>
-  <data name="Enhancer_Bangumi_Name" xml:space="preserve">
-    <value>Bangumi</value>
-  </data>
-  <data name="Enhancer_Bangumi_Description" xml:space="preserve">
-    <value />
-  </data>
-  <data name="Enhancer_Bangumi_Target_Name_Name" xml:space="preserve">
-    <value>Name</value>
-  </data>
-  <data name="Enhancer_Bangumi_Target_Tags_Name" xml:space="preserve">
-    <value>Tags</value>
-  </data>
-  <data name="Enhancer_Bangumi_Target_Introduction_Name" xml:space="preserve">
-    <value>Introduction</value>
-  </data>
-  <data name="Enhancer_Bangumi_Target_Rating_Name" xml:space="preserve">
-    <value>Rating(0~10)</value>
-  </data>
-  <data name="Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name" xml:space="preserve">
-    <value>Other properties in left panel</value>
-  </data>
-  <data name="Enhancer_Bangumi_Target_Cover_Name" xml:space="preserve">
-    <value>Cover</value>
-  </data>
   <data name="Migration_V190_DefaultPropertyName_Cover" xml:space="preserve">
     <value>Cover</value>
+  </data>
+  <data name="Reserved_Resource_Property_Name_Introduction" xml:space="preserve">
+    <value>Introduction</value>
+  </data>
+  <data name="Reserved_Resource_Property_Name_Rating" xml:space="preserve">
+    <value>Rating</value>
   </data>
 </root>

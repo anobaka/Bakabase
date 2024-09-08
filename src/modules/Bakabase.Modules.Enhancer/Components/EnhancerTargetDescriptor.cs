@@ -14,10 +14,11 @@ public class EnhancerTargetDescriptor(
     CustomPropertyType customPropertyType,
     bool isDynamic,
     int[]? optionsItems,
-    IEnhancementConverter? converter = null
-    ) : IEnhancerTargetDescriptor
+    IEnhancementConverter? converter = null,
+    ReservedResourceProperty? reservedResourcePropertyCandidate = null
+) : IEnhancerTargetDescriptor
 {
-    public int Id { get; } = (int)(object)id;
+    public int Id { get; } = (int) (object) id;
     public Enum EnumId { get; } = id;
     public CustomPropertyType CustomPropertyType { get; } = customPropertyType;
     public string Name => localizer.Enhancer_TargetName(enhancerId, EnumId);
@@ -26,4 +27,5 @@ public class EnhancerTargetDescriptor(
     public string? Description => localizer.Enhancer_TargetDescription(enhancerId, EnumId);
     public int[]? OptionsItems => optionsItems;
     public IEnhancementConverter? EnhancementConverter => converter;
+    public ReservedResourceProperty? ReservedResourcePropertyCandidate => reservedResourcePropertyCandidate;
 }

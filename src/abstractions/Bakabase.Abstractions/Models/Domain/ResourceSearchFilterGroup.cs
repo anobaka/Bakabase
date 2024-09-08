@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Bakabase.InsideWorld.Models.Constants;
+﻿using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Models.Aos;
 
-namespace Bakabase.InsideWorld.Models.Models.Aos
+namespace Bakabase.Abstractions.Models.Domain
 {
     public record ResourceSearchFilterGroup
     {

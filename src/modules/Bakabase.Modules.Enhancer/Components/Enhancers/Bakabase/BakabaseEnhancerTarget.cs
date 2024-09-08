@@ -8,34 +8,34 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase;
 public enum BakabaseEnhancerTarget
 {
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.SingleLineText,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     Name = 1,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.MultipleChoice,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     Publisher,
 
     [EnhancerTarget(StandardValueType.DateTime, CustomPropertyType.Date,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     ReleaseDt,
 
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.SingleLineText,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     VolumeName,
 
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.SingleLineText,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     VolumeTitle,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.MultipleChoice,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     Originals,
 
     [EnhancerTarget(StandardValueType.String, CustomPropertyType.SingleChoice,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty])]
     Language,
 
     [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.Attachment,
-        [EnhancerTargetOptionsItem.AutoGenerateProperties])]
+        [EnhancerTargetOptionsItem.AutoBindProperty, EnhancerTargetOptionsItem.CoverSelectOrder])]
     Cover
 }

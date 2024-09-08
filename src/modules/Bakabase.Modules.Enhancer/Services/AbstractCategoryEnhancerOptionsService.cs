@@ -166,10 +166,11 @@ namespace Bakabase.Modules.Enhancer.Services
             }
 
             targetOptions.PropertyId = patches.PropertyId ?? targetOptions.PropertyId;
+            targetOptions.PropertyType = patches.PropertyType ?? targetOptions.PropertyType;
             targetOptions.AutoMatchMultilevelString =
                 patches.AutoMatchMultilevelString ?? targetOptions.AutoMatchMultilevelString;
-            targetOptions.AutoGenerateProperties =
-                patches.AutoGenerateProperties ?? targetOptions.AutoGenerateProperties;
+            targetOptions.AutoBindProperty = patches.AutoBindProperty ?? targetOptions.AutoBindProperty;
+            targetOptions.CoverSelectOrder = patches.CoverSelectOrder ?? targetOptions.CoverSelectOrder;
             // patch or create
             targetOptions.DynamicTarget = patches.DynamicTarget ?? dynamicTarget;
 

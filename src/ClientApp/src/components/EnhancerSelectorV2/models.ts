@@ -1,4 +1,10 @@
-import type { EnhancerId, EnhancerTargetOptionsItem, EnhancerTargetType, StandardValueType } from '@/sdk/constants';
+import type {
+  EnhancerId,
+  EnhancerTargetOptionsItem,
+  EnhancerTargetType,
+  ReservedResourceProperty,
+  StandardValueType,
+} from '@/sdk/constants';
 
 export interface EnhancerDescriptor {
   id: EnhancerId;
@@ -15,4 +21,5 @@ export interface EnhancerTargetDescriptor {
   type: EnhancerTargetType;
   valueType: StandardValueType;
   optionsItems?: EnhancerTargetOptionsItem[];
+  reservedResourcePropertyCandidate?: ReservedResourceProperty;
 }

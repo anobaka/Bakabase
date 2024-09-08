@@ -28,6 +28,7 @@ using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.Logging.LogService.Services;
+using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancer;
@@ -121,11 +122,11 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                             targetOptionsGroup.FirstOrDefault(x => x.DynamicTarget == enhancement.DynamicTarget);
                         if (dynamicTargetOptions == null)
                         {
-                            if (targetOptions.AutoGenerateProperties == true)
+                            if (targetOptions.AutoBindProperty == true)
                             {
                                 dynamicTargetOptions = new EnhancerTargetFullOptions
                                 {
-                                    AutoGenerateProperties = true,
+                                    AutoBindProperty = true,
                                     DynamicTarget = enhancement.DynamicTarget,
                                     Target = enhancement.Target
                                 };
@@ -148,91 +149,136 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     continue;
                 }
 
-                if (targetOptions.PropertyId > 0)
+                // match property
+                if (targetOptions is {PropertyId: not null, PropertyType: not null})
                 {
-                    if (!propertyMap.TryGetValue(targetOptions.PropertyId.Value, out var property))
+                    switch (targetOptions.PropertyType.Value)
                     {
-                        _logger.LogError(
-                            $"Couldn't find a property with id: {targetOptions.PropertyId} for target:{targetDescriptor.Name} in enhancer:{_enhancerDescriptors[enhancement.EnhancerId].Name}");
-                        if (targetOptions.AutoGenerateProperties == true)
+                        case ResourcePropertyType.Reserved:
                         {
-                            targetOptions.PropertyId = null;
-                        }
-                    }
-                }
+                            if (!SpecificEnumUtils<ReservedResourceProperty>.Values.Contains(
+                                    (ReservedResourceProperty) targetOptions.PropertyId))
+                            {
+                                throw new Exception(
+                                    _enhancerLocalizer
+                                        .Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties(
+                                            targetOptions.PropertyId.Value));
+                            }
 
-                if (targetOptions.PropertyId > 0)
-                {
-                    var property = propertyMap[targetOptions.PropertyId!.Value];
-                    if (property.EnumType != targetDescriptor.CustomPropertyType)
-                    {
-                        throw new Exception(
-                            $"Property {property.Id}:{property.Name} is not compatible with enhancement of target:{targetDescriptor.Name} in enhancer:{_enhancerDescriptors[enhancement.EnhancerId].Name}");
+                            break;
+                        }
+                        case ResourcePropertyType.Custom:
+                        {
+                            if (!propertyMap.TryGetValue(targetOptions.PropertyId.Value, out var property))
+                            {
+                                throw new Exception(
+                                    _enhancerLocalizer
+                                        .Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties(
+                                            targetOptions.PropertyId.Value));
+                            }
+
+                            break;
+                        }
+                        case ResourcePropertyType.Internal:
+                        case ResourcePropertyType.All:
+                        default:
+                            throw new Exception(
+                                _enhancerLocalizer.Enhancer_Target_Options_PropertyTypeIsNotSupported(targetOptions
+                                    .PropertyType.Value));
                     }
                 }
                 else
                 {
-                    if (targetOptions.AutoGenerateProperties == true)
+                    if (targetOptions.PropertyId.HasValue || targetOptions.PropertyType.HasValue)
                     {
-                        var name = targetDescriptor.IsDynamic ? enhancement.DynamicTarget : targetDescriptor.Name;
-                        if (!string.IsNullOrEmpty(name))
+                        if (!targetOptions.PropertyId.HasValue)
                         {
-                            var propertyCandidate = propertyMap.Values.FirstOrDefault(p =>
-                                p.EnumType == targetDescriptor.CustomPropertyType && p.Name == name);
-                            if (propertyCandidate == null)
+                            throw new Exception(
+                                _enhancerLocalizer.Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(
+                                    targetOptions.PropertyType!.Value));
+                        }
+
+                        throw new Exception(
+                            _enhancerLocalizer
+                                .Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot(targetOptions.PropertyId
+                                    .Value));
+                    }
+                    else
+                    {
+                        if (targetOptions.AutoBindProperty == true)
+                        {
+                            if (targetDescriptor.ReservedResourcePropertyCandidate.HasValue)
                             {
-                                var kv = newPropertyAddModels.FirstOrDefault(x =>
-                                    x.PropertyAddModel.Name == name && x.PropertyAddModel.Type ==
-                                    (int) targetDescriptor.CustomPropertyType);
-                                if (kv == default)
-                                {
-                                    kv = (new CustomPropertyAddOrPutDto
-                                    {
-                                        Name = name,
-                                        Type = (int) targetDescriptor.CustomPropertyType
-                                    }, []);
-
-                                    object? options = null;
-                                    // todo: Standardize serialization of options
-                                    switch (targetDescriptor.CustomPropertyType)
-                                    {
-                                        case CustomPropertyType.SingleChoice:
-                                        {
-                                            options = new ChoicePropertyOptions<string>
-                                                {AllowAddingNewDataDynamically = true};
-                                            kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
-                                            break;
-                                        }
-                                        case CustomPropertyType.MultipleChoice:
-                                        {
-                                            options = new ChoicePropertyOptions<List<string>>
-                                                {AllowAddingNewDataDynamically = true};
-                                            break;
-                                        }
-                                        case CustomPropertyType.Multilevel:
-                                        {
-                                            options = new MultilevelPropertyOptions
-                                                {AllowAddingNewDataDynamically = true};
-                                            break;
-                                        }
-                                    }
-
-                                    if (options != null)
-                                    {
-                                        kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
-                                    }
-
-                                    newPropertyAddModels.Add(kv);
-                                }
-
-                                kv.Enhancements.Add(enhancement);
+                                targetOptions.PropertyId =
+                                    (int) targetDescriptor.ReservedResourcePropertyCandidate.Value;
+                                targetOptions.PropertyType = ResourcePropertyType.Reserved;
                             }
                             else
                             {
-                                targetOptions.PropertyId = propertyCandidate.Id;
-                            }
+                                var name = targetDescriptor.IsDynamic
+                                    ? enhancement.DynamicTarget
+                                    : targetDescriptor.Name;
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    var propertyCandidate = propertyMap.Values.FirstOrDefault(p =>
+                                        p.EnumType == targetDescriptor.CustomPropertyType && p.Name == name);
+                                    if (propertyCandidate == null)
+                                    {
+                                        var kv = newPropertyAddModels.FirstOrDefault(x =>
+                                            x.PropertyAddModel.Name == name && x.PropertyAddModel.Type ==
+                                            (int) targetDescriptor.CustomPropertyType);
+                                        if (kv == default)
+                                        {
+                                            kv = (new CustomPropertyAddOrPutDto
+                                            {
+                                                Name = name,
+                                                Type = (int) targetDescriptor.CustomPropertyType
+                                            }, []);
 
-                            changedCategoryEnhancerOptions.Add(categoryOptions!);
+                                            object? options = null;
+                                            // todo: Standardize serialization of options
+                                            switch (targetDescriptor.CustomPropertyType)
+                                            {
+                                                case CustomPropertyType.SingleChoice:
+                                                {
+                                                    options = new ChoicePropertyOptions<string>
+                                                        {AllowAddingNewDataDynamically = true};
+                                                    kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
+                                                    break;
+                                                }
+                                                case CustomPropertyType.MultipleChoice:
+                                                {
+                                                    options = new ChoicePropertyOptions<List<string>>
+                                                        {AllowAddingNewDataDynamically = true};
+                                                    break;
+                                                }
+                                                case CustomPropertyType.Multilevel:
+                                                {
+                                                    options = new MultilevelPropertyOptions
+                                                        {AllowAddingNewDataDynamically = true};
+                                                    break;
+                                                }
+                                            }
+
+                                            if (options != null)
+                                            {
+                                                kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
+                                            }
+
+                                            newPropertyAddModels.Add(kv);
+                                        }
+
+                                        kv.Enhancements.Add(enhancement);
+                                    }
+                                    else
+                                    {
+                                        targetOptions.PropertyId = propertyCandidate.Id;
+                                        targetOptions.PropertyType = ResourcePropertyType.Custom;
+                                    }
+
+                                    changedCategoryEnhancerOptions.Add(categoryOptions!);
+                                }
+                            }
                         }
                     }
                 }
@@ -252,6 +298,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     foreach (var e in es)
                     {
                         enhancementTargetOptionsMap[e].PropertyId = property.Id;
+                        enhancementTargetOptionsMap[e].PropertyType = ResourcePropertyType.Custom;
+
                     }
 
                     propertyMap[property.Id] = property;

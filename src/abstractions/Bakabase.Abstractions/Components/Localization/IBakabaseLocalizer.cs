@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Localization;
 using System.Diagnostics.CodeAnalysis;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.Abstractions.Components.Localization;
 
@@ -21,7 +22,6 @@ public interface IBakabaseLocalizer
     string ValueIsNotSet(string name);
     string NewFolderName();
     string Downloader_FailedToStart(string taskName, string message);
-    string Tags();
-    string Rating();
     string SpecialText_HistoricalLanguageValue2ShouldBeModified();
+    string Reserved_Resource_Property_Name(ReservedResourceProperty property);
 }

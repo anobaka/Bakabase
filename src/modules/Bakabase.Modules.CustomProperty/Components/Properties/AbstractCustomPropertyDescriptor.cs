@@ -22,6 +22,7 @@ using Bakabase.Modules.CustomProperty.Components.Properties.Time;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Extensions;
+using Bootstrap.Extensions;
 using Newtonsoft.Json;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties
@@ -37,6 +38,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
         public abstract CustomPropertyType EnumType { get; }
 
         public int Type => (int) EnumType;
+        public Type PropertyType { get; } = SpecificTypeUtils<TProperty>.Type;
 
         public virtual Abstractions.Models.CustomProperty? ToDomainModel(
             Bakabase.Abstractions.Models.Db.CustomProperty? customProperty)

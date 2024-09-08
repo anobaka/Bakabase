@@ -29,6 +29,7 @@ export default () => {
       {
         ...x,
         type: ResourcePropertyType.Custom,
+        customPropertyType: x.type!,
       }
     )));
   };

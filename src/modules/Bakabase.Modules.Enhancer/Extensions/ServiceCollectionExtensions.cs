@@ -62,7 +62,10 @@ public static class ServiceCollectionExtensions
                         targetAttr.CustomPropertyType,
                         targetAttr.IsDynamic,
                         targetAttr.Options?.Cast<int>().ToArray(),
-                        converter
+                        converter,
+                        targetAttr.ReservedResourcePropertyCandidate != default
+                            ? targetAttr.ReservedResourcePropertyCandidate
+                            : null
                     );
                 }).ToArray();
 

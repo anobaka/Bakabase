@@ -1,4 +1,5 @@
 ﻿using System.Linq.Expressions;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.View;
@@ -239,19 +240,32 @@ namespace Bakabase.Modules.CustomProperty.Services
             return result;
         }
 
+        /// <summary>
+        /// todo: factor
+        /// </summary>
+        /// <param name="sourcePropertyId"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
         public async Task<BaseResponse> ChangeType(int sourcePropertyId, CustomPropertyType type)
         {
             var property = await GetByKey(sourcePropertyId);
             var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == sourcePropertyId,
                 CustomPropertyValueAdditionalItem.None, false);
             var propertyDescriptor = propertyDescriptors[property.Type];
+            var targetPropertyDescriptor = propertyDescriptors[(int)type];
 
-            property.Type = (int) type;
-            // clear previous options
             var allowAddingNewDataDynamically =
                 (property.Options as IAllowAddingNewDataDynamically)?.AllowAddingNewDataDynamically ?? false;
+
+            // clear previous options
             property.Options = null;
-            property.SetAllowAddingNewDataDynamically(true);
+            // brutal new property conversion.
+            var targetProperty = (JsonConvert.DeserializeObject(JsonConvert.SerializeObject(property),
+                targetPropertyDescriptor.PropertyType) as Abstractions.Models.CustomProperty)!;
+            targetProperty.SetAllowAddingNewDataDynamically(true);
+            targetProperty.Type = (int)type;
+
+            var newValues = new List<CustomPropertyValue>();
 
             foreach (var v in values)
             {
@@ -259,13 +273,23 @@ namespace Bakabase.Modules.CustomProperty.Services
                 var (nv, loss) =
                     await StandardValueService.CheckConversionLoss(bizValue, property.BizValueType,
                         type.GetBizValueType());
-                var (dbValue, _) = propertyDescriptor.PrepareDbValueFromBizValue(property, nv);
-                v.Value = dbValue;
+                var (dbValue, _) = targetPropertyDescriptor.PrepareDbValueFromBizValue(targetProperty, nv);
+                var newValue = new CustomPropertyValue
+                {
+                    BizValue = v.BizValue,
+                    Id = v.Id,
+                    Property = v.Property,
+                    PropertyId = v.PropertyId,
+                    ResourceId = v.ResourceId,
+                    Scope = v.Scope,
+                    Value = dbValue
+                };
+                newValues.Add(newValue);
             }
 
-            property.SetAllowAddingNewDataDynamically(allowAddingNewDataDynamically);
-            await Put(property);
-            await CustomPropertyValueService.UpdateRange(values);
+            targetProperty.SetAllowAddingNewDataDynamically(allowAddingNewDataDynamically);
+            await Put(targetProperty);
+            await CustomPropertyValueService.UpdateRange(newValues);
             return BaseResponseBuilder.Ok;
         }
 

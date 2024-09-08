@@ -14,4 +14,5 @@ public interface IEnhancerTargetDescriptor
     string? Description { get; }
     int[]? OptionsItems { get; }
     IEnhancementConverter? EnhancementConverter { get; }
+    ReservedResourceProperty? ReservedResourcePropertyCandidate { get; }
 }

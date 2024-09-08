@@ -11,6 +11,7 @@ public class EnhancerTargetAttribute(
     EnhancerTargetOptionsItem[]? options = null,
     bool isDynamic = false,
     Type? converter = null,
+    ReservedResourceProperty reservedResourcePropertyCandidate = default,
     string? description = null) : Attribute
 {
     public StandardValueType ValueType { get; } = valueType;
@@ -19,4 +20,5 @@ public class EnhancerTargetAttribute(
     public bool IsDynamic { get; } = isDynamic;
     public string? Description { get; } = description;
     public Type? Converter { get; } = converter;
+    public ReservedResourceProperty ReservedResourcePropertyCandidate { get; } = reservedResourcePropertyCandidate;
 }

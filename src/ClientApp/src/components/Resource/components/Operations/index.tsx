@@ -49,7 +49,7 @@ export default ({
         <ProductOutlined className={'text-base absolute top-1 right-1 z-10 hidden group-hover:block'} />
       )}
       style={{
-        zIndex: 10,
+        zIndex: 20,
       }}
     >
       <div className={'grid grid-cols-2 gap-1 rounded'}>

@@ -1,12 +1,8 @@
 ﻿using Bakabase.Abstractions.Models.Input;
 using Bakabase.InsideWorld.Models.Constants.Aos;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Db;
-using Bakabase.InsideWorld.Models.Extensions;
+using Bakabase.Abstractions.Models.Domain;
+using Resource = Bakabase.Abstractions.Models.Db.Resource;
 
 namespace Bakabase.Abstractions.Extensions
 {
@@ -42,6 +38,25 @@ namespace Bakabase.Abstractions.Extensions
             }
 
             return ordersForSearch.ToArray();
+        }
+
+        public static List<ResourceSearchFilter> ExtractFilters(this ResourceSearchFilterGroup group)
+        {
+            var filters = new List<ResourceSearchFilter>();
+            if (group.Filters != null)
+            {
+                filters.AddRange(group.Filters);
+            }
+
+            if (group.Groups != null)
+            {
+                foreach (var g in group.Groups)
+                {
+                    filters.AddRange(g.ExtractFilters());
+                }
+            }
+
+            return filters;
         }
     }
 }

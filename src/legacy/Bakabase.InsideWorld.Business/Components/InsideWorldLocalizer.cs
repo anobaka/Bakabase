@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
@@ -91,11 +92,18 @@ namespace Bakabase.InsideWorld.Business.Components
         public string Downloader_FailedToStart(string taskName, string message) =>
             this[nameof(Downloader_FailedToStart), taskName, message];
 
-        public string Tags() => this[nameof(Tags)];
-        public string Rating() => this[nameof(Rating)];
-
         public string SpecialText_HistoricalLanguageValue2ShouldBeModified() =>
             this[nameof(SpecialText_HistoricalLanguageValue2ShouldBeModified)];
+
+        public string Reserved_Resource_Property_Name(ReservedResourceProperty property)
+        {
+            return property switch
+            {
+                ReservedResourceProperty.Introduction or ReservedResourceProperty.Rating => this[
+                    $"{nameof(Reserved_Resource_Property_Name)}_{property}"],
+                _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
+            };
+        }
 
         public string CustomProperty_DescriptorNotFound(int propertyType)
         {
