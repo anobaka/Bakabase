@@ -1,4 +1,3 @@
-import type { TFunction } from 'react-i18next';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import type { Duration } from 'dayjs/plugin/duration';
@@ -85,8 +84,13 @@ export const deserializeStandardValue = (value: string | null, type: StandardVal
       return value;
     case StandardValueType.ListString:
       return splitStringWithEscapeChar(value, Serialization.LowLevelSeparator, Serialization.EscapeChar);
-    case StandardValueType.Decimal:
-      return parseFloat(value);
+    case StandardValueType.Decimal: {
+      const d = parseFloat(value);
+      if (Number.isNaN(d)) {
+        return undefined;
+      }
+      return d;
+    }
     case StandardValueType.Link: {
       const parts = splitStringWithEscapeChar(value, Serialization.LowLevelSeparator, Serialization.EscapeChar);
       if (parts) {
@@ -169,7 +173,7 @@ export const serializeStandardValue = (value: any | null, type: StandardValueTyp
         return undefined;
       }
       return joinWithEscapeChar(tvs.map(tv =>
-        joinWithEscapeChar([tv.group, tv.name], Serialization.LowLevelSeparator, Serialization.EscapeChar)),
+          joinWithEscapeChar([tv.group, tv.name], Serialization.LowLevelSeparator, Serialization.EscapeChar)),
         Serialization.HighLevelSeparator, Serialization.EscapeChar);
     }
     case StandardValueType.DateTime: {

@@ -278,6 +278,25 @@ export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {
   aliasAppliedBizValue?: any;
 }
 
+export interface BakabaseAbstractionsModelsDomainResourceSearchFilter {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyType?: BakabaseAbstractionsModelsDomainConstantsResourcePropertyType;
+  /** @format int32 */
+  propertyId?: number;
+  isCustomProperty?: boolean;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation?: BakabaseInsideWorldModelsConstantsSearchOperation;
+  dbValue?: string | null;
+  bizValue?: string | null;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSearchFilterGroup {
+  /** [1: And, 2: Or] */
+  combinator?: BakabaseInsideWorldModelsConstantsCombinator;
+  groups?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup[] | null;
+  filters?: BakabaseAbstractionsModelsDomainResourceSearchFilter[] | null;
+}
+
 export interface BakabaseAbstractionsModelsDomainSpecialText {
   /** @format int32 */
   id?: number;
@@ -320,7 +339,7 @@ export interface BakabaseAbstractionsModelsDtoResourceSearchDto {
   pageSize?: number;
   /** @format int32 */
   skipCount?: number;
-  group?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup;
+  group?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[] | null;
   keyword?: string | null;
 }
@@ -789,7 +808,7 @@ export interface BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel 
   pageSize?: number;
   /** @format int32 */
   skipCount?: number;
-  group?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup;
+  group?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[] | null;
   keyword?: string | null;
   saveSearchCriteria?: boolean;
@@ -1176,23 +1195,6 @@ export interface BakabaseInsideWorldModelsModelsAosResourceDiff {
   subDiffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[] | null;
 }
 
-export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilter {
-  /** @format int32 */
-  propertyId?: number;
-  isCustomProperty?: boolean;
-  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation?: BakabaseInsideWorldModelsConstantsSearchOperation;
-  dbValue?: string | null;
-  bizValue?: string | null;
-}
-
-export interface BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup {
-  /** [1: And, 2: Or] */
-  combinator?: BakabaseInsideWorldModelsConstantsCombinator;
-  groups?: BakabaseInsideWorldModelsModelsAosResourceSearchFilterGroup[] | null;
-  filters?: BakabaseInsideWorldModelsModelsAosResourceSearchFilter[] | null;
-}
-
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
   id?: BakabaseInsideWorldModelsConstantsThirdPartyId;
@@ -1492,6 +1494,25 @@ export type BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustom
   | 15
   | 16;
 
+export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModel {
+  results?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTin[] | null;
+}
+
+export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTin {
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  type?: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType;
+  serializedBizValue?: string | null;
+  outputs?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTout[] | null;
+}
+
+export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTout {
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  type?: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  serializedBizValue?: string | null;
+}
+
 export type BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter = object;
 
 export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
@@ -1557,6 +1578,8 @@ export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptions
   coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
   /** @format int32 */
   propertyId?: number | null;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyType?: BakabaseAbstractionsModelsDomainConstantsResourcePropertyType;
   dynamicTarget?: string | null;
 }
 
@@ -2061,6 +2084,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code?: number;
   message?: string | null;
   data?: BakabaseInsideWorldModelsModelsEntitiesComponentOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModel {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
@@ -4315,6 +4345,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/custom-property/${id}/value-usage`,
         method: "GET",
         query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name TestCustomPropertyTypeConversion
+     * @request GET:/custom-property/type-conversion-overview
+     */
+    testCustomPropertyTypeConversion: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModel,
+        any
+      >({
+        path: `/custom-property/type-conversion-overview`,
+        method: "GET",
         format: "json",
         ...params,
       }),

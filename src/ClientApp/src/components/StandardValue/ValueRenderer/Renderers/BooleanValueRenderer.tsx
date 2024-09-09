@@ -18,7 +18,7 @@ export default ({ value, variant, editor, ...props }: BooleanValueRendererProps)
         <Checkbox
           size={'sm'}
           disableAnimation={!editor}
-          checked={value}
+          isSelected={value}
           onValueChange={v => editor?.onValueChange?.(v, v)}
         />
       );
@@ -27,7 +27,7 @@ export default ({ value, variant, editor, ...props }: BooleanValueRendererProps)
         <Switch
           size={'sm'}
           disableAnimation={!editor}
-          checked={value}
+          isSelected={value}
           onValueChange={v => editor?.onValueChange?.(v, v)}
         />
       );

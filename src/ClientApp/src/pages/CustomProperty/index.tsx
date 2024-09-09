@@ -4,19 +4,24 @@ import { SearchOutlined } from '@ant-design/icons';
 import PropertyDialog from '@/components/PropertyDialog';
 import BApi from '@/sdk/BApi';
 import type {
-  StandardValueType,
+  StandardValueType } from '@/sdk/constants';
+import {
+  customPropertyTypes,
 } from '@/sdk/constants';
 import {
   CustomPropertyAdditionalItem,
   CustomPropertyType,
   ResourcePropertyType,
 } from '@/sdk/constants';
-import { Button, Chip, Input } from '@/components/bakaui';
+import { Button, Chip, Input, Modal, Table, TableColumn, TableRow, TableCell, TableHeader, TableBody } from '@/components/bakaui';
 import Property from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import TypeConversionOverviewDialog from '@/pages/CustomProperty/components/TypeConversionOverviewDialog';
 
 export default () => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const [properties, setProperties] = useState<IProperty[]>([]);
 
   const [keyword, setKeyword] = useState('');
@@ -36,6 +41,7 @@ export default () => {
 
   useEffect(() => {
     loadProperties();
+    // createPortal(TypeConversionOverviewDialog, {});
   }, []);
 
   const filteredProperties = properties.filter(p => keyword == undefined || keyword.length == 0 || p.name!.toLowerCase().includes(keyword.toLowerCase()));
@@ -48,28 +54,41 @@ export default () => {
 
   return (
     <div>
-      <div className={'flex items-center gap-2 mb-4'}>
-        <Button
-          size={'sm'}
-          color={'primary'}
-          onClick={() => {
-            PropertyDialog.show({
-              onSaved: loadProperties,
-            });
-          }}
-        >
-          {t('Add')}
-        </Button>
-        <div>
-          <Input
+      <div className={'flex items-center justify-between gap-2 mb-4'}>
+        <div className={'flex items-center gap-2'}>
+          <Button
             size={'sm'}
-            startContent={(
-              <SearchOutlined className={'text-small'} />
-            )}
-            value={keyword}
-            onValueChange={v => setKeyword(v)}
-          />
+            color={'primary'}
+            onClick={() => {
+              PropertyDialog.show({
+                onSaved: loadProperties,
+              });
+            }}
+          >
+            {t('Add')}
+          </Button>
+          <div>
+            <Input
+              size={'sm'}
+              startContent={(
+                <SearchOutlined className={'text-small'} />
+              )}
+              value={keyword}
+              onValueChange={v => setKeyword(v)}
+            />
+          </div>
+          <Button
+            size={'sm'}
+            color={'secondary'}
+            variant={'light'}
+            onClick={async () => {
+              createPortal(TypeConversionOverviewDialog, {});
+            }}
+          >
+            {t('Check type conversion overview')}
+          </Button>
         </div>
+        <div />
       </div>
       <div
         className={'grid gap-2 items-center'}

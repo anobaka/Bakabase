@@ -1,6 +1,7 @@
 import type { ValueRendererProps } from '../models';
 import type { MultilevelData, TagValue } from '../../models';
 import MultilevelValueEditor from '../../ValueEditor/Editors/MultilevelValueEditor';
+import NotSet from './components/NotSet';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Card, CardBody, Chip } from '@/components/bakaui';
 import { buildLogger, uuidv4 } from '@/components/utils';
@@ -82,15 +83,23 @@ export default (props: TagsValueRendererProps) => {
     });
   };
 
+  const startEditing = editor ? showEditor : undefined;
+
+  if (!value || value.length == 0) {
+    return (
+      <NotSet onClick={startEditing} />
+    );
+  }
+
   if (variant == 'light') {
     return (
-      <span onClick={editor ? showEditor : undefined}>{simpleLabels?.join(',')}</span>
+      <span onClick={startEditing}>{simpleLabels?.join(',')}</span>
     );
   } else {
     return (
       <Card>
         <CardBody>
-          <div className={'flex flex-wrap gap-1'} onClick={editor ? showEditor : undefined}>
+          <div className={'flex flex-wrap gap-1'} onClick={startEditing}>
             {simpleLabels?.map(l => {
               return (
                 <Chip

@@ -7,7 +7,6 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 import { Button, Modal, Tab, Table, Tabs, TableBody, TableCell, TableColumn, TableHeader, TableRow, Snippet } from '@/components/bakaui';
 import type { Enhancement } from '@/components/Enhancer/models';
 import { EnhancementAdditionalItem } from '@/sdk/constants';
-import StandardValueRenderer from '@/components/StandardValue/ValueRenderer';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';

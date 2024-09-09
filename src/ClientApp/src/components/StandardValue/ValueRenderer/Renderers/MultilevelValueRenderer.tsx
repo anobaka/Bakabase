@@ -5,6 +5,7 @@ import type { MultilevelData } from '../../models';
 import MultilevelValueEditor from '../../ValueEditor/Editors/MultilevelValueEditor';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Chip, Card, CardBody, Button } from '@/components/bakaui';
+import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
 
 type MultilevelValueRendererProps = ValueRendererProps<string[][], string[]> & {
   multiple?: boolean;
@@ -26,11 +27,14 @@ export default ({ value, editor, variant, getDataSource, multiple, ...props }: M
     });
   };
 
+  if (value == undefined || value.length == 0) {
+    return (
+      <NotSet onClick={editor && showEditor} />
+    );
+  }
+
   if (variant == 'light') {
     let label = value?.map(v => v.join('/')).join(';');
-    if ((label == undefined || label.length == 0) && editor) {
-      label = t('Click to set');
-    }
     return (
       <Button
         variant={'light'}

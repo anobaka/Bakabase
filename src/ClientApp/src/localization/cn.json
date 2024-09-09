@@ -1391,5 +1391,9 @@
   "CoverSelectOrder.FileModifyDtDescending": "文件修改时间降序",
   "ResourceProperty.Introduction": "介绍",
   "ResourceProperty.Rating": "评分",
-  "You can bind properties in category page": "您可以在分类页面绑定属性"
+  "You can bind properties in category page": "您可以在分类页面绑定属性",
+  "Check type conversion overview": "查看类型转换概览",
+  "Type conversion overview": "类型转换总览",
+  "Type to be converted": "待转换类型",
+  "Value to be converted": "待转换值"
 }

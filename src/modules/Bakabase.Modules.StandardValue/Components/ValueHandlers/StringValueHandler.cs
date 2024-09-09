@@ -51,7 +51,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         }
 
         public override (LinkValue? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(string currentValue) =>
-            (new LinkValue { Text = currentValue, Url = currentValue }, null);
+            (new LinkValue { Text = currentValue, Url = null }, null);
 
         public override (List<List<string>>? NewValue, StandardValueConversionLoss? Loss)
             ConvertToMultilevel(string currentValue) => ([[currentValue]], null);

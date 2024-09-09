@@ -62,7 +62,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         public override (LinkValue? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(TimeSpan currentValue)
         {
             var str = BuildDisplayValue(currentValue);
-            return (new LinkValue { Url = str, Text = str }, null);
+            return (new LinkValue { Url = null, Text = str }, null);
         }
 
         public override Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(

@@ -94,7 +94,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
             List<string> currentValue)
         {
             var text = string.Join(InternalOptions.TextSeparator, currentValue);
-            var ld = new LinkValue { Text = text, Url = text };
+            var ld = new LinkValue { Text = text, Url = null };
             return (ld, currentValue.Count > 1 ? StandardValueConversionLoss.ValuesWillBeMerged : null);
         }
 

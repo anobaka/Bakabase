@@ -75,7 +75,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
             List<List<string>> currentValue)
         {
             var (nv, loss) = ConvertToString(currentValue);
-            return (new LinkValue { Url = nv, Text = nv }, loss);
+            return (new LinkValue { Url = null, Text = nv }, loss);
         }
 
         public override async Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(

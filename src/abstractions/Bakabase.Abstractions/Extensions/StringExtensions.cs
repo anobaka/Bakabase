@@ -59,7 +59,7 @@ public static class StringExtensions
             idx = nextIdx + 1;
         }
 
-        return result;
+        return result.Select(r => r.Replace($"{escapeChar}{separator}", $"{separator}")).ToList();
     }
 
     /// <summary>

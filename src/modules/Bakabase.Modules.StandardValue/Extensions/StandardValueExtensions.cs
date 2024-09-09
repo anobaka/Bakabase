@@ -116,7 +116,7 @@ public static class StandardValueExtensions
                     return rawValue.ToString();
                 case StandardValueType.DateTime:
                 {
-                    return rawValue is DateTime dt ? dt.ToMillisecondTimestamp().ToString() : null;
+                    return rawValue is DateTime dt ? new DateTimeOffset(dt).ToUnixTimeMilliseconds().ToString() : null;
                 }
                 case StandardValueType.Time:
                 {

@@ -2,19 +2,15 @@
  * Created by S on 2018/6/21.
  */
 
-import path from 'path';
 import React, { useEffect, useRef } from 'react';
 import i18n from 'i18next';
 import ReactDOM from 'react-dom/client';
-import { string } from 'prop-types';
-import { isStr } from 'react-toastify/dist/utils';
 import isUncPath from 'is-unc-path';
 import hoistNonReactStatic from 'hoist-non-react-statics';
 import chalk from 'chalk';
 import { reservedResourceFileTypes, reservedResourceProperties } from '@/sdk/constants';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
-import BakabaseContextProvider from '@/components/ContextProvider/BakabaseContextProvider';
 
 
 export default { // 工具集
@@ -458,6 +454,7 @@ export function wrapWithStaticShowMethod<T extends {}>(Component: React.Componen
       return createPortalOfComponent(Component, props);
     }
   }
+
   hoistNonReactStatic(Enhance, Component);
   return Enhance;
 }
@@ -647,7 +644,7 @@ export function splitStringWithEscapeChar(str: string, separator: string, escape
     idx = nextIdx + 1;
   }
 
-  return result;
+  return result.map(r => r.replaceAll(`${escapeChar}${separator}`, separator));
 }
 
 export function splitStringWithEscapeCharNested(str: string, highLevelSeparator: string, lowLevelSeparator: string, escapeChar: string): string[][] | null {
@@ -660,5 +657,8 @@ export function splitStringWithEscapeCharNested(str: string, highLevelSeparator:
 }
 
 export function joinWithEscapeChar(data: (string | null | undefined)[], separator: string, escapeChar: string): string {
-  return data.map(d => d?.replace(new RegExp(separator, 'g'), `${escapeChar}${separator}`)).join(separator);
+  return data
+    .map(d => d?.replace(new RegExp(separator, 'g'), `${escapeChar}${separator}`))
+    // .filter(x => (ignoreNullOrEmpty ? true : (x != undefined && x.length > 0)))
+    .join(separator);
 }

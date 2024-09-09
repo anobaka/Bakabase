@@ -3110,6 +3110,45 @@ export const GetCustomPropertyValueUsageURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: TestCustomPropertyTypeConversion
+ * url: TestCustomPropertyTypeConversionURL
+ * method: TestCustomPropertyTypeConversion_TYPE
+ * raw_url: TestCustomPropertyTypeConversion_RAW_URL
+ */
+export const TestCustomPropertyTypeConversion = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property/type-conversion-overview'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const TestCustomPropertyTypeConversion_RAW_URL = function() {
+  return '/custom-property/type-conversion-overview'
+}
+export const TestCustomPropertyTypeConversion_TYPE = function() {
+  return 'get'
+}
+export const TestCustomPropertyTypeConversionURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property/type-conversion-overview'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetStatistics
  * url: GetStatisticsURL
  * method: GetStatistics_TYPE
