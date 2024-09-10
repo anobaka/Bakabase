@@ -60,12 +60,6 @@ namespace Bakabase.Service
         {
             using var scope = serviceProvider.CreateScope();
 
-            var updaterOptionsManager =
-                scope.ServiceProvider.GetRequiredService<IBOptionsManager<UpdaterOptions>>();
-            // force fixing oss configuration
-            await updaterOptionsManager.SaveAsync(a =>
-                a.AppUpdaterOssObjectPrefix = InternalOptions.AppOssObjectPrefix);
-
             var dependencies = serviceProvider.GetRequiredService<IEnumerable<IDependentComponentService>>().ToList();
             foreach (var d in dependencies)
             {
