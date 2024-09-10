@@ -3821,6 +3821,51 @@ export const DeleteEnhancementsByCategoryURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: DeleteEnhancementsByEnhancer
+ * url: DeleteEnhancementsByEnhancerURL
+ * method: DeleteEnhancementsByEnhancer_TYPE
+ * raw_url: DeleteEnhancementsByEnhancer_RAW_URL
+ * @param enhancerId - 
+ */
+export const DeleteEnhancementsByEnhancer = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/enhancer/{enhancerId}/enhancement'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteEnhancementsByEnhancer_RAW_URL = function() {
+  return '/enhancer/{enhancerId}/enhancement'
+}
+export const DeleteEnhancementsByEnhancer_TYPE = function() {
+  return 'delete'
+}
+export const DeleteEnhancementsByEnhancerURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/enhancer/{enhancerId}/enhancement'
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllEnhancerDescriptors
  * url: GetAllEnhancerDescriptorsURL
  * method: GetAllEnhancerDescriptors_TYPE

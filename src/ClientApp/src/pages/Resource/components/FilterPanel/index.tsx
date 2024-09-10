@@ -190,6 +190,7 @@ export default ({
           group={searchForm.group}
           onChange={v => {
             setSearchForm({
+              ...searchForm,
               group: v,
             });
           }}

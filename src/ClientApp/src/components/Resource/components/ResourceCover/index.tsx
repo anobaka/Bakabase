@@ -164,7 +164,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     }
     if (refresh) {
       for (let i = 0; i < urls.length; i++) {
-        urls[i] += `&v=${uuidv4()}`;
+        urls[i] += urls[i].includes('?') ? `&v=${uuidv4()}` : `?v=${uuidv4()}`;
       }
     }
     setUrls(urls);

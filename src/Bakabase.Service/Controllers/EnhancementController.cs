@@ -108,7 +108,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpDelete("~/media-library/{mediaLibraryId:int}/enhancement")]
         [SwaggerOperation(OperationId = "DeleteByEnhancementsMediaLibrary")]
-        public async Task<BaseResponse> RemoveMediaLibraryEnhancementRecords(int mediaLibraryId)
+        public async Task<BaseResponse> DeleteMediaLibraryEnhancementRecords(int mediaLibraryId)
         {
             var resourceIds = (await resourceService.GetAll(t => t.MediaLibraryId == mediaLibraryId))
                 .Select(t => t.Id).ToArray();
@@ -119,12 +119,21 @@ namespace Bakabase.Service.Controllers
 
         [HttpDelete("~/category/{categoryId:int}/enhancement")]
         [SwaggerOperation(OperationId = "DeleteEnhancementsByCategory")]
-        public async Task<BaseResponse> RemoveCategoryEnhancementRecords(int categoryId)
+        public async Task<BaseResponse> DeleteCategoryEnhancementRecords(int categoryId)
         {
             var resourceIds = (await resourceService.GetAll(t => t.CategoryId == categoryId))
                 .Select(t => t.Id).ToArray();
             await enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
             await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpDelete("~/enhancer/{enhancerId:int}/enhancement")]
+        [SwaggerOperation(OperationId = "DeleteEnhancementsByEnhancer")]
+        public async Task<BaseResponse> DeleteEnhancerEnhancementRecords(int enhancerId)
+        {
+            await enhancementService.RemoveAll(t => t.EnhancerId == enhancerId, true);
+            await enhancementRecordService.DeleteAll(t => t.EnhancerId == enhancerId);
             return BaseResponseBuilder.Ok;
         }
     }

@@ -1501,6 +1501,8 @@ export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConver
 export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTin {
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type?: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   serializedBizValue?: string | null;
   outputs?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTout[] | null;
 }
@@ -5101,6 +5103,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
   };
   enhancer = {
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByEnhancer
+     * @request DELETE:/enhancer/{enhancerId}/enhancement
+     */
+    deleteEnhancementsByEnhancer: (enhancerId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/enhancer/${enhancerId}/enhancement`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
     /**
      * No description
      *
