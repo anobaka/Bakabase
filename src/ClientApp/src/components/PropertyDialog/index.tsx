@@ -5,7 +5,7 @@ import AceEditor from 'react-ace';
 import type { Key } from '@react-types/shared';
 import ChoiceList from './components/ChoiceList';
 import TagList from './components/TagList';
-import { createPortalOfComponent } from '@/components/utils';
+import { buildLogger, createPortalOfComponent } from '@/components/utils';
 import { CustomPropertyType, ResourcePropertyType, StandardValueConversionLoss } from '@/sdk/constants';
 import './index.scss';
 import BApi from '@/sdk/BApi';
@@ -79,6 +79,8 @@ const RatingMaxValueDataSource = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(x => ({
   label: x,
 }));
 
+const log = buildLogger('PropertyDialog');
+
 const PropertyDialog = ({
                           value,
                           onSaved,
@@ -98,7 +100,7 @@ const PropertyDialog = ({
     setVisible(false);
   };
 
-  // console.log(6666, property);
+  log(property);
 
   const checkValueUsage = property.id ? async (value: string) => {
     const rsp = await BApi.customProperty.getCustomPropertyValueUsage(property.id!, { value: value });
@@ -140,7 +142,7 @@ const PropertyDialog = ({
                     ...property,
                     options: {
                       ...options,
-                      allowAddingNewOptionsWhileChoosing: c,
+                      allowAddingNewDataDynamically: c,
                     },
                   });
                 }}
@@ -338,7 +340,7 @@ const PropertyDialog = ({
                     ...property,
                     options: {
                       ...options,
-                      allowAddingNewOptionsWhileChoosing: c,
+                      allowAddingNewDataDynamically: c,
                     },
                   });
                 }}
