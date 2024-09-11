@@ -43,7 +43,7 @@ namespace Bakabase.Migrations.V190
         private readonly ICustomPropertyService _customPropertyService;
         private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly V190MigrationLocalizer _localizer;
-        private readonly IBuiltinPropertyValueService _builtinPropertyValueService;
+        private readonly IReservedPropertyValueService _reservedPropertyValueService;
         private readonly IResourceService _resourceService;
         private readonly IAliasService _aliasService;
         private readonly ICategoryCustomPropertyMappingService _categoryCustomPropertyMappingService;
@@ -66,7 +66,7 @@ namespace Bakabase.Migrations.V190
             LegacyPublisherResourceMappingService publisherResourceMappingService, LegacyTagService tagService,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IServiceProvider serviceProvider, V190MigrationLocalizer localizer,
-            IBuiltinPropertyValueService builtinPropertyValueService, IResourceService resourceService,
+            IReservedPropertyValueService reservedPropertyValueService, IResourceService resourceService,
             IAliasService aliasService, LegacyAliasService legacyAliasService, InsideWorldDbContext dbCtx,
             ICategoryCustomPropertyMappingService categoryCustomPropertyMappingService,
             ICategoryService categoryService, AppService appService, IFileManager fileManager) : base(serviceProvider)
@@ -87,7 +87,7 @@ namespace Bakabase.Migrations.V190
             _publisherResourceMappingService = publisherResourceMappingService;
             _tagService = tagService;
             _localizer = localizer;
-            _builtinPropertyValueService = builtinPropertyValueService;
+            _reservedPropertyValueService = reservedPropertyValueService;
             _resourceService = resourceService;
             _aliasService = aliasService;
             _legacyAliasService = legacyAliasService;
@@ -102,7 +102,7 @@ namespace Bakabase.Migrations.V190
         {
             await MigrateAliases();
             await MigrateResources();
-            await MigrateBuiltinProperties();
+            await MigrateReservedProperties();
             await MigrateCustomProperties();
         }
 
@@ -162,20 +162,20 @@ namespace Bakabase.Migrations.V190
             return cp;
         }
 
-        private async Task MigrateBuiltinProperties()
+        private async Task MigrateReservedProperties()
         {
             var resources = await _legacyResourceService.GetAll();
-            var doneResourceIds = (await _builtinPropertyValueService.GetAll())
+            var doneResourceIds = (await _reservedPropertyValueService.GetAll())
                 .Where(x => x.Scope == (int) PropertyValueScope.Manual).Select(x => x.ResourceId).ToHashSet();
 
-            var newValues = new List<Bakabase.Abstractions.Models.Domain.BuiltinPropertyValue>();
+            var newValues = new List<Bakabase.Abstractions.Models.Domain.ReservedPropertyValue>();
             foreach (var r in resources)
             {
                 if (!doneResourceIds.Contains(r.Id))
                 {
                     if (r.Rate > 0 || !string.IsNullOrEmpty(r.Introduction))
                     {
-                        var v = new Bakabase.Abstractions.Models.Domain.BuiltinPropertyValue
+                        var v = new Bakabase.Abstractions.Models.Domain.ReservedPropertyValue
                         {
                             ResourceId = r.Id,
                             Scope = (int) PropertyValueScope.Manual,
@@ -187,7 +187,7 @@ namespace Bakabase.Migrations.V190
                 }
             }
 
-            await _builtinPropertyValueService.AddRange(newValues);
+            await _reservedPropertyValueService.AddRange(newValues);
         }
 
         private async Task MigrateCustomProperties()

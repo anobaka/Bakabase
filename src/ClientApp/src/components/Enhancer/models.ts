@@ -1,4 +1,4 @@
-import type { StandardValueType } from '@/sdk/constants';
+import type { ResourcePropertyType, StandardValueType } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
 
 export type Enhancement = {
@@ -11,11 +11,17 @@ export type Enhancement = {
   dynamicTarget?: string;
   valueType: StandardValueType;
   value?: any;
+  propertyType?: ResourcePropertyType;
+  propertyId?: number;
   customPropertyValue?: {
     id: number;
     value: any;
-    property?: IProperty;
     bizValue?: any;
   };
   createdAt: string;
+  property?: IProperty;
+  reservedPropertyValue?: {
+    rating?: number;
+    introduction?: string;
+  };
 };

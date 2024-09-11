@@ -19,7 +19,7 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
         [Enhancer(typeof(BangumiEnhancer), PropertyValueScope.BangumiEnhancer, typeof(BangumiEnhancerTarget))]
         Bangumi = 3,
 
-        [Enhancer(typeof(DLsiteEnhancer), PropertyValueScope.BangumiEnhancer, typeof(DLsiteEnhancerTarget))]
+        [Enhancer(typeof(DLsiteEnhancer), PropertyValueScope.DLsiteEnhancer, typeof(DLsiteEnhancerTarget))]
         DLsite = 4,
 
         [Enhancer(typeof(RegexEnhancer), PropertyValueScope.RegexEnhancer, typeof(RegexEnhancerTarget))]

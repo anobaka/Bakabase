@@ -6,9 +6,18 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Components.Properties.Attachment;
+using Bakabase.Modules.CustomProperty.Components.Properties.Boolean;
+using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
+using Bakabase.Modules.CustomProperty.Components.Properties.DateTime;
+using Bakabase.Modules.CustomProperty.Components.Properties.Formula;
 using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
+using Bakabase.Modules.CustomProperty.Components.Properties.Number;
+using Bakabase.Modules.CustomProperty.Components.Properties.Number.Abstractions;
 using Bakabase.Modules.CustomProperty.Components.Properties.Tags;
+using Bakabase.Modules.CustomProperty.Components.Properties.Text;
+using Bakabase.Modules.CustomProperty.Components.Properties.Time;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -200,5 +209,48 @@ public static class CustomPropertyExtensions
         {
             options.AllowAddingNewDataDynamically = enable;
         }
+    }
+
+    public static CustomPropertyType GetEnumCustomPropertyType(this Property property) =>
+        (CustomPropertyType) property.CustomPropertyType;
+
+    public static Abstractions.Models.CustomProperty ToCustomProperty(this Property property)
+    {
+        if (property.Type != ResourcePropertyType.Custom)
+        {
+            throw new Exception(
+                $"Can not convert a non-custom {nameof(Property)} to {nameof(Abstractions.Models.CustomProperty)}");
+        }
+
+        // todo: make it bind to custom property descriptor
+        Abstractions.Models.CustomProperty cp = property.GetEnumCustomPropertyType() switch
+        {
+            CustomPropertyType.SingleLineText => new SingleLineTextProperty(),
+            CustomPropertyType.MultilineText => new MultilineTextProperty(),
+            CustomPropertyType.SingleChoice => new SingleChoiceProperty(),
+            CustomPropertyType.MultipleChoice => new MultipleChoiceProperty(),
+            CustomPropertyType.Number => new NumberProperty(),
+            CustomPropertyType.Percentage => new PercentageProperty(),
+            CustomPropertyType.Rating => new RatingProperty(),
+            CustomPropertyType.Boolean => new BooleanProperty(),
+            CustomPropertyType.Link => new LinkProperty(),
+            CustomPropertyType.Attachment => new AttachmentProperty(),
+            CustomPropertyType.Date => new DateTimeProperty(),
+            CustomPropertyType.DateTime => new DateTimeProperty(),
+            CustomPropertyType.Time => new TimeProperty(),
+            CustomPropertyType.Formula => new FormulaProperty(),
+            CustomPropertyType.Multilevel => new MultilevelProperty(),
+            CustomPropertyType.Tags => new TagsProperty(),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        cp.Id = property.Id;
+        cp.Name = property.CustomPropertyName!;
+        cp.Type = property.CustomPropertyType;
+        cp.DbValueType = property.DbValueType;
+        cp.BizValueType = property.BizValueType;
+        cp.Options = property.Options;
+
+        return cp;
     }
 }

@@ -58,7 +58,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<EnhancementRecord> EnhancementRecords { get; set; }
 
         public DbSet<Resource> ResourcesV2 { get; set; }
-        public DbSet<BuiltinPropertyValue> BuiltinPropertyValues { get; set; }
+        public DbSet<ReservedPropertyValue> ReservedPropertyValues { get; set; }
         public DbSet<Modules.Alias.Abstractions.Models.Db.Alias> AliasesV2 { get; set; }
 
         public InsideWorldDbContext()
@@ -174,7 +174,7 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => new {x.ResourceId, x.PropertyId, x.Scope}).IsUnique();
             });
 
-            modelBuilder.Entity<BuiltinPropertyValue>(t =>
+            modelBuilder.Entity<ReservedPropertyValue>(t =>
             {
                 t.HasIndex(x => new {x.ResourceId, x.Scope}).IsUnique();
             });

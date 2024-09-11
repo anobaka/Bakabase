@@ -164,7 +164,7 @@ export enum CustomPropertyValueAdditionalItem {None = 0, BizValue = 1}
 export const customPropertyValueAdditionalItems = Object.keys(CustomPropertyValueAdditionalItem).filter(k => typeof CustomPropertyValueAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyValueAdditionalItem[t]}));
 export enum MediaLibraryAdditionalItem {None = 0, Category = 1, FileSystemInfo = 2, PathConfigurationCustomProperties = 4}
 export const mediaLibraryAdditionalItems = Object.keys(MediaLibraryAdditionalItem).filter(k => typeof MediaLibraryAdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryAdditionalItem[t]}));
-export enum ResourceAdditionalItem {None = 0, Alias = 64, Category = 128, CustomProperties = 160, DisplayName = 416, HasChildren = 512, BuiltinProperties = 1024, All = 2016}
+export enum ResourceAdditionalItem {None = 0, Alias = 64, Category = 128, CustomProperties = 160, DisplayName = 416, HasChildren = 512, ReservedProperties = 1024, All = 2016}
 export const resourceAdditionalItems = Object.keys(ResourceAdditionalItem).filter(k => typeof ResourceAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceAdditionalItem[t]}));
 export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));
@@ -214,7 +214,7 @@ export enum BangumiEnhancerTarget {Name = 1, Tags = 2, Introduction = 3, Rating 
 export const bangumiEnhancerTargets = Object.keys(BangumiEnhancerTarget).filter(k => typeof BangumiEnhancerTarget[k] === 'number').map(t => ({label: t, value: BangumiEnhancerTarget[t]}));
 export enum BakabaseEnhancerTarget {Name = 1, Publisher = 2, ReleaseDt = 3, VolumeName = 4, VolumeTitle = 5, Originals = 6, Language = 7, Cover = 8}
 export const bakabaseEnhancerTargets = Object.keys(BakabaseEnhancerTarget).filter(k => typeof BakabaseEnhancerTarget[k] === 'number').map(t => ({label: t, value: BakabaseEnhancerTarget[t]}));
-export enum EnhancementAdditionalItem {None = 0, GeneratedCustomPropertyValue = 1}
+export enum EnhancementAdditionalItem {None = 0, GeneratedPropertyValue = 1}
 export const enhancementAdditionalItems = Object.keys(EnhancementAdditionalItem).filter(k => typeof EnhancementAdditionalItem[k] === 'number').map(t => ({label: t, value: EnhancementAdditionalItem[t]}));
 export enum EnhancerTargetOptionsItem {AutoBindProperty = 1, AutoMatchMultilevelString = 2, CoverSelectOrder = 3}
 export const enhancerTargetOptionsItems = Object.keys(EnhancerTargetOptionsItem).filter(k => typeof EnhancerTargetOptionsItem[k] === 'number').map(t => ({label: t, value: EnhancerTargetOptionsItem[t]}));

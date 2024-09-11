@@ -1,9 +1,13 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Linq;
+using Bakabase.Abstractions.Components.Property;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
+using Bootstrap.Extensions;
 
 namespace Bakabase.Abstractions.Components.Configuration
 {
@@ -144,88 +148,33 @@ namespace Bakabase.Abstractions.Components.Configuration
             public StandardValueType BizValueType { get; set; } = BizValueType;
         }
 
-        public static readonly ConcurrentDictionary<ResourceProperty, SearchableReservedPropertyValueTypes>
-            InternalResourcePropertyAndValueTypesMap =
-                new(new Dictionary<ResourceProperty, SearchableReservedPropertyValueTypes>
+        public static readonly ConcurrentDictionary<ResourceProperty, Models.Domain.Property>
+            InternalResourcePropertyDescriptorMap =
+                new(new[]
                 {
-                    {
-                        ResourceProperty.FileName,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
-                    },
-                    {
-                        ResourceProperty.DirectoryPath,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
-                    },
-                    {
-                        ResourceProperty.CreatedAt,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
-                    },
-                    {
-                        ResourceProperty.FileCreatedAt,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
-                    },
-                    {
-                        ResourceProperty.FileModifiedAt,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
-                    },
-                    {
-                        ResourceProperty.MediaLibrary,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.ListString,
-                            StandardValueType.ListListString)
-                    },
-                });
+                    ResourceProperty.FileName,
+                    ResourceProperty.DirectoryPath,
+                    ResourceProperty.CreatedAt,
+                    ResourceProperty.FileCreatedAt,
+                    ResourceProperty.FileModifiedAt,
+                    ResourceProperty.MediaLibrary,
+                }.ToDictionary(d => d, d => BuiltinPropertyDescriptors.DescriptorMap[d]));
 
-        public static readonly ConcurrentDictionary<ResourceProperty, SearchableReservedPropertyValueTypes>
-            ReservedResourcePropertyAndValueTypesMap =
-                new(new Dictionary<ResourceProperty, SearchableReservedPropertyValueTypes>
+        public static readonly ConcurrentDictionary<ReservedResourceProperty, Models.Domain.Property>
+            ReservedResourcePropertyDescriptorMap =
+                new(new[]
                 {
-                    {
-                        ResourceProperty.Rating,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.Decimal, StandardValueType.Decimal)
-                    },
-                    {
-                        ResourceProperty.Introduction,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
-                    },
-                });
+                    ResourceProperty.Rating,
+                    ResourceProperty.Introduction,
+                }.ToDictionary(
+                    d => (ReservedResourceProperty) d, d => BuiltinPropertyDescriptors.DescriptorMap[d]));
 
-        public static readonly ConcurrentDictionary<SearchableReservedProperty, SearchableReservedPropertyValueTypes>
-            SearchableResourcePropertyAndValueTypesMap =
-                new(new Dictionary<SearchableReservedProperty, SearchableReservedPropertyValueTypes>
-                {
-                    {
-                        SearchableReservedProperty.FileName,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
-                    },
-                    {
-                        SearchableReservedProperty.DirectoryPath,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
-                    },
-                    {
-                        SearchableReservedProperty.CreatedAt,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
-                    },
-                    {
-                        SearchableReservedProperty.FileCreatedAt,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
-                    },
-                    {
-                        SearchableReservedProperty.FileModifiedAt,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.DateTime, StandardValueType.DateTime)
-                    },
-                    {
-                        SearchableReservedProperty.MediaLibrary,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.ListString,
-                            StandardValueType.ListListString)
-                    },
-                    {
-                        SearchableReservedProperty.Rating,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.Decimal, StandardValueType.Decimal)
-                    },
-                    {
-                        SearchableReservedProperty.Introduction,
-                        new SearchableReservedPropertyValueTypes(StandardValueType.String, StandardValueType.String)
-                    },
-                });
+        public static readonly ConcurrentDictionary<SearchableReservedProperty, Models.Domain.Property>
+            SearchableResourcePropertyDescriptorMap =
+                new ConcurrentDictionary<SearchableReservedProperty, Models.Domain.Property>(
+                    SpecificEnumUtils<SearchableReservedProperty>.Values.Select(x =>
+                            InternalResourcePropertyDescriptorMap.GetValueOrDefault((ResourceProperty) x) ??
+                            ReservedResourcePropertyDescriptorMap.GetValueOrDefault((ReservedResourceProperty) x))
+                        .Where(d => d != null).ToDictionary(d => (SearchableReservedProperty) d.EnumId, d => d));
     }
 }

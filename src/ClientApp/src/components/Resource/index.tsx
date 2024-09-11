@@ -1,5 +1,5 @@
 import { Dialog, Message, Tag } from '@alifd/next';
-import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { Profiler, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type Queue from 'queue';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
@@ -197,6 +197,18 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const coverRef = useRef<IResourceCoverRef>();
 
+  function onRenderCallback(
+    id, // the "id" prop of the Profiler tree that has just committed
+    phase, // either "mount" (if the tree just mounted) or "update" (if it re-rendered)
+    actualDuration, // time spent rendering the committed update
+    baseDuration, // estimated time to render the entire subtree without memoization
+    startTime, // when React began rendering this update
+    commitTime, // when React committed this update
+    interactions, // the Set of interactions belonging to this update
+  ) {
+    console.log({ id, phase, actualDuration, baseDuration, startTime, commitTime, interactions });
+  }
+
   const renderCover = () => {
     const elementId = `resource-${resource.id}`;
     const playable = playableFiles.length > 0;
@@ -211,15 +223,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
             disableCache={disableCache}
             disableMediaPreviewer={disableMediaPreviewer}
             onClick={() => {
-              createPortal(ResourceDetailDialog, {
-                id: resource.id,
-                onPlay: clickPlayButton,
-                noPlayableFile: !(playableFiles?.length > 0),
-                onDestroyed: () => {
-                  reload();
-                },
-              });
-            }}
+                createPortal(ResourceDetailDialog, {
+                  id: resource.id,
+                  onPlay: clickPlayButton,
+                  noPlayableFile: !(playableFiles?.length > 0),
+                  onDestroyed: () => {
+                    reload();
+                  },
+                });
+              }}
             resourceId={resource.id}
             coverPaths={resource.coverPaths}
             ref={coverRef}

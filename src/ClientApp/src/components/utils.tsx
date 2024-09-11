@@ -183,7 +183,7 @@ export function useTraceUpdate(props, logPrefix) {
         return ps;
       }, {});
     if (Object.keys(changedProps).length > 0) {
-      // console.log(`${logPrefix}Changed props:`, changedProps);
+      console.log(`${logPrefix}Changed props:`, changedProps);
     }
     prev.current = props;
   });

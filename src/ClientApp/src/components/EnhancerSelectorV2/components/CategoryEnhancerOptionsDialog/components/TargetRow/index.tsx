@@ -120,13 +120,10 @@ export default (props: Props) => {
   if (options.propertyType != undefined && options.propertyId != undefined) {
     switch (options.propertyType!) {
       case ResourcePropertyType.Reserved: {
-        const valueTypes = internalOptions.resource.reservedResourcePropertyAndValueTypesMap?.[options.propertyId];
-        if (valueTypes) {
+        const p = internalOptions.resource.reservedResourcePropertyDescriptorMap?.[options.propertyId];
+        if (p) {
           property = {
-            id: options.propertyId,
-            dbValueType: valueTypes.dbValueType,
-            type: ResourcePropertyType.Reserved,
-            bizValueType: valueTypes.bizValueType,
+            ...p,
             name: t(`ResourceProperty.${ResourceProperty[options.propertyId]}`),
           };
         }

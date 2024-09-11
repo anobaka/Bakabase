@@ -6,7 +6,7 @@ import { Button, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IProperty } from '@/components/Property/models';
-import { CustomPropertyType } from '@/sdk/constants';
+import { CustomPropertyType, ResourcePropertyType } from '@/sdk/constants';
 
 interface IProps {
   onAllowAddingNewDataDynamicallyEnabled?: () => any;
@@ -57,7 +57,7 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
       );
     }
 
-    if (category.customPropertyIds?.includes(property.id) != true) {
+    if (category.customPropertyIds?.includes(property.id) != true && property.type == ResourcePropertyType.Custom) {
       tips.push(
         <div className={'flex items-center gap-1'} key={2}>
           {t('This property is not bound to the category, its data will not be displayed.')}

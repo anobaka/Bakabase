@@ -1,8 +1,13 @@
 ﻿using System.Linq.Expressions;
+using Bakabase.Abstractions.Components.Property;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Components;
@@ -25,8 +30,10 @@ namespace Bakabase.Modules.Enhancer.Services
         protected ICustomPropertyValueService CustomPropertyValueService =>
             GetRequiredService<ICustomPropertyValueService>();
 
-        protected IEnumerable<EnhancerDescriptor> EnhancerDescriptors =>
-            GetRequiredService<IEnumerable<EnhancerDescriptor>>();
+        protected IReservedPropertyValueService ReservedPropertyValueService =>
+            GetRequiredService<IReservedPropertyValueService>();
+
+        protected IEnhancerDescriptors EnhancerDescriptors => GetRequiredService<IEnhancerDescriptors>();
 
         public async Task<List<Enhancement>> GetAll(
             Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>>? exp,
@@ -53,7 +60,8 @@ namespace Bakabase.Modules.Enhancer.Services
                 Target = dbModel.Target,
                 Value = standardValueHelper.Deserialize(dbModel.Value, dbModel.ValueType),
                 ValueType = dbModel.ValueType,
-                CustomPropertyValueId = dbModel.CustomPropertyValueId,
+                PropertyType = dbModel.PropertyType,
+                PropertyId = dbModel.PropertyId,
                 DynamicTarget = dbModel.DynamicTarget
             };
         }
@@ -73,7 +81,8 @@ namespace Bakabase.Modules.Enhancer.Services
                 Target = domainModel.Target,
                 Value = standardValueHelper.Serialize(domainModel.Value, domainModel.ValueType),
                 ValueType = domainModel.ValueType,
-                CustomPropertyValueId = domainModel.CustomPropertyValueId,
+                PropertyType = domainModel.PropertyType,
+                PropertyId = domainModel.PropertyId,
                 DynamicTarget = domainModel.DynamicTarget
             };
         }
@@ -88,14 +97,53 @@ namespace Bakabase.Modules.Enhancer.Services
                     {
                         case EnhancementAdditionalItem.None:
                             break;
-                        case EnhancementAdditionalItem.GeneratedCustomPropertyValue:
+                        case EnhancementAdditionalItem.GeneratedPropertyValue:
                         {
-                            var cpvIds = data.Select(d => d.CustomPropertyValueId).ToHashSet();
-                            var cpValuesMap = (await CustomPropertyValueService.GetAll(x => cpvIds.Contains(x.Id),
-                                CustomPropertyValueAdditionalItem.BizValue, false)).ToDictionary(d => d.Id, d => d);
-                            foreach (var d in data)
+                            var reservedPropertyEnhancements =
+                                data.Where(d => d.PropertyType == ResourcePropertyType.Reserved).ToList();
+                            if (reservedPropertyEnhancements.Any())
                             {
-                                d.CustomPropertyValue = cpValuesMap.GetValueOrDefault(d.CustomPropertyValueId);
+                                var scopes = data
+                                    .Select(d => EnhancerDescriptors.TryGet(d.EnhancerId)?.PropertyValueScope)
+                                    .ToHashSet();
+                                var reservedValueMap =
+                                    (await ReservedPropertyValueService.GetAll(v => scopes.Contains(v.Scope)))
+                                    .GroupBy(d => d.Scope)
+                                    .ToDictionary(d => d.Key,
+                                        d => d.GroupBy(x => x.ResourceId).ToDictionary(x => x.Key, x => x.First()));
+                                foreach (var d in reservedPropertyEnhancements)
+                                {
+                                    d.ReservedPropertyValue = reservedValueMap.GetValueOrDefault(
+                                            EnhancerDescriptors.TryGet(d.EnhancerId)?.PropertyValueScope ?? 0)
+                                        ?.GetValueOrDefault(d.ResourceId);
+                                    d.Property =
+                                        BuiltinPropertyDescriptors.DescriptorMap.GetValueOrDefault(
+                                            (ResourceProperty) d.PropertyId!.Value);
+                                }
+                            }
+
+                            var customPropertyEnhancements = data.Where(d => d.PropertyType == ResourcePropertyType.Custom).ToList();
+                            if (customPropertyEnhancements.Any())
+                            {
+                                var scopes = data.Select(d =>
+                                    EnhancerDescriptors.TryGet(d.EnhancerId)?.PropertyValueScope);
+                                var scopedValueMap = (await CustomPropertyValueService.GetAll(
+                                        x => scopes.Contains(x.Scope),
+                                        CustomPropertyValueAdditionalItem.BizValue, false)).GroupBy(d => d.Scope)
+                                    .ToDictionary(d => d.Key,
+                                        d => d.GroupBy(x => x.PropertyId).ToDictionary(x => x.Key,
+                                            x => x.GroupBy(y => y.ResourceId)
+                                                .ToDictionary(z => z.Key, z => z.First())));
+                                foreach (var d in customPropertyEnhancements)
+                                {
+                                    var scope = EnhancerDescriptors.TryGet(d.EnhancerId)?.PropertyValueScope;
+                                    if (scope.HasValue)
+                                    {
+                                        d.CustomPropertyValue = scopedValueMap.GetValueOrDefault((int) scope.Value)
+                                            ?.GetValueOrDefault(d.PropertyId!.Value)?.GetValueOrDefault(d.ResourceId);
+                                        d.Property = d.CustomPropertyValue?.Property?.ToProperty();
+                                    }
+                                }
                             }
 
                             break;
@@ -128,9 +176,8 @@ namespace Bakabase.Modules.Enhancer.Services
             bool removeGeneratedCustomPropertyValues)
         {
             var enhancements = await base.GetAll(selector);
-            var enhancerDescriptorMap = EnhancerDescriptors.ToDictionary(d => d.Id, d => d);
             var keys = enhancements
-                .Select(e => (Scope: enhancerDescriptorMap.GetValueOrDefault(e.EnhancerId)?.PropertyValueScope,
+                .Select(e => (Scope: EnhancerDescriptors.TryGet(e.EnhancerId)?.PropertyValueScope,
                     e.ResourceId)).Where(x => x.Scope.HasValue).ToList();
             var scopes = keys.Select(d => d.Scope).ToHashSet();
             var resourceIds = keys.Select(d => d.ResourceId).ToHashSet();

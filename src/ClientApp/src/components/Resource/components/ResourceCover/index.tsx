@@ -5,7 +5,7 @@ import { useUpdate } from 'react-use';
 import { Img } from 'react-image';
 import { LoadingOutlined } from '@ant-design/icons';
 import serverConfig from '@/serverConfig';
-import { useTraceUpdate, uuidv4 } from '@/components/utils';
+import { buildLogger, useTraceUpdate, uuidv4 } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import './index.scss';
@@ -44,6 +44,8 @@ export interface IResourceCoverRef {
   load: (refresh?: boolean) => void;
 }
 
+const log = buildLogger('ResourceCover');
+
 const ResourceCover = React.forwardRef((props: Props, ref) => {
   const {
     resourceId,
@@ -54,6 +56,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     biggerCoverPlacement,
     coverPaths,
   } = props;
+  log('rendering', props);
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const [loading, setLoading] = useState(true);
@@ -72,6 +75,10 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     w: 0,
     h: 0,
   });
+
+  useEffect(() => {
+    log('urls changed', urls);
+  }, [urls]);
 
   useEffect(() => {
     disableCacheRef.current = disableCache;
@@ -177,17 +184,19 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   }, [propsOnClick]);
 
 
-  const renderCover = () => {
+  const renderCover = useCallback(() => {
     if (urls) {
       return (
         <Carousel
+          key={urls.join(',')}
           autoplay={urls && urls.length > 1}
           // autoplay={false}
           dots
         >
           {urls?.map(url => (
-            <div>
+            <div key={url}>
               <div
+                key={url}
                 style={{
                   width: containerRef.current?.clientWidth,
                   height: containerRef.current?.clientHeight,
@@ -200,13 +209,15 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                     maxHeight: '100%',
                     objectFit: 'contain',
                   }}
+                  key={url}
                   // style={{ maxWidth: containerRef.current?.clientWidth ?? '100%', maxHeight: containerRef.current?.clientHeight ?? '100%', objectFit: 'contain' }}
-                  src={[url]}
+                  src={url}
                   onError={e => {
                     console.log(e);
                   }}
                   onLoad={(e) => {
                     setLoaded(true);
+                    // forceUpdate();
                     const img = e.target as HTMLImageElement;
                     if (img) {
                       if (!maxCoverRawSizeRef.current) {
@@ -218,7 +229,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                         maxCoverRawSizeRef.current.w = Math.max(maxCoverRawSizeRef.current.w, img.naturalWidth);
                         maxCoverRawSizeRef.current.h = Math.max(maxCoverRawSizeRef.current.h, img.naturalHeight);
                       }
-                      // console.log('loaded', e);
+                      log('loaded', e);
                     }
                   }}
                   loader={(
@@ -235,7 +246,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       );
     }
     return null;
-  };
+  }, [urls]);
 
   const renderContainer = () => {
     return (
@@ -272,71 +283,74 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     );
   };
 
-  // console.log(loaded, showBiggerOnHover);
-
-  if (loaded) {
-    if (showBiggerOnHover) {
-      // ignore small cover
-      const containerWidth = containerRef.current?.clientWidth ?? 100;
-      const containerHeight = containerRef.current?.clientHeight ?? 100;
-      if (maxCoverRawSizeRef.current.w > containerWidth && maxCoverRawSizeRef.current.h > containerHeight) {
-        const tooltipScale = Math.min(window.innerWidth * 0.6 / maxCoverRawSizeRef.current.w, window.innerHeight * 0.6 / maxCoverRawSizeRef.current.h);
-        const tooltipWidth = maxCoverRawSizeRef.current.w * tooltipScale;
-        const tooltipHeight = maxCoverRawSizeRef.current.h * tooltipScale;
-        return (
-          <Tooltip
-            // isOpen
-            placement={biggerCoverPlacement}
-            content={(
-              <div style={{
-                width: tooltipWidth,
-                height: tooltipHeight,
-              }}
-              >
-                <Carousel
-                  autoplay={urls && urls.length > 1}
-                  // autoplay={false}
-                  adaptiveHeight
-                  dots
-                >
-                  {urls?.map(url => (
-                    <div>
-                      <div
-                        style={{
-                          maxWidth: tooltipWidth,
-                          maxHeight: tooltipHeight,
-                        }}
-                        className={'flex items-center justify-center'}
-                      >
-                        <Img
-                          src={[url!]}
-                          loader={(
-                            <LoadingOutlined className={'text-2xl'} />
-                          )}
-                          unloader={(
-                            <CustomIcon type={'image-slash'} className={'text-2xl'} />
-                          )}
-                          // src={url}
-                          alt={''}
-                          style={{
-                            maxWidth: tooltipWidth,
-                            maxHeight: tooltipHeight,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </Carousel>
-              </div>
-            )}
-          >
-            {renderContainer()}
-          </Tooltip>
-        );
-      }
+  let tooltipWidth: number | undefined;
+  let tooltipHeight: number | undefined;
+  if (showBiggerOnHover) {
+    // ignore small cover
+    const containerWidth = containerRef.current?.clientWidth ?? 100;
+    const containerHeight = containerRef.current?.clientHeight ?? 100;
+    if (maxCoverRawSizeRef.current.w > containerWidth && maxCoverRawSizeRef.current.h > containerHeight) {
+      const tooltipScale = Math.min(window.innerWidth * 0.6 / maxCoverRawSizeRef.current.w, window.innerHeight * 0.6 / maxCoverRawSizeRef.current.h);
+      tooltipWidth = maxCoverRawSizeRef.current.w * tooltipScale;
+      tooltipHeight = maxCoverRawSizeRef.current.h * tooltipScale;
     }
   }
-  return renderContainer();
+
+  return (
+    <Tooltip
+      // key={urls?.join(',')}
+      // isOpen
+      placement={biggerCoverPlacement}
+      isDisabled={tooltipWidth == undefined}
+      content={(
+        <div style={{
+          width: tooltipWidth,
+          height: tooltipHeight,
+        }}
+        >
+          <Carousel
+            autoplay={urls && urls.length > 1}
+            adaptiveHeight
+            dots
+          >
+            {urls?.map(url => (
+              <div >
+                <div
+                  style={{
+                    maxWidth: tooltipWidth,
+                    maxHeight: tooltipHeight,
+                  }}
+                  className={'flex items-center justify-center'}
+                >
+                  <Img
+                    // key={url}
+                    src={url}
+                    loader={(
+                      <LoadingOutlined className={'text-2xl'} />
+                    )}
+                    unloader={(
+                      <CustomIcon type={'image-slash'} className={'text-2xl'} />
+                    )}
+                    onLoad={e => {
+                      log('loaded bigger', e);
+                    }}
+                    // src={url}
+                    alt={''}
+                    style={{
+                      maxWidth: tooltipWidth,
+                      maxHeight: tooltipHeight,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </Carousel>
+        </div>
+      )}
+    >
+      {renderContainer()}
+    </Tooltip>
+  );
 });
 
 export default React.memo(ResourceCover);

@@ -15,8 +15,8 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
         Category = 1 << 7,
         DisplayName = 1 << 8 | CustomProperties | Category,
         HasChildren = 1 << 9,
-        BuiltinProperties = 1 << 10,
+        ReservedProperties = 1 << 10,
 
-        All = CustomProperties | DisplayName | Alias | HasChildren | Category | BuiltinProperties
+        All = CustomProperties | DisplayName | Alias | HasChildren | Category | ReservedProperties
     }
 }

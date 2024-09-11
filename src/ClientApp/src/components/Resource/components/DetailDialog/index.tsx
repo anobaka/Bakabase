@@ -2,16 +2,15 @@ import React, { useEffect, useState } from 'react';
 
 import './index.scss';
 import { useTranslation } from 'react-i18next';
-import { DeleteOutlined, FolderOpenOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { FolderOpenOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import BasicInfo from './BasicInfo';
 import Properties from './Properties';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
-import { Button, ButtonGroup, Divider, Modal } from '@/components/bakaui';
+import { Button, ButtonGroup, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import FileSystemEntries from '@/components/Resource/components/DetailDialog/FileSystemEntries';
 import BApi from '@/sdk/BApi';
-import { ResourceAdditionalItem } from '@/sdk/constants';
+import { ReservedResourceProperty, ResourceAdditionalItem, ResourcePropertyType } from '@/sdk/constants';
 import { convertFromApiValue } from '@/components/StandardValue/helpers';
 
 
@@ -72,13 +71,23 @@ export default ({
     >
       {resource && (
         <>
-          <div className="flex gap-4">
+          <div className="flex gap-4 max-h-[600px]">
             <div className="min-w-[400px] w-[400px] max-w-[400px] flex flex-col gap-4">
               <div className={'h-[400px] max-h-[400px] overflow-hidden rounded flex items-center justify-center'}>
                 <ResourceCover
                   resourceId={resource.id}
                   showBiggerOnHover={false}
                   coverPaths={resource.coverPaths}
+                />
+              </div>
+              <div className={'flex justify-center'}>
+                <Properties
+                  resource={resource}
+                  reload={loadResource}
+                  restrictedPropertyType={ResourcePropertyType.Reserved}
+                  restrictedPropertyIds={[ReservedResourceProperty.Rating]}
+                  hidePropertyName
+                  propertyInnerDirection={'ver'}
                 />
               </div>
               <div className={'flex items-center justify-center'}>
@@ -113,14 +122,27 @@ export default ({
               </div>
               <BasicInfo resource={resource} />
             </div>
-            <div className="flex flex-col gap-5 grow">
+            <div className="overflow-auto">
               <div className={'grow'}>
                 <Properties
                   resource={resource}
                   reload={loadResource}
+                  restrictedPropertyType={ResourcePropertyType.Custom}
+                  propertyClassNames={{
+                    name: 'justify-end',
+                  }}
                 />
               </div>
             </div>
+          </div>
+          <div className={'mt-2'}>
+            <Properties
+              resource={resource}
+              reload={loadResource}
+              restrictedPropertyType={ResourcePropertyType.Reserved}
+              restrictedPropertyIds={[ReservedResourceProperty.Introduction]}
+              propertyInnerDirection={'ver'}
+            />
           </div>
           {/* <Divider /> */}
           {/* <FileSystemEntries isFile={resource.isFile} path={resource.path} /> */}

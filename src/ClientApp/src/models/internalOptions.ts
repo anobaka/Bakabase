@@ -1,10 +1,14 @@
 import type { ResourceProperty, SearchOperation, StandardValueType } from '@/sdk/constants';
 import type { SignalRData } from '@/components/SignalR/models';
+import type { IProperty } from '@/components/Property/models';
 
 interface Options {
   resource: {
-    reservedResourcePropertyAndValueTypesMap: Record<ResourceProperty, {dbValueType: StandardValueType; bizValueType: StandardValueType}>;
-    internalResourcePropertyAndValueTypesMap: Record<ResourceProperty, {dbValueType: StandardValueType; bizValueType: StandardValueType}>;
+    // reservedResourcePropertyAndValueTypesMap: Record<ResourceProperty, IProperty>;
+    // internalResourcePropertyAndValueTypesMap: Record<ResourceProperty, IProperty>;
+
+    reservedResourcePropertyDescriptorMap: Record<ResourceProperty, IProperty>;
+    internalResourcePropertyDescriptorMap: Record<ResourceProperty, IProperty>;
     customPropertyValueSearchOperationsMap: Record<StandardValueType, SearchOperation[]>;
   };
 }

@@ -105,6 +105,11 @@ namespace Bakabase.InsideWorld.Business.Components
             };
         }
 
+        public string Property_DescriptorIsNotFound(ResourcePropertyType type, int propertyId)
+        {
+            return this[nameof(Property_DescriptorIsNotFound), type, propertyId];
+        }
+
         public string CustomProperty_DescriptorNotFound(int propertyType)
         {
             return this[nameof(CustomProperty_DescriptorNotFound), propertyType];

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using static Bakabase.Abstractions.Components.Configuration.InternalOptions;
@@ -13,19 +14,11 @@ namespace Bakabase.InsideWorld.Business.Models.Dto
 
         public record ResourceOptions
         {
-            public IDictionary<int, SearchableReservedPropertyValueTypes> InternalResourcePropertyAndValueTypesMap
-            {
-                get;
-                set;
-            } =
-                InternalOptions.InternalResourcePropertyAndValueTypesMap.ToDictionary(x => (int) x.Key, x => x.Value);
+            public IDictionary<int, Property> InternalResourcePropertyDescriptorMap { get; set; } =
+                InternalOptions.InternalResourcePropertyDescriptorMap.ToDictionary(x => (int) x.Key, x => x.Value);
 
-            public IDictionary<int, SearchableReservedPropertyValueTypes> ReservedResourcePropertyAndValueTypesMap
-            {
-                get;
-                set;
-            } =
-                InternalOptions.ReservedResourcePropertyAndValueTypesMap.ToDictionary(x => (int) x.Key, x => x.Value);
+            public IDictionary<int, Property> ReservedResourcePropertyDescriptorMap { get; set; } =
+                InternalOptions.ReservedResourcePropertyDescriptorMap.ToDictionary(x => (int) x.Key, x => x.Value);
 
             public Dictionary<int, SearchOperation[]> CustomPropertyValueSearchOperationsMap { get; set; } = new();
         }

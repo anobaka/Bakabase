@@ -511,6 +511,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Property descriptor is not found for type: {0}, id: {1}.
+        /// </summary>
+        internal static string Property_DescriptorIsNotFound {
+            get {
+                return ResourceManager.GetString("Property_DescriptorIsNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Introduction.
         /// </summary>
         internal static string Reserved_Resource_Property_Name_Introduction {
@@ -588,6 +597,24 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string Resource_NotFound {
             get {
                 return ResourceManager.GetString("Resource_NotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        internal static string Resource_Property_Reserved_Introduction_Name {
+            get {
+                return ResourceManager.GetString("Resource_Property_Reserved_Introduction_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to .
+        /// </summary>
+        internal static string Resource_Property_Reserved_Rating_Name {
+            get {
+                return ResourceManager.GetString("Resource_Property_Reserved_Rating_Name", resourceCulture);
             }
         }
         

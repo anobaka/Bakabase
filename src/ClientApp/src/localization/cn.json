@@ -1397,5 +1397,8 @@
   "Type to be converted": "待转换类型",
   "Value to be converted": "待转换值",
   "Delete all enhancement records of this enhancer for category {{categoryName}}": "删除分类 {{categoryName}} 下所有当前增强器的增强记录",
-  "Delete all enhancement records of this enhancer": "删除当前增强器的所有增强记录"
+  "Delete all enhancement records of this enhancer": "删除当前增强器的所有增强记录",
+  "Can not operate on this property": "无法操作当前属性",
+  "Unsupported property type: {{type}}": "不支持的属性类型：{{type}}",
+  "Unsupported reserved property type: {{type}}": "不支持的预置属性类型：{{type}}"
 }

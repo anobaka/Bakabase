@@ -70,32 +70,12 @@ const PropertySelector = ({
   const loadProperties = async () => {
     const arr: IProperty[] = [];
     if (pool & ResourcePropertyType.Reserved) {
-      const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
-      arr.push(
-        ...Object.keys(map).map<IProperty>(pStr => {
-          const p = parseInt(pStr, 10) as EnumResourceProperty;
-          return {
-            id: p,
-            dbValueType: map[p].dbValueType,
-            type: ResourcePropertyType.Reserved,
-            bizValueType: map[p].bizValueType,
-          };
-        }),
-      );
+      const map = internalOptions.resource.reservedResourcePropertyDescriptorMap || {};
+      arr.push(...Object.values(map));
     }
     if (pool & ResourcePropertyType.Internal) {
-      const map = internalOptions.resource.internalResourcePropertyAndValueTypesMap || {};
-      arr.push(
-        ...Object.keys(map).map<IProperty>(pStr => {
-          const p = parseInt(pStr, 10) as EnumResourceProperty;
-          return {
-            id: p,
-            dbValueType: map[p].dbValueType,
-            type: ResourcePropertyType.Internal,
-            bizValueType: map[p].bizValueType,
-          };
-        }),
-      );
+      const map = internalOptions.resource.internalResourcePropertyDescriptorMap || {};
+      arr.push(...Object.values(map));
     }
     if (pool & ResourcePropertyType.Custom) {
       const rsp = await BApi.customProperty.getAllCustomProperties({ additionalItems: CustomPropertyAdditionalItem.Category });

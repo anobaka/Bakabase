@@ -4,5 +4,5 @@
 public enum EnhancementAdditionalItem
 {
     None = 0,
-    GeneratedCustomPropertyValue = 1,
+    GeneratedPropertyValue = 1,
 }

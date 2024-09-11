@@ -71,7 +71,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly IResourceSearchContextProcessor _resourceSearchContextProcessor;
         private readonly IAliasService _aliasService;
-        private readonly IBuiltinPropertyValueService _builtinPropertyValueService;
+        private readonly IReservedPropertyValueService _reservedPropertyValueService;
         private readonly Dictionary<int, IStandardValueHandler> _standardValueHandlers;
         private readonly ICustomPropertyDescriptors _customPropertyDescriptors;
         private readonly IFileManager _fileManager;
@@ -87,7 +87,7 @@ namespace Bakabase.InsideWorld.Business.Services
             FfMpegService ffMpegService, InsideWorldLocalizer localizer,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IResourceSearchContextProcessor resourceSearchContextProcessor,
-            IBuiltinPropertyValueService builtinPropertyValueService,
+            IReservedPropertyValueService reservedPropertyValueService,
             IEnumerable<IStandardValueHandler> standardValueHandlers,
             ICustomPropertyDescriptors customPropertyDescriptors, IFileManager fileManager,
             ICoverDiscoverer coverDiscoverer, IStandardValueHelper standardValueHelper, ICategoryCustomPropertyMappingService categoryCustomPropertyMappingService)
@@ -106,7 +106,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _customPropertyService = customPropertyService;
             _customPropertyValueService = customPropertyValueService;
             _resourceSearchContextProcessor = resourceSearchContextProcessor;
-            _builtinPropertyValueService = builtinPropertyValueService;
+            _reservedPropertyValueService = reservedPropertyValueService;
             _fileManager = fileManager;
             _coverDiscoverer = coverDiscoverer;
             _standardValueHelper = standardValueHelper;
@@ -339,13 +339,13 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     switch (i)
                     {
-                        case ResourceAdditionalItem.BuiltinProperties:
+                        case ResourceAdditionalItem.ReservedProperties:
                         {
-                            var builtinPropertyValueMap =
-                                (await _builtinPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId)))
+                            var reservedPropertyValueMap =
+                                (await _reservedPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId)))
                                 .GroupBy(d => d.ResourceId).ToDictionary(d => d.Key, d => d.ToList());
 
-                            var resourceRatingPropertyMap = builtinPropertyValueMap.ToDictionary(d => d.Key,
+                            var resourceRatingPropertyMap = reservedPropertyValueMap.ToDictionary(d => d.Key,
                                 d =>
                                 {
                                     var scopeRatings = d.Value.Where(x => x.Rating.HasValue)
@@ -363,7 +363,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                     return null;
                                 });
 
-                            var resourceIntroductionPropertyMap = builtinPropertyValueMap.ToDictionary(d => d.Key,
+                            var resourceIntroductionPropertyMap = reservedPropertyValueMap.ToDictionary(d => d.Key,
                                 d =>
                                 {
                                     var scopeIntroductions = d.Value.Where(x => !string.IsNullOrEmpty(x.Introduction))
@@ -385,19 +385,19 @@ namespace Bakabase.InsideWorld.Business.Services
                             foreach (var r in doList)
                             {
                                 r.Properties ??= [];
-                                var builtinProperties =
+                                var reservedProperties =
                                     r.Properties.GetOrAdd((int) ResourcePropertyType.Reserved, () => []);
-                                var dbBuiltinProperties = builtinPropertyValueMap.GetValueOrDefault(r.Id);
-                                builtinProperties[(int) ResourceProperty.Rating] = new Resource.Property(null,
+                                var dbReservedProperties = reservedPropertyValueMap.GetValueOrDefault(r.Id);
+                                reservedProperties[(int) ResourceProperty.Rating] = new Resource.Property(null,
                                     StandardValueType.Decimal,
                                     StandardValueType.Decimal,
-                                    dbBuiltinProperties?.Select(s =>
+                                    dbReservedProperties?.Select(s =>
                                         new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating,
                                             s.Rating)).ToList(), true);
-                                builtinProperties[(int) ResourceProperty.Introduction] = new Resource.Property(null,
+                                reservedProperties[(int) ResourceProperty.Introduction] = new Resource.Property(null,
                                     StandardValueType.String,
                                     StandardValueType.String,
-                                    dbBuiltinProperties?.Select(s =>
+                                    dbReservedProperties?.Select(s =>
                                         new Resource.Property.PropertyValue(s.Scope, s.Introduction, s.Introduction,
                                             s.Introduction)).ToList(), true);
                             }
@@ -1054,10 +1054,10 @@ namespace Bakabase.InsideWorld.Business.Services
                     case ResourceProperty.Introduction:
                     case ResourceProperty.Rating:
                     {
-                        var scopeValue = await _builtinPropertyValueService.GetFirst(x =>
+                        var scopeValue = await _reservedPropertyValueService.GetFirst(x =>
                             x.ResourceId == resourceId && x.Scope == (int) PropertyValueScope.Manual);
                         var noValue = scopeValue == null;
-                        scopeValue ??= new BuiltinPropertyValue
+                        scopeValue ??= new ReservedPropertyValue
                         {
                             ResourceId = resourceId,
                             Scope = (int) PropertyValueScope.Manual
@@ -1075,8 +1075,8 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
 
                         return noValue
-                            ? await _builtinPropertyValueService.Add(scopeValue)
-                            : await _builtinPropertyValueService.Update(scopeValue);
+                            ? await _reservedPropertyValueService.Add(scopeValue)
+                            : await _reservedPropertyValueService.Update(scopeValue);
                     }
                     // case ResourceProperty.CustomProperty:
                     //     break;

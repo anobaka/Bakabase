@@ -26,7 +26,7 @@ public enum DLsiteEnhancerTarget
     Introduction,
 
     [EnhancerTarget(StandardValueType.Decimal, CustomPropertyType.Rating,
-        [EnhancerTargetOptionsItem.AutoBindProperty], false, typeof(RatingMax10),
+        [EnhancerTargetOptionsItem.AutoBindProperty], false, 
         reservedResourcePropertyCandidate: ReservedResourceProperty.Rating)]
     Rating
 }

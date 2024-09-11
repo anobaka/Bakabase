@@ -309,4 +309,13 @@
   <data name="Reserved_Resource_Property_Name_Rating" xml:space="preserve">
     <value>Rating</value>
   </data>
+  <data name="Resource_Property_Reserved_Introduction_Name" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Resource_Property_Reserved_Rating_Name" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Property_DescriptorIsNotFound" xml:space="preserve">
+    <value>Property descriptor is not found for type: {0}, id: {1}</value>
+  </data>
 </root>

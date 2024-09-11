@@ -1,6 +1,6 @@
-﻿namespace Bakabase.Abstractions.Models.Domain;
+﻿namespace Bakabase.Abstractions.Models.Db;
 
-public record BuiltinPropertyValue
+public record ReservedPropertyValue
 {
     public int Id { get; set; }
     public int ResourceId { get; set; }

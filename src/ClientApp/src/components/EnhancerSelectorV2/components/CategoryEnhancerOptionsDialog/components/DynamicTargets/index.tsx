@@ -59,7 +59,7 @@ export default (props: Props) => {
       const subOptions = options.targetOptions?.filter(x => x.target == descriptor.id) || [];
       let defaultOptions = subOptions.find(x => x.dynamicTarget == undefined);
       if (defaultOptions == undefined) {
-        defaultOptions = defaultCategoryEnhancerTargetOptions(descriptor.id, descriptor.optionsItems);
+        defaultOptions = defaultCategoryEnhancerTargetOptions(descriptor);
       } else {
         const defaultIdx = subOptions.findIndex(x => x == defaultOptions);
         subOptions.splice(defaultIdx, 1);
@@ -75,7 +75,7 @@ export default (props: Props) => {
   };
 
   const createNewOptions = (descriptor: EnhancerTargetDescriptor, otherOptions: EnhancerTargetFullOptions[] | undefined) => {
-    const options: EnhancerTargetFullOptions = defaultCategoryEnhancerTargetOptions(descriptor.id, descriptor.optionsItems);
+    const options: EnhancerTargetFullOptions = defaultCategoryEnhancerTargetOptions(descriptor);
     let maxNo = 0;
     if (otherOptions != undefined) {
       const regex = new RegExp(String.raw`^${t('Target')}(?<no>\d+)$`, 'g');
@@ -127,9 +127,10 @@ export default (props: Props) => {
               <TableBody />
             </Table>
             <div className={'flex flex-col gap-y-2'}>
-              {subOptions.map(data => {
+              {subOptions.map((data, i) => {
                 return (
                   <TargetRow
+                    key={i}
                     target={data.target}
                     dynamicTarget={data.dynamicTarget}
                     options={data}
@@ -144,10 +145,10 @@ export default (props: Props) => {
                         setOptions({ ...options });
                       }
                     }}
-                    // onChange={(newOptions) => {
-                    //   Object.assign(data, newOptions);
-                    //   forceUpdate();
-                    // }}
+                    onChange={(newOptions) => {
+                      Object.assign(data, newOptions);
+                      forceUpdate();
+                    }}
                   />
                 );
               })}

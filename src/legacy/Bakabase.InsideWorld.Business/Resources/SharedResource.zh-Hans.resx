@@ -309,4 +309,7 @@
   <data name="Resource_Property_Reserved_Rating_Name" xml:space="preserve">
     <value>评分</value>
   </data>
+  <data name="Property_DescriptorIsNotFound" xml:space="preserve">
+    <value>未能找到属性描述器，类型: {0}， id: {1}</value>
+  </data>
 </root>

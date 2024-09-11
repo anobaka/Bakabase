@@ -28,7 +28,7 @@ namespace Bakabase.Modules.CustomProperty.Services
             IEnumerable<IStandardValueHandler> converters,
             ICustomPropertyDescriptors propertyDescriptors,
             ICustomPropertyLocalizer localizer,
-            IBuiltinPropertyValueService _builtinPropertyValueService,
+            IReservedPropertyValueService _reservedPropertyValueService,
             IStandardValueLocalizer standardValueLocalizer)
         : FullMemoryCacheResourceService<TDbContext, Bakabase.Abstractions.Models.Db.CustomPropertyValue, int>(
             serviceProvider), ICustomPropertyValueService where TDbContext : DbContext

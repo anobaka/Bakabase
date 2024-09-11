@@ -156,9 +156,13 @@ export interface BakabaseAbstractionsModelsDomainEnhancement {
   target?: number;
   dynamicTarget?: string | null;
   value?: any;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyType?: BakabaseAbstractionsModelsDomainConstantsResourcePropertyType;
   /** @format int32 */
-  customPropertyValueId?: number;
+  propertyId?: number | null;
   customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
+  reservedPropertyValue?: BakabaseAbstractionsModelsDomainReservedPropertyValue;
+  propertyDescriptor?: BakabaseAbstractionsModelsDomainPropertyDescriptor;
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibrary {
@@ -215,6 +219,22 @@ export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultReso
   isCustom?: boolean;
 }
 
+export interface BakabaseAbstractionsModelsDomainPropertyDescriptor {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  type?: BakabaseAbstractionsModelsDomainConstantsResourcePropertyType;
+  /** @format int32 */
+  id?: number;
+  /** [1: RootPath, 2: ParentResource, 3: Resource, 12: Introduction, 13: Rating, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary] */
+  enumId?: BakabaseInsideWorldModelsConstantsResourceProperty;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  dbValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** @format int32 */
+  customPropertyType?: number;
+  options?: any;
+}
+
 export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
   fixedText?: string | null;
   /** @format int32 */
@@ -229,6 +249,18 @@ export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue
   isSecondaryProperty?: boolean;
   isResourceProperty?: boolean;
   isValid?: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainReservedPropertyValue {
+  /** @format int32 */
+  id?: number;
+  /** @format int32 */
+  resourceId?: number;
+  /** @format int32 */
+  scope?: number;
+  /** @format double */
+  rating?: number | null;
+  introduction?: string | null;
 }
 
 export interface BakabaseAbstractionsModelsDomainResource {
@@ -968,7 +1000,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAddit
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
- * [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: BuiltinProperties, 2016: All]
+ * [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2016: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
@@ -1107,6 +1139,25 @@ export type BakabaseInsideWorldModelsConstantsResourceDiffType = 1 | 2 | 3;
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsResourceMatcherValueType = 1 | 2 | 3;
+
+/**
+ * [1: RootPath, 2: ParentResource, 3: Resource, 12: Introduction, 13: Rating, 14: CustomProperty, 15: FileName, 16: DirectoryPath, 17: CreatedAt, 18: FileCreatedAt, 19: FileModifiedAt, 20: Category, 21: MediaLibrary]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsResourceProperty =
+  | 1
+  | 2
+  | 3
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18
+  | 19
+  | 20
+  | 21;
 
 /**
  * [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
@@ -1545,7 +1596,7 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
 }
 
 /**
- * [0: None, 1: GeneratedCustomPropertyValue]
+ * [0: None, 1: GeneratedPropertyValue]
  * @format int32
  */
 export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementAdditionalItem = 0 | 1;
@@ -4561,7 +4612,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourceEnhancements: (
       resourceId: number,
       query?: {
-        /** [0: None, 1: GeneratedCustomPropertyValue] */
+        /** [0: None, 1: GeneratedPropertyValue] */
         additionalItem?: BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementAdditionalItem;
       },
       params: RequestParams = {},
@@ -4652,7 +4703,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: BuiltinProperties, 2016: All] */
+        /** [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2016: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},

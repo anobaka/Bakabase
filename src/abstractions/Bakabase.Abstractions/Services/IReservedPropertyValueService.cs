@@ -1,17 +1,17 @@
 ﻿using System.Linq.Expressions;
 using Bootstrap.Models.ResponseModels;
-using BuiltinPropertyValue = Bakabase.Abstractions.Models.Domain.BuiltinPropertyValue;
+using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedPropertyValue;
 
 namespace Bakabase.Abstractions.Services;
 
-public interface IBuiltinPropertyValueService
+public interface IReservedPropertyValueService
 {
     // Task<ResourceReservedPropertyValue> GetByKey(Int32 key, bool returnCopy = true);
     // Task<ResourceReservedPropertyValue[]> GetByKeys(IEnumerable<Int32> keys, bool returnCopy = true);
     //
-    Task<BuiltinPropertyValue?> GetFirst(Expression<Func<Abstractions.Models.Db.BuiltinPropertyValue, bool>> selector);
+    Task<ReservedPropertyValue?> GetFirst(Expression<Func<Abstractions.Models.Db.ReservedPropertyValue, bool>> selector);
 
-    Task<List<BuiltinPropertyValue>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.BuiltinPropertyValue, bool>>? selector = null, bool asNoTracking = true);
+    Task<List<ReservedPropertyValue>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.ReservedPropertyValue, bool>>? selector = null, bool asNoTracking = true);
     // Task<int> Count(Func<ResourceReservedPropertyValue, bool> selector = null);
     //
     // /// <summary>
@@ -35,11 +35,11 @@ public interface IBuiltinPropertyValueService
     // Task<BaseResponse> RemoveAll(Expression<Func<ResourceReservedPropertyValue, bool>> selector);
     // Task<BaseResponse> RemoveByKey(Int32 key);
     // Task<BaseResponse> RemoveByKeys(IEnumerable<Int32> keys);
-    Task<SingletonResponse<BuiltinPropertyValue>> Add(BuiltinPropertyValue resource);
-    Task<ListResponse<BuiltinPropertyValue>> AddRange(List<BuiltinPropertyValue> resources);
+    Task<SingletonResponse<ReservedPropertyValue>> Add(ReservedPropertyValue resource);
+    Task<ListResponse<ReservedPropertyValue>> AddRange(List<ReservedPropertyValue> resources);
     // Task<SingletonResponse<ResourceReservedPropertyValue>> UpdateByKey(Int32 key, Action<ResourceReservedPropertyValue> modify);
-    Task<BaseResponse> Update(BuiltinPropertyValue resource);
-    // Task<BaseResponse> UpdateRange(IReadOnlyCollection<ResourceReservedPropertyValue> resources);
+    Task<BaseResponse> Update(ReservedPropertyValue resource);
+    Task<BaseResponse> UpdateRange(IReadOnlyCollection<ReservedPropertyValue> resources);
     //
     // Task<ListResponse<ResourceReservedPropertyValue>> UpdateByKeys(IReadOnlyCollection<Int32> keys,
     //     Action<ResourceReservedPropertyValue> modify);

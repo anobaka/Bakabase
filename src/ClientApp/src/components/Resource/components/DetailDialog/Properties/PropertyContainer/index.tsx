@@ -12,18 +12,23 @@ import type { IProperty } from '@/components/Property/models';
 import { buildLogger } from '@/components/utils';
 import { serializeStandardValue } from '@/components/StandardValue/helpers';
 
-type Props = {
+export type PropertyContainerProps = {
   valueScopePriority: PropertyValueScope[];
   onValueScopePriorityChange: (priority: PropertyValueScope[]) => any;
   property: IProperty;
   values?: Property['values'];
   onValueChange: (sdv?: string, sbv?: string) => any;
   dataPool?: PropertyValueRendererProps['dataPool'];
+  hidePropertyName?: boolean;
+  classNames?: {
+    name?: string;
+    value?: string;
+  };
 };
 
 const log = buildLogger('PropertyContainer');
 
-export default (props: Props) => {
+export default (props: PropertyContainerProps) => {
   const forceUpdate = useUpdate();
   log(props);
   const {
@@ -33,6 +38,8 @@ export default (props: Props) => {
     property,
     onValueChange,
     dataPool,
+    hidePropertyName = false,
+    classNames,
   } = props;
   const { t } = useTranslation();
 
@@ -63,21 +70,23 @@ export default (props: Props) => {
 
   return (
     <>
-      <div className={'flex justify-end'}>
-        <Chip
-          className={'whitespace-break-spaces py-1 h-auto break-all'}
-          size={'sm'}
-          radius={'sm'}
-          color={'secondary'}
-          // variant={'light'}
-        >
-          {property.type == ResourcePropertyType.Custom ? property.name : t(ResourceProperty[property.id])}
-        </Chip>
-      </div>
+      {!hidePropertyName && (
+        <div className={`flex ${classNames?.name}`}>
+          <Chip
+            className={'whitespace-break-spaces py-1 h-auto break-all'}
+            size={'sm'}
+            radius={'sm'}
+            color={'secondary'}
+            // variant={'light'}
+          >
+            {property.type == ResourcePropertyType.Custom ? property.name : t(ResourceProperty[property.id])}
+          </Chip>
+        </div>
+      )}
       {/* <Card> */}
       {/*   <CardBody> */}
       <div
-        className={'flex items-center gap-2 break-all'}
+        className={`flex items-center gap-2 break-all ${classNames?.value}`}
       >
         <PropertyValueRenderer
           variant={'default'}

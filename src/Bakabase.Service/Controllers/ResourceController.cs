@@ -304,7 +304,7 @@ namespace Bakabase.Service.Controllers
                         {
                             var rp = (SearchableReservedProperty) filter.PropertyId;
                             var valueTypes =
-                                InternalOptions.SearchableResourcePropertyAndValueTypesMap.GetValueOrDefault(rp);
+                                InternalOptions.SearchableResourcePropertyDescriptorMap.GetValueOrDefault(rp);
                             if (valueTypes == null)
                             {
                                 switch (rp)
@@ -431,13 +431,13 @@ namespace Bakabase.Service.Controllers
                 return NotFound();
             }
 
-            if (!string.IsNullOrEmpty(cover.Path))
+            if (cover.Data != null)
             {
-                return File(System.IO.File.OpenRead(cover.Path), MimeTypes.GetMimeType(cover.Path));
+                var format = await Image.DetectFormatAsync(new MemoryStream(cover.Data!));
+                return File(cover.Data!, format.DefaultMimeType);
             }
 
-            var format = await Image.DetectFormatAsync(new MemoryStream(cover.Data!));
-            return File(cover.Data!, format.DefaultMimeType);
+            return File(System.IO.File.OpenRead(cover.Path), MimeTypes.GetMimeType(cover.Path));
         }
 
         [HttpGet("{id}/playable-files")]

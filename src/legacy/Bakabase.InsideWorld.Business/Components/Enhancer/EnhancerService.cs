@@ -5,6 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Property;
 using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
@@ -12,6 +15,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
@@ -39,12 +43,14 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
     {
         private readonly ICustomPropertyService _customPropertyService;
         private readonly IResourceService _resourceService;
+        private readonly IReservedPropertyValueService _reservedPropertyValueService;
         private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly IEnhancementService _enhancementService;
         private readonly ICategoryEnhancerOptionsService _categoryEnhancerService;
         private readonly IStandardValueService _standardValueService;
         private readonly LogService _logService;
         private readonly IEnhancerDescriptors _enhancerDescriptors;
+        private readonly IBakabaseLocalizer _bakabaseLocalizer;
         private readonly IEnhancerLocalizer _enhancerLocalizer;
         private readonly Dictionary<int, IEnhancer> _enhancers;
         private readonly ILogger<EnhancerService> _logger;
@@ -55,7 +61,9 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             ICustomPropertyValueService customPropertyValueService,
             IEnhancementService enhancementService, ICategoryEnhancerOptionsService categoryEnhancerService,
             IStandardValueService standardValueService, LogService logService, IEnhancerLocalizer enhancerLocalizer,
-            IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger, ICategoryService categoryService, IEnhancementRecordService enhancementRecordService)
+            IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger,
+            ICategoryService categoryService, IEnhancementRecordService enhancementRecordService,
+            IBakabaseLocalizer bakabaseLocalizer, IReservedPropertyValueService reservedPropertyValueService)
         {
             _customPropertyService = customPropertyService;
             _resourceService = resourceService;
@@ -69,6 +77,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             _logger = logger;
             _categoryService = categoryService;
             _enhancementRecordService = enhancementRecordService;
+            _bakabaseLocalizer = bakabaseLocalizer;
+            _reservedPropertyValueService = reservedPropertyValueService;
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 
@@ -92,7 +102,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
             var enhancementTargetOptionsMap = new Dictionary<Enhancement, EnhancerTargetFullOptions>();
             var changedCategoryEnhancerOptions = new HashSet<CategoryEnhancerFullOptions>();
-            var newPropertyAddModels = new List<(CustomPropertyAddOrPutDto PropertyAddModel, List<Enhancement> Enhancements)>();
+            var newPropertyAddModels =
+                new List<(CustomPropertyAddOrPutDto PropertyAddModel, List<Enhancement> Enhancements)>();
             foreach (var enhancement in enhancements)
             {
                 var resource = resourceMap.GetValueOrDefault(enhancement.ResourceId);
@@ -114,7 +125,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
                 var targetDescriptor = _enhancerDescriptors[enhancement.EnhancerId][enhancement.Target];
                 var targetOptions = targetOptionsGroup.FirstOrDefault(x => string.IsNullOrEmpty(x.DynamicTarget));
-                if (!string.IsNullOrEmpty(enhancement.DynamicTarget) && targetOptions != null)
+                if (!string.IsNullOrEmpty(enhancement.DynamicTarget))
                 {
                     if (targetDescriptor.IsDynamic)
                     {
@@ -122,7 +133,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                             targetOptionsGroup.FirstOrDefault(x => x.DynamicTarget == enhancement.DynamicTarget);
                         if (dynamicTargetOptions == null)
                         {
-                            if (targetOptions.AutoBindProperty == true)
+                            if (targetOptions?.AutoBindProperty == true)
                             {
                                 dynamicTargetOptions = new EnhancerTargetFullOptions
                                 {
@@ -308,7 +319,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
             if (changedCategoryEnhancerOptions.Any())
             {
-                await _categoryEnhancerService.PutAll(changedCategoryEnhancerOptions.ToArray()); 
+                await _categoryEnhancerService.PutAll(changedCategoryEnhancerOptions.ToArray());
             }
 
             // var enhancementsIntegratedWithAlias = enhancementTargetOptionsMap
@@ -331,45 +342,116 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             var pvs = new List<CustomPropertyValue>();
             var addedPvKeys = new HashSet<string>();
             var enhancementCpvMap = enhancements.ToDictionary(d => d, d => (CustomPropertyValue?) null);
+            var scopedRpvMap = new Dictionary<PropertyValueScope, Dictionary<int, ReservedPropertyValue>>();
 
             var changedProperties = new HashSet<CustomProperty>();
 
             foreach (var (enhancement, targetOptions) in enhancementTargetOptionsMap)
             {
-                var property = propertyMap.GetValueOrDefault(targetOptions.PropertyId!.Value);
-                if (property == null)
-                {
-                    continue;
-                }
-                
+                enhancement.PropertyType = targetOptions.PropertyType;
+                enhancement.PropertyId = targetOptions.PropertyId;
+
                 // use first not null enhancement for enhancements with same properties;
                 var enhancerDescriptor = _enhancerDescriptors[enhancement.EnhancerId];
                 var pvKey =
-                    $"{enhancement.ResourceId}-{property.Id}-{enhancerDescriptor.PropertyValueScope}";
+                    $"{enhancement.ResourceId}-{targetOptions.PropertyType}-{targetOptions.PropertyId}-{enhancerDescriptor.PropertyValueScope}";
+
                 if (addedPvKeys.Add(pvKey))
                 {
+                    Property? propertyDescriptor;
+
+                    switch (targetOptions.PropertyType!.Value)
+                    {
+                        case ResourcePropertyType.Reserved:
+                        {
+                            propertyDescriptor =
+                                BuiltinPropertyDescriptors.DescriptorMap.GetValueOrDefault(
+                                    (ResourceProperty) targetOptions.PropertyId!.Value);
+                            break;
+                        }
+                        case ResourcePropertyType.Custom:
+                        {
+                            propertyDescriptor = propertyMap.GetValueOrDefault(targetOptions.PropertyId!.Value)
+                                ?.ToProperty();
+                            break;
+                        }
+                        case ResourcePropertyType.Internal:
+                        case ResourcePropertyType.All:
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    if (propertyDescriptor == null)
+                    {
+                        throw new Exception(
+                            _bakabaseLocalizer.Property_DescriptorIsNotFound(enhancement.PropertyType!.Value,
+                                enhancement.PropertyId!.Value));
+                    }
+
                     var targetDescriptor = _enhancerDescriptors[enhancement.EnhancerId][enhancement.Target];
                     var value = targetDescriptor.EnhancementConverter == null
                         ? enhancement.Value
-                        : targetDescriptor.EnhancementConverter.Convert(enhancement.Value, property);
+                        : targetDescriptor.EnhancementConverter.Convert(enhancement.Value, propertyDescriptor);
 
-                    var result = await _customPropertyValueService.CreateTransient(value, enhancement.ValueType,
-                        property,
-                        enhancement.ResourceId, enhancerDescriptor.PropertyValueScope);
-                    if (result.HasValue)
+                    var (nv, _) =
+                        await _standardValueService.CheckConversionLoss(value, enhancement.ValueType,
+                            propertyDescriptor.BizValueType);
+
+                    switch (targetOptions.PropertyType!.Value)
                     {
-                        var (pv, propertyChanged) = result.Value;
-                        if (currentPropertyValuesMap.TryGetValue(pv.BizKey, out var cpv))
+                        case ResourcePropertyType.Reserved:
                         {
-                            pv.Id = cpv.Id;
-                        }
+                            var scope = (PropertyValueScope) enhancerDescriptor.PropertyValueScope;
+                            var rpv = scopedRpvMap.GetOrAdd(scope, () => new Dictionary<int, ReservedPropertyValue>())
+                                .GetOrAdd(enhancement.ResourceId, () => new ReservedPropertyValue
+                                {
+                                    ResourceId = enhancement.ResourceId,
+                                    Scope = (int) scope,
+                                });
 
-                        pvs.Add(pv);
-                        enhancementCpvMap[enhancement] = pv;
-                        if (propertyChanged)
-                        {
-                            changedProperties.Add(property);
+                            switch ((ReservedResourceProperty) targetOptions.PropertyId!.Value)
+                            {
+                                case ReservedResourceProperty.Introduction:
+                                    rpv.Introduction = nv as string;
+                                    break;
+                                case ReservedResourceProperty.Rating:
+                                    rpv.Rating = nv is decimal nv1 ? nv1 : null;
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
+
+                            break;
                         }
+                        case ResourcePropertyType.Custom:
+                        {
+                            var property = propertyMap[targetOptions.PropertyId!.Value];
+                            var result = await _customPropertyValueService.CreateTransient(nv,
+                                propertyDescriptor.BizValueType,
+                                property,
+                                enhancement.ResourceId, enhancerDescriptor.PropertyValueScope);
+                            if (result.HasValue)
+                            {
+                                var (pv, propertyChanged) = result.Value;
+                                if (currentPropertyValuesMap.TryGetValue(pv.BizKey, out var cpv))
+                                {
+                                    pv.Id = cpv.Id;
+                                }
+
+                                pvs.Add(pv);
+                                enhancementCpvMap[enhancement] = pv;
+                                if (propertyChanged)
+                                {
+                                    changedProperties.Add(property);
+                                }
+                            }
+
+                            break;
+                        }
+                        case ResourcePropertyType.Internal:
+                        case ResourcePropertyType.All:
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
                 }
             }
@@ -387,6 +469,35 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             var valuesToAdd = pvs.Except(valuesToUpdate).ToList();
             await _customPropertyValueService.UpdateRange(valuesToUpdate);
             await _customPropertyValueService.AddRange(valuesToAdd);
+
+            if (scopedRpvMap.Any())
+            {
+                var scopes = scopedRpvMap.Keys.Cast<int>().ToHashSet();
+                var reservedValues = (await _reservedPropertyValueService.GetAll(x => scopes.Contains(x.Scope)))
+                    .GroupBy(d => d.Scope).ToDictionary(d => (PropertyValueScope) d.Key,
+                        d => d.GroupBy(x => x.ResourceId).ToDictionary(y => y.Key, y => y.First()));
+                var reservedPropertyValuesToBeAdded = new List<ReservedPropertyValue>();
+                var reservedPropertyValuesToBeUpdated = new List<ReservedPropertyValue>();
+                foreach (var (scope, reservedResourceValues) in scopedRpvMap)
+                {
+                    foreach (var (rId, rv) in reservedResourceValues)
+                    {
+                        var dbValue = reservedValues.GetValueOrDefault(scope)?.GetValueOrDefault(rId);
+                        if (dbValue != null)
+                        {
+                            rv.Id = dbValue.Id;
+                            reservedPropertyValuesToBeUpdated.Add(rv);
+                        }
+                        else
+                        {
+                            reservedPropertyValuesToBeAdded.Add(rv);
+                        }
+                    }
+                }
+
+                await _reservedPropertyValueService.UpdateRange(reservedPropertyValuesToBeUpdated);
+                await _reservedPropertyValueService.AddRange(reservedPropertyValuesToBeAdded);
+            }
 
             var remainingPvScopeKeys = enhancements
                 .Select(e => e.EnhancerId)
@@ -407,11 +518,6 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             }
 
             await _customPropertyValueService.RemoveByKeys(valueIdsToDelete);
-
-            foreach (var (e, v) in enhancementCpvMap)
-            {
-                e.CustomPropertyValueId = v?.Id ?? 0;
-            }
 
             await _enhancementService.UpdateRange(enhancements);
         }

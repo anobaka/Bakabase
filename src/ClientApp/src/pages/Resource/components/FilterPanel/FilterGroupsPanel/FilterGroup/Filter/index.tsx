@@ -52,25 +52,11 @@ export default ({
     if (filter.propertyId) {
        switch (filter!.propertyType!) {
          case ResourcePropertyType.Internal: {
-           const map = internalOptions.resource.internalResourcePropertyAndValueTypesMap || {};
-           setProperty({
-             id: filter.propertyId,
-             name: t(EnumResourceProperty[filter.propertyId]),
-             dbValueType: map[filter.propertyId].dbValueType,
-             type: ResourcePropertyType.Internal,
-             bizValueType: map[filter.propertyId].bizValueType,
-           });
+           setProperty(internalOptions.resource.internalResourcePropertyDescriptorMap[filter.propertyId]);
            break;
          }
          case ResourcePropertyType.Reserved: {
-           const map = internalOptions.resource.reservedResourcePropertyAndValueTypesMap || {};
-           setProperty({
-             id: filter.propertyId,
-             name: t(EnumResourceProperty[filter.propertyId]),
-             dbValueType: map[filter.propertyId].dbValueType,
-             type: ResourcePropertyType.Reserved,
-             bizValueType: map[filter.propertyId].bizValueType,
-           });
+           setProperty(internalOptions.resource.reservedResourcePropertyDescriptorMap[filter.propertyId]);
            break;
          }
          case ResourcePropertyType.Custom: {
@@ -164,7 +150,7 @@ export default ({
   };
 
   const noValue = filter.operation == SearchOperation.IsNull || filter.operation == SearchOperation.IsNotNull;
-  console.log('rendering filter', filter, property, propertyMap, dataPool, internalOptions.resource.reservedResourcePropertyAndValueTypesMap, internalOptions.resource.internalResourcePropertyAndValueTypesMap);
+  console.log('rendering filter', filter, property, propertyMap, dataPool, internalOptions.resource.reservedResourcePropertyDescriptorMap, internalOptions.resource.internalResourcePropertyDescriptorMap);
 
   return (
     <div

@@ -2,11 +2,11 @@
 
 namespace Bakabase.Abstractions.Extensions;
 
-public static class BuiltinPropertyValueExtensions
+public static class ReservedPropertyValueExtensions
 {
-    public static BuiltinPropertyValue ToDomainModel(this Models.Db.BuiltinPropertyValue dbModel)
+    public static ReservedPropertyValue ToDomainModel(this Models.Db.ReservedPropertyValue dbModel)
     {
-        return new BuiltinPropertyValue
+        return new ReservedPropertyValue
         {
             Id = dbModel.Id,
             Introduction = dbModel.Introduction,
@@ -16,9 +16,9 @@ public static class BuiltinPropertyValueExtensions
         };
     }
 
-    public static Models.Db.BuiltinPropertyValue ToDbModel(this BuiltinPropertyValue domainModel)
+    public static Models.Db.ReservedPropertyValue ToDbModel(this ReservedPropertyValue domainModel)
     {
-        return new Models.Db.BuiltinPropertyValue
+        return new Models.Db.ReservedPropertyValue
         {
             Id = domainModel.Id,
             Introduction = domainModel.Introduction,

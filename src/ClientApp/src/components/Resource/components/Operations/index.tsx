@@ -102,7 +102,7 @@ export default ({
           title={t('Enhancements')}
           isIconOnly
           onClick={() => {
-            BApi.resource.getResourceEnhancements(resource.id, { additionalItem: EnhancementAdditionalItem.GeneratedCustomPropertyValue })
+            BApi.resource.getResourceEnhancements(resource.id, { additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue })
               .then((t) => {
                 createPortal(ResourceEnhancementsDialog, {
                   resourceId: resource.id,
