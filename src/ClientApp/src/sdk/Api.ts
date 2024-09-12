@@ -162,7 +162,7 @@ export interface BakabaseAbstractionsModelsDomainEnhancement {
   propertyId?: number | null;
   customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
   reservedPropertyValue?: BakabaseAbstractionsModelsDomainReservedPropertyValue;
-  propertyDescriptor?: BakabaseAbstractionsModelsDomainPropertyDescriptor;
+  property?: BakabaseAbstractionsModelsDomainProperty;
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibrary {
@@ -219,7 +219,7 @@ export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultReso
   isCustom?: boolean;
 }
 
-export interface BakabaseAbstractionsModelsDomainPropertyDescriptor {
+export interface BakabaseAbstractionsModelsDomainProperty {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   type?: BakabaseAbstractionsModelsDomainConstantsResourcePropertyType;
   /** @format int32 */
@@ -230,6 +230,7 @@ export interface BakabaseAbstractionsModelsDomainPropertyDescriptor {
   dbValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  customPropertyName?: string | null;
   /** @format int32 */
   customPropertyType?: number;
   options?: any;
@@ -315,7 +316,6 @@ export interface BakabaseAbstractionsModelsDomainResourceSearchFilter {
   propertyType?: BakabaseAbstractionsModelsDomainConstantsResourcePropertyType;
   /** @format int32 */
   propertyId?: number;
-  isCustomProperty?: boolean;
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
   operation?: BakabaseInsideWorldModelsConstantsSearchOperation;
   dbValue?: string | null;

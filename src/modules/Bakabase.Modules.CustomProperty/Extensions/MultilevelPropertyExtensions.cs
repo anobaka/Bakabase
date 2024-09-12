@@ -5,6 +5,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Extensions;
+using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.CustomProperty.Extensions
 {
@@ -126,6 +128,7 @@ namespace Bakabase.Modules.CustomProperty.Extensions
         public static bool AddBranchOptions(this MultilevelPropertyOptions options,
             List<List<string>>? bizValueBranches)
         {
+            bizValueBranches?.TrimAll();
             var optionsChanged = false;
             if (bizValueBranches != null && options.AllowAddingNewDataDynamically)
             {
@@ -152,6 +155,7 @@ namespace Bakabase.Modules.CustomProperty.Extensions
         private static bool AddBranchOptions(this List<MultilevelDataOptions> options, List<string> bizValueBranch,
             int index = 0)
         {
+            bizValueBranch.TrimAll();
             if (index >= bizValueBranch.Count)
             {
                 return false;

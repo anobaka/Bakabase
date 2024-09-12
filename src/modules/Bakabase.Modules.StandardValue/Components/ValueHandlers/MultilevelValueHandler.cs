@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
@@ -30,16 +31,15 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
         protected override string? BuildDisplayValue(List<List<string>> value)
         {
+            value = value.RemoveEmpty();
             return string.Join(InternalOptions.TextSeparator,
-                value.Select(s =>
-                        string.Join(InternalOptions.LayerTextSeparator, s.Where(c => !string.IsNullOrEmpty(c))))
-                    .Where(c => !string.IsNullOrEmpty(c)));
+                value.Select(s => string.Join(InternalOptions.LayerTextSeparator, s)));
         }
 
         protected override List<List<string>>? ConvertToTypedValue(object? currentValue)
         {
-            var data = currentValue as List<List<string>>;
-            return data?.Any(x => x?.Any() == true) == true ? data : null;
+            var data = (currentValue as List<List<string>>)?.RemoveEmpty();
+            return data?.Any() == true ? data : null;
         }
 
         public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(

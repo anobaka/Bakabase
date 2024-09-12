@@ -5,6 +5,7 @@ using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.CustomProperty.Components.Properties.Tags;
@@ -39,6 +40,7 @@ public class TagsPropertyDescriptor(IStandardValueHelper standardValueHelper)
 
     protected override (List<string>? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(TagsProperty property, List<TagValue> bizValue)
     {
+        bizValue.TrimAll();
         if (!bizValue.Any())
         {
             return (null, false);

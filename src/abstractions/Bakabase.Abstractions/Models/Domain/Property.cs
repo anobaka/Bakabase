@@ -23,7 +23,7 @@ public record Property(
     public StandardValueType DbValueType { get; set; } = DbValueType;
     public StandardValueType BizValueType { get; set; } = BizValueType;
 
-    public string? CustomPropertyName { get; set; }
+    public string? CustomPropertyName { get; set; } = CustomPropertyName;
 
     /// <summary>
     /// Only available when <see cref="Type"/> equals <see cref="ResourcePropertyType.Custom"/>

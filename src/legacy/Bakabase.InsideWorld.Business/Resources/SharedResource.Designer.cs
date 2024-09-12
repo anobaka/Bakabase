@@ -61,6 +61,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Filename.
+        /// </summary>
+        internal static string BuiltinPropertyForDisplayName_Filename {
+            get {
+                return ResourceManager.GetString("BuiltinPropertyForDisplayName.Filename", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Component with type [{0}] has not been configured for category [{1}].
         /// </summary>
         internal static string Category_ComponentWithTypeHasNotBeenConfigured {

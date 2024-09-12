@@ -51,6 +51,7 @@ public class SingleChoicePropertyDescriptor(
     protected override (string? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(
         SingleChoiceProperty property, string bizValue)
     {
+        bizValue = bizValue.Trim();
         if (!string.IsNullOrEmpty(bizValue))
         {
             var propertyChanged = (property.Options ??= new ChoicePropertyOptions<string>()).AddChoices(true, [bizValue], null);

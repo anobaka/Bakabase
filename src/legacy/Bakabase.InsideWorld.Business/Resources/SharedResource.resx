@@ -318,4 +318,7 @@
   <data name="Property_DescriptorIsNotFound" xml:space="preserve">
     <value>Property descriptor is not found for type: {0}, id: {1}</value>
   </data>
+  <data name="BuiltinPropertyForDisplayName.Filename" xml:space="preserve">
+    <value>Filename</value>
+  </data>
 </root>

@@ -20,6 +20,7 @@ import {
 } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/models';
 import PropertyFilterValueRenderer
   from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/PropertyFilterValueRenderer';
+import { buildLogger } from '@/components/utils';
 
 interface IProps {
   filter: IFilter;
@@ -28,6 +29,8 @@ interface IProps {
   propertyMap: Record<number, IProperty>;
   dataPool?: DataPool;
 }
+
+const log = buildLogger('Filter');
 
 export default ({
                   filter: propsFilter,
@@ -71,7 +74,7 @@ export default ({
     setFilter(propsFilter);
   }, [propsFilter]);
 
-  // console.log('Filter changed', propsFilter, filter);
+  log(propsFilter, filter, property);
 
   const renderOperations = () => {
     if (filter.propertyId == undefined) {
@@ -93,9 +96,10 @@ export default ({
 
     let operations: SearchOperation[] | undefined;
     if (property) {
-      operations = property.type == ResourcePropertyType.Custom ? standardValueTypeSearchOperationsMap[property.dbValueType] : SearchableReservedPropertySearchOperationsMap[property.id];
+      operations = property.type == ResourcePropertyType.Custom ? standardValueTypeSearchOperationsMap[property.customPropertyType!] : SearchableReservedPropertySearchOperationsMap[property.id];
     }
     operations ??= [];
+    log(operations);
     if (operations.length == 0) {
       return (
         <Tooltip
@@ -136,6 +140,8 @@ export default ({
                     setFilter({
                       ...filter,
                       operation: operation,
+                      dbValue: undefined,
+                      bizValue: undefined,
                     });
                   }}
                 >
@@ -150,7 +156,7 @@ export default ({
   };
 
   const noValue = filter.operation == SearchOperation.IsNull || filter.operation == SearchOperation.IsNotNull;
-  console.log('rendering filter', filter, property, propertyMap, dataPool, internalOptions.resource.reservedResourcePropertyDescriptorMap, internalOptions.resource.internalResourcePropertyDescriptorMap);
+  log('rendering filter', filter, property, propertyMap, dataPool, internalOptions.resource.reservedResourcePropertyDescriptorMap, internalOptions.resource.internalResourcePropertyDescriptorMap);
 
   return (
     <div
@@ -180,10 +186,13 @@ export default ({
                 }],
               onSubmit: async (selectedProperties) => {
                 const property = selectedProperties[0]!;
+                setProperty(property);
                 setFilter({
                   ...filter,
                   propertyId: property.id,
                   propertyType: property.type,
+                  dbValue: undefined,
+                  bizValue: undefined,
                 });
               },
               multiple: false,

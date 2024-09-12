@@ -100,6 +100,7 @@ export default ({
           switch (operation) {
             case SearchOperation.Contains:
             case SearchOperation.NotContains:
+            case SearchOperation.In:
               return true;
           }
         case FilterValueRendererType.Boolean: {

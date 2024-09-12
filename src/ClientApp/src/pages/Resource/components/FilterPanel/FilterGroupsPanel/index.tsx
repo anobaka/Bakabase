@@ -35,6 +35,7 @@ export default ({
     arr.push(...(rsp.data || []).map(d => ({
       ...d,
       type: ResourcePropertyType.Custom,
+      customPropertyType: d.type,
     })));
     setPropertyMap(arr.reduce((s, p) => {
       // @ts-ignore

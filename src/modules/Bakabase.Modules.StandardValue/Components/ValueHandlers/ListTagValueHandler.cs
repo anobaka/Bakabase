@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers;
@@ -35,11 +36,11 @@ public class ListTagValueHandler : AbstractStandardValueHandler<List<TagValue>>
 
     protected override List<TagValue>? ConvertToTypedValue(object? currentValue)
     {
-        var tv = currentValue as List<TagValue>;
+        var tv = (currentValue as List<TagValue>)?.RemoveEmpty();
         return tv?.Any() == true ? tv : null;
     }
 
-    protected override string? BuildDisplayValue(List<TagValue> value) => string.Join(InternalOptions.TextSeparator, value.Select(v => v.ToString()));
+    protected override string? BuildDisplayValue(List<TagValue> value) => string.Join(InternalOptions.TextSeparator, value.RemoveEmpty().Select(v => v.ToString()));
 
     public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(List<TagValue> currentValue)
     {

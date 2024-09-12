@@ -1400,5 +1400,12 @@
   "Delete all enhancement records of this enhancer": "删除当前增强器的所有增强记录",
   "Can not operate on this property": "无法操作当前属性",
   "Unsupported property type: {{type}}": "不支持的属性类型：{{type}}",
-  "Unsupported reserved property type: {{type}}": "不支持的预置属性类型：{{type}}"
+  "Unsupported reserved property type: {{type}}": "不支持的预置属性类型：{{type}}",
+  "Add or delete choices in bulk": "批量添加或删除",
+  "Choices will be separated by line breaks.": "每行是一个选项",
+  "Once you click the submit button, new choices will be added to the list, and missing choices will be deleted.": "一旦您点击了提交按钮，新的数据会被添加至选项列表中，其他未和原数据匹配的选项会被移除",
+  "Be cautions: once you modify the text in one line, it will be treated as a new choice, and the original choice will be deleted.": "请注意：一旦您修改了一行中的文本，它将会被视为一个新的选项，原有的选项将会被删除。",
+  "Please select a property first": "请先选择一个属性",
+  "Not supported": "暂不支持",
+  "BuiltinPropertyForDisplayName.Filename": "文件名"
 }

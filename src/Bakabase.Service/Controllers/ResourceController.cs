@@ -107,7 +107,7 @@ namespace Bakabase.Service.Controllers
                 {
                     var filters = sc.Group.ExtractFilters();
                     var customPropertyIds =
-                        filters.Where(d => d.IsCustomProperty).Select(d => d.PropertyId).ToHashSet();
+                        filters.Where(d => d.PropertyType == ResourcePropertyType.Custom).Select(d => d.PropertyId).ToHashSet();
                     var customPropertyMap =
                         (await _customPropertyService.GetByKeys(customPropertyIds, CustomPropertyAdditionalItem.None))
                         .ToDictionary(d => d.Id, d => d);
@@ -123,7 +123,7 @@ namespace Bakabase.Service.Controllers
                             continue;
                         }
 
-                        if (filter.IsCustomProperty)
+                        if (filter.PropertyType == ResourcePropertyType.Custom)
                         {
                             var property = customPropertyMap.GetValueOrDefault(filter.PropertyId);
                             if (property == null)

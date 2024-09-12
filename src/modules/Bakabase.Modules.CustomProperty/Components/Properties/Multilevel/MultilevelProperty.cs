@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
@@ -79,6 +80,7 @@ public class MultilevelPropertyDescriptor(
     protected override (List<string>? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(
         MultilevelProperty property, List<List<string>> bizValue)
     {
+        bizValue.TrimAll();
         if (bizValue.Any())
         {
             var options = property.Options ??= new MultilevelPropertyOptions();

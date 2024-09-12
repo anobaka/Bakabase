@@ -110,6 +110,11 @@ namespace Bakabase.InsideWorld.Business.Components
             return this[nameof(Property_DescriptorIsNotFound), type, propertyId];
         }
 
+        public string BuiltinPropertyNameForDisplayName(BuiltinPropertyForDisplayName property)
+        {
+            return this[$"{nameof(BuiltinPropertyForDisplayName)}.{property.ToString()}"];
+        }
+
         public string CustomProperty_DescriptorNotFound(int propertyType)
         {
             return this[nameof(CustomProperty_DescriptorNotFound), propertyType];

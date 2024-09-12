@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -72,6 +73,7 @@ namespace Bakabase.InsideWorld.Business.Services
         protected ComponentService ComponentService => GetRequiredService<ComponentService>();
         protected CategoryComponentService CategoryComponentService => GetRequiredService<CategoryComponentService>();
         protected IStringLocalizer<SharedResource> Localizer => GetRequiredService<IStringLocalizer<SharedResource>>();
+        protected IBakabaseLocalizer BakabaseLocalizer => GetRequiredService<IBakabaseLocalizer>();
         protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
 
         protected ICategoryEnhancerOptionsService CategoryEnhancerOptionsService =>
@@ -581,6 +583,17 @@ namespace Bakabase.InsideWorld.Business.Services
                     return null;
                 });
 
+            foreach (var b in SpecificEnumUtils<BuiltinPropertyForDisplayName>.Values)
+            {
+                var name = BakabaseLocalizer.BuiltinPropertyNameForDisplayName(b);
+                var key = $"{{{name}}}";
+                replacements[key] = b switch
+                {
+                    BuiltinPropertyForDisplayName.Filename => resource.FileName,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+            }
+
             var segments =
                 CategoryHelpers.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
 
@@ -607,7 +620,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     [
                         new ResourceSearchFilter
                         {
-                            IsCustomProperty = false,
+                            PropertyType = ResourcePropertyType.Internal,
                             Operation = SearchOperation.In,
                             PropertyId = (int) ResourceProperty.Category,
                             DbValue = new[] {id.ToString()}.SerializeAsStandardValue(StandardValueType.ListString)

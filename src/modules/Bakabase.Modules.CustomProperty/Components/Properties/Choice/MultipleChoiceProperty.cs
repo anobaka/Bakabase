@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
@@ -48,6 +49,7 @@ public class MultipleChoicePropertyDescriptor(
     protected override (List<string>? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(
         MultipleChoiceProperty property, List<string> bizValue)
     {
+        bizValue = bizValue.RemoveEmpty();
         if (bizValue.Any())
         {
             var propertyChanged =

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
@@ -44,14 +45,14 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
         protected override string? BuildDisplayValue(List<string> value)
         {
-            return string.Join(InternalOptions.TextSeparator, value.Where(v => !string.IsNullOrEmpty(v)));
+            return string.Join(InternalOptions.TextSeparator, value.RemoveEmpty());
         }
 
         protected override List<string>? ConvertToTypedValue(object? currentValue)
         {
             if (currentValue is List<string> list)
             {
-                list = list.Distinct().Where(s => !string.IsNullOrEmpty(s)).ToList();
+                list = list.RemoveEmpty().Distinct().ToList();
                 if (list.Any())
                 {
                     return list;

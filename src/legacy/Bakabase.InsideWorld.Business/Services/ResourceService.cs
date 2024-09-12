@@ -154,7 +154,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         {
                             DbValue = model.Keyword.SerializeAsStandardValue(StandardValueType.String),
                             Operation = SearchOperation.Contains,
-                            IsCustomProperty = false,
+                            PropertyType = ResourcePropertyType.Internal,
                             PropertyId = (int) ResourceProperty.FileName
                         }
                     ]

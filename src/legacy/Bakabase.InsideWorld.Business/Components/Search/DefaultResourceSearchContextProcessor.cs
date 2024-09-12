@@ -36,7 +36,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
     {
         private async Task PrepareAliases(ResourceSearchFilter filter, ResourceSearchContext context)
         {
-            if (filter.IsCustomProperty)
+            if (filter.PropertyType == ResourcePropertyType.Custom)
             {
                 var property = context.PropertiesDataPool?.GetValueOrDefault(filter.PropertyId);
                 if (property != null)
@@ -94,7 +94,7 @@ namespace Bakabase.InsideWorld.Business.Components.Search
 			HashSet<int>? set = null;
 			if (filter.PropertyId != 0 && filter.Operation != 0)
 			{
-				if (!filter.IsCustomProperty)
+				if (filter.PropertyType != ResourcePropertyType.Custom)
 				{
 					var property = (SearchableReservedProperty) filter.PropertyId;
 					switch (property)

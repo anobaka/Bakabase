@@ -8,8 +8,11 @@ import { extractResourceDisplayNameTemplate } from './helpers';
 import { Button, Chip, Code, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import {
-  CategoryResourceDisplayNameSegmentType,
+  builtinPropertyForDisplayNames,
+  builtinResourcePropertyForDisplayNames,
   CategoryAdditionalItem,
+  CategoryResourceDisplayNameSegmentType,
+  ResourcePropertyType,
   SpecialTextType,
 } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
@@ -65,7 +68,9 @@ export default ({
   const [wrappers, setWrappers] = useState<Wrapper[]>([]);
   const [category, setCategory] = useState<ICategory>();
 
-  const propertiesRef = useRef<IProperty[]>([]);
+  const [variables, setVariables] = useState<string[]>([]);
+
+  // const propertiesRef = useRef<IProperty[]>([]);
   const [templateHtml, setTemplateHtml] = useState<string>('');
   const templateRef = useRef('');
 
@@ -87,10 +92,20 @@ export default ({
       name: c.name!,
     });
 
-    const arr: IProperty[] = [];
-    const cps = c.customProperties as IProperty[] || [];
-    arr.push(...cps);
-    propertiesRef.current = arr;
+    // const arr: IProperty[] = [];
+    // // @ts-ignore
+    // const cps = (c.customProperties || []).map<IProperty>(cp => ({
+    //   ...cp,
+    //   type: ResourcePropertyType.Custom,
+    //   customPropertyType: cp.type!,
+    // }));
+    // arr.push(...cps);
+    // propertiesRef.current = arr;
+
+    const builtinPropertyNames = builtinPropertyForDisplayNames.map(v => t(`BuiltinPropertyForDisplayName.${v.label}`));
+    const customPropertyNames = c.customProperties?.map(cp => cp.name!) ?? [];
+
+    setVariables(builtinPropertyNames.concat(customPropertyNames));
 
     templateRef.current = c.resourceDisplayNameTemplate ?? '';
     setTemplateHtml(c.resourceDisplayNameTemplate ? buildTemplateHtml(c.resourceDisplayNameTemplate) : '');
@@ -105,7 +120,6 @@ export default ({
   };
 
   const buildTemplateHtml = (template: string) => {
-    const variables = propertiesRef.current.map(p => p.name!);
     const parts = extractResourceDisplayNameTemplate(template, variables, wrappers);
     const components = parts.map(p => renderDisplayNameSegment(p));
     const html = renderToString(<>{components}</>);
@@ -140,7 +154,8 @@ export default ({
             <Trans
               i18nKey={'category.displayNameTemplate.propertyExample'}
               values={{
-                samplePropertyName: propertiesRef.current[0]?.name ?? t('Name'),
+                // samplePropertyName: propertiesRef.current[0]?.name ?? t('Name'),
+                samplePropertyName: variables?.[0] ?? t('Name'),
               }}
             >
               To add a property value as a variable in the template, you can use the following
@@ -156,16 +171,16 @@ export default ({
           </div>
         </div>
         <div className={'flex flex-wrap gap-1 mt-2'}>
-          {propertiesRef.current.map(p => (
+          {variables?.map(p => (
             <Button
               size={'sm'}
-              key={p.id}
+              key={p}
               onClick={() => {
-                templateRef.current += `{${p.name}}`;
+                templateRef.current += `{${p}}`;
                 setTemplateHtml(buildTemplateHtml(templateRef.current));
               }}
             >
-              {p.name}
+              {p}
             </Button>
           ))}
         </div>

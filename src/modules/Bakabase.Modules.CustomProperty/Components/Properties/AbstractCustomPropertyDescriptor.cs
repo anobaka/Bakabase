@@ -128,7 +128,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
             {
                 Operation = sf.Value.Operation,
                 DbValue = sf.Value.DbValue.SerializeAsStandardValue(property.DbValueType),
-                IsCustomProperty = true,
+                PropertyType = ResourcePropertyType.Custom,
                 PropertyId = property.Id
             };
         }

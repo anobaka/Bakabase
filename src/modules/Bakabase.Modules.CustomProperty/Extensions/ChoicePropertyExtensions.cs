@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Extensions;
 using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.CustomProperty.Extensions
@@ -25,6 +26,8 @@ namespace Bakabase.Modules.CustomProperty.Extensions
         {
             if (options.AllowAddingNewDataDynamically)
             {
+                values = values.RemoveEmpty().ToArray();
+
                 options.Choices ??= [];
                 if (ignoreSameValue)
                 {

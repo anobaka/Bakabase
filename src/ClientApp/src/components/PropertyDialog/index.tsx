@@ -37,6 +37,7 @@ import 'ace-builds/src-noconflict/theme-monokai';
 import 'ace-builds/src-noconflict/ext-language_tools';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
+import { optimizeOptions } from '@/components/PropertyDialog/helpers';
 
 interface IProps {
   value?: CustomPropertyForm;
@@ -90,7 +91,10 @@ const PropertyDialog = ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [visible, setVisible] = useState(true);
-  const [property, setProperty] = useState<CustomPropertyForm>(JSON.parse(JSON.stringify(value || {})));
+  const [property, setProperty] = useState<CustomPropertyForm>(JSON.parse(JSON.stringify({
+    ...(value || {}),
+    options: optimizeOptions(value?.options),
+  })));
 
   const [typeGroupsVisible, setTypeGroupsVisible] = useState(false);
 

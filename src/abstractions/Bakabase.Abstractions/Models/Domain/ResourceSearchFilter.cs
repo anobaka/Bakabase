@@ -7,7 +7,6 @@ namespace Bakabase.Abstractions.Models.Domain
     {
         public ResourcePropertyType PropertyType { get; set; }
         public int PropertyId { get; set; }
-        public bool IsCustomProperty { get; set; }
         public SearchOperation Operation { get; set; }
         public string? DbValue { get; set; }
         public string? BizValue { get; set; }

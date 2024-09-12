@@ -25,4 +25,5 @@ public interface IBakabaseLocalizer
     string SpecialText_HistoricalLanguageValue2ShouldBeModified();
     string Reserved_Resource_Property_Name(ReservedResourceProperty property);
     string Property_DescriptorIsNotFound(ResourcePropertyType type, int propertyId);
+    string BuiltinPropertyNameForDisplayName(BuiltinPropertyForDisplayName property);
 }

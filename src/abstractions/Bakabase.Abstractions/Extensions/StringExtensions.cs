@@ -137,4 +137,29 @@ public static class StringExtensions
             return false;
         }
     }
+
+    public static List<string> RemoveEmpty(this IEnumerable<string> arr) =>
+        arr.Select(a => a.Trim()).Where(a => a.IsNotEmpty()).ToList();
+
+    public static void TrimAll(this IList<string> arr)
+    {
+        for (var i = 0; i < arr.Count; i++)
+        {
+            arr[i] = arr[i].Trim();
+        }
+    }
+
+    public static List<List<string>> RemoveEmpty(this IEnumerable<IEnumerable<string>> arr) => arr
+        .Select(b => b.Select(x => x.Trim()).Where(x => x.IsNotEmpty()).ToList()).Where(x => x.Any()).ToList();
+
+    public static void TrimAll(this List<List<string>> branches)
+    {
+        foreach (var t in branches)
+        {
+            for (var j = 0; j < t.Count; j++)
+            {
+                t[j] = t[j].Trim();
+            }
+        }
+    }
 }
