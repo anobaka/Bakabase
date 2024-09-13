@@ -1,6 +1,6 @@
 中文|[English](/README-en.md)
 
-Inside World 是一款离线媒体管理库，用于本地媒体快速处理、搜索、预览与播放。
+~~Inside World~~ Bakabase 是一款离线媒体管理库，用于本地媒体快速处理、搜索、预览与播放。
 
 目前支持动画、漫画、音声、本子、电影、图集等媒体的管理，老司机食用效果更加哦~
 
@@ -19,6 +19,10 @@ Inside World 是一款离线媒体管理库，用于本地媒体快速处理、�
 ![categary-path-segment-matcher-3-4](./docs/img/categary-path-segment-matcher-3-4.png)
 ![file-processor-basic](./docs/img/file-processor-basic.png)
 ![downloader-1](./docs/img/downloader-1.png)
+
+## 如何参与
+
+您可以查看开发文档(https://inside-world.anobaka.com/#/dev/dev)
 
 ## Star History
 

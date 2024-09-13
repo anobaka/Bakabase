@@ -1,213 +1,158 @@
-import {
-  AutoSizer,
-  CellMeasurer,
-  CellMeasurerCache,
-  createMasonryCellPositioner,
-  Masonry,
-  WindowScroller,
-} from 'react-virtualized';
-import React, { useRef } from 'react';
-import { useUpdateEffect } from 'react-use';
+import { AutoSizer, CellMeasurer, CellMeasurerCache, Grid } from 'react-virtualized';
+import React, { useEffect, useRef } from 'react';
+import { useUpdate, useUpdateEffect } from 'react-use';
+import { buildLogger } from '@/components/utils';
 
 const Gap = 10;
 
+type ScrollEvent = {
+  clientHeight: number;
+  clientWidth: number;
+  scrollHeight: number;
+  scrollLeft: number;
+  scrollTop: number;
+  scrollWidth: number;
+};
+
 interface IProps {
   columnCount: number;
-  scrollElement: any;
   loadMore?: () => Promise<any>;
-  overscanByRowCount?: number;
-  renderCell: (index: number, style: any) => any;
+  renderCell: ({
+                 columnIndex, // Horizontal (column) index of cell
+                 // isScrolling, // The Grid is currently being scrolled
+                 // isVisible, // This cell is visible within the grid (eg it is not an overscanned cell)
+                 key, // Unique key within array of cells
+                 parent, // Reference to the parent Grid (instance)
+                 rowIndex, // Vertical (row) index of cell
+                 style,
+                 measure,
+               }) => any;
   cellCount: number;
+  onScroll?: (event: ScrollEvent) => any;
 }
+
+const log = buildLogger('ResourceGrid');
 
 export default ({
                   columnCount,
-                  scrollElement,
                   loadMore,
-                  overscanByRowCount = 5,
                   renderCell,
                   cellCount,
+                  onScroll,
                 }: IProps) => {
   const loadingRef = useRef<boolean>(false);
-
+  const gridRef = useRef<any>();
   const cacheRef = useRef(new CellMeasurerCache({
     defaultHeight: 250,
     defaultWidth: 200,
     fixedWidth: true,
   }));
+  const verScrollbarWidthRef = useRef(0);
 
-  const cellPositionerRef = useRef<any>();
-  const masonryRef = useRef<any>();
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const resizeObserver = new ResizeObserver(() => {
+      onResize();
+    });
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect(); // clean up
+  }, []);
 
-  const gridInfoRef = useRef<{
-    columnWidth?: number;
-    width?: number;
-    height: number;
-    scrollTop: number;
-    overscanByPixels: number;
-  }>({
-    height: 0,
-    scrollTop: 0,
-    overscanByPixels: 0,
-  });
+  const forceUpdate = useUpdate();
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const cellRenderer = ({
+                          columnIndex,
+                          key,
+                          parent,
+                          rowIndex,
+                          style,
+                        }) => (
+                          <CellMeasurer
+                            cache={cacheRef.current}
+                            columnIndex={columnIndex}
+                            key={key}
+                            parent={parent}
+                            rowIndex={rowIndex}
+                          >
+                            {({ measure }) => renderCell({
+        columnIndex,
+        key,
+        parent,
+        rowIndex,
+        style,
+        measure,
+      })}
+                          </CellMeasurer>
+  );
 
   useUpdateEffect(() => {
-    _calculateColumnWidth();
-    // console.log('resize', gridInfoRef.current.columnWidth, columnCount);
-    _resetCellPositioner();
-    cacheRef.current.clearAll();
-    masonryRef.current.clearCellPositions();
-    masonryRef.current.recomputeCellPositions();
   }, [columnCount]);
 
-  function _calculateColumnWidth() {
-    const { width } = gridInfoRef.current;
-
-    gridInfoRef.current.columnWidth = (width! - (columnCount! - 1)! * Gap) / columnCount!;
-  }
-
-  function _cellRenderer({
-                           index,
-                           key,
-                           parent,
-                           style,
-                         }) {
-    const { columnWidth } = gridInfoRef.current;
-
-    // console.log(index, style);
-
-    return (
-      <CellMeasurer cache={cacheRef.current} index={index} key={key} parent={parent}>
-        {renderCell(index, {
-          ...style,
-          width: columnWidth,
-        })}
-      </CellMeasurer>
-    );
-  }
-
-  function _resetCellPositioner() {
-    const {
-      columnWidth,
-    } = gridInfoRef.current;
-
-    console.log('reset cell positioner', columnCount, columnWidth, Gap);
-
-    cellPositionerRef.current.reset({
-      columnCount: columnCount,
-      columnWidth: columnWidth!,
-      spacer: Gap,
-    });
-  }
-
-  function _onResize({ width }) {
-    gridInfoRef.current.width = width;
-
-    _calculateColumnWidth();
-    _resetCellPositioner();
+  const onResize = () => {
+    log('on resize');
+    forceUpdate();
     cacheRef.current.clearAll();
-    masonryRef.current.clearCellPositions();
-    masonryRef.current.recomputeCellPositions();
-}
+  };
 
-  function _renderAutoSizer({
-                              height,
-                              scrollTop,
-                            }) {
-    gridInfoRef.current.height = height;
-    gridInfoRef.current.scrollTop = scrollTop;
+  function renderGrid() {
+    const containerWidth = containerRef.current?.clientWidth ?? 0;
+    const containerHeight = containerRef.current?.clientHeight ?? 0;
 
-    const { overscanByPixels } = gridInfoRef.current;
+    const columnWidth = (containerWidth - verScrollbarWidthRef.current) / columnCount;
 
-    // console.log('scroll', scrollTop, height, overscanByPixels);
+    log(containerWidth, containerHeight, columnWidth, columnCount, gridRef);
 
     return (
-      <AutoSizer
-        disableHeight
-        height={height}
-        onResize={_onResize}
-        overscanByPixels={overscanByPixels}
-        scrollTop={gridInfoRef.current.scrollTop}
-      >
-        {_renderMasonry}
-      </AutoSizer>
-    );
-  }
-
-  function _initCellPositioner() {
-    if (typeof cellPositionerRef.current === 'undefined') {
-      const {
-        columnWidth,
-      } = gridInfoRef.current;
-
-      console.log('init cell positioner', columnCount, columnWidth, Gap);
-
-      cellPositionerRef.current = createMasonryCellPositioner({
-        cellMeasurerCache: cacheRef.current,
-        columnCount: columnCount,
-        columnWidth,
-        spacer: Gap,
-      });
-    }
-  }
-
-  function _setMasonryRef(ref) {
-    masonryRef.current = ref;
-  }
-
-  function _renderMasonry({ width }) {
-    gridInfoRef.current.width = width;
-
-    _calculateColumnWidth();
-    _initCellPositioner();
-
-    const {
-      height,
-      overscanByPixels,
-      scrollTop,
-    } = gridInfoRef.current;
-
-    return (
-      <Masonry
-        autoHeight
-        cellCount={cellCount}
-        cellMeasurerCache={cacheRef.current}
-        cellPositioner={cellPositionerRef.current}
-        cellRenderer={_cellRenderer}
-        height={height ?? 0}
-        overscanByPixels={overscanByPixels}
-        ref={_setMasonryRef}
-        scrollTop={scrollTop}
-        onCellsRendered={({
-                            startIndex,
-                            stopIndex,
-                          }: { startIndex: number; stopIndex: number }) => {
-          // const rowStartIndex = Math.ceil((startIndex + 1) / virtualizedRef.current.columnCount) - 1;
-          const rowEndIndex = Math.ceil((stopIndex + 1) / columnCount) - 1;
-          const maxRowIndex = Math.ceil(cellCount / columnCount) - 1;
-          if (rowEndIndex + overscanByRowCount > maxRowIndex) {
-            if (!loadingRef.current && loadMore) {
-              loadingRef.current = true;
-              loadMore().finally(() => {
-                loadingRef.current = false;
-              });
-              // console.log('load more resources');
-            } else {
-
-            }
+      <div
+        onResize={e => {
+          log('resize', e);
+        }}
+        className={'grow min-h-[0] overflow-hidden'}
+        ref={r => {
+          if (!containerRef.current) {
+            containerRef.current = r;
+            forceUpdate();
           }
         }}
-        width={width}
-      />
+      >
+        {containerRef.current && (
+          <AutoSizer>
+            {({
+                height,
+                width,
+              }) => (
+                <Grid
+                  ref={gridRef}
+                // height={containerHeight}
+                // width={containerWidth}
+                  width={width}
+                  height={height}
+                  cellRenderer={cellRenderer}
+                  overscanRowCount={2}
+                  columnCount={columnCount}
+                  columnWidth={columnWidth}
+                  rowCount={Math.ceil(cellCount / columnCount)}
+                  rowHeight={cacheRef.current.rowHeight}
+                  onScrollbarPresenceChange={e => {
+                    log('onScrollbarPresenceChange', e);
+                    const newWidth = e.vertical ? e.size : 0;
+                    if (newWidth != verScrollbarWidthRef.current) {
+                      verScrollbarWidthRef.current = newWidth;
+                      onResize();
+                    }
+                  }}
+                  onScroll={e => {
+                    log('onScroll', e);
+                    onScroll?.(e);
+                  }}
+                />)}
+          </AutoSizer>
+        )}
+      </div>
     );
   }
 
-  return (
-    <WindowScroller
-      overscanByPixels={gridInfoRef.current.overscanByPixels}
-      scrollElement={scrollElement}
-    >
-      {_renderAutoSizer}
-    </WindowScroller>
-  );
+  return renderGrid();
 };

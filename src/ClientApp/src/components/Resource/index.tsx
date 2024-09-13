@@ -284,6 +284,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
       className={`flex flex-col p-1 rounded relative border-1 border-default-200 group ${styles.resource} ${props.className}`}
       key={resource.id}
       style={style}
+      role={'resource'}
+      data-id={resource.id}
     >
       <Operations
         resource={resource}

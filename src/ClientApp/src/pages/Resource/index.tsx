@@ -14,6 +14,7 @@ import BusinessConstants from '@/components/BusinessConstants';
 import ResourceMasonry from '@/pages/Resource/components/ResourceMasonry';
 import { Button, Pagination, Spinner } from '@/components/bakaui';
 import type { BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel } from '@/sdk/Api';
+import { buildLogger } from '@/components/utils';
 
 const PageSize = 100;
 const MinResourceWidth = 100;
@@ -24,23 +25,37 @@ interface IPageable {
   totalCount: number;
 }
 
+const log = buildLogger('ResourcePage');
+
+const convertToDto = (form: ISearchForm) => {
+  return {
+    ...form,
+    group: convertFilterGroupToDto(form.group),
+  };
+};
+
 export default () => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const [pageable, setPageable] = useState<IPageable>();
+  const pageableRef = useRef(pageable);
 
   const [resources, setResources] = useState<any[]>([]);
+  const resourcesRef = useRef(resources);
 
   const uiOptions = store.useModelState('uiOptions');
 
   const [columnCount, setColumnCount] = useState<number>(0);
-  const [searchForm, setSearchForm] = useState<Partial<ISearchForm>>();
+  const [searchForm, setSearchForm] = useState<ISearchForm>();
   const searchFormRef = useRef(searchForm);
 
   const [searching, setSearching] = useState(true);
+  const searchingRef = useRef(false);
 
   const [bulkOperationMode, setBulkOperationMode] = useState<boolean>(false);
   const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
+
+  const initStartPageRef = useRef(1);
 
   useEffect(() => {
     const c = uiOptions.resource?.colCount ?? BusinessConstants.DefaultResourceColumnCount;
@@ -53,26 +68,40 @@ export default () => {
     searchFormRef.current = searchForm;
   }, [searchForm]);
 
+  useEffect(() => {
+    searchingRef.current = searching;
+  }, [searching]);
+
+  useEffect(() => {
+    pageableRef.current = pageable;
+  }, [pageable]);
+
+  useEffect(() => {
+    resourcesRef.current = resources;
+  }, [resources]);
+
   const pageContainerRef = useRef<any>();
 
-  const search = async (partialForm: Partial<ISearchForm>, renderMode: 'append' | 'replace', replaceSearchCriteria: boolean = false) => {
+  const search = async (partialForm: Partial<ISearchForm>, renderMode: 'append' | 'replace', replaceSearchCriteria: boolean = false, save: boolean = true) => {
     const baseForm = replaceSearchCriteria ? {} : searchForm;
 
     const newForm = {
       ...baseForm,
       ...partialForm,
       pageSize: PageSize,
-      save: true,
-    };
+    } as ISearchForm;
 
     setSearchForm(newForm);
-    console.log('Search resources', newForm);
+    log('Search resources', newForm);
 
     const dto: BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel = {
-      ...newForm,
-      group: convertFilterGroupToDto(newForm.group),
-      saveSearchCriteria: true,
+      ...convertToDto(newForm),
+      saveSearchCriteria: save,
     };
+
+    if (resourcesRef.current.length == 0 || renderMode == 'replace') {
+      initStartPageRef.current = newForm.pageIndex ?? 1;
+    }
 
     if (renderMode == 'replace') {
       setResources([]);
@@ -81,10 +110,17 @@ export default () => {
     setSearching(true);
     const rsp = await BApi.resource.searchResources(dto);
 
-    setPageable({
-      page: rsp.pageIndex!,
-      pageSize: PageSize,
-      totalCount: rsp.totalCount!,
+    if (renderMode == 'replace') {
+      setPageable({
+        page: rsp.pageIndex!,
+        pageSize: PageSize,
+        totalCount: rsp.totalCount!,
+      });
+    }
+
+    setSearchForm({
+      ...newForm,
+      pageIndex: rsp.pageIndex!,
     });
 
     const newResources = rsp.data || [];
@@ -99,13 +135,23 @@ export default () => {
   useEffect(() => {
     BApi.resource.getResourceSearchCriteria().then(r => {
       // @ts-ignore
-      search(r.data || {}, false);
+      search(r.data || {}, 'replace');
     });
+
+    const handleScroll = () => {
+      console.log(window.scrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   return (
     <div
-      className={styles.resourcePage}
+      className={`${styles.resourcePage} flex flex-col h-full max-h-full relative`}
       ref={r => {
         pageContainerRef.current = r?.parentElement;
       }}
@@ -156,8 +202,64 @@ export default () => {
           <ResourceMasonry
             cellCount={resources.length}
             columnCount={columnCount}
-            scrollElement={pageContainerRef.current}
-            renderCell={(index, style) => {
+            onScroll={e => {
+              if (e.scrollHeight < e.scrollTop + e.clientHeight + 200 && !searchingRef.current) {
+                searchingRef.current = true;
+                const totalPage = Math.ceil((pageable?.totalCount ?? 0) / PageSize);
+                if (searchFormRef.current?.pageIndex != undefined && searchFormRef.current.pageIndex < totalPage) {
+                  search({
+                    pageIndex: searchFormRef.current.pageIndex + 1,
+                  }, 'append', false, false);
+                }
+              }
+
+              const items = pageContainerRef.current?.querySelectorAll("div[role='resource']");
+              if (items && items.length > 0) {
+                const x = e.clientWidth / 2;
+                const y = e.scrollTop + e.clientHeight / 2;
+                log('on Scroll', `center: ${x},${y}`);
+                let closest = items[0];
+                let minDis = Number.MAX_VALUE;
+                for (const item of items) {
+                  const parent = item.parentElement;
+                  const ix = parent.offsetLeft + parent.clientWidth / 2;
+                  const iy = parent.offsetTop + parent.clientHeight / 2;
+                  const dis = Math.abs((ix - x) ** 2 + (iy - y) ** 2);
+                  if (dis < minDis) {
+                    minDis = dis;
+                    closest = item;
+                  }
+                }
+                const centerResourceId = parseInt(closest.getAttribute('data-id'), 10);
+                const pageOffset = Math.floor(resources.findIndex(r => r.id == centerResourceId) / PageSize);
+                const currentPage = pageOffset + initStartPageRef.current;
+                log('on Scroll', 'center item', centerResourceId, closest, 'page offset', pageOffset, 'active page', currentPage);
+                if (currentPage != pageableRef.current?.page) {
+                  setPageable({
+                    ...pageableRef.current!,
+                    page: currentPage,
+                  });
+                  BApi.options.patchResourceOptions({
+                    searchCriteria: convertToDto({
+                      ...searchFormRef.current!,
+                      pageIndex: currentPage,
+                    }),
+                  });
+                }
+              }
+            }}
+            renderCell={({
+                           columnIndex, // Horizontal (column) index of cell
+                           // isScrolling, // The Grid is currently being scrolled
+                           // isVisible, // This cell is visible within the grid (eg it is not an overscanned cell)
+                           key, // Unique key within array of cells
+                           parent, // Reference to the parent Grid (instance)
+                           rowIndex, // Vertical (row) index of cell
+                           style, // Style object to be applied to cell (to position it);
+                           // This must be passed through to the rendered cell element.
+              measure,
+                         }) => {
+              const index = rowIndex * columnCount + columnIndex;
               if (index >= resources.length) {
                 return null;
               }
@@ -165,8 +267,11 @@ export default () => {
               const selected = selectedResourceIds.includes(resource.id);
               return (
                 <div
-                  className={'relative'}
-                  style={style}
+                  className={'relative p-0.5'}
+                  style={{
+                    ...style,
+                  }}
+                  onLoad={measure}
                 >
                   {bulkOperationMode && (
                     <div
@@ -181,8 +286,8 @@ export default () => {
                         }
                       }}
                     >
-                      {selected ? <CheckCircleTwoTone className={'text-5xl'}/>
-                        : <CheckCircleOutlined className={'text-5xl opacity-80'}/>}
+                      {selected ? <CheckCircleTwoTone className={'text-5xl'} />
+                        : <CheckCircleOutlined className={'text-5xl opacity-80'} />}
                     </div>
                   )}
                   <Resource
@@ -195,18 +300,14 @@ export default () => {
                 </div>
               );
             }}
-            loadMore={async () => {
-              const totalPage = Math.ceil((pageable?.totalCount ?? 0) / PageSize);
-              if ((pageable?.page ?? 0) < totalPage) {
-                await search({
-                  pageIndex: (pageable?.page ?? 0) + 1,
-                }, 'append');
-              }
-            }}
           />
         </>
       )}
-      <div className={'mt-10 flex items-center gap-2 justify-center'}>
+      <div
+        className={'mt-10 flex items-center gap-2 justify-center bottom-0 left-0 w-full'}
+        style={{ position: resources.length == 0 ? 'relative' : 'absolute' }}
+      >
+        {/* <Spinner label={t('Searching...')} /> */}
         {searching ? (
           <Spinner label={t('Searching...')} />
         ) : (resources.length == 0) && (

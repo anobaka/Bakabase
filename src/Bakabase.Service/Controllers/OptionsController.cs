@@ -420,6 +420,11 @@ namespace Bakabase.Service.Controllers
                     options.PropertyValueScopePriority = model.PropertyValueScopePriority;
                 }
 
+                if (model.SearchCriteria != null)
+                {
+                    options.LastSearchV2 = model.SearchCriteria;
+                }
+
             });
             return BaseResponseBuilder.Ok;
         }

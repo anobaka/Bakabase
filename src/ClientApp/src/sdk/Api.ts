@@ -827,6 +827,7 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOpt
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
   coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
   propertyValueScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[] | null;
+  searchCriteria?: BakabaseAbstractionsModelsDtoResourceSearchDto;
 }
 
 export interface BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel {
