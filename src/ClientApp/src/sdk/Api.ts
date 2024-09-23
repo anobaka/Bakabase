@@ -484,14 +484,6 @@ export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewMo
  */
 export type BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType = 1 | 2 | 3 | 4;
 
-export interface BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel {
-  /** @format int32 */
-  totalDataCount?: number;
-  /** @format int32 */
-  incompatibleDataCount?: number;
-  lossData?: Record<string, string[]>;
-}
-
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel {
   language?: string | null;
   enablePreReleaseChannel?: boolean | null;
@@ -1546,25 +1538,40 @@ export type BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustom
   | 15
   | 16;
 
-export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModel {
-  results?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTin[] | null;
+export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
+  results?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTin[] | null;
 }
 
-export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTin {
+export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTin {
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type?: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   serializedBizValue?: string | null;
-  outputs?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTout[] | null;
+  outputs?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTout[] | null;
 }
 
-export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModelTout {
+export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTout {
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type?: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   serializedBizValue?: string | null;
+}
+
+export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel {
+  /** @format int32 */
+  dataCount?: number;
+  changes?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionPreviewViewModelChange[] | null;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  fromType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  toType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+}
+
+export interface BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionPreviewViewModelChange {
+  serializedFromValue?: string | null;
+  serializedToValue?: string | null;
 }
 
 export type BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter = object;
@@ -1657,6 +1664,36 @@ export interface BakabaseModulesEnhancerModelsViewResourceEnhancementsTargetEnha
   target?: number;
   targetName?: string | null;
   enhancement?: BakabaseAbstractionsModelsDomainEnhancement;
+}
+
+/**
+ * [1: Directly, 2: Incompatible, 4: ValuesWillBeMerged, 8: DateWillBeLost, 16: StringToTag, 64: OnlyFirstValidRemains, 128: StringToDateTime, 256: StringToTime, 1024: UrlWillBeLost, 2048: StringToNumber, 8192: Trim, 16384: StringToLink, 32768: ValueWillBeSplit, 65536: BooleanToNumber, 131072: TimeToDateTime, 262144: TagGroupWillBeLost, 524288: ValueToBoolean]
+ * @format int32
+ */
+export type BakabaseModulesStandardValueAbstractionsModelsDomainConstantsStandardValueConversionRule =
+  | 1
+  | 2
+  | 4
+  | 8
+  | 16
+  | 64
+  | 128
+  | 256
+  | 1024
+  | 2048
+  | 8192
+  | 16384
+  | 32768
+  | 65536
+  | 131072
+  | 262144
+  | 524288;
+
+export interface BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel {
+  /** [1: Directly, 2: Incompatible, 4: ValuesWillBeMerged, 8: DateWillBeLost, 16: StringToTag, 64: OnlyFirstValidRemains, 128: StringToDateTime, 256: StringToTime, 1024: UrlWillBeLost, 2048: StringToNumber, 8192: Trim, 16384: StringToLink, 32768: ValueWillBeSplit, 65536: BooleanToNumber, 131072: TimeToDateTime, 262144: TagGroupWillBeLost, 524288: ValueToBoolean] */
+  rule?: BakabaseModulesStandardValueAbstractionsModelsDomainConstantsStandardValueConversionRule;
+  name?: string | null;
+  description?: string | null;
 }
 
 export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
@@ -1951,13 +1988,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDtoResourceSearchDto;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel {
-  /** @format int32 */
-  code?: number;
-  message?: string | null;
-  data?: BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
   /** @format int32 */
   code?: number;
@@ -2140,11 +2170,18 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldModelsModelsEntitiesComponentOptions;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModel {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
   /** @format int32 */
   code?: number;
   message?: string | null;
-  data?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModel;
+  data?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionExampleViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
@@ -2152,6 +2189,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   code?: number;
   message?: string | null;
   data?: Record<string, BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel {
+  /** @format int32 */
+  code?: number;
+  message?: string | null;
+  data?: Record<string, Record<string, BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel[]>>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseAbstractionsModelsDomainSpecialText {
@@ -4329,20 +4373,38 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags CustomProperty
-     * @name CalculateCustomPropertyTypeConversionLoss
-     * @request POST:/custom-property/{id}/{type}/loss
+     * @name PreviewCustomPropertyTypeConversion
+     * @request POST:/custom-property/{sourceCustomPropertyId}/{targetType}/conversion-preview
      */
-    calculateCustomPropertyTypeConversionLoss: (
-      id: number,
-      type: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType,
+    previewCustomPropertyTypeConversion: (
+      sourceCustomPropertyId: number,
+      targetType: BakabaseModulesCustomPropertyAbstractionsModelsDomainConstantsCustomPropertyType,
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewCustomPropertyTypeConversionLossViewModel,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel,
         any
       >({
-        path: `/custom-property/${id}/${type}/loss`,
+        path: `/custom-property/${sourceCustomPropertyId}/${targetType}/conversion-preview`,
         method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name GetCustomPropertyConversionRules
+     * @request GET:/custom-property/conversion-rule
+     */
+    getCustomPropertyConversionRules: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel,
+        any
+      >({
+        path: `/custom-property/conversion-rule`,
+        method: "GET",
         format: "json",
         ...params,
       }),
@@ -4412,7 +4474,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     testCustomPropertyTypeConversion: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionOverviewViewModel,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesCustomPropertyModelsViewCustomPropertyTypeConversionExampleViewModel,
         any
       >({
         path: `/custom-property/type-conversion-overview`,

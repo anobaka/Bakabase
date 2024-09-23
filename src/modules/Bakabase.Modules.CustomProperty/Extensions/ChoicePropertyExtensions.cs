@@ -26,38 +26,40 @@ namespace Bakabase.Modules.CustomProperty.Extensions
         {
             if (options.AllowAddingNewDataDynamically)
             {
-                values = values.RemoveEmpty().ToArray();
-
-                options.Choices ??= [];
-                if (ignoreSameValue)
+                var goodValues = values.TrimAndRemoveEmpty()?.ToArray();
+                if (goodValues?.Any() == true)
                 {
-                    var current = options.Choices.Select(c => c.Label).ToHashSet();
-                    values = values.ToHashSet().Except(current).ToArray();
-                }
-
-                if (values.Any())
-                {
-                    if (dbValues != null && dbValues.Length != values.Length)
+                    options.Choices ??= [];
+                    if (ignoreSameValue)
                     {
-                        throw new Exception(
-                            $"Count of {nameof(values)} and {nameof(dbValues)} must be same if {nameof(dbValues)} is specified");
+                        var current = options.Choices.Select(c => c.Label).ToHashSet();
+                        values = values.ToHashSet().Except(current).ToArray();
                     }
 
-                    options.Choices.AddRange(values.Select((v, i) =>
+                    if (values.Any())
                     {
-                        var o = new ChoicePropertyOptions<T>.ChoiceOptions
+                        if (dbValues != null && dbValues.Length != values.Length)
                         {
-                            Label = v
-                        };
-                        var id = dbValues?[i];
-                        if (id.IsNotEmpty())
-                        {
-                            o.Value = id;
+                            throw new Exception(
+                                $"Count of {nameof(values)} and {nameof(dbValues)} must be same if {nameof(dbValues)} is specified");
                         }
 
-                        return o;
-                    }));
-                    return true;
+                        options.Choices.AddRange(values.Select((v, i) =>
+                        {
+                            var o = new ChoicePropertyOptions<T>.ChoiceOptions
+                            {
+                                Label = v
+                            };
+                            var id = dbValues?[i];
+                            if (id.IsNotEmpty())
+                            {
+                                o.Value = id;
+                            }
+
+                            return o;
+                        }));
+                        return true;
+                    }
                 }
             }
 

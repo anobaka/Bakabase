@@ -4,90 +4,69 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Extensions;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
+using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public class LinkValueHandler : AbstractStandardValueHandler<LinkValue>
+    public class LinkValueHandler(ICustomDateTimeParser customDateTimeParser)
+        : AbstractStandardValueHandler<LinkValue>(customDateTimeParser)
     {
         public override StandardValueType Type => StandardValueType.Link;
-
-        public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
-            new()
-            {
-                {StandardValueType.String, StandardValueConversionLoss.TextWillBeLost},
-                {StandardValueType.ListString, StandardValueConversionLoss.TextWillBeLost},
-                {StandardValueType.Decimal, StandardValueConversionLoss.All},
-                {StandardValueType.Link, null},
-                {StandardValueType.Boolean, StandardValueConversionLoss.All},
-                {StandardValueType.DateTime, StandardValueConversionLoss.All},
-                {StandardValueType.Time, StandardValueConversionLoss.All},
-                {StandardValueType.ListListString, StandardValueConversionLoss.All},
-                {StandardValueType.ListTag, StandardValueConversionLoss.All}
-            };
-
-        protected override LinkValue? ConvertToTypedValue(object? currentValue)
-        {
-            var ld = currentValue as LinkValue;
-            return string.IsNullOrEmpty(ld?.Text) && string.IsNullOrEmpty(ld?.Url) ? null : ld;
-        }
 
         protected override string? BuildDisplayValue(LinkValue value)
         {
             return value.ToString();
         }
 
-        public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(LinkValue currentValue)
+        protected override bool ConvertToOptimizedTypedValue(object? currentValue, out LinkValue? optimizedTypedValue)
         {
-            if (!string.IsNullOrEmpty(currentValue.Url))
+            if (currentValue is LinkValue ld)
             {
-                return (currentValue.Url,
-                    string.IsNullOrEmpty(currentValue.Text) ? null : StandardValueConversionLoss.TextWillBeLost);
+                var trimText = ld.Text?.Trim();
+                var trimUrl = ld.Url?.Trim();
+                if (trimText != ld.Text || trimUrl != ld.Url)
+                {
+                    ld = new LinkValue(trimText, trimUrl);
+                }
+
+                if (!ld.IsEmpty)
+                {
+                    optimizedTypedValue = ld;
+                    return true;
+                }
             }
 
-            return (currentValue.Text, null);
+            optimizedTypedValue = default;
+            return false;
         }
 
-        public override (List<string>? NewValue, StandardValueConversionLoss? Loss) ConvertToListString(
-            LinkValue currentValue)
-        {
-            var (nv, loss) = ConvertToString(currentValue);
-            return (nv == null ? null : [nv], loss);
-        }
+        public override string? ConvertToString(LinkValue optimizedValue) => optimizedValue.ToString();
 
-        public override (decimal? NewValue, StandardValueConversionLoss? Loss) ConvertToNumber(LinkValue currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
+        public override List<string>? ConvertToListString(LinkValue optimizedValue) =>
+            optimizedValue.Url.IsNullOrEmpty()
+                ? optimizedValue.Text.ConvertToListString()
+                : [optimizedValue.ToString()!];
 
-        public override (bool? NewValue, StandardValueConversionLoss? Loss) ConvertToBoolean(LinkValue currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
+        public override decimal? ConvertToNumber(LinkValue optimizedValue) => optimizedValue.Text.ConvertToDecimal();
+        public override bool? ConvertToBoolean(LinkValue optimizedValue) => optimizedValue.Text.ConvertToBoolean();
+        public override LinkValue? ConvertToLink(LinkValue optimizedValue) => optimizedValue;
 
-        public override (LinkValue? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(LinkValue currentValue) =>
-            (currentValue, null);
+        public override List<List<string>>? ConvertToListListString(LinkValue optimizedValue) =>
+            optimizedValue.Url.IsNullOrEmpty()
+                ? optimizedValue.Text.ConvertToListListString()
+                : [[optimizedValue.ToString()!]];
 
-        public override async Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(
-            LinkValue currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
+        protected override List<string>? ExtractTextsForConvertingToDateTime(LinkValue optimizedValue) =>
+            optimizedValue.Text.IsNullOrEmpty() ? null : [optimizedValue.Text];
 
-        public override (TimeSpan? NewValue, StandardValueConversionLoss? Loss) ConvertToTime(LinkValue currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
-        public override (List<List<string>>? NewValue, StandardValueConversionLoss? Loss) ConvertToMultilevel(
-            LinkValue currentValue)
-        {
-            var (nv, loss) = ConvertToString(currentValue);
-            return (nv == null ? null : [[nv]], loss);
-        }
+        protected override List<string>? ExtractTextsForConvertingToTime(LinkValue optimizedValue) =>
+            optimizedValue.Text.IsNullOrEmpty() ? null : [optimizedValue.Text];
 
-        public override (List<TagValue>? NewValue, StandardValueConversionLoss? Loss) ConvertToListTag(LinkValue currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
+        public override List<TagValue>? ConvertToListTag(LinkValue optimizedValue) =>
+            optimizedValue.Text.ConvertToListTag();
     }
 }

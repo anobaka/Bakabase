@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MoreOutlined } from '@ant-design/icons';
+import { DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import type { CategoryEnhancerFullOptions } from './components/CategoryEnhancerOptionsDialog/models';
 import { Button, Checkbox, Chip, Divider, Link, Listbox, ListboxItem, Modal, Popover, Tooltip } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
@@ -194,6 +194,7 @@ const EnhancerSelector = ({
                         key={'Category'}
                         color={'danger'}
                         className={'text-danger'}
+                        startContent={<DeleteOutlined className={'text-base'} />}
                       >
                         {t('Delete all enhancement records of this enhancer for category {{categoryName}}', { categoryName: category?.name })}
                       </ListboxItem>
@@ -201,6 +202,7 @@ const EnhancerSelector = ({
                         key={'All'}
                         color={'danger'}
                         className={'text-danger'}
+                        startContent={<DeleteOutlined className={'text-base'} />}
                       >
                         {t('Delete all enhancement records of this enhancer')}
                       </ListboxItem>

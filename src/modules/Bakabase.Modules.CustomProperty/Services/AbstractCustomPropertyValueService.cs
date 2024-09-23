@@ -10,7 +10,9 @@ using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.Modules.StandardValue.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
@@ -29,7 +31,8 @@ namespace Bakabase.Modules.CustomProperty.Services
             ICustomPropertyDescriptors propertyDescriptors,
             ICustomPropertyLocalizer localizer,
             IReservedPropertyValueService _reservedPropertyValueService,
-            IStandardValueLocalizer standardValueLocalizer)
+            IStandardValueLocalizer standardValueLocalizer,
+            IStandardValueService standardValueService)
         : FullMemoryCacheResourceService<TDbContext, Bakabase.Abstractions.Models.Db.CustomPropertyValue, int>(
             serviceProvider), ICustomPropertyValueService where TDbContext : DbContext
     {
@@ -220,7 +223,9 @@ namespace Bakabase.Modules.CustomProperty.Services
                         {
                             foreach (var v in propertyValue.Values)
                             {
-                                var (rawDbValue, propertyChanged) = pd.PrepareDbValueFromBizValue(property, v.BizValue);
+                                var optimizedBizValue = await standardValueService.Convert(v.BizValue,
+                                    property.BizValueType, property.BizValueType);
+                                var (rawDbValue, propertyChanged) = pd.PrepareDbValueFromBizValue(property, optimizedBizValue);
 
                                 var dbPv = dbValueMap.GetValueOrDefault(resourceId)?.GetValueOrDefault(propertyId)
                                     ?.GetValueOrDefault(v.Scope);
@@ -280,11 +285,11 @@ namespace Bakabase.Modules.CustomProperty.Services
             var stdValueConverter = _converters.GetValueOrDefault(bizValueType);
             if (stdValueConverter == null)
             {
-                Logger.LogError(standardValueLocalizer.StandardValue_HandlerNotFound(bizValueType));
+                Logger.LogError(standardValueLocalizer.HandlerNotFound(bizValueType));
                 return null;
             }
 
-            var (dbInnerValue, propertyChanged) = pd.PrepareDbValueFromBizValue(property, bizValue);
+            var (dbInnerValue, propertyChanged) = pd.PrepareDbValueFromBizValue(property, bizValueType);
 
             var pv = CustomPropertyValueHelper.CreateFromImplicitValue(dbInnerValue, property.Type, resourceId,
                 property.Id, scope);

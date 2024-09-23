@@ -32,7 +32,7 @@ namespace Bakabase.InsideWorld.Business.Services
 {
     public class SpecialTextService(
         FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.SpecialText, int> orm)
-        : ISpecialTextService, IDateTimeParser
+        : ISpecialTextService, ICustomDateTimeParser
     {
         public async Task<List<SpecialText>> GetAll(
             Expression<Func<Abstractions.Models.Db.SpecialText, bool>>? selector = null, bool asNoTracking = true)

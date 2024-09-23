@@ -11,6 +11,7 @@ using Bakabase.Modules.CustomProperty.Components.Properties.Boolean;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
 using Bakabase.Modules.CustomProperty.Components.Properties.DateTime;
 using Bakabase.Modules.CustomProperty.Components.Properties.Formula;
+using Bakabase.Modules.CustomProperty.Components.Properties.Link;
 using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
 using Bakabase.Modules.CustomProperty.Components.Properties.Number;
 using Bakabase.Modules.CustomProperty.Components.Properties.Number.Abstractions;

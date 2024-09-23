@@ -22,7 +22,7 @@ export default () => {
   const { createPortal } = useBakabaseContext();
 
   const [categories, setCategories] = useState<any[]>([]);
-  const [libraries, setLibraries] = useState([]);
+  const [libraries, setLibraries] = useState<any[]>([]);
   const categoriesLoadedRef = useRef(false);
   // const [enhancers, setEnhancers] = useState([]);
   const resourceOptions = store.useModelState('resourceOptions');
@@ -75,6 +75,22 @@ export default () => {
       setLoading(false);
     }
   }
+
+  const reloadCategory = async (id: number) => {
+    const c = (await BApi.category.getCategory(id, { additionalItems: CategoryAdditionalItem.Validation |
+        CategoryAdditionalItem.CustomProperties |
+        CategoryAdditionalItem.EnhancerOptions })).data ?? {};
+    const idx = categories.findIndex(x => x.id == id);
+    categories[idx] = c;
+    setCategories([...categories]);
+  };
+
+  const reloadMediaLibrary = async (id: number) => {
+    const c = (await BApi.mediaLibrary.getMediaLibrary(id, { additionalItems: MediaLibraryAdditionalItem.Category | MediaLibraryAdditionalItem.FileSystemInfo | MediaLibraryAdditionalItem.PathConfigurationCustomProperties })).data ?? {};
+    const idx = libraries.findIndex(x => x.id == id);
+    libraries[idx] = c;
+    setLibraries({ ...libraries });
+  };
 
   useEffect(() => {
     init();
@@ -193,6 +209,8 @@ export default () => {
         allComponents={allComponents}
         loadAllCategories={loadAllCategories}
         loadAllMediaLibraries={loadAllMediaLibraries}
+        reloadCategory={reloadCategory}
+        reloadMediaLibrary={reloadMediaLibrary}
         categories={categories}
         libraries={libraries}
         enhancers={enhancers}

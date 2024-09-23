@@ -1,27 +1,43 @@
-﻿using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
+using Bakabase.Modules.StandardValue.Abstractions.Extensions;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public abstract class AbstractStandardValueHandler<TValue> : IStandardValueHandler
+    public abstract class AbstractStandardValueHandler<TValue>(ICustomDateTimeParser customDateTimeParser)
+        : IStandardValueHandler
     {
         public abstract StandardValueType Type { get; }
 
-        public abstract Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; }
+        private Dictionary<StandardValueType, StandardValueConversionRule>? _possibleConversionLosses;
 
-        public async Task<(object? NewValue, StandardValueConversionLoss? Loss)> Convert(object? currentValue,
+        public Dictionary<StandardValueType, StandardValueConversionRule> ConversionRules =>
+            (_possibleConversionLosses ??= StandardValueOptions.ConversionRules[Type]);
+
+
+        public async Task<object?> Convert(object? currentValue,
             StandardValueType toType)
         {
-            var typedCurrentValue = ConvertToTypedValue(currentValue);
-            // this is a hardcode, to resolve the mixed using of nullable type and nullable language feature.
-            // for example, if TValue is a non-nullable value, the overrides of ConvertToTypedValue must return a non-nullable value, this may hide the original null value of currentValue.
-            if (currentValue == null || typedCurrentValue == null)
+            if (currentValue == null)
             {
-                return (toType != StandardValueType.Boolean ? false : null, null);
+                return null;
+            }
+
+            if (!ConvertToOptimizedTypedValue(currentValue, out var typedCurrentValue))
+            {
+                return null;
+            }
+
+            if (typedCurrentValue == null)
+            {
+                return null;
             }
 
             return toType switch
@@ -33,7 +49,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
                 StandardValueType.String => ConvertToString(typedCurrentValue),
                 StandardValueType.ListString => ConvertToListString(typedCurrentValue),
                 StandardValueType.Decimal => ConvertToNumber(typedCurrentValue),
-                StandardValueType.ListListString => ConvertToMultilevel(typedCurrentValue),
+                StandardValueType.ListListString => ConvertToListListString(typedCurrentValue),
                 StandardValueType.ListTag => ConvertToListTag(typedCurrentValue),
                 _ => throw new ArgumentOutOfRangeException(nameof(toType), toType, null)
             };
@@ -46,26 +62,64 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
         public Type ExpectedType => SpecificTypeUtils<TValue>.Type;
 
-        public string? BuildDisplayValue(object? value) => value == null ? null : BuildDisplayValue((TValue)value);
+        public string? BuildDisplayValue(object? value) => value == null ? null : BuildDisplayValue((TValue) value);
         protected virtual string? BuildDisplayValue(TValue value) => value?.ToString();
 
-        protected abstract TValue? ConvertToTypedValue(object? currentValue);
+        /// <summary>
+        /// <para>
+        /// Why not using <see cref="optimizedTypedValue"/> as return value: due to the mixed usings of nullable-value-type and nullable-reference-type, we need a solution to:
+        /// 1. Make sure null or bad <see cref="currentValue"/> will be converted to null for nullable-value-type.
+        /// 2. Make ConvertToXXX methods receive a not-null value for better coding experience for implementations.
+        /// </para>
+        /// </summary>
+        /// <param name="currentValue"></param>
+        /// <param name="optimizedTypedValue"></param>
+        /// <returns></returns>
+        protected abstract bool ConvertToOptimizedTypedValue(object? currentValue, out TValue? optimizedTypedValue);
 
-        public abstract (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(TValue currentValue);
+        public abstract string? ConvertToString(TValue optimizedValue);
 
-        public abstract (List<string>? NewValue, StandardValueConversionLoss? Loss) ConvertToListString(
-            TValue currentValue);
+        public abstract List<string>? ConvertToListString(TValue optimizedValue);
 
-        public abstract (decimal? NewValue, StandardValueConversionLoss? Loss) ConvertToNumber(TValue currentValue);
-        public abstract (bool? NewValue, StandardValueConversionLoss? Loss) ConvertToBoolean(TValue currentValue);
-        public abstract (LinkValue? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(TValue currentValue);
+        public abstract decimal? ConvertToNumber(TValue optimizedValue);
+        public abstract bool? ConvertToBoolean(TValue optimizedValue);
+        public abstract LinkValue? ConvertToLink(TValue optimizedValue);
 
-        public abstract Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(
-            TValue currentValue);
+        protected virtual List<string>? ExtractTextsForConvertingToDateTime(TValue optimizedValue) => null;
 
-        public abstract (TimeSpan? NewValue, StandardValueConversionLoss? Loss) ConvertToTime(TValue currentValue);
-        public abstract (List<List<string>>? NewValue, StandardValueConversionLoss? Loss) ConvertToMultilevel(
-            TValue currentValue);
-        public abstract (List<TagValue>? NewValue, StandardValueConversionLoss? Loss) ConvertToListTag(TValue currentValue);
+        public virtual async Task<DateTime?> ConvertToDateTime(TValue optimizedValue)
+        {
+            var texts = ExtractTextsForConvertingToDateTime(optimizedValue)?.TrimAndRemoveEmpty();
+            if (texts?.Any() == true)
+            {
+                foreach (var text in texts)
+                {
+                    var date = await customDateTimeParser.TryToParseDateTime(text);
+                    if (date.HasValue)
+                    {
+                        return date;
+                    }
+
+                    date = text.ConvertToDateTime();
+                    if (date.HasValue)
+                    {
+                        return date;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        protected virtual List<string>? ExtractTextsForConvertingToTime(TValue optimizedValue) => null;
+
+        public virtual TimeSpan? ConvertToTime(TValue optimizedValue)
+        {
+            var texts = ExtractTextsForConvertingToTime(optimizedValue)?.TrimAndRemoveEmpty();
+            return texts.FirstNotNullOrDefault(t => t.ConvertToTime());
+        }
+
+        public abstract List<List<string>>? ConvertToListListString(TValue optimizedValue);
+        public abstract List<TagValue>? ConvertToListTag(TValue optimizedValue);
     }
 }

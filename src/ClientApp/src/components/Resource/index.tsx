@@ -74,7 +74,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     style,
   } = props;
 
-  console.log(`showBiggerCoverOnHover: ${showBiggerCoverOnHover}, disableMediaPreviewer: ${disableMediaPreviewer}, disableCache: ${disableCache}`);
+  // console.log(`showBiggerCoverOnHover: ${showBiggerCoverOnHover}, disableMediaPreviewer: ${disableMediaPreviewer}, disableCache: ${disableCache}`);
 
   const { createPortal } = useBakabaseContext();
 

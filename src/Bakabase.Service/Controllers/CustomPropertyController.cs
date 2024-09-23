@@ -11,6 +11,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.Modules.CustomProperty.Abstractions.Components;
+using Bakabase.Modules.CustomProperty.Abstractions.Configurations;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.CustomProperty.Components;
@@ -18,9 +19,12 @@ using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.CustomProperty.Models.Input;
 using Bakabase.Modules.CustomProperty.Models.View;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
+using Bakabase.Modules.StandardValue.Models.View;
 using Bakabase.Modules.StandardValue.Services;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
@@ -34,7 +38,8 @@ namespace Bakabase.Service.Controllers
         ICustomPropertyService service,
         ICustomPropertyValueService propertyValueService,
         ICustomPropertyDescriptors customPropertyDescriptors,
-        IStandardValueService standardValueService
+        IStandardValueService standardValueService,
+        IStandardValueLocalizer standardValueLocalizer
     )
         : Controller
     {
@@ -75,14 +80,50 @@ namespace Bakabase.Service.Controllers
             return await service.RemoveByKey(id);
         }
 
-        [HttpPost("{id:int}/{type}/loss")]
-        [SwaggerOperation(OperationId = "CalculateCustomPropertyTypeConversionLoss")]
-        public async Task<SingletonResponse<CustomPropertyTypeConversionLossViewModel>> CalculateTypeConversionLoss(
-            int id,
-            CustomPropertyType type)
+        [HttpPost("{sourceCustomPropertyId:int}/{targetType}/conversion-preview")]
+        [SwaggerOperation(OperationId = "PreviewCustomPropertyTypeConversion")]
+        public async Task<SingletonResponse<CustomPropertyTypeConversionPreviewViewModel>> PreviewTypeConversion(
+            int sourceCustomPropertyId, CustomPropertyType targetType)
         {
-            return new SingletonResponse<CustomPropertyTypeConversionLossViewModel>(
-                await service.CalculateTypeConversionLoss(id, type));
+            return new SingletonResponse<CustomPropertyTypeConversionPreviewViewModel>(
+                await service.PreviewTypeConversion(sourceCustomPropertyId, targetType));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>FromType - ToType - Rules</returns>
+        [HttpGet("conversion-rule")]
+        [SwaggerOperation(OperationId = "GetCustomPropertyConversionRules")]
+        public async Task<SingletonResponse<
+                Dictionary<int, Dictionary<int, List<StandardValueConversionRuleViewModel>>>>>
+            GetConversionRules()
+        {
+            var customPropertyTypes = SpecificEnumUtils<CustomPropertyType>.Values;
+            var ruleMap = customPropertyTypes.ToDictionary(v => (int) v, v => customPropertyTypes.ToDictionary(
+                d => (int) d,
+                d =>
+                {
+                    var fromStdType = customPropertyDescriptors[(int) v].BizValueType;
+                    var toStdType = customPropertyDescriptors[(int) d].BizValueType;
+                    var rulesFlag = StandardValueOptions.ConversionRules[fromStdType][toStdType];
+                    return SpecificEnumUtils<StandardValueConversionRule>.Values.Select(x =>
+                    {
+                        if (!rulesFlag.HasFlag(x))
+                        {
+                            return null;
+                        }
+
+                        return new StandardValueConversionRuleViewModel
+                        {
+                            Name = standardValueLocalizer.ConversionRuleName(x),
+                            Description = standardValueLocalizer.ConversionRuleDescription(x),
+                            Rule = x
+                        };
+                    }).OfType<StandardValueConversionRuleViewModel>().ToList();
+                }));
+            return new SingletonResponse<Dictionary<int, Dictionary<int, List<StandardValueConversionRuleViewModel>>>>(
+                ruleMap);
         }
 
         [HttpPut("{id:int}/{type}")]
@@ -125,62 +166,27 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("type-conversion-overview")]
         [SwaggerOperation(OperationId = "TestCustomPropertyTypeConversion")]
-        public async Task<SingletonResponse<CustomPropertyTypeConversionOverviewViewModel>>
+        public async Task<SingletonResponse<CustomPropertyTypeConversionExampleViewModel>>
             CheckTypeConversionOverview()
         {
-            var testData = new List<(CustomPropertyType Type, IStandardValueBuilder? ValueBuilder)>
-            {
-                (CustomPropertyType.SingleLineText, new StringValueBuilder("aaa")),
-                (CustomPropertyType.SingleLineText, new StringValueBuilder("4.5")),
-                (CustomPropertyType.MultilineText, new StringValueBuilder("aaa\nbbb<br/>ccc")),
-                (CustomPropertyType.MultilineText, new StringValueBuilder("4.5")),
-                (CustomPropertyType.SingleChoice, new StringValueBuilder("aaa")),
-                (CustomPropertyType.SingleChoice, new StringValueBuilder("4.5")),
-                (CustomPropertyType.MultipleChoice, new ListStringValueBuilder(["aaa", "bbb"])),
-                (CustomPropertyType.MultipleChoice, new ListStringValueBuilder(["4.5", "aaa"])),
-                (CustomPropertyType.Number, new DecimalValueBuilder(4)),
-                (CustomPropertyType.Percentage, new DecimalValueBuilder(40)),
-                (CustomPropertyType.Rating, new DecimalValueBuilder(4.5m)),
-                (CustomPropertyType.Boolean, new BooleanValueBuilder(true)),
-                (CustomPropertyType.Link, new LinkValueBuilder(new LinkValue {Text = "text", Url = "http://a.com"})),
-                (CustomPropertyType.Attachment, new ListStringValueBuilder(["C:/1.png", "D:/2.pdf"])),
-                (CustomPropertyType.Date, new DateTimeValueBuilder(DateTime.Today)),
-                (CustomPropertyType.DateTime, new DateTimeValueBuilder(DateTime.Now)),
-                (CustomPropertyType.Time, new TimeValueBuilder(DateTime.Now.TimeOfDay)),
-                (CustomPropertyType.Formula, new StringValueBuilder("fff")),
-                (CustomPropertyType.Multilevel,
-                    new ListListStringValueBuilder([["aaa", "bbb", "ccc"], ["aaa", "ddd", "eee"]])),
-                (CustomPropertyType.Multilevel,
-                    new ListListStringValueBuilder([["4.5", "4.6", "4.7"], ["aaa", "bbb"]])),
-                (CustomPropertyType.Tags,
-                    new ListTagValueBuilder([new TagValue("Group1", "Name1"), new TagValue(null, "Name2")])),
-                (CustomPropertyType.Tags,
-                    new ListTagValueBuilder([new TagValue("Group2", "Name3"), new TagValue(null, "4.5")])),
-            }.Select(x => new CustomPropertyTypeConversionOverviewInputModel.T()
-            {
-                Type = x.Type,
-                SerializedBizValue =
-                    x.ValueBuilder?.Value?.SerializeAsStandardValue(
-                        customPropertyDescriptors[(int) x.Type].BizValueType)
-            });
+            var testData = StandardValueOptions.ExpectedConversions.SelectMany(x =>
+                (x.Key.GetCompatibleCustomPropertyTypes() ?? []).SelectMany(cpt =>
+                    x.Value.SelectMany(y => y.Value.Select(z => z.FromValue).Distinct().Select(a =>
+                        new CustomPropertyTypeConversionExampleInputModel.T()
+                        {
+                            Type = cpt,
+                            SerializedBizValue = a?.SerializeAsStandardValue(x.Key)
+                        })))).ToList();
 
-            var results = new CustomPropertyTypeConversionOverviewViewModel {Results = []};
+            var results = new CustomPropertyTypeConversionExampleViewModel {Results = []};
 
             foreach (var @in in testData)
             {
                 var inPropertyDescriptor = customPropertyDescriptors[(int) @in.Type];
 
-                var notNullValueResult = new CustomPropertyTypeConversionOverviewViewModel.Tin
+                var valueResult = new CustomPropertyTypeConversionExampleViewModel.Tin
                 {
                     SerializedBizValue = @in.SerializedBizValue,
-                    Type = @in.Type,
-                    Outputs = [],
-                    BizValueType = inPropertyDescriptor.BizValueType
-                };
-
-                var nullValueResult = new CustomPropertyTypeConversionOverviewViewModel.Tin
-                {
-                    SerializedBizValue = null,
                     Type = @in.Type,
                     Outputs = [],
                     BizValueType = inPropertyDescriptor.BizValueType
@@ -194,38 +200,28 @@ namespace Bakabase.Service.Controllers
 
                 foreach (var outType in SpecificEnumUtils<CustomPropertyType>.Values)
                 {
-                    if (@in.Type == CustomPropertyType.Attachment && outType == CustomPropertyType.Link)
+                    if (@in.Type == CustomPropertyType.Number && outType == CustomPropertyType.SingleLineText)
                     {
 
                     }
 
                     var outBizType = outType.GetBizValueType();
-                    var (nv, _) =
-                        await standardValueService.CheckConversionLoss(inBizValue, fakeInProperty.BizValueType,
+                    var nv =
+                        await standardValueService.Convert(inBizValue, fakeInProperty.BizValueType,
                             outBizType);
 
-                    notNullValueResult.Outputs.Add(new CustomPropertyTypeConversionOverviewViewModel.Tout
+                    valueResult.Outputs.Add(new CustomPropertyTypeConversionExampleViewModel.Tout
                     {
                         SerializedBizValue = nv?.SerializeAsStandardValue(outBizType),
                         Type = outType,
                         BizValueType = outBizType
                     });
-
-                    var (nv2, _) =
-                        await standardValueService.CheckConversionLoss(null, fakeInProperty.BizValueType, outBizType);
-                    nullValueResult.Outputs.Add(new CustomPropertyTypeConversionOverviewViewModel.Tout
-                    {
-                        SerializedBizValue = nv2?.SerializeAsStandardValue(outBizType),
-                        Type = outType,
-                        BizValueType = outBizType
-                    });
                 }
 
-                results.Results.Add(notNullValueResult);
-                results.Results.Add(nullValueResult);
+                results.Results.Add(valueResult);
             }
 
-            return new SingletonResponse<CustomPropertyTypeConversionOverviewViewModel>(results);
+            return new SingletonResponse<CustomPropertyTypeConversionExampleViewModel>(results);
         }
     }
 }

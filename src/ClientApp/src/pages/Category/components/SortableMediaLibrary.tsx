@@ -26,6 +26,7 @@ import { Chip, Badge, Tooltip, Button, Modal } from '@/components/bakaui';
 export default (({
                    library,
                    loadAllMediaLibraries,
+                   reloadMediaLibrary,
                  }) => {
   const {
     attributes,

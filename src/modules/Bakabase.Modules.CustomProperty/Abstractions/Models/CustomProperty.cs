@@ -7,14 +7,11 @@ public record CustomProperty : Bakabase.Abstractions.Models.Domain.CustomPropert
     public CustomPropertyType EnumType => (CustomPropertyType) Type;
 }
 
-
-public record CustomProperty<TOptions> : CustomProperty
+public record CustomProperty<TOptions> : CustomProperty where TOptions : class
 {
-    private TOptions? _options;
-
     public new TOptions? Options
     {
-        get => _options;
-        set => base.Options = _options = value;
+        get => base.Options as TOptions;
+        set => base.Options = value;
     }
 }

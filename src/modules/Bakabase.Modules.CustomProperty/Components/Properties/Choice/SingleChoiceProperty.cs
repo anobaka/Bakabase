@@ -48,13 +48,15 @@ public class SingleChoicePropertyDescriptor(
         return ids?.Any() == true ? (ids, SearchOperation.In) : null;
     }
 
-    protected override (string? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(
+    protected override (string? DbValue, bool PropertyChanged) PrepareDbValueFromBizValueInternal(
         SingleChoiceProperty property, string bizValue)
     {
         bizValue = bizValue.Trim();
         if (!string.IsNullOrEmpty(bizValue))
         {
-            var propertyChanged = (property.Options ??= new ChoicePropertyOptions<string>()).AddChoices(true, [bizValue], null);
+            var propertyChanged =
+                (property.Options ??= new ChoicePropertyOptions<string>() {AllowAddingNewDataDynamically = true})
+                .AddChoices(true, [bizValue], null);
             var stringValue = property.Options.Choices?.Find(x => x.Label == bizValue)?.Value;
             var nv = new StringValueBuilder(stringValue).Value;
             return (nv, propertyChanged);

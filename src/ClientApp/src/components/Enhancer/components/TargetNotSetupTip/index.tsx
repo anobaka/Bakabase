@@ -19,7 +19,7 @@ enum Status {
 }
 
 const isSet = (options: EnhancerTargetFullOptions | undefined, isDefaultOfDynamic: boolean): boolean => {
-  return (options != undefined && (options.propertyId != undefined && options.propertyId > 0 || options.autoGenerateProperties || isDefaultOfDynamic)) ?? false;
+  return (options != undefined && (options.propertyId != undefined && options.propertyId > 0 || options.autoBindProperty || isDefaultOfDynamic)) ?? false;
 };
 
 export default ({ options, enhancer }: IProps) => {

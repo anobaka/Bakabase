@@ -21,6 +21,7 @@ using Bakabase.Modules.CustomProperty.Components.Properties.Text;
 using Bakabase.Modules.CustomProperty.Components.Properties.Time;
 using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Components;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
@@ -87,13 +88,13 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
         {
             if (bizValue is TBizValue typedBizValue)
             {
-                return TypedPrepareDbValueFromBizValue(property.Cast<TProperty>(), typedBizValue);
+                return PrepareDbValueFromBizValueInternal(property.Cast<TProperty>(), typedBizValue);
             }
 
             return (null, false);
         }
 
-        protected virtual (TDbValue? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(TProperty property,
+        protected virtual (TDbValue? DbValue, bool PropertyChanged) PrepareDbValueFromBizValueInternal(TProperty property,
             TBizValue bizValue) => (bizValue is TDbValue x ? x : default, false);
 
         public object? ConvertDbValueToBizValue(Bakabase.Abstractions.Models.Domain.CustomProperty property,
@@ -108,6 +109,8 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
             value is TBizValue bizValue ? bizValue : default;
 
         public abstract SearchOperation[] SearchOperations { get; }
+
+        protected virtual StandardValueType SearchFilterValueType => DbValueType;
 
         public ResourceSearchFilter? BuildSearchFilterByKeyword(
             Bakabase.Abstractions.Models.Domain.CustomProperty property, string keyword)
@@ -127,7 +130,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
             return new ResourceSearchFilter
             {
                 Operation = sf.Value.Operation,
-                DbValue = sf.Value.DbValue.SerializeAsStandardValue(property.DbValueType),
+                DbValue = sf.Value.DbValue.SerializeAsStandardValue(SearchFilterValueType),
                 PropertyType = ResourcePropertyType.Custom,
                 PropertyId = property.Id
             };
@@ -233,7 +236,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties
                 }
             }
 
-            var filterValue = filter.DbValue?.DeserializeAsStandardValue(DbValueType);
+            var filterValue = filter.DbValue?.DeserializeAsStandardValue(SearchFilterValueType);
 
             return IsMatch(typedValue == null ? default : typedValue.TypedValue, filter.Operation, filterValue);
         }

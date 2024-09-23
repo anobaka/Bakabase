@@ -1,5 +1,5 @@
 import { AutoSizer, CellMeasurer, CellMeasurerCache, Grid } from 'react-virtualized';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { buildLogger } from '@/components/utils';
 
@@ -43,16 +43,21 @@ export default ({
   const loadingRef = useRef<boolean>(false);
   const gridRef = useRef<any>();
   const cacheRef = useRef(new CellMeasurerCache({
-    defaultHeight: 250,
+    defaultHeight: 0,
     defaultWidth: 200,
     fixedWidth: true,
   }));
   const verScrollbarWidthRef = useRef(0);
+  const prevContainerWidthRef = useRef<number | undefined>(undefined);
+
+  log('rendering');
 
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver(() => {
-      onResize();
+      const clearCache = prevContainerWidthRef.current != containerRef.current?.clientWidth;
+      prevContainerWidthRef.current = containerRef.current?.clientWidth;
+      onResize(clearCache);
     });
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect(); // clean up
@@ -90,10 +95,17 @@ export default ({
   useUpdateEffect(() => {
   }, [columnCount]);
 
-  const onResize = () => {
-    log('on resize');
+  const onResize = (clearCache: boolean = false) => {
+    log('on resize on scroll', gridRef, containerRef.current?.clientHeight);
+    // gridRef.current?.scrollToPosition(scrollTopRef.current);
+    if (clearCache) {
+      // todo: clear cache will cause the grid scrolls to bottom when height downsized which may trigger load more behavior.
+      cacheRef.current.clearAll();
+    } else {
+      gridRef.current?.measureAllCells();
+    }
+    // gridRef.current?.recomputeGridSize();
     forceUpdate();
-    cacheRef.current.clearAll();
   };
 
   function renderGrid() {
@@ -106,9 +118,6 @@ export default ({
 
     return (
       <div
-        onResize={e => {
-          log('resize', e);
-        }}
         className={'grow min-h-[0] overflow-hidden'}
         ref={r => {
           if (!containerRef.current) {
@@ -125,8 +134,8 @@ export default ({
               }) => (
                 <Grid
                   ref={gridRef}
-                // height={containerHeight}
-                // width={containerWidth}
+                  // height={containerHeight}
+                  // width={containerWidth}
                   width={width}
                   height={height}
                   cellRenderer={cellRenderer}
@@ -140,7 +149,7 @@ export default ({
                     const newWidth = e.vertical ? e.size : 0;
                     if (newWidth != verScrollbarWidthRef.current) {
                       verScrollbarWidthRef.current = newWidth;
-                      onResize();
+                      onResize(true);
                     }
                   }}
                   onScroll={e => {

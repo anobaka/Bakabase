@@ -35,16 +35,14 @@ export default ({
           </span>
         );
       }
-      return (
-        <NotSet />
-      );
     }
+    return;
   };
 
   const inner = renderInner();
   if (editor) {
     return (
-      <span>
+      <span className={'flex items-center gap-2'}>
         {inner}
         <Popover
           isOpen={!!editingValue}
@@ -75,7 +73,7 @@ export default ({
             />
             <Input
               size={'sm'}
-              lang={t('url')}
+              label={t('Link')}
               value={editingValue?.url}
               onValueChange={url => {
                 setEditingValue({

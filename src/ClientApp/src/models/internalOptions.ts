@@ -1,4 +1,4 @@
-import type { ResourceProperty, SearchOperation, StandardValueType } from '@/sdk/constants';
+import type { ResourceProperty, SearchOperation, StandardValueConversionRule, StandardValueType } from '@/sdk/constants';
 import type { SignalRData } from '@/components/SignalR/models';
 import type { IProperty } from '@/components/Property/models';
 
@@ -11,6 +11,7 @@ interface Options {
     internalResourcePropertyDescriptorMap: Record<ResourceProperty, IProperty>;
     customPropertyValueSearchOperationsMap: Record<StandardValueType, SearchOperation[]>;
   };
+  standardValueConversionRuleMap: Record<StandardValueType, Record<StandardValueType, StandardValueConversionRule>>;
 }
 export default {
   state: {} as SignalRData<Options>,

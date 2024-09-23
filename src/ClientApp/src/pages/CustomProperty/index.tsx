@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { SearchOutlined } from '@ant-design/icons';
+import TypeConversionOverviewDialog from 'src/pages/CustomProperty/components/TypeConversionExampleDialog';
 import PropertyDialog from '@/components/PropertyDialog';
 import BApi from '@/sdk/BApi';
 import type {
@@ -17,7 +18,7 @@ import { Button, Chip, Input, Modal, Table, TableColumn, TableRow, TableCell, Ta
 import Property from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import TypeConversionOverviewDialog from '@/pages/CustomProperty/components/TypeConversionOverviewDialog';
+import TypeConversionRuleOverviewDialog from '@/pages/CustomProperty/components/TypeConversionRuleOverviewDialog';
 
 export default () => {
   const { t } = useTranslation();
@@ -82,10 +83,10 @@ export default () => {
             color={'secondary'}
             variant={'light'}
             onClick={async () => {
-              createPortal(TypeConversionOverviewDialog, {});
+              createPortal(TypeConversionRuleOverviewDialog, {});
             }}
           >
-            {t('Check type conversion overview')}
+            {t('Check type conversion rules')}
           </Button>
         </div>
         <div />
@@ -99,8 +100,11 @@ export default () => {
           const ps = groupedFilteredProperties[k];
           return (
             <>
-              <div className={'mb-1'}>
-                <Chip radius={'sm'}>
+              <div className={'mb-1 text-right'}>
+                <Chip
+                  radius={'sm'}
+                  size={'sm'}
+                >
                   {t(`CustomPropertyType.${CustomPropertyType[type]}`)}
                 </Chip>
               </div>
@@ -117,6 +121,7 @@ export default () => {
                       onRemoved={() => {
                         loadProperties();
                       }}
+                      onDialogDestroyed={loadProperties}
                     />
                   );
                 })}

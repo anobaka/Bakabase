@@ -4,6 +4,7 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.CustomProperty.Models.View;
 using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Modules.CustomProperty.Abstractions.Services;
@@ -41,8 +42,7 @@ public interface ICustomPropertyService
     Task<Models.CustomProperty> Put(int id, CustomPropertyAddOrPutDto model);
     Task<BaseResponse> RemoveByKey(int id);
 
-    Task<CustomPropertyTypeConversionLossViewModel> CalculateTypeConversionLoss(int sourcePropertyId,
-        CustomPropertyType type);
+    Task<CustomPropertyTypeConversionPreviewViewModel> PreviewTypeConversion(int sourcePropertyId, CustomPropertyType toType);
 
     Task<BaseResponse> ChangeType(int sourcePropertyId, CustomPropertyType type);
 

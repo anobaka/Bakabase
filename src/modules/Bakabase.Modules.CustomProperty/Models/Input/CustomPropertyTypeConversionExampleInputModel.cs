@@ -2,7 +2,7 @@
 
 namespace Bakabase.Modules.CustomProperty.Models.Input;
 
-public record CustomPropertyTypeConversionOverviewInputModel
+public record CustomPropertyTypeConversionExampleInputModel
 {
     public List<T>? TestData { get; set; }
 

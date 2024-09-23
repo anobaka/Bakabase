@@ -4,6 +4,8 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using static Bakabase.Abstractions.Components.Configuration.InternalOptions;
 
 namespace Bakabase.InsideWorld.Business.Models.Dto
@@ -22,5 +24,13 @@ namespace Bakabase.InsideWorld.Business.Models.Dto
 
             public Dictionary<int, SearchOperation[]> CustomPropertyValueSearchOperationsMap { get; set; } = new();
         }
+
+        public Dictionary<int, Dictionary<int, StandardValueConversionRule>> StandardValueConversionRuleMap
+        {
+            get;
+            set;
+        } =
+            StandardValueOptions.ConversionRules.ToDictionary(d => (int) d.Key,
+                d => d.Value.ToDictionary(x => (int) x.Key, x => x.Value));
     }
 }

@@ -1,14 +1,8 @@
 .property {
-  padding: 10px;
-  border-radius: 4px;
   background: var(--theme-block-background);
   border: 1px solid var(--theme-border-color);
 
   .line1 {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
     font-size: 14px;
 
     .left {

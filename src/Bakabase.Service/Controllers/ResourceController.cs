@@ -146,6 +146,7 @@ namespace Bakabase.Service.Controllers
                                 case CustomPropertyType.Attachment:
                                 case CustomPropertyType.Link:
                                 {
+                                    // todo: there is a hardcode for link property, which use types of filter value same as string
                                     filter.BizValue = filter.DbValue;
                                     break;
                                 }

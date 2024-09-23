@@ -131,7 +131,7 @@ namespace Bakabase.Service.Extensions
             services
                 .AddEnhancers<InsideWorldDbContext, EnhancementService, EnhancerService, CategoryEnhancerOptionsService,
                     EnhancementRecordService>();
-            services.AddStandardValue<SpecialTextService, InsideWorldLocalizer>();
+            services.AddStandardValue<SpecialTextService>();
             services.AddReservedProperty();
 
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>>();

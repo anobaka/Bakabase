@@ -17,8 +17,7 @@ namespace Bakabase.InsideWorld.Business.Components
     /// todo: Redirect raw <see cref="IStringLocalizer"/> callings to here
     /// </summary>
     public class InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
-        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, ICustomPropertyLocalizer,
-            IStandardValueLocalizer
+        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, ICustomPropertyLocalizer
     {
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
             localizer.GetAllStrings(includeParentCultures);
@@ -118,11 +117,6 @@ namespace Bakabase.InsideWorld.Business.Components
         public string CustomProperty_DescriptorNotFound(int propertyType)
         {
             return this[nameof(CustomProperty_DescriptorNotFound), propertyType];
-        }
-
-        public string StandardValue_HandlerNotFound(StandardValueType type)
-        {
-            return this[nameof(StandardValue_HandlerNotFound), type];
         }
     }
 }

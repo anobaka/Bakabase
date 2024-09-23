@@ -46,16 +46,17 @@ public class MultipleChoicePropertyDescriptor(
         return ids?.Any() == true ? (ids, SearchOperation.In) : null;
     }
 
-    protected override (List<string>? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(
+    protected override (List<string>? DbValue, bool PropertyChanged) PrepareDbValueFromBizValueInternal(
         MultipleChoiceProperty property, List<string> bizValue)
     {
-        bizValue = bizValue.RemoveEmpty();
-        if (bizValue.Any())
+        var goodValues = bizValue.TrimAndRemoveEmpty();
+        if (goodValues?.Any() == true)
         {
             var propertyChanged =
-                (property.Options ??= new ChoicePropertyOptions<List<string>>()).AddChoices(true, bizValue.ToArray(),
+                (property.Options ??= new ChoicePropertyOptions<List<string>>() {AllowAddingNewDataDynamically = true})
+                .AddChoices(true, goodValues.ToArray(),
                     null);
-            var stringValues = bizValue.Select(v => property.Options.Choices?.Find(c => c.Label == v)?.Value)
+            var stringValues = goodValues.Select(v => property.Options.Choices?.Find(c => c.Label == v)?.Value)
                 .OfType<string>().ToList();
             var nv = stringValues.Any() ? new ListStringValueBuilder(stringValues).Value : null;
             return (nv, propertyChanged);

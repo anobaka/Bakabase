@@ -13,8 +13,11 @@ using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
 using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
 using Bakabase.Modules.CustomProperty.Extensions;
+using Bakabase.Modules.CustomProperty.Models.View;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
@@ -190,52 +193,42 @@ namespace Bakabase.Modules.CustomProperty.Services
             return await base.RemoveByKey(id);
         }
 
-        public async Task<CustomPropertyTypeConversionLossViewModel> CalculateTypeConversionLoss(int sourcePropertyId,
-            CustomPropertyType type)
+        public async Task<CustomPropertyTypeConversionPreviewViewModel> PreviewTypeConversion(int sourcePropertyId,
+            CustomPropertyType toType)
         {
             var property = await GetByKey(sourcePropertyId);
             var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == sourcePropertyId,
                 CustomPropertyValueAdditionalItem.None, false);
             var propertyDescriptor = propertyDescriptors[property.Type];
-            var dbValueHandler = StdValueHandlers[property.DbValueType];
-            var bizValueHandler = StdValueHandlers[property.BizValueType];
 
-            var typedValues = values.Select(v => propertyDescriptor.ConvertDbValueToBizValue(property, v.Value))
+            var toBizValueType = toType.GetBizValueType();
+
+            var fromStdHandler = StdValueHandlers[property.BizValueType];
+            var toStdHandler = StdValueHandlers[toBizValueType];
+
+            var bizValues = values.Select(v => propertyDescriptor.ConvertDbValueToBizValue(property, v.Value))
                 .ToList();
 
-            var lossMap = new Dictionary<StandardValueConversionLoss, List<string>>();
-            var result = new CustomPropertyTypeConversionLossViewModel
+            var result = new CustomPropertyTypeConversionPreviewViewModel
             {
-                TotalDataCount = typedValues.Count,
+                DataCount = bizValues.Count,
+                FromType = property.BizValueType,
+                ToType = toBizValueType,
+                Changes = [],
             };
 
-            foreach (var d in typedValues)
+            foreach (var bizValue in bizValues)
             {
-                var (nv, loss) =
-                    await StandardValueService.CheckConversionLoss(d, property.BizValueType, type.GetBizValueType());
-                var list = SpecificEnumUtils<StandardValueConversionLoss>.Values.Where(s => loss?.HasFlag(s) == true)
-                    .ToList();
-                foreach (var l in list)
+                var serializedFromBizValue = bizValue?.SerializeAsStandardValue(propertyDescriptor.BizValueType);
+                var newBizValue = await StandardValueService.Convert(bizValue, property.BizValueType, toBizValueType);
+                var serializedToBizValue = newBizValue?.SerializeAsStandardValue(toBizValueType);
+                var fromDisplayValue = fromStdHandler.BuildDisplayValue(bizValue);
+                var toDisplayValue = toStdHandler.BuildDisplayValue(newBizValue);
+                if (fromDisplayValue != toDisplayValue)
                 {
-                    var str = bizValueHandler.BuildDisplayValue(d);
-                    if (!string.IsNullOrEmpty(str))
-                    {
-                        if (!lossMap.ContainsKey(l))
-                        {
-                            lossMap[l] = [];
-                        }
-
-                        lossMap[l].Add(str);
-                    }
-                }
-
-                if (list.Any())
-                {
-                    result.IncompatibleDataCount++;
+                    result.Changes.Add(new CustomPropertyTypeConversionPreviewViewModel.Change(serializedFromBizValue, serializedToBizValue));
                 }
             }
-
-            result.LossData = lossMap.Any() ? lossMap.ToDictionary(x => (int) x.Key, x => x.Value.ToArray()) : null;
 
             return result;
         }
@@ -256,27 +249,29 @@ namespace Bakabase.Modules.CustomProperty.Services
 
             var allowAddingNewDataDynamically =
                 (property.Options as IAllowAddingNewDataDynamically)?.AllowAddingNewDataDynamically ?? false;
+            var options = property.Options;
 
             // clear previous options
             property.Options = null;
             // brutal new property conversion.
-            var targetProperty = (JsonConvert.DeserializeObject(JsonConvert.SerializeObject(property),
+            var fakeNewProperty = (JsonConvert.DeserializeObject(JsonConvert.SerializeObject(property),
                 targetPropertyDescriptor.PropertyType) as Abstractions.Models.CustomProperty)!;
-            targetProperty.SetAllowAddingNewDataDynamically(true);
-            targetProperty.Type = (int)type;
+            fakeNewProperty.Type = (int)type;
+            fakeNewProperty.BizValueType = targetPropertyDescriptor.BizValueType;
+            fakeNewProperty.DbValueType = targetPropertyDescriptor.DbValueType;
+            fakeNewProperty.SetAllowAddingNewDataDynamically(true);
 
             var newValues = new List<CustomPropertyValue>();
+            property.Options = options;
 
             foreach (var v in values)
             {
                 var bizValue = propertyDescriptor.ConvertDbValueToBizValue(property, v.Value);
-                var (nv, loss) =
-                    await StandardValueService.CheckConversionLoss(bizValue, property.BizValueType,
-                        type.GetBizValueType());
-                var (dbValue, _) = targetPropertyDescriptor.PrepareDbValueFromBizValue(targetProperty, nv);
+                var nv = await StandardValueService.Convert(bizValue, property.BizValueType, fakeNewProperty.BizValueType);
+                var (dbValue, _) = targetPropertyDescriptor.PrepareDbValueFromBizValue(fakeNewProperty, nv);
                 var newValue = new CustomPropertyValue
                 {
-                    BizValue = v.BizValue,
+                    BizValue = bizValue,
                     Id = v.Id,
                     Property = v.Property,
                     PropertyId = v.PropertyId,
@@ -287,8 +282,8 @@ namespace Bakabase.Modules.CustomProperty.Services
                 newValues.Add(newValue);
             }
 
-            targetProperty.SetAllowAddingNewDataDynamically(allowAddingNewDataDynamically);
-            await Put(targetProperty);
+            fakeNewProperty.SetAllowAddingNewDataDynamically(allowAddingNewDataDynamically);
+            await Put(fakeNewProperty);
             await CustomPropertyValueService.UpdateRange(newValues);
             return BaseResponseBuilder.Ok;
         }

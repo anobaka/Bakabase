@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Radio, RadioGroup } from '@nextui-org/react';
+import { Radio, RadioGroup, TableHeader } from '@nextui-org/react';
 import AceEditor from 'react-ace';
 import type { Key } from '@react-types/shared';
 import ChoiceList from './components/ChoiceList';
 import TagList from './components/TagList';
 import { buildLogger, createPortalOfComponent } from '@/components/utils';
-import { CustomPropertyType, ResourcePropertyType, StandardValueConversionLoss } from '@/sdk/constants';
+import { CustomPropertyType, ResourcePropertyType } from '@/sdk/constants';
 import './index.scss';
 import BApi from '@/sdk/BApi';
 import {
@@ -22,6 +22,11 @@ import {
   Tab,
   Tabs,
   Tooltip,
+  Table,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
 } from '@/components/bakaui';
 import type {
   ChoicePropertyOptions,
@@ -38,8 +43,12 @@ import 'ace-builds/src-noconflict/ext-language_tools';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
 import { optimizeOptions } from '@/components/PropertyDialog/helpers';
+import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
+import ValueRenderer from '@/components/StandardValue/ValueRenderer';
+import { deserializeStandardValue } from '@/components/StandardValue/helpers';
+import type { DestroyableProps } from '@/components/bakaui/types';
 
-interface IProps {
+interface IProps extends DestroyableProps{
   value?: CustomPropertyForm;
   onSaved?: (property: IProperty) => any;
   validValueTypes?: CustomPropertyType[];
@@ -359,6 +368,49 @@ const PropertyDialog = ({
     return;
   };
 
+  const renderPropertyTypeButton = () => {
+    const btn = (
+      <Button
+        color={'default'}
+        size={'lg'}
+        onClick={() => {
+          // console.log(13456577, true);
+          setTypeGroupsVisible(true);
+        }}
+      >
+        {property.type == undefined ? t('Select a type') : (
+          <>
+            <Icon
+              type={PropertyTypeIconMap[property.type]!}
+              className={'text-base'}
+            />
+            {t(CustomPropertyType[property.type])}
+          </>
+        )}
+      </Button>
+    );
+    if (property && property.id != undefined && property.id > 0) {
+      // return btn;
+      return (
+        <div>
+          <Tooltip content={t('Click to change type')}>
+            <div>
+              {btn}
+            </div>
+          </Tooltip>
+        </div>
+      );
+    } else {
+      return (
+        <div>
+          {btn}
+        </div>
+      );
+    }
+  };
+
+  console.log(typeGroupsVisible);
+
   return (
     <Modal
       size={'lg'}
@@ -393,24 +445,11 @@ const PropertyDialog = ({
             closeMode={['mask', 'esc']}
             showArrow
             visible={typeGroupsVisible}
-            onVisibleChange={visible => setTypeGroupsVisible(visible)}
-            trigger={(
-              <Button
-                color={'default'}
-                size={'lg'}
-                onClick={() => setTypeGroupsVisible(true)}
-              >
-                {property.type == undefined ? t('Select a type') : (
-                  <>
-                    <Icon
-                      type={PropertyTypeIconMap[property.type]!}
-                      className={'text-base'}
-                    />
-                    {t(CustomPropertyType[property.type])}
-                  </>
-                )}
-              </Button>
-            )}
+            onVisibleChange={visible => {
+              // console.log(visible, 'event');
+              setTypeGroupsVisible(visible);
+            }}
+            trigger={renderPropertyTypeButton()}
             placement={'right'}
           >
             <div className={'p-2 flex flex-col gap-2'} ref={typePopoverDomRef}>
@@ -418,7 +457,7 @@ const PropertyDialog = ({
                 return (
                   <div className={'pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0'}>
                     <div className={'mb-2 font-bold'}>{t(group)}</div>
-                    <div className="grid grid-cols-2 gap-x-2 text-sm leading-5">
+                    <div className="grid grid-cols-3 gap-x-2 text-sm leading-5">
                       {PropertyTypeGroup[group].map(type => {
                         if (group == UnderDevelopmentGroupKey) {
                           return (
@@ -444,87 +483,115 @@ const PropertyDialog = ({
                             className={'justify-start'}
                             onClick={() => {
                               if (property.id != undefined && property.id > 0) {
-                                // change property type
-                                const model = Modal.show({
-                                  title: t('You are changing property type'),
-                                  children: t('Changing the property type may cause the loss of existing data. Click \'continue\' to check.'),
-                                  footer: {
-                                    actions: ['ok', 'cancel'],
-                                    okProps: {
-                                      children: t('Continue'),
-                                    },
-                                  },
-                                  onOk: async () => {
-                                    const rsp = await BApi.customProperty.calculateCustomPropertyTypeConversionLoss(property.id!, type);
-                                    if (rsp.data) {
-                                      const {
-                                        totalDataCount,
-                                        incompatibleDataCount,
-                                        lossData,
-                                      } = rsp.data;
-                                      const lossKeys = lossData ? Object.keys(lossData) : undefined;
-                                      Modal.show({
-                                        title: t('Final check'),
-                                        size: incompatibleDataCount! > 0 ? 'lg' : undefined,
-                                        children: (
-                                          <div>
-                                            <div className={'text-medium'}>
-                                              {incompatibleDataCount! > 0 ? t('Found {{count}} data, and {{incompatibleDataCount}} data will not be retained', {
-                                                count: totalDataCount!,
-                                                incompatibleDataCount: incompatibleDataCount,
-                                              }) : t('Found {{count}} data, and all of them will be retained', { count: totalDataCount! })}
-                                            </div>
-                                            <div className={'font-bold'}>
-                                              {t('Be careful, this process is irreversible')}
-                                            </div>
-                                            {lossKeys && lossKeys.length > 0 && (
-                                              <Tabs>
-                                                {lossKeys.map(k => {
-                                                  const loss = parseInt(k, 10) as StandardValueConversionLoss;
-                                                  const data = lossData![k];
+                                BApi.customProperty.getCustomPropertyConversionRules().then(r => {
+                                  const rules = r.data?.[property.type!]?.[type] ?? [];
+                                  // change property type
+                                  const model = Modal.show({
+                                    title: t('You are changing property type'),
+                                    children: (
+                                      <div>
+                                        <div>
+                                          {t('Changing the property type may cause the loss of existing data. Click \'continue\' to check.')}
+                                        </div>
+                                        {rules.length > 0 && (
+                                          <div className={'mt-2'}>
+                                            <div className={'font-bold'}>{t('Following rule(s) will be applied')}</div>
+                                            <div className={'flex flex-wrap gap-2 items-center mt-1'}>
+                                              {rules.map(r => {
+                                                if (r.description == null) {
                                                   return (
-                                                    <Tab
-                                                      key={loss}
-                                                      className={'mt-2'}
-                                                      title={(
-                                                        <>
-                                                          {t(`StandardValueConversionLoss.${StandardValueConversionLoss[loss]}`)}
-                                                          ({data.length})
-                                                        </>
-                                                      )}
-                                                    >
-                                                      <div className={'flex flex-wrap gap-2'}>
-                                                        {data.map(d => {
-                                                          return (
-                                                            <Chip size={'sm'} className={'whitespace-break-spaces h-auto py-1'}>
-                                                              {d}
-                                                            </Chip>
-                                                          );
-                                                        })}
-                                                      </div>
-                                                    </Tab>
+                                                    <Chip size={'sm'}>{r.name}</Chip>
                                                   );
-                                                })}
-                                              </Tabs>
-                                            )}
+                                                }
+                                                return (
+                                                  <Tooltip content={(<pre>{r.description}</pre>)}>
+                                                    <Chip size={'sm'}>{r.name}</Chip>
+                                                  </Tooltip>
+                                                );
+                                              })}
+                                            </div>
                                           </div>
-                                        ),
-                                        onOk: async () => {
-                                          await BApi.customProperty.changeCustomPropertyType(property.id!, type);
-                                          await BApi.customProperty.getCustomPropertyByKeys({ ids: [property.id!] }).then(r => {
-                                            // @ts-ignore
-                                            setProperty(r.data[0]);
-                                          });
-                                        },
-                                        footer: {
-                                          actions: ['ok', 'cancel'],
-                                          okProps: {
-                                            children: t('Convert'),
+                                        )}
+                                      </div>
+                                    ),
+                                    footer: {
+                                      actions: ['ok', 'cancel'],
+                                      okProps: {
+                                        children: t('Continue'),
+                                      },
+                                    },
+                                    onOk: async () => {
+                                      const rsp = await BApi.customProperty.previewCustomPropertyTypeConversion(property.id!, type);
+                                      if (rsp.data) {
+                                        const changes = rsp.data?.changes || [];
+                                        const {
+                                          dataCount,
+                                          toType,
+                                          fromType,
+                                        } = rsp.data;
+                                        Modal.show({
+                                          title: t('Final check'),
+                                          size: changes.length! > 0 ? 'lg' : undefined,
+                                          children: (
+                                            <div>
+                                              <div className={'text-medium'}>
+                                                {changes.length > 0 ? t('Found {{count}} data, and {{changedDataCount}} data will be modified or deleted', {
+                                                  count: dataCount,
+                                                  changedDataCount: changes.length!,
+                                                }) : t('Found {{count}} data, and all of them will be retained', { count: dataCount! })}
+                                              </div>
+                                              <div className={'font-bold'}>
+                                                {t('Be careful, this process is irreversible')}
+                                              </div>
+                                              {changes.length > 0 && (
+                                                <Table>
+                                                  <TableHeader>
+                                                    <TableColumn>{t('Source value')}</TableColumn>
+                                                    <TableColumn>{t('Converted value')}</TableColumn>
+                                                  </TableHeader>
+                                                  <TableBody>
+                                                    {changes.map(c => {
+                                                      return (
+                                                        <TableRow>
+                                                          <TableCell>
+                                                            <ValueRenderer
+                                                              type={fromType!}
+                                                              value={deserializeStandardValue(c.serializedFromValue ?? null, fromType!)}
+                                                              variant={'light'}
+                                                            />
+                                                          </TableCell>
+                                                          <TableCell>
+                                                            <ValueRenderer
+                                                              type={toType!}
+                                                              value={deserializeStandardValue(c.serializedToValue ?? null, toType!)}
+                                                              variant={'light'}
+                                                            />
+                                                          </TableCell>
+                                                        </TableRow>
+                                                      );
+                                                    })}
+                                                  </TableBody>
+                                                </Table>
+                                              )}
+                                            </div>
+                                          ),
+                                          onOk: async () => {
+                                            await BApi.customProperty.changeCustomPropertyType(property.id!, type);
+                                            await BApi.customProperty.getCustomPropertyByKeys({ ids: [property.id!] }).then(r => {
+                                              // @ts-ignore
+                                              setProperty(r.data[0]);
+                                            });
                                           },
-                                        },
-                                      });
-                                    }
-                                  },
+                                          footer: {
+                                            actions: ['ok', 'cancel'],
+                                            okProps: {
+                                              children: t('Convert'),
+                                            },
+                                          },
+                                        });
+                                      }
+                                    },
+                                  });
                                 });
                               } else {
                                 setProperty({

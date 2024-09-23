@@ -45,6 +45,8 @@ export default (({
                    category,
                    loadAllCategories,
                    loadAllMediaLibraries,
+                   reloadCategory,
+                   reloadMediaLibrary,
                    libraries,
                    forceUpdate,
                    allComponents,
@@ -110,7 +112,7 @@ export default (({
               type: componentType,
             }).then(a => {
               if (!a.code) {
-                loadAllCategories();
+                reloadCategory(category.id);
                 resolve(a);
               } else {
                 reject();
@@ -524,13 +526,9 @@ export default (({
                           variant={'flat'}
                           key={e.id}
                           onClick={() => {
-                            // createPortal(EnhancerSelectorV2, {
-                            //   categoryId: category.id,
-                            //   onClose: loadAllCategories,
-                            // });
                             createPortal(EnhancerSelectorV2, {
                               categoryId: category.id,
-                              onClose: loadAllCategories,
+                              onClose: () => reloadCategory(category.id),
                             });
                           }}
                         >
@@ -547,7 +545,7 @@ export default (({
                     onClick={() => {
                       createPortal(EnhancerSelectorV2, {
                         categoryId: category.id,
-                        onClose: loadAllCategories,
+                        onClose: () => reloadCategory(category.id),
                       });
                     }}
                   >
@@ -582,7 +580,7 @@ export default (({
                       onClick={() => {
                         CategoryCustomPropertyBinderDialog.show({
                           category: category,
-                          onSaved: loadAllCategories,
+                          onSaved: () => reloadCategory(category.id),
                         });
                       }}
                     >
@@ -599,7 +597,7 @@ export default (({
                   onClick={() => {
                     CategoryCustomPropertyBinderDialog.show({
                       category: category,
-                      onSaved: loadAllCategories,
+                      onSaved: () => reloadCategory(category.id),
                     });
                   }}
                 >
@@ -627,9 +625,7 @@ export default (({
               onClick={() => {
                 createPortal(DisplayNameTemplateEditorDialog, {
                   categoryId: category.id,
-                  onSaved: () => {
-                    loadAllCategories();
-                  },
+                  onSaved: () => reloadCategory(category.id),
                 });
               }}
             >
@@ -736,6 +732,7 @@ export default (({
           <SortableMediaLibraryList
             libraries={libraries}
             loadAllMediaLibraries={loadAllMediaLibraries}
+            reloadMediaLibrary={reloadMediaLibrary}
             forceUpdate={forceUpdate}
           />
         </div>

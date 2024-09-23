@@ -207,7 +207,7 @@ export default (props: Props) => {
           <div className={'flex items-center gap-1'}>
             <Button
               // size={'sm'}
-              disabled={options?.autoGenerateProperties}
+              disabled={options?.autoBindProperty}
               variant={'light'}
               color={property ? 'success' : 'primary'}
               onClick={() => {

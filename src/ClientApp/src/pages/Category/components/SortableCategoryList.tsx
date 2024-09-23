@@ -7,7 +7,7 @@ import SortableTag from '@/pages/Tag/components/SortableTag';
 import { SortCategories } from '@/sdk/apis';
 
 export default (({ categories, libraries,
-  loadAllMediaLibraries, loadAllCategories, allComponents, forceUpdate, enhancers }) => {
+  loadAllMediaLibraries, loadAllCategories, allComponents, forceUpdate, enhancers, reloadCategory, reloadMediaLibrary }) => {
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -76,6 +76,8 @@ export default (({ categories, libraries,
                 key={c.id}
                 loadAllMediaLibraries={loadAllMediaLibraries}
                 loadAllCategories={loadAllCategories}
+                reloadCategory={reloadCategory}
+                reloadMediaLibrary={reloadMediaLibrary}
                 libraries={mls}
                 allComponents={allComponents}
                 enhancers={enhancers}

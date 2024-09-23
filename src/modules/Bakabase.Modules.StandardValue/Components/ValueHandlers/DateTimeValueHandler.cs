@@ -4,87 +4,57 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public class DateTimeValueHandler : AbstractStandardValueHandler<DateTime>
+    public class DateTimeValueHandler(ICustomDateTimeParser customDateTimeParser)
+        : AbstractStandardValueHandler<DateTime>(customDateTimeParser)
     {
         private const string Template = "yyyy-MM-dd HH:mm:ss";
 
         public override StandardValueType Type => StandardValueType.DateTime;
-
-        public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
-            new()
-            {
-                {StandardValueType.String, null},
-                {StandardValueType.ListString, null},
-                {StandardValueType.Decimal, StandardValueConversionLoss.All},
-                {StandardValueType.Link, null},
-                {StandardValueType.Boolean, StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue},
-                {StandardValueType.DateTime, null},
-                {StandardValueType.Time, StandardValueConversionLoss.DateWillBeLost},
-                {StandardValueType.ListListString, StandardValueConversionLoss.All},
-                {StandardValueType.ListTag, StandardValueConversionLoss.All}
-            };
 
         protected override string BuildDisplayValue(DateTime value)
         {
             return value.ToString(Template);
         }
 
-        protected override DateTime ConvertToTypedValue(object? currentValue)
+        protected override bool ConvertToOptimizedTypedValue(object? currentValue, out DateTime optimizedTypedValue)
         {
-            return currentValue is DateTime dt ? dt : default;
+            if (currentValue is DateTime dt)
+            {
+                optimizedTypedValue = dt;
+                return true;
+            }
+
+            optimizedTypedValue = default;
+            return false;
         }
 
-        public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(DateTime currentValue)
-        {
-            return (BuildDisplayValue(currentValue), null);
-        }
+        public override string? ConvertToString(DateTime optimizedValue) => optimizedValue.ToString(Template);
 
-        public override (List<string>? NewValue, StandardValueConversionLoss? Loss) ConvertToListString(
-            DateTime currentValue)
-        {
-            return ([BuildDisplayValue(currentValue)], null);
-        }
+        public override List<string>? ConvertToListString(DateTime optimizedValue) =>
+            [ConvertToString(optimizedValue)!];
 
-        public override (decimal? NewValue, StandardValueConversionLoss? Loss) ConvertToNumber(DateTime currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
+        public override decimal? ConvertToNumber(DateTime optimizedValue) => null;
 
-        public override (bool? NewValue, StandardValueConversionLoss? Loss) ConvertToBoolean(DateTime currentValue)
-        {
-            return (true, StandardValueConversionLoss.NotEmptyValueWillBeConvertedToTrue);
-        }
+        public override bool? ConvertToBoolean(DateTime optimizedValue) => true;
 
-        public override (LinkValue? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(DateTime currentValue)
-        {
-            var str = BuildDisplayValue(currentValue);
-            return (new LinkValue { Url = null, Text = str }, null);
-        }
+        public override LinkValue? ConvertToLink(DateTime optimizedValue) =>
+            new LinkValue(ConvertToString(optimizedValue)!, null);
 
-        public override async Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(
-            DateTime currentValue)
-        {
-            return (currentValue, null);
-        }
+        public override List<List<string>>? ConvertToListListString(DateTime optimizedValue) =>
+            [[ConvertToString(optimizedValue)!]];
 
-        public override (TimeSpan? NewValue, StandardValueConversionLoss? Loss) ConvertToTime(DateTime currentValue)
-        {
-            return (currentValue.TimeOfDay, StandardValueConversionLoss.DateWillBeLost);
-        }
+        public override List<TagValue>? ConvertToListTag(DateTime optimizedValue) =>
+            [new TagValue(null, ConvertToString(optimizedValue)!)];
 
-        public override (List<List<string>>? NewValue, StandardValueConversionLoss? Loss) ConvertToMultilevel(
-            DateTime currentValue)
-        {
-            return ([[BuildDisplayValue(currentValue)]], null);
-        }
+        public override Task<DateTime?> ConvertToDateTime(DateTime optimizedValue) =>
+            Task.FromResult((DateTime?) optimizedValue);
 
-        public override (List<TagValue>? NewValue, StandardValueConversionLoss? Loss) ConvertToListTag(DateTime currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
+        public override TimeSpan? ConvertToTime(DateTime optimizedValue) => optimizedValue.TimeOfDay;
     }
 }

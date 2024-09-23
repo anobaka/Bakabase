@@ -142,8 +142,6 @@ export enum SearchableReservedProperty {Introduction = 12, Rating = 13, FileName
 export const searchableReservedProperties = Object.keys(SearchableReservedProperty).filter(k => typeof SearchableReservedProperty[k] === 'number').map(t => ({label: t, value: SearchableReservedProperty[t]}));
 export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
 export const searchOperations = Object.keys(SearchOperation).filter(k => typeof SearchOperation[k] === 'number').map(t => ({label: t, value: SearchOperation[t]}));
-export enum StandardValueConversionLoss {All = 1, InconvertibleDataWillBeLost = 2, NotEmptyValueWillBeConvertedToTrue = 4, ValuesWillBeMerged = 8, OnlyFirstNotEmptyValueWillBeRemained = 16, NonZeroValueWillBeConvertedToTrue = 32, TextWillBeLost = 64, TimeWillBeLost = 128, DateWillBeLost = 256, TagGroupAndNameWillBeMerged = 512}
-export const standardValueConversionLosses = Object.keys(StandardValueConversionLoss).filter(k => typeof StandardValueConversionLoss[k] === 'number').map(t => ({label: t, value: StandardValueConversionLoss[t]}));
 export enum StartupPage {Default = 0, Resource = 1}
 export const startupPages = Object.keys(StartupPage).filter(k => typeof StartupPage[k] === 'number').map(t => ({label: t, value: StartupPage[t]}));
 export enum SubscriptionType {ExHentai = 1, Jav = 2, SoulPlus = 4}
@@ -220,6 +218,8 @@ export enum EnhancementAdditionalItem {None = 0, GeneratedPropertyValue = 1}
 export const enhancementAdditionalItems = Object.keys(EnhancementAdditionalItem).filter(k => typeof EnhancementAdditionalItem[k] === 'number').map(t => ({label: t, value: EnhancementAdditionalItem[t]}));
 export enum EnhancerTargetOptionsItem {AutoBindProperty = 1, AutoMatchMultilevelString = 2, CoverSelectOrder = 3}
 export const enhancerTargetOptionsItems = Object.keys(EnhancerTargetOptionsItem).filter(k => typeof EnhancerTargetOptionsItem[k] === 'number').map(t => ({label: t, value: EnhancerTargetOptionsItem[t]}));
+export enum StandardValueConversionRule {Directly = 1, Incompatible = 2, ValuesWillBeMerged = 4, DateWillBeLost = 8, StringToTag = 16, OnlyFirstValidRemains = 64, StringToDateTime = 128, StringToTime = 256, UrlWillBeLost = 1024, StringToNumber = 2048, Trim = 8192, StringToLink = 16384, ValueWillBeSplit = 32768, BooleanToNumber = 65536, TimeToDateTime = 131072, TagGroupWillBeLost = 262144, ValueToBoolean = 524288}
+export const standardValueConversionRules = Object.keys(StandardValueConversionRule).filter(k => typeof StandardValueConversionRule[k] === 'number').map(t => ({label: t, value: StandardValueConversionRule[t]}));
 export enum LegacyResourceProperty {ReleaseDt = 4, Publisher = 5, Name = 6, Language = 7, Volume = 8, Original = 9, Series = 10, Tag = 11, CustomProperty = 14, Favorites = 22, Cover = 23}
 export const legacyResourceProperties = Object.keys(LegacyResourceProperty).filter(k => typeof LegacyResourceProperty[k] === 'number').map(t => ({label: t, value: LegacyResourceProperty[t]}));
 export enum LogLevel {Trace = 0, Debug = 1, Information = 2, Warning = 3, Error = 4, Critical = 5, None = 6}

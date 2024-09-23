@@ -291,9 +291,6 @@
   <data name="Spanish" xml:space="preserve">
     <value>西班牙语</value>
   </data>
-  <data name="StandardValue_HandlerNotFound" xml:space="preserve">
-    <value>未找到类型[{0}]对应的标准数据处理器</value>
-  </data>
   <data name="TypeIsNotFound" xml:space="preserve">
     <value>未找到类型：{0}</value>
   </data>

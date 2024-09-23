@@ -10,9 +10,8 @@ namespace Bakabase.Modules.StandardValue.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection
-            AddStandardValue<TDateTimeParser, TStandardValueLocalizer>(this IServiceCollection services)
-            where TDateTimeParser : class, IDateTimeParser where TStandardValueLocalizer : IStandardValueLocalizer
+        public static IServiceCollection AddStandardValue<TDateTimeParser>(this IServiceCollection services)
+            where TDateTimeParser : class, ICustomDateTimeParser
         {
             var types = Assembly.GetExecutingAssembly()!.GetTypes()
                 .Where(s => s is {IsClass: true, IsAbstract: false, IsPublic: true} &&
@@ -24,8 +23,8 @@ namespace Bakabase.Modules.StandardValue.Extensions
 
             services.AddScoped<IStandardValueHandlers, StandardValueHandlers>();
             services.AddScoped<IStandardValueService, StandardValueService>();
-            services.AddScoped<IDateTimeParser>(sp => sp.GetRequiredService<TDateTimeParser>());
-            services.AddTransient<IStandardValueLocalizer>(sp => sp.GetRequiredService<TStandardValueLocalizer>());
+            services.AddScoped<ICustomDateTimeParser>(sp => sp.GetRequiredService<TDateTimeParser>());
+            services.AddTransient<IStandardValueLocalizer, StandardValueLocalizer>();
             services.AddSingleton<IStandardValueHelper, StandardValueHelper>();
 
             return services;

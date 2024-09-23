@@ -28,7 +28,7 @@ namespace Bakabase.Lab
                     var v = string.Compare(a, b, CultureInfo.CurrentCulture, stringComparison);
                     // if (v == 0)
                     {
-                        Console.WriteLine($"{a}:{b}={v}, {stringComparison}");
+                        Console.WriteLine($@"{a}:{b}={v}, {stringComparison}");
                     }
                 }
             }

@@ -76,11 +76,17 @@ export default (props: StringValueRendererProps) => {
   } else {
     if (multiline) {
       return (
-        <pre dangerouslySetInnerHTML={{ __html: value! }} onClick={startEditing} />
+        <pre
+          className={'whitespace-normal'}
+          dangerouslySetInnerHTML={{ __html: value! }}
+          onClick={startEditing}
+        />
       );
     } else {
       return (
-        <span onClick={startEditing}>{value}</span>
+        <span
+          onClick={startEditing}
+        >{value}</span>
       );
     }
   }

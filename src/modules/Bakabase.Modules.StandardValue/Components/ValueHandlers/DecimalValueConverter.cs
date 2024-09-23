@@ -1,85 +1,46 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Models.Domain;
+﻿using System.Globalization;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public class DecimalValueConverter : AbstractStandardValueHandler<decimal>
+    public class DecimalValueConverter(ICustomDateTimeParser customDateTimeParser)
+        : AbstractStandardValueHandler<decimal>(customDateTimeParser)
     {
         public override StandardValueType Type => StandardValueType.Decimal;
+        public override bool? ConvertToBoolean(decimal optimizedValue) => optimizedValue != 0;
 
-        public override Dictionary<StandardValueType, StandardValueConversionLoss?> DefaultConversionLoss { get; } =
-            new()
+        public override LinkValue? ConvertToLink(decimal optimizedValue) =>
+            new(optimizedValue.ToString(CultureInfo.InvariantCulture), null);
+
+        public override List<string>? ConvertToListString(decimal optimizedValue) =>
+            [optimizedValue.ToString(CultureInfo.InvariantCulture)];
+
+        public override List<List<string>>? ConvertToListListString(decimal optimizedValue) =>
+            [[optimizedValue.ToString(CultureInfo.InvariantCulture)]];
+
+        public override List<TagValue>? ConvertToListTag(decimal optimizedValue) =>
+        [
+            new TagValue(null, optimizedValue.ToString(CultureInfo.InvariantCulture))
+        ];
+
+        public override decimal? ConvertToNumber(decimal optimizedValue) => optimizedValue;
+
+        protected override bool ConvertToOptimizedTypedValue(object? currentValue, out decimal optimizedTypedValue)
+        {
+            if (currentValue is decimal d)
             {
-                {StandardValueType.String, null},
-                {StandardValueType.ListString, null},
-                {StandardValueType.Decimal, null},
-                {StandardValueType.Link, StandardValueConversionLoss.All},
-                {StandardValueType.Boolean, StandardValueConversionLoss.NonZeroValueWillBeConvertedToTrue},
-                {StandardValueType.DateTime, StandardValueConversionLoss.All},
-                {StandardValueType.Time, StandardValueConversionLoss.All},
-                {StandardValueType.ListListString, StandardValueConversionLoss.All},
-                {StandardValueType.ListTag, StandardValueConversionLoss.All}
-            };
+                optimizedTypedValue = d;
+                return true;
+            }
 
-        public override (bool? NewValue, StandardValueConversionLoss? Loss) ConvertToBoolean(decimal currentValue)
-        {
-            return (currentValue != 0,
-                currentValue == 0 ? null : StandardValueConversionLoss.NonZeroValueWillBeConvertedToTrue);
+            optimizedTypedValue = default;
+            return false;
         }
 
-        public override Task<(DateTime? NewValue, StandardValueConversionLoss? Loss)> ConvertToDateTime(
-            decimal currentValue)
-        {
-            return Task.FromResult<(DateTime? NewValue, StandardValueConversionLoss? Loss)>((null,
-                StandardValueConversionLoss.All));
-        }
-
-        public override (LinkValue? NewValue, StandardValueConversionLoss? Loss) ConvertToLink(decimal currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
-
-        public override (List<string>? NewValue, StandardValueConversionLoss? Loss) ConvertToListString(
-            decimal currentValue)
-        {
-            return ([currentValue.ToString(CultureInfo.InvariantCulture)], null);
-        }
-
-        public override (List<List<string>>? NewValue, StandardValueConversionLoss? Loss) ConvertToMultilevel(
-            decimal currentValue)
-        {
-            return ([[currentValue.ToString(CultureInfo.InvariantCulture)]], null);
-        }
-
-        public override (List<TagValue>? NewValue, StandardValueConversionLoss? Loss) ConvertToListTag(decimal currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
-
-        public override (decimal? NewValue, StandardValueConversionLoss? Loss) ConvertToNumber(decimal currentValue)
-        {
-            return (currentValue, null);
-        }
-
-        public override (string? NewValue, StandardValueConversionLoss? Loss) ConvertToString(decimal currentValue)
-        {
-            return (currentValue.ToString(CultureInfo.InvariantCulture), null);
-        }
-
-        public override (TimeSpan? NewValue, StandardValueConversionLoss? Loss) ConvertToTime(decimal currentValue)
-        {
-            return (null, StandardValueConversionLoss.All);
-        }
-
-        protected override decimal ConvertToTypedValue(object? currentValue)
-        {
-            return currentValue is decimal d ? d : 0;
-        }
+        public override string? ConvertToString(decimal optimizedValue) =>
+            optimizedValue.ToString(CultureInfo.InvariantCulture);
     }
 }

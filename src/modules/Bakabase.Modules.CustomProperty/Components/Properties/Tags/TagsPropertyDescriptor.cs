@@ -33,12 +33,11 @@ public class TagsPropertyDescriptor(IStandardValueHelper standardValueHelper)
         return values?.Any() == true ? (values, SearchOperation.In) : null;
     }
 
-    protected override List<TagValue>? TypedConvertDbValueToBizValue(TagsProperty property, List<string> value)
-    {
-        return property.Options?.Tags?.Where(t => value.Contains(t.Value)).Select(s => s.ToTagValue()).ToList();
-    }
+    protected override List<TagValue>? TypedConvertDbValueToBizValue(TagsProperty property, List<string> value) => value
+        .Select(v => property.Options?.Tags?.FirstOrDefault(x => x.Value == v)?.ToTagValue()).OfType<TagValue>()
+        .ToList();
 
-    protected override (List<string>? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(TagsProperty property, List<TagValue> bizValue)
+    protected override (List<string>? DbValue, bool PropertyChanged) PrepareDbValueFromBizValueInternal(TagsProperty property, List<TagValue> bizValue)
     {
         bizValue.TrimAll();
         if (!bizValue.Any())
@@ -48,7 +47,7 @@ public class TagsPropertyDescriptor(IStandardValueHelper standardValueHelper)
 
         var dbValue = new List<string>();
         var propertyChanged = false;
-        property.Options ??= new();
+        property.Options ??= new() { AllowAddingNewDataDynamically = true };
         property.Options.Tags ??= [];
         foreach (var tag in bizValue)
         {

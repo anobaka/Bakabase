@@ -12,7 +12,7 @@ interface IProps extends DialogProps {
   onSubmitted: any;
 }
 
-const AddMediaLibraryInBulkDialog = ({
+const AddRootPathsInBulkDialog = ({
                                        libraryId,
                                        onSubmitted,
                                        ...dialogProps
@@ -91,6 +91,6 @@ const AddMediaLibraryInBulkDialog = ({
   );
 };
 
-AddMediaLibraryInBulkDialog.show = (props: IProps) => createPortalOfComponent(AddMediaLibraryInBulkDialog, props);
+AddRootPathsInBulkDialog.show = (props: IProps) => createPortalOfComponent(AddRootPathsInBulkDialog, props);
 
-export default AddMediaLibraryInBulkDialog;
+export default AddRootPathsInBulkDialog;

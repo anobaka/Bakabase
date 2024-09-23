@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { DatabaseOutlined, DisconnectOutlined, LinkOutlined } from '@ant-design/icons';
+import { useBakabaseContext } from '../ContextProvider/BakabaseContextProvider';
 import styles from './index.module.scss';
 import type { IProperty } from './models';
 import { PropertyTypeIconMap } from './models';
@@ -21,6 +22,8 @@ interface IProps {
   editablePortal?: 'click' | 'edit-icon';
   onSaved?: (property: IProperty) => any;
   onRemoved?: () => any;
+
+  onDialogDestroyed?: () => any;
 }
 
 export {
@@ -33,11 +36,13 @@ export default ({
                   editablePortal = 'edit-icon',
                   onSaved,
                   onRemoved,
+                  onDialogDestroyed,
                   ...props
                 }: IProps) => {
   const { t } = useTranslation();
 
   const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] = useState(false);
+  const { createPortal } = useBakabaseContext();
 
   const editable = property.type == ResourcePropertyType.Custom && props.editable;
   const removable = property.type == ResourcePropertyType.Custom && props.removable;
@@ -47,22 +52,22 @@ export default ({
   const renderBottom = () => {
     const categories = property.categories || [];
     return (
-      <div className={`${styles.bottom} mt-2 pt-2 flex flex-wrap gap-2`}>
+      <div className={`${styles.bottom} mt-1 pt-1 flex flex-wrap gap-2`}>
         {categories.length > 0 ? (
           <Tooltip
             placement={'bottom'}
             content={<div className={'flex flex-wrap gap-1 max-w-[600px]'}>
               {categories.map(c => {
-              return (
-                <Chip
-                  size={'sm'}
-                  radius={'sm'}
-                  key={c.id}
-                >
-                  {c.name}
-                </Chip>
-              );
-            })}
+                return (
+                  <Chip
+                    size={'sm'}
+                    radius={'sm'}
+                    key={c.id}
+                  >
+                    {c.name}
+                  </Chip>
+                );
+              })}
             </div>}
           >
             <div className={'flex gap-0.5 items-center'}>
@@ -104,7 +109,7 @@ export default ({
   };
 
   const showDetail = () => {
-    PropertyDialog.show({
+    createPortal(PropertyDialog, {
       value: {
         ...property,
         type: property.customPropertyType as unknown as CustomPropertyType,
@@ -112,13 +117,14 @@ export default ({
       onSaved: p => onSaved?.({
         ...p,
       }),
+      onDestroyed: onDialogDestroyed,
     });
   };
 
   return (
     <div
       key={property.id}
-      className={`${styles.property} group`}
+      className={`${styles.property} group px-2 py-1 rounded`}
       onClick={() => {
         if (editable && editablePortal == 'click') {
           showDetail();
@@ -137,8 +143,8 @@ export default ({
       >
         {t('This operation can not be undone, are you sure?')}
       </Modal>
-      <div className={styles.line1}>
-        <div className={`${styles.left} mr-2`}>
+      <div className={`${styles.line1} flex item-center justify-between gap-1`}>
+        <div className={`${styles.left} mr-1`}>
           <div className={styles.name}>{
             property.type == ResourcePropertyType.Custom ? property.name : t(ResourceProperty[property.id])
           }</div>
@@ -194,3 +200,4 @@ export default ({
     </div>
   );
 };
+

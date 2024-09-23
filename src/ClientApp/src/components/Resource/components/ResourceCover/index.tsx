@@ -56,7 +56,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     biggerCoverPlacement,
     coverPaths,
   } = props;
-  log('rendering', props);
+  // log('rendering', props);
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const [loading, setLoading] = useState(true);
@@ -77,7 +77,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   });
 
   useEffect(() => {
-    log('urls changed', urls);
+    // log('urls changed', urls);
   }, [urls]);
 
   useEffect(() => {
@@ -159,7 +159,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     };
   }, [saveThumbnail]);
 
-  useTraceUpdate(props, '[ResourceCover]');
+  // useTraceUpdate(props, '[ResourceCover]');
 
   const loadCover = useCallback((refresh: boolean) => {
     const serverAddress = appContext.serverAddresses?.[1] ?? serverConfig.apiEndpoint;

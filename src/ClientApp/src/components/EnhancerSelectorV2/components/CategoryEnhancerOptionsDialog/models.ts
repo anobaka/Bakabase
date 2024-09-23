@@ -17,7 +17,7 @@ export interface EnhancerTargetFullOptions {
   propertyId?: number;
   integrateWithAlias?: boolean;
   autoMatchMultilevelString?: boolean;
-  autoGenerateProperties?: boolean;
+  autoBindProperty?: boolean;
   target: number;
   dynamicTarget?: string;
   reservedResourcePropertyCandidate?: ReservedResourceProperty;

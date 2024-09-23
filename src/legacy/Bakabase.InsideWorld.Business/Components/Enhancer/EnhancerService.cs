@@ -393,9 +393,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                         ? enhancement.Value
                         : targetDescriptor.EnhancementConverter.Convert(enhancement.Value, propertyDescriptor);
 
-                    var (nv, _) =
-                        await _standardValueService.CheckConversionLoss(value, enhancement.ValueType,
-                            propertyDescriptor.BizValueType);
+                    var nv = await _standardValueService.Convert(value, enhancement.ValueType,
+                        propertyDescriptor.BizValueType);
 
                     switch (targetOptions.PropertyType!.Value)
                     {

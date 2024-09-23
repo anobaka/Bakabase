@@ -14,9 +14,10 @@ public record TextProperty : CustomProperty.Abstractions.Models.CustomProperty;
 public record TextPropertyValue : CustomPropertyValue<string>;
 
 public abstract class
-    TextPropertyDescriptor<TPropertyValue, TInnerValue>(IStandardValueHelper standardValueHelper)
-    : AbstractCustomPropertyDescriptor<TextProperty, TPropertyValue, TInnerValue, TInnerValue>(standardValueHelper)
+    TextPropertyDescriptor<TTextProperty, TPropertyValue, TInnerValue>(IStandardValueHelper standardValueHelper)
+    : AbstractCustomPropertyDescriptor<TTextProperty, TPropertyValue, TInnerValue, TInnerValue>(standardValueHelper)
     where TPropertyValue : CustomPropertyValue<TInnerValue>, new()
+    where TTextProperty : TextProperty, new()
 {
 
     public override SearchOperation[] SearchOperations { get; } =
@@ -35,7 +36,7 @@ public abstract class
         SearchOperation.NotMatches
     ];
 
-    protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeyword(TextProperty property,
+    protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeyword(TTextProperty property,
         string keyword)
     {
         return (keyword, SearchOperation.Contains);

@@ -172,7 +172,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                 }
 
-                if (searchModel.Group == null)
+                if (searchModel.Group is not {HasValidFilter: true})
                 {
                     searchModel.Group = newGroup;
                 }
@@ -186,7 +186,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            var resourceIds = await SearchResourceIds(searchModel.Group, context);
+            var resourceIds = await SearchResourceIds(searchModel.Group?.Trim(), context);
             var ordersForSearch = searchModel.Orders.BuildForSearch();
 
             Func<Abstractions.Models.Db.Resource, bool>? exp = resourceIds == null

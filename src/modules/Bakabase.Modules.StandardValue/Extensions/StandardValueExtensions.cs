@@ -4,6 +4,7 @@ using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
 using SQLitePCL;
+using System.Security.Policy;
 
 namespace Bakabase.Modules.StandardValue.Extensions;
 
@@ -33,7 +34,7 @@ public static class StandardValueExtensions
                 {
                     var data = serializedValue.SplitWithEscapeChar(SerializationLowLevelSeparator,
                         SerializationSeparatorEscapeChar);
-                    return data == null ? null : new LinkValue() {Text = data[0], Url = data[1]};
+                    return data == null ? null : new LinkValue(data[0], data[1]);
                 }
                 case StandardValueType.DateTime:
                     return DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(serializedValue)).ToLocalTime().DateTime;

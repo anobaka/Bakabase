@@ -9,7 +9,7 @@ namespace Bakabase.Modules.CustomProperty.Components.Properties.Text
 
     public record MultilineTextPropertyValue : TextPropertyValue;
 
-    public class MultilineTextPropertyDescriptor(IStandardValueHelper standardValueHelper) : TextPropertyDescriptor<MultilineTextPropertyValue, string>(standardValueHelper)
+    public class MultilineTextPropertyDescriptor(IStandardValueHelper standardValueHelper) : TextPropertyDescriptor<SingleLineTextProperty, MultilineTextPropertyValue, string>(standardValueHelper)
     {
         public override CustomPropertyType EnumType => CustomPropertyType.MultilineText;
         protected override string[] GetMatchSources(string? value)

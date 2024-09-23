@@ -177,8 +177,8 @@ namespace Bakabase.Modules.CustomProperty.Extensions
 
             if (index < bizValueBranch.Count - 1)
             {
-                node.Children = [];
-                optionsChanged = optionsChanged || AddBranchOptions(node.Children, bizValueBranch, index + 1);
+                node.Children ??= [];
+                optionsChanged = AddBranchOptions(node.Children, bizValueBranch, index + 1) || optionsChanged;
             }
 
             return optionsChanged;

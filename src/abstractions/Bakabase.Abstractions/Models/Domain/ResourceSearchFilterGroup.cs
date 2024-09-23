@@ -17,5 +17,8 @@ namespace Bakabase.Abstractions.Models.Domain
                 Filters = Filters?.Select(f => f with { }).ToList()
             };
         }
+
+        public bool HasValidFilter =>
+            Groups?.Any(g => g.HasValidFilter) == true || Filters?.Any(f => f.IsValid) == true;
     }
 }

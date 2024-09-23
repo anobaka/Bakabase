@@ -138,8 +138,11 @@ public static class StringExtensions
         }
     }
 
-    public static List<string> RemoveEmpty(this IEnumerable<string> arr) =>
-        arr.Select(a => a.Trim()).Where(a => a.IsNotEmpty()).ToList();
+    public static List<string>? TrimAndRemoveEmpty(this IEnumerable<string?> arr)
+    {
+        var r = arr.Select(a => a?.Trim()).Where(a => a.IsNotEmpty()).OfType<string>().ToList();
+        return !r.Any() ? null : r;
+    }
 
     public static void TrimAll(this IList<string> arr)
     {

@@ -58,5 +58,31 @@ namespace Bakabase.Abstractions.Extensions
 
             return filters;
         }
+
+        public static ResourceSearchFilterGroup? Trim(this ResourceSearchFilterGroup group)
+        {
+            var groups = group.Groups?.Select(g => g.Trim()).OfType<ResourceSearchFilterGroup>().ToList();
+            var filters = group.Filters?.Where(f => f.IsValid).ToList();
+            if (groups is {Count: 0})
+            {
+                groups = null;
+            }
+
+            if (filters is {Count: 0})
+            {
+                filters = null;
+            }
+
+            if (groups == null && filters == null)
+            {
+                return null;
+            }
+
+            return group with
+            {
+                Groups = groups,
+                Filters = filters
+            };
+        }
     }
 }

@@ -3,7 +3,7 @@ using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Modules.CustomProperty.Models.View;
 
-public record CustomPropertyTypeConversionOverviewViewModel
+public record CustomPropertyTypeConversionExampleViewModel
 {
     public List<Tin>? Results { get; set; }
 

@@ -646,15 +646,6 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Handler for standard value with type:{0} is not found.
-        /// </summary>
-        internal static string StandardValue_HandlerNotFound {
-            get {
-                return ResourceManager.GetString("StandardValue_HandlerNotFound", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Type {0} is not found.
         /// </summary>
         internal static string TypeIsNotFound {

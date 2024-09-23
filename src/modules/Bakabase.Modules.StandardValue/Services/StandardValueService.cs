@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Extensions;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 
 namespace Bakabase.Modules.StandardValue.Services;
@@ -24,9 +25,7 @@ public class StandardValueService : IStandardValueService
     /// <param name="toType"></param>
     /// <returns>Loss information</returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public async Task<(object? NewValue, StandardValueConversionLoss? Loss)> CheckConversionLoss(object? data,
-        StandardValueType fromType,
-        StandardValueType toType)
+    public async Task<object?> Convert(object? data, StandardValueType fromType, StandardValueType toType)
     {
         var converter = _valueConverters[fromType];
         return await converter.Convert(data, toType);

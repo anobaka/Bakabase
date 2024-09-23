@@ -1,8 +1,11 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Modules.StandardValue.Abstractions.Components;
 
 public interface IStandardValueLocalizer
 {
-    string StandardValue_HandlerNotFound(StandardValueType type);
+    string HandlerNotFound(StandardValueType type);
+    string ConversionRuleName(StandardValueConversionRule rule);
+    string? ConversionRuleDescription(StandardValueConversionRule rule);
 }

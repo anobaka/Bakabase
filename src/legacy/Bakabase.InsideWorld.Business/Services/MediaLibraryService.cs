@@ -889,10 +889,10 @@ namespace Bakabase.InsideWorld.Business.Services
                         var property = customPropertyMap.GetValueOrDefault(pId);
                         if (property != null)
                         {
-                            
+
                             customPropertyIdValueMap[property.Id] =
-                                (await StandardValueService.CheckConversionLoss(listString.ToList(),
-                                    StandardValueType.ListString, property.DbValueType)).NewValue;
+                                await StandardValueService.Convert(listString.ToList(), StandardValueType.ListString,
+                                    property.DbValueType);
                         }
                     }
 

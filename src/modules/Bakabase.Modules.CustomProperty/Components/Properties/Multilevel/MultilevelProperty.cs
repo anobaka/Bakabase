@@ -77,13 +77,13 @@ public class MultilevelPropertyDescriptor(
         }
     }
 
-    protected override (List<string>? DbValue, bool PropertyChanged) TypedPrepareDbValueFromBizValue(
+    protected override (List<string>? DbValue, bool PropertyChanged) PrepareDbValueFromBizValueInternal(
         MultilevelProperty property, List<List<string>> bizValue)
     {
-        bizValue.TrimAll();
         if (bizValue.Any())
         {
-            var options = property.Options ??= new MultilevelPropertyOptions();
+            bizValue.TrimAll();
+            var options = property.Options ??= new MultilevelPropertyOptions() { AllowAddingNewDataDynamically = true };
             var propertyChanged = options.AddBranchOptions(bizValue);
 
             var branches = options.Data ?? [];
