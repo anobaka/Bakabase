@@ -289,7 +289,7 @@ namespace Bakabase.Modules.CustomProperty.Services
                 return null;
             }
 
-            var (dbInnerValue, propertyChanged) = pd.PrepareDbValueFromBizValue(property, bizValueType);
+            var (dbInnerValue, propertyChanged) = pd.PrepareDbValueFromBizValue(property, bizValue);
 
             var pv = CustomPropertyValueHelper.CreateFromImplicitValue(dbInnerValue, property.Type, resourceId,
                 property.Id, scope);
