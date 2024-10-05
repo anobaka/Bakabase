@@ -1,5 +1,5 @@
 import type { PropertyValueScope, StandardValueType } from '@/sdk/constants';
-import type { ResourcePropertyType } from '@/sdk/constants';
+import type { PropertyPool } from '@/sdk/constants';
 
 type Value = {
   scope: PropertyValueScope;
@@ -32,6 +32,6 @@ export type Resource = {
   fileCreateDt: string;
   fileUpdateDt: string;
   parent?: Resource;
-  properties?: Record<ResourcePropertyType, Record<number, Property>>;
+  properties?: Record<PropertyPool, Record<number, Property>>;
   coverPaths?: string[];
 };

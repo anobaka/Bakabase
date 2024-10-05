@@ -1,10 +1,10 @@
 ﻿using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Modules.CustomProperty.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bootstrap.Extensions;
@@ -21,8 +21,7 @@ public class DLsiteEnhancer : AbstractEnhancer<DLsiteEnhancerTarget, DLsiteEnhan
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex IdRegex = new System.Text.RegularExpressions.Regex(@"[BVR]J\d{6,10}");
 
-    public DLsiteEnhancer(IEnumerable<IStandardValueHandler> valueConverters, ILoggerFactory loggerFactory,
-        IFileManager fileManager, DLsiteClient client) : base(valueConverters, loggerFactory, fileManager)
+    public DLsiteEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, DLsiteClient client) : base(loggerFactory, fileManager)
     {
         _client = client;
     }

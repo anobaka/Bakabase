@@ -103,60 +103,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("CategoryEnhancerOptions");
                 });
 
-            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.CustomProperty", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Options")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CustomProperties");
-                });
-
-            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.CustomPropertyValue", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PropertyId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ResourceId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Scope")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Value")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PropertyId");
-
-                    b.HasIndex("ResourceId");
-
-                    b.HasIndex("ResourceId", "PropertyId", "Scope")
-                        .IsUnique();
-
-                    b.ToTable("CustomPropertyValues");
-                });
-
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.Enhancement", b =>
                 {
                     b.Property<int>("Id")
@@ -172,7 +118,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int?>("PropertyId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("PropertyType")
+                    b.Property<int?>("PropertyPool")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("ResourceId")
@@ -1068,6 +1014,60 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AliasesV2");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Property.Abstractions.Models.Db.CustomPropertyDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Options")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CustomProperties");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Property.Abstractions.Models.Db.CustomPropertyValueDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PropertyId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("ResourceId", "PropertyId", "Scope")
+                        .IsUnique();
+
+                    b.ToTable("CustomPropertyValues");
                 });
 
             modelBuilder.Entity("Bootstrap.Components.Logging.LogService.Models.Entities.Log", b =>

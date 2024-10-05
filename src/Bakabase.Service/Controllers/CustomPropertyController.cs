@@ -10,14 +10,12 @@ using Bakabase.InsideWorld.Business.Components.Modules.CustomProperty;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.Modules.CustomProperty.Abstractions.Components;
-using Bakabase.Modules.CustomProperty.Abstractions.Configurations;
-using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.CustomProperty.Abstractions.Services;
-using Bakabase.Modules.CustomProperty.Components;
-using Bakabase.Modules.CustomProperty.Extensions;
-using Bakabase.Modules.CustomProperty.Models.Input;
-using Bakabase.Modules.CustomProperty.Models.View;
+using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.Property.Models.Input;
+using Bakabase.Modules.Property.Models.View;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
@@ -26,6 +24,8 @@ using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bakabase.Modules.StandardValue.Models.View;
 using Bakabase.Modules.StandardValue.Services;
+using Bakabase.Service.Extensions;
+using Bakabase.Service.Models.View;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -37,26 +37,30 @@ namespace Bakabase.Service.Controllers
     public class CustomPropertyController(
         ICustomPropertyService service,
         ICustomPropertyValueService propertyValueService,
-        ICustomPropertyDescriptors customPropertyDescriptors,
         IStandardValueService standardValueService,
-        IStandardValueLocalizer standardValueLocalizer
+        IStandardValueLocalizer standardValueLocalizer,
+        IPropertyLocalizer propertyLocalizer
     )
         : Controller
     {
         [HttpGet("all")]
         [SwaggerOperation(OperationId = "GetAllCustomProperties")]
-        public async Task<ListResponse<CustomProperty>> GetAll(
+        public async Task<ListResponse<CustomPropertyViewModel>> GetAll(
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
         {
-            return new ListResponse<CustomProperty>(await service.GetAll(null, additionalItems, false));
+            var cps = await service.GetAll(null, additionalItems, false);
+            var vms = cps.Select(c => c.ToViewModel(propertyLocalizer)).ToList();
+            return new ListResponse<CustomPropertyViewModel>(vms);
         }
 
         [HttpGet("ids")]
         [SwaggerOperation(OperationId = "GetCustomPropertyByKeys")]
-        public async Task<ListResponse<CustomProperty>> GetByKeys(int[] ids,
+        public async Task<ListResponse<CustomPropertyViewModel>> GetByKeys(int[] ids,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None)
         {
-            return new ListResponse<CustomProperty>(await service.GetByKeys(ids, additionalItems, false));
+            var cps = await service.GetByKeys(ids, additionalItems, false);
+            var vms = cps.Select(c => c.ToViewModel(propertyLocalizer)).ToList();
+            return new ListResponse<CustomPropertyViewModel>(vms);
         }
 
         [HttpPost]
@@ -83,7 +87,7 @@ namespace Bakabase.Service.Controllers
         [HttpPost("{sourceCustomPropertyId:int}/{targetType}/conversion-preview")]
         [SwaggerOperation(OperationId = "PreviewCustomPropertyTypeConversion")]
         public async Task<SingletonResponse<CustomPropertyTypeConversionPreviewViewModel>> PreviewTypeConversion(
-            int sourceCustomPropertyId, CustomPropertyType targetType)
+            int sourceCustomPropertyId, PropertyType targetType)
         {
             return new SingletonResponse<CustomPropertyTypeConversionPreviewViewModel>(
                 await service.PreviewTypeConversion(sourceCustomPropertyId, targetType));
@@ -99,14 +103,14 @@ namespace Bakabase.Service.Controllers
                 Dictionary<int, Dictionary<int, List<StandardValueConversionRuleViewModel>>>>>
             GetConversionRules()
         {
-            var customPropertyTypes = SpecificEnumUtils<CustomPropertyType>.Values;
+            var customPropertyTypes = SpecificEnumUtils<PropertyType>.Values;
             var ruleMap = customPropertyTypes.ToDictionary(v => (int) v, v => customPropertyTypes.ToDictionary(
                 d => (int) d,
                 d =>
                 {
-                    var fromStdType = customPropertyDescriptors[(int) v].BizValueType;
-                    var toStdType = customPropertyDescriptors[(int) d].BizValueType;
-                    var rulesFlag = StandardValueOptions.ConversionRules[fromStdType][toStdType];
+                    var fromStdType = PropertyInternals.DescriptorMap[v].BizValueType;
+                    var toStdType = PropertyInternals.DescriptorMap[d].BizValueType;
+                    var rulesFlag = StandardValueInternals.ConversionRules[fromStdType][toStdType];
                     return SpecificEnumUtils<StandardValueConversionRule>.Values.Select(x =>
                     {
                         if (!rulesFlag.HasFlag(x))
@@ -128,7 +132,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPut("{id:int}/{type}")]
         [SwaggerOperation(OperationId = "ChangeCustomPropertyType")]
-        public async Task<BaseResponse> ChangeType(int id, CustomPropertyType type)
+        public async Task<BaseResponse> ChangeType(int id, PropertyType type)
         {
             return await service.ChangeType(id, type);
         }
@@ -145,21 +149,17 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<int>> GetValueUsage(int id, [FromQuery] string value)
         {
             var property = await service.GetByKey(id);
-            if (!property.EnumType.IsReferenceValueType())
+            if (!property.Type.IsReferenceValueType())
             {
                 return new(data: 0);
             }
 
             var values = await propertyValueService.GetAll(x => x.PropertyId == id,
                 CustomPropertyValueAdditionalItem.None, false);
-            var pd = customPropertyDescriptors[property.Type];
-            var count = values.Count(v => pd.IsMatch(v, new ResourceSearchFilter
-            {
-                DbValue = value.SerializeAsStandardValue(StandardValueType.String),
-                Operation = property.EnumType == CustomPropertyType.SingleChoice
-                    ? SearchOperation.Equals
-                    : SearchOperation.Contains
-            }));
+            var psh = PropertyInternals.PropertySearchHandlerMap[property.Type];
+            var count = values.Count(v => psh.IsMatch(v, property.Type == PropertyType.SingleChoice
+                ? SearchOperation.Equals
+                : SearchOperation.Contains, value));
 
             return new(data: count);
         }
@@ -169,7 +169,7 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<CustomPropertyTypeConversionExampleViewModel>>
             CheckTypeConversionOverview()
         {
-            var testData = StandardValueOptions.ExpectedConversions.SelectMany(x =>
+            var testData = StandardValueInternals.ExpectedConversions.SelectMany(x =>
                 (x.Key.GetCompatibleCustomPropertyTypes() ?? []).SelectMany(cpt =>
                     x.Value.SelectMany(y => y.Value.Select(z => z.FromValue).Distinct().Select(a =>
                         new CustomPropertyTypeConversionExampleInputModel.T()
@@ -182,7 +182,7 @@ namespace Bakabase.Service.Controllers
 
             foreach (var @in in testData)
             {
-                var inPropertyDescriptor = customPropertyDescriptors[(int) @in.Type];
+                var inPropertyDescriptor = PropertyInternals.DescriptorMap[@in.Type];
 
                 var valueResult = new CustomPropertyTypeConversionExampleViewModel.Tin
                 {
@@ -192,22 +192,21 @@ namespace Bakabase.Service.Controllers
                     BizValueType = inPropertyDescriptor.BizValueType
                 };
 
-                var fakeInProperty = inPropertyDescriptor.ToDomainModel(new Abstractions.Models.Db.CustomProperty()
-                    {Type = (int) @in.Type})!;
+                var fakeInProperty = new Property(PropertyPool.Custom, 0, @in.Type);
                 fakeInProperty.SetAllowAddingNewDataDynamically(true);
 
                 var inBizValue = @in.SerializedBizValue?.DeserializeAsStandardValue(inPropertyDescriptor.BizValueType);
 
-                foreach (var outType in SpecificEnumUtils<CustomPropertyType>.Values)
+                foreach (var outType in SpecificEnumUtils<PropertyType>.Values)
                 {
-                    if (@in.Type == CustomPropertyType.Number && outType == CustomPropertyType.SingleLineText)
+                    if (@in.Type == PropertyType.Number && outType == PropertyType.SingleLineText)
                     {
 
                     }
 
                     var outBizType = outType.GetBizValueType();
                     var nv =
-                        await standardValueService.Convert(inBizValue, fakeInProperty.BizValueType,
+                        await standardValueService.Convert(inBizValue, fakeInProperty.Type.GetBizValueType(),
                             outBizType);
 
                     valueResult.Outputs.Add(new CustomPropertyTypeConversionExampleViewModel.Tout

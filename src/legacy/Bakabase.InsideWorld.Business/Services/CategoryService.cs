@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
@@ -13,26 +11,22 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
-using Bakabase.Abstractions.Models.View.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
-using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Helpers;
-using Bakabase.InsideWorld.Business.Models.Domain;
-using Bakabase.InsideWorld.Business.Models.Dto;
+using Bakabase.InsideWorld.Business.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.InsideWorld.Models.Extensions;
-using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
-using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.Modules.CustomProperty.Abstractions.Components;
-using Bakabase.Modules.CustomProperty.Abstractions.Services;
-using Bakabase.Modules.CustomProperty.Extensions;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Extensions;
+using Bakabase.Modules.Enhancer.Models.Domain;
+using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -40,15 +34,9 @@ using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
-using CsQuery.ExtensionMethods;
-using CsQuery.ExtensionMethods.Internal;
-using CsQuery.Implementation;
-using CsQuery.Utility;
-using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
-using Namotion.Reflection;
 using Newtonsoft.Json;
 using static Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel;
 using Category = Bakabase.Abstractions.Models.Domain.Category;
@@ -79,11 +67,7 @@ namespace Bakabase.InsideWorld.Business.Services
         protected ICategoryEnhancerOptionsService CategoryEnhancerOptionsService =>
             GetRequiredService<ICategoryEnhancerOptionsService>();
 
-        protected Dictionary<int, ICustomPropertyDescriptor> CustomPropertyDescriptorMap =>
-            GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>().ToDictionary(d => d.Type, d => d);
-
-        protected Dictionary<StandardValueType, IStandardValueHandler> StandardValueHandlerMap =>
-            GetRequiredService<IEnumerable<IStandardValueHandler>>().ToDictionary(d => d.Type, d => d);
+        protected IPropertyLocalizer PropertyLocalizer => GetRequiredService<IPropertyLocalizer>();
 
         protected ISpecialTextService SpecialTextService => GetRequiredService<ISpecialTextService>();
 
@@ -233,11 +217,20 @@ namespace Bakabase.InsideWorld.Business.Services
                             var cIds = dtoList.Select(a => a.Id).ToArray();
                             var enhancerOptionsMap =
                                 (await CategoryEnhancerOptionsService.GetAll(c => cIds.Contains(c.CategoryId)))
-                                .GroupBy(d => d.CategoryId).ToDictionary(d => d.Key, d => d.ToList());
+                                .GroupBy(d => d.CategoryId).ToDictionary(d => d.Key,
+                                    d => d.GroupBy(x => x.EnhancerId).ToDictionary(a => a.Key, a => a.First()));
+                            var enhancers = serviceProvider.GetRequiredService<IEnhancerDescriptors>().Descriptors
+                                .ToList();
                             foreach (var d in dtoList)
                             {
-                                d.EnhancerOptions = enhancerOptionsMap.GetValueOrDefault(d.Id)
-                                    ?.Cast<CategoryEnhancerOptions>().ToList();
+                                d.EnhancerOptions = enhancers.Select(enhancer =>
+                                {
+                                    var options =
+                                        enhancerOptionsMap.GetValueOrDefault(d.Id)?.GetValueOrDefault(enhancer.Id) ??
+                                        new CategoryEnhancerFullOptions {CategoryId = d.Id, EnhancerId = enhancer.Id};
+                                    options.AddDefaultOptions(enhancer);
+                                    return options;
+                                }).Cast<CategoryEnhancerOptions>().ToList();
                             }
 
                             break;
@@ -566,7 +559,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template,
             (string Left, string Right)[] wrappers)
         {
-            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int) ResourcePropertyType.Custom)?.Values
+            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int) PropertyPool.Custom)?.Values
                 .GroupBy(d => d.Name)
                 .ToDictionary(d => $"{{{d.Key}}}", d => d.First()) ?? [];
 
@@ -576,7 +569,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     var value = d.Value.Values?.FirstOrDefault()?.BizValue;
                     if (value != null)
                     {
-                        var stdValueHandler = StandardValueHandlerMap[d.Value.BizValueType];
+                        var stdValueHandler = StandardValueInternals.HandlerMap[d.Value.BizValueType];
                         return stdValueHandler.BuildDisplayValue(value);
                     }
 
@@ -585,7 +578,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             foreach (var b in SpecificEnumUtils<BuiltinPropertyForDisplayName>.Values)
             {
-                var name = BakabaseLocalizer.BuiltinPropertyNameForDisplayName(b);
+                var name = PropertyLocalizer.BuiltinPropertyName((ResourceProperty) b);
                 var key = $"{{{name}}}";
                 replacements[key] = b switch
                 {
@@ -612,15 +605,15 @@ namespace Bakabase.InsideWorld.Business.Services
             string template,
             int maxCount = 100)
         {
-            var resourcesSearchResult = await ResourceService.Search(new ResourceSearchDto
+            var resourcesSearchResult = await ResourceService.Search(new ResourceSearch
             {
                 Group = new ResourceSearchFilterGroup
                 {
-                    Combinator = Combinator.And, Filters =
+                    Combinator = SearchCombinator.And, Filters =
                     [
                         new ResourceSearchFilter
                         {
-                            PropertyType = ResourcePropertyType.Internal,
+                            PropertyPool = PropertyPool.Internal,
                             Operation = SearchOperation.In,
                             PropertyId = (int) ResourceProperty.Category,
                             DbValue = new[] {id.ToString()}.SerializeAsStandardValue(StandardValueType.ListString)

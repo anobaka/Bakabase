@@ -16,8 +16,7 @@ using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public class ListStringValueHandler(ICustomDateTimeParser customDateTimeParser)
-        : AbstractStandardValueHandler<List<string>>(customDateTimeParser)
+    public class ListStringValueHandler : AbstractStandardValueHandler<List<string>>
     {
         public override StandardValueType Type => StandardValueType.ListString;
 
@@ -47,7 +46,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         public override string? ConvertToString(List<string> optimizedValue)
         {
             return optimizedValue.Any()
-                ? string.Join(StandardValueOptions.CommonListItemSeparator, optimizedValue)
+                ? string.Join(StandardValueInternals.CommonListItemSeparator, optimizedValue)
                 : null;
         }
 
@@ -71,10 +70,10 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
                 }
             }
 
-            return new LinkValue(string.Join(StandardValueOptions.CommonListItemSeparator, optimizedValue), null);
+            return new LinkValue(string.Join(StandardValueInternals.CommonListItemSeparator, optimizedValue), null);
         }
 
-        protected override List<string>? ExtractTextsForConvertingToDateTime(List<string> optimizedValue) =>
+        protected override List<string>? ExtractTextsForConvertingToDateTimeInternal(List<string> optimizedValue) =>
             optimizedValue;
 
         protected override List<string>? ExtractTextsForConvertingToTime(List<string> optimizedValue) => optimizedValue;

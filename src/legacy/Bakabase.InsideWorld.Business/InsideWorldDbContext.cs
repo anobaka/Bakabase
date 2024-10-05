@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Legacy.Models;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
@@ -49,8 +50,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<BulkModificationDiff> BulkModificationDiffs { get; set; }
         public DbSet<BulkModificationTempData> BulkModificationTempData { get; set; }
 
-        public DbSet<CustomProperty> CustomProperties { get; set; }
-        public DbSet<CustomPropertyValue> CustomPropertyValues { get; set; }
+        public DbSet<CustomPropertyDbModel> CustomProperties { get; set; }
+        public DbSet<CustomPropertyValueDbModel> CustomPropertyValues { get; set; }
         public DbSet<CategoryCustomPropertyMapping> CategoryCustomPropertyMappings { get; set; }
 
         public DbSet<Enhancement> Enhancements { get; set; }
@@ -165,9 +166,9 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => new {x.CategoryId, x.PropertyId}).IsUnique();
             });
 
-            modelBuilder.Entity<CustomProperty>(t => { });
+            modelBuilder.Entity<CustomPropertyDbModel>(t => { });
 
-            modelBuilder.Entity<CustomPropertyValue>(t =>
+            modelBuilder.Entity<CustomPropertyValueDbModel>(t =>
             {
                 t.HasIndex(x => new {x.ResourceId});
                 t.HasIndex(x => x.PropertyId);

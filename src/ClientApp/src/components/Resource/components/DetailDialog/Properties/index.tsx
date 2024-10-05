@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
 import type { Property, Resource } from '@/core/models/Resource';
-import { PropertyValueScope, propertyValueScopes, ResourcePropertyType } from '@/sdk/constants';
+import { PropertyValueScope, propertyValueScopes, PropertyPool } from '@/sdk/constants';
 import store from '@/store';
 import type {
   PropertyContainerProps,
@@ -18,7 +18,7 @@ type Props = {
   resource: Resource;
   reload: () => Promise<any>;
   className?: string;
-  restrictedPropertyType?: ResourcePropertyType;
+  restrictedPropertyPool?: PropertyPool;
   restrictedPropertyIds?: number[];
   propertyInnerDirection?: 'hoz' | 'ver';
   hidePropertyName?: boolean;
@@ -28,7 +28,7 @@ type Props = {
 type PropertyRenderContext = {
   property: IProperty;
   propertyValues: Property;
-  propertyType: ResourcePropertyType;
+  propertyPool: PropertyPool;
   visible: boolean;
 };
 
@@ -41,7 +41,7 @@ export default (props: Props) => {
     resource,
     className,
     reload,
-    restrictedPropertyType,
+    restrictedPropertyPool,
     restrictedPropertyIds,
     propertyInnerDirection = 'hoz',
     hidePropertyName = false,
@@ -52,7 +52,6 @@ export default (props: Props) => {
   const cps = resource.properties;
   const resourceOptions = store.useModelState('resourceOptions');
   const [valueScopePriority, setValueScopePriority] = useState<PropertyValueScope[]>([]);
-  const internalOptions = store.useModelState('internalOptions');
   const [builtinPropertyMap, setBuiltinPropertyMap] = useState<Record<number, IProperty>>({});
   const [customPropertyMap, setCustomPropertyMap] = useState<Record<number, IProperty>>({});
   const [showInvisibleProperties, setShowInvisibleProperties] = useState(false);
@@ -63,28 +62,25 @@ export default (props: Props) => {
   }, [resourceOptions.propertyValueScopePriority]);
 
   useEffect(() => {
-    if (internalOptions.initialized) {
-      setBuiltinPropertyMap({ ...(internalOptions.resource.internalResourcePropertyDescriptorMap || {}), ...(internalOptions.resource.reservedResourcePropertyDescriptorMap || {}) });
-    }
-  }, [internalOptions.initialized]);
+    // @ts-ignore
+    BApi.property.getPropertiesByPool(PropertyPool.Reserved | PropertyPool.Internal).then(r => {
+      const ps = r.data || [];
+      setBuiltinPropertyMap(ps.reduce<Record<number, IProperty>>((s, t) => {
+        // @ts-ignore
+        s[t.id!] = t;
+        return s;
+      }, {}));
+    });
 
-  useEffect(() => {
-    if (restrictedPropertyType == undefined || restrictedPropertyType == ResourcePropertyType.Custom) {
-      const customPropertyMap = resource.properties?.[ResourcePropertyType.Custom] || {};
+    if (restrictedPropertyPool == undefined || restrictedPropertyPool == PropertyPool.Custom) {
+      const customPropertyMap = resource.properties?.[PropertyPool.Custom] || {};
       const customPropertyIds = Object.keys(customPropertyMap).map(x => parseInt(x, 10));
       if (customPropertyIds.length > 0) {
         BApi.customProperty.getCustomPropertyByKeys({ ids: customPropertyIds }).then(r => {
           const ps = r.data || [];
           setCustomPropertyMap(ps.reduce<Record<number, IProperty>>((s, t) => {
-            s[t.id!] = {
-              id: t.id!,
-              name: t.name!,
-              bizValueType: t.bizValueType!,
-              dbValueType: t.dbValueType!,
-              type: ResourcePropertyType.Custom,
-              customPropertyType: t.type!,
-              options: t.options,
-            };
+            // @ts-ignore
+            s[t.id!] = t;
             return s;
           }, {}));
         });
@@ -113,12 +109,12 @@ export default (props: Props) => {
 
   const buildRenderContext = () => {
     const renderContext: RenderContext = [];
-    Object.keys(resource.properties ?? {}).forEach(propertyTypeStr => {
-      const pt = parseInt(propertyTypeStr, 10) as ResourcePropertyType;
-      if (restrictedPropertyType != undefined && restrictedPropertyType != pt) {
+    Object.keys(resource.properties ?? {}).forEach(propertyPoolStr => {
+      const pp = parseInt(propertyPoolStr, 10) as PropertyPool;
+      if (restrictedPropertyPool != undefined && restrictedPropertyPool != pp) {
         return;
       }
-      const propertyMap = resource.properties?.[pt] ?? {};
+      const propertyMap = resource.properties?.[pp] ?? {};
       Object.keys(propertyMap).forEach(idStr => {
         const pId = parseInt(idStr, 10);
         if (restrictedPropertyIds != undefined && !restrictedPropertyIds.includes(pId)) {
@@ -127,22 +123,15 @@ export default (props: Props) => {
 
         const sp = propertyMap[pId];
         let property: IProperty | undefined;
-        switch (pt) {
-          case ResourcePropertyType.Internal:
+        switch (pp) {
+          case PropertyPool.Internal:
             break;
-          case ResourcePropertyType.Reserved:
+          case PropertyPool.Reserved:
             property = builtinPropertyMap[pId];
             break;
-          case ResourcePropertyType.Custom: {
+          case PropertyPool.Custom: {
             const p = customPropertyMap?.[pId];
-            property = {
-              ...p,
-              id: pId,
-              type: ResourcePropertyType.Custom,
-              dbValueType: sp.dbValueType,
-              bizValueType: sp.bizValueType,
-              name: sp.name,
-            };
+            property = p;
             break;
           }
         }
@@ -150,7 +139,7 @@ export default (props: Props) => {
         if (property) {
           renderContext.push({
             property,
-            propertyType: pt,
+            propertyPool: pp,
             propertyValues: sp,
             visible: sp.visible ?? false,
           });
@@ -164,13 +153,13 @@ export default (props: Props) => {
     const {
       property,
       propertyValues,
-      propertyType,
+      propertyPool,
     } = pCtx;
     return (
       <PropertyContainer
         classNames={propertyClassNames}
         hidePropertyName={hidePropertyName}
-        key={`${propertyType}-${property.id}`}
+        key={`${propertyPool}-${property.id}`}
         property={property}
         values={propertyValues.values}
         valueScopePriority={valueScopePriority}
@@ -179,7 +168,7 @@ export default (props: Props) => {
           const dv = deserializeStandardValue(sdv ?? null, property!.dbValueType!);
           const bv = deserializeStandardValue(sbv ?? null, property!.bizValueType!);
 
-          log('OnValueChange', 'dv', dv, 'bv', bv, 'sdv', sdv, 'sbv', sbv);
+          log('OnValueChange', 'dv', dv, 'bv', bv, 'sdv', sdv, 'sbv', sbv, property);
 
           let manualValue = propertyValues.values?.find(v => v.scope == PropertyValueScope.Manual);
           if (!manualValue) {
@@ -193,7 +182,7 @@ export default (props: Props) => {
           manualValue.value = dv;
           forceUpdate();
 
-          onValueChange(property.id, property!.type == ResourcePropertyType.Custom, sdv);
+          onValueChange(property.id, property!.pool == PropertyPool.Custom, sdv);
         }}
       />
     );

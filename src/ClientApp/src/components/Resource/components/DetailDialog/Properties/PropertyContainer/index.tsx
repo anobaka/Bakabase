@@ -3,7 +3,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
 import { Badge, Button, Chip, Listbox, ListboxItem, Popover } from '@/components/bakaui';
-import { PropertyValueScope, propertyValueScopes, ResourceProperty, ResourcePropertyType } from '@/sdk/constants';
+import { PropertyValueScope, propertyValueScopes, ResourceProperty, PropertyPool } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import type { Property } from '@/core/models/Resource';
 import type { Props as PropertyValueRendererProps } from '@/components/Property/components/PropertyValueRenderer';
@@ -18,7 +18,6 @@ export type PropertyContainerProps = {
   property: IProperty;
   values?: Property['values'];
   onValueChange: (sdv?: string, sbv?: string) => any;
-  dataPool?: PropertyValueRendererProps['dataPool'];
   hidePropertyName?: boolean;
   classNames?: {
     name?: string;
@@ -37,7 +36,6 @@ export default (props: PropertyContainerProps) => {
     values,
     property,
     onValueChange,
-    dataPool,
     hidePropertyName = false,
     classNames,
   } = props;
@@ -79,7 +77,7 @@ export default (props: PropertyContainerProps) => {
             color={'secondary'}
             // variant={'light'}
           >
-            {property.type == ResourcePropertyType.Custom ? property.name : t(ResourceProperty[property.id])}
+            {property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id])}
           </Chip>
         </div>
       )}
@@ -94,7 +92,6 @@ export default (props: PropertyContainerProps) => {
           bizValue={serializeStandardValue(bizValue, property.bizValueType)}
           dbValue={serializeStandardValue(dbValue, property.dbValueType)}
           onValueChange={onValueChange}
-          dataPool={dataPool}
         />
         <Popover
           trigger={(
@@ -160,7 +157,6 @@ export default (props: PropertyContainerProps) => {
                           variant={'light'}
                           property={property}
                           bizValue={serializeStandardValue(sbv, property.bizValueType)}
-                          dataPool={dataPool}
                         />
                       </div>
                     </ListboxItem>

@@ -34,6 +34,7 @@ export default (props: TagsValueRendererProps) => {
   const showEditor = () => {
     createPortal(MultilevelValueEditor<string>, {
       value: editor?.value,
+      multiple: true,
       getDataSource: async () => {
         const ds = await getDataSource?.() || [];
         const data: MultilevelData<string>[] = [];
@@ -97,22 +98,18 @@ export default (props: TagsValueRendererProps) => {
     );
   } else {
     return (
-      <Card>
-        <CardBody>
-          <div className={'flex flex-wrap gap-1'} onClick={startEditing}>
-            {simpleLabels?.map(l => {
-              return (
-                <Chip
-                  size={'sm'}
-                  radius={'sm'}
-                >
-                  {l}
-                </Chip>
-              );
-            })}
-          </div>
-        </CardBody>
-      </Card>
+      <div className={'flex flex-wrap gap-1'} onClick={startEditing}>
+        {simpleLabels?.map(l => {
+          return (
+            <Chip
+              size={'sm'}
+              radius={'sm'}
+            >
+              {l}
+            </Chip>
+          );
+        })}
+      </div>
     );
   }
 };

@@ -45,7 +45,7 @@ const EnhancerSelector = ({
 
     // @ts-ignore
     await BApi.category.getCategory(categoryId, { additionalItems: CategoryAdditionalItem.EnhancerOptions | CategoryAdditionalItem.CustomProperties }).then(r => {
-      const data = r.data || {};
+      const data = r.data!;
       setCategory({ id: data.id!, name: data.name! });
       setCategoryEnhancerOptionsList(data.enhancerOptions?.map(eo => (eo as CategoryEnhancerFullOptions)) || []);
     });

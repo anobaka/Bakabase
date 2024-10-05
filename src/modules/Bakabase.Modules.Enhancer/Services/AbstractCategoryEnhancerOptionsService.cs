@@ -13,6 +13,7 @@ using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions;
 
 namespace Bakabase.Modules.Enhancer.Services
 {
@@ -25,13 +26,14 @@ namespace Bakabase.Modules.Enhancer.Services
             Expression<Func<Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions, bool>>? exp)
         {
             var data = await orm.GetAll(exp);
-            return data.Select(d => d.ToDomainModel()!).ToList();
+            return data.Select(d => d.ToDomainModel(enhancerDescriptors.TryGet(d.EnhancerId))!).ToList();
         }
 
         public async Task<CategoryEnhancerFullOptions?> GetByCategoryAndEnhancer(int cId, int eId)
         {
-            var data = await orm.GetFirst(x => x.CategoryId == cId && x.EnhancerId == eId);
-            return data?.ToDomainModel();
+            var data = await orm.GetFirst(x => x.CategoryId == cId && x.EnhancerId == eId) ??
+                       new CategoryEnhancerOptions {CategoryId = cId, EnhancerId = eId};
+            return data?.ToDomainModel(enhancerDescriptors.TryGet(eId));
         }
 
         public async Task<BaseResponse> PutAll(CategoryEnhancerFullOptions[] options)
@@ -39,8 +41,24 @@ namespace Bakabase.Modules.Enhancer.Services
             return await orm.UpdateRange(options.Select(o => o.ToDbModel()));
         }
 
-        public async Task<List<CategoryEnhancerFullOptions>> GetByCategory(int categoryId) =>
-            await GetAll(x => x.CategoryId == categoryId);
+        public async Task<List<CategoryEnhancerFullOptions>> GetByCategory(int categoryId)
+        {
+            var list = await GetAll(x => x.CategoryId == categoryId);
+            var descriptors = enhancerDescriptors.Descriptors.ToList();
+            foreach (var enhancer in descriptors)
+            {
+                var options = list.FirstOrDefault(x => x.EnhancerId == enhancer.Id);
+                if (options == null)
+                {
+                    options = new CategoryEnhancerFullOptions {CategoryId = categoryId, EnhancerId = enhancer.Id};
+                    list.Add(options);
+                }
+
+                options.AddDefaultOptions(enhancer);
+            }
+
+            return list;
+        }
 
         public async Task<SingletonResponse<CategoryEnhancerFullOptions>> Patch(int categoryId, int enhancerId,
             CategoryEnhancerOptionsPatchInputModel model)
@@ -72,7 +90,9 @@ namespace Bakabase.Modules.Enhancer.Services
                 data = (await orm.Add(data)).Data;
             }
 
-            return new SingletonResponse<CategoryEnhancerFullOptions>(data.ToDomainModel());
+            var enhancer = enhancerDescriptors.TryGet(enhancerId);
+
+            return new SingletonResponse<CategoryEnhancerFullOptions>(data!.ToDomainModel(enhancer));
         }
 
         public async Task<BaseResponse> UnbindTargetProperty(int categoryId, int enhancerId, int target,
@@ -166,7 +186,7 @@ namespace Bakabase.Modules.Enhancer.Services
             }
 
             targetOptions.PropertyId = patches.PropertyId ?? targetOptions.PropertyId;
-            targetOptions.PropertyType = patches.PropertyType ?? targetOptions.PropertyType;
+            targetOptions.PropertyPool = patches.PropertyPool ?? targetOptions.PropertyPool;
             targetOptions.AutoMatchMultilevelString =
                 patches.AutoMatchMultilevelString ?? targetOptions.AutoMatchMultilevelString;
             targetOptions.AutoBindProperty = patches.AutoBindProperty ?? targetOptions.AutoBindProperty;
@@ -174,7 +194,15 @@ namespace Bakabase.Modules.Enhancer.Services
             // patch or create
             targetOptions.DynamicTarget = patches.DynamicTarget ?? dynamicTarget;
 
-            await orm.Update(data.ToDbModel());
+            var dbData = data.ToDbModel();
+            if (dbData.Id > 0)
+            {
+                await orm.Update(dbData);
+            }
+            else
+            {
+                await orm.Add(dbData);
+            }
 
             return BaseResponseBuilder.Ok;
         }

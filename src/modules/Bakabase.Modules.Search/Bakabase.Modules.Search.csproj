@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
+    <ProjectReference Include="..\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Abstractions\Components\" />
+    <Folder Include="Abstractions\Configuration\" />
+    <Folder Include="Abstractions\Services\" />
+    <Folder Include="Components\" />
+  </ItemGroup>
+
+</Project>

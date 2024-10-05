@@ -10,8 +10,7 @@ using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public class DateTimeValueHandler(ICustomDateTimeParser customDateTimeParser)
-        : AbstractStandardValueHandler<DateTime>(customDateTimeParser)
+    public class DateTimeValueHandler : AbstractStandardValueHandler<DateTime>
     {
         private const string Template = "yyyy-MM-dd HH:mm:ss";
 
@@ -52,8 +51,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         public override List<TagValue>? ConvertToListTag(DateTime optimizedValue) =>
             [new TagValue(null, ConvertToString(optimizedValue)!)];
 
-        public override Task<DateTime?> ConvertToDateTime(DateTime optimizedValue) =>
-            Task.FromResult((DateTime?) optimizedValue);
+        public override DateTime? ConvertToDateTime(DateTime optimizedValue) => optimizedValue;
 
         public override TimeSpan? ConvertToTime(DateTime optimizedValue) => optimizedValue.TimeOfDay;
     }

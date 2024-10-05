@@ -33,9 +33,9 @@ export default () => {
   const [loading, setLoading] = useState(true);
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
-  const gotoNewCategoryPage = (noCategory: boolean) => {
-    history!.push(`/category/setupWizard?noCategory=${noCategory ? 1 : 0}`);
-  };
+  // const gotoNewCategoryPage = (noCategory: boolean) => {
+  //   history!.push(`/category/setupWizard?noCategory=${noCategory ? 1 : 0}`);
+  // };
 
   const loadAllCategories = (cb: () => void = () => {
   }): Promise<any> => {

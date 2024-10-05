@@ -14,7 +14,7 @@ namespace Bakabase.InsideWorld.Models.Constants
         Introduction = 12,
         Rating = 13,
         CustomProperty = 14,
-        FileName = 15,
+        Filename = 15,
         DirectoryPath = 16,
         CreatedAt = 17,
         FileCreatedAt = 18,

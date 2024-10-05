@@ -21,7 +21,8 @@ using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using Bakabase.Modules.CustomProperty.Abstractions.Services;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Logging.LogService.Services;
@@ -491,9 +492,9 @@ namespace Bakabase.InsideWorld.Business.Services
                     var property = customPropertyMap.GetValueOrDefault(pId);
                     if (property != null)
                     {
-                        var propertyMap = (pr.Properties ??= []).GetOrAdd((int)ResourcePropertyType.Custom, () => [])!;
+                        var propertyMap = (pr.Properties ??= []).GetOrAdd((int)PropertyPool.Custom, () => [])!;
                         var rp = propertyMap.GetOrAdd(property.Id,
-                            () => new Resource.Property(property.Name, property.DbValueType, property.DbValueType, null));
+                            () => new Resource.Property(property.Name, property.Type.GetDbValueType(), property.Type.GetBizValueType(), null));
                         rp.Values ??= [];
                         rp.Values.Add(new Resource.Property.PropertyValue((int)PropertyValueScope.Synchronization,
                             rawValue, rawValue, rawValue));
@@ -892,7 +893,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             customPropertyIdValueMap[property.Id] =
                                 await StandardValueService.Convert(listString.ToList(), StandardValueType.ListString,
-                                    property.DbValueType);
+                                    property.Type.GetDbValueType());
                         }
                     }
 

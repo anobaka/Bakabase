@@ -93,6 +93,7 @@ export default ({
   );
 
   useUpdateEffect(() => {
+    onResize(true);
   }, [columnCount]);
 
   const onResize = (clearCache: boolean = false) => {

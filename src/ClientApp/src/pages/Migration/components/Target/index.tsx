@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { FileSearchOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import SimplePropertySelector from '../SimplePropertySelector';
-import type { CustomPropertyType } from '@/sdk/constants';
+import type { PropertyType } from '@/sdk/constants';
 import { ResourceProperty, StandardValueConversionLoss } from '@/sdk/constants';
 import { Button, Chip, Modal, Tab, Tabs } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
@@ -16,7 +16,7 @@ export interface MigrationTarget {
   data?: any;
   dataForDisplay?: string[];
   targetCandidates?: {
-    type: CustomPropertyType;
+    type: PropertyType;
     lossData?: Record<string, string[]>;
   }[];
 }
@@ -41,7 +41,7 @@ const Target = ({
 
   const [selectedProperty, setSelectedProperty] = useState<IProperty>();
 
-  const lossData = target.targetCandidates?.find(d => d.type == (selectedProperty?.dbValueType as unknown as CustomPropertyType))?.lossData;
+  const lossData = target.targetCandidates?.find(d => d.type == (selectedProperty?.dbValueType as unknown as PropertyType))?.lossData;
   const hasLossData = lossData && Object.keys(lossData).length > 0;
 
   useEffect(() => {

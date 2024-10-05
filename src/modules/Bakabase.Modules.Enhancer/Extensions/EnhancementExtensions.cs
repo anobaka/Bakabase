@@ -1,8 +1,11 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -12,7 +15,7 @@ namespace Bakabase.Modules.Enhancer.Extensions;
 public static class EnhancementExtensions
 {
     public static CategoryEnhancerFullOptions ToDomainModel(
-        this Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions ce)
+        this Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions ce, IEnhancerDescriptor? enhancer)
     {
         var model = new CategoryEnhancerFullOptions
         {
@@ -48,8 +51,33 @@ public static class EnhancementExtensions
             model.Options = JsonConvert.DeserializeObject<EnhancerFullOptions>(ce.Options);
         }
 
+        if (enhancer != null)
+        {
+            model.AddDefaultOptions(enhancer);
+        }
+
         return model;
     }
+
+    public static void AddDefaultOptions(this CategoryEnhancerFullOptions options, IEnhancerDescriptor enhancer)
+    {
+        foreach (var t in enhancer.Targets.Where(x => x.ReservedPropertyCandidate.HasValue))
+        {
+            options.Options ??= new();
+            options.Options.TargetOptions ??= [];
+            var to = options.Options.TargetOptions.FirstOrDefault(x => x.Target == t.Id);
+            if (to == null)
+            {
+                options.Options.TargetOptions.Add(new EnhancerTargetFullOptions
+                {
+                    PropertyPool = PropertyPool.Reserved,
+                    PropertyId = (int)t.ReservedPropertyCandidate!.Value,
+                    Target = t.Id
+                });
+            }
+        }
+    }
+
     public static Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions ToDbModel(
         this CategoryEnhancerFullOptions ce)
     {
@@ -63,5 +91,37 @@ public static class EnhancementExtensions
         };
 
         return model;
+    }
+
+    public static Enhancement ToDomainModel(this Bakabase.Abstractions.Models.Db.Enhancement dbModel)
+    {
+        return new Enhancement
+        {
+            EnhancerId = dbModel.EnhancerId,
+            Id = dbModel.Id,
+            ResourceId = dbModel.ResourceId,
+            Target = dbModel.Target,
+            Value = dbModel.Value?.DeserializeAsStandardValue(dbModel.ValueType),
+            ValueType = dbModel.ValueType,
+            PropertyPool = dbModel.PropertyPool,
+            PropertyId = dbModel.PropertyId,
+            DynamicTarget = dbModel.DynamicTarget
+        };
+    }
+
+    public static Bakabase.Abstractions.Models.Db.Enhancement ToDbModel(this Enhancement domainModel)
+    {
+        return new Bakabase.Abstractions.Models.Db.Enhancement
+        {
+            EnhancerId = domainModel.EnhancerId,
+            Id = domainModel.Id,
+            ResourceId = domainModel.ResourceId,
+            Target = domainModel.Target,
+            Value = domainModel.Value?.SerializeAsStandardValue(domainModel.ValueType),
+            ValueType = domainModel.ValueType,
+            PropertyPool = domainModel.PropertyPool,
+            PropertyId = domainModel.PropertyId,
+            DynamicTarget = domainModel.DynamicTarget
+        };
     }
 }

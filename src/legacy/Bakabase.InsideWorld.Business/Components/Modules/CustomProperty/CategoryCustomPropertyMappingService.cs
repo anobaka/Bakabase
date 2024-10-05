@@ -1,5 +1,5 @@
 ﻿using System;
-using Bakabase.Modules.CustomProperty.Services;
+using Bakabase.Modules.Property.Services;
 
 namespace Bakabase.InsideWorld.Business.Components.Modules.CustomProperty;
 

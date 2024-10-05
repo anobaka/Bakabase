@@ -13,8 +13,8 @@ import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
 import ResourceMasonry from '@/pages/Resource/components/ResourceMasonry';
 import { Button, Pagination, Spinner } from '@/components/bakaui';
-import type { BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel } from '@/sdk/Api';
 import { buildLogger } from '@/components/utils';
+import { CoverFit } from '@/sdk/constants';
 
 const PageSize = 100;
 const MinResourceWidth = 100;
@@ -27,7 +27,7 @@ interface IPageable {
 
 const log = buildLogger('ResourcePage');
 
-const convertToDto = (form: ISearchForm) => {
+const convertToInputModel = (form: ISearchForm) => {
   return {
     ...form,
     group: convertFilterGroupToDto(form.group),
@@ -58,9 +58,11 @@ export default () => {
   const initStartPageRef = useRef(1);
 
   useEffect(() => {
-    const c = uiOptions.resource?.colCount ?? BusinessConstants.DefaultResourceColumnCount;
-    if (uiOptions.initialized && (columnCount == 0 || columnCount != c)) {
-      setColumnCount(c);
+    if (uiOptions.initialized) {
+      const c = uiOptions.resource?.colCount ?? BusinessConstants.DefaultResourceColumnCount;
+      if ((columnCount == 0 || columnCount != c)) {
+        setColumnCount(c);
+      }
     }
   }, [uiOptions]);
 
@@ -94,9 +96,10 @@ export default () => {
     setSearchForm(newForm);
     log('Search resources', newForm);
 
-    const dto: BakabaseInsideWorldBusinessModelsInputResourceSearchInputModel = {
-      ...convertToDto(newForm),
+    const dto = {
+      ...convertToInputModel(newForm),
       saveSearchCriteria: save,
+      skipCount: 0,
     };
 
     if (resourcesRef.current.length == 0 || renderMode == 'replace') {
@@ -242,7 +245,7 @@ export default () => {
                     page: currentPage,
                   });
                   BApi.options.patchResourceOptions({
-                    searchCriteria: convertToDto({
+                    searchCriteria: convertToInputModel({
                       ...searchFormRef.current!,
                       pageIndex: currentPage,
                     }),

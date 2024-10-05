@@ -8,7 +8,7 @@ using Bootstrap.Models.RequestModels;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
-    public class PasswordSearchRequestModel : SearchRequestModel
+    public record PasswordSearchRequestModel : SearchRequestModel
     {
         public PasswordSearchOrder? Order { get; set; }
     }

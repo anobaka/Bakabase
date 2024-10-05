@@ -6,15 +6,16 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Migrations;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Legacy.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.Alias.Abstractions.Models.Db;
 using Bakabase.Modules.Alias.Abstractions.Services;
-using Bakabase.Modules.CustomProperty.Abstractions.Components;
-using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.CustomProperty.Abstractions.Services;
-using Bakabase.Modules.CustomProperty.Components;
+using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
@@ -148,11 +149,11 @@ namespace Bakabase.Migrations.V190
         {
             var cpType = GetDefaultCustomPropertyTypeForLegacyProperties(property, subProperty);
             var cpName = _localizer.DefaultPropertyName(property, subProperty);
-            var cp = (await _customPropertyService.GetAll(x => x.Name == cpName && x.Type == (int) cpType))
+            var cp = (await _customPropertyService.GetAll(x => x.Name == cpName && x.Type == cpType))
                 .FirstOrDefault() ?? await _customPropertyService.Add(new CustomPropertyAddOrPutDto
                 {
                     Name = cpName,
-                    Type = (int) cpType,
+                    Type = cpType,
                 });
 
             await _customPropertyService.EnableAddingNewDataDynamically(cp.Id);
@@ -395,7 +396,7 @@ namespace Bakabase.Migrations.V190
                     var propertyChanged = false;
                     foreach (var (rId, bizValue) in rbMap!)
                     {
-                        var result = await _customPropertyValueService.CreateTransient(bizValue, property.BizValueType, property,
+                        var result = await _customPropertyValueService.CreateTransient(bizValue, property.Type.GetBizValueType(), property,
                             rId, (int) PropertyValueScope.Manual);
                         if (result.HasValue)
                         {
@@ -431,28 +432,28 @@ namespace Bakabase.Migrations.V190
             }
         }
 
-        public static CustomPropertyType GetDefaultCustomPropertyTypeForLegacyProperties(
+        public static PropertyType GetDefaultCustomPropertyTypeForLegacyProperties(
             LegacyResourceProperty property,
             string? propertyKey)
         {
             return property switch
             {
-                LegacyResourceProperty.ReleaseDt => CustomPropertyType.DateTime,
-                LegacyResourceProperty.Publisher => CustomPropertyType.MultipleChoice,
-                LegacyResourceProperty.Name => CustomPropertyType.SingleLineText,
-                LegacyResourceProperty.Language => CustomPropertyType.SingleChoice,
+                LegacyResourceProperty.ReleaseDt => PropertyType.DateTime,
+                LegacyResourceProperty.Publisher => PropertyType.MultipleChoice,
+                LegacyResourceProperty.Name => PropertyType.SingleLineText,
+                LegacyResourceProperty.Language => PropertyType.SingleChoice,
                 LegacyResourceProperty.Volume => propertyKey switch
                 {
-                    nameof(Volume.Index) => CustomPropertyType.Number,
-                    nameof(Volume.Title) => CustomPropertyType.SingleLineText,
-                    nameof(Volume.Name) => CustomPropertyType.SingleLineText,
+                    nameof(Volume.Index) => PropertyType.Number,
+                    nameof(Volume.Title) => PropertyType.SingleLineText,
+                    nameof(Volume.Name) => PropertyType.SingleLineText,
                 },
-                LegacyResourceProperty.Original => CustomPropertyType.MultipleChoice,
-                LegacyResourceProperty.Series => CustomPropertyType.SingleLineText,
-                LegacyResourceProperty.CustomProperty => CustomPropertyType.MultipleChoice,
-                LegacyResourceProperty.Favorites => CustomPropertyType.MultipleChoice,
-                LegacyResourceProperty.Tag => CustomPropertyType.Tags,
-                LegacyResourceProperty.Cover => CustomPropertyType.Attachment,
+                LegacyResourceProperty.Original => PropertyType.MultipleChoice,
+                LegacyResourceProperty.Series => PropertyType.SingleLineText,
+                LegacyResourceProperty.CustomProperty => PropertyType.MultipleChoice,
+                LegacyResourceProperty.Favorites => PropertyType.MultipleChoice,
+                LegacyResourceProperty.Tag => PropertyType.Tags,
+                LegacyResourceProperty.Cover => PropertyType.Attachment,
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }

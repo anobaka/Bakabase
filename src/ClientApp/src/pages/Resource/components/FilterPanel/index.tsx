@@ -1,16 +1,13 @@
-import { Balloon, Dropdown, Overlay } from '@alifd/next';
+import { Dropdown, Overlay } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useUpdateEffect } from 'react-use';
-import { DatabaseOutlined, OrderedListOutlined, SearchOutlined } from '@ant-design/icons';
-import { PopoverContent, PopoverTrigger } from '@nextui-org/react';
+import { OrderedListOutlined, SearchOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './FilterGroupsPanel';
 import OrderSelector from './OrderSelector';
 import BApi from '@/sdk/BApi';
 import ResourceTagBinderDialog from '@/components/Resource/components/ResourceTagBinderDialog';
-import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
-import FavoritesSelector from '@/pages/Resource/components/FavoritesSelector';
 import store from '@/store';
 import ClickableIcon from '@/components/ClickableIcon';
 import { PlaylistCollection } from '@/components/Playlist';
@@ -18,6 +15,7 @@ import type { ISearchForm } from '@/pages/Resource/models';
 import { Button, Icon, Input, Popover, Tooltip } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
 import DeleteUnknownResources from '@/components/DeleteUnknownResources';
+import { CoverFit } from '@/sdk/constants';
 
 const { Popup } = Overlay;
 
@@ -281,6 +279,22 @@ export default ({
               })}
             </div>
           </Popover>
+          <Tooltip content={t('封面占满空白部分')}>
+            <Icon
+              type={'FullscreenOutlined'}
+              className={`${styles.switch} ${uiOptions?.resource?.coverFit == CoverFit.Cover ? styles.on : ''} !text-xl`}
+              onClick={() => {
+                const current = uiOptions?.resource?.coverFit ?? CoverFit.Contain;
+                const n = current == CoverFit.Contain ? CoverFit.Cover : CoverFit.Contain;
+                BApi.options.patchUiOptions({
+                  resource: {
+                    ...(uiOptions?.resource || {}),
+                    coverFit: n,
+                  },
+                });
+              }}
+            />
+          </Tooltip>
           <Tooltip content={t('Show larger cover on mouse hover')}>
             <Icon
               type={'ZoomInOutlined'}

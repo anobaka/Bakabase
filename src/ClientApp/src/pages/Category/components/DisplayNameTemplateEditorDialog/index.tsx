@@ -12,7 +12,7 @@ import {
   builtinResourcePropertyForDisplayNames,
   CategoryAdditionalItem,
   CategoryResourceDisplayNameSegmentType,
-  ResourcePropertyType,
+  PropertyPool,
   SpecialTextType,
 } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
@@ -96,8 +96,8 @@ export default ({
     // // @ts-ignore
     // const cps = (c.customProperties || []).map<IProperty>(cp => ({
     //   ...cp,
-    //   type: ResourcePropertyType.Custom,
-    //   customPropertyType: cp.type!,
+    //   type: PropertyPool.Custom,
+    //   PropertyType: cp.type!,
     // }));
     // arr.push(...cps);
     // propertiesRef.current = arr;

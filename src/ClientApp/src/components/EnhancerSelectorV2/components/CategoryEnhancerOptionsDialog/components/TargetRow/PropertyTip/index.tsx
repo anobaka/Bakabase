@@ -6,7 +6,7 @@ import { Button, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IProperty } from '@/components/Property/models';
-import { CustomPropertyType, ResourcePropertyType } from '@/sdk/constants';
+import { PropertyType, PropertyPool } from '@/sdk/constants';
 
 interface IProps {
   onAllowAddingNewDataDynamicallyEnabled?: () => any;
@@ -15,11 +15,11 @@ interface IProps {
   category: {name: string; id: number; customPropertyIds?: number[]};
 }
 
-const CustomPropertyTypesWithDynamicData = [
-  CustomPropertyType.Multilevel,
-  CustomPropertyType.MultipleChoice,
-  CustomPropertyType.SingleChoice,
-  CustomPropertyType.Tags,
+const PropertyTypesWithDynamicData = [
+  PropertyType.Multilevel,
+  PropertyType.MultipleChoice,
+  PropertyType.SingleChoice,
+  PropertyType.Tags,
 ];
 
 export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCategory, property, category }: IProps) => {
@@ -30,7 +30,7 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
     const tips: ReactElement[] = [];
     const propertyChoiceOptions = property?.options as {allowAddingNewDataDynamically: boolean};
     const allowAddingNewDataDynamicallyDisabled = property &&
-      CustomPropertyTypesWithDynamicData.includes(property.customPropertyType!) &&
+      PropertyTypesWithDynamicData.includes(property.type!) &&
       !propertyChoiceOptions.allowAddingNewDataDynamically;
     if (allowAddingNewDataDynamicallyDisabled) {
       tips.push(
@@ -57,7 +57,7 @@ export default ({ onAllowAddingNewDataDynamicallyEnabled, onPropertyBoundToCateg
       );
     }
 
-    if (category.customPropertyIds?.includes(property.id) != true && property.type == ResourcePropertyType.Custom) {
+    if (category.customPropertyIds?.includes(property.id) != true && property.pool == PropertyPool.Custom) {
       tips.push(
         <div className={'flex items-center gap-1'} key={2}>
           {t('This property is not bound to the category, its data will not be displayed.')}

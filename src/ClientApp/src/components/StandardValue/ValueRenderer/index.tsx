@@ -1,4 +1,3 @@
-import type { Dayjs } from 'dayjs';
 import type dayjs from 'dayjs';
 import type { Duration } from 'dayjs/plugin/duration';
 import StringValueRenderer from './Renderers/StringValueRenderer';
@@ -6,19 +5,24 @@ import NumberValueRenderer from './Renderers/NumberValueRenderer';
 import BooleanValueRenderer from './Renderers/BooleanValueRenderer';
 import LinkValueRenderer from './Renderers/LinkValueRenderer';
 import DateTimeValueRenderer from './Renderers/DateTimeValueRenderer';
-import { CustomPropertyType, StandardValueType } from '@/sdk/constants';
+import { PropertyType } from '@/sdk/constants';
+import { StandardValueType } from '@/sdk/constants';
 import type { LinkValue, TagValue } from '@/components/StandardValue/models';
 import { MultilevelValueRenderer, TagsValueRenderer, TimeValueRenderer } from '@/components/StandardValue';
+import { buildLogger } from '@/components/utils';
 
 type Props = {
   value?: any;
   type: StandardValueType;
   variant?: 'default' | 'light';
-  customPropertyType?: CustomPropertyType;
+  propertyType?: PropertyType;
 };
 
-const StandardValueRenderer = ({ value, type, variant = 'default', customPropertyType }: Props) => {
-  console.log(value, StandardValueType[type]);
+const log = buildLogger('StandardValueRenderer');
+
+const StandardValueRenderer = (props: Props) => {
+  const { value, type, variant = 'default', propertyType } = props;
+  log(props);
 
   switch (type) {
     case StandardValueType.String:
@@ -26,7 +30,7 @@ const StandardValueRenderer = ({ value, type, variant = 'default', customPropert
         <StringValueRenderer
           value={value as string}
           variant={variant}
-          multiline={customPropertyType == CustomPropertyType.MultilineText}
+          multiline={propertyType == PropertyType.Multilevel}
         />
       );
     case StandardValueType.ListString: {
@@ -42,7 +46,7 @@ const StandardValueRenderer = ({ value, type, variant = 'default', customPropert
         <NumberValueRenderer
           value={value as number}
           variant={variant}
-          as={(customPropertyType == undefined || customPropertyType == CustomPropertyType.Rating || customPropertyType == CustomPropertyType.Number) ? 'number' : 'progress'}
+          as={(propertyType == undefined || propertyType == PropertyType.Rating || propertyType == PropertyType.Number) ? 'number' : 'progress'}
         />
       );
     case StandardValueType.Link:
@@ -63,9 +67,9 @@ const StandardValueRenderer = ({ value, type, variant = 'default', customPropert
       return (
         <DateTimeValueRenderer
           value={value as dayjs.Dayjs}
-          format={(customPropertyType == undefined || customPropertyType == CustomPropertyType.DateTime) ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD'}
+          format={(propertyType == undefined || propertyType == PropertyType.DateTime) ? 'YYYY-MM-DD HH:mm:ss' : 'YYYY-MM-DD'}
           variant={variant}
-          as={(customPropertyType == undefined || customPropertyType == CustomPropertyType.DateTime) ? 'datetime' : 'date'}
+          as={(propertyType == undefined || propertyType == PropertyType.DateTime) ? 'datetime' : 'date'}
         />
       );
     }

@@ -3,13 +3,19 @@ import type { ValueRendererProps } from '../models';
 import NumberValueEditor from '../../ValueEditor/Editors/NumberValueEditor';
 import { Input, Progress } from '@/components/bakaui';
 import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
+import { buildLogger } from '@/components/utils';
 type NumberValueRendererProps = ValueRendererProps<number, number> & {
   precision?: number;
   as?: 'number' | 'progress';
   suffix?: string;
 };
 
-export default ({ value, precision, editor, variant, suffix, as, ...props }: NumberValueRendererProps) => {
+const log = buildLogger('NumberValueRenderer');
+
+export default (props: NumberValueRendererProps) => {
+  const { value, precision, editor, variant, suffix, as, ...otherProps } = props;
+  log(props);
+
   const [editing, setEditing] = useState(false);
 
   const startEditing = editor ? () => setEditing(true) : undefined;
@@ -18,7 +24,10 @@ export default ({ value, precision, editor, variant, suffix, as, ...props }: Num
     return (
       <NumberValueEditor
         value={value}
-        onValueChange={editor?.onValueChange}
+        onValueChange={(dbValue, bizValue) => {
+          editor?.onValueChange?.(dbValue, bizValue);
+          setEditing(false);
+        }}
       />
     );
   }

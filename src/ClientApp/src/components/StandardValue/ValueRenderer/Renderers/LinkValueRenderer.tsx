@@ -1,10 +1,8 @@
 import { EditOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useRef, useState } from 'react';
-import { useUpdate } from 'react-use';
 import type { ValueRendererProps } from '../models';
 import type { LinkValue } from '../../models';
-import NotSet from './components/NotSet';
 import ExternalLink from '@/components/ExternalLink';
 import { Button, Input, Popover } from '@/components/bakaui';
 
@@ -36,7 +34,7 @@ export default ({
         );
       }
     }
-    return;
+    return null;
   };
 
   const inner = renderInner();

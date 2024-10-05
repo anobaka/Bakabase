@@ -2,13 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import PropertySelector from '@/components/PropertySelector';
 import { Button } from '@/components/bakaui';
-import type { CustomPropertyType, StandardValueType } from '@/sdk/constants';
-import { ResourcePropertyType } from '@/sdk/constants';
+import type { PropertyType, StandardValueType } from '@/sdk/constants';
+import { PropertyPool } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
 
 interface IProps {
   onSelected?: (property: IProperty) => any;
-  valueTypes?: CustomPropertyType[];
+  valueTypes?: PropertyType[];
 }
 
 export default (props: IProps) => {
@@ -27,7 +27,7 @@ export default (props: IProps) => {
           editable: true,
           removable: true,
           addable: true,
-          pool: ResourcePropertyType.Custom | ResourcePropertyType.Reserved,
+          pool: PropertyPool.Custom | PropertyPool.Reserved,
           multiple: false,
           valueTypes: props.valueTypes?.map(v => v as unknown as StandardValueType),
           onSubmit: async (selected) => {

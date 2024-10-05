@@ -4,7 +4,7 @@ import { Checkbox, Tooltip } from '@/components/bakaui';
 
 interface IProps {
   autoMatch?: boolean;
-  onChange?: (integrateWithAlias: boolean) => void;
+  onChange?: (autoMatch: boolean) => void;
 }
 
 export default ({ autoMatch, onChange }: IProps) => {

@@ -10,7 +10,7 @@ public record RegexEnhancerOptions
     public record CaptureGroupOptions
     {
         public string Name { get; set; } = null!;
-        public ResourcePropertyType PropertyType { get; set; }
+        public PropertyPool PropertyPool { get; set; }
         public int PropertyId { get; set; }
     }
 

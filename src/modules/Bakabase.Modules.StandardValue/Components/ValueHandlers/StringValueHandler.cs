@@ -13,8 +13,7 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public class StringValueHandler(ICustomDateTimeParser customDateTimeParser)
-        : AbstractStandardValueHandler<string>(customDateTimeParser)
+    public class StringValueHandler : AbstractStandardValueHandler<string>
     {
         public override StandardValueType Type => StandardValueType.String;
 
@@ -41,7 +40,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
         public override LinkValue? ConvertToLink(string optimizedValue) => optimizedValue.ConvertToLinkValue();
 
-        protected override List<string>? ExtractTextsForConvertingToDateTime(string optimizedValue) =>
+        protected override List<string>? ExtractTextsForConvertingToDateTimeInternal(string optimizedValue) =>
             [optimizedValue];
 
         protected override List<string>? ExtractTextsForConvertingToTime(string optimizedValue) => [optimizedValue];

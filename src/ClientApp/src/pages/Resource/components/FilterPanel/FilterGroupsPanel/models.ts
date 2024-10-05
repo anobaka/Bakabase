@@ -1,31 +1,26 @@
-import type { ResourcePropertyType, SearchOperation } from '@/sdk/constants';
-import { StandardValueType } from '@/sdk/constants';
+'use strict';
 
-export type DataPoolCategory = {id: number; name: string};
-export type DataPoolMediaLibrary = {id: number; name: string; categoryId: number; resourceCount: number};
-
-
-export interface DataPool {
-  categoryMap: Record<number, DataPoolCategory>;
-  mediaLibraryMap: Record<number, DataPoolMediaLibrary>;
-}
+import type { IProperty } from '@/components/Property/models';
+import type { PropertyPool, PropertyType, SearchOperation } from '@/sdk/constants';
 
 export enum GroupCombinator {
   And = 1,
   Or,
 }
 
-export interface IFilter {
+export type ResourceSearchFilter = {
   propertyId?: number;
-  propertyType?: ResourcePropertyType;
-  group?: IGroup;
+  propertyPool?: PropertyPool;
   operation?: SearchOperation;
   dbValue?: string;
   bizValue?: string;
-}
+  availableOperations?: SearchOperation[];
+  property?: IProperty;
+  valueProperty?: IProperty;
+};
 
-export interface IGroup {
-  groups?: IGroup[];
-  filters?: IFilter[];
+export type ResourceSearchFilterGroup = {
+  groups?: ResourceSearchFilterGroup[];
+  filters?: ResourceSearchFilter[];
   combinator: GroupCombinator;
-}
+};

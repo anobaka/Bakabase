@@ -13,8 +13,7 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers;
 
-public class ListTagValueHandler(ICustomDateTimeParser customDateTimeParser)
-    : AbstractStandardValueHandler<List<TagValue>>(customDateTimeParser)
+public class ListTagValueHandler : AbstractStandardValueHandler<List<TagValue>>
 {
     public override StandardValueType Type => StandardValueType.ListTag;
 
@@ -38,7 +37,7 @@ public class ListTagValueHandler(ICustomDateTimeParser customDateTimeParser)
     }
 
     public override string? ConvertToString(List<TagValue> optimizedValue) =>
-        string.Join(StandardValueOptions.CommonListItemSeparator, optimizedValue.Select(t => t.ToString()));
+        string.Join(StandardValueInternals.CommonListItemSeparator, optimizedValue.Select(t => t.ToString()));
 
     public override List<string>? ConvertToListString(List<TagValue> optimizedValue) =>
         optimizedValue.Select(t => t.ToString()).ToList();
@@ -73,7 +72,7 @@ public class ListTagValueHandler(ICustomDateTimeParser customDateTimeParser)
 
     public override List<TagValue>? ConvertToListTag(List<TagValue> optimizedValue) => optimizedValue;
 
-    protected override List<string>? ExtractTextsForConvertingToDateTime(List<TagValue> optimizedValue) =>
+    protected override List<string>? ExtractTextsForConvertingToDateTimeInternal(List<TagValue> optimizedValue) =>
         optimizedValue.Select(t => t.Name).ToList();
 
     protected override List<string>? ExtractTextsForConvertingToTime(List<TagValue> optimizedValue) =>

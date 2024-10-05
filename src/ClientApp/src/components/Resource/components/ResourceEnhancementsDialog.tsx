@@ -17,7 +17,7 @@ import {
   Tabs,
 } from '@/components/bakaui';
 import type { Enhancement } from '@/components/Enhancer/models';
-import { EnhancementAdditionalItem, ReservedResourceProperty, ResourcePropertyType } from '@/sdk/constants';
+import { EnhancementAdditionalItem, ReservedProperty, PropertyPool } from '@/sdk/constants';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
@@ -94,26 +94,26 @@ function ResourceEnhancementsDialog({
   console.log(enhancements);
 
   const renderConvertedValue = (e: Enhancement | undefined) => {
-    if (!e || e.propertyType == undefined || e.propertyId == undefined || e.property == undefined) {
+    if (!e || e.propertyPool == undefined || e.propertyId == undefined || e.property == undefined) {
       return;
     }
 
     const { property } = e;
 
-    switch (e.propertyType) {
-      case ResourcePropertyType.Reserved: {
+    switch (e.propertyPool) {
+      case PropertyPool.Reserved: {
         const rv = e.reservedPropertyValue;
         if (!rv) {
           return;
         }
         let bizRv: any;
         let dbRv: any;
-        switch (e.propertyId as ReservedResourceProperty) {
-          case ReservedResourceProperty.Introduction:
+        switch (e.propertyId as ReservedProperty) {
+          case ReservedProperty.Introduction:
             bizRv = rv.introduction;
             dbRv = rv.introduction;
             break;
-          case ReservedResourceProperty.Rating:
+          case ReservedProperty.Rating:
             bizRv = rv.rating;
             dbRv = rv.rating;
             break;
@@ -129,7 +129,7 @@ function ResourceEnhancementsDialog({
           />
         );
       }
-      case ResourcePropertyType.Custom: {
+      case PropertyPool.Custom: {
         const pv = e.customPropertyValue;
         if (!pv) {
           return;
@@ -143,9 +143,9 @@ function ResourceEnhancementsDialog({
           />
         );
       }
-      case ResourcePropertyType.Internal:
-      case ResourcePropertyType.All:
-        return t('Unsupported property type: {{type}}', { type: e.propertyType });
+      case PropertyPool.Internal:
+      case PropertyPool.All:
+        return t('Unsupported property type: {{type}}', { type: e.propertyPool });
     }
   };
 

@@ -1,22 +1,26 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Bakabase.Abstractions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
+using Bakabase.Abstractions.Components.Property;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.Input;
+using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
+using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
@@ -27,19 +31,23 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.CustomProperty.Abstractions.Services;
-using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
-using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
-using Bakabase.Modules.CustomProperty.Components.Properties.Tags;
-using Bakabase.Modules.CustomProperty.Extensions;
+using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
+using Bakabase.Service.Extensions;
+using Bakabase.Service.Models.Input;
+using Bakabase.Service.Models.View;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;
 using Image = SixLabors.ImageSharp.Image;
@@ -50,334 +58,116 @@ namespace Bakabase.Service.Controllers
     public class ResourceController : Controller
     {
         private readonly IResourceService _service;
-        private readonly ISpecialTextService _specialTextService;
-        private readonly IMediaLibraryService _mediaLibraryService;
         private readonly ResourceTaskManager _resourceTaskManager;
-        private readonly BackgroundTaskManager _taskManager;
-        private readonly IWebHostEnvironment _env;
-        private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
-        private readonly InsideWorldLocalizer _localizer;
         private readonly FfMpegService _ffMpegService;
         private readonly IBOptions<ResourceOptions> _resourceOptions;
-        private readonly InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.FfMpegService _ffMpegInstaller;
+        private readonly FfMpegService _ffMpegInstaller;
         private readonly ILogger<ResourceController> _logger;
-        private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly ICategoryService _categoryService;
-        private readonly ICustomPropertyService _customPropertyService;
         private readonly ICoverDiscoverer _coverDiscoverer;
-        private readonly IStandardValueHelper _standardValueHelper;
-
-        public ResourceController(IResourceService service, IServiceProvider serviceProvider,
-            ISpecialTextService specialTextService, IMediaLibraryService mediaLibraryService,
-            ResourceTaskManager resourceTaskManager, BackgroundTaskManager taskManager, IWebHostEnvironment env,
-            InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            FfMpegService ffMpegService, IBOptions<ResourceOptions> resourceOptions,
-            InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.FfMpegService ffMpegInstaller,
-            ILogger<ResourceController> logger, ICustomPropertyValueService customPropertyValueService,
-            ICategoryService categoryService, ICustomPropertyService customPropertyService,
-            ICoverDiscoverer coverDiscoverer, IStandardValueHelper standardValueHelper)
+        private readonly IPropertyService _propertyService;
+        private readonly ICustomPropertyService _customPropertyService;
+        private readonly IPropertyLocalizer _propertyLocalizer;
+        public ResourceController(IResourceService service, ResourceTaskManager resourceTaskManager,
+            FfMpegService ffMpegService, IBOptions<ResourceOptions> resourceOptions, FfMpegService ffMpegInstaller,
+            ILogger<ResourceController> logger, ICategoryService categoryService, ICoverDiscoverer coverDiscoverer,
+            IPropertyService propertyService, ICustomPropertyService customPropertyService, IPropertyLocalizer propertyLocalizer)
         {
             _service = service;
-            _specialTextService = specialTextService;
-            _mediaLibraryService = mediaLibraryService;
             _resourceTaskManager = resourceTaskManager;
-            _taskManager = taskManager;
-            _env = env;
-            _insideWorldOptionsManager = insideWorldOptionsManager;
-            _localizer = localizer;
             _ffMpegService = ffMpegService;
             _resourceOptions = resourceOptions;
             _ffMpegInstaller = ffMpegInstaller;
             _logger = logger;
-            _customPropertyValueService = customPropertyValueService;
             _categoryService = categoryService;
-            _customPropertyService = customPropertyService;
             _coverDiscoverer = coverDiscoverer;
-            _standardValueHelper = standardValueHelper;
+            _propertyService = propertyService;
+            _customPropertyService = customPropertyService;
+            _propertyLocalizer = propertyLocalizer;
+        }
+
+        [HttpGet("search-operation")]
+        [SwaggerOperation(OperationId = "GetSearchOperationsForProperty")]
+        public async Task<ListResponse<SearchOperation>> GetSearchOperationsForProperty(
+            PropertyPool propertyPool, int propertyId)
+        {
+            PropertyType? pt;
+            if (propertyPool != PropertyPool.Custom)
+            {
+                pt = PropertyInternals.BuiltinPropertyMap.GetValueOrDefault((ResourceProperty) propertyId)?.Type;
+            }
+            else
+            {
+                var p = await _customPropertyService.GetByKey(propertyId);
+                pt = p.Type;
+            }
+
+            if (!pt.HasValue)
+            {
+                return ListResponseBuilder<SearchOperation>.NotFound;
+            }
+
+            var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(pt.Value);
+
+            return new ListResponse<SearchOperation>(psh?.SearchOperations.Keys);
+        }
+
+        [HttpGet("filter-value-property")]
+        [SwaggerOperation(OperationId = "GetFilterValueProperty")]
+        public async Task<SingletonResponse<PropertyViewModel>> GetFilterValueProperty(PropertyPool propertyPool,
+            int propertyId,
+            SearchOperation operation)
+        {
+            var p = await _propertyService.GetProperty(propertyPool, propertyId);
+
+            var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(p.Type);
+            var options = psh?.SearchOperations.GetValueOrDefault(operation);
+            if (options == null)
+            {
+                return SingletonResponseBuilder<PropertyViewModel>.NotFound;
+            }
+
+            if (options.ConvertProperty != null)
+            {
+                p = options.ConvertProperty(p);
+            }
+
+            return new SingletonResponse<PropertyViewModel>(p.ToViewModel(_propertyLocalizer));
         }
 
         [HttpGet("search-criteria")]
         [SwaggerOperation(OperationId = "GetResourceSearchCriteria")]
-        public async Task<SingletonResponse<ResourceSearchDto?>> GetSearchCriteria()
+        public async Task<SingletonResponse<ResourceSearchViewModel?>> GetSearchCriteria()
         {
-            var sc = _resourceOptions.Value.LastSearchV2;
-            if (sc != null)
+            var sc = _resourceOptions.Value.LastSearchV2?.ToDomainModel();
+            if (sc?.Group != null)
             {
-                if (sc.Group != null)
+                var filters = sc.Group.ExtractFilters();
+                if (filters.Any())
                 {
-                    var filters = sc.Group.ExtractFilters();
-                    var customPropertyIds =
-                        filters.Where(d => d.PropertyType == ResourcePropertyType.Custom).Select(d => d.PropertyId).ToHashSet();
-                    var customPropertyMap =
-                        (await _customPropertyService.GetByKeys(customPropertyIds, CustomPropertyAdditionalItem.None))
-                        .ToDictionary(d => d.Id, d => d);
-
-                    Dictionary<int, MediaLibrary>? mediaLibraryMap = null;
-                    Dictionary<int, Category>? categoryMap = null;
-                    var propertyMap = (await _customPropertyService.GetAll()).ToDictionary(d => d.Id, d => d);
-
+                    var pool = filters.Aggregate((PropertyPool) 0, (a, b) => a | b.PropertyPool);
+                    var propertyMap = (await _propertyService.GetProperties(pool)).GroupBy(d => d.Pool)
+                        .ToDictionary(d => d.Key, d => d.ToDictionary(x => x.Id));
                     foreach (var filter in filters)
                     {
-                        if (string.IsNullOrEmpty(filter.DbValue))
+                        var property = propertyMap.GetValueOrDefault(filter.PropertyPool)
+                            ?.GetValueOrDefault(filter.PropertyId);
+                        if (property != null)
                         {
-                            continue;
-                        }
-
-                        if (filter.PropertyType == ResourcePropertyType.Custom)
-                        {
-                            var property = customPropertyMap.GetValueOrDefault(filter.PropertyId);
-                            if (property == null)
-                            {
-                                continue;
-                            }
-
-                            switch (property.EnumType)
-                            {
-                                case CustomPropertyType.SingleLineText:
-                                case CustomPropertyType.MultilineText:
-                                case CustomPropertyType.Date:
-                                case CustomPropertyType.DateTime:
-                                case CustomPropertyType.Time:
-                                case CustomPropertyType.Formula:
-                                case CustomPropertyType.Number:
-                                case CustomPropertyType.Percentage:
-                                case CustomPropertyType.Rating:
-                                case CustomPropertyType.Boolean:
-                                case CustomPropertyType.Attachment:
-                                case CustomPropertyType.Link:
-                                {
-                                    // todo: there is a hardcode for link property, which use types of filter value same as string
-                                    filter.BizValue = filter.DbValue;
-                                    break;
-                                }
-                                case CustomPropertyType.SingleChoice:
-                                {
-                                    switch (filter.Operation)
-                                    {
-                                        case SearchOperation.Equals:
-                                        case SearchOperation.NotEquals:
-                                        {
-                                            var value = _standardValueHelper.Deserialize<string>(filter.DbValue,
-                                                StandardValueType.String);
-                                            if (!string.IsNullOrEmpty(value))
-                                            {
-                                                var choices = (propertyMap.GetValueOrDefault(filter.PropertyId) as
-                                                    SingleChoiceProperty)?.Options?.Choices;
-                                                if (choices?.Any() == true)
-                                                {
-                                                    filter.BizValue = choices.FirstOrDefault(x => x.Value == value)
-                                                        ?.Label;
-                                                }
-                                            }
-
-                                            break;
-                                        }
-                                        case SearchOperation.In:
-                                        case SearchOperation.NotIn:
-                                        {
-                                            var value = _standardValueHelper
-                                                .Deserialize<List<string>>(filter.DbValue, StandardValueType.ListString)
-                                                ?.OfType<string>().ToList();
-                                            if (value?.Any() == true)
-                                            {
-                                                var choices = (propertyMap.GetValueOrDefault(filter.PropertyId) as
-                                                    SingleChoiceProperty)?.Options?.Choices;
-                                                if (choices?.Any() == true)
-                                                {
-                                                    filter.BizValue = _standardValueHelper.Serialize(value
-                                                        .Select(v => choices.FirstOrDefault(x => x.Value == v)?.Label)
-                                                        .OfType<string>().ToList(), StandardValueType.ListString);
-                                                }
-
-                                            }
-
-                                            break;
-                                        }
-                                    }
-
-                                    break;
-                                }
-                                case CustomPropertyType.MultipleChoice:
-                                {
-                                    switch (filter.Operation)
-                                    {
-                                        case SearchOperation.Contains:
-                                        case SearchOperation.NotContains:
-                                        {
-                                            var value = _standardValueHelper
-                                                .Deserialize<List<string>>(filter.DbValue, StandardValueType.ListString)
-                                                ?.OfType<string>()
-                                                .ToList();
-                                            if (value?.Any() == true)
-                                            {
-                                                var choices =
-                                                    (propertyMap.GetValueOrDefault(filter.PropertyId) as
-                                                        MultipleChoiceProperty)?.Options?.Choices;
-                                                if (choices?.Any() == true)
-                                                {
-                                                    filter.BizValue = _standardValueHelper.Serialize(value
-                                                        .Select(v => choices.FirstOrDefault(x => x.Value == v)?.Label)
-                                                        .OfType<string>().ToList(), StandardValueType.ListString);
-                                                }
-
-                                            }
-
-                                            break;
-                                        }
-                                    }
-
-                                    break;
-                                }
-                                case CustomPropertyType.Multilevel:
-                                {
-                                    switch (filter.Operation)
-                                    {
-                                        case SearchOperation.Contains:
-                                        case SearchOperation.NotContains:
-                                        {
-                                            var value = _standardValueHelper
-                                                .Deserialize<List<string>>(filter.DbValue, StandardValueType.ListString)
-                                                ?.OfType<string>()
-                                                .ToList();
-                                            if (value?.Any() == true)
-                                            {
-                                                var trees = (propertyMap.GetValueOrDefault(filter.PropertyId) as
-                                                    MultilevelProperty)?.Options?.Data;
-                                                if (trees?.Any() == true)
-                                                {
-                                                    filter.BizValue = _standardValueHelper.Serialize(value
-                                                        .Select(v => trees.FindLabelChain(v)?.ToList())
-                                                        .OfType<List<string>>().ToList(), StandardValueType.ListListString);
-                                                }
-                                            }
-
-                                            break;
-                                        }
-                                    }
-
-                                    break;
-                                }
-                                case CustomPropertyType.Tags:
-                                {
-                                    switch (filter.Operation)
-                                    {
-                                        case SearchOperation.Contains:
-                                        case SearchOperation.NotContains:
-                                        {
-                                            var value = _standardValueHelper
-                                                .Deserialize<List<string>>(filter.DbValue, StandardValueType.ListString)
-                                                ?.OfType<string>()
-                                                .ToList();
-                                            if (value?.Any() == true)
-                                            {
-                                                var tags =
-                                                    (propertyMap.GetValueOrDefault(filter.PropertyId) as TagsProperty)
-                                                    ?.Options?.Tags;
-                                                if (tags?.Any() == true)
-                                                {
-                                                    filter.BizValue = _standardValueHelper.Serialize(value
-                                                        .Select(v =>
-                                                        {
-                                                            var tag = tags.FirstOrDefault(x => x.Value == v);
-                                                            if (tag == null)
-                                                            {
-                                                                return null;
-                                                            }
-
-                                                            return new TagValue(tag.Group, tag.Name);
-                                                        })
-                                                        .OfType<TagValue>()
-                                                        .ToList(), StandardValueType.ListTag);
-                                                }
-                                            }
-
-                                            break;
-                                        }
-                                    }
-
-                                    break;
-                                }
-                                default:
-                                    throw new ArgumentOutOfRangeException();
-                            }
-                        }
-                        else
-                        {
-                            var rp = (SearchableReservedProperty) filter.PropertyId;
-                            var valueTypes =
-                                InternalOptions.SearchableResourcePropertyDescriptorMap.GetValueOrDefault(rp);
-                            if (valueTypes == null)
-                            {
-                                switch (rp)
-                                {
-                                    case SearchableReservedProperty.MediaLibrary:
-                                    {
-                                        if (!string.IsNullOrEmpty(filter.DbValue))
-                                        {
-                                            mediaLibraryMap ??= (await _mediaLibraryService.GetAll(null,
-                                                MediaLibraryAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
-
-                                            categoryMap ??=
-                                                (await _categoryService.GetAll(null, CategoryAdditionalItem.None))
-                                                .ToDictionary(d => d.Id, d => d);
-
-                                            var ids = _standardValueHelper.Deserialize<List<string>>(filter.DbValue,
-                                                StandardValueType
-                                                    .ListString)?.Select(int.Parse) ?? [];
-
-                                            var tMlMap = mediaLibraryMap;
-                                            var tCMap = categoryMap;
-                                            var bizValue = new List<List<string>>();
-                                            foreach (var id in ids)
-                                            {
-                                                var ml = tMlMap.GetValueOrDefault(id);
-                                                if (ml == null)
-                                                {
-                                                    continue;
-                                                }
-
-                                                var c = tCMap.GetValueOrDefault(ml.CategoryId);
-                                                if (c == null)
-                                                {
-                                                    continue;
-                                                }
-
-                                                bizValue.Add([c.Name, ml.Name]);
-                                            }
-
-                                            filter.BizValue = _standardValueHelper.Serialize(bizValue, StandardValueType.ListListString);
-                                        }
-
-                                        break;
-                                    }
-                                    case SearchableReservedProperty.FileName:
-                                    case SearchableReservedProperty.DirectoryPath:
-                                    case SearchableReservedProperty.CreatedAt:
-                                    case SearchableReservedProperty.FileCreatedAt:
-                                    case SearchableReservedProperty.FileModifiedAt:
-                                    case SearchableReservedProperty.Introduction:
-                                    case SearchableReservedProperty.Rating:
-                                    {
-                                        filter.BizValue = filter.DbValue;
-                                        break;
-                                    }
-                                    default:
-                                        throw new ArgumentOutOfRangeException();
-                                }
-                            }
+                            filter.Property = property;
                         }
                     }
                 }
             }
 
-            return new SingletonResponse<ResourceSearchDto>(sc);
+            return new SingletonResponse<ResourceSearchViewModel?>(sc?.ToViewModel(_propertyLocalizer));
         }
 
         [HttpPost("search")]
         [SwaggerOperation(OperationId = "SearchResources")]
         public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model)
         {
-            return await _service.Search(model, model.SaveSearchCriteria, false);
+            return await _service.Search(model.ToDomainModel(), model.SaveSearchCriteria, false);
         }
 
         [HttpGet("keys")]

@@ -1,5 +1,4 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Components.EnhancementConverters;
@@ -8,25 +7,25 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.DLsite;
 
 public enum DLsiteEnhancerTarget
 {
-    [EnhancerTarget(StandardValueType.String, CustomPropertyType.SingleLineText,
+    [EnhancerTarget(StandardValueType.String, PropertyType.SingleLineText,
         [EnhancerTargetOptionsItem.AutoBindProperty])]
     Name,
 
-    [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.Attachment,
+    [EnhancerTarget(StandardValueType.ListString, PropertyType.Attachment,
         [EnhancerTargetOptionsItem.AutoBindProperty, EnhancerTargetOptionsItem.CoverSelectOrder])]
     Cover,
 
-    [EnhancerTarget(StandardValueType.ListString, CustomPropertyType.MultipleChoice,
+    [EnhancerTarget(StandardValueType.ListString, PropertyType.MultipleChoice,
         [EnhancerTargetOptionsItem.AutoBindProperty], true)]
     PropertiesOnTheRightSideOfCover,
 
-    [EnhancerTarget(StandardValueType.String, CustomPropertyType.MultilineText,
+    [EnhancerTarget(StandardValueType.String, PropertyType.MultilineText,
         [EnhancerTargetOptionsItem.AutoBindProperty],
-        reservedResourcePropertyCandidate: ReservedResourceProperty.Introduction)]
+        reservedPropertyCandidate: ReservedProperty.Introduction)]
     Introduction,
 
-    [EnhancerTarget(StandardValueType.Decimal, CustomPropertyType.Rating,
+    [EnhancerTarget(StandardValueType.Decimal, PropertyType.Rating,
         [EnhancerTargetOptionsItem.AutoBindProperty], false, 
-        reservedResourcePropertyCandidate: ReservedResourceProperty.Rating)]
+        reservedPropertyCandidate: ReservedProperty.Rating)]
     Rating
 }

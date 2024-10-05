@@ -1,18 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { SearchOutlined } from '@ant-design/icons';
-import TypeConversionOverviewDialog from 'src/pages/CustomProperty/components/TypeConversionExampleDialog';
 import PropertyDialog from '@/components/PropertyDialog';
 import BApi from '@/sdk/BApi';
 import type {
-  StandardValueType } from '@/sdk/constants';
+  PropertyType } from '@/sdk/constants';
 import {
-  customPropertyTypes,
+  StandardValueType,
 } from '@/sdk/constants';
 import {
   CustomPropertyAdditionalItem,
-  CustomPropertyType,
-  ResourcePropertyType,
 } from '@/sdk/constants';
 import { Button, Chip, Input, Modal, Table, TableColumn, TableRow, TableCell, TableHeader, TableBody } from '@/components/bakaui';
 import Property from '@/components/Property';
@@ -31,13 +28,7 @@ export default () => {
     // @ts-ignore
     const rsp = await BApi.customProperty.getAllCustomProperties({ additionalItems: CustomPropertyAdditionalItem.Category | CustomPropertyAdditionalItem.ValueCount });
     // @ts-ignore
-    setProperties((rsp.data || []).map(x => (
-      {
-        ...x,
-        type: ResourcePropertyType.Custom,
-        customPropertyType: x.type!,
-      }
-    )));
+    setProperties((rsp.data || []));
   };
 
   useEffect(() => {
@@ -46,8 +37,8 @@ export default () => {
   }, []);
 
   const filteredProperties = properties.filter(p => keyword == undefined || keyword.length == 0 || p.name!.toLowerCase().includes(keyword.toLowerCase()));
-  const groupedFilteredProperties = filteredProperties.reduce<{[key in StandardValueType]?: IProperty[]}>((s, t) => {
-    (s[t.customPropertyType!] ??= []).push(t);
+  const groupedFilteredProperties: {[key in PropertyType]?: IProperty[]} = filteredProperties.reduce<{[key in PropertyType]?: IProperty[]}>((s, t) => {
+    (s[t.type!] ??= []).push(t);
     return s;
   }, {});
 
@@ -96,7 +87,6 @@ export default () => {
         style={{ gridTemplateColumns: 'auto 1fr' }}
       >
         {Object.keys(groupedFilteredProperties).map(k => {
-          const type = parseInt(k, 10);
           const ps = groupedFilteredProperties[k];
           return (
             <>
@@ -105,7 +95,7 @@ export default () => {
                   radius={'sm'}
                   size={'sm'}
                 >
-                  {t(`CustomPropertyType.${CustomPropertyType[type]}`)}
+                  {ps[0].typeName}
                 </Chip>
               </div>
               <div className={'flex items-start gap-2 flex-wrap'}>

@@ -10,6 +10,7 @@ import TargetRow from '../TargetRow';
 import type { IProperty } from '@/components/Property/models';
 import { Button, Table, TableBody, TableColumn, TableHeader } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
+import type { PropertyPool } from '@/sdk/constants';
 
 const sortOptions = (a: EnhancerTargetFullOptions, b: EnhancerTargetFullOptions) => {
   if (a.dynamicTarget == undefined) {
@@ -22,7 +23,7 @@ const sortOptions = (a: EnhancerTargetFullOptions, b: EnhancerTargetFullOptions)
 };
 
 interface Props {
-  propertyMap?: { [key: number]: IProperty };
+  propertyMap?: {[key in PropertyPool]?: Record<number, IProperty>};
   options?: EnhancerFullOptions;
   category: { name: string; id: number; customPropertyIds?: number[] };
   enhancer: EnhancerDescriptor;

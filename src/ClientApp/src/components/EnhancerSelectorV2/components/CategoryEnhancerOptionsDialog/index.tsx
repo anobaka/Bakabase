@@ -17,6 +17,7 @@ import {
 } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
+import { PropertyPool } from '@/sdk/constants';
 import { CategoryAdditionalItem, SpecialTextType, StandardValueType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import type { EnhancerFullOptions } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
@@ -45,7 +46,7 @@ const CategoryEnhancerOptionsDialog = ({
   });
 
   const [options, setOptions] = useState<EnhancerFullOptions>();
-  const [propertyMap, setPropertyMap] = useState<Record<number, IProperty>>({});
+  const [propertyMap, setPropertyMap] = useState<{[key in PropertyPool]?: Record<number, IProperty>}>({});
 
   const init = async () => {
     await loadCategory();
@@ -58,9 +59,8 @@ const CategoryEnhancerOptionsDialog = ({
   }, []);
 
   const loadOptions = async () => {
-    const data = (await BApi.category.getCategoryEnhancerOptions(categoryId, enhancer.id)).data ?? {};
-    // @ts-ignore
-    setOptions(data.options || {});
+    const { data } = await BApi.category.getCategoryEnhancerOptions(categoryId, enhancer.id);
+    setOptions(data?.options || {});
   };
 
   const loadCategory = async () => {
@@ -78,12 +78,15 @@ const CategoryEnhancerOptionsDialog = ({
   };
 
   const loadAllProperties = async () => {
-    const r = await BApi.customProperty.getAllCustomProperties();
-    const pm = (r.data ?? []).reduce<Record<number, IProperty>>((s, t) => {
-      s[t.id!] = t as IProperty;
+    const psr = (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
+    const ps: {[key in PropertyPool]?: Record<number, IProperty>} = psr.reduce<{[key in PropertyPool]?: Record<number, IProperty>}>((s, t) => {
+      const pt = t.pool!;
+      s[pt] ??= {};
+      // @ts-ignore
+      s[pt][t.id!] = t;
       return s;
     }, {});
-    setPropertyMap(pm);
+    setPropertyMap(ps);
     // console.log('loadAllProperties', pm);
   };
 

@@ -7,7 +7,7 @@ using Bootstrap.Models.RequestModels;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
-    public class EnhancementRecordSearchRequestModel : SearchRequestModel
+    public record EnhancementRecordSearchRequestModel : SearchRequestModel
     {
         public int? ResourceId { get; set; }
         public bool? Success { get; set; }

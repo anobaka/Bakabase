@@ -4,7 +4,7 @@ import React from 'react';
 import { Link } from '@ice/runtime/router';
 import {
   FireOutlined,
-  FolderOpenOutlined,
+  FolderOpenOutlined, PlayCircleOutlined,
   ProductOutlined,
   SearchOutlined,
   VideoCameraAddOutlined,
@@ -46,7 +46,13 @@ export default ({
   return (
     <Popover
       trigger={(
-        <ProductOutlined className={'text-base absolute top-1 right-1 z-10 hidden group-hover:block'} />
+        <Button
+          isIconOnly
+          size={'sm'}
+          className={'absolute top-1 right-1 z-10 hidden group-hover:block'}
+        >
+          <ProductOutlined className={'text-base'} />
+        </Button>
       )}
       style={{
         zIndex: 20,

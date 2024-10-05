@@ -10,8 +10,7 @@ using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public class TimeValueHandler(ICustomDateTimeParser customDateTimeParser)
-        : AbstractStandardValueHandler<TimeSpan>(customDateTimeParser)
+    public class TimeValueHandler : AbstractStandardValueHandler<TimeSpan>
     {
         private const string Template = "g";
 
@@ -54,7 +53,6 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
         public override TimeSpan? ConvertToTime(TimeSpan optimizedValue) => optimizedValue;
 
-        public override Task<DateTime?> ConvertToDateTime(TimeSpan optimizedValue) =>
-            Task.FromResult((DateTime?) DateTime.Now.Date.Add(optimizedValue));
+        public override DateTime? ConvertToDateTime(TimeSpan optimizedValue) => DateTime.Now.Date.Add(optimizedValue);
     }
 }

@@ -18,9 +18,10 @@ import Operations from '@/components/Resource/components/Operations';
 import TaskCover from '@/components/Resource/components/TaskCover';
 import type { Property, Resource as ResourceModel } from '@/core/models/Resource';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Button, Link, Tooltip } from '@/components/bakaui';
-import { ResourceAdditionalItem, ResourcePropertyType, StandardValueType } from '@/sdk/constants';
+import { Button, Link, Modal, Tooltip } from '@/components/bakaui';
+import { ResourceAdditionalItem, PropertyPool, StandardValueType, CoverFit } from '@/sdk/constants';
 import type { TagValue } from '@/components/StandardValue/models';
+import store from '@/store';
 
 export interface IResourceHandler {
   id: number;
@@ -80,6 +81,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const { t } = useTranslation();
   const log = buildLogger(`Resource:${resource.id}|${resource.path}`);
+
+  const uiOptions = store.useModelState('uiOptions');
 
   const forceUpdate = useUpdate();
   const [playableFiles, setPlayableFiles] = useState<string[]>([]);
@@ -165,29 +168,34 @@ const Resource = React.forwardRef((props: Props, ref) => {
     if (playableFiles.length == 1) {
       play(playableFiles[0]);
     } else {
-      Dialog.show({
-        v2: true,
-        content: (
-          <div className={'flex flex-wrap gap-2'}>
-            {playableFiles.map((a) => {
-              const segments = splitPathIntoSegments(a);
-              return (
-                <Button
-                  size={'sm'}
-                  onClick={() => {
-                    play(a);
-                  }}
-                >
-                  <PlayCircleOutlined className={'text-base'} />
-                  <span className={'break-all overflow-hidden text-ellipsis'}>{segments[segments.length - 1]}</span>
-                </Button>
-              );
-            })}
-          </div>
-        ),
-        footer: false,
-        closeMode: ['esc', 'mask', 'close'],
-      });
+      createPortal(
+        Modal, {
+          defaultVisible: true,
+          size: 'lg',
+          title: t('Please select a file to play'),
+          children: (
+            <div className={'flex flex-wrap gap-2 pb-2'}>
+              {playableFiles.map((a) => {
+                const segments = splitPathIntoSegments(a);
+                return (
+                  <Button
+                    radius={'full'}
+                    size={'sm'}
+                    className={'whitespace-break-spaces py-2 h-auto text-left'}
+                    onClick={() => {
+                      play(a);
+                    }}
+                  >
+                    <PlayCircleOutlined className={'text-base'} />
+                    <span className={'break-all overflow-hidden text-ellipsis'}>{segments[segments.length - 1]}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          ),
+          footer: false,
+        },
+      );
     }
   }, [playableFiles]);
 
@@ -219,6 +227,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
       >
         <div className={styles.absoluteRectangle}>
           <ResourceCover
+            coverFit={uiOptions.resource?.coverFit}
             biggerCoverPlacement={biggerCoverPlacement}
             disableCache={disableCache}
             disableMediaPreviewer={disableMediaPreviewer}
@@ -243,10 +252,13 @@ const Resource = React.forwardRef((props: Props, ref) => {
             <Tooltip
               content={t('Use player to play')}
             >
-              <PlayCircleOutlined
-                className={'text-2xl'}
+              <Button
                 onClick={clickPlayButton}
-              />
+                // variant={'light'}
+                isIconOnly
+              >
+                <PlayCircleOutlined className={'text-2xl'} />
+              </Button>
             </Tooltip>
           </div>
         )}
@@ -257,7 +269,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   let firstTagsValue: (TagValue & {value: string})[] | undefined;
   let firstTagsValuePropertyId: number | undefined;
   {
-    const customPropertyValues = resource.properties?.[ResourcePropertyType.Custom] || {};
+    const customPropertyValues = resource.properties?.[PropertyPool.Custom] || {};
     Object.keys(customPropertyValues).find(x => {
       const p: Property = customPropertyValues[x];
       if (p.bizValueType == StandardValueType.ListTag) {

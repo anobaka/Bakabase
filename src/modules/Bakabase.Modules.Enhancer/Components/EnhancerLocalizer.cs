@@ -39,12 +39,12 @@ internal class EnhancerLocalizer(IStringLocalizer<EnhancerResource> localizer) :
         return d;
     }
 
-    public string Enhancer_Target_Options_PropertyTypeIsNotSupported(ResourcePropertyType type)
+    public string Enhancer_Target_Options_PropertyTypeIsNotSupported(PropertyPool type)
     {
         return localizer[nameof(Enhancer_Target_Options_PropertyTypeIsNotSupported), $"{(int) type}:{type}"];
     }
 
-    public string Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(ResourcePropertyType type)
+    public string Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(PropertyPool type)
     {
         return localizer[nameof(Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot), $"{(int)type}:{type}"];
     }

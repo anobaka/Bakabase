@@ -1,18 +1,20 @@
-import type { ResourcePropertyType, StandardValueType } from '@/sdk/constants';
+import type { PropertyPool, StandardValueType } from '@/sdk/constants';
 
-import { CustomPropertyType } from '@/sdk/constants';
+import { PropertyType } from '@/sdk/constants';
 import type { MultilevelData } from '@/components/StandardValue/models';
 
 export interface IProperty {
   id: number;
   dbValueType: StandardValueType;
   bizValueType: StandardValueType;
-  name?: string;
+  name: string;
   categories?: {id: number; name: string}[];
   options?: any;
-  type: ResourcePropertyType;
-  customPropertyType?: CustomPropertyType;
+  pool: PropertyPool;
+  type: PropertyType;
   valueCount?: number;
+  typeName: string;
+  poolName: string;
 }
 
 export type PropertyValue = {
@@ -43,23 +45,23 @@ export type TagsPropertyOptions = {
   allowAddingNewDataDynamically: boolean;
 };
 
-export const PropertyTypeIconMap: {[key in CustomPropertyType]?: string} = {
-  [CustomPropertyType.SingleLineText]: 'FontSizeOutlined',
-  [CustomPropertyType.MultilineText]: 'OrderedListOutlined',
-  [CustomPropertyType.SingleChoice]: 'AppstoreOutlined',
-  [CustomPropertyType.MultipleChoice]: 'UnorderedListOutlined',
-  [CustomPropertyType.Multilevel]: 'ApartmentOutlined',
-  [CustomPropertyType.Number]: 'FieldBinaryOutlined',
-  [CustomPropertyType.Percentage]: 'PercentageOutlined',
-  [CustomPropertyType.Rating]: 'StarOutlined',
-  [CustomPropertyType.Boolean]: 'CheckSquareOutlined',
-  [CustomPropertyType.Link]: 'LinkOutlined',
-  [CustomPropertyType.Attachment]: 'PaperClipOutlined',
-  [CustomPropertyType.Formula]: 'FunctionOutlined',
-  [CustomPropertyType.Time]: 'HistoryOutlined',
-  [CustomPropertyType.Date]: 'CalendarOutlined',
-  [CustomPropertyType.DateTime]: 'CalendarOutlined',
-  [CustomPropertyType.Tags]: 'TagsOutlined',
+export const PropertyTypeIconMap: {[key in PropertyType]?: string} = {
+  [PropertyType.SingleLineText]: 'FontSizeOutlined',
+  [PropertyType.MultilineText]: 'OrderedListOutlined',
+  [PropertyType.SingleChoice]: 'AppstoreOutlined',
+  [PropertyType.MultipleChoice]: 'UnorderedListOutlined',
+  [PropertyType.Multilevel]: 'ApartmentOutlined',
+  [PropertyType.Number]: 'FieldBinaryOutlined',
+  [PropertyType.Percentage]: 'PercentageOutlined',
+  [PropertyType.Rating]: 'StarOutlined',
+  [PropertyType.Boolean]: 'CheckSquareOutlined',
+  [PropertyType.Link]: 'LinkOutlined',
+  [PropertyType.Attachment]: 'PaperClipOutlined',
+  [PropertyType.Formula]: 'FunctionOutlined',
+  [PropertyType.Time]: 'HistoryOutlined',
+  [PropertyType.Date]: 'CalendarOutlined',
+  [PropertyType.DateTime]: 'CalendarOutlined',
+  [PropertyType.Tags]: 'TagsOutlined',
 };
 
 export interface ChoicePropertyOptions {

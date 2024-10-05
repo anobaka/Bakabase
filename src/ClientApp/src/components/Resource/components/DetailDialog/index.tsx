@@ -10,7 +10,7 @@ import type { Resource as ResourceModel } from '@/core/models/Resource';
 import { Button, ButtonGroup, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import BApi from '@/sdk/BApi';
-import { ReservedResourceProperty, ResourceAdditionalItem, ResourcePropertyType } from '@/sdk/constants';
+import { ReservedProperty, ResourceAdditionalItem, PropertyPool } from '@/sdk/constants';
 import { convertFromApiValue } from '@/components/StandardValue/helpers';
 
 
@@ -84,8 +84,8 @@ export default ({
                 <Properties
                   resource={resource}
                   reload={loadResource}
-                  restrictedPropertyType={ResourcePropertyType.Reserved}
-                  restrictedPropertyIds={[ReservedResourceProperty.Rating]}
+                  restrictedPropertyPool={PropertyPool.Reserved}
+                  restrictedPropertyIds={[ReservedProperty.Rating]}
                   hidePropertyName
                   propertyInnerDirection={'ver'}
                 />
@@ -127,7 +127,7 @@ export default ({
                 <Properties
                   resource={resource}
                   reload={loadResource}
-                  restrictedPropertyType={ResourcePropertyType.Custom}
+                  restrictedPropertyPool={PropertyPool.Custom}
                   propertyClassNames={{
                     name: 'justify-end',
                   }}
@@ -139,8 +139,8 @@ export default ({
             <Properties
               resource={resource}
               reload={loadResource}
-              restrictedPropertyType={ResourcePropertyType.Reserved}
-              restrictedPropertyIds={[ReservedResourceProperty.Introduction]}
+              restrictedPropertyPool={PropertyPool.Reserved}
+              restrictedPropertyIds={[ReservedProperty.Introduction]}
               propertyInnerDirection={'ver'}
             />
           </div>

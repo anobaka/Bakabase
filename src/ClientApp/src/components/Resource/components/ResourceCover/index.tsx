@@ -1,17 +1,17 @@
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Checkbox, Dialog, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import { useUpdate } from 'react-use';
+import { useUpdate, useUpdateEffect } from 'react-use';
 import { Img } from 'react-image';
 import { LoadingOutlined } from '@ant-design/icons';
 import serverConfig from '@/serverConfig';
-import { buildLogger, useTraceUpdate, uuidv4 } from '@/components/utils';
+import { buildLogger, uuidv4 } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import './index.scss';
 import store from '@/store';
 import type { CoverSaveLocation } from '@/sdk/constants';
-import { ResponseCode } from '@/sdk/constants';
+import { CoverFit, ResponseCode } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import { Carousel, Tooltip } from '@/components/bakaui';
 
@@ -37,6 +37,7 @@ interface Props {
   disableMediaPreviewer?: boolean;
   biggerCoverPlacement?: TooltipPlacement;
   coverPaths?: string[];
+  coverFit?: CoverFit;
 }
 
 export interface IResourceCoverRef {
@@ -55,6 +56,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     disableMediaPreviewer = false,
     biggerCoverPlacement,
     coverPaths,
+    coverFit = CoverFit.Contain,
   } = props;
   // log('rendering', props);
   const { t } = useTranslation();
@@ -75,6 +77,12 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     w: 0,
     h: 0,
   });
+
+  // log(coverFit);
+
+  useUpdateEffect(() => {
+    forceUpdate();
+  }, [coverFit]);
 
   useEffect(() => {
     // log('urls changed', urls);
@@ -204,13 +212,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                 className={'flex items-center justify-center'}
               >
                 <Img
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain',
-                  }}
+                  className={`w-full h-full max-w-full max-h-full ${coverFit == CoverFit.Cover ? 'object-cover' : 'object-contain'}`}
                   key={url}
-                  // style={{ maxWidth: containerRef.current?.clientWidth ?? '100%', maxHeight: containerRef.current?.clientHeight ?? '100%', objectFit: 'contain' }}
                   src={url}
                   onError={e => {
                     console.log(e);
@@ -229,7 +232,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                         maxCoverRawSizeRef.current.w = Math.max(maxCoverRawSizeRef.current.w, img.naturalWidth);
                         maxCoverRawSizeRef.current.h = Math.max(maxCoverRawSizeRef.current.h, img.naturalHeight);
                       }
-                      log('loaded', e);
+                      // log('loaded', e);
                     }
                   }}
                   loader={(
@@ -246,7 +249,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       );
     }
     return null;
-  }, [urls]);
+  }, [urls, coverFit]);
 
   const renderContainer = () => {
     return (

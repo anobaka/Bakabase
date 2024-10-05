@@ -4,26 +4,25 @@ import { useUpdateEffect } from 'react-use';
 import type { Root } from 'react-dom/client';
 import { createRoot } from 'react-dom/client';
 import { AppstoreOutlined, FilterOutlined, SearchOutlined } from '@ant-design/icons';
-import type { DataPool, IFilter, IGroup } from '../models';
+import type { ResourceSearchFilter, ResourceSearchFilterGroup } from '../models';
 import { GroupCombinator } from '../models';
 import styles from './index.module.scss';
 import Filter from './Filter';
 import ClickableIcon from '@/components/ClickableIcon';
-import type { IProperty } from '@/components/Property/models';
 import { Button, Popover } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';
-import { ResourceProperty, ResourcePropertyType, SearchOperation, StandardValueType } from '@/sdk/constants';
+import { PropertyPool, ResourceProperty, SearchOperation } from '@/sdk/constants';
 import { serializeStandardValue } from '@/components/StandardValue/helpers';
+import BApi from '@/sdk/BApi';
+import QuickFilter from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/QuickFilter';
 
 interface IProps {
-  group: IGroup;
+  group: ResourceSearchFilterGroup;
   onRemove?: () => void;
-  onChange?: (group: IGroup) => void;
+  onChange?: (group: ResourceSearchFilterGroup) => void;
   isRoot?: boolean;
   portalContainer?: any;
-  propertyMap: Record<number, IProperty>;
-  dataPool?: DataPool;
 }
 
 const FilterGroup = ({
@@ -32,13 +31,11 @@ const FilterGroup = ({
                        onChange,
                        isRoot = false,
                        portalContainer,
-                       propertyMap,
-                       dataPool,
                      }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const [group, setGroup] = React.useState<IGroup>(propsGroup);
+  const [group, setGroup] = React.useState<ResourceSearchFilterGroup>(propsGroup);
   const groupRef = useRef(group);
 
 
@@ -72,8 +69,6 @@ const FilterGroup = ({
 
   const conditionElements: any[] = (filters || []).map((f, i) => (
     <Filter
-      dataPool={dataPool}
-      propertyMap={propertyMap}
       key={`f-${i}`}
       filter={f}
       onRemove={() => {
@@ -95,8 +90,6 @@ const FilterGroup = ({
     />
   )).concat((groups || []).map((g, i) => (
     <FilterGroup
-      dataPool={dataPool}
-      propertyMap={propertyMap}
       key={`g-${i}`}
       group={g}
       onRemove={() => {
@@ -161,55 +154,16 @@ const FilterGroup = ({
           className={'grid items-center gap-2 my-3 mx-1'}
           style={{ gridTemplateColumns: 'auto auto' }}
         >
-          <div>{t('Quick filter')}</div>
-          <div className={'flex items-center gap-2 flex-wrap'}>
-            <Button
-              size={'sm'}
-              onClick={() => {
-                createPortal(MediaLibrarySelectorV2, {
-                  onSelected: (dbValue, bizValue) => {
-                    const newFilter: IFilter = {
-                      propertyId: ResourceProperty.MediaLibrary,
-                      dbValue: serializeStandardValue(dbValue, StandardValueType.ListString),
-                      operation: SearchOperation.In,
-                      propertyType: ResourcePropertyType.Internal,
-                      bizValue: serializeStandardValue(bizValue, StandardValueType.ListListString),
-                    };
-                    setGroup({
-                      ...groupRef.current,
-                      filters: [
-                        ...(groupRef.current.filters || []),
-                        newFilter,
-                      ],
-                    });
-                  },
-                });
-              }}
-            >
-              <SearchOutlined className={'text-base'} />
-              {t('Media library')}
-            </Button>
-            <Button
-              size={'sm'}
-              onClick={() => {
-                const newFilter: IFilter = {
-                  propertyId: ResourceProperty.FileName,
-                  operation: SearchOperation.Contains,
-                  propertyType: ResourcePropertyType.Internal,
-                };
-                setGroup({
-                  ...groupRef.current,
-                  filters: [
-                    ...(groupRef.current.filters || []),
-                    newFilter,
-                  ],
-                });
-              }}
-            >
-              <SearchOutlined className={'text-base'} />
-              {t('Filename')}
-            </Button>
-          </div>
+          <QuickFilter onAdded={newFilter => {
+            setGroup({
+              ...groupRef.current,
+              filters: [
+                ...(groupRef.current.filters || []),
+                newFilter,
+              ],
+            });
+          }}
+          />
           <div>{t('Advance filter')}</div>
           <div className={'flex items-center gap-2'}>
             <Button

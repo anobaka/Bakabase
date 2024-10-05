@@ -9,7 +9,7 @@ import PscProperty from '../models/PscProperty';
 import { PscMatcherValue } from '../models/PscMatcherValue';
 import type { SegmentMatcherConfigurationProps } from '../SegmentMatcherConfiguration';
 import SegmentMatcherConfiguration from '../SegmentMatcherConfiguration';
-import { ResourceMatcherValueType, ResourceProperty, ResourcePropertyType } from '@/sdk/constants';
+import { ResourceMatcherValueType, ResourceProperty, PropertyPool } from '@/sdk/constants';
 import type { ChipProps } from '@/components/bakaui';
 import { Chip, Listbox, ListboxItem, Popover, Tooltip } from '@/components/bakaui';
 import BusinessConstants from '@/components/BusinessConstants';
@@ -271,7 +271,7 @@ export default ({
                                 }
                                 case PscPropertyType.CustomProperty: {
                                   createPortal(PropertySelector, {
-                                    pool: ResourcePropertyType.Custom,
+                                    pool: PropertyPool.Custom,
                                     multiple: false,
                                     addable: true,
                                     onSubmit: async (selection) => {

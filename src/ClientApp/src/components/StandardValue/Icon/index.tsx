@@ -15,6 +15,7 @@ const StandardValueTypeIconMap: Record<StandardValueType, string> = {
   [StandardValueType.DateTime]: 'date-time',
   [StandardValueType.Time]: 'time',
   [StandardValueType.ListListString]: 'multi_level',
+  [StandardValueType.ListTag]: 'multi_level',
 };
 
 export default ({ valueType, ...props }: IProps) => {

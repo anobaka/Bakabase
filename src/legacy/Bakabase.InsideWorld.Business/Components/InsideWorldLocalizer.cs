@@ -4,9 +4,9 @@ using System.Linq;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.CustomProperty.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Localization;
@@ -17,7 +17,7 @@ namespace Bakabase.InsideWorld.Business.Components
     /// todo: Redirect raw <see cref="IStringLocalizer"/> callings to here
     /// </summary>
     public class InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
-        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, ICustomPropertyLocalizer
+        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer
     {
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
             localizer.GetAllStrings(includeParentCultures);
@@ -94,29 +94,19 @@ namespace Bakabase.InsideWorld.Business.Components
         public string SpecialText_HistoricalLanguageValue2ShouldBeModified() =>
             this[nameof(SpecialText_HistoricalLanguageValue2ShouldBeModified)];
 
-        public string Reserved_Resource_Property_Name(ReservedResourceProperty property)
+        public string Reserved_Resource_Property_Name(Abstractions.Models.Domain.Constants.ReservedProperty property)
         {
             return property switch
             {
-                ReservedResourceProperty.Introduction or ReservedResourceProperty.Rating => this[
+                Abstractions.Models.Domain.Constants.ReservedProperty.Introduction or Abstractions.Models.Domain.Constants.ReservedProperty.Rating => this[
                     $"{nameof(Reserved_Resource_Property_Name)}_{property}"],
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }
 
-        public string Property_DescriptorIsNotFound(ResourcePropertyType type, int propertyId)
+        public string Property_DescriptorIsNotFound(PropertyPool type, int propertyId)
         {
             return this[nameof(Property_DescriptorIsNotFound), type, propertyId];
-        }
-
-        public string BuiltinPropertyNameForDisplayName(BuiltinPropertyForDisplayName property)
-        {
-            return this[$"{nameof(BuiltinPropertyForDisplayName)}.{property.ToString()}"];
-        }
-
-        public string CustomProperty_DescriptorNotFound(int propertyType)
-        {
-            return this[nameof(CustomProperty_DescriptorNotFound), propertyType];
         }
     }
 }

@@ -6,7 +6,7 @@ import i18n from 'i18next';
 import { useUpdateEffect } from 'react-use';
 import type { BRjsfProps } from '@/components/BRjsf';
 import BRjsf from '@/components/BRjsf';
-import { reservedResourceProperties, ReservedResourceProperty } from '@/sdk/constants';
+import { reservedResourceProperties, ReservedProperty } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import { findCapturingGroupsInRegex } from '@/components/utils';
 
@@ -182,9 +182,9 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
                       {r.isReserved ? (
                         <Select
                           dataSource={translatedReservedResourceProperties}
-                          value={c ? ReservedResourceProperty[c] : undefined}
+                          value={c ? ReservedProperty[c] : undefined}
                           onChange={v => {
-                            r.key = ReservedResourceProperty[v];
+                            r.key = ReservedProperty[v];
                             setValue([...value]);
                           }}
                           size={'small'}

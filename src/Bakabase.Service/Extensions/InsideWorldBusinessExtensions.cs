@@ -25,13 +25,11 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infras
 using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Services;
-using Bakabase.InsideWorld.Business.Models.Dto;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.Migrations.V190;
 using Bakabase.Modules.Alias.Extensions;
-using Bakabase.Modules.CustomProperty.Abstractions.Components;
-using Bakabase.Modules.CustomProperty.Extensions;
 using Bakabase.Modules.Enhancer.Extensions;
+using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.ThirdParty.Extensions;
 using Bootstrap.Components.DependencyInjection;
@@ -106,17 +104,6 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<BmMediaLibraryProcessor>();
             // services.AddScoped<BmTagProcessor>();
 
-            services.AddSingleton<InternalOptionsDto>(t =>
-            {
-                var options = new InternalOptionsDto();
-                var customPropertyDescriptors = t.GetRequiredService<IEnumerable<ICustomPropertyDescriptor>>();
-                options.Resource.CustomPropertyValueSearchOperationsMap =
-                    customPropertyDescriptors.ToDictionary(d => (int) d.Type, d => d.SearchOperations);
-                return options;
-            });
-
-            services.AddSingleton<IResourceSearchContextProcessor, DefaultResourceSearchContextProcessor>();
-
             #region Optimized after V190
 
             services.AddBakabaseComponents();
@@ -126,8 +113,7 @@ namespace Bakabase.Service.Extensions
             services.AddLegacies();
 
             services.AddAlias<InsideWorldDbContext, AliasService>();
-            services.AddCustomProperty<CustomPropertyService, CustomPropertyValueService,
-                CategoryCustomPropertyMappingService, InsideWorldLocalizer>();
+            services.AddProperty<CustomPropertyService, CustomPropertyValueService, CategoryCustomPropertyMappingService>();
             services
                 .AddEnhancers<InsideWorldDbContext, EnhancementService, EnhancerService, CategoryEnhancerOptionsService,
                     EnhancementRecordService>();

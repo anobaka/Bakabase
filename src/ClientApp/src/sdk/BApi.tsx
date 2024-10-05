@@ -33,7 +33,7 @@ class BApi extends Api<any> {
               }
             }
             if ((typedRsp?.code >= 400 || typedRsp?.code < 200)) {
-              if (!params.ignoreError) {
+              if (!params.ignoreError && !typedRsp.message?.includes('SQLite Error')) {
                 Message.error({
                   duration: 5000,
                   title: `${params.path}: [${typedRsp.code}]`,

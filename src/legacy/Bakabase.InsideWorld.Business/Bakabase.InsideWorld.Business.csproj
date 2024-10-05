@@ -9,7 +9,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\miscellaneous\Bakabase.Prefabs\Bakabase.Prefabs.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
-		<ProjectReference Include="..\..\modules\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.ThirdParty\Bakabase.Modules.ThirdParty.csproj" />

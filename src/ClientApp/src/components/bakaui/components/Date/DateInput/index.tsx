@@ -36,6 +36,7 @@ export default ({ value: propsValue, onChange, defaultValue, ...props }: DateInp
 
   return (
     <DateInput
+      hourCycle={24}
       aria-label={'Date Input'}
       defaultValue={dv}
       value={value}

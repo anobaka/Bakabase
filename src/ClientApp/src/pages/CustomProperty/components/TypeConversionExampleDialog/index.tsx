@@ -2,18 +2,18 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Modal, Tab, Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, Tabs } from '@/components/bakaui';
 import type { StandardValueType } from '@/sdk/constants';
-import { CustomPropertyType } from '@/sdk/constants';
-import { customPropertyTypes } from '@/sdk/constants';
+import { PropertyType } from '@/sdk/constants';
+import { propertyTypes } from '@/sdk/constants';
 import StandardValueRenderer from '@/components/StandardValue/ValueRenderer';
 import { deserializeStandardValue } from '@/components/StandardValue/helpers';
 import BApi from '@/sdk/BApi';
 
 type Result = {
-  type: CustomPropertyType;
+  type: PropertyType;
   serializedBizValue?: string;
   bizValueType: StandardValueType;
   outputs?: {
-    type: CustomPropertyType;
+    type: PropertyType;
     serializedBizValue?: string;
     bizValueType: StandardValueType;
   }[];
@@ -27,9 +27,9 @@ export default () => {
   const columns = [
     // <TableColumn>{t('Type to be converted')}</TableColumn>,
     <TableColumn>{t('Value to be converted')}</TableColumn>,
-    ...customPropertyTypes.map(cpt => {
+    ...propertyTypes.map(cpt => {
       return (
-        <TableColumn>{t(CustomPropertyType[cpt.value])}</TableColumn>
+        <TableColumn>{t(PropertyType[cpt.value])}</TableColumn>
       );
     }),
   ];
@@ -56,10 +56,10 @@ export default () => {
       <div>
         <Tabs isVertical disabledKeys={['title']}>
           <Tab key={'title'} title={t('Source type')} />
-          {customPropertyTypes.map(cpt => {
+          {propertyTypes.map(cpt => {
             const filteredResults = results?.filter(x => x.type == cpt.value) || [];
             return (
-              <Tab key={cpt.value} title={t(CustomPropertyType[cpt.value])}>
+              <Tab key={cpt.value} title={t(PropertyType[cpt.value])}>
                 <Table>
                   <TableHeader>
                     {columns}
@@ -67,17 +67,17 @@ export default () => {
                   <TableBody>
                     {filteredResults.map((td, i) => {
                       const cells = [
-                        // <TableCell>{t(CustomPropertyType[td.type])}</TableCell>,
+                        // <TableCell>{t(PropertyType[td.type])}</TableCell>,
                         <TableCell>
                           <StandardValueRenderer
                             type={td.bizValueType}
                             value={deserializeStandardValue(td.serializedBizValue ?? null, td.bizValueType)}
                             variant={'default'}
-                            customPropertyType={td.type}
+                            propertyType={td.type}
                           />
                         </TableCell>,
                       ];
-                      customPropertyTypes.forEach(type => {
+                      propertyTypes.forEach(type => {
                         const o = filteredResults?.[i]?.outputs?.find(o => o.type == type.value);
                         if (o) {
                           const deserializedValue = deserializeStandardValue(o.serializedBizValue ?? null, o.bizValueType);
@@ -88,7 +88,7 @@ export default () => {
                                 type={o.bizValueType}
                                 value={deserializedValue}
                                 variant={'default'}
-                                customPropertyType={type.value}
+                                propertyType={type.value}
                               />
                             </TableCell>,
                           );

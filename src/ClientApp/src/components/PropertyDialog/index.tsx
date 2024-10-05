@@ -6,7 +6,7 @@ import type { Key } from '@react-types/shared';
 import ChoiceList from './components/ChoiceList';
 import TagList from './components/TagList';
 import { buildLogger, createPortalOfComponent } from '@/components/utils';
-import { CustomPropertyType, ResourcePropertyType } from '@/sdk/constants';
+import { PropertyType, PropertyPool } from '@/sdk/constants';
 import './index.scss';
 import BApi from '@/sdk/BApi';
 import {
@@ -51,31 +51,31 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 interface IProps extends DestroyableProps{
   value?: CustomPropertyForm;
   onSaved?: (property: IProperty) => any;
-  validValueTypes?: CustomPropertyType[];
+  validValueTypes?: PropertyType[];
 }
 
 interface CustomPropertyForm {
   id?: number;
   name?: string;
-  type?: CustomPropertyType;
+  type?: PropertyType;
   options?: any;
 }
 
 const UnderDevelopmentGroupKey = 'UnderDevelopment';
 
-const PropertyTypeGroup: Record<string, CustomPropertyType[]> = {
-  Text: [CustomPropertyType.SingleLineText, CustomPropertyType.MultilineText, CustomPropertyType.Link],
-  Number: [CustomPropertyType.Number, CustomPropertyType.Percentage, CustomPropertyType.Rating],
-  Option: [CustomPropertyType.SingleChoice, CustomPropertyType.MultipleChoice],
-  DateTime: [CustomPropertyType.DateTime, CustomPropertyType.Date, CustomPropertyType.Time],
+const PropertyTypeGroup: Record<string, PropertyType[]> = {
+  Text: [PropertyType.SingleLineText, PropertyType.MultilineText, PropertyType.Link],
+  Number: [PropertyType.Number, PropertyType.Percentage, PropertyType.Rating],
+  Option: [PropertyType.SingleChoice, PropertyType.MultipleChoice],
+  DateTime: [PropertyType.DateTime, PropertyType.Date, PropertyType.Time],
   Other: [
-    CustomPropertyType.Attachment,
-    CustomPropertyType.Boolean,
-    CustomPropertyType.Tags,
+    PropertyType.Attachment,
+    PropertyType.Boolean,
+    PropertyType.Tags,
   ],
   [UnderDevelopmentGroupKey]: [
-    CustomPropertyType.Formula,
-    CustomPropertyType.Multilevel,
+    PropertyType.Formula,
+    PropertyType.Multilevel,
   ],
 };
 
@@ -123,13 +123,13 @@ const PropertyDialog = ({
   const renderOptions = () => {
     if (property.type != undefined) {
       switch (property.type) {
-        case CustomPropertyType.SingleLineText:
-        case CustomPropertyType.MultilineText:
+        case PropertyType.SingleLineText:
+        case PropertyType.MultilineText:
           break;
-        case CustomPropertyType.SingleChoice:
-        case CustomPropertyType.MultipleChoice: {
+        case PropertyType.SingleChoice:
+        case PropertyType.MultipleChoice: {
           const options = property.options as ChoicePropertyOptions;
-          const multiple = property.type === CustomPropertyType.MultipleChoice;
+          const multiple = property.type === PropertyType.MultipleChoice;
           return (
             <>
               <ChoiceList
@@ -183,7 +183,7 @@ const PropertyDialog = ({
             </>
           );
         }
-        case CustomPropertyType.Number: {
+        case PropertyType.Number: {
           const options = property.options as NumberPropertyOptions ?? {};
           const previewValue = 80;
           const previewValueStr = Number(previewValue).toFixed(options?.precision || 0);
@@ -213,7 +213,7 @@ const PropertyDialog = ({
             </>
           );
         }
-        case CustomPropertyType.Percentage: {
+        case PropertyType.Percentage: {
           const options = property.options as PercentagePropertyOptions ?? {};
           const previewValue = 80;
           const previewValueStr = `${Number(previewValue).toFixed(options?.precision || 0)}%`;
@@ -266,7 +266,7 @@ const PropertyDialog = ({
             </>
           );
         }
-        case CustomPropertyType.Rating: {
+        case PropertyType.Rating: {
           const options = property.options as RatingPropertyOptions ?? {};
           options.maxValue ??= 5;
           return (
@@ -288,19 +288,19 @@ const PropertyDialog = ({
             </>
           );
         }
-        case CustomPropertyType.Boolean: {
+        case PropertyType.Boolean: {
           break;
         }
-        case CustomPropertyType.Link:
-        case CustomPropertyType.Attachment:
+        case PropertyType.Link:
+        case PropertyType.Attachment:
           break;
-        case CustomPropertyType.Date:
+        case PropertyType.Date:
           break;
-        case CustomPropertyType.DateTime:
+        case PropertyType.DateTime:
           break;
-        case CustomPropertyType.Time:
+        case PropertyType.Time:
           break;
-        case CustomPropertyType.Formula: {
+        case PropertyType.Formula: {
           return (
             <>
               <RadioGroup
@@ -322,10 +322,10 @@ const PropertyDialog = ({
             </>
           );
         }
-        case CustomPropertyType.Multilevel: {
+        case PropertyType.Multilevel: {
           break;
         }
-        case CustomPropertyType.Tags:
+        case PropertyType.Tags:
         {
           const options = property.options as TagsPropertyOptions;
           return (
@@ -384,7 +384,7 @@ const PropertyDialog = ({
               type={PropertyTypeIconMap[property.type]!}
               className={'text-base'}
             />
-            {t(CustomPropertyType[property.type])}
+            {t(PropertyType[property.type])}
           </>
         )}
       </Button>
@@ -431,8 +431,8 @@ const PropertyDialog = ({
             name: rsp.data!.name!,
             dbValueType: rsp.data!.dbValueType!,
             bizValueType: rsp.data!.bizValueType!,
-            customPropertyType: rsp.data!.type!,
-            type: ResourcePropertyType.Custom,
+            type: rsp.data!.type!,
+            pool: PropertyPool.Custom,
           });
           close();
         }
@@ -462,7 +462,7 @@ const PropertyDialog = ({
                         if (group == UnderDevelopmentGroupKey) {
                           return (
                             <Tooltip content={(
-                              <FeatureStatusTip status={'developing'} name={t(CustomPropertyType[type])} />
+                              <FeatureStatusTip status={'developing'} name={t(PropertyType[type])} />
                             )}
                             >
                               <Button
@@ -471,7 +471,7 @@ const PropertyDialog = ({
                                 className={'justify-start'}
                               >
                                 <Icon type={PropertyTypeIconMap[type]!} className={'text-medium'} />
-                                {t(CustomPropertyType[type])}
+                                {t(PropertyType[type])}
                               </Button>
                             </Tooltip>
                           );
@@ -603,7 +603,7 @@ const PropertyDialog = ({
                             }}
                           >
                             <Icon type={PropertyTypeIconMap[type]!} className={'text-medium'} />
-                            {t(CustomPropertyType[type])}
+                            {t(PropertyType[type])}
                           </Button>
                         );
                       })}

@@ -10,7 +10,7 @@ import ClickableIcon from '@/components/ClickableIcon';
 import PropertyDialog from '@/components/PropertyDialog';
 import { Chip, Icon, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
-import { CustomPropertyType, ResourceProperty, ResourcePropertyType } from '@/sdk/constants';
+import { PropertyPool, PropertyType, ResourceProperty } from '@/sdk/constants';
 import { StandardValueIcon } from '@/components/StandardValue';
 
 interface IProps {
@@ -44,12 +44,15 @@ export default ({
   const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] = useState(false);
   const { createPortal } = useBakabaseContext();
 
-  const editable = property.type == ResourcePropertyType.Custom && props.editable;
-  const removable = property.type == ResourcePropertyType.Custom && props.removable;
+  const editable = property.pool == PropertyPool.Custom && props.editable;
+  const removable = property.pool == PropertyPool.Custom && props.removable;
 
-  const icon = property.customPropertyType == undefined ? undefined : PropertyTypeIconMap[property.customPropertyType];
+  const icon = property.type == undefined ? undefined : PropertyTypeIconMap[property.type];
 
   const renderBottom = () => {
+    if (property.pool != PropertyPool.Custom) {
+      return null;
+    }
     const categories = property.categories || [];
     return (
       <div className={`${styles.bottom} mt-1 pt-1 flex flex-wrap gap-2`}>
@@ -112,7 +115,7 @@ export default ({
     createPortal(PropertyDialog, {
       value: {
         ...property,
-        type: property.customPropertyType as unknown as CustomPropertyType,
+        type: property.type as unknown as PropertyType,
       },
       onSaved: p => onSaved?.({
         ...p,
@@ -144,57 +147,50 @@ export default ({
         {t('This operation can not be undone, are you sure?')}
       </Modal>
       <div className={`${styles.line1} flex item-center justify-between gap-1`}>
-        <div className={`${styles.left} mr-1`}>
+        <div className={`${styles.left}`}>
           <div className={styles.name}>{
-            property.type == ResourcePropertyType.Custom ? property.name : t(ResourceProperty[property.id])
+            property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id])
           }</div>
-          {property.type == ResourcePropertyType.Custom ? (
-            icon != undefined && (
-              <Tooltip
-                color={'foreground'}
-                content={t(CustomPropertyType[property.customPropertyType!])}
-              >
-                <div className={styles.type}>
-                  <Icon
-                    type={icon}
-                    className={'text-base'}
-                  />
-                </div>
-              </Tooltip>
-            )
-          ) : (
-            <StandardValueIcon
-              valueType={property.dbValueType}
-              style={{ color: 'var(--bakaui-color)' }}
-            />
-          )}
+          <Tooltip
+            color={'foreground'}
+            content={t(PropertyType[property.type!])}
+          >
+            <div className={styles.type}>
+              <Icon
+                type={icon}
+                className={'text-base'}
+              />
+            </div>
+          </Tooltip>
         </div>
-        <div className={'flex gap-0.5 items-center invisible group-hover:visible'}>
-          {editable && editablePortal == 'edit-icon' && (
-            <ClickableIcon
-              colorType={'normal'}
-              className={'text-medium'}
-              type={'edit-square'}
-              onClick={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                showDetail();
-              }}
-            />
-          )}
-          {removable && (
-            <ClickableIcon
-              colorType={'danger'}
-              className={'text-medium'}
-              type={'delete'}
-              onClick={async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setRemoveConfirmingDialogVisible(true);
-              }}
-            />
-          )}
-        </div>
+        {property.pool == PropertyPool.Custom && (
+          <div className={'ml-1 flex gap-0.5 items-center invisible group-hover:visible'}>
+            {editable && editablePortal == 'edit-icon' && (
+              <ClickableIcon
+                colorType={'normal'}
+                className={'text-medium'}
+                type={'edit-square'}
+                onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  showDetail();
+                }}
+              />
+            )}
+            {removable && (
+              <ClickableIcon
+                colorType={'danger'}
+                className={'text-medium'}
+                type={'delete'}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setRemoveConfirmingDialogVisible(true);
+                }}
+              />
+            )}
+          </div>
+        )}
       </div>
       {renderBottom()}
     </div>

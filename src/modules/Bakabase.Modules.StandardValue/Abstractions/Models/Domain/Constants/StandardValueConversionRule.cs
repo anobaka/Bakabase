@@ -22,7 +22,7 @@ public enum StandardValueConversionRule
     StringToTag = 1 << 4,
 
     /// <summary>
-    /// String will be split by <see cref="StandardValueOptions.ListListStringInnerSeparator"/>
+    /// String will be split by <see cref="StandardValueInternals.ListListStringInnerSeparator"/>
     /// </summary>
     OnlyFirstValidRemains = 1 << 6,
     StringToDateTime = 1 << 7,

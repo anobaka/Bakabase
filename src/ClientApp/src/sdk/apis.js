@@ -7550,6 +7550,164 @@ export const GetPlaylistFilesURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetPropertiesByPool
+ * url: GetPropertiesByPoolURL
+ * method: GetPropertiesByPool_TYPE
+ * raw_url: GetPropertiesByPool_RAW_URL
+ * @param pool - 
+ */
+export const GetPropertiesByPool = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/property/pool/{pool}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{pool}', `${parameters['pool']}`)
+  if (parameters['pool'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: pool'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetPropertiesByPool_RAW_URL = function() {
+  return '/property/pool/{pool}'
+}
+export const GetPropertiesByPool_TYPE = function() {
+  return 'get'
+}
+export const GetPropertiesByPoolURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/property/pool/{pool}'
+  path = path.replace('{pool}', `${parameters['pool']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetSearchOperationsForProperty
+ * url: GetSearchOperationsForPropertyURL
+ * method: GetSearchOperationsForProperty_TYPE
+ * raw_url: GetSearchOperationsForProperty_RAW_URL
+ * @param propertyPool - 
+ * @param propertyId - 
+ */
+export const GetSearchOperationsForProperty = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/search-operation'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['propertyPool'] !== undefined) {
+    queryParameters['propertyPool'] = parameters['propertyPool']
+  }
+  if (parameters['propertyId'] !== undefined) {
+    queryParameters['propertyId'] = parameters['propertyId']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetSearchOperationsForProperty_RAW_URL = function() {
+  return '/resource/search-operation'
+}
+export const GetSearchOperationsForProperty_TYPE = function() {
+  return 'get'
+}
+export const GetSearchOperationsForPropertyURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/search-operation'
+  if (parameters['propertyPool'] !== undefined) {
+    queryParameters['propertyPool'] = parameters['propertyPool']
+  }
+  if (parameters['propertyId'] !== undefined) {
+    queryParameters['propertyId'] = parameters['propertyId']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetFilterValueProperty
+ * url: GetFilterValuePropertyURL
+ * method: GetFilterValueProperty_TYPE
+ * raw_url: GetFilterValueProperty_RAW_URL
+ * @param propertyPool - 
+ * @param propertyId - 
+ * @param operation - 
+ */
+export const GetFilterValueProperty = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/filter-value-property'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['propertyPool'] !== undefined) {
+    queryParameters['propertyPool'] = parameters['propertyPool']
+  }
+  if (parameters['propertyId'] !== undefined) {
+    queryParameters['propertyId'] = parameters['propertyId']
+  }
+  if (parameters['operation'] !== undefined) {
+    queryParameters['operation'] = parameters['operation']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetFilterValueProperty_RAW_URL = function() {
+  return '/resource/filter-value-property'
+}
+export const GetFilterValueProperty_TYPE = function() {
+  return 'get'
+}
+export const GetFilterValuePropertyURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/filter-value-property'
+  if (parameters['propertyPool'] !== undefined) {
+    queryParameters['propertyPool'] = parameters['propertyPool']
+  }
+  if (parameters['propertyId'] !== undefined) {
+    queryParameters['propertyId'] = parameters['propertyId']
+  }
+  if (parameters['operation'] !== undefined) {
+    queryParameters['operation'] = parameters['operation']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetResourceSearchCriteria
  * url: GetResourceSearchCriteriaURL
  * method: GetResourceSearchCriteria_TYPE

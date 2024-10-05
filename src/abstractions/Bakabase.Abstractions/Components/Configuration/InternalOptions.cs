@@ -1,13 +1,7 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Immutable;
-using System.Linq;
-using Bakabase.Abstractions.Components.Property;
-using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Domain.Constants;
+﻿using System.Collections.Immutable;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
-using Bootstrap.Extensions;
 
 namespace Bakabase.Abstractions.Components.Configuration
 {
@@ -139,42 +133,5 @@ namespace Bakabase.Abstractions.Components.Configuration
 
         public const int MaxThumbnailWidth = 300;
         public const int MaxThumbnailHeight = 300;
-
-        public record SearchableReservedPropertyValueTypes(
-            StandardValueType DbValueType,
-            StandardValueType BizValueType)
-        {
-            public StandardValueType DbValueType { get; set; } = DbValueType;
-            public StandardValueType BizValueType { get; set; } = BizValueType;
-        }
-
-        public static readonly ConcurrentDictionary<ResourceProperty, Models.Domain.Property>
-            InternalResourcePropertyDescriptorMap =
-                new(new[]
-                {
-                    ResourceProperty.FileName,
-                    ResourceProperty.DirectoryPath,
-                    ResourceProperty.CreatedAt,
-                    ResourceProperty.FileCreatedAt,
-                    ResourceProperty.FileModifiedAt,
-                    ResourceProperty.MediaLibrary,
-                }.ToDictionary(d => d, d => BuiltinPropertyDescriptors.DescriptorMap[d]));
-
-        public static readonly ConcurrentDictionary<ReservedResourceProperty, Models.Domain.Property>
-            ReservedResourcePropertyDescriptorMap =
-                new(new[]
-                {
-                    ResourceProperty.Rating,
-                    ResourceProperty.Introduction,
-                }.ToDictionary(
-                    d => (ReservedResourceProperty) d, d => BuiltinPropertyDescriptors.DescriptorMap[d]));
-
-        public static readonly ConcurrentDictionary<SearchableReservedProperty, Models.Domain.Property>
-            SearchableResourcePropertyDescriptorMap =
-                new ConcurrentDictionary<SearchableReservedProperty, Models.Domain.Property>(
-                    SpecificEnumUtils<SearchableReservedProperty>.Values.Select(x =>
-                            InternalResourcePropertyDescriptorMap.GetValueOrDefault((ResourceProperty) x) ??
-                            ReservedResourcePropertyDescriptorMap.GetValueOrDefault((ReservedResourceProperty) x))
-                        .Where(d => d != null).ToDictionary(d => (SearchableReservedProperty) d.EnumId, d => d));
     }
 }

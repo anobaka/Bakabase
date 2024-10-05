@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import { TableCell } from '@nextui-org/react';
 import TargetRow from '../TargetRow';
 import type { EnhancerFullOptions } from '../../models';
 import type { EnhancerDescriptor } from '../../../../models';
 import { Table, TableBody, TableColumn, TableHeader, TableRow } from '@/components/bakaui';
 import type { IProperty } from '@/components/Property/models';
+import type { PropertyPool } from '@/sdk/constants';
 
 interface Props {
-  propertyMap?: { [key: number]: IProperty };
+  propertyMap?: {[key in PropertyPool]?: Record<number, IProperty>};
   options?: EnhancerFullOptions;
   category: { name: string; id: number; customPropertyIds?: number[] };
   enhancer: EnhancerDescriptor;

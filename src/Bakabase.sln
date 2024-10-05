@@ -42,7 +42,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "modules", "modules", "{3808
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Abstractions", "abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj", "{8686512A-39C1-4EEE-A3F5-101D50D07763}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.CustomProperty", "modules\Bakabase.Modules.CustomProperty\Bakabase.Modules.CustomProperty.csproj", "{CB569CF2-09AA-4D76-8E51-278642C66E0D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.Property", "modules\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj", "{CB569CF2-09AA-4D76-8E51-278642C66E0D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.Enhancer", "modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj", "{C7F49146-4E21-48E2-AEB4-8BA20E93E306}"
 EndProject
@@ -60,7 +60,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "miscellaneous", "miscellane
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.StandardValue.Tests", "tests\Bakabase.Modules.StandardValue.Tests\Bakabase.Modules.StandardValue.Tests.csproj", "{5359A72B-063C-4BDC-A65E-C7FA9D3D56AE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.CustomPropertyValue.Tests", "tests\Bakabase.Modules.CustomPropertyValue.Tests\Bakabase.Modules.CustomPropertyValue.Tests.csproj", "{1C512718-9490-4984-B64F-6862BE5EABBB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.Property.Tests", "tests\Bakabase.Modules.Property.Tests\Bakabase.Modules.Property.Tests.csproj", "{1C512718-9490-4984-B64F-6862BE5EABBB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

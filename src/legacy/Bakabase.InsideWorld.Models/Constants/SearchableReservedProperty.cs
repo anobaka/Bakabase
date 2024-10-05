@@ -2,7 +2,7 @@
 
 public enum SearchableReservedProperty
 {
-	FileName = ResourceProperty.FileName,
+	FileName = ResourceProperty.Filename,
 	DirectoryPath = ResourceProperty.DirectoryPath,
 	CreatedAt = ResourceProperty.CreatedAt,
 	FileCreatedAt = ResourceProperty.FileCreatedAt,

@@ -31,7 +31,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using AppContext = Bakabase.Infrastructures.Components.App.AppContext;
-using InternalOptionsDto = Bakabase.InsideWorld.Business.Models.Dto.InternalOptionsDto;
 
 namespace Bakabase.InsideWorld.Business.Components.Gui
 {
@@ -58,14 +57,14 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly IEnumerable<IDependentComponentService> _dependentComponentServices;
         private readonly IFileMover _fileMover;
         private readonly AppUpdater _appUpdater;
-        private readonly InternalOptionsDto _reservedOptions;
         private readonly AppContext _appContext;
 
         public WebGuiHub(
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
-            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover, AppUpdater appUpdater, InternalOptionsDto reservedOptions, AppContext appContext)
+            IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover,
+            AppUpdater appUpdater, AppContext appContext)
         {
             _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
@@ -76,7 +75,6 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             _dependentComponentServices = dependentComponentServices;
             _fileMover = fileMover;
             _appUpdater = appUpdater;
-            _reservedOptions = reservedOptions;
             _appContext = appContext;
         }
 
@@ -103,8 +101,6 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
             await Clients.Caller.GetData(nameof(BulkModificationConfiguration),
                 BulkModificationService.GetConfiguration());
-
-            await Clients.Caller.GetData(nameof(InternalOptions), _reservedOptions);
 
             await Clients.Caller.GetData(nameof(AppContext), _appContext);
         }

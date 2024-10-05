@@ -1,4 +1,4 @@
-import type { ResourcePropertyType, StandardValueType } from '@/sdk/constants';
+import type { PropertyPool, StandardValueType } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
 
 export type Enhancement = {
@@ -11,7 +11,7 @@ export type Enhancement = {
   dynamicTarget?: string;
   valueType: StandardValueType;
   value?: any;
-  propertyType?: ResourcePropertyType;
+  propertyPool?: PropertyPool;
   propertyId?: number;
   customPropertyValue?: {
     id: number;

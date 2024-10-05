@@ -13,7 +13,7 @@ import TagSelector from '@/components/TagSelector';
 import type { IPathSegmentConfigurationRef } from '@/components/PathSegmentsConfiguration';
 import PathSegmentsConfiguration, { PathSegmentConfigurationPropsMatcherOptions } from '@/components/PathSegmentsConfiguration';
 import type { LayerValue } from '@/components/PathSegmentsConfiguration/models/matchers';
-import EnhancerSelector from '@/components/EnhancerSelector';
+// import EnhancerSelector from '@/components/EnhancerSelector';
 import CustomIcon from '@/components/CustomIcon';
 import type { IPscValue } from '@/components/PathSegmentsConfiguration/models/PscValue';
 import BusinessConstants from '@/components/BusinessConstants';

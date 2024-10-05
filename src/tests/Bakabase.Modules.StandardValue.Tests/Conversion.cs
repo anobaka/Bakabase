@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -15,18 +16,11 @@ namespace Bakabase.Modules.StandardValue.Tests
     public sealed class Conversion
     {
         [TestMethod]
-        public async Task TestConversion()
+        public void TestConversion()
         {
-            var sc = new ServiceCollection();
-            sc.AddStandardValue<NoneCustomDateTimeParser>();
-            sc.AddSingleton<NoneCustomDateTimeParser>();
-            var sp = sc.BuildServiceProvider();
-
-            var stdValueHandlers = sp.GetRequiredService<IStandardValueHandlers>();
-
             Console.WriteLine($@"Prepared conversion cases:");
             Console.WriteLine();
-            var dataSets = StandardValueOptions.ExpectedConversions;
+            var dataSets = StandardValueInternals.ExpectedConversions;
             Console.WriteLine();
 
             foreach (var fromType in SpecificEnumUtils<StandardValueType>.Values)
@@ -35,7 +29,7 @@ namespace Bakabase.Modules.StandardValue.Tests
                 {
                     foreach (var data in dataSets[fromType][toType])
                     {
-                        var actualToValue = await stdValueHandlers[fromType].Convert(data.FromValue, toType);
+                        var actualToValue = StandardValueInternals.HandlerMap[fromType].Convert(data.FromValue, toType);
                         try
                         {
                             JsonConvert.SerializeObject(actualToValue).Should()

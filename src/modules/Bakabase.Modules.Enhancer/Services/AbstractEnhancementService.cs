@@ -1,18 +1,21 @@
 ﻿using System.Linq.Expressions;
-using Bakabase.Abstractions.Components.Property;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.Modules.CustomProperty.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Extensions;
+using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
@@ -21,9 +24,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Modules.Enhancer.Services
 {
-    public abstract class AbstractEnhancementService<TDbContext>(
-        IServiceProvider serviceProvider,
-        IStandardValueHelper standardValueHelper)
+    public abstract class AbstractEnhancementService<TDbContext>(IServiceProvider serviceProvider)
         : ResourceService<TDbContext, Bakabase.Abstractions.Models.Db.Enhancement, int>(serviceProvider),
             IEnhancementService where TDbContext : DbContext
     {
@@ -40,51 +41,9 @@ namespace Bakabase.Modules.Enhancer.Services
             EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None)
         {
             var data = await base.GetAll(exp);
-            var doModels = data.Select(d => ToDomainModel(d)!).ToList();
+            var doModels = data.Select(d => d.ToDomainModel()).ToList();
             await Populate(doModels, additionalItem);
             return doModels;
-        }
-
-        protected Enhancement? ToDomainModel(Bakabase.Abstractions.Models.Db.Enhancement? dbModel)
-        {
-            if (dbModel == null)
-            {
-                return null;
-            }
-
-            return new Enhancement
-            {
-                EnhancerId = dbModel.EnhancerId,
-                Id = dbModel.Id,
-                ResourceId = dbModel.ResourceId,
-                Target = dbModel.Target,
-                Value = standardValueHelper.Deserialize(dbModel.Value, dbModel.ValueType),
-                ValueType = dbModel.ValueType,
-                PropertyType = dbModel.PropertyType,
-                PropertyId = dbModel.PropertyId,
-                DynamicTarget = dbModel.DynamicTarget
-            };
-        }
-
-        protected Bakabase.Abstractions.Models.Db.Enhancement? ToDbModel(Enhancement? domainModel)
-        {
-            if (domainModel == null)
-            {
-                return null;
-            }
-
-            return new Bakabase.Abstractions.Models.Db.Enhancement
-            {
-                EnhancerId = domainModel.EnhancerId,
-                Id = domainModel.Id,
-                ResourceId = domainModel.ResourceId,
-                Target = domainModel.Target,
-                Value = standardValueHelper.Serialize(domainModel.Value, domainModel.ValueType),
-                ValueType = domainModel.ValueType,
-                PropertyType = domainModel.PropertyType,
-                PropertyId = domainModel.PropertyId,
-                DynamicTarget = domainModel.DynamicTarget
-            };
         }
 
         protected async Task Populate(List<Enhancement> data, EnhancementAdditionalItem additionalItem)
@@ -100,9 +59,10 @@ namespace Bakabase.Modules.Enhancer.Services
                         case EnhancementAdditionalItem.GeneratedPropertyValue:
                         {
                             var reservedPropertyEnhancements =
-                                data.Where(d => d.PropertyType == ResourcePropertyType.Reserved).ToList();
+                                data.Where(d => d.PropertyPool == PropertyPool.Reserved).ToList();
                             if (reservedPropertyEnhancements.Any())
                             {
+                                var builtinPropertyMap = GetRequiredService<BuiltinPropertyMap>();
                                 var scopes = data
                                     .Select(d => EnhancerDescriptors.TryGet(d.EnhancerId)?.PropertyValueScope)
                                     .ToHashSet();
@@ -117,12 +77,12 @@ namespace Bakabase.Modules.Enhancer.Services
                                             EnhancerDescriptors.TryGet(d.EnhancerId)?.PropertyValueScope ?? 0)
                                         ?.GetValueOrDefault(d.ResourceId);
                                     d.Property =
-                                        BuiltinPropertyDescriptors.DescriptorMap.GetValueOrDefault(
-                                            (ResourceProperty) d.PropertyId!.Value);
+                                        builtinPropertyMap.GetValueOrDefault((ResourceProperty) d.PropertyId!.Value);
                                 }
                             }
 
-                            var customPropertyEnhancements = data.Where(d => d.PropertyType == ResourcePropertyType.Custom).ToList();
+                            var customPropertyEnhancements =
+                                data.Where(d => d.PropertyPool == PropertyPool.Custom).ToList();
                             if (customPropertyEnhancements.Any())
                             {
                                 var scopes = data.Select(d =>
@@ -157,7 +117,7 @@ namespace Bakabase.Modules.Enhancer.Services
 
         public async Task AddRange(List<Enhancement> enhancements)
         {
-            var dbValuesMap = enhancements.ToDictionary(e => ToDbModel(e)!, e => e);
+            var dbValuesMap = enhancements.ToDictionary(e => e.ToDbModel(), e => e);
             await base.AddRange(dbValuesMap.Keys.ToList());
             foreach (var (k, v) in dbValuesMap)
             {
@@ -167,7 +127,7 @@ namespace Bakabase.Modules.Enhancer.Services
 
         public async Task UpdateRange(List<Enhancement> enhancements)
         {
-            var dbValues = enhancements.Select(e => ToDbModel(e)!);
+            var dbValues = enhancements.Select(e => e.ToDbModel());
             await base.UpdateRange(dbValues);
         }
 

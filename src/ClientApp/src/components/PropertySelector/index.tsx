@@ -4,29 +4,22 @@ import PropertyDialog from '../PropertyDialog';
 import type { IProperty } from '@/components/Property/models';
 import Property from '@/components/Property';
 import { createPortalOfComponent } from '@/components/utils';
-import type {
-  CustomPropertyType,
-  ResourceProperty as EnumResourceProperty } from '@/sdk/constants';
-import {
-  CustomPropertyAdditionalItem,
-  ResourcePropertyType,
-  StandardValueType,
-} from '@/sdk/constants';
+import type { PropertyType } from '@/sdk/constants';
+import { PropertyPool, StandardValueType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
-import store from '@/store';
 import { Button, Chip, Modal, Spacer, Tab, Tabs } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface IKey {
   id: number;
-  type: ResourcePropertyType;
+  pool: PropertyPool;
 }
 
 interface IProps extends DestroyableProps{
   selection?: IKey[];
   onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
   multiple?: boolean;
-  pool: ResourcePropertyType;
+  pool: PropertyPool;
   valueTypes?: StandardValueType[];
   editable?: boolean;
   addable?: boolean;
@@ -49,52 +42,25 @@ const PropertySelector = ({
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
 
-  const internalOptions = store.useModelState('internalOptions');
   const [properties, setProperties] = useState<IProperty[]>([]);
-  const initializedRef = useRef(false);
   const [selection, setSelection] = useState<IKey[]>(propsSelection || []);
 
   const [currentTab, setCurrentTab] = useState<string>('selected');
 
-  console.log('props selection', propsSelection, properties, addable, editable, removable);
-
-  useEffect(() => {
-    console.log(internalOptions.initialized, initializedRef.current);
-
-    if (internalOptions.initialized && !initializedRef.current) {
-      initializedRef.current = true;
-      loadProperties();
-    }
-  }, [internalOptions]);
+  // console.log('props selection', propsSelection, properties, addable, editable, removable);
 
   const loadProperties = async () => {
-    const arr: IProperty[] = [];
-    if (pool & ResourcePropertyType.Reserved) {
-      const map = internalOptions.resource.reservedResourcePropertyDescriptorMap || {};
-      arr.push(...Object.values(map));
-    }
-    if (pool & ResourcePropertyType.Internal) {
-      const map = internalOptions.resource.internalResourcePropertyDescriptorMap || {};
-      arr.push(...Object.values(map));
-    }
-    if (pool & ResourcePropertyType.Custom) {
-      const rsp = await BApi.customProperty.getAllCustomProperties({ additionalItems: CustomPropertyAdditionalItem.Category });
-      // @ts-ignore
-      arr.push(...(rsp.data || []).map(d => ({
-        ...d,
-        type: ResourcePropertyType.Custom,
-      })));
-    }
-    setProperties(arr);
+    const psr = (await BApi.property.getPropertiesByPool(pool)).data || [];
+    // @ts-ignore
+    setProperties(psr);
 
     if (selection.length == 0) {
       setCurrentTab('notSelected');
     }
-
-    console.log('reloaded', arr);
   };
 
   useEffect(() => {
+    loadProperties();
   }, []);
 
   const close = () => {
@@ -102,20 +68,20 @@ const PropertySelector = ({
   };
 
   const renderProperty = (property: IProperty) => {
-    const selected = selection.some(s => s.id == property.id && s.type == property.type);
+    const selected = selection.some(s => s.id == property.id && s.pool == property.pool);
     console.log(selection, property);
     return (
       <Property
-        key={`${property.id}-${property.type}`}
+        key={`${property.id}-${property.pool}`}
         property={property}
         onClick={async () => {
           if (multiple) {
             if (selected) {
-              setSelection(selection.filter(s => s.id != property.id && s.type == property.type));
+              setSelection(selection.filter(s => s.id != property.id && s.pool == property.pool));
             } else {
               setSelection([...selection, {
                 id: property.id,
-                type: property.type,
+                pool: property.pool,
               }]);
             }
           } else {
@@ -124,7 +90,7 @@ const PropertySelector = ({
             } else {
               const ns: IKey[] = [{
                 id: property.id,
-                type: property.type,
+                pool: property.pool,
               }];
               setSelection(ns);
               await onSubmit(ns);
@@ -142,7 +108,7 @@ const PropertySelector = ({
   const onSubmit = async (selection: IKey[]) => {
     // console.log(customProperties, selection);
     if (propsOnSubmit) {
-      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.type == s.type)).filter(x => x != undefined) as IProperty[]);
+      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.pool == s.pool)).filter(x => x != undefined) as IProperty[]);
     }
   };
 
@@ -150,22 +116,22 @@ const PropertySelector = ({
 
   const renderFilter = () => {
     const filters: any[] = [];
-    if (pool != ResourcePropertyType.All) {
-      Object.keys(ResourcePropertyType).forEach(k => {
-        const v = parseInt(k, 10) as ResourcePropertyType;
+    if (pool != PropertyPool.All) {
+      Object.keys(PropertyPool).forEach(k => {
+        const v = parseInt(k, 10) as PropertyPool;
         if (Number.isNaN(v)) {
           return;
         }
         if (pool & v) {
           switch (v) {
-            case ResourcePropertyType.Internal:
-            case ResourcePropertyType.Reserved:
-            case ResourcePropertyType.Custom:
+            case PropertyPool.Internal:
+            case PropertyPool.Reserved:
+            case PropertyPool.Custom:
               filters.push(
                 <Chip
                   key={'pool'}
                   size={'sm'}
-                >{t(ResourcePropertyType[v])}</Chip>,
+                >{t(PropertyPool[v])}</Chip>,
               );
               break;
             default:
@@ -202,8 +168,8 @@ const PropertySelector = ({
     }
     return true;
   });
-  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.type == s.type)).filter(x => x).map(x => x!);
-  const unselectedProperties = filteredProperties.filter(p => !selection.some(s => s.id == p.id && s.type == p.type));
+  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.pool == s.pool)).filter(x => x).map(x => x!);
+  const unselectedProperties = filteredProperties.filter(p => !selection.some(s => s.id == p.id && s.pool == p.pool));
   const propertyCount = selectedProperties.length + unselectedProperties.length;
 
   const renderProperties = () => {
@@ -218,7 +184,7 @@ const PropertySelector = ({
               onClick={() => {
                 PropertyDialog.show({
                   onSaved: loadProperties,
-                  validValueTypes: valueTypes?.map(v => v as unknown as CustomPropertyType),
+                  validValueTypes: valueTypes?.map(v => v as unknown as PropertyType),
                 });
               }}
             >
@@ -265,7 +231,7 @@ const PropertySelector = ({
             onClick={() => {
               PropertyDialog.show({
                 onSaved: loadProperties,
-                validValueTypes: valueTypes?.map(v => v as unknown as CustomPropertyType),
+                validValueTypes: valueTypes?.map(v => v as unknown as PropertyType),
               });
             }}
           >

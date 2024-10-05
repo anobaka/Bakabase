@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Checkbox, Tooltip } from '@/components/bakaui';
-import type { CustomPropertyType } from '@/sdk/constants';
+import type { PropertyType } from '@/sdk/constants';
 
 interface IProps {
   autoBindProperty: boolean;
-  onChange?: (integrateWithAlias: boolean) => void;
+  onChange?: (autoBindProperty: boolean) => void;
 }
 
 export default ({ autoBindProperty, onChange }: IProps) => {

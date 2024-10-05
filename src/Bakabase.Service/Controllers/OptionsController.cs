@@ -9,11 +9,13 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
-using Bakabase.InsideWorld.Business.Configurations.Models.Input;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.InsideWorld.Models.RequestModels.Options;
+using Bakabase.Modules.Property.Extensions;
+using Bakabase.Service.Extensions;
+using Bakabase.Service.Models.Input;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
@@ -422,7 +424,7 @@ namespace Bakabase.Service.Controllers
 
                 if (model.SearchCriteria != null)
                 {
-                    options.LastSearchV2 = model.SearchCriteria;
+                    options.LastSearchV2 = model.SearchCriteria.ToDbModel();
                 }
 
             });

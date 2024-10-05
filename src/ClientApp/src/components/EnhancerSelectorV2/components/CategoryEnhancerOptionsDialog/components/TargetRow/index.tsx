@@ -1,6 +1,7 @@
 import { DeleteOutlined, DisconnectOutlined, EditOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useUpdateEffect } from 'react-use';
 import type { EnhancerTargetFullOptions } from '../../models';
 import { defaultCategoryEnhancerTargetOptions } from '../../models';
 import type { EnhancerDescriptor, EnhancerTargetDescriptor } from '../../../../models';
@@ -12,15 +13,12 @@ import BApi from '@/sdk/BApi';
 import { PropertyLabel } from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
 import {
-  reservedResourceProperties,
-  ResourceProperty,
-  ResourcePropertyType,
+  PropertyPool,
   SpecialTextType,
   StandardValueType,
 } from '@/sdk/constants';
 import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
 import { buildLogger } from '@/components/utils';
-import store from '@/store';
 
 interface Props {
   target: number;
@@ -29,7 +27,7 @@ interface Props {
   options?: Partial<EnhancerTargetFullOptions>;
   otherDynamicTargetsInGroup?: string[];
   onDeleted?: () => any;
-  propertyMap?: Record<number, IProperty>;
+  propertyMap?: {[key in PropertyPool]?: Record<number, IProperty>};
   category: {name: string; id: number; customPropertyIds?: number[]};
   onPropertyChanged?: () => any;
   onCategoryChanged?: () => any;
@@ -59,7 +57,6 @@ export default (props: Props) => {
     enhancer,
     onChange,
   } = props;
-  const internalOptions = store.useModelState('internalOptions');
 
   const [options, setOptions] = useState<Partial<EnhancerTargetFullOptions>>(propsOptions ?? defaultCategoryEnhancerTargetOptions(descriptor));
   const [dynamicTargetError, setDynamicTargetError] = useState<string>();
@@ -79,6 +76,10 @@ export default (props: Props) => {
     }
     return error == undefined;
   };
+
+  useUpdateEffect(() => {
+    setOptions(propsOptions ?? defaultCategoryEnhancerTargetOptions(descriptor));
+  }, [propsOptions]);
 
   const patchTargetOptions = async (patches: Partial<EnhancerTargetFullOptions>) => {
     const newOptions = {
@@ -117,28 +118,11 @@ export default (props: Props) => {
   const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
 
   let property: IProperty | undefined;
-  if (options.propertyType != undefined && options.propertyId != undefined) {
-    switch (options.propertyType!) {
-      case ResourcePropertyType.Reserved: {
-        const p = internalOptions.resource.reservedResourcePropertyDescriptorMap?.[options.propertyId];
-        if (p) {
-          property = {
-            ...p,
-            name: t(`ResourceProperty.${ResourceProperty[options.propertyId]}`),
-          };
-        }
-        break;
-      }
-
-      case ResourcePropertyType.Custom:
-        property = propertyMap?.[options.propertyId];
-        break;
-      case ResourcePropertyType.Internal:
-        break;
-      case ResourcePropertyType.All:
-        break;
-    }
+  if (options.propertyPool != undefined && options.propertyId != undefined) {
+    property = propertyMap?.[options.propertyPool]?.[options.propertyId];
   }
+
+  log(props, options, propsOptions, property);
 
   return (
     <div className={'flex items-center gap-1'}>
@@ -214,13 +198,13 @@ export default (props: Props) => {
                 PropertySelector.show({
                   addable: true,
                   editable: true,
-                  pool: ResourcePropertyType.Custom | ResourcePropertyType.Reserved,
+                  pool: PropertyPool.Custom | PropertyPool.Reserved,
                   multiple: false,
                   selection: property ? [property] : [],
                   onSubmit: async properties => {
                     patchTargetOptions({
                       propertyId: properties[0].id,
-                      propertyType: properties[0].type,
+                      propertyPool: properties[0].pool,
                     });
                   },
                 });

@@ -8,10 +8,10 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
-using Bakabase.Modules.CustomProperty.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Extensions;
 using Bootstrap.Models;
@@ -20,13 +20,12 @@ using Microsoft.Extensions.Logging;
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
 {
     public class BakabaseEnhancer(
-        IEnumerable<IStandardValueHandler> valueConverters,
         ILoggerFactory loggerFactory,
         ISpecialTextService specialTextService,
         IBakabaseLocalizer localizer,
         IFileManager fileManager,
         ICoverDiscoverer coverDiscoverer)
-        : AbstractEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(valueConverters, loggerFactory,
+        : AbstractEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(loggerFactory,
             fileManager)
     {
         protected override EnhancerId TypedId => EnhancerId.Bakabase;

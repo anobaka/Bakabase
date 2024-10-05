@@ -1,5 +1,5 @@
-import type { EnhancerId, ReservedResourceProperty } from '@/sdk/constants';
-import { ResourcePropertyType } from '@/sdk/constants';
+import type { EnhancerId, ReservedProperty } from '@/sdk/constants';
+import type { PropertyPool } from '@/sdk/constants';
 import type { EnhancerTargetDescriptor } from '@/components/EnhancerSelectorV2/models';
 
 export interface CategoryEnhancerFullOptions {
@@ -15,19 +15,15 @@ export interface EnhancerFullOptions {
 
 export interface EnhancerTargetFullOptions {
   propertyId?: number;
-  integrateWithAlias?: boolean;
   autoMatchMultilevelString?: boolean;
   autoBindProperty?: boolean;
   target: number;
   dynamicTarget?: string;
-  reservedResourcePropertyCandidate?: ReservedResourceProperty;
-  propertyType?: ResourcePropertyType;
+  propertyPool?: PropertyPool;
 }
 
 export function defaultCategoryEnhancerTargetOptions(descriptor: EnhancerTargetDescriptor): EnhancerTargetFullOptions {
   const eto: EnhancerTargetFullOptions = {
-    propertyId: descriptor.reservedResourcePropertyCandidate,
-    propertyType: descriptor.reservedResourcePropertyCandidate == undefined ? undefined : ResourcePropertyType.Reserved,
     target: descriptor.id,
   };
   if (descriptor.optionsItems != undefined) {

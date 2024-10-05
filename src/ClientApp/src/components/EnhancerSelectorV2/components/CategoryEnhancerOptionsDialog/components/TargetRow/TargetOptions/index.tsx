@@ -9,7 +9,6 @@ import type { CoverSelectOrder } from '@/sdk/constants';
 import { EnhancerTargetOptionsItem } from '@/sdk/constants';
 
 type Options = {
-  integrateWithAlias?: boolean;
   autoMatchMultilevelString?: boolean;
   autoBindProperty?: boolean;
   coverSelectOrder?: CoverSelectOrder;

@@ -4,11 +4,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
-using Bakabase.Modules.Enhancer.Models.View;
+using Bakabase.Service.Extensions;
+using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Humanizer.Localisation;
@@ -65,7 +67,7 @@ namespace Bakabase.Service.Controllers
                         var e = es.FirstOrDefault(e => e.Target == targetId);
                         return new ResourceEnhancements.TargetEnhancement
                         {
-                            Enhancement = e,
+                            Enhancement = e?.ToViewModel(),
                             Target = targetId,
                             TargetName = t.Name
                         };
@@ -73,7 +75,7 @@ namespace Bakabase.Service.Controllers
                     DynamicTargets = ed.Targets.Where(x => x.IsDynamic).Select(t =>
                     {
                         var targetId = Convert.ToInt32(t.Id);
-                        var e = es.Where(e => e.Target == targetId).ToList();
+                        var e = es.Where(e => e.Target == targetId).Select(e => e.ToViewModel()).ToList();
                         return new ResourceEnhancements.DynamicTargetEnhancements()
                         {
                             Enhancements = e,

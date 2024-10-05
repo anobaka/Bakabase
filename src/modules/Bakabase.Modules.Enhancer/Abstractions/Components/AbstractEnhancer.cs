@@ -21,14 +21,11 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
     public abstract class AbstractEnhancer<TEnumTarget, TContext, TEnhancerOptions> : IEnhancer
         where TEnumTarget : Enum where TEnhancerOptions : class? where TContext : class?
     {
-        protected readonly IEnumerable<IStandardValueHandler> ValueConverters;
         protected readonly ILogger Logger;
         private readonly IFileManager _fileManager;
 
-        protected AbstractEnhancer(IEnumerable<IStandardValueHandler> valueConverters,
-            ILoggerFactory loggerFactory, IFileManager fileManager)
+        protected AbstractEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager)
         {
-            ValueConverters = valueConverters;
             _fileManager = fileManager;
             Logger = loggerFactory.CreateLogger(GetType());
         }

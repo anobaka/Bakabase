@@ -7,18 +7,20 @@ import Tour from './cases/Tour';
 import Sortable from './cases/Sortable';
 import MediaPreviewer from './cases/MediaPreviewer';
 import CategoryEnhancerOptionsDialog from './cases/CategoryEnhancerOptionsDialog';
+import ResourceFilter from './cases/ResourceFilter';
 import { Button, Divider, Listbox } from '@/components/bakaui';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import PropertySelector from '@/components/PropertySelector';
 import AntdMenu from '@/layouts/BasicLayout/components/PageNav/components/AntdMenu';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import type { IFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
+import type { ResourceSearchFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
 import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector';
 import VirtualList from '@/pages/Test/cases/VirtualList';
 
 
 const components = {
+  Filter: <ResourceFilter />,
   VirtualList: <VirtualList />,
   CategoryEnhancerOptions: <CategoryEnhancerOptionsDialog />,
   Psc: <Psc />,

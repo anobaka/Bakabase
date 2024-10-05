@@ -17,19 +17,19 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.CustomProperty.Abstractions.Services;
-using Bakabase.Modules.CustomProperty.Components.Properties.Choice;
-using Bakabase.Modules.CustomProperty.Components.Properties.Choice.Abstractions;
-using Bakabase.Modules.CustomProperty.Components.Properties.Multilevel;
-using Bakabase.Modules.CustomProperty.Extensions;
-using Bakabase.Modules.CustomProperty.Helpers;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Components.Properties.Choice;
+using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
+using Bakabase.Modules.Property.Components.Properties.Multilevel;
+using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Extensions;
@@ -52,6 +52,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
         private readonly IEnhancerDescriptors _enhancerDescriptors;
         private readonly IBakabaseLocalizer _bakabaseLocalizer;
         private readonly IEnhancerLocalizer _enhancerLocalizer;
+        private readonly IPropertyLocalizer _propertyLocalizer;
         private readonly Dictionary<int, IEnhancer> _enhancers;
         private readonly ILogger<EnhancerService> _logger;
         private readonly ICategoryService _categoryService;
@@ -63,7 +64,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             IStandardValueService standardValueService, LogService logService, IEnhancerLocalizer enhancerLocalizer,
             IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger,
             ICategoryService categoryService, IEnhancementRecordService enhancementRecordService,
-            IBakabaseLocalizer bakabaseLocalizer, IReservedPropertyValueService reservedPropertyValueService)
+            IBakabaseLocalizer bakabaseLocalizer, IReservedPropertyValueService reservedPropertyValueService, IPropertyLocalizer propertyLocalizer)
         {
             _customPropertyService = customPropertyService;
             _resourceService = resourceService;
@@ -79,6 +80,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             _enhancementRecordService = enhancementRecordService;
             _bakabaseLocalizer = bakabaseLocalizer;
             _reservedPropertyValueService = reservedPropertyValueService;
+            _propertyLocalizer = propertyLocalizer;
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 
@@ -161,14 +163,14 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 }
 
                 // match property
-                if (targetOptions is {PropertyId: not null, PropertyType: not null})
+                if (targetOptions is {PropertyId: not null, PropertyPool: not null})
                 {
-                    switch (targetOptions.PropertyType.Value)
+                    switch (targetOptions.PropertyPool.Value)
                     {
-                        case ResourcePropertyType.Reserved:
+                        case PropertyPool.Reserved:
                         {
-                            if (!SpecificEnumUtils<ReservedResourceProperty>.Values.Contains(
-                                    (ReservedResourceProperty) targetOptions.PropertyId))
+                            if (!SpecificEnumUtils<Abstractions.Models.Domain.Constants.ReservedProperty>.Values.Contains(
+                                    (Abstractions.Models.Domain.Constants.ReservedProperty) targetOptions.PropertyId))
                             {
                                 throw new Exception(
                                     _enhancerLocalizer
@@ -178,7 +180,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
                             break;
                         }
-                        case ResourcePropertyType.Custom:
+                        case PropertyPool.Custom:
                         {
                             if (!propertyMap.TryGetValue(targetOptions.PropertyId.Value, out var property))
                             {
@@ -190,23 +192,23 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
                             break;
                         }
-                        case ResourcePropertyType.Internal:
-                        case ResourcePropertyType.All:
+                        case PropertyPool.Internal:
+                        case PropertyPool.All:
                         default:
                             throw new Exception(
                                 _enhancerLocalizer.Enhancer_Target_Options_PropertyTypeIsNotSupported(targetOptions
-                                    .PropertyType.Value));
+                                    .PropertyPool.Value));
                     }
                 }
                 else
                 {
-                    if (targetOptions.PropertyId.HasValue || targetOptions.PropertyType.HasValue)
+                    if (targetOptions.PropertyId.HasValue || targetOptions.PropertyPool.HasValue)
                     {
                         if (!targetOptions.PropertyId.HasValue)
                         {
                             throw new Exception(
                                 _enhancerLocalizer.Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(
-                                    targetOptions.PropertyType!.Value));
+                                    targetOptions.PropertyPool!.Value));
                         }
 
                         throw new Exception(
@@ -218,11 +220,11 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     {
                         if (targetOptions.AutoBindProperty == true)
                         {
-                            if (targetDescriptor.ReservedResourcePropertyCandidate.HasValue)
+                            if (targetDescriptor.ReservedPropertyCandidate.HasValue)
                             {
                                 targetOptions.PropertyId =
-                                    (int) targetDescriptor.ReservedResourcePropertyCandidate.Value;
-                                targetOptions.PropertyType = ResourcePropertyType.Reserved;
+                                    (int) targetDescriptor.ReservedPropertyCandidate.Value;
+                                targetOptions.PropertyPool = PropertyPool.Reserved;
                             }
                             else
                             {
@@ -232,38 +234,37 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                 if (!string.IsNullOrEmpty(name))
                                 {
                                     var propertyCandidate = propertyMap.Values.FirstOrDefault(p =>
-                                        p.EnumType == targetDescriptor.CustomPropertyType && p.Name == name);
+                                        p.Type == targetDescriptor.PropertyType && p.Name == name);
                                     if (propertyCandidate == null)
                                     {
                                         var kv = newPropertyAddModels.FirstOrDefault(x =>
-                                            x.PropertyAddModel.Name == name && x.PropertyAddModel.Type ==
-                                            (int) targetDescriptor.CustomPropertyType);
+                                            x.PropertyAddModel.Name == name && x.PropertyAddModel.Type == targetDescriptor.PropertyType);
                                         if (kv == default)
                                         {
                                             kv = (new CustomPropertyAddOrPutDto
                                             {
                                                 Name = name,
-                                                Type = (int) targetDescriptor.CustomPropertyType
+                                                Type = targetDescriptor.PropertyType
                                             }, []);
 
                                             object? options = null;
                                             // todo: Standardize serialization of options
-                                            switch (targetDescriptor.CustomPropertyType)
+                                            switch (targetDescriptor.PropertyType)
                                             {
-                                                case CustomPropertyType.SingleChoice:
+                                                case PropertyType.SingleChoice:
                                                 {
-                                                    options = new ChoicePropertyOptions<string>
+                                                    options = new SingleChoicePropertyOptions()
                                                         {AllowAddingNewDataDynamically = true};
                                                     kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
                                                     break;
                                                 }
-                                                case CustomPropertyType.MultipleChoice:
+                                                case PropertyType.MultipleChoice:
                                                 {
-                                                    options = new ChoicePropertyOptions<List<string>>
+                                                    options = new MultipleChoicePropertyOptions()
                                                         {AllowAddingNewDataDynamically = true};
                                                     break;
                                                 }
-                                                case CustomPropertyType.Multilevel:
+                                                case PropertyType.Multilevel:
                                                 {
                                                     options = new MultilevelPropertyOptions
                                                         {AllowAddingNewDataDynamically = true};
@@ -284,7 +285,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                     else
                                     {
                                         targetOptions.PropertyId = propertyCandidate.Id;
-                                        targetOptions.PropertyType = ResourcePropertyType.Custom;
+                                        targetOptions.PropertyPool = PropertyPool.Custom;
                                     }
 
                                     changedCategoryEnhancerOptions.Add(categoryOptions!);
@@ -309,7 +310,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     foreach (var e in es)
                     {
                         enhancementTargetOptionsMap[e].PropertyId = property.Id;
-                        enhancementTargetOptionsMap[e].PropertyType = ResourcePropertyType.Custom;
+                        enhancementTargetOptionsMap[e].PropertyPool = PropertyPool.Custom;
 
                     }
 
@@ -348,35 +349,35 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
             foreach (var (enhancement, targetOptions) in enhancementTargetOptionsMap)
             {
-                enhancement.PropertyType = targetOptions.PropertyType;
+                enhancement.PropertyPool = targetOptions.PropertyPool;
                 enhancement.PropertyId = targetOptions.PropertyId;
 
                 // use first not null enhancement for enhancements with same properties;
                 var enhancerDescriptor = _enhancerDescriptors[enhancement.EnhancerId];
                 var pvKey =
-                    $"{enhancement.ResourceId}-{targetOptions.PropertyType}-{targetOptions.PropertyId}-{enhancerDescriptor.PropertyValueScope}";
+                    $"{enhancement.ResourceId}-{targetOptions.PropertyPool}-{targetOptions.PropertyId}-{enhancerDescriptor.PropertyValueScope}";
 
                 if (addedPvKeys.Add(pvKey))
                 {
                     Property? propertyDescriptor;
 
-                    switch (targetOptions.PropertyType!.Value)
+                    switch (targetOptions.PropertyPool!.Value)
                     {
-                        case ResourcePropertyType.Reserved:
+                        case PropertyPool.Reserved:
                         {
                             propertyDescriptor =
-                                BuiltinPropertyDescriptors.DescriptorMap.GetValueOrDefault(
+                                PropertyInternals.BuiltinPropertyMap.GetValueOrDefault(
                                     (ResourceProperty) targetOptions.PropertyId!.Value);
                             break;
                         }
-                        case ResourcePropertyType.Custom:
+                        case PropertyPool.Custom:
                         {
                             propertyDescriptor = propertyMap.GetValueOrDefault(targetOptions.PropertyId!.Value)
                                 ?.ToProperty();
                             break;
                         }
-                        case ResourcePropertyType.Internal:
-                        case ResourcePropertyType.All:
+                        case PropertyPool.Internal:
+                        case PropertyPool.All:
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -384,7 +385,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     if (propertyDescriptor == null)
                     {
                         throw new Exception(
-                            _bakabaseLocalizer.Property_DescriptorIsNotFound(enhancement.PropertyType!.Value,
+                            _propertyLocalizer.DescriptorIsNotFound(enhancement.PropertyPool!.Value,
                                 enhancement.PropertyId!.Value));
                     }
 
@@ -394,11 +395,11 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                         : targetDescriptor.EnhancementConverter.Convert(enhancement.Value, propertyDescriptor);
 
                     var nv = await _standardValueService.Convert(value, enhancement.ValueType,
-                        propertyDescriptor.BizValueType);
+                        propertyDescriptor.Type.GetBizValueType());
 
-                    switch (targetOptions.PropertyType!.Value)
+                    switch (targetOptions.PropertyPool!.Value)
                     {
-                        case ResourcePropertyType.Reserved:
+                        case PropertyPool.Reserved:
                         {
                             var scope = (PropertyValueScope) enhancerDescriptor.PropertyValueScope;
                             var rpv = scopedRpvMap.GetOrAdd(scope, () => new Dictionary<int, ReservedPropertyValue>())
@@ -408,12 +409,12 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                     Scope = (int) scope,
                                 });
 
-                            switch ((ReservedResourceProperty) targetOptions.PropertyId!.Value)
+                            switch ((Abstractions.Models.Domain.Constants.ReservedProperty) targetOptions.PropertyId!.Value)
                             {
-                                case ReservedResourceProperty.Introduction:
+                                case Abstractions.Models.Domain.Constants.ReservedProperty.Introduction:
                                     rpv.Introduction = nv as string;
                                     break;
-                                case ReservedResourceProperty.Rating:
+                                case Abstractions.Models.Domain.Constants.ReservedProperty.Rating:
                                     rpv.Rating = nv is decimal nv1 ? nv1 : null;
                                     break;
                                 default:
@@ -422,11 +423,11 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
                             break;
                         }
-                        case ResourcePropertyType.Custom:
+                        case PropertyPool.Custom:
                         {
                             var property = propertyMap[targetOptions.PropertyId!.Value];
                             var result = await _customPropertyValueService.CreateTransient(nv,
-                                propertyDescriptor.BizValueType,
+                                propertyDescriptor.Type.GetBizValueType(),
                                 property,
                                 enhancement.ResourceId, enhancerDescriptor.PropertyValueScope);
                             if (result.HasValue)
@@ -447,8 +448,8 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
                             break;
                         }
-                        case ResourcePropertyType.Internal:
-                        case ResourcePropertyType.All:
+                        case PropertyPool.Internal:
+                        case PropertyPool.All:
                         default:
                             throw new ArgumentOutOfRangeException();
                     }

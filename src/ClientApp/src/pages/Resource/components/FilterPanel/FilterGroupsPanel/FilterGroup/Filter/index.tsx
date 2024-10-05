@@ -1,33 +1,28 @@
+'use strict';
+
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useUpdateEffect } from 'react-use';
 import { DropdownItem, DropdownMenu, DropdownTrigger } from '@nextui-org/react';
 import groupStyles from '../index.module.scss';
-import type { DataPool, IFilter } from '../../models';
+import type { ResourceSearchFilter } from '../../models';
 import PropertySelector from '@/components/PropertySelector';
 import ClickableIcon from '@/components/ClickableIcon';
 import {
-  ResourceProperty as EnumResourceProperty,
   ResourceProperty,
-  ResourcePropertyType,
-  SearchOperation,
+  PropertyPool,
+  SearchOperation, type PropertyType,
 } from '@/sdk/constants';
-import store from '@/store';
 import type { IProperty } from '@/components/Property/models';
 import { Button, Dropdown, Tooltip } from '@/components/bakaui';
-import {
-  SearchableReservedPropertySearchOperationsMap,
-} from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/models';
-import PropertyFilterValueRenderer
-  from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter/PropertyFilterValueRenderer';
 import { buildLogger } from '@/components/utils';
+import BApi from '@/sdk/BApi';
+import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
 
 interface IProps {
-  filter: IFilter;
+  filter: ResourceSearchFilter;
   onRemove?: () => any;
-  onChange?: (filter: IFilter) => any;
-  propertyMap: Record<number, IProperty>;
-  dataPool?: DataPool;
+  onChange?: (filter: ResourceSearchFilter) => any;
 }
 
 const log = buildLogger('Filter');
@@ -36,45 +31,20 @@ export default ({
                   filter: propsFilter,
                   onRemove,
                   onChange,
-                  propertyMap,
-                  dataPool,
                 }: IProps) => {
   const { t } = useTranslation();
 
-  const internalOptions = store.useModelState('internalOptions');
-  const standardValueTypeSearchOperationsMap = internalOptions?.resource?.customPropertyValueSearchOperationsMap || {};
-
-  const [filter, setFilter] = useState<IFilter>(propsFilter);
-  const [property, setProperty] = useState<IProperty>();
+  const [filter, setFilter] = useState<ResourceSearchFilter>(propsFilter);
 
   useUpdateEffect(() => {
     onChange?.(filter);
   }, [filter]);
 
-  useEffect(() => {
-    if (filter.propertyId) {
-       switch (filter!.propertyType!) {
-         case ResourcePropertyType.Internal: {
-           setProperty(internalOptions.resource.internalResourcePropertyDescriptorMap[filter.propertyId]);
-           break;
-         }
-         case ResourcePropertyType.Reserved: {
-           setProperty(internalOptions.resource.reservedResourcePropertyDescriptorMap[filter.propertyId]);
-           break;
-         }
-         case ResourcePropertyType.Custom: {
-           setProperty(propertyMap[filter.propertyId]);
-           break;
-         }
-       }
-    }
-  }, [filter, internalOptions]);
-
   useUpdateEffect(() => {
     setFilter(propsFilter);
   }, [propsFilter]);
 
-  log(propsFilter, filter, property);
+  log(propsFilter, filter);
 
   const renderOperations = () => {
     if (filter.propertyId == undefined) {
@@ -88,17 +58,13 @@ export default ({
             color={'secondary'}
             size={'sm'}
           >
-            {filter.operation == undefined ? t('Filter.Operation') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
+            {filter.operation == undefined ? t('Condition') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
           </Button>
         </Tooltip>
       );
     }
 
-    let operations: SearchOperation[] | undefined;
-    if (property) {
-      operations = property.type == ResourcePropertyType.Custom ? standardValueTypeSearchOperationsMap[property.customPropertyType!] : SearchableReservedPropertySearchOperationsMap[property.id];
-    }
-    operations ??= [];
+    const operations = filter.availableOperations ?? [];
     log(operations);
     if (operations.length == 0) {
       return (
@@ -111,14 +77,11 @@ export default ({
             color={'secondary'}
             size={'sm'}
           >
-            {filter.operation == undefined ? t('Filter.Operation') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
+            {filter.operation == undefined ? t('Condition') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
           </Button>
         </Tooltip>
       );
     } else {
-      if (filter.operation == undefined) {
-        filter.operation = operations[0];
-      }
       return (
         <Dropdown placement={'bottom-start'}>
           <DropdownTrigger>
@@ -128,7 +91,7 @@ export default ({
               color={'secondary'}
               size={'sm'}
             >
-              {filter.operation == undefined ? t('Filter.Operation') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
+              {filter.operation == undefined ? t('Condition') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
             </Button>
           </DropdownTrigger>
           <DropdownMenu>
@@ -137,11 +100,9 @@ export default ({
                 <DropdownItem
                   key={operation}
                   onClick={() => {
-                    setFilter({
+                    refreshValue({
                       ...filter,
                       operation: operation,
-                      dbValue: undefined,
-                      bizValue: undefined,
                     });
                   }}
                 >
@@ -155,8 +116,49 @@ export default ({
     }
   };
 
-  const noValue = filter.operation == SearchOperation.IsNull || filter.operation == SearchOperation.IsNotNull;
-  log('rendering filter', filter, property, propertyMap, dataPool, internalOptions.resource.reservedResourcePropertyDescriptorMap, internalOptions.resource.internalResourcePropertyDescriptorMap);
+  log('rendering filter', filter);
+
+  const refreshValue = (filter: ResourceSearchFilter) => {
+    if (!filter.propertyPool || !filter.propertyId || !filter.operation) {
+      filter.valueProperty = undefined;
+      filter.dbValue = undefined;
+      filter.bizValue = undefined;
+      setFilter({
+        ...filter,
+      });
+    } else {
+      BApi.resource.getFilterValueProperty(filter).then(r => {
+        const p = r.data;
+        filter.valueProperty = p;
+        setFilter({
+          ...filter,
+        });
+      });
+    }
+  };
+
+  const renderValue = () => {
+    if (!filter.valueProperty) {
+      return null;
+    }
+
+    return (
+      <PropertyValueRenderer
+        property={filter.valueProperty}
+        variant={'light'}
+        bizValue={filter.bizValue}
+        dbValue={filter.dbValue}
+        onValueChange={(dbValue, bizValue) => {
+          setFilter({
+            ...filter,
+            dbValue: dbValue,
+            bizValue: bizValue,
+          });
+        }}
+        defaultEditing={filter.dbValue == undefined}
+      />
+    );
+  };
 
   return (
     <div
@@ -182,48 +184,36 @@ export default ({
                 ? undefined
                 : [{
                   id: filter.propertyId,
-                  type: filter.propertyType!,
+                  pool: filter.propertyPool!,
                 }],
               onSubmit: async (selectedProperties) => {
                 const property = selectedProperties[0]!;
-                setProperty(property);
-                setFilter({
+                const availableOperations = (await BApi.resource.getSearchOperationsForProperty({ propertyPool: property.pool, propertyId: property.id })).data || [];
+                const nf = {
                   ...filter,
                   propertyId: property.id,
-                  propertyType: property.type,
+                  propertyPool: property.pool,
                   dbValue: undefined,
                   bizValue: undefined,
-                });
+                  property,
+                  availableOperations,
+                };
+                refreshValue(nf);
               },
               multiple: false,
-              pool: ResourcePropertyType.All,
+              pool: PropertyPool.All,
               addable: false,
               editable: false,
             });
           }}
         >
-          {(filter.propertyId ? filter.propertyType == ResourcePropertyType.Custom ? propertyMap[filter.propertyId]?.name : t(ResourceProperty[filter.propertyId]) : t('Property')) ?? t('Unknown property')}
+          {filter.property ? filter.property.name ?? t('Unknown property') : t('Property')}
         </Button>
       </div>
       <div className={''}>
         {renderOperations()}
       </div>
-      {noValue ? null : (filter.operation && property) ? (
-        <PropertyFilterValueRenderer
-          operation={filter.operation}
-          property={property}
-          dataPool={dataPool}
-          onValueChange={(dbValue, bizValue) => {
-            setFilter({
-              ...filter,
-              dbValue: dbValue,
-              bizValue: bizValue,
-            });
-          }}
-          dbValue={filter.dbValue}
-          bizValue={filter.bizValue}
-        />
-      ) : null}
+      {renderValue()}
     </div>
   );
 };

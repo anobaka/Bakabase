@@ -3,7 +3,7 @@ using Bootstrap.Models.RequestModels;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
-    public class SerialSearchRequestModel : SearchRequestModel
+    public record SerialSearchRequestModel : SearchRequestModel
     {
         public string Name { get; set; }
         public List<string> Names { get; set; }

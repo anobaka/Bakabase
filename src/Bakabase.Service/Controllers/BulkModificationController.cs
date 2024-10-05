@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos;

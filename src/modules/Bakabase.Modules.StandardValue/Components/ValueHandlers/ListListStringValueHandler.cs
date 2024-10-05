@@ -16,8 +16,7 @@ using Newtonsoft.Json;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public class ListListStringValueHandler(ICustomDateTimeParser customDateTimeParser)
-        : AbstractStandardValueHandler<List<List<string>>>(customDateTimeParser)
+    public class ListListStringValueHandler : AbstractStandardValueHandler<List<List<string>>>
     {
         public override StandardValueType Type => StandardValueType.ListListString;
 
@@ -46,11 +45,11 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         }
 
         public override string? ConvertToString(List<List<string>> optimizedValue) =>
-            string.Join(StandardValueOptions.CommonListItemSeparator,
-                optimizedValue.Select(x => string.Join(StandardValueOptions.ListListStringInnerSeparator, x)));
+            string.Join(StandardValueInternals.CommonListItemSeparator,
+                optimizedValue.Select(x => string.Join(StandardValueInternals.ListListStringInnerSeparator, x)));
 
         public override List<string>? ConvertToListString(List<List<string>> optimizedValue) => optimizedValue
-            .Select(x => string.Join(StandardValueOptions.ListListStringInnerSeparator, x)).ToList();
+            .Select(x => string.Join(StandardValueInternals.ListListStringInnerSeparator, x)).ToList();
 
         public override decimal? ConvertToNumber(List<List<string>> optimizedValue) =>
             optimizedValue.FirstNotNullOrDefault(x => x.FirstNotNullOrDefault(a => a.ConvertToDecimal()));
@@ -74,7 +73,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
                     : new TagValue(x[0], string.Join(InternalOptions.LayerTextSeparator, x.Skip(1)))).ToList();
         }
 
-        protected override List<string>? ExtractTextsForConvertingToDateTime(List<List<string>> optimizedValue) =>
+        protected override List<string>? ExtractTextsForConvertingToDateTimeInternal(List<List<string>> optimizedValue) =>
             optimizedValue.SelectMany(o => o).ToList();
 
         protected override List<string>? ExtractTextsForConvertingToTime(List<List<string>> optimizedValue) =>

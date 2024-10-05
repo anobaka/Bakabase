@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import PropertySelector from '@/components/PropertySelector';
 import { createPortalOfComponent } from '@/components/utils';
 import BApi from '@/sdk/BApi';
-import { ResourcePropertyType } from '@/sdk/constants';
+import { PropertyPool } from '@/sdk/constants';
 
 const { Popup } = Overlay;
 
@@ -21,8 +21,8 @@ const CategoryCustomPropertyBinderDialog = ({
   return (
     <PropertySelector
       multiple
-      pool={ResourcePropertyType.Custom}
-      selection={category.customProperties?.map(c => ({ id: c.id, type: ResourcePropertyType.Custom }))}
+      pool={PropertyPool.Custom}
+      selection={category.customProperties?.map(c => ({ id: c.id, pool: PropertyPool.Custom }))}
       title={t('Binding custom properties to category {{categoryName}}', { categoryName: category.name })}
       onSubmit={async (properties) => {
         const rsp = await BApi.category.bindCustomPropertiesToCategory(category.id, { customPropertyIds: properties?.map(p => p.id) });

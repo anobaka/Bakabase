@@ -1,5 +1,4 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.CustomProperty.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Modules.Enhancer.Abstractions.Components;
 
@@ -9,10 +8,10 @@ public interface IEnhancerTargetDescriptor
     string Name { get; }
     Enum EnumId { get; }
     StandardValueType ValueType { get; }
-    CustomPropertyType CustomPropertyType { get; }
+    PropertyType PropertyType { get; }
     bool IsDynamic { get; }
     string? Description { get; }
     int[]? OptionsItems { get; }
     IEnhancementConverter? EnhancementConverter { get; }
-    ReservedResourceProperty? ReservedResourcePropertyCandidate { get; }
+    ReservedProperty? ReservedPropertyCandidate { get; }
 }

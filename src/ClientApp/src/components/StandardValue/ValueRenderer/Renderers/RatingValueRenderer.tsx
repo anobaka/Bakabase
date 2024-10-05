@@ -18,7 +18,7 @@ export default (props: RatingValueRendererProps) => {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
 
-  log(props);
+  // log(props);
 
   useUpdateEffect(() => {
     setValue(propsValue);

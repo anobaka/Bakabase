@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ValueRendererProps } from '../models';
 import type { MultilevelData } from '../../models';
@@ -12,11 +12,17 @@ type MultilevelValueRendererProps = ValueRendererProps<string[][], string[]> & {
   getDataSource?: () => Promise<MultilevelData<string>[]>;
 };
 
-export default ({ value, editor, variant, getDataSource, multiple, ...props }: MultilevelValueRendererProps) => {
+export default ({ value, editor, variant, getDataSource, multiple, defaultEditing, ...props }: MultilevelValueRendererProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   console.log('[MultilevelValueRenderer]', value, variant);
+
+  useEffect(() => {
+    if (defaultEditing) {
+      showEditor();
+    }
+  }, []);
 
   const showEditor = () => {
     createPortal(MultilevelValueEditor<string>, {

@@ -1,32 +1,30 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.Modules.CustomProperty.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
-using System.Text.RegularExpressions;
 using Bakabase.InsideWorld.Models.Configs;
 using Microsoft.Extensions.Options;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models.RequestModels;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 {
     public class ExHentaiEnhancer(
-        IEnumerable<IStandardValueHandler> valueConverters,
         ILoggerFactory loggerFactory,
         ExHentaiClient exHentaiClient,
         IServiceProvider services,
         IOptions<ExHentaiOptions> options,
         ISpecialTextService specialTextService,
         IFileManager fileManager)
-        : AbstractEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(valueConverters, loggerFactory, fileManager)
+        : AbstractEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(loggerFactory, fileManager)
     {
         private readonly ExHentaiClient _exHentaiClient = exHentaiClient;
         private readonly IServiceProvider _services = services;

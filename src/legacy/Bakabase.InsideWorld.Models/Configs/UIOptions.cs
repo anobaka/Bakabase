@@ -21,6 +21,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             public bool ShowBiggerCoverWhileHover { get; set; }
             public bool DisableMediaPreviewer { get; set; }
             public bool DisableCache { get; set; }
+            public CoverFit CoverFit { get; set; } = CoverFit.Contain;
         }
     }
 }

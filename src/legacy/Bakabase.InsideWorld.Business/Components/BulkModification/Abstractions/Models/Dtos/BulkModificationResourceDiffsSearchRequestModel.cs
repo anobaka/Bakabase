@@ -7,7 +7,7 @@ using Bootstrap.Models.RequestModels;
 
 namespace Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos
 {
-    public class BulkModificationResourceDiffsSearchRequestModel : SearchRequestModel
+    public record BulkModificationResourceDiffsSearchRequestModel : SearchRequestModel
     {
         public int BmId { get; set; }
         public string? Path { get; set; }

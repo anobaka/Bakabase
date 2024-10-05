@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Models.Domain.Constants;
+﻿using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Abstractions.Models.Domain
 {
@@ -22,12 +23,12 @@ namespace Bakabase.Abstractions.Models.Domain
         public object? Value { get; set; }
 
         /// <summary>
-        /// <inheritdoc cref="Models.Db.Enhancement.PropertyType"/>
+        /// <inheritdoc cref="Db.Enhancement.PropertyPool"/>
         /// </summary>
-        public ResourcePropertyType? PropertyType { get; set; }
+        public PropertyPool? PropertyPool { get; set; }
 
         /// <summary>
-        /// <inheritdoc cref="PropertyType"/>
+        /// <inheritdoc cref="PropertyPool"/>
         /// </summary>
         public int? PropertyId { get; set; }
 

@@ -11,18 +11,17 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public abstract class AbstractStandardValueHandler<TValue>(ICustomDateTimeParser customDateTimeParser)
-        : IStandardValueHandler
+    public abstract class AbstractStandardValueHandler<TValue> : IStandardValueHandler
     {
         public abstract StandardValueType Type { get; }
 
         private Dictionary<StandardValueType, StandardValueConversionRule>? _possibleConversionLosses;
 
         public Dictionary<StandardValueType, StandardValueConversionRule> ConversionRules =>
-            (_possibleConversionLosses ??= StandardValueOptions.ConversionRules[Type]);
+            (_possibleConversionLosses ??= StandardValueInternals.ConversionRules[Type]);
 
 
-        public async Task<object?> Convert(object? currentValue,
+        public object? Convert(object? currentValue,
             StandardValueType toType)
         {
             if (currentValue == null)
@@ -44,7 +43,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
             {
                 StandardValueType.Boolean => ConvertToBoolean(typedCurrentValue),
                 StandardValueType.Link => ConvertToLink(typedCurrentValue),
-                StandardValueType.DateTime => await ConvertToDateTime(typedCurrentValue),
+                StandardValueType.DateTime => ConvertToDateTime(typedCurrentValue),
                 StandardValueType.Time => ConvertToTime(typedCurrentValue),
                 StandardValueType.String => ConvertToString(typedCurrentValue),
                 StandardValueType.ListString => ConvertToListString(typedCurrentValue),
@@ -54,6 +53,8 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
                 _ => throw new ArgumentOutOfRangeException(nameof(toType), toType, null)
             };
         }
+
+        public object? Optimize(object? value) => ConvertToOptimizedTypedValue(value, out var x) ? x : null;
 
         public bool ValidateType(object? value)
         {
@@ -85,22 +86,22 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         public abstract bool? ConvertToBoolean(TValue optimizedValue);
         public abstract LinkValue? ConvertToLink(TValue optimizedValue);
 
-        protected virtual List<string>? ExtractTextsForConvertingToDateTime(TValue optimizedValue) => null;
+        protected virtual List<string>? ExtractTextsForConvertingToDateTimeInternal(TValue optimizedValue) => null;
 
-        public virtual async Task<DateTime?> ConvertToDateTime(TValue optimizedValue)
+        public virtual DateTime? ConvertToDateTime(TValue optimizedValue)
         {
-            var texts = ExtractTextsForConvertingToDateTime(optimizedValue)?.TrimAndRemoveEmpty();
+            var texts = ExtractTextsForConvertingToDateTimeInternal(optimizedValue)?.TrimAndRemoveEmpty();
             if (texts?.Any() == true)
             {
                 foreach (var text in texts)
                 {
-                    var date = await customDateTimeParser.TryToParseDateTime(text);
-                    if (date.HasValue)
-                    {
-                        return date;
-                    }
+                    // var date = await customDateTimeParser.TryToParseDateTime(text);
+                    // if (date.HasValue)
+                    // {
+                    //     return date;
+                    // }
 
-                    date = text.ConvertToDateTime();
+                    var date = text.ConvertToDateTime();
                     if (date.HasValue)
                     {
                         return date;
@@ -110,6 +111,10 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
             return null;
         }
+
+        public List<string>? ExtractTextsForConvertingToDateTime(object optimizedValue) => optimizedValue is TValue tv
+            ? ExtractTextsForConvertingToDateTimeInternal(tv)
+            : null;
 
         protected virtual List<string>? ExtractTextsForConvertingToTime(TValue optimizedValue) => null;
 

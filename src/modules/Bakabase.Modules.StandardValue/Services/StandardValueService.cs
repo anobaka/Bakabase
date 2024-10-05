@@ -2,21 +2,15 @@
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 
 namespace Bakabase.Modules.StandardValue.Services;
 
-public class StandardValueService : IStandardValueService
+public class StandardValueService(ICustomDateTimeParser datetimeParser) : IStandardValueService
 {
-    private readonly Dictionary<StandardValueType, IStandardValueHandler> _valueConverters;
-
-    public StandardValueService(IEnumerable<IStandardValueHandler> valueConverters)
-    {
-        _valueConverters = valueConverters.ToDictionary(d => d.Type, d => d);
-    }
-
     /// <summary>
     /// 
     /// </summary>
@@ -27,7 +21,25 @@ public class StandardValueService : IStandardValueService
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public async Task<object?> Convert(object? data, StandardValueType fromType, StandardValueType toType)
     {
-        var converter = _valueConverters[fromType];
-        return await converter.Convert(data, toType);
+        var converter = StandardValueInternals.HandlerMap[fromType];
+        var output = converter.Convert(data, toType);
+        if (output == null && (toType == StandardValueType.DateTime) && data != null)
+        {
+            var textsForDateTime = converter.ExtractTextsForConvertingToDateTime(data);
+            if (textsForDateTime?.Any() == true)
+            {
+                foreach (var t in textsForDateTime)
+                {
+                    var date = await datetimeParser.TryToParseDateTime(t);
+                    if (date.HasValue)
+                    {
+                        output = date.Value;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return output;
     }
 }

@@ -3,12 +3,12 @@ using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.Modules.CustomProperty.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Components.Enhancers.DLsite;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
@@ -19,11 +19,10 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Regex;
 
 [EnhancerComponent(OptionsType = typeof(RegexEnhancerOptions))]
 public class RegexEnhancer(
-    IEnumerable<IStandardValueHandler> valueConverters,
     ILoggerFactory loggerFactory,
     IFileManager fileManager,
     IBOptions<EnhancerOptions> enhancerOptions)
-    : AbstractEnhancer<RegexEnhancerTarget, RegexEnhancerContext, object?>(valueConverters, loggerFactory, fileManager)
+    : AbstractEnhancer<RegexEnhancerTarget, RegexEnhancerContext, object?>(loggerFactory, fileManager)
 {
     protected override async Task<RegexEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options,
         CancellationToken ct)

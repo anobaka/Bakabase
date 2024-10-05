@@ -1,8 +1,7 @@
 import type {
   EnhancerId,
   EnhancerTargetOptionsItem,
-  EnhancerTargetType,
-  ReservedResourceProperty,
+  ReservedProperty,
   StandardValueType,
 } from '@/sdk/constants';
 
@@ -18,8 +17,6 @@ export interface EnhancerTargetDescriptor {
   isDynamic: boolean;
   name: string;
   description?: string;
-  type: EnhancerTargetType;
   valueType: StandardValueType;
   optionsItems?: EnhancerTargetOptionsItem[];
-  reservedResourcePropertyCandidate?: ReservedResourceProperty;
 }

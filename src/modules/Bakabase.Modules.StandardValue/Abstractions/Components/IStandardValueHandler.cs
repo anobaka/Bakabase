@@ -11,8 +11,10 @@ public interface IStandardValueHandler
 {
     StandardValueType Type { get; }
     Dictionary<StandardValueType, StandardValueConversionRule> ConversionRules { get; }
-    Task<object?> Convert(object? currentValue, StandardValueType toType);
+    object? Convert(object? currentValue, StandardValueType toType);
+    object? Optimize(object? value);
     bool ValidateType(object? value);
     Type ExpectedType { get; }
     string? BuildDisplayValue(object? value);
+    public List<string>? ExtractTextsForConvertingToDateTime(object optimizedValue) => null;
 }

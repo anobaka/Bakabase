@@ -1,3 +1,5 @@
+'use strict';
+
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { Tooltip } from '@/components/bakaui';
@@ -6,6 +8,7 @@ import type {
   EnhancerTargetFullOptions,
 } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
+import { buildLogger } from '@/components/utils';
 
 interface IProps {
   options?: CategoryEnhancerFullOptions;
@@ -18,14 +21,14 @@ enum Status {
   NotSet = 3,
 }
 
+const log = buildLogger('TargetNotSetupTip');
+
 const isSet = (options: EnhancerTargetFullOptions | undefined, isDefaultOfDynamic: boolean): boolean => {
   return (options != undefined && (options.propertyId != undefined && options.propertyId > 0 || options.autoBindProperty || isDefaultOfDynamic)) ?? false;
 };
 
 export default ({ options, enhancer }: IProps) => {
   const { t } = useTranslation();
-
-  // console.log(options, enhancer);
 
   if (options?.active != true) {
     return null;
@@ -56,6 +59,8 @@ export default ({ options, enhancer }: IProps) => {
   }
 
   const status: Status = setTargets.length == 0 ? Status.NotSet : setTargets.length == enhancer.targets.length ? Status.AllSet : Status.NotAllSet;
+
+  log(options, enhancer, status, setTargets);
 
   switch (status) {
     case Status.AllSet:

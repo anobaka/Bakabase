@@ -15,10 +15,10 @@ namespace Bakabase.Abstractions.Models.Db
         /// <summary>
         /// This field will be filled after converting enhancement raw value to property value
         /// </summary>
-        public ResourcePropertyType? PropertyType { get; set; }
+        public PropertyPool? PropertyPool { get; set; }
 
         /// <summary>
-        /// <inheritdoc cref="PropertyType"/>
+        /// <inheritdoc cref="PropertyPool"/>
         /// </summary>
         public int? PropertyId { get; set; }
 

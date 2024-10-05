@@ -7,6 +7,7 @@ import { Button, Input, Modal } from '@/components/bakaui';
 import type { MultilevelData } from '@/components/StandardValue/models';
 import { filterMultilevelData, findNodeChainInMultilevelData } from '@/components/StandardValue/helpers';
 import type { DestroyableProps } from '@/components/bakaui/types';
+import { buildLogger } from '@/components/utils';
 
 type Selectable<V> = (data: MultilevelData<V>, depth: number, index: number) => boolean;
 
@@ -20,11 +21,13 @@ const buildDefaultSelectable: (<V>() => Selectable<V>) = () => {
   return (data, depth, index) => data.children == undefined || data.children.length == 0;
 };
 
+const log = buildLogger('MultilevelValueEditor');
+
 export default <V = string>(props: MultilevelValueEditorProps<V>) => {
   const { t } = useTranslation();
 
   const { getDataSource, selectable = buildDefaultSelectable<V>(), value: propsValue, onValueChange, onCancel, multiple } = props;
-  // console.log(props);
+  log(props);
 
   const [dataSource, setDataSource] = useState<MultilevelData<V>[]>([]);
   const [keyword, setKeyword] = useState('');

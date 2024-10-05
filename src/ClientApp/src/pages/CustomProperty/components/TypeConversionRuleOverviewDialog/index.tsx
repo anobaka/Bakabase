@@ -17,7 +17,7 @@ import {
   Tooltip,
 } from '@/components/bakaui';
 import type { StandardValueConversionRule } from '@/sdk/constants';
-import { CustomPropertyType, customPropertyTypes } from '@/sdk/constants';
+import { PropertyType, propertyTypes } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
@@ -44,7 +44,7 @@ export default () => {
     });
   }, []);
 
-  const renderRows = (fromType: CustomPropertyType): any[] => {
+  const renderRows = (fromType: PropertyType): any[] => {
     if (!rules) {
       return [];
     }
@@ -57,12 +57,12 @@ export default () => {
     const rows: any[] = [];
 
     Object.keys(targetMap).forEach(toTypeStr => {
-      const toType = parseInt(toTypeStr, 10) as CustomPropertyType;
+      const toType = parseInt(toTypeStr, 10) as PropertyType;
       const rules = targetMap[toType];
       rows.push(
         <TableRow key={fromType}>
-          {/* <TableCell>{t(CustomPropertyType[fromType])}</TableCell> */}
-          <TableCell>{t(CustomPropertyType[toType])}</TableCell>
+          {/* <TableCell>{t(PropertyType[fromType])}</TableCell> */}
+          <TableCell>{t(PropertyType[toType])}</TableCell>
           <TableCell>
             <div className={'flex flex-wrap gap-1'}>
               {rules.map(r => {
@@ -121,9 +121,9 @@ export default () => {
       <div>
         <Tabs isVertical disabledKeys={['title']}>
           <Tab key={'title'} title={t('Source type')} />
-          {customPropertyTypes.map(cpt => {
+          {propertyTypes.map(cpt => {
             return (
-              <Tab key={cpt.value} title={t(CustomPropertyType[cpt.value])}>
+              <Tab key={cpt.value} title={t(PropertyType[cpt.value])}>
                 <Table>
                   <TableHeader>
                     {columns}

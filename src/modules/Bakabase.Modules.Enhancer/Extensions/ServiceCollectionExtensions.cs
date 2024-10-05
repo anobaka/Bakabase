@@ -59,12 +59,12 @@ public static class ServiceCollectionExtensions
                         enhancerId,
                         localizer,
                         targetAttr.ValueType,
-                        targetAttr.CustomPropertyType,
+                        targetAttr.PropertyType,
                         targetAttr.IsDynamic,
                         targetAttr.Options?.Cast<int>().ToArray(),
                         converter,
-                        targetAttr.ReservedResourcePropertyCandidate != default
-                            ? targetAttr.ReservedResourcePropertyCandidate
+                        targetAttr.ReservedPropertyCandidate != default
+                            ? targetAttr.ReservedPropertyCandidate
                             : null
                     );
                 }).ToArray();

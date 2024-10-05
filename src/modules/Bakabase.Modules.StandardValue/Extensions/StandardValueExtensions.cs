@@ -49,24 +49,6 @@ public static class StandardValueExtensions
                         SerializationLowLevelSeparator, SerializationSeparatorEscapeChar);
                     return data?.Select(d => new TagValue(d[0], d[1])).ToList();
                 }
-                // case StandardValueType.String:
-                //     return JsonConvert.DeserializeObject<string>(serializedValue);
-                // case StandardValueType.ListString:
-                //     return JsonConvert.DeserializeObject<List<string>>(serializedValue);
-                // case StandardValueType.Decimal:
-                //     return JsonConvert.DeserializeObject<decimal>(serializedValue);
-                // case StandardValueType.Boolean:
-                //     return JsonConvert.DeserializeObject<bool>(serializedValue);
-                // case StandardValueType.Link:
-                //     return JsonConvert.DeserializeObject<LinkValue>(serializedValue);
-                // case StandardValueType.DateTime:
-                //     return JsonConvert.DeserializeObject<DateTime>(serializedValue);
-                // case StandardValueType.Time:
-                //     return JsonConvert.DeserializeObject<TimeSpan>(serializedValue);
-                // case StandardValueType.ListListString:
-                //     return JsonConvert.DeserializeObject<List<List<string>>>(serializedValue);
-                // case StandardValueType.ListTag:
-                //     return JsonConvert.DeserializeObject<List<TagValue>>(serializedValue);
             }
 
             throw new ArgumentOutOfRangeException(nameof(valueType), valueType, null);
@@ -154,4 +136,18 @@ public static class StandardValueExtensions
             return null;
         }
     }
+
+    public static bool IsStandardValueType(this object? value, StandardValueType type) => value == null || type switch
+    {
+        StandardValueType.String => value is string,
+        StandardValueType.ListString => value is List<string>,
+        StandardValueType.Decimal => value is decimal,
+        StandardValueType.Link => value is LinkValue,
+        StandardValueType.Boolean => value is bool,
+        StandardValueType.DateTime => value is DateTime,
+        StandardValueType.Time => value is TimeSpan,
+        StandardValueType.ListListString => value is List<List<string>>,
+        StandardValueType.ListTag => value is List<TagValue>,
+        _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+    };
 }

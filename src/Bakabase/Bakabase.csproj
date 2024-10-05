@@ -8,7 +8,7 @@
         <Nullable>enable</Nullable>
         <UseWPF>true</UseWPF>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Version>1.9.0-beta7</Version>
+        <Version>1.9.0-beta8</Version>
         <SpaRoot>ClientApp\</SpaRoot>
         <ApplicationIcon>Assets/favicon.ico</ApplicationIcon>
         <AssemblyName>Bakabase</AssemblyName>

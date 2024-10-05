@@ -10,8 +10,7 @@ using Bakabase.Modules.StandardValue.Models.Domain;
 
 namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 {
-    public class BooleanValueHandler(ICustomDateTimeParser customDateTimeParser)
-        : AbstractStandardValueHandler<bool>(customDateTimeParser)
+    public class BooleanValueHandler : AbstractStandardValueHandler<bool>
     {
         public override StandardValueType Type => StandardValueType.Boolean;
 
@@ -43,6 +42,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         public override List<List<string>>? ConvertToListListString(bool optimizedValue) =>
             [[ConvertToString(optimizedValue)]];
 
-        public override List<TagValue>? ConvertToListTag(bool optimizedValue) => [new TagValue(null, ConvertToString(optimizedValue))];
+        public override List<TagValue>? ConvertToListTag(bool optimizedValue) =>
+            [new TagValue(null, ConvertToString(optimizedValue))];
     }
 }
