@@ -395,20 +395,34 @@ namespace Bakabase.Service.Controllers
                     for (var i = 0; i < paths.Length; i++)
                     {
                         var path = paths[i];
-                        if (Directory.Exists(path) || System.IO.File.Exists(path))
+                        var isDirectory = Directory.Exists(path);
+                        var isFile = System.IO.File.Exists(path);
+                        if (isDirectory || isFile)
                         {
+                            var targetPath = Path.Combine(model.DestDir, Path.GetFileName(path));
                             await _iwFsEntryTaskManager.Add(new IwFsTaskInfo(path, IwFsEntryTaskType.Moving, bt.Id,
-                                $"{IwFsEntryTaskType.Moving} to {model.DestDir}"));
+                                $"{IwFsEntryTaskType.Moving} to {targetPath}"));
 
                             var i1 = i;
                             try
                             {
-                                await DirectoryUtils.MoveAsync(path, model.DestDir, false, async p =>
+                                async Task ProgressChange(int p)
                                 {
                                     await _iwFsEntryTaskManager.Update(path, t => t.Percentage = p);
                                     var totalPercentage = (int) (unitEntryPercentage * (i1 + (decimal) p / 100));
                                     bt.Percentage = totalPercentage;
-                                }, bt.Cts.Token);
+                                }
+
+                                if (isDirectory)
+                                {
+                                    await DirectoryUtils.MoveAsync1(path, targetPath, false, ProgressChange,
+                                        bt.Cts.Token);
+                                }
+                                else
+                                {
+                                    await FileUtils.MoveAsync(path, targetPath, false, ProgressChange, bt.Cts.Token);
+                                }
+
                                 await _iwFsEntryTaskManager.Clear(path);
                             }
                             catch (Exception e)

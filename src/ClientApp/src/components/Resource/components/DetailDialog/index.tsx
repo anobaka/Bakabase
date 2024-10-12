@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import './index.scss';
 import { useTranslation } from 'react-i18next';
-import { FolderOpenOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { DatabaseOutlined, FolderOpenOutlined, PlayCircleOutlined, SettingOutlined } from '@ant-design/icons';
 import BasicInfo from './BasicInfo';
 import Properties from './Properties';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
@@ -12,6 +12,8 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 import BApi from '@/sdk/BApi';
 import { ReservedProperty, ResourceAdditionalItem, PropertyPool } from '@/sdk/constants';
 import { convertFromApiValue } from '@/components/StandardValue/helpers';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import PropertyValueScopePicker from '@/components/Resource/components/DetailDialog/PropertyValueScopePicker';
 
 
 interface Props extends DestroyableProps {
@@ -29,6 +31,7 @@ export default ({
                   ...props
                 }: Props) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const [resource, setResource] = useState<ResourceModel>();
 
   const loadResource = async () => {
@@ -71,7 +74,7 @@ export default ({
     >
       {resource && (
         <>
-          <div className="flex gap-4 max-h-[600px]">
+          <div className="flex gap-4 max-h-[600px] relative">
             <div className="min-w-[400px] w-[400px] max-w-[400px] flex flex-col gap-4">
               <div className={'h-[400px] max-h-[400px] overflow-hidden rounded flex items-center justify-center'}>
                 <ResourceCover
@@ -134,6 +137,19 @@ export default ({
                 />
               </div>
             </div>
+            <Button
+              size={'sm'}
+              isIconOnly
+              variant={'light'}
+              className={'absolute top-0 right-0'}
+              onClick={() => {
+                createPortal(PropertyValueScopePicker, {
+                  resource,
+                });
+              }}
+            >
+              <SettingOutlined className={'text-base'} />
+            </Button>
           </div>
           <div className={'mt-2'}>
             <Properties

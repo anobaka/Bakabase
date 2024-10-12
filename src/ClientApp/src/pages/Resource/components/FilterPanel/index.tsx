@@ -1,8 +1,8 @@
-import { Dropdown, Overlay } from '@alifd/next';
+import { Overlay } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useUpdateEffect } from 'react-use';
-import { OrderedListOutlined, SearchOutlined } from '@ant-design/icons';
+import { EyeOutlined, OrderedListOutlined, SearchOutlined, SnippetsOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './FilterGroupsPanel';
 import OrderSelector from './OrderSelector';
@@ -12,10 +12,11 @@ import store from '@/store';
 import ClickableIcon from '@/components/ClickableIcon';
 import { PlaylistCollection } from '@/components/Playlist';
 import type { ISearchForm } from '@/pages/Resource/models';
-import { Button, Icon, Input, Popover, Tooltip } from '@/components/bakaui';
+import { Button, Chip, Icon, Input, Popover, Tooltip, DropdownItem, DropdownMenu, DropdownTrigger, Dropdown } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
 import DeleteUnknownResources from '@/components/DeleteUnknownResources';
-import { CoverFit } from '@/sdk/constants';
+import { ResourceDisplayContent } from '@/sdk/constants';
+import { CoverFit, resourceDisplayContents } from '@/sdk/constants';
 
 const { Popup } = Overlay;
 
@@ -26,6 +27,8 @@ interface IProps {
   searchForm?: Partial<ISearchForm>;
   onSearch?: (form: Partial<ISearchForm>) => Promise<any>;
   reloadResources: (ids: number[]) => any;
+  multiSelection?: boolean;
+  rearrangeResources?: () => any;
 }
 
 const MinResourceColCount = 3;
@@ -39,6 +42,8 @@ export default ({
                   onSearch,
                   searchForm: propsSearchForm,
                   reloadResources,
+                  multiSelection = false,
+                  rearrangeResources,
                 }: IProps) => {
   const { t } = useTranslation();
 
@@ -152,6 +157,9 @@ export default ({
     return;
   }, [bulkOperationMode, selectedResourceIds]);
 
+  const currentResourceDisplayContents = uiOptions.resource?.displayContents ?? ResourceDisplayContent.All;
+  const selectableResourceDisplayContents = resourceDisplayContents.filter(d => d.value != ResourceDisplayContent.All).map(x => ({ ...x, value: x.value.toString() }));
+
   return (
     <div className={`${styles.filterPanel}`}>
       <div className={'flex items-center gap-4'}>
@@ -211,6 +219,11 @@ export default ({
           </Button>
         </div>
         <div className={'flex items-center gap-2'}>
+          {multiSelection && (
+            <Chip variant={'light'} color={'success'}>
+              <SnippetsOutlined className={'text-base'} />
+            </Chip>
+          )}
           <DeleteUnknownResources onDeleted={() => search({})} />
           <OrderSelector
             className={'mr-2'}
@@ -224,23 +237,21 @@ export default ({
               search(nf);
             }}
           />
-          <Dropdown
-            triggerType={'click'}
-            trigger={(
-              <Button
-                color={'default'}
-                size={'sm'}
-                startContent={<CustomIcon
-                  type={'playlistplay'}
-                  className={'text-xl'}
-                />}
-              >
-                {t('Playlist')}
-              </Button>
-            )}
+          <Popover trigger={(
+            <Button
+              color={'default'}
+              size={'sm'}
+              startContent={<CustomIcon
+                type={'playlistplay'}
+                className={'text-xl'}
+              />}
+            >
+              {t('Playlist')}
+            </Button>
+          )}
           >
             <PlaylistCollection className={'resource-page'} />
-          </Dropdown>
+          </Popover>
           <Popover
             placement={'bottom-end'}
             trigger={(
@@ -337,6 +348,41 @@ export default ({
               }}
             />
           </Tooltip>
+          <Dropdown>
+            <DropdownTrigger>
+              <EyeOutlined className={`${styles.switch} !text-xl ${currentResourceDisplayContents ? styles.on : ''}`} />
+            </DropdownTrigger>
+            <DropdownMenu
+              aria-label="Multiple selection example"
+              variant="flat"
+              closeOnSelect={false}
+              selectionMode="multiple"
+              selectedKeys={selectableResourceDisplayContents.filter(c => currentResourceDisplayContents & c.value).map(c => c.value.toString())}
+              onSelectionChange={keys => {
+                let dc: ResourceDisplayContent = 0;
+                for (const key of keys) {
+                  dc |= parseInt(key as string, 10);
+                }
+                // console.log(123212321321312, keys);
+                BApi.options.patchUiOptions({
+                  resource: {
+                    ...(uiOptions?.resource || {}),
+                    displayContents: dc,
+                  },
+                }).then(r => {
+                  if ((currentResourceDisplayContents & ResourceDisplayContent.Tags) != (dc & ResourceDisplayContent.Tags)) {
+                    rearrangeResources?.();
+                  }
+                });
+              }}
+            >
+              {selectableResourceDisplayContents.map(d => {
+                return (
+                  <DropdownItem key={d.value.toString()}>{t(d.label)}</DropdownItem>
+                );
+              })}
+            </DropdownMenu>
+          </Dropdown>
           {/* <div className={'flex gap-2 items-center'}> */}
           {/*   {renderBulkOperations()} */}
           {/*   <Tooltip */}

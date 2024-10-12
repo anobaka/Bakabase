@@ -1,8 +1,10 @@
+import { MouseEvent, useCallback } from 'react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useUpdate } from 'react-use';
-import { CheckCircleOutlined, CheckCircleTwoTone } from '@ant-design/icons';
+import { useUpdate, useUpdateEffect } from 'react-use';
+import type { ResourcesRef } from './components/Resources';
+import Resources from './components/Resources';
 import styles from './index.module.scss';
 import FilterPanel from './components/FilterPanel';
 import type { ISearchForm } from '@/pages/Resource/models';
@@ -11,13 +13,11 @@ import BApi from '@/sdk/BApi';
 import Resource from '@/components/Resource';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
-import ResourceMasonry from '@/pages/Resource/components/ResourceMasonry';
 import { Button, Pagination, Spinner } from '@/components/bakaui';
 import { buildLogger } from '@/components/utils';
-import { CoverFit } from '@/sdk/constants';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 const PageSize = 100;
-const MinResourceWidth = 100;
 
 interface IPageable {
   page: number;
@@ -55,7 +55,63 @@ export default () => {
   const [bulkOperationMode, setBulkOperationMode] = useState<boolean>(false);
   const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
 
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const selectedIdsRef = useRef(selectedIds);
+  const [multiSelection, setMultiSelection] = useState<boolean>(false);
+  const multiSelectionRef = useRef(multiSelection);
+
+  const resourcesComponentRef = useRef<ResourcesRef | null>();
+
+  const { createPortal } = useBakabaseContext();
+
   const initStartPageRef = useRef(1);
+
+  useEffect(() => {
+    BApi.resource.getResourceSearchCriteria().then(r => {
+      // @ts-ignore
+      search(r.data || {}, 'replace');
+    });
+
+    const handleScroll = () => {
+      console.log(window.scrollY);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      // log(e);
+      if (e.key == 'Control' && !multiSelectionRef.current) {
+        setMultiSelection(true);
+      }
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key == 'Control' && multiSelectionRef.current) {
+        setMultiSelection(false);
+      }
+    };
+
+    const onClick = (e: globalThis.MouseEvent) => {
+      if (!multiSelectionRef.current) {
+        // alert('clear all');
+        setSelectedIds([]);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('click', onClick);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('click', onClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    multiSelectionRef.current = multiSelection;
+  }, [multiSelection]);
 
   useEffect(() => {
     if (uiOptions.initialized) {
@@ -82,9 +138,14 @@ export default () => {
     resourcesRef.current = resources;
   }, [resources]);
 
+  useUpdateEffect(() => {
+    selectedIdsRef.current = selectedIds;
+    log('SelectedIds', selectedIds);
+  }, [selectedIds]);
+
   const pageContainerRef = useRef<any>();
 
-  const search = async (partialForm: Partial<ISearchForm>, renderMode: 'append' | 'replace', replaceSearchCriteria: boolean = false, save: boolean = true) => {
+  const search = async (partialForm: Partial<ISearchForm>, renderMode: 'append' | 'replace' | 'prepend', replaceSearchCriteria: boolean = false, save: boolean = true) => {
     const baseForm = replaceSearchCriteria ? {} : searchForm;
 
     const newForm = {
@@ -127,30 +188,68 @@ export default () => {
     });
 
     const newResources = rsp.data || [];
-    if (renderMode == 'append') {
-      setResources([...resources, ...newResources]);
-    } else {
-      setResources(newResources);
+    switch (renderMode) {
+      case 'append':
+        setResources([...resources, ...newResources]);
+        break;
+      case 'prepend':
+        setResources([...newResources, ...resources]);
+        break;
+      default:
+        setResources(newResources);
+        break;
     }
     setSearching(false);
   };
 
-  useEffect(() => {
-    BApi.resource.getResourceSearchCriteria().then(r => {
-      // @ts-ignore
-      search(r.data || {}, 'replace');
-    });
+  const renderCell = useCallback(({
+                                    columnIndex, // Horizontal (column) index of cell
+                                    // isScrolling, // The Grid is currently being scrolled
+                                    // isVisible, // This cell is visible within the grid (eg it is not an overscanned cell)
+                                    key, // Unique key within array of cells
+                                    parent, // Reference to the parent Grid (instance)
+                                    rowIndex, // Vertical (row) index of cell
+                                    style, // Style object to be applied to cell (to position it);
+                                    // This must be passed through to the rendered cell element.
+                                    measure,
+                                  }) => {
+    const index = rowIndex * columnCount + columnIndex;
+    if (index >= resources.length) {
+      return null;
+    }
+    const resource = resources[index];
+    const selected = selectedIds.includes(resource.id);
+    return (
+      <div
+        className={'relative p-0.5'}
+        style={{
+          ...style,
+        }}
+        key={resource.id}
+        onLoad={measure}
+      >
+        <Resource
+          resource={resource}
+          showBiggerCoverOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
+          disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
+          disableCache={uiOptions?.resource?.disableCache}
+          biggerCoverPlacement={index % columnCount < columnCount / 2 ? 'right' : 'left'}
+          mode={multiSelection ? 'select' : 'default'}
+          selected={selected}
+          onSelected={() => {
+            if (selected) {
+              setSelectedIds(selectedIds.filter(id => id != resource.id));
+            } else {
+              setSelectedIds([...selectedIds, resource.id]);
+            }
+          }}
+          selectedResourceIds={selectedIds}
+        />
+      </div>
+    );
+  }, [resources, multiSelection, columnCount, selectedIds]);
 
-    const handleScroll = () => {
-      console.log(window.scrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
+  log(searchForm?.pageIndex, pageable?.page, 'aaaa');
 
   return (
     <div
@@ -164,6 +263,7 @@ export default () => {
           ...f,
           pageIndex: 1,
         }, 'replace')}
+        multiSelection={multiSelection}
         searchForm={searchForm}
         selectedResourceIds={selectedResourceIds}
         onBulkOperationModeChange={m => {
@@ -183,6 +283,7 @@ export default () => {
             setResources([...resources]);
           });
         }}
+        rearrangeResources={() => resourcesComponentRef.current?.rearrange()}
       />
       {columnCount > 0 && resources.length > 0 && (
         <>
@@ -202,7 +303,17 @@ export default () => {
               />
             </div>
           )}
-          <ResourceMasonry
+          <Resources
+            onScrollToTop={() => {
+              // todo: this would be a mess because: 1. the mismatch between the columnCount and the pageSize; 2. Redefining the key of item in react-virtualized seems not to be a easy task.
+              // log('scroll to top');
+              // if (pageableRef.current && !searchingRef.current && searchFormRef.current) {
+              //   const newPage = pageableRef.current.page - 1;
+              //   if (newPage > 0 && newPage != searchFormRef.current.pageIndex) search({
+              //       pageIndex: newPage,
+              //     }, 'prepend', false, false);
+              // }
+            }}
             cellCount={resources.length}
             columnCount={columnCount}
             onScroll={e => {
@@ -253,63 +364,15 @@ export default () => {
                 }
               }
             }}
-            renderCell={({
-                           columnIndex, // Horizontal (column) index of cell
-                           // isScrolling, // The Grid is currently being scrolled
-                           // isVisible, // This cell is visible within the grid (eg it is not an overscanned cell)
-                           key, // Unique key within array of cells
-                           parent, // Reference to the parent Grid (instance)
-                           rowIndex, // Vertical (row) index of cell
-                           style, // Style object to be applied to cell (to position it);
-                           // This must be passed through to the rendered cell element.
-              measure,
-                         }) => {
-              const index = rowIndex * columnCount + columnIndex;
-              if (index >= resources.length) {
-                return null;
-              }
-              const resource = resources[index];
-              const selected = selectedResourceIds.includes(resource.id);
-              return (
-                <div
-                  className={'relative p-0.5'}
-                  style={{
-                    ...style,
-                  }}
-                  onLoad={measure}
-                >
-                  {bulkOperationMode && (
-                    <div
-                      className={'absolute top-0 left-0 z-10 flex items-center justify-center w-full h-full hover:bg-[hsla(var(--nextui-foreground)/0.1)] hover:cursor-pointer'}
-                      onClick={() => {
-                        if (bulkOperationMode) {
-                          if (selected) {
-                            setSelectedResourceIds(selectedResourceIds.filter(id => id != resource.id));
-                          } else {
-                            setSelectedResourceIds([...selectedResourceIds, resource.id]);
-                          }
-                        }
-                      }}
-                    >
-                      {selected ? <CheckCircleTwoTone className={'text-5xl'} />
-                        : <CheckCircleOutlined className={'text-5xl opacity-80'} />}
-                    </div>
-                  )}
-                  <Resource
-                    resource={resource}
-                    showBiggerCoverOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
-                    disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
-                    disableCache={uiOptions?.resource?.disableCache}
-                    biggerCoverPlacement={index % columnCount < columnCount / 2 ? 'right' : 'left'}
-                  />
-                </div>
-              );
+            renderCell={renderCell}
+            ref={r => {
+              resourcesComponentRef.current = r;
             }}
           />
         </>
       )}
       <div
-        className={'mt-10 flex items-center gap-2 justify-center bottom-0 left-0 w-full'}
+        className={'mt-10 flex items-center gap-2 justify-center left-0 w-ful bottom-0'}
         style={{ position: resources.length == 0 ? 'relative' : 'absolute' }}
       >
         {/* <Spinner label={t('Searching...')} /> */}

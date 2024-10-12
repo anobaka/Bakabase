@@ -7979,6 +7979,49 @@ export const GetResourcePlayableFilesURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: MoveResources
+ * url: MoveResourcesURL
+ * method: MoveResources_TYPE
+ * raw_url: MoveResources_RAW_URL
+ * @param model - 
+ */
+export const MoveResources = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/move'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const MoveResources_RAW_URL = function() {
+  return '/resource/move'
+}
+export const MoveResources_TYPE = function() {
+  return 'put'
+}
+export const MoveResourcesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/move'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: ClearResourceTask
  * url: ClearResourceTaskURL
  * method: ClearResourceTask_TYPE

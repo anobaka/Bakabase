@@ -22,6 +22,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             public bool DisableMediaPreviewer { get; set; }
             public bool DisableCache { get; set; }
             public CoverFit CoverFit { get; set; } = CoverFit.Contain;
+            public ResourceDisplayContent DisplayContents { get; set; } = ResourceDisplayContent.All;
         }
     }
 }

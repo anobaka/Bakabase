@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PropertyPool, ResourceProperty, SearchOperation } from '@/sdk/constants';
 import { Button } from '@/components/bakaui';
-import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';
 import BApi from '@/sdk/BApi';
 import type { ResourceSearchFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
 import type { IProperty } from '@/components/Property/models';

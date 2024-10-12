@@ -93,4 +93,6 @@ public interface IResourceService
     Task<BaseResponse> Play(int resourceId, string file);
     Task DeleteUnknown();
     Task<int> GetUnknownCount();
+
+    Task<BaseResponse> ChangeMediaLibraryAndPath(int id, int mediaLibraryId, string path);
 }

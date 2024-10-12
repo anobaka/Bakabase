@@ -16,7 +16,6 @@ import ShowResourceMediaPlayer from '@/components/Resource/components/ShowResour
 import type { CoverSaveLocation } from '@/sdk/constants';
 import { EnhancementAdditionalItem } from '@/sdk/constants';
 import { PlaylistItemType } from '@/sdk/constants';
-import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
 import FavoritesSelector from '@/pages/Resource/components/FavoritesSelector';
 import { PlaylistCollection } from '@/components/Playlist';
 import TagSelector from '@/components/TagSelector';

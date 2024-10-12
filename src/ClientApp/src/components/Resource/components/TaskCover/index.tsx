@@ -1,20 +1,29 @@
-import { Button, Dialog } from '@alifd/next';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { diff } from 'deep-diff';
-import styles from '@/components/Resource/index.module.scss';
-import { ResourceTaskOperationOnComplete, ResourceTaskType } from '@/sdk/constants';
+import { CloseCircleOutlined } from '@ant-design/icons';
+import diff from 'deep-diff';
+import { useUpdate } from 'react-use';
+import { ResourceTaskType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import type ResourceTask from '@/core/models/ResourceTask';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { Button, Chip, Modal } from '@/components/bakaui';
 import store from '@/store';
+import { buildLogger } from '@/components/utils';
 
 interface IProps {
   resource: any;
+  reload?: () => any;
 }
 
-export default ({ resource }: IProps) => {
-  const taskRef = useRef<ResourceTask>();
+const log = buildLogger('TaskCover');
+
+export default ({ resource, reload }: IProps) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
+  const forceUpdate = useUpdate();
+
+  const taskRef = useRef<ResourceTask>();
   useEffect(() => {
     const unsubscribe = store.subscribe(() => {
       const task = store.getState()
@@ -23,13 +32,14 @@ export default ({ resource }: IProps) => {
       if (task || taskRef.current) {
         const differences = diff(task, taskRef.current);
         if (differences) {
-          if (task?.percentage == 100 && task.operationOnComplete == ResourceTaskOperationOnComplete.RemoveOnResourceView) {
+          // console.log(differences);
+          const prevTask = taskRef.current;
+          taskRef.current = task;
+          log('TaskChanged', differences, 'current: ', task, 'previous: ', prevTask);
+          forceUpdate();
 
-          } else {
-            const prevTask = taskRef.current;
-            taskRef.current = task;
-            // log('TaskChanged', differences, 'current: ', task, 'previous: ', prevTask);
-            // forceUpdate();
+          if (prevTask?.percentage != task?.percentage && task?.percentage == 100) {
+            reload?.();
           }
         }
       }
@@ -45,41 +55,54 @@ export default ({ resource }: IProps) => {
   }
 
   return (
-    <div className={styles.taskCover} title={taskRef.current.summary}>
-      <div className={styles.type}>
-        {ResourceTaskType[taskRef.current.type]}
+    <div
+      className={'absolute top-0 left-0 z-20 w-full h-full flex flex-col items-center justify-center gap-3'}
+      title={taskRef.current.summary}
+    >
+      <div className={'absolute top-0 left-0 bg-black opacity-80 w-full h-full'} />
+      <div className={'font-bold z-20'}>
+        {t(ResourceTaskType[taskRef.current.type])}
       </div>
-      <div className={styles.percentage}>
-        {taskRef.current.error ? (<span
-          style={{
-            color: 'red',
-            cursor: 'pointer',
-          }}
-          onClick={() => Dialog.show({
-            title: t('Error'),
-            content: (<pre>{taskRef.current!.error}</pre>),
-            closeable: true,
-          })}
-        >Error
-        </span>) : `${taskRef.current.percentage}%`}
-      </div>
-      <div className={styles.opt}>
-        {taskRef.current.error ? (
+      {taskRef.current.error ? (
+        <div className={'font-bold z-20 flex items-center group'}>
+          <Chip
+            // size={'sm'}
+            color={'danger'}
+            variant={'light'}
+            className={'cursor-pointer'}
+            onClick={() => createPortal(Modal, {
+              defaultVisible: true,
+              title: t('Error'),
+              size: 'xl',
+              children: <pre>{taskRef.current!.error}</pre>,
+            })}
+          >{t('Error')}
+          </Chip>
           <Button
-            size={'small'}
-            type={'secondary'}
+            size={'sm'}
+            isIconOnly
+            color={'danger'}
+            variant={'light'}
             onClick={() => {
               BApi.resource.clearResourceTask(resource.id);
             }}
           >
-            {t('Clear')}
+            <CloseCircleOutlined className={'text-sm'} />
           </Button>
-        ) : (
+        </div>
+      ) : (
+        <div className={'font-bold z-20'}>
+          {`${taskRef.current.percentage}%`}
+        </div>
+      )}
+      {taskRef.current.error ? null : (
+        <div className={'font-bold z-20'}>
           <Button
-            size={'small'}
-            warning
+            size={'sm'}
+            color={'danger'}
             onClick={() => {
-              Dialog.confirm({
+              createPortal(Modal, {
+                defaultVisible: true,
                 title: t('Sure to stop?'),
                 onOk: () => {
                   return new Promise(((resolve, reject) => {
@@ -96,15 +119,13 @@ export default ({ resource }: IProps) => {
                       });
                   }));
                 },
-                closeable: true,
               });
             }}
           >
             {t('Stop')}
           </Button>
-        )}
-
-      </div>
+        </div>
+      )}
     </div>
   );
 };

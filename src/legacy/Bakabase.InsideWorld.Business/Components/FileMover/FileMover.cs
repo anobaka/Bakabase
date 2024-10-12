@@ -3,10 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
@@ -14,16 +10,14 @@ using Bakabase.InsideWorld.Business.Components.FileMover.Models;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.InsideWorld.Models.Extensions;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using static Bakabase.InsideWorld.Models.Configs.FileSystemOptions;
 
 namespace Bakabase.InsideWorld.Business.Components.FileMover
 {
@@ -32,7 +26,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
         private readonly IBOptions<FileSystemOptions> _options;
         private readonly ConcurrentDictionary<string, FileSystemWatcher> _watchers = new();
         private readonly object _lock = new object();
-        private readonly ConcurrentDictionary<string, DateTime> _creationTimeCache = new();
+        protected readonly ConcurrentDictionary<string, DateTime> CreationTimeCache = new();
         private readonly BackgroundTaskManager _backgroundTaskManager;
         private readonly ILogger<FileMover> _logger;
         public ConcurrentDictionary<string, FileMovingProgress> Progresses { get; } = new();
@@ -55,9 +49,122 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
             });
         }
 
-        private bool _shouldMove(string path, DateTime dtExpired)
+        private bool _shouldMove(string standardPath, DateTime maxCreatedAt)
         {
-            return !_creationTimeCache.TryGetValue(path, out var dt) || dt < dtExpired;
+            var s = !CreationTimeCache.TryGetValue(standardPath, out var dt) || dt < maxCreatedAt;
+            return s;
+        }
+
+        protected async Task MoveInternal(FileMoverOptions options, Func<int, Task>? onGlobalProgressChange, CancellationToken ct)
+        {
+            _logger.LogInformation($"Discovering files to move...");
+
+            var targets = options.Targets ?? [];
+            var totalSourceAndTargetPairCount = targets.Sum(s => s.Sources.Count);
+            var singleStPairPercentage = totalSourceAndTargetPairCount == 0 ? 0 : 100m / totalSourceAndTargetPairCount;
+            var doneStPair = 0;
+
+            var maxCreatedAt = DateTime.Now - options.Delay;
+
+            // source - target
+            foreach (var target in targets)
+            {
+                var targetPath = target.Path.StandardizePath()!;
+                var sources = target.Sources.Select(a => a.StandardizePath()!).ToArray();
+                Directory.CreateDirectory(targetPath);
+                foreach (var s in sources)
+                {
+                    var files = Directory.GetFiles(s).Select(a => a.StandardizePath()!).Where(a => _shouldMove(a, maxCreatedAt))
+                        .ToArray();
+                    var dirs = Directory.GetDirectories(s).Select(a => a.StandardizePath()!).Where(a => _shouldMove(a, maxCreatedAt))
+                        .ToArray();
+                    var entries = dirs.Concat(files).ToArray();
+                    var tasks = new Dictionary<string, string>();
+
+                    var fileSet = files.ToHashSet();
+
+                    foreach (var e in entries)
+                    {
+                        var relativeName = e.Replace(s, null).Trim(Path.DirectorySeparatorChar,
+                            Path.VolumeSeparatorChar, Path.AltDirectorySeparatorChar);
+                        var finalPath = Path.Combine(targetPath, relativeName).StandardizePath()!;
+                        tasks.Add(e, finalPath);
+                    }
+
+                    if (tasks.Any())
+                    {
+                        _logger.LogInformation($"Found {entries.Length} items to move in top level of {s}");
+                        var singleItemPercentage = 100m / tasks.Count;
+                        var doneItemCount = 0;
+
+                        var progress = Progresses.GetOrAdd(s, _ => new());
+                        progress.Moving = true;
+                        var baseStPairPercentage = doneStPair * singleStPairPercentage;
+
+                        var globalPercentage = 0;
+
+                        try
+                        {
+                            foreach (var (source, dest) in tasks)
+                            {
+                                var count = doneItemCount;
+                                try
+                                {
+                                    async Task ProgressChange(int p)
+                                    {
+                                        var stPairPercentage = (int) (count * singleItemPercentage +
+                                                                      p * singleItemPercentage / 100);
+
+                                        var newGlobalPercentage = (int) (baseStPairPercentage + stPairPercentage * singleStPairPercentage / 100);
+                                        if (globalPercentage != newGlobalPercentage)
+                                        {
+                                            globalPercentage = newGlobalPercentage;
+                                            if (onGlobalProgressChange != null)
+                                            {
+                                                await onGlobalProgressChange(globalPercentage);
+                                            }
+                                        }
+
+                                        if (progress.Percentage != stPairPercentage)
+                                        {
+                                            await OnInternalProgressChange();
+                                        }
+
+                                        progress.Percentage = stPairPercentage;
+                                    }
+
+                                    if (fileSet.Contains(source))
+                                    {
+                                        await FileUtils.MoveAsync(source, dest, false, (Func<int, Task>) ProgressChange,
+                                            ct);
+                                    }
+                                    else
+                                    {
+                                        await DirectoryUtils.MoveAsync1(source, dest, false,
+                                            (Func<int, Task>) ProgressChange, ct);
+                                    }
+
+                                    doneItemCount++;
+                                }
+                                catch (Exception e)
+                                {
+                                    progress.Error = $"{e.Message}{Environment.NewLine}{e.StackTrace}";
+                                    _logger.LogError(e,
+                                        $"An error occurred while moving files: {e.Message}");
+                                    throw;
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            progress.Moving = false;
+                            await OnInternalProgressChange();
+                        }
+                    }
+
+                    doneStPair++;
+                }
+            }
         }
 
         public void TryStartMovingFiles()
@@ -85,88 +192,10 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
 
                     _backgroundTaskManager.RunInBackground(taskName, new CancellationTokenSource(), async (task, sp) =>
                     {
-                        _logger.LogInformation($"Discovering files to move...");
-                        var totalSourceAndTargetPairCount = options.Targets?.Sum(s => s.Sources.Count) ?? 0;
-                        var singleStPairPercentage =
-                            totalSourceAndTargetPairCount == 0 ? 0 : 100m / totalSourceAndTargetPairCount;
-                        var doneStPair = 0;
-                        // source - target
-                        foreach (var target in options.Targets!)
+                        await MoveInternal(options, async p =>
                         {
-                            var targetPath = target.Path.StandardizePath()!;
-                            var sources = target.Sources.Select(a => a.StandardizePath()!).ToArray();
-                            Directory.CreateDirectory(targetPath);
-                            foreach (var s in sources)
-                            {
-                                var files = Directory.GetFiles(s).Where(a => _shouldMove(a, dtExpired))
-                                    .Select(a => a.StandardizePath()!).ToArray();
-                                var dirs = Directory.GetDirectories(s).Where(a => _shouldMove(a, dtExpired))
-                                    .Select(a => a.StandardizePath()!).ToArray();
-                                var entries = dirs.Concat(files).ToArray();
-                                var tasks = new Dictionary<string, string>();
-
-                                foreach (var e in entries)
-                                {
-                                    var relativeName = e.Replace(s, null).Trim(Path.DirectorySeparatorChar,
-                                        Path.VolumeSeparatorChar, Path.AltDirectorySeparatorChar);
-                                    var targetDirectory = Path.Combine(targetPath,
-                                        Path.GetDirectoryName(relativeName).StandardizePath() ?? string.Empty);
-                                    tasks.Add(e, targetDirectory);
-                                }
-
-                                if (tasks.Any())
-                                {
-                                    _logger.LogInformation($"Found {entries.Length} items to move in top layer of {s}");
-                                    var singleItemPercentage = 100m / tasks.Count;
-                                    var doneItemCount = 0;
-
-                                    var progress = Progresses.GetOrAdd(s, _ => new());
-                                    progress.Moving = true;
-                                    var baseStPairPercentage = doneStPair * singleStPairPercentage;
-                                    try
-                                    {
-                                        foreach (var (source, dest) in tasks)
-                                        {
-                                            var count = doneItemCount;
-                                            try
-                                            {
-                                                await DirectoryUtils.MoveAsync(source, dest, false, async p =>
-                                                {
-                                                    var stPairPercentage = (int) (count * singleItemPercentage +
-                                                        p * singleItemPercentage / 100);
-
-                                                    task.Percentage = (int) (baseStPairPercentage +
-                                                                             stPairPercentage * singleStPairPercentage /
-                                                                             100);
-
-                                                    if (progress.Percentage != stPairPercentage)
-                                                    {
-                                                        await OnProgressChange();
-                                                    }
-
-                                                    progress.Percentage = stPairPercentage;
-                                                }, task.Cts.Token);
-                                                doneItemCount++;
-                                            }
-                                            catch (Exception e)
-                                            {
-                                                progress.Error = $"{e.Message}{Environment.NewLine}{e.StackTrace}";
-                                                _logger.LogError(e,
-                                                    $"An error occurred while moving files: {e.Message}");
-                                                throw;
-                                            }
-                                        }
-                                    }
-                                    finally
-                                    {
-                                        progress.Moving = false;
-                                        await OnProgressChange();
-                                    }
-                                }
-
-                                doneStPair++;
-                            }
-                        }
+                            task.Percentage = p;
+                        }, task.Cts.Token);
 
                         return BaseResponseBuilder.Ok;
                     });
@@ -174,14 +203,14 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
             }
         }
 
-        private async Task OnProgressChange()
+        private async Task OnInternalProgressChange()
         {
             await _uiHub.Clients.All.GetData(nameof(FileMovingProgress), Progresses);
         }
 
-        private void OnCreated(object sender, FileSystemEventArgs e)
+        private void OnChanged(object sender, FileSystemEventArgs e)
         {
-            _creationTimeCache[e.FullPath] = DateTime.Now;
+            CreationTimeCache[e.FullPath.StandardizePath()!] = DateTime.Now;
         }
 
         private void OnOptionsChange(FileSystemOptions.FileMoverOptions options)
@@ -227,7 +256,9 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
                             IncludeSubdirectories = false
                         };
                         // Add event handlers for all events you want to handle
-                        watcher.Created += OnCreated;
+                        watcher.Created += OnChanged;
+                        watcher.Changed += OnChanged;
+                        watcher.Renamed += OnChanged;
                         // Activate the watcher
                         watcher.EnableRaisingEvents = true;
                         _watchers[k] = watcher;

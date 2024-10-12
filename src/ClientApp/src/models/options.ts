@@ -2,8 +2,8 @@ import type {
   BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel,
   BakabaseInfrastructuresComponentsConfigurationsAppAppOptions,
   BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions,
-  BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel,
-  BakabaseInsideWorldModelsConfigsBilibiliOptions, BakabaseInsideWorldModelsConfigsEnhancerOptions,
+  BakabaseInsideWorldModelsConfigsBilibiliOptions,
+  BakabaseInsideWorldModelsConfigsEnhancerOptions,
   BakabaseInsideWorldModelsConfigsExHentaiOptions,
   BakabaseInsideWorldModelsConfigsFileSystemOptions,
   BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions,
@@ -14,7 +14,9 @@ import type {
   BakabaseInsideWorldModelsConfigsThirdPartyOptions,
   BakabaseInsideWorldModelsConfigsUIOptions,
   BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel,
-  BootstrapModelsResponseModelsBaseResponse } from '@/sdk/Api';
+  BakabaseServiceModelsInputResourceOptionsPatchInputModel,
+  BootstrapModelsResponseModelsBaseResponse,
+} from '@/sdk/Api';
 import {
   BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel,
 } from '@/sdk/Api';
@@ -70,7 +72,7 @@ export default {
   }, BakabaseInsideWorldModelsConfigsFileSystemOptions>(BApi.options.patchFileSystemOptions),
   javLibraryOptions: buildModel<BakabaseInsideWorldModelsConfigsJavLibraryOptions, BakabaseInsideWorldModelsConfigsJavLibraryOptions>(BApi.options.patchJavLibraryOptions),
   pixivOptions: buildModel<BakabaseInsideWorldModelsConfigsPixivOptions, BakabaseInsideWorldModelsConfigsPixivOptions>(BApi.options.patchPixivOptions),
-  resourceOptions: buildModel<BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions, BakabaseInsideWorldBusinessConfigurationsModelsInputResourceOptionsPatchInputModel>(BApi.options.patchResourceOptions),
+  resourceOptions: buildModel<BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions, BakabaseServiceModelsInputResourceOptionsPatchInputModel>(BApi.options.patchResourceOptions),
   thirdPartyOptions: buildModel<BakabaseInsideWorldModelsConfigsThirdPartyOptions, BakabaseInsideWorldModelsConfigsThirdPartyOptions>(BApi.options.patchThirdPartyOptions),
   networkOptions: buildModel<BakabaseInsideWorldModelsConfigsNetworkOptions, BakabaseInsideWorldModelsConfigsNetworkOptions>(BApi.options.patchNetworkOptions),
   enhancerOptions: buildModel<BakabaseInsideWorldModelsConfigsEnhancerOptions, BakabaseInsideWorldModelsConfigsEnhancerOptions>(BApi.options.patchEnhancerOptions),

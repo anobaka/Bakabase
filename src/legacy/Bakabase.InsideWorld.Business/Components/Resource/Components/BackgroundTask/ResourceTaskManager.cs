@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask
 {
@@ -16,9 +18,12 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Backgroun
 
         private readonly ConcurrentDictionary<int, ResourceTaskInfo> _tasks = new();
 
-        public ResourceTaskManager(IHubContext<WebGuiHub, IWebGuiClient> uiHub)
+        private readonly ILogger<ResourceTaskManager> _logger;
+
+        public ResourceTaskManager(IHubContext<WebGuiHub, IWebGuiClient> uiHub, ILogger<ResourceTaskManager> logger)
         {
             _uiHub = uiHub;
+            _logger = logger;
         }
 
         public async Task Add(ResourceTaskInfo task)
@@ -27,7 +32,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Backgroun
             await PushToGui(task.Id);
         }
 
-        public ResourceTaskInfo Get(int id)
+        public ResourceTaskInfo? Get(int id)
         {
             return _tasks.TryGetValue(id, out var task) ? task : null;
         }
@@ -36,6 +41,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Backgroun
         {
             foreach (var id in ids)
             {
+                // _logger.LogInformation(JsonConvert.SerializeObject(Get(id)));
                 await _uiHub.Clients.All.GetResourceTask(id, Get(id));
             }
         }

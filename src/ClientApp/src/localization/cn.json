@@ -1419,5 +1419,15 @@
   "Add a root path": "添加根目录",
   "Source value": "源值",
   "Condition": "条件",
-  "Please select a file to play": "请选择一个需要播放的文件"
+  "Please select a file to play": "请选择一个需要播放的文件",
+  "Move to media library": "移动至媒体库",
+  "Move {{count}} resources to media library": "移动{{count}}个资源至媒体库",
+  "Final value": "最终值",
+  "Display value": "展示值",
+  "Setup priority of property value scopes": "设置多维属性值优先级",
+  "Visible scopes": "可见维度",
+  "This filter is used for quick check and does not change the priority of property value scopes.": "这个过滤器仅用于快速查阅，不会改变属性值维度的优先级",
+  "The numbers represent the priority of property dimensions, and the property values will be displayed according to the priority of the dimensions.": "数字代表属性维度的优先级，属性值将会根据维度的优先级展示。",
+  "indicates this scope is not enabled.": "表示该维度未启用。",
+  "You can click on the scope button to change the priority of the property value scopes.": "您可以点击维度按钮来改变它的优先级。"
 }

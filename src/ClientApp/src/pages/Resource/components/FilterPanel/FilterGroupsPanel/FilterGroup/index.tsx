@@ -11,10 +11,6 @@ import Filter from './Filter';
 import ClickableIcon from '@/components/ClickableIcon';
 import { Button, Popover } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';
-import { PropertyPool, ResourceProperty, SearchOperation } from '@/sdk/constants';
-import { serializeStandardValue } from '@/components/StandardValue/helpers';
-import BApi from '@/sdk/BApi';
 import QuickFilter from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/QuickFilter';
 
 interface IProps {

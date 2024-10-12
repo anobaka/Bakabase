@@ -168,10 +168,6 @@ export interface BakabaseAbstractionsModelsDomainCustomProperty {
   name: string;
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
-  dbValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
-  bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** @format date-time */
   createdAt: string;
   categories?: BakabaseAbstractionsModelsDomainCategory[] | null;
@@ -193,28 +189,6 @@ export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
   scope: number;
   bizKey: string;
   bizValue?: any;
-}
-
-export interface BakabaseAbstractionsModelsDomainEnhancement {
-  /** @format int32 */
-  id: number;
-  /** @format int32 */
-  resourceId: number;
-  /** @format int32 */
-  enhancerId: number;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
-  valueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
-  /** @format int32 */
-  target: number;
-  dynamicTarget?: string | null;
-  value?: any;
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  propertyId?: number | null;
-  customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
-  reservedPropertyValue?: BakabaseAbstractionsModelsDomainReservedPropertyValue;
-  property?: BakabaseAbstractionsModelsDomainProperty;
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibrary {
@@ -335,6 +309,7 @@ export interface BakabaseAbstractionsModelsDomainResource {
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
   category?: BakabaseAbstractionsModelsDomainCategory;
+  mediaLibraryName?: string | null;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceProperty {
@@ -948,6 +923,8 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   disableCache: boolean;
   /** [1: Contain, 2: Cover] */
   coverFit: BakabaseInsideWorldModelsConstantsCoverFit;
+  /** [1: MediaLibrary, 2: Category, 4: Tags, 7: All] */
+  displayContents: BakabaseInsideWorldModelsConstantsResourceDisplayContent;
 }
 
 /**
@@ -981,7 +958,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAddit
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
- * [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2016: All]
+ * [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4064: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
@@ -992,7 +969,8 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalI
   | 416
   | 512
   | 1024
-  | 2016;
+  | 2048
+  | 4064;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -1114,6 +1092,12 @@ export type BakabaseInsideWorldModelsConstantsResourceDiffProperty =
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsResourceDiffType = 1 | 2 | 3;
+
+/**
+ * [1: MediaLibrary, 2: Category, 4: Tags, 7: All]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsResourceDisplayContent = 1 | 2 | 4 | 7;
 
 /**
  * [1: Layer, 2: Regex, 3: FixedText]
@@ -1437,6 +1421,14 @@ export interface BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingD
   entryPath: string;
 }
 
+export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel {
+  ids: number[];
+  /** @format int32 */
+  mediaLibraryId: number;
+  /** @minLength 1 */
+  path: string;
+}
+
 export interface BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel {
   resource?: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
   /** [0: Default, 1: Resource] */
@@ -1529,28 +1521,6 @@ export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptions
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   dynamicTarget?: string | null;
-}
-
-export interface BakabaseModulesEnhancerModelsViewResourceEnhancements {
-  enhancer: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor;
-  /** @format date-time */
-  enhancedAt?: string | null;
-  targets: BakabaseModulesEnhancerModelsViewResourceEnhancementsTargetEnhancement[];
-  dynamicTargets: BakabaseModulesEnhancerModelsViewResourceEnhancementsDynamicTargetEnhancements[];
-}
-
-export interface BakabaseModulesEnhancerModelsViewResourceEnhancementsDynamicTargetEnhancements {
-  /** @format int32 */
-  target: number;
-  targetName: string;
-  enhancements?: BakabaseAbstractionsModelsDomainEnhancement[] | null;
-}
-
-export interface BakabaseModulesEnhancerModelsViewResourceEnhancementsTargetEnhancement {
-  /** @format int32 */
-  target: number;
-  targetName: string;
-  enhancement?: BakabaseAbstractionsModelsDomainEnhancement;
 }
 
 export interface BakabaseModulesPropertyModelsDbResourceSearchDbModel {
@@ -1724,6 +1694,28 @@ export interface BakabaseServiceModelsViewCustomPropertyViewModel {
   categories?: BakabaseAbstractionsModelsDomainCategory[] | null;
 }
 
+export interface BakabaseServiceModelsViewEnhancementViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  /** @format int32 */
+  enhancerId: number;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  valueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** @format int32 */
+  target: number;
+  dynamicTarget?: string | null;
+  value?: any;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId?: number | null;
+  customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
+  reservedPropertyValue?: BakabaseAbstractionsModelsDomainReservedPropertyValue;
+  property?: BakabaseServiceModelsViewPropertyViewModel;
+}
+
 export interface BakabaseServiceModelsViewPropertyViewModel {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -1739,6 +1731,28 @@ export interface BakabaseServiceModelsViewPropertyViewModel {
   bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   poolName: string;
   typeName: string;
+}
+
+export interface BakabaseServiceModelsViewResourceEnhancements {
+  enhancer: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor;
+  /** @format date-time */
+  enhancedAt?: string | null;
+  targets: BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement[];
+  dynamicTargets: BakabaseServiceModelsViewResourceEnhancementsDynamicTargetEnhancements[];
+}
+
+export interface BakabaseServiceModelsViewResourceEnhancementsDynamicTargetEnhancements {
+  /** @format int32 */
+  target: number;
+  targetName: string;
+  enhancements?: BakabaseServiceModelsViewEnhancementViewModel[] | null;
+}
+
+export interface BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement {
+  /** @format int32 */
+  target: number;
+  targetName: string;
+  enhancement?: BakabaseServiceModelsViewEnhancementViewModel;
 }
 
 export interface BakabaseServiceModelsViewResourceSearchFilterGroupViewModel {
@@ -1904,13 +1918,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhanc
   data?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor[] | null;
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhancerModelsViewResourceEnhancements {
-  /** @format int32 */
-  code: number;
-  message?: string | null;
-  data?: BakabaseModulesEnhancerModelsViewResourceEnhancements[] | null;
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   /** @format int32 */
   code: number;
@@ -1930,6 +1937,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string | null;
   data?: BakabaseServiceModelsViewPropertyViewModel[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceEnhancements {
+  /** @format int32 */
+  code: number;
+  message?: string | null;
+  data?: BakabaseServiceModelsViewResourceEnhancements[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -4775,10 +4789,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhancerModelsViewResourceEnhancements,
-        any
-      >({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceEnhancements, any>({
         path: `/resource/${resourceId}/enhancement`,
         method: "GET",
         query: query,
@@ -4914,7 +4925,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2016: All] */
+        /** [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4064: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -4974,6 +4985,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/resource/${id}/playable-files`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name MoveResources
+     * @request PUT:/resource/move
+     */
+    moveResources: (data: BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/move`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

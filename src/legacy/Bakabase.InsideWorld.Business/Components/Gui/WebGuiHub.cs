@@ -41,7 +41,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         Task OptionsChanged(string optionsName, object options);
         Task GetResponse(BaseResponse rsp);
         Task GetIwFsEntryTask(string path, IwFsTaskInfo task);
-        Task GetResourceTask(int id, ResourceTaskInfo task);
+        Task GetResourceTask(int id, ResourceTaskInfo? task);
         Task IwFsEntriesChange(List<IwFsEntryChangeEvent> events, CancellationToken ct);
         Task GetAppUpdaterState(UpdaterState state);
     }

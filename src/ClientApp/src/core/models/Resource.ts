@@ -32,6 +32,8 @@ export type Resource = {
   fileCreateDt: string;
   fileUpdateDt: string;
   parent?: Resource;
-  properties?: Record<PropertyPool, Record<number, Property>>;
+  properties?: {[key in PropertyPool]?: Record<number, Property>};
   coverPaths?: string[];
+  mediaLibraryName?: string;
+  category?: {id: number; name: string};
 };

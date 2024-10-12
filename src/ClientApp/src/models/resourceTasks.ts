@@ -9,11 +9,11 @@ export default {
   reducers: {
     // setState: (prevState, tasks) => tasks,
     remove: (prevState, id) => {
-      console.log('remove');
+      // console.log('remove');
       return prevState.filter((t) => t.id != id);
     },
     update: (prevState, task) => {
-      console.log('update');
+      // console.log('update');
       const idx = prevState.findIndex((t) => t.id == task.id);
       if (idx > -1) {
         prevState[idx] = task;

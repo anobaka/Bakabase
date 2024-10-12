@@ -16,6 +16,16 @@ namespace Bakabase.InsideWorld.Models.Configs
         public FileMoverOptions? FileMover { get; set; }
         public FileProcessorOptions? FileProcessor { get; set; }
 
+        public void AddRecentMovingDestination(string destination)
+        {
+            const int capacity = 5;
+
+            RecentMovingDestinations ??= [];
+            var paths = RecentMovingDestinations.Where(x => x != destination).ToList();
+            paths.Insert(0, destination);
+            RecentMovingDestinations = paths.Take(capacity).ToArray();
+        }
+
         public class FileMoverOptions
         {
             /// <summary>

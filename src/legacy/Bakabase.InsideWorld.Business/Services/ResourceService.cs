@@ -58,13 +58,13 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IAliasService _aliasService;
         private readonly IReservedPropertyValueService _reservedPropertyValueService;
         private readonly ICoverDiscoverer _coverDiscoverer;
-
+        private readonly IPropertyService _propertyService;
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
             ILogger<ResourceService> logger,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IReservedPropertyValueService reservedPropertyValueService,
-            ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager)
+            ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager, IPropertyService propertyService)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -76,6 +76,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _reservedPropertyValueService = reservedPropertyValueService;
             _coverDiscoverer = coverDiscoverer;
             _optionsManager = optionsManager;
+            _propertyService = propertyService;
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(
                 serviceProvider);
         }
@@ -158,7 +159,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 ? null
                 : r => resourceIds.Contains(r.Id);
 
-            var resources = await _orm.Search(exp, internalSearchModel.PageIndex, internalSearchModel.PageSize, ordersForSearch,
+            var resources = await _orm.Search(exp, internalSearchModel.PageIndex, internalSearchModel.PageSize,
+                ordersForSearch,
                 asNoTracking);
             var dtoList = await ToDomainModel(resources.Data!.ToArray(), ResourceAdditionalItem.All);
 
@@ -229,7 +231,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                 CustomPropertyValueAdditionalItem.None, false)).GroupBy(d => d.PropertyId)
                             .ToDictionary(d => d.Key,
                                 d => d.GroupBy(x => x.ResourceId)
-                                    .ToDictionary(a => a.Key, List<object>? (a) => a.Select(b => b.Value).Where(c => c != null).ToList()!));
+                                    .ToDictionary(a => a.Key,
+                                        List<object>? (a) => a.Select(b => b.Value).Where(c => c != null).ToList()!));
                         context.PropertyValueMap[PropertyPool.Custom] = cpValues;
                     }
                 }
@@ -433,19 +436,23 @@ namespace Bakabase.InsideWorld.Business.Services
                                     return null;
                                 });
 
+                            var reservedPropertyMap = (await _propertyService.GetProperties(PropertyPool.Reserved)).ToDictionary(d => d.Id, d => d);
+
                             foreach (var r in doList)
                             {
                                 r.Properties ??= [];
                                 var reservedProperties =
                                     r.Properties.GetOrAdd((int) PropertyPool.Reserved, () => []);
                                 var dbReservedProperties = reservedPropertyValueMap.GetValueOrDefault(r.Id);
-                                reservedProperties[(int) ResourceProperty.Rating] = new Resource.Property(null,
+                                reservedProperties[(int) ResourceProperty.Rating] = new Resource.Property(
+                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Rating)?.Name,
                                     StandardValueType.Decimal,
                                     StandardValueType.Decimal,
                                     dbReservedProperties?.Select(s =>
                                         new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating,
                                             s.Rating)).ToList(), true);
-                                reservedProperties[(int) ResourceProperty.Introduction] = new Resource.Property(null,
+                                reservedProperties[(int) ResourceProperty.Introduction] = new Resource.Property(
+                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Introduction)?.Name,
                                     StandardValueType.String,
                                     StandardValueType.String,
                                     dbReservedProperties?.Select(s =>
@@ -622,6 +629,20 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
                         case ResourceAdditionalItem.All:
                             break;
+                        case ResourceAdditionalItem.MediaLibraryName:
+                        {
+                            var mediaLibraryIds = doList.Select(d => d.MediaLibraryId).ToHashSet();
+                            var mediaLibraryMap =
+                                (await _mediaLibraryService.GetAll(x => mediaLibraryIds.Contains(x.Id))).ToDictionary(
+                                    d => d.Id, d => d);
+                            foreach (var resource in doList)
+                            {
+                                resource.MediaLibraryName =
+                                    mediaLibraryMap.GetValueOrDefault(resource.MediaLibraryId)?.Name;
+                            }
+
+                            break;
+                        }
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -1152,6 +1173,34 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             var unknownResources = await GetUnknownResources();
             return unknownResources.Count;
+        }
+
+        public async Task<BaseResponse> ChangeMediaLibraryAndPath(int id, int mediaLibraryId, string path)
+        {
+            var resource = await _orm.GetByKey(id);
+            if (resource == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            if (resource.MediaLibraryId == mediaLibraryId)
+            {
+                return BaseResponseBuilder.Ok;
+            }
+
+            var library = await _mediaLibraryService.Get(id, MediaLibraryAdditionalItem.None);
+
+            if (library == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            resource.CategoryId = library.CategoryId;
+            resource.MediaLibraryId = library.Id;
+
+            await _orm.Update(resource);
+
+            return BaseResponseBuilder.Ok;
         }
 
         private async Task DeleteRelatedData(List<int> ids)

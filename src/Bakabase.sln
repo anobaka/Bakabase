@@ -62,6 +62,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.StandardVa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.Property.Tests", "tests\Bakabase.Modules.Property.Tests\Bakabase.Modules.Property.Tests.csproj", "{1C512718-9490-4984-B64F-6862BE5EABBB}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bootstrap.Tests", "..\..\LazyMortal\test\Bootstrap.Tests\Bootstrap.Tests.csproj", "{CE119E81-02F6-4E55-9F96-F234CA97ABAA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Company|Any CPU = Company|Any CPU
@@ -189,6 +191,12 @@ Global
 		{1C512718-9490-4984-B64F-6862BE5EABBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1C512718-9490-4984-B64F-6862BE5EABBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1C512718-9490-4984-B64F-6862BE5EABBB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE119E81-02F6-4E55-9F96-F234CA97ABAA}.Company|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE119E81-02F6-4E55-9F96-F234CA97ABAA}.Company|Any CPU.Build.0 = Debug|Any CPU
+		{CE119E81-02F6-4E55-9F96-F234CA97ABAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE119E81-02F6-4E55-9F96-F234CA97ABAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE119E81-02F6-4E55-9F96-F234CA97ABAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE119E81-02F6-4E55-9F96-F234CA97ABAA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -218,6 +226,7 @@ Global
 		{5E8D2749-632F-455B-A908-D8234F7B7263} = {E3E19229-9C9B-48D3-A710-9778DD6E2F10}
 		{5359A72B-063C-4BDC-A65E-C7FA9D3D56AE} = {8B728E85-2F02-43E7-A3D1-32CDB437DFEC}
 		{1C512718-9490-4984-B64F-6862BE5EABBB} = {8B728E85-2F02-43E7-A3D1-32CDB437DFEC}
+		{CE119E81-02F6-4E55-9F96-F234CA97ABAA} = {4E98F6DA-3438-4C6C-8354-B24B5B9D0EB0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0EDB2DE5-2794-4737-A47F-105A2CCFFD16}

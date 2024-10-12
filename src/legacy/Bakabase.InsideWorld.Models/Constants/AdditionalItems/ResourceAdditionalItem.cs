@@ -16,7 +16,8 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
         DisplayName = 1 << 8 | CustomProperties | Category,
         HasChildren = 1 << 9,
         ReservedProperties = 1 << 10,
+        MediaLibraryName = 1 << 11,
 
-        All = CustomProperties | DisplayName | Alias | HasChildren | Category | ReservedProperties
+        All = CustomProperties | DisplayName | Alias | HasChildren | Category | ReservedProperties | MediaLibraryName
     }
 }

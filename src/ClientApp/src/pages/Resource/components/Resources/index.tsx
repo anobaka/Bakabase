@@ -1,5 +1,5 @@
 import { AutoSizer, CellMeasurer, CellMeasurerCache, Grid } from 'react-virtualized';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { buildLogger } from '@/components/utils';
 
@@ -14,7 +14,7 @@ type ScrollEvent = {
   scrollWidth: number;
 };
 
-interface IProps {
+type Props = {
   columnCount: number;
   loadMore?: () => Promise<any>;
   renderCell: ({
@@ -29,17 +29,23 @@ interface IProps {
                }) => any;
   cellCount: number;
   onScroll?: (event: ScrollEvent) => any;
-}
+  onScrollToTop?: () => any;
+};
 
-const log = buildLogger('ResourceGrid');
+export type ResourcesRef = {
+  rearrange: () => any;
+};
 
-export default ({
-                  columnCount,
-                  loadMore,
-                  renderCell,
-                  cellCount,
-                  onScroll,
-                }: IProps) => {
+const log = buildLogger('Resources');
+
+const Resources = forwardRef<ResourcesRef, Props>(({
+                                            columnCount,
+                                            loadMore,
+                                            renderCell,
+                                            cellCount,
+                                            onScroll,
+                                            onScrollToTop,
+                                          }, ref) => {
   const loadingRef = useRef<boolean>(false);
   const gridRef = useRef<any>();
   const cacheRef = useRef(new CellMeasurerCache({
@@ -49,6 +55,8 @@ export default ({
   }));
   const verScrollbarWidthRef = useRef(0);
   const prevContainerWidthRef = useRef<number | undefined>(undefined);
+
+  const scrollTopRef = useRef(0);
 
   log('rendering');
 
@@ -109,6 +117,12 @@ export default ({
     forceUpdate();
   };
 
+  useImperativeHandle(ref, () => ({
+    rearrange: () => {
+      onResize(true);
+    },
+  }));
+
   function renderGrid() {
     const containerWidth = containerRef.current?.clientWidth ?? 0;
     const containerHeight = containerRef.current?.clientHeight ?? 0;
@@ -124,6 +138,12 @@ export default ({
           if (!containerRef.current) {
             containerRef.current = r;
             forceUpdate();
+          }
+        }}
+        onWheel={e => {
+          log('onWheel', e);
+          if (e.deltaY < 0 && scrollTopRef.current == 0) {
+            onScrollToTop?.();
           }
         }}
       >
@@ -155,6 +175,7 @@ export default ({
                   }}
                   onScroll={e => {
                     log('onScroll', e);
+                    scrollTopRef.current = e.scrollTop;
                     onScroll?.(e);
                   }}
                 />)}
@@ -165,4 +186,6 @@ export default ({
   }
 
   return renderGrid();
-};
+});
+
+export default Resources;

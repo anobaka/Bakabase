@@ -138,6 +138,8 @@ public record Resource
 
     public Category? Category { get; set; }
 
+    public string? MediaLibraryName { get; set; }
+
     private void RebuildPath()
     {
         if (!string.IsNullOrEmpty(_fileName) || !string.IsNullOrEmpty(_directory))

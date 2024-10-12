@@ -4,39 +4,6 @@
   //background: $color-brand1-9;
   //box-shadow: rgba(9, 30, 66, 0.25) 0px 4px 8px -2px, var(--theme-border-color) 0px 0px 0px 1px;
 
-  .taskCover {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 100;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: white;
-
-    .type, .percentage {
-      font-size: 16px;
-      font-weight: bold;
-      text-align: center;
-    }
-
-    .type {
-    }
-
-    .percentage {
-
-    }
-
-    button {
-
-    }
-  }
-
   .coverRectangle {
     width: 100%;
     max-width: 100%;

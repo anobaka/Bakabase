@@ -1,11 +1,12 @@
-import { Dialog, Message, Tag } from '@alifd/next';
-import React, { Profiler, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Message } from '@alifd/next';
+import type { CSSProperties } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type Queue from 'queue';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
 import { PlayCircleOutlined } from '@ant-design/icons';
+import { ControlledMenu, MenuItem } from '@szhsin/react-menu';
 import styles from './index.module.scss';
-import CustomIcon from '@/components/CustomIcon';
 import { OpenResourceDirectory } from '@/sdk/apis';
 import { buildLogger, splitPathIntoSegments, useTraceUpdate } from '@/components/utils';
 import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
@@ -18,16 +19,22 @@ import Operations from '@/components/Resource/components/Operations';
 import TaskCover from '@/components/Resource/components/TaskCover';
 import type { Property, Resource as ResourceModel } from '@/core/models/Resource';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Button, Link, Modal, Tooltip } from '@/components/bakaui';
-import { ResourceAdditionalItem, PropertyPool, StandardValueType, CoverFit } from '@/sdk/constants';
+import { Button, Chip, Link, Modal, Tooltip } from '@/components/bakaui';
+import {
+  IwFsEntryTaskType,
+  PropertyPool,
+  ResourceAdditionalItem,
+  ResourceDisplayContent,
+  StandardValueType,
+} from '@/sdk/constants';
 import type { TagValue } from '@/components/StandardValue/models';
 import store from '@/store';
+import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
 
 export interface IResourceHandler {
   id: number;
   reload: (ct?: AbortSignal) => Promise<any>;
 }
-
 
 type TooltipPlacement =
   | 'top'
@@ -52,11 +59,15 @@ type Props = {
   biggerCoverPlacement?: TooltipPlacement;
   searchEngines?: SimpleSearchEngine[] | null;
   ct: AbortSignal;
-  onTagClick?: (propertyId: number, value: string) => any;
+  onTagClick?: (propertyId: number, value: TagValue) => any;
   disableCache?: boolean;
   disableMediaPreviewer?: boolean;
   style?: any;
   className?: string;
+  selected?: boolean;
+  mode?: 'default' | 'select';
+  onSelected?: () => any;
+  selectedResourceIds?: number[];
 };
 
 const Resource = React.forwardRef((props: Props, ref) => {
@@ -65,14 +76,19 @@ const Resource = React.forwardRef((props: Props, ref) => {
     onRemove = (id) => {
     },
     showBiggerCoverOnHover = true,
-    onTagClick = (propertyId: number, value: string) => {
+    onTagClick = (propertyId: number, value: TagValue) => {
     },
     queue,
     ct = new AbortController().signal,
     disableCache = false,
     disableMediaPreviewer = false,
     biggerCoverPlacement,
-    style,
+    style: propStyle = {},
+    selected = false,
+    mode = 'default',
+    onSelected = () => {
+    },
+    selectedResourceIds: propsSelectedResourceIds,
   } = props;
 
   // console.log(`showBiggerCoverOnHover: ${showBiggerCoverOnHover}, disableMediaPreviewer: ${disableMediaPreviewer}, disableCache: ${disableCache}`);
@@ -86,6 +102,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const forceUpdate = useUpdate();
   const [playableFiles, setPlayableFiles] = useState<string[]>([]);
+
+  const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
+  const [contextMenuAnchorPoint, setContextMenuAnchorPoint] = useState({
+    x: 0,
+    y: 0,
+  });
+
+  const iwFsEntryChangeEvents = store.useModelState('iwFsEntryChangeEvents');
+  const activeMovingTask = iwFsEntryChangeEvents.events.find(x => x.path == resource.path && x.task?.type == IwFsEntryTaskType.Moving && !x.task.error);
 
   const disableCacheRef = useRef(disableCache);
 
@@ -102,6 +127,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   useTraceUpdate(props, `[${resource.fileName}]`);
 
+  const displayContents = uiOptions.resource?.displayContents ?? ResourceDisplayContent.All;
   // log('Rendering');
 
   const loadPlayableFiles = useCallback(async (ct?: AbortSignal) => {
@@ -147,7 +173,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
     });
 
   const reload = useCallback(async (ct?: AbortSignal) => {
-    const newResourceRsp = await BApi.resource.getResourcesByKeys({ ids: [resource.id], additionalItems: ResourceAdditionalItem.All });
+    const newResourceRsp = await BApi.resource.getResourcesByKeys({
+      ids: [resource.id],
+      additionalItems: ResourceAdditionalItem.All,
+    });
     if (!newResourceRsp.code) {
       const nr = (newResourceRsp.data || [])[0];
       if (nr) {
@@ -214,7 +243,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
     commitTime, // when React committed this update
     interactions, // the Set of interactions belonging to this update
   ) {
-    console.log({ id, phase, actualDuration, baseDuration, startTime, commitTime, interactions });
+    console.log({
+      id,
+      phase,
+      actualDuration,
+      baseDuration,
+      startTime,
+      commitTime,
+      interactions,
+    });
   }
 
   const renderCover = () => {
@@ -232,15 +269,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
             disableCache={disableCache}
             disableMediaPreviewer={disableMediaPreviewer}
             onClick={() => {
-                createPortal(ResourceDetailDialog, {
-                  id: resource.id,
-                  onPlay: clickPlayButton,
-                  noPlayableFile: !(playableFiles?.length > 0),
-                  onDestroyed: () => {
-                    reload();
-                  },
-                });
-              }}
+              createPortal(ResourceDetailDialog, {
+                id: resource.id,
+                onPlay: clickPlayButton,
+                noPlayableFile: !(playableFiles?.length > 0),
+                onDestroyed: () => {
+                  reload();
+                },
+              });
+            }}
             resourceId={resource.id}
             coverPaths={resource.coverPaths}
             ref={coverRef}
@@ -262,20 +299,38 @@ const Resource = React.forwardRef((props: Props, ref) => {
             </Tooltip>
           </div>
         )}
+        <div className={'flex flex-col gap-1 absolute bottom-0 right-0 items-end'}>
+          {(displayContents & ResourceDisplayContent.MediaLibrary) ? (resource.mediaLibraryName != undefined && (
+            <Chip
+              size={'sm'}
+              variant={'flat'}
+              className={'h-auto'}
+              radius={'sm'}
+            >{resource.mediaLibraryName}</Chip>
+          )) : undefined}
+          {(displayContents & ResourceDisplayContent.Category) ? (resource.category != undefined && (
+            <Chip
+              size={'sm'}
+              variant={'flat'}
+              className={'h-auto'}
+              radius={'sm'}
+            >{resource.category.name}</Chip>
+          )) : undefined}
+        </div>
       </div>
     );
   };
 
-  let firstTagsValue: (TagValue & {value: string})[] | undefined;
+  let firstTagsValue: TagValue[] | undefined;
   let firstTagsValuePropertyId: number | undefined;
   {
     const customPropertyValues = resource.properties?.[PropertyPool.Custom] || {};
     Object.keys(customPropertyValues).find(x => {
       const p: Property = customPropertyValues[x];
       if (p.bizValueType == StandardValueType.ListTag) {
-        const values = p.values?.find(v => (v.value as string[])?.length > 0);
+        const values = p.values?.find(v => (v.aliasAppliedBizValue as TagValue[])?.length > 0);
         if (values) {
-          firstTagsValue = (values.value as string[]).map((id, i) => {
+          firstTagsValue = (values.aliasAppliedBizValue as TagValue[]).map((id, i) => {
             const bvs = values.aliasAppliedBizValue as TagValue[];
             const bv = bvs?.[i];
             return {
@@ -290,6 +345,22 @@ const Resource = React.forwardRef((props: Props, ref) => {
       return false;
     });
   }
+
+  const style: CSSProperties = {
+    ...propStyle,
+  };
+
+  if (selected) {
+    style.borderWidth = 2;
+    style.borderColor = 'var(--bakaui-success)';
+  }
+
+  const selectedResourceIds = (propsSelectedResourceIds ?? []).slice();
+  if (!selectedResourceIds.includes(resource.id)) {
+    selectedResourceIds.push(resource.id);
+  }
+
+  log('selectedResourceIds', selectedResourceIds);
 
   return (
     <div
@@ -306,39 +377,97 @@ const Resource = React.forwardRef((props: Props, ref) => {
       />
       <TaskCover
         resource={resource}
+        reload={reload}
       />
-      {renderCover()}
-      <div className={styles.info}>
-        <div
-          className={`select-text ${styles.limitedContent}`}
+      <div
+        onContextMenu={(e) => {
+          if (typeof document.hasFocus === 'function' && !document.hasFocus()) return;
+
+          e.preventDefault();
+          setContextMenuAnchorPoint({
+            x: e.clientX,
+            y: e.clientY,
+          });
+          setContextMenuIsOpen(true);
+        }}
+        onClick={() => {
+          log('outer', 'click');
+        }}
+      >
+        <ControlledMenu
+          key={resource.id}
+          anchorPoint={contextMenuAnchorPoint}
+          state={contextMenuIsOpen ? 'open' : 'closed'}
+          direction="right"
+          onClose={() => setContextMenuIsOpen(false)}
+          onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
         >
-          {resource.displayName}
+          <MenuItem
+            onClick={() => {
+              log('inner', 'click');
+              createPortal(MediaLibraryPathSelectorV2, {
+                onSelect: (id, path) => {
+                  if (selectedResourceIds.length > 0) {
+                    BApi.resource.moveResources({
+                      ids: selectedResourceIds,
+                      path,
+                      mediaLibraryId: id,
+                    });
+                  }
+                },
+              });
+            }}
+            onClickCapture={() => {
+              log('inner', 'click capture');
+            }}
+          >{selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library', { count: selectedResourceIds.length }) : t('Move to media library')}</MenuItem>
+        </ControlledMenu>
+        <div onClickCapture={e => {
+          log('outer', 'click capture');
+          if (mode == 'select' && !activeMovingTask) {
+            onSelected();
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        >
+          {renderCover()}
+          <div className={styles.info}>
+            <div
+              className={`select-text ${styles.limitedContent}`}
+            >
+              {resource.displayName}
+            </div>
+          </div>
+          {(displayContents & ResourceDisplayContent.Tags) ? (firstTagsValue && firstTagsValue.length > 0 && (
+            <div className={styles.info}>
+              <div
+                className={`select-text ${styles.limitedContent} flex gap-1 flex-wrap opacity-70 leading-3 gap-px`}
+              >
+                {firstTagsValue.map(v => {
+                  return (
+                    <Link
+                      color={'foreground'}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onTagClick?.(firstTagsValuePropertyId!, v);
+                      }}
+                      className={'text-xs cursor-pointer'}
+                      underline={'none'}
+                      size={'sm'}
+                      // variant={'light'}
+                    >#{v.group == undefined ? '' : `${v.group}:`}{v.name}</Link>
+                  );
+                })}
+              </div>
+            </div>
+          )) : undefined}
         </div>
       </div>
-      {firstTagsValue && firstTagsValue.length > 0 && (
-        <div className={styles.info}>
-          <div
-            className={`select-text ${styles.limitedContent} flex gap-1 flex-wrap opacity-70 leading-3`}
-          >
-            {firstTagsValue.map(v => {
-              return (
-                <Link
-                  color={'foreground'}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onTagClick?.(firstTagsValuePropertyId!, v.value);
-                  }}
-                  className={'text-xs cursor-pointer'}
-                  underline={'none'}
-                  size={'sm'}
-                  // variant={'light'}
-                >#{v.group == undefined ? '' : `${v.group}:`}{v.name}</Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 });

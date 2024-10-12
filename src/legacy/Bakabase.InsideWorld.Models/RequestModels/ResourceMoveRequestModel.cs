@@ -11,7 +11,7 @@ namespace Bakabase.InsideWorld.Models.RequestModels
     public class ResourceMoveRequestModel
     {
         [Required] [BindRequired] public int[] Ids { get; set; } = null!;
-        public int? MediaLibraryId { get; set; }
+        public int MediaLibraryId { get; set; }
         [Required] public string Path { get; set; } = null!;
     }
 }
