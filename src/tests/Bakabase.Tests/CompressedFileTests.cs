@@ -52,33 +52,33 @@ namespace Bakabase.Tests
             var str = string.Join(Environment.NewLine, result.Select(t => $"{t}{Environment.NewLine}"));
 
             const string rightStr = @"[Key]1
-[Entry]C:\1.zip
-[Part]C:\1.z01
-[Part]C:\1.z02
+[Entry]C:/1.zip
+[Part]C:/1.z01
+[Part]C:/1.z02
 
 [Key]2
-[Entry]C:\2.rar
-[Part]C:\2.r01
-[Part]C:\2.r02
+[Entry]C:/2.rar
+[Part]C:/2.r01
+[Part]C:/2.r02
 
 [Key]2
-[Entry]C:\2.7z
+[Entry]C:/2.7z
 
 [Key]2
-[Entry]C:\2.tar
+[Entry]C:/2.tar
 
 [Key]2
-[Entry]C:\2.7z.00001
-[Part]C:\2.7z.00002
-[Part]C:\2.7z.00003
+[Entry]C:/2.7z.00001
+[Part]C:/2.7z.00002
+[Part]C:/2.7z.00003
 
 [Key]2
-[Entry]C:\2.rar.part1
-[Part]C:\2.rar.part2
-[Part]C:\2.rar.part3
+[Entry]C:/2.rar.part1
+[Part]C:/2.rar.part2
+[Part]C:/2.rar.part3
 
 [Key]2
-[Entry]C:\2.tar.gz
+[Entry]C:/2.tar.gz
 ";
 
             Assert.AreEqual(str, rightStr);
