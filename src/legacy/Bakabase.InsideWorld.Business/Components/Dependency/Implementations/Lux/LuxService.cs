@@ -117,7 +117,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
                 await compressedFileService.ExtractToCurrentDirectory(fullFilename, true, ct);
             }
 
-            await DirectoryUtils.MoveAsync1(TempDirectory, DefaultLocation, true, null, ct);
+            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, ct);
         }
 
         /// <summary>

@@ -140,7 +140,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
                                     }
                                     else
                                     {
-                                        await DirectoryUtils.MoveAsync1(source, dest, false,
+                                        await DirectoryUtils.MoveAsync(source, dest, false,
                                             (Func<int, Task>) ProgressChange, ct);
                                     }
 

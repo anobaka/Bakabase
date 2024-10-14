@@ -282,7 +282,7 @@ namespace Bakabase.Service.Controllers
                         }
                         else
                         {
-                            await DirectoryUtils.MoveAsync1(resource.Path, targetPath, false,
+                            await DirectoryUtils.MoveAsync(resource.Path, targetPath, false,
                                 async p => { await resourceTaskManager.Update(id, t => t.Percentage = p); },
                                 bt.Cts.Token);
                         }

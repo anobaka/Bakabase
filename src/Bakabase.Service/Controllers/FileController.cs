@@ -415,7 +415,7 @@ namespace Bakabase.Service.Controllers
 
                                 if (isDirectory)
                                 {
-                                    await DirectoryUtils.MoveAsync1(path, targetPath, false, ProgressChange,
+                                    await DirectoryUtils.MoveAsync(path, targetPath, false, ProgressChange,
                                         bt.Cts.Token);
                                 }
                                 else

@@ -1188,7 +1188,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 return BaseResponseBuilder.Ok;
             }
 
-            var library = await _mediaLibraryService.Get(id, MediaLibraryAdditionalItem.None);
+            var library = await _mediaLibraryService.Get(mediaLibraryId, MediaLibraryAdditionalItem.None);
 
             if (library == null)
             {
@@ -1197,6 +1197,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             resource.CategoryId = library.CategoryId;
             resource.MediaLibraryId = library.Id;
+            resource.Path = path;
 
             await _orm.Update(resource);
 

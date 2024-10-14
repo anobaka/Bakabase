@@ -136,7 +136,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
 
         protected override async Task PostDownloading(List<string> files, CancellationToken ct)
         {
-            await DirectoryUtils.MoveAsync1(TempDirectory, DefaultLocation, true, null, ct);
+            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, ct);
         }
 
         protected override IDiscoverer Discoverer { get; } = new BakabaseUpdaterDiscover();

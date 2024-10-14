@@ -6,7 +6,7 @@ import BApi from '@/sdk/BApi';
 import store from '@/store';
 import { MediaLibraryAdditionalItem } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import { Button, Input, Modal } from '@/components/bakaui';
+import { Button, Divider, Input, Modal } from '@/components/bakaui';
 
 type Props = {
   onSelect: (id: number, path: string) => (Promise<any> | any);
@@ -123,52 +123,64 @@ export default (props: Props) => {
           />
         </div>
         <div className={'py-2'}>
-          {filteredCategories.map((c) => {
+          {filteredCategories.map((c, ic) => {
             return (
-              <div
-                className={'grid gap-1 items-center'}
-                style={{ gridTemplateColumns: '20% auto' }}
-              >
-                <div>
-                  {c.name}
+              <>
+                <div
+                  className={'grid gap-1 items-center'}
+                  style={{ gridTemplateColumns: '20% auto' }}
+                >
+                  <div>
+                    {c.name}
+                  </div>
+                  <div>
+                    {c.libraries
+                      .map((l, il) => {
+                        return (
+                          <>
+                            <div
+                              className={'grid gap-1 items-center'}
+                              style={{ gridTemplateColumns: '20% auto' }}
+                            >
+                              <div>
+                                {l.name}
+                              </div>
+                              <div
+                                className={'flex flex-col gap-1'}
+                              >
+                                {l.paths.map((path) => {
+                                  const selectedRecently = recentlySelectedPaths.indexOf(standardizePath(path)) > -1;
+                                  return (
+                                    <Button
+                                      size={'sm'}
+                                      variant={'light'}
+                                      color={selectedRecently ? 'success' : 'primary'}
+                                      onClick={() => {
+                                        onSelect?.(l.id, path);
+                                        setVisible(false);
+                                      }}
+                                    >
+                                      {path}
+                                      {selectedRecently && (
+                                        <HistoryOutlined className={'text-sm'} />
+                                      )}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            {il != c.libraries.length - 1 && (
+                              <Divider orientation={'horizontal'} />
+                            )}
+                          </>
+                        );
+                      })}
+                  </div>
                 </div>
-                <div>
-                  {c.libraries
-                    .map((l) => {
-                      return (
-                        <div
-                          className={'grid gap-1 items-center'}
-                          style={{ gridTemplateColumns: '20% auto' }}
-                        >
-                          <div>
-                            {l.name}
-                          </div>
-                          <div className={'flex flex-col gap-1'}>
-                            {l.paths.map((path) => {
-                              const selectedRecently = recentlySelectedPaths.indexOf(standardizePath(path)) > -1;
-                              return (
-                                <Button
-                                  size={'sm'}
-                                  variant={'light'}
-                                  color={selectedRecently ? 'success' : 'primary'}
-                                  onClick={() => {
-                                      onSelect?.(l.id, path);
-                                      setVisible(false);
-                                    }}
-                                >
-                                  {path}
-                                  {selectedRecently && (
-                                  <HistoryOutlined className={'text-sm'} />
-                                    )}
-                                </Button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
+                {ic != filteredCategories.length - 1 && (
+                  <Divider orientation={'horizontal'} />
+                )}
+              </>
             );
           })}
         </div>

@@ -57,7 +57,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
                 await compressedFileService.ExtractToCurrentDirectory(fullFilename, true, ct);
             }
 
-            await DirectoryUtils.MoveAsync1(TempDirectory, DefaultLocation, true, null, ct);
+            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, ct);
         }
 
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)
