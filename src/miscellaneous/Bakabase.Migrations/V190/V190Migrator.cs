@@ -114,10 +114,9 @@ namespace Bakabase.Migrations.V190
                 var legacyMap = await _legacyAliasService.GetAll();
                 var legacyGroups = legacyMap.DistinctBy(x => x.Name).GroupBy(x => x.GroupId)
                     .ToDictionary(d => (d.FirstOrDefault(x => x.IsPreferred) ?? d.First()).Name,
-                        d => d.Select(c => c.Name).ToHashSet());
-                var aliases = legacyGroups.SelectMany(la =>
-                    la.Value.Select(t => new Alias {Text = t, Preferred = t == la.Key ? null : la.Key})).ToList();
-                await _aliasService.AddAll(aliases);
+                        d => d.Select(c => c.Name).ToHashSet().ToArray())
+                    .Select(x => new string[] {x.Key}.Concat(x.Value.Where(v => v != x.Key)).ToArray()).ToArray();
+                await _aliasService.MergeGroups(legacyGroups);
             }
         }
 

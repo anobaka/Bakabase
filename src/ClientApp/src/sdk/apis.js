@@ -324,6 +324,91 @@ export const MergeAliasGroupsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: ExportAliases
+ * url: ExportAliasesURL
+ * method: ExportAliases_TYPE
+ * raw_url: ExportAliases_RAW_URL
+ */
+export const ExportAliases = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/alias/export'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const ExportAliases_RAW_URL = function() {
+  return '/alias/export'
+}
+export const ExportAliases_TYPE = function() {
+  return 'post'
+}
+export const ExportAliasesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/alias/export'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: ImportAliases
+ * url: ImportAliasesURL
+ * method: ImportAliases_TYPE
+ * raw_url: ImportAliases_RAW_URL
+ * @param path - 
+ */
+export const ImportAliases = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/alias/import'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const ImportAliases_RAW_URL = function() {
+  return '/alias/import'
+}
+export const ImportAliases_TYPE = function() {
+  return 'post'
+}
+export const ImportAliasesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/alias/import'
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: CheckAppInitialized
  * url: CheckAppInitializedURL
  * method: CheckAppInitialized_TYPE

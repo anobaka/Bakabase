@@ -3392,6 +3392,42 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Alias
+     * @name ExportAliases
+     * @request POST:/alias/export
+     */
+    exportAliases: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/alias/export`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Alias
+     * @name ImportAliases
+     * @request POST:/alias/import
+     */
+    importAliases: (
+      query?: {
+        path?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/alias/import`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
   };
   app = {
     /**

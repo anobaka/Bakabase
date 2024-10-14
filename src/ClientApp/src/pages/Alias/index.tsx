@@ -1,6 +1,13 @@
 import React, { useEffect, useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DeleteOutlined, EnterOutlined, MergeOutlined, SearchOutlined, ToTopOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined, DownloadOutlined,
+  EnterOutlined,
+  MergeOutlined,
+  PlusCircleOutlined,
+  SearchOutlined,
+  ToTopOutlined, UploadOutlined,
+} from '@ant-design/icons';
 import { AliasAdditionalItem } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import {
@@ -22,6 +29,7 @@ import {
   Tooltip,
 } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 
 type Form = {
   pageSize: 20;
@@ -122,9 +130,10 @@ export default () => {
             }}
           />
         </div>
-        <div>
+        <div className={'flex items-center gap-2'}>
           <Button
             size={'sm'}
+            color={'primary'}
             onClick={() => {
               let value: string;
               createPortal(Modal, {
@@ -144,7 +153,41 @@ export default () => {
               });
             }}
           >
+            <PlusCircleOutlined className={'text-base'} />
             {t('Add an alias')}
+          </Button>
+          <Button
+            size={'sm'}
+            color={'secondary'}
+            onClick={() => {
+              createPortal(FileSystemSelectorDialog, {
+                onSelected: e => {
+                  const modal = createPortal(Modal, {
+                    visible: true,
+                    title: t('Importing, please wait...'),
+                    footer: false,
+                    closeButton: false,
+                  });
+                  BApi.alias.importAliases({ path: e.path }).then(r => {
+                    modal.destroy();
+                  });
+                },
+                targetType: 'file',
+                filter: e => e.isDirectory || e.path.endsWith('.csv'),
+              });
+            }}
+          >
+            <UploadOutlined className={'text-base'} />
+            {t('Import')}
+          </Button>
+          <Button
+            size={'sm'}
+            onClick={() => {
+              BApi.alias.exportAliases();
+            }}
+          >
+            <DownloadOutlined className={'text-base'} />
+            {t('Export')}
           </Button>
         </div>
       </div>

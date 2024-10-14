@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Models.Domain.Constants;
+﻿using System.Linq.Expressions;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.Alias.Models.Input;
@@ -11,8 +12,9 @@ public interface IAliasService
     Task<List<object>> GetAliasAppliedValues(List<(object BizValue, StandardValueType BizValueType)> values);
     Task<DataChangeViewModel> SaveByResources(List<Bakabase.Abstractions.Models.Domain.Resource> resources);
     Task<SingletonResponse<Models.Domain.Alias>> Add(AliasAddInputModel model);
-    Task<List<Models.Db.Alias>> AddAll(IEnumerable<Models.Db.Alias> aliases);
+
     Task<BaseResponse> Patch(string text, AliasPatchInputModel model);
+
     // Task<ListResponse<Abstractions.Models.Db.Alias>> AddRange(List<Abstractions.Models.Db.Alias> resources);
     // Task<Abstractions.Models.Db.Alias> GetByKey(Int32 key, bool returnCopy = true);
     // Task<Abstractions.Models.Db.Alias[]> GetByKeys(IEnumerable<Int32> keys, bool returnCopy = true);
@@ -20,11 +22,12 @@ public interface IAliasService
     // Task<Abstractions.Models.Db.Alias> GetFirst(Expression<Func<Abstractions.Models.Db.Alias, bool>> selector,
     //     Expression<Func<Abstractions.Models.Db.Alias, object>> orderBy = null, bool asc = false, bool returnCopy = true);
     //
-    // Task<List<Abstractions.Models.Db.Alias>> GetAll(Expression<Func<Abstractions.Models.Db.Alias, bool>> selector = null, bool returnCopy = true);
+    Task<List<Models.Domain.Alias>> GetAll(Expression<Func<Abstractions.Models.Db.Alias, bool>>? selector = null);
     Task<int> Count(Func<Models.Db.Alias, bool>? selector = null);
     Task<bool> Any(Func<Models.Db.Alias, bool>? selector = null);
-    
+
     Task<SearchResponse<Models.Domain.Alias>> SearchGroups(AliasSearchInputModel model);
+
     //
     // Task<SearchResponse<Abstractions.Models.Db.Alias>> Search(Func<Abstractions.Models.Db.Alias, bool> selector,
     //     int pageIndex, int pageSize, Func<Abstractions.Models.Db.Alias, object> orderBy = null, bool asc = false, IComparer<object>? comparer = null, bool returnCopy = true);
@@ -35,6 +38,8 @@ public interface IAliasService
     Task<BaseResponse> Delete(string text);
     Task<BaseResponse> DeleteGroups(string[] preferredTexts);
     Task<BaseResponse> MergeGroups(string[] preferredTexts);
+
+    Task MergeGroups(string[][] aliasGroups);
     // Task<BaseResponse> RemoveByKeys(IEnumerable<Int32> keys);
     // Task<SingletonResponse<Abstractions.Models.Db.Alias>> Add(Abstractions.Models.Db.Alias resource);
     // Task<SingletonResponse<Abstractions.Models.Db.Alias>> UpdateByKey(Int32 key, Action<Abstractions.Models.Db.Alias> modify);

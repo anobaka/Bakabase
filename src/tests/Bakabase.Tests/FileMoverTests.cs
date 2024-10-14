@@ -28,6 +28,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Logging;
 using Bakabase.Infrastructures.Components.Orm.Log;
+using Bakabase.Tests.Utils;
 using Bootstrap.Components.Logging.LogService.Services;
 using FluentAssertions.Common;
 
@@ -36,41 +37,10 @@ namespace Bakabase.Tests;
 [TestClass]
 public class FileMoverTests
 {
-    private static async Task<IServiceProvider> PrepareServiceProvider()
-    {
-        var dbFilePath = Path.Combine(Directory.GetCurrentDirectory(), "test.db");
-        File.Delete(dbFilePath);
-        var sc = new ServiceCollection();
-        sc.AddLogging();
-        sc.AddLocalization();
-        sc.AddBootstrapServices<InsideWorldDbContext>(c => c.UseBootstrapSqLite(Path.GetDirectoryName(dbFilePath), Path.GetFileNameWithoutExtension(dbFilePath)));
-        sc.AddSingleton<LogService, SqliteLogService>();
-        sc.AddBootstrapLogService<LogDbContext>(c =>
-            c.UseBootstrapSqLite(Directory.GetCurrentDirectory(), "bootstrap_log"));
-
-        sc.AddSignalR(x => { });
-        sc.AddSingleton<IGuiAdapter, TestGuiAdapter>();
-        sc.AddSingleton<BackgroundTaskManager>();
-        sc.AddSingleton<IOptionsMonitor<FileSystemOptions>>(
-            new TestOptionsMonitor<FileSystemOptions>(new FileSystemOptions()));
-        sc.AddSingleton<AspNetCoreOptionsManager<FileSystemOptions>>(sp =>
-            new AspNetCoreOptionsManager<FileSystemOptions>("123", "aaa",
-                sp.GetRequiredService<IOptionsMonitor<FileSystemOptions>>(),
-                sp.GetRequiredService<ILogger<AspNetCoreOptionsManager<FileSystemOptions>>>()));
-        sc.AddSingleton<TestFileMover>();
-        var sp = sc.BuildServiceProvider();
-        var scope = sp.CreateAsyncScope();
-        var scopeSp = scope.ServiceProvider;
-        var ctx = scopeSp.GetRequiredService<InsideWorldDbContext>();
-        await ctx.Database.MigrateAsync();
-
-        return scopeSp;
-    }
-
     [TestMethod]
     public async Task Test()
     {
-        var sp = await PrepareServiceProvider();
+        var sp = await HostUtils.PrepareScopedServiceProvider();
         var fm = sp.GetRequiredService<TestFileMover>();
 
         var root = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!,

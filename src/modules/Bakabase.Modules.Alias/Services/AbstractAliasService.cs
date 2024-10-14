@@ -12,6 +12,9 @@ using Bakabase.Modules.Alias.Abstractions.Models.Domain;
 using Bakabase.Modules.Alias.Models.Input;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
+using System.Linq;
+using Bakabase.Modules.Alias.Models.Domain;
+using Bakabase.Modules.Alias.Models.Domain.Constants;
 
 namespace Bakabase.Modules.Alias.Services;
 
@@ -44,11 +47,6 @@ public abstract class AbstractAliasService<TDbContext>(
         return new SingletonResponse<Abstractions.Models.Domain.Alias>(dbAlias.ToDomainModel());
     }
 
-    public async Task<List<Abstractions.Models.Db.Alias>> AddAll(IEnumerable<Abstractions.Models.Db.Alias> aliases)
-    {
-        return (await orm.AddRange(aliases.ToList())).Data;
-    }
-
     public async Task<BaseResponse> Patch(string text, AliasPatchInputModel model)
     {
         var alias = await orm.GetFirst(x => x.Text == text);
@@ -75,6 +73,12 @@ public abstract class AbstractAliasService<TDbContext>(
         }
 
         return BaseResponseBuilder.Ok;
+    }
+
+    public async Task<List<Abstractions.Models.Domain.Alias>> GetAll(
+        Expression<Func<Abstractions.Models.Db.Alias, bool>>? selector = null)
+    {
+        return (await orm.GetAll(selector)).Select(a => a.ToDomainModel()).ToList();
     }
 
     public async Task<int> Count(Func<Abstractions.Models.Db.Alias, bool>? selector = null)
@@ -153,7 +157,8 @@ public abstract class AbstractAliasService<TDbContext>(
     /// </summary>
     /// <param name="values"></param>
     /// <returns></returns>
-    public async Task<List<object>> GetAliasAppliedValues(List<(object BizValue, StandardValueType BizValueType)> values)
+    public async Task<List<object>> GetAliasAppliedValues(
+        List<(object BizValue, StandardValueType BizValueType)> values)
     {
         var texts = new HashSet<string>();
         var valueReplacer = new List<Func<Dictionary<string, string>, object>?>();
@@ -167,6 +172,7 @@ public abstract class AbstractAliasService<TDbContext>(
                     texts.Add(tt);
                 }
             }
+
             valueReplacer.Add(ctx?.ReplaceWithAlias);
         }
 
@@ -174,5 +180,83 @@ public abstract class AbstractAliasService<TDbContext>(
 
         var replacedValues = values.Select((d, i) => valueReplacer[i]?.Invoke(aliasMap) ?? d.BizValue).ToList();
         return replacedValues;
+    }
+
+    public async Task MergeGroups(string[][] aliasGroups)
+    {
+        var aliases = await orm.GetAll();
+        var groupedAliases = aliases.GroupBy(t => t.Preferred ?? t.Text).ToDictionary(a => a.Key, a => a.ToArray());
+        var textGroupMap = groupedAliases.SelectMany(x => x.Value.Select(a => (Name: a.Text, Group: x.Value)))
+            .ToDictionary(d => d.Name, d => d.Group);
+        var texts = textGroupMap.Keys.ToHashSet();
+
+        var errors = new List<string>();
+        var newAliases = new List<Abstractions.Models.Db.Alias>();
+        var changedAliases = new List<Abstractions.Models.Db.Alias>();
+
+        var optimizedAliasGroups = aliasGroups.Select(x => new[] {x[0]}.Concat(x.Skip(1).Distinct()).ToArray()).ToArray();
+
+        foreach (var incomingGroup in optimizedAliasGroups)
+        {
+            var dbTexts = incomingGroup.Where(texts.Contains).ToArray();
+            var dbGroups = dbTexts.Select(t => textGroupMap[t]).Distinct().ToList();
+            if (dbGroups.Count > 1)
+            {
+                var msg =
+                    $"[{string.Join(",", incomingGroup)}] exist in more than one alias group on words: [{string.Join(",", dbTexts)}]";
+                errors.Add(msg);
+                continue;
+            }
+
+            var newPreferred = incomingGroup[0];
+            if (dbGroups.Any())
+            {
+                var dbGroup = dbGroups[0];
+                var @new = incomingGroup.Except(dbGroup.Select(g => g.Text)).Select(a =>
+                    new Abstractions.Models.Db.Alias
+                    {
+                        Preferred = a == newPreferred ? null : newPreferred,
+                        Text = a
+                    }).ToArray();
+                newAliases.AddRange(@new);
+
+                foreach (var dbAlias in dbGroup)
+                {
+                    if (dbAlias.Text == newPreferred)
+                    {
+                        if (dbAlias.Preferred != null)
+                        {
+                            dbAlias.Preferred = null;
+                            changedAliases.Add(dbAlias);
+                        }
+                    }
+                    else
+                    {
+                        if (dbAlias.Preferred != newPreferred)
+                        {
+                            dbAlias.Preferred = newPreferred;
+                            changedAliases.Add(dbAlias);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var @new = incomingGroup.Select(t => new Abstractions.Models.Db.Alias
+                {
+                    Text = t,
+                    Preferred = t == newPreferred ? null : newPreferred,
+                });
+                newAliases.AddRange(@new);
+            }
+        }
+
+        await orm.AddRange(newAliases);
+        await orm.UpdateRange(changedAliases);
+
+        if (errors.Any())
+        {
+            throw new AliasException(AliasExceptionType.ConflictAliasGroup, string.Join(Environment.NewLine, errors));
+        }
     }
 }

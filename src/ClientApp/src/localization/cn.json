@@ -1429,5 +1429,6 @@
   "This filter is used for quick check and does not change the priority of property value scopes.": "这个过滤器仅用于快速查阅，不会改变属性值维度的优先级",
   "The numbers represent the priority of property dimensions, and the property values will be displayed according to the priority of the dimensions.": "数字代表属性维度的优先级，属性值将会根据维度的优先级展示。",
   "indicates this scope is not enabled.": "表示该维度未启用。",
-  "You can click on the scope button to change the priority of the property value scopes.": "您可以点击维度按钮来改变它的优先级。"
+  "You can click on the scope button to change the priority of the property value scopes.": "您可以点击维度按钮来改变它的优先级。",
+  "Importing, please wait...": "导入中，请稍后。。。"
 }
