@@ -371,7 +371,6 @@ export interface BakabaseAbstractionsModelsInputCategoryAddInputModel {
   /** @format int32 */
   order?: number | null;
   generateNfo?: boolean | null;
-  resourceDisplayNameTemplate?: string | null;
   componentsData: BakabaseAbstractionsModelsInputCategoryAddInputModelSimpleCategoryComponent[];
   enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
 }
@@ -408,7 +407,6 @@ export interface BakabaseAbstractionsModelsInputCategoryPatchInputModel {
   /** @format int32 */
   order?: number | null;
   generateNfo?: boolean | null;
-  resourceDisplayNameTemplate?: string | null;
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryAddInBulkInputModel {
@@ -721,7 +719,7 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
   meaningfulName: string;
   ext: string;
   attributes: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsAttribute[];
-  /** [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 10000: Invalid] */
+  /** [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 1000: Drive, 10000: Invalid] */
   type: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType;
   /** @format int64 */
   size?: number | null;
@@ -747,7 +745,7 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview {
 }
 
 /**
- * [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 10000: Invalid]
+ * [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 1000: Drive, 10000: Invalid]
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
@@ -759,6 +757,7 @@ export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
   | 500
   | 600
   | 700
+  | 1000
   | 10000;
 
 export interface BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
@@ -1128,12 +1127,6 @@ export interface BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitionsFi
   example: string;
 }
 
-export interface BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult {
-  rootPath: string;
-  currentNames: string[];
-  mergeResult: Record<string, string[]>;
-}
-
 export interface BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation {
   /** @format int64 */
   totalSize: number;
@@ -1418,7 +1411,7 @@ export interface BakabaseInsideWorldModelsRequestModelsPathConfigurationRemoveRe
 
 export interface BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingDirectoryRequestModel {
   workingDir: string;
-  entryPath: string;
+  entryPaths: string[];
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel {
@@ -1632,6 +1625,11 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   mediaCount: number;
 }
 
+export interface BakabaseServiceModelsInputFileSystemEntryGroupInputModel {
+  paths: string[];
+  groupInternal: boolean;
+}
+
 export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
   coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
@@ -1714,6 +1712,21 @@ export interface BakabaseServiceModelsViewEnhancementViewModel {
   customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
   reservedPropertyValue?: BakabaseAbstractionsModelsDomainReservedPropertyValue;
   property?: BakabaseServiceModelsViewPropertyViewModel;
+}
+
+export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
+  rootPath: string;
+  groups: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelGroupViewModel[];
+}
+
+export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelGroupViewModel {
+  directoryName: string;
+  filenames: string[];
+}
+
+export interface BakabaseServiceModelsViewFileSystemEntryNameViewModel {
+  name: string;
+  isDirectory: boolean;
 }
 
 export interface BakabaseServiceModelsViewPropertyViewModel {
@@ -1930,6 +1943,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string | null;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel[] | null;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileSystemEntryNameViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string | null;
+  data?: BakabaseServiceModelsViewFileSystemEntryNameViewModel[] | null;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewPropertyViewModel {
@@ -2223,13 +2243,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldModelsConfigsUIOptions;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult {
-  /** @format int32 */
-  code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult;
-}
-
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
   /** @format int32 */
   code: number;
@@ -2279,6 +2292,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   data?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string | null;
+  data?: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewPropertyViewModel {
   /** @format int32 */
   code: number;
@@ -2291,6 +2311,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string | null;
   data?: BakabaseServiceModelsViewResourceSearchViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemBoolean {
+  /** @format int32 */
+  code: number;
+  message?: string | null;
+  data: boolean;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
@@ -3954,6 +3981,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Category
+     * @name PutCategoryResourceDisplayNameTemplate
+     * @request PUT:/category/{id}/resource-display-name-template
+     */
+    putCategoryResourceDisplayNameTemplate: (id: number, data: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${id}/resource-display-name-template`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
      * @name ConfigureCategoryComponents
      * @request PUT:/category/{id}/component
      */
@@ -5467,6 +5511,30 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags File
+     * @name GetTopLevelFileSystemEntryNames
+     * @request GET:/file/top-level-file-system-entries
+     */
+    getTopLevelFileSystemEntryNames: (
+      query?: {
+        root?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileSystemEntryNameViewModel,
+        any
+      >({
+        path: `/file/top-level-file-system-entries`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags File
      * @name GetEntryTaskInfo
      * @request GET:/file/task-info
      */
@@ -5678,7 +5746,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingDirectoryRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileSystemEntryNameViewModel,
+        any
+      >({
         path: `/file/same-name-entries-in-working-directory`,
         method: "POST",
         body: data,
@@ -5698,7 +5769,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingDirectoryRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/same-name-entry-in-working-directory`,
         method: "DELETE",
         body: data,
@@ -5863,95 +5934,41 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags File
-     * @name PreviewFileEntriesMergeResult
-     * @request PUT:/file/merge-preview
+     * @name PreviewFileSystemEntriesGroupResult
+     * @request PUT:/file/group-preview
      */
-    previewFileEntriesMergeResult: (data: string[], params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult,
-        any
-      >({
-        path: `/file/merge-preview`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags File
-     * @name PreviewFileEntriesMergeResultInRootPath
-     * @request PUT:/file/merge-preview-in-root-path
-     */
-    previewFileEntriesMergeResultInRootPath: (data: string, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosFileEntriesMergeResult,
-        any
-      >({
-        path: `/file/merge-preview-in-root-path`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags File
-     * @name MergeFileEntries
-     * @request PUT:/file/merge
-     */
-    mergeFileEntries: (data: string[], params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/file/merge`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags File
-     * @name MergeFileEntriesInRootPath
-     * @request PUT:/file/merge-by
-     */
-    mergeFileEntriesInRootPath: (data: string, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/file/merge-by`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags File
-     * @name GetFileSystemEntriesInDirectory
-     * @request GET:/file/directory/file-entries
-     */
-    getFileSystemEntriesInDirectory: (
-      query?: {
-        path?: string;
-        /** @format int32 */
-        maxCount?: number;
-      },
+    previewFileSystemEntriesGroupResult: (
+      data: BakabaseServiceModelsInputFileSystemEntryGroupInputModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
-        path: `/file/directory/file-entries`,
-        method: "GET",
-        query: query,
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel,
+        any
+      >({
+        path: `/file/group-preview`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags File
+     * @name MergeFileSystemEntries
+     * @request PUT:/file/group
+     */
+    mergeFileSystemEntries: (
+      data: BakabaseServiceModelsInputFileSystemEntryGroupInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/file/group`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -5988,6 +6005,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/file-processor-watcher`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags File
+     * @name CheckPathIsFile
+     * @request GET:/file/is-file
+     */
+    checkPathIsFile: (
+      query?: {
+        path?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemBoolean, any>({
+        path: `/file/is-file`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),

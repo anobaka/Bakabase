@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Models.Aos
 {
-    public record FileEntriesMergeResult(string RootPath, string[] CurrentNames,
+    public record FileEntriesGroupResult(string RootPath, string[] CurrentNames,
         Dictionary<string, string[]> MergeResult)
     {
         public string RootPath { get; set; } = RootPath;

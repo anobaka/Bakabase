@@ -97,6 +97,10 @@ export class Entry {
     return this._filteredChildren;
   }
 
+  async dispose() {
+
+  }
+
   private refreshFilteredChildren() {
     const { keyword, types, custom } = this._tmpFilter;
     const lowerCasedKeyword = keyword?.toLowerCase();
@@ -182,7 +186,7 @@ export class Entry {
 
   get actions(): IwFsEntryAction[] {
     const actions: IwFsEntryAction[] = [];
-    if (this.type != IwFsType.Directory && this.type != IwFsType.CompressedFilePart) {
+    if (!this.isDirectoryOrDrive && this.type != IwFsType.CompressedFilePart) {
       actions.push(IwFsEntryAction.Decompress);
     }
     if (this.childrenCount != undefined && this.childrenCount > 0) {
@@ -197,17 +201,19 @@ export class Entry {
 
   initializationStatus: EntryAsyncOperationStatus = EntryAsyncOperationStatus.NotStarted;
 
-  async initialize(callback?: () => any) {
+  async initialize() {
     if (this.initializationStatus != EntryAsyncOperationStatus.NotStarted) {
       return;
     }
+    this.ref?.setLoading(true);
     this.initializationStatus = EntryAsyncOperationStatus.Running;
     try {
       for (const property of this.properties) {
         switch (property) {
           case EntryProperty.ChildrenCount: {
-            if (this.type == IwFsType.Directory) {
-              const info = await BApi.file.getIwFsInfo({ path: this.path }, { ignoreError: true });
+            if (this.isDirectoryOrDrive) {
+              // @ts-ignore
+              const info = await BApi.file.getIwFsInfo({ path: this.path }, { ignoreError: () => true });
               if (info.code) {
                 this.errors[EntryError.InitializationFailed] = info.message!;
               } else {
@@ -218,7 +224,8 @@ export class Entry {
             break;
           }
           case EntryProperty.TaskInfo: {
-            const taskInfo = await BApi.file.getEntryTaskInfo({ path: this.path }, { ignoreError: true });
+            // @ts-ignore
+            const taskInfo = await BApi.file.getEntryTaskInfo({ path: this.path }, { ignoreError: () => true });
             if (taskInfo.code) {
               this.errors[EntryError.InitializationFailed] = taskInfo.message!;
             } else {
@@ -233,7 +240,7 @@ export class Entry {
       this.errors[EntryError.InitializationFailed] = e.message;
     } finally {
       this.initializationStatus = EntryAsyncOperationStatus.Completed;
-      callback && callback();
+      this.ref?.setLoading(false);
     }
   }
 
@@ -299,11 +306,11 @@ export class Entry {
    * @deprecated The method should not be used
    */
   get isDecompressionCandidateInMultiSelection(): boolean {
-    return this.type != IwFsType.Directory;
+    return !this.isDirectoryOrDrive;
   }
 
   get expandable(): boolean {
-    return this.type == IwFsType.Directory && (this.childrenCount == undefined || this.childrenCount > 0);
+    return this.isDirectoryOrDrive && (this.childrenCount == undefined || this.childrenCount > 0);
   }
 
   get isMedia(): boolean {
@@ -312,6 +319,13 @@ export class Entry {
 
   get isDirectory(): boolean {
     return this.type == IwFsType.Directory;
+  }
+
+  get isDirectoryOrDrive(): boolean {
+    return this.type == IwFsType.Directory || this.type == IwFsType.Drive;
+  }
+  get isDrive(): boolean {
+    return this.type == IwFsType.Drive;
   }
 
   /**
@@ -405,7 +419,7 @@ export class Entry {
     if (this.isRoot) {
       const parentHeight = ref.dom?.parentElement?.clientHeight ?? 0;
       if (parentHeight == 0) {
-        throw new Error('Can\'t get root children height if root dom is not initialized');
+        // throw new Error('Can\'t get root children height if root dom is not initialized');
       }
       return parentHeight;
     }
@@ -450,5 +464,9 @@ export interface IEntryRef {
   forceUpdate: () => void;
   renderChildren: () => void;
 
+  scrollTo: (path: string) => void;
+
   get filteredChildren(): Entry[];
+
+  setLoading: (loading: boolean) => void;
 }

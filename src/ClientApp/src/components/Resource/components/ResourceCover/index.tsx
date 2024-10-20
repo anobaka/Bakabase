@@ -201,50 +201,64 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           // autoplay={false}
           dots
         >
-          {urls?.map(url => (
-            <div key={url}>
-              <div
-                key={url}
-                style={{
-                  width: containerRef.current?.clientWidth,
-                  height: containerRef.current?.clientHeight,
-                }}
-                className={'flex items-center justify-center'}
-              >
-                <Img
-                  className={`w-full h-full max-w-full max-h-full ${coverFit == CoverFit.Cover ? 'object-cover' : 'object-contain'}`}
+          {urls?.map(url => {
+            let dynamicClassNames: string[] = [];
+            if (containerRef.current && maxCoverRawSizeRef.current) {
+              if (maxCoverRawSizeRef.current.w > containerRef.current.clientWidth) {
+                dynamicClassNames.push('w-full');
+              }
+              if (maxCoverRawSizeRef.current.h > containerRef.current.clientHeight) {
+                dynamicClassNames.push('h-full');
+              }
+              dynamicClassNames.push(coverFit == CoverFit.Cover ? 'object-cover' : 'object-contain');
+            }
+
+            const dynamicClassName = dynamicClassNames.join(' ');
+            return (
+              <div key={url}>
+                <div
                   key={url}
-                  src={url}
-                  onError={e => {
-                    console.log(e);
+                  style={{
+                    width: containerRef.current?.clientWidth,
+                    height: containerRef.current?.clientHeight,
                   }}
-                  onLoad={(e) => {
-                    setLoaded(true);
-                    // forceUpdate();
-                    const img = e.target as HTMLImageElement;
-                    if (img) {
-                      if (!maxCoverRawSizeRef.current) {
-                        maxCoverRawSizeRef.current = {
-                          w: img.naturalWidth,
-                          h: img.naturalHeight,
-                        };
-                      } else {
-                        maxCoverRawSizeRef.current.w = Math.max(maxCoverRawSizeRef.current.w, img.naturalWidth);
-                        maxCoverRawSizeRef.current.h = Math.max(maxCoverRawSizeRef.current.h, img.naturalHeight);
+                  className={'flex items-center justify-center'}
+                >
+                  <Img
+                    className={`${dynamicClassName} max-w-full max-h-full`}
+                    key={url}
+                    src={url}
+                    onError={e => {
+                      console.log(e);
+                    }}
+                    onLoad={(e) => {
+                      setLoaded(true);
+                      // forceUpdate();
+                      const img = e.target as HTMLImageElement;
+                      if (img) {
+                        if (!maxCoverRawSizeRef.current) {
+                          maxCoverRawSizeRef.current = {
+                            w: img.naturalWidth,
+                            h: img.naturalHeight,
+                          };
+                        } else {
+                          maxCoverRawSizeRef.current.w = Math.max(maxCoverRawSizeRef.current.w, img.naturalWidth);
+                          maxCoverRawSizeRef.current.h = Math.max(maxCoverRawSizeRef.current.h, img.naturalHeight);
+                        }
+                        // log('loaded', e);
                       }
-                      // log('loaded', e);
-                    }
-                  }}
-                  loader={(
-                    <LoadingOutlined className={'text-2xl'} />
-                  )}
-                  unloader={(
-                    <CustomIcon type={'image-slash'} className={'text-2xl'} />
-                  )}
-                />
+                    }}
+                    loader={(
+                      <LoadingOutlined className={'text-2xl'} />
+                    )}
+                    unloader={(
+                      <CustomIcon type={'image-slash'} className={'text-2xl'} />
+                    )}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </Carousel>
       );
     }

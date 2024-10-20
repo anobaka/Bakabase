@@ -39,6 +39,7 @@ using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.Property.Models.Db;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -103,12 +104,24 @@ namespace Bakabase.InsideWorld.Business.Services
             var allResources = await GetAll();
             var context = new ResourceSearchContext(allResources);
 
+            var allFilters = model.Group?.ExtractFilters();
+            var allCustomPropertyFilters = allFilters?.Where(f => f.PropertyPool == PropertyPool.Custom).ToList();
+            if (allCustomPropertyFilters?.Any() == true)
+            {
+                var customPropertyIds = allCustomPropertyFilters.Select(f => f.PropertyId).ToHashSet();
+                var customPropertyMap =
+                    (await _customPropertyService.GetByKeys(customPropertyIds)).ToDictionary(d => d.Id, d => d);
+                foreach (var f in allCustomPropertyFilters)
+                {
+                    f.Property = customPropertyMap.GetValueOrDefault(f.PropertyId)?.ToProperty();
+                }
+            }
+
             var internalSearchModel = model.Copy();
             internalSearchModel.Group = internalSearchModel.Group?.Optimize();
 
             if (!string.IsNullOrEmpty(model.Keyword))
             {
-                var properties = await _customPropertyService.GetAll();
                 var newGroup = new ResourceSearchFilterGroup
                 {
                     Combinator = SearchCombinator.Or, Filters =
@@ -123,6 +136,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     ]
                 };
 
+                var properties = await _customPropertyService.GetAll();
                 foreach (var p in properties)
                 {
                     if (PropertyInternals.PropertySearchHandlerMap.TryGetValue(p.Type, out var pd))
@@ -1197,7 +1211,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             resource.CategoryId = library.CategoryId;
             resource.MediaLibraryId = library.Id;
-            resource.Path = path;
+            resource.Path = path.StandardizePath()!;
 
             await _orm.Update(resource);
 

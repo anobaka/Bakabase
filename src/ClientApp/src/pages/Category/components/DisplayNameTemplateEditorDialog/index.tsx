@@ -9,13 +9,10 @@ import { Button, Chip, Code, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import {
   builtinPropertyForDisplayNames,
-  builtinResourcePropertyForDisplayNames,
   CategoryAdditionalItem,
   CategoryResourceDisplayNameSegmentType,
-  PropertyPool,
   SpecialTextType,
 } from '@/sdk/constants';
-import type { IProperty } from '@/components/Property/models';
 import {
   type ResourceDisplayNameTemplateSegment,
   ResourceDisplayNameTemplateSegmentType,
@@ -33,6 +30,8 @@ interface IProps extends DestroyableProps {
 interface ICategory {
   id: number;
   name: string;
+  resourceDisplayNameTemplate?: string | null;
+  customProperties?: {name: string}[] | null;
 }
 
 const renderDisplayNameSegment = (p: ResourceDisplayNameTemplateSegment) => {
@@ -86,7 +85,7 @@ export default ({
     setWrappers(wrappers);
 
     const cr = await BApi.category.getCategory(categoryId, { additionalItems: CategoryAdditionalItem.CustomProperties });
-    const c = cr.data || {};
+    const c: ICategory = cr.data || { id: 0, name: '' };
     setCategory({
       id: c.id!,
       name: c.name!,
@@ -135,9 +134,7 @@ export default ({
       onClose={close}
       size={'xl'}
       onOk={async () => {
-        await BApi.category.patchCategory(categoryId, {
-          resourceDisplayNameTemplate: templateRef.current,
-        });
+        await BApi.category.putCategoryResourceDisplayNameTemplate(categoryId, templateRef.current);
         onSaved?.();
       }}
     >

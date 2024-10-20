@@ -1,5 +1,6 @@
 import type { ModalProps as NextUIModalProps } from '@nextui-org/react';
 import { Modal as NextUiModal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@nextui-org/react';
+import type { LegacyRef } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ButtonProps } from '@/components/bakaui';
@@ -9,11 +10,11 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 
 interface ISimpleFooter {
   actions: ('ok' | 'cancel')[];
-  okProps?: ButtonProps;
-  cancelProps?: ButtonProps;
+  okProps?: ButtonProps & { ref?: LegacyRef<HTMLButtonElement> };
+  cancelProps?: ButtonProps & { ref?: LegacyRef<HTMLButtonElement> };
 }
 
-export interface ModalProps extends DestroyableProps, Omit<NextUIModalProps, 'children'>{
+export interface ModalProps extends DestroyableProps, Omit<NextUIModalProps, 'children'> {
   title?: any;
   children?: any;
   defaultVisible?: boolean;
@@ -34,6 +35,8 @@ const Modal = (props: ModalProps) => {
   const [okLoading, setOkLoading] = useState(false);
   const domRef = useRef<HTMLElement | null>(null);
   const isOpen = props.visible != undefined ? props.visible : visible;
+
+  const autoFocused = useRef(false);
 
   useEffect(() => {
     // console.log('modal initialized');
@@ -85,13 +88,18 @@ const Modal = (props: ModalProps) => {
 
     const elements: any[] = [];
     if (simpleFooter.actions.includes('cancel')) {
-      const { children, ref, ...otherProps } = simpleFooter.cancelProps || {};
+      const {
+        children,
+        ref,
+        ...otherProps
+      } = simpleFooter.cancelProps || {};
       elements.push(
         <Button
           color="danger"
           variant="light"
-          onClick={onClose}
+          onPress={onClose}
           key={'cancel'}
+          ref={ref}
           {...otherProps}
         >
           {children ?? t('Close')}
@@ -99,12 +107,17 @@ const Modal = (props: ModalProps) => {
       );
     }
     if (simpleFooter.actions.includes('ok')) {
-      const { children, ref, ...otherProps } = simpleFooter.okProps || {};
+      const {
+        children,
+        ref,
+        autoFocus,
+        ...otherProps
+      } = simpleFooter.okProps || {};
       elements.push(
         <Button
           isLoading={okLoading}
           color="primary"
-          onClick={async () => {
+          onPress={async () => {
             const r = props.onOk?.();
             if (r instanceof Promise) {
               setOkLoading(true);
@@ -122,6 +135,19 @@ const Modal = (props: ModalProps) => {
             // console.log('onok sync finish');
           }}
           key={'ok'}
+          ref={r => {
+            if (typeof ref === 'function') {
+              ref(r);
+            } else {
+              if (ref && typeof ref === 'object' && 'current' in ref) {
+                (ref as React.MutableRefObject<HTMLButtonElement | null>).current = r;
+              }
+            }
+            if (r && !autoFocused.current && autoFocus) {
+              autoFocused.current = true;
+              r.focus();
+            }
+          }}
           {...otherProps}
         >
           {children ?? t('Confirm')}
@@ -167,6 +193,9 @@ const Modal = (props: ModalProps) => {
   );
 };
 
-Modal.show = (props: ModalProps) => createPortalOfComponent(Modal, { ...props, defaultVisible: true });
+Modal.show = (props: ModalProps) => createPortalOfComponent(Modal, {
+  ...props,
+  defaultVisible: true,
+});
 
 export default Modal;

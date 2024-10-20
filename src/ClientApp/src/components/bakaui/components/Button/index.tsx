@@ -4,11 +4,11 @@ import { forwardRef } from 'react';
 import type * as react from 'react';
 import type { ReactRef } from '@nextui-org/react-utils';
 
-interface ButtonProps extends Omit<NextUIButtonProps, 'size'>{
+interface ButtonProps extends Omit<NextUIButtonProps, 'size' | 'ref'>{
   size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large';
 }
 
-const Button = forwardRef((props: ButtonProps, ref: ReactRef<HTMLButtonElement>) => {
+const Button = forwardRef<HTMLButtonElement, ButtonProps>((props, ref: ReactRef<HTMLButtonElement | null>) => {
   let nSize: NextUIButtonProps['size'];
 
   if (props.size) {

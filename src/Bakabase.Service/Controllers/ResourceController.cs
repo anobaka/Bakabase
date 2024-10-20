@@ -273,7 +273,7 @@ namespace Bakabase.Service.Controllers
 
                     foreach (var (id, resource) in resources)
                     {
-                        var targetPath = Path.Combine(model.Path, resource.FileName);
+                        var targetPath = Path.Combine(model.Path, resource.FileName).StandardizePath()!;
                         if (resource.IsFile)
                         {
                             await FileUtils.MoveAsync(resource.Path, targetPath, false,
@@ -289,8 +289,7 @@ namespace Bakabase.Service.Controllers
 
                         if (resource.MediaLibraryId != mediaLibrary.Id)
                         {
-                            await resourceService.ChangeMediaLibraryAndPath(resource.Id, mediaLibrary.Id,
-                                Path.Combine(model.Path, Path.GetFileName(resource.Path)));
+                            await resourceService.ChangeMediaLibraryAndPath(resource.Id, mediaLibrary.Id, targetPath);
                         }
 
                         // var p = 0;

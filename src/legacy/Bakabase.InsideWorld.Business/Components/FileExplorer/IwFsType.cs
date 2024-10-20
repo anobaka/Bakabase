@@ -19,6 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
         Symlink = 500,
         Video = 600,
         Audio = 700,
+        Drive = 1000,
         Invalid = 10000
     }
 }

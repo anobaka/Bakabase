@@ -1430,5 +1430,19 @@
   "The numbers represent the priority of property dimensions, and the property values will be displayed according to the priority of the dimensions.": "数字代表属性维度的优先级，属性值将会根据维度的优先级展示。",
   "indicates this scope is not enabled.": "表示该维度未启用。",
   "You can click on the scope button to change the priority of the property value scopes.": "您可以点击维度按钮来改变它的优先级。",
-  "Importing, please wait...": "导入中，请稍后。。。"
+  "Importing, please wait...": "导入中，请稍后。。。",
+  "Other files": "其他文件",
+  "Other files in {{parent}}": "{{parent}}内的其他文件",
+  "Decompress {{count}} files": "解压 {{count}} 个文件",
+  "Extract {{count}} directories": "提取 {{count}} 个目录",
+  "Wrap {{count}} items": "包裹 {{count}} 个项目",
+  "Delete {{count}} items": "删除 {{count}} 个项目",
+  "Delete items with the same names": "删除同名项目",
+  "Move {{count}} items": "移动 {{count}} 个项目",
+  "Group {{count}} items": "组合 {{count}} 个项目",
+  "Group internal items": "组合内部项目",
+  "Copy {{count}} names": "复制 {{count}} 个名称",
+  "Copy {{count}} paths": "复制 {{count}} 个路径",
+  "Removing all filesystem entries in {{workingDirectory}} that have the same names as the {{count}} selected filesystem entries": "在{{workingDirectory}}下寻找并删除所有和已选的{{count}}个文件(夹)同名的文件(夹)",
+  "Calculating changes...": "正在计算变更。。。"
 }

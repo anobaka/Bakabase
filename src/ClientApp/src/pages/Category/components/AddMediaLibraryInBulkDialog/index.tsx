@@ -4,7 +4,6 @@ import type { DialogProps } from '@alifd/next/types/dialog';
 import { useTranslation } from 'react-i18next';
 import ClickableIcon from '@/components/ClickableIcon';
 import { createPortalOfComponent } from '@/components/utils';
-import DeleteSameNameFilesDialog from '@/pages/FileProcessor/DeleteSameNameFilesDialog';
 import BApi from '@/sdk/BApi';
 
 interface IProps extends DialogProps {
@@ -61,7 +60,7 @@ const close = () => {
                 trim
                 hasClear
                 onChange={v => {
-                  nameAndPaths[i].name = v;
+                  nameAndPaths[i].name = v.toString();
                 }}
               />
             );

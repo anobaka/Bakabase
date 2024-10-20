@@ -1,10 +1,13 @@
+import { data } from 'autoprefixer';
 import type { IEntryFilter } from '@/core/models/FileExplorer/Entry';
 import { Entry } from '@/core/models/FileExplorer/Entry';
 import BusinessConstants from '@/components/BusinessConstants';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
-import { buildLogger } from '@/components/utils';
+import { buildLogger, splitPathIntoSegments } from '@/components/utils';
 import { IwFsEntryChangeType } from '@/sdk/constants';
+import filter from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter';
+import segments from '@/components/PathSegmentsConfiguration/Segments';
 
 const log = buildLogger('TreeEntry');
 
@@ -59,12 +62,14 @@ class RootEntry extends Entry {
 
   private _initialized: boolean = false;
 
+
   async initialize() {
     if (!this._initialized) {
       this._initialized = true;
       log('Initializing...', this);
       await this._stop();
-      await BApi.file.startWatchingChangesInFileProcessorWorkspace({ path: this.path });
+      // @ts-ignore
+      await BApi.file.startWatchingChangesInFileProcessorWorkspace({ path: this.path }, { ignoreError: () => true });
       store.dispatch.iwFsEntryChangeEvents.clear();
 
       const renderingQueue = new RenderingQueue();
@@ -107,11 +112,11 @@ class RootEntry extends Entry {
             const evt = filteredEvents[i];
             const changedEntryPath = evt.type == IwFsEntryChangeType.Renamed ? evt.prevPath! : evt.path;
             const changedEntry: Entry | undefined = this.nodeMap[changedEntryPath];
-            const segments = evt.path.split(BusinessConstants.pathSeparator);
-            const parentPath = segments.slice(0, segments.length - 1)
-              .join(BusinessConstants.pathSeparator);
+            const segments = splitPathIntoSegments(evt.path);
+            const parentPath = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
             const parent: Entry | undefined = this.nodeMap[parentPath];
-            log(`File system entry changed: [${IwFsEntryChangeType[evt.type]}]${evt.path}`, 'Event: ', evt, 'Entry: ', changedEntry, 'Parent: ', parent);
+            log('Try to locate parent', 'path:', parentPath, 'parent:', parent, 'nodeMap:', this.nodeMap);
+            log(`File system entry changed: [${IwFsEntryChangeType[evt.type]}]${evt.path}`, 'Event: ', evt, 'Entry: ', changedEntry);
 
             if (!changedEntry) {
               if (parent) {
@@ -209,7 +214,8 @@ class RootEntry extends Entry {
     }
   }
 
-  async dispose() {
+
+  async dispose(): Promise<void> {
     await this._stop();
   }
 

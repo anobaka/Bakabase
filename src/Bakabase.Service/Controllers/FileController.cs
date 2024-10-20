@@ -27,6 +27,8 @@ using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Service.Models.Input;
+using Bakabase.Service.Models.View;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
@@ -38,6 +40,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NPOI.SS.UserModel;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
@@ -63,7 +66,8 @@ namespace Bakabase.Service.Controllers
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             BackgroundTaskHelper backgroundTaskHelper, InsideWorldOptionsManagerPool insideWorldOptionsManager,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
-            IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger, InsideWorldLocalizer localizer)
+            IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
+            InsideWorldLocalizer localizer)
         {
             _specialTextService = specialTextService;
             _env = env;
@@ -79,6 +83,20 @@ namespace Bakabase.Service.Controllers
             _localizer = localizer;
 
             _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
+        }
+
+        [HttpGet("top-level-file-system-entries")]
+        [SwaggerOperation(OperationId = "GetTopLevelFileSystemEntryNames")]
+        public async Task<ListResponse<FileSystemEntryNameViewModel>> GetTopLevelFileSystemEntryNames(
+            string root)
+        {
+            var files = Directory.GetFiles(root)
+                .Select(x => new FileSystemEntryNameViewModel(Path.GetFileName(x)!, false)).ToArray();
+            var directories = Directory.GetDirectories(root)
+                .Select(x => new FileSystemEntryNameViewModel(Path.GetFileName(x)!, true)).ToArray();
+
+            return new ListResponse<FileSystemEntryNameViewModel>(files.Concat(directories)
+                .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase));
         }
 
         [HttpGet("task-info")]
@@ -158,7 +176,8 @@ namespace Bakabase.Service.Controllers
                     {
                         if (!System.IO.File.Exists(root))
                         {
-                            return SingletonResponseBuilder<IwFsPreview>.Build(ResponseCode.NotFound, $"{root} does not exist");
+                            return SingletonResponseBuilder<IwFsPreview>.Build(ResponseCode.NotFound,
+                                $"{root} does not exist");
                         }
                     }
                     else
@@ -174,11 +193,12 @@ namespace Bakabase.Service.Controllers
                 }
                 else
                 {
-                    files = new[] { root };
+                    files = new[] {root};
                 }
             }
 
-            var entries = files.AsParallel().Select(t => new IwFsEntry(t)).OrderBy(t => t.Type == IwFsType.Directory ? 0 : 1)
+            var entries = files.AsParallel().Select(t => new IwFsEntry(t))
+                .OrderBy(t => t.Type == IwFsType.Directory ? 0 : 1)
                 .ThenBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
 
             // var entriesMap = entries.ToDictionary(t => t.Path, t => t);
@@ -439,68 +459,81 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        private static async Task<string[]> _getSameNameEntriesInWorkingDirectory(
+        private static async Task<(string[] Files, string[] Directories)> _getSameNameEntriesInWorkingDirectory(
             RemoveSameEntryInWorkingDirectoryRequestModel model)
         {
-            var name = Path.GetFileName(model.EntryPath);
-            if (System.IO.File.Exists(model.EntryPath))
-            {
-                var files = Directory.GetFiles(model.WorkingDir, "*.*", SearchOption.AllDirectories)
-                    .Where(t => t.EndsWith(name, StringComparison.OrdinalIgnoreCase)).ToArray();
-                return files;
-            }
+            var allFiles = Directory.GetFiles(model.WorkingDir, "*.*", SearchOption.AllDirectories);
+            var allDirectories = Directory.GetDirectories(model.WorkingDir, "*.*", SearchOption.AllDirectories);
 
-            if (Directory.Exists(model.EntryPath))
+            var files = new List<string>();
+            var directories = new List<string>();
+
+            foreach (var entryPath in model.EntryPaths)
             {
-                var dirs = Directory.GetDirectories(model.WorkingDir, "*.*", SearchOption.AllDirectories)
-                    .Where(t => t.EndsWith(name, StringComparison.OrdinalIgnoreCase)).OrderBy(t => t.Length)
-                    .ThenBy(t => t).ToArray();
-                // Remove sub dirs
-                var result = new List<string>();
-                foreach (var d in dirs)
+                var name = Path.GetFileName(entryPath);
+                if (System.IO.File.Exists(entryPath))
                 {
-                    if (result.Any(d.StartsWith))
-                    {
-                        continue;
-                    }
-
-                    result.Add(d);
+                    files.AddRange(allFiles.Where(t => t.EndsWith(name, StringComparison.OrdinalIgnoreCase)).ToArray());
                 }
 
-                return result.ToArray();
+                if (Directory.Exists(entryPath))
+                {
+                    var dirs = allDirectories
+                        .Where(t => t.EndsWith(name, StringComparison.OrdinalIgnoreCase)).OrderBy(t => t.Length)
+                        .ThenBy(t => t).ToArray();
+                    // Remove sub dirs
+                    foreach (var d in dirs)
+                    {
+                        if (directories.Any(d.StartsWith))
+                        {
+                            continue;
+                        }
+
+                        directories.Add(d);
+                    }
+                }
             }
 
-            return new string[] { };
+            return (files.ToArray(), directories.ToArray());
         }
 
         [HttpPost("same-name-entries-in-working-directory")]
         [SwaggerOperation(OperationId = "GetSameNameEntriesInWorkingDirectory")]
-        public async Task<ListResponse<string>> GetSameNameEntriesInWorkingDirectory(
+        public async Task<ListResponse<FileSystemEntryNameViewModel>> GetSameNameEntriesInWorkingDirectory(
             [FromBody] RemoveSameEntryInWorkingDirectoryRequestModel model)
         {
-            var paths = await _getSameNameEntriesInWorkingDirectory(model);
-            return new ListResponse<string>(paths);
+            model.WorkingDir = model.WorkingDir.StandardizePath()!;
+
+            var (files, directories) = await _getSameNameEntriesInWorkingDirectory(model);
+
+            var viewModels = files
+                .Select(f =>
+                    new FileSystemEntryNameViewModel(f.StandardizePath()!.Replace(model.WorkingDir, null), false))
+                .Concat(directories.Select(d =>
+                    new FileSystemEntryNameViewModel(d.StandardizePath()!.Replace(model.WorkingDir, null), true)))
+                .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase);
+
+            return new ListResponse<FileSystemEntryNameViewModel>(viewModels);
         }
 
         [HttpDelete("same-name-entry-in-working-directory")]
         [SwaggerOperation(OperationId = "RemoveSameNameEntryInWorkingDirectory")]
-        public async Task<ListResponse<string>> RemoveSameNameEntryInWorkingDirectory(
+        public async Task<BaseResponse> RemoveSameNameEntryInWorkingDirectory(
             [FromBody] RemoveSameEntryInWorkingDirectoryRequestModel model)
         {
             var paths = await _getSameNameEntriesInWorkingDirectory(model);
-            foreach (var be in paths)
+            foreach (var be in paths.Files)
             {
-                if (System.IO.File.Exists(be))
-                {
-                    FileUtils.Delete(be, false, true);
-                }
-                else
-                {
-                    DirectoryUtils.Delete(be, false, true);
-                }
+                FileUtils.Delete(be, false, true);
             }
 
-            return new ListResponse<string>(paths);
+            foreach (var be in paths.Directories)
+            {
+                DirectoryUtils.Delete(be, false, true);
+            }
+
+
+            return BaseResponseBuilder.Ok;
         }
 
         [HttpPut("standardize")]
@@ -707,7 +740,8 @@ namespace Bakabase.Service.Controllers
                                 // Input password via stdin
                                 if (group.Password.IsNotEmpty() && !tryPSwitch)
                                 {
-                                    command = command.WithStandardInputPipe(PipeSource.FromString(group.Password!, Encoding.UTF8));
+                                    command = command.WithStandardInputPipe(
+                                        PipeSource.FromString(group.Password!, Encoding.UTF8));
                                 }
 
                                 var result = await command.ExecuteAsync();
@@ -910,54 +944,89 @@ namespace Bakabase.Service.Controllers
             return new SingletonResponse<Dictionary<string, int>>(extensions);
         }
 
-        [HttpPut("merge-preview")]
-        [SwaggerOperation(OperationId = "PreviewFileEntriesMergeResult")]
-        public async Task<SingletonResponse<FileEntriesMergeResult>> MergePreview([FromBody] string[] paths)
+        [HttpPut("group-preview")]
+        [SwaggerOperation(OperationId = "PreviewFileSystemEntriesGroupResult")]
+        public async Task<SingletonResponse<FileSystemEntryGroupResultViewModel>> GroupPreview(
+            [FromBody] FileSystemEntryGroupInputModel model)
         {
-            if (paths.Length == 0)
+            if (model.Paths.Length == 0)
             {
-                return SingletonResponseBuilder<FileEntriesMergeResult>.NotFound;
+                return SingletonResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
             }
 
-            if (paths.GroupBy(Path.GetDirectoryName).Count() > 1)
+            var files = new List<string>();
+
+            string rootPath;
+
+            if (model.GroupInternal)
             {
-                return SingletonResponseBuilder<FileEntriesMergeResult>.BuildBadRequest(
-                    _localizer.PathsShouldBeInSameDirectory());
+                if (model.Paths.Length > 1)
+                {
+                    return SingletonResponseBuilder<FileSystemEntryGroupResultViewModel>.BuildBadRequest(
+                        _localizer.PathsShouldBeInSameDirectory());
+                }
+
+                rootPath = model.Paths[0];
+
+                if (!Directory.Exists(rootPath))
+                {
+                    return SingletonResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
+                }
+
+                files.AddRange(Directory.GetFiles(rootPath));
+            }
+            else
+            {
+                if (model.Paths.GroupBy(Path.GetDirectoryName).Count() > 1)
+                {
+                    return SingletonResponseBuilder<FileSystemEntryGroupResultViewModel>.BuildBadRequest(
+                        _localizer.PathsShouldBeInSameDirectory());
+                }
+
+                rootPath = Path.GetDirectoryName(model.Paths[0])!;
+
+                foreach (var path in model.Paths)
+                {
+                    if (System.IO.File.Exists(path))
+                    {
+                        files.Add(path);
+                    }
+                }
             }
 
-            var rootPath = Path.GetDirectoryName(paths[0]).StandardizePath()!;
-            var mergeResult = paths
-                .GroupBy(a => Directory.Exists(a) ? Path.GetFileName(a) : Path.GetFileNameWithoutExtension(a))
-                .ToDictionary(a => a.Key, a => a.Select(x => Path.GetFileName(x)!).Where(b => b != a.Key).ToArray());
-            var currentNames = paths.Select(x => Path.GetFileName(x)!).ToArray();
+            rootPath = rootPath.StandardizePath()!;
 
-            var result = new FileEntriesMergeResult(rootPath, currentNames, mergeResult);
+            var vm = new FileSystemEntryGroupResultViewModel
+            {
+                RootPath = rootPath,
+                Groups = files.GroupBy(d => Path.GetFileNameWithoutExtension(d) ?? string.Empty)
+                    .Where(x => x.Key.IsNotEmpty()).Select(x => new FileSystemEntryGroupResultViewModel.GroupViewModel
+                    {
+                        DirectoryName = x.Key,
+                        Filenames = x.Select(y => Path.GetFileName(y)!).ToArray()
+                    }).ToArray()
+            };
 
-            return new SingletonResponse<FileEntriesMergeResult>(result);
+            return new SingletonResponse<FileSystemEntryGroupResultViewModel>(vm);
         }
 
-        [HttpPut("merge-preview-in-root-path")]
-        [SwaggerOperation(OperationId = "PreviewFileEntriesMergeResultInRootPath")]
-        public async Task<SingletonResponse<FileEntriesMergeResult>> MergePreview([FromBody] string rootPath) =>
-            await MergePreview(Directory.GetFileSystemEntries(rootPath, "*.*", SearchOption.TopDirectoryOnly));
-
-        [HttpPut("merge")]
-        [SwaggerOperation(OperationId = "MergeFileEntries")]
-        public async Task<BaseResponse> Merge([FromBody] string[] paths)
+        [HttpPut("group")]
+        [SwaggerOperation(OperationId = "MergeFileSystemEntries")]
+        public async Task<BaseResponse> Group([FromBody] FileSystemEntryGroupInputModel model)
         {
-            var r = await MergePreview(paths);
+            var r = await GroupPreview(model);
             if (r.Code != 0)
             {
                 return r;
             }
 
-            var result = r.Data;
+            var result = r.Data!;
 
-            foreach (var (dirName, fileNames) in result.MergeResult)
+            foreach (var group in result.Groups)
             {
-                var dirFullname = Path.Combine(result.RootPath, dirName);
+                var dirFullname = Path.Combine(result.RootPath, group.DirectoryName);
                 Directory.CreateDirectory(dirFullname);
-                foreach (var f in fileNames)
+                foreach (var f in group.Filenames)
                 {
                     var sourceFile = Path.Combine(result.RootPath, f);
                     var fileFullname = Path.Combine(dirFullname, f);
@@ -967,31 +1036,6 @@ namespace Bakabase.Service.Controllers
             }
 
             return BaseResponseBuilder.Ok;
-        }
-
-        [HttpPut("merge-by")]
-        [SwaggerOperation(OperationId = "MergeFileEntriesInRootPath")]
-        public async Task<BaseResponse> Merge([FromBody] string rootPath) =>
-            await Merge(Directory.GetFileSystemEntries(rootPath, null, SearchOption.TopDirectoryOnly));
-
-        [HttpGet("directory/file-entries")]
-        [SwaggerOperation(OperationId = "GetFileSystemEntriesInDirectory")]
-        public async Task<ListResponse<string>> GetFileSystemEntriesInDirectory(string path, int maxCount)
-        {
-            if (!Directory.Exists(path))
-            {
-                return new ListResponse<string>();
-            }
-
-            var di = new DirectoryInfo(path);
-            using var enumerator = di.EnumerateFileSystemInfos("*.*", SearchOption.TopDirectoryOnly).GetEnumerator();
-            var data = new List<string>();
-            while (enumerator.MoveNext() && maxCount > data.Count)
-            {
-                data.Add(enumerator.Current.Name);
-            }
-
-            return new ListResponse<string>(data);
         }
 
         [HttpPost("file-processor-watcher")]
@@ -1008,6 +1052,23 @@ namespace Bakabase.Service.Controllers
         {
             _fileProcessorWatcher.Stop();
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("is-file")]
+        [SwaggerOperation(OperationId = "CheckPathIsFile")]
+        public async Task<SingletonResponse<bool>> CheckPathIsFile(string path)
+        {
+            var isFile = false;
+            try
+            {
+                isFile = System.IO.File.Exists(path);
+            }
+            catch (Exception e)
+            {
+                // ignored
+            }
+
+            return new SingletonResponse<bool>(isFile);
         }
     }
 }

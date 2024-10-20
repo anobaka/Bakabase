@@ -34,8 +34,9 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
             var type = IwFsType.Unknown;
             if (Directory.Exists(path))
             {
-                fileSystemInfo = new DirectoryInfo(path);
-                type = IwFsType.Directory;
+                var di = new DirectoryInfo(path);
+                type = di.Parent == null ? IwFsType.Drive : IwFsType.Directory;
+                fileSystemInfo = di;
             }
             else
             {

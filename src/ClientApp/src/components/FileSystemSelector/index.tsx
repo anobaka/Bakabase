@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Icon, Input } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
+import { ArrowUpOutlined, FolderAddOutlined, FolderOutlined } from '@ant-design/icons';
+import { useUpdate, useUpdateEffect } from 'react-use';
 import TreeEntry from '@/pages/FileProcessor/TreeEntry';
 import type { IEntryRef } from '@/core/models/FileExplorer/Entry';
-import { Entry } from '@/core/models/FileExplorer/Entry';
+import type { Entry } from '@/core/models/FileExplorer/Entry';
 import RootEntry from '@/core/models/FileExplorer/RootEntry';
 import './index.scss';
 import BApi from '@/sdk/BApi';
-import { useUpdate } from 'react-use';
-import { splitPathIntoSegments, standardizePath } from '@/components/utils';
+import { buildLogger, splitPathIntoSegments, standardizePath } from '@/components/utils';
 import BusinessConstants from '@/components/BusinessConstants';
 import { IwFsType } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import DeleteDialog from '@/pages/FileProcessor/DeleteDialog';
-import ClickableIcon from '@/components/ClickableIcon';
+import { Button, Chip, Input } from '@/components/bakaui';
+import RootTreeEntry from '@/pages/FileProcessor/RootTreeEntry';
 
 export interface IFileSystemSelectorProps {
   startPath?: string;
@@ -24,6 +25,8 @@ export interface IFileSystemSelectorProps {
   defaultSelectedPath?: string;
 }
 
+const log = buildLogger('FileSystemSelector');
+
 export default (props: IFileSystemSelectorProps) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -31,95 +34,30 @@ export default (props: IFileSystemSelectorProps) => {
   const {
     startPath,
     targetType,
-    onSelected = () => {
-    },
-    onCancel = () => {
-    },
+    onSelected,
+    onCancel,
     filter: propsFilter = e => true,
     defaultSelectedPath,
   } = props;
 
-  const [entries, setEntries] = useState<Entry[]>();
-  const selectedEntryRef = useRef<Entry>();
-  const inputPathRef = useRef<string | undefined>(startPath);
-  const inputBlurHandlerRef = useRef<any>();
-  const highlightEntryNameRef = useRef<string>();
-
-  /**
-   * todo: Optimize Entry to use TreeEntry immediately instead of handling first layer manually.
-   * @param root
-   */
-  const initializeRoot = async (root?: string) => {
-    inputPathRef.current = root;
-    BApi.file.getChildrenIwFsInfo({ root }).then(r => {
-      const rootEntry = new RootEntry(root);
-      rootEntry.type = IwFsType.Directory;
-      let types: IwFsType[] | undefined;
-      if (targetType) {
-        switch (targetType) {
-          case 'file':
-            types = [IwFsType.Audio, IwFsType.CompressedFilePart, IwFsType.CompressedFileEntry, IwFsType.Image, IwFsType.Unknown, IwFsType.Video];
-            break;
-          case 'folder':
-            types = [IwFsType.Directory];
-            break;
-        }
-      }
-
-      rootEntry.patchFilter({
-        custom: propsFilter,
-        types,
-      });
-      // @ts-ignore
-      const newEntries = r.data?.entries?.map(e => new Entry({
-        ...e,
-        parent: rootEntry,
-        properties: [],
-      })).filter(e => {
-        if (!types || types.includes(e.type) || e.type == IwFsType.Directory) {
-          if (!propsFilter || propsFilter(e)) {
-            return true;
-          }
-        }
-        return false;
-      }) || [];
-
-      setEntries(newEntries);
-
-      const selectedEntry = newEntries.find(a => a.name == highlightEntryNameRef.current);
-      if (selectedEntry) {
-        selectedEntryRef.current = selectedEntry;
-        selectedEntry.select(true);
-      } else {
-        // Select if start path is selected on initialization
-        if (entries == undefined && defaultSelectedPath == root) {
-          selectedEntryRef.current = rootEntry;
-        }
-      }
-
-      inputBlurHandlerRef.current = undefined;
-      highlightEntryNameRef.current = undefined;
-
-      forceUpdate();
-
-      console.log('12345', root, selectedEntryRef.current);
-    });
-  };
+  const [selected, setSelected] = useState<Entry>();
+  const [currentDirPath, setCurrentDirPath] = useState<string>();
 
   useEffect(() => {
-    if (defaultSelectedPath) {
-      highlightEntryNameRef.current = splitPathIntoSegments(defaultSelectedPath).pop();
-    }
-
-    initializeRoot(startPath);
   }, []);
 
-  const isAvailable = (e: Entry) => {
+  const filter = (e: Entry, mode: 'visible' | 'select') => {
     if (targetType) {
       switch (targetType) {
         case 'file':
           if (![IwFsType.Audio, IwFsType.CompressedFilePart, IwFsType.CompressedFileEntry, IwFsType.Image, IwFsType.Unknown, IwFsType.Video].includes(e.type)) {
-            return false;
+            if (mode == 'select') {
+              return false;
+            } else {
+              if (e.type != IwFsType.Directory) {
+                return false;
+              }
+            }
           }
           break;
         case 'folder':
@@ -135,141 +73,73 @@ export default (props: IFileSystemSelectorProps) => {
     return true;
   };
 
-  const selectionIsAvailable = selectedEntryRef.current && isAvailable(selectedEntryRef.current);
-
   return (
-    <div
-      className={'file-system-selector'}
-    >
-      <div className="line1">
-        <ClickableIcon
-          type={'arrowup'}
-          colorType={'normal'}
-          onClick={() => {
-            const path = inputPathRef.current || '';
-            const segments = splitPathIntoSegments(path);
-            const isUncPath = path.startsWith(BusinessConstants.uncPathPrefix);
-            console.log(path, segments, isUncPath);
-            if (segments.length > 0 && !isUncPath) {
-              const newRoot = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
-              initializeRoot(newRoot);
-            }
-          }}
-        />
-        <Input
-          // size={'small'}
-          placeholder={t('You can type a path here')}
-          value={inputPathRef.current}
-          onChange={v => {
-            clearInterval(inputBlurHandlerRef.current);
-            const path = standardizePath(v)!;
-            inputPathRef.current = path;
-            const segments = splitPathIntoSegments(path);
-            const isUncPath = path.startsWith(BusinessConstants.uncPathPrefix);
-            let newRootSegmentLength = segments.length == 1 ? 1 : (segments.length == 2 && isUncPath) ? 2 : segments.length - 1;
-            const newRoot = segments.slice(0, newRootSegmentLength).join(BusinessConstants.pathSeparator);
-            highlightEntryNameRef.current = segments[newRootSegmentLength];
-            // console.log(segments, newRoot, highlightNameRef.current);
-            inputBlurHandlerRef.current = setTimeout(() => {
-              initializeRoot(newRoot);
-            }, 1000);
-            forceUpdate();
-          }}
-        />
-      </div>
-      {(entries == undefined || inputBlurHandlerRef.current) ? (
-        <div className={'no-entry'}>
-          <Icon type={'loading'} />
-        </div>
-      ) : (
-        <div className="entries">
-          {entries.map(e => (
-            <TreeEntry
-              key={e.path}
-              basicMode
-              entry={e}
-              trySelect={e => {
-                if (selectedEntryRef.current != e) {
-                  selectedEntryRef.current?.select(false);
-                  selectedEntryRef.current = e;
-                } else {
-                  selectedEntryRef.current = undefined;
-                }
-                forceUpdate();
-                return true;
-              }}
-              onDeleteKeyDown={(evt, en) => {
-                DeleteDialog.show({
-                  paths: [en.path],
-                  afterClose: () => {
-                    if (en.parent) {
-                      en.parent.expand(true);
-                    }
-                  },
-                });
-              }}
-              onDoubleClick={(evt, en) => {
-                if (en.expandable) {
-                  if (en.expanded) {
-                    en.collapse();
-                  } else {
-                    en.expand();
-                  }
-                }
-              }}
-              ref={(r: IEntryRef) => {
-                e.ref = r;
-              }}
-            />
-          ))}
-        </div>
-      )}
+    <div className={'flex flex-col gap-2 grow max-h-full'} >
+      <RootTreeEntry
+        rootPath={startPath}
+        defaultSelectedPath={defaultSelectedPath}
+        filter={{
+          custom: e => filter(e, 'visible'),
+        }}
+        selectable={'single'}
+        onSelected={es => {
+          const e = es[0];
+          if (e && filter(e, 'select')) {
+            setSelected(e);
+          } else {
+            setSelected(undefined);
+          }
+        }}
+        onRootPathChange={p => setCurrentDirPath(p)}
+      />
       {
-        selectionIsAvailable && selectedEntryRef.current!.path && (
-          <div className="selected">
-            {t('Selected')}: {selectedEntryRef.current!.path}
+        selected && (
+          <div className="flex items-center gap-2">
+            <Chip
+              size={'sm'}
+              radius={'sm'}
+              variant={'light'}
+              color={'success'}
+            >
+              {t('Selected')}
+            </Chip>
+            <Chip
+              size={'sm'}
+              radius={'sm'}
+              variant={'light'}
+              color={'success'}
+            >
+              {selected.path}
+            </Chip>
           </div>
         )
       }
-      <div className="opt">
-        <div className="left">
-          <Button
-            type={'normal'}
-            size={'small'}
-            disabled={selectedEntryRef.current?.type != IwFsType.Directory}
-            className={'new-folder'}
-            onClick={() => {
-              BApi.file.createDirectory({ parent: selectedEntryRef.current!.path }).then(r => {
-                if (!r.code) {
-                  selectedEntryRef.current?.expand(true);
-                }
-              });
+      <div className="flex items-center justify-between mb-2">
+        <Button
+            // size={'small'}
+          isDisabled={!currentDirPath}
+          onClick={() => {
+              BApi.file.createDirectory({ parent: currentDirPath });
             }}
-          >
-            <CustomIcon type={'folder-add'} className={'text-base'} />
-            {t('New Folder')}
-          </Button>
-        </div>
-        <div className="right">
+        >
+          <FolderAddOutlined className={'text-base'} />
+          {t('New Folder')}
+        </Button>
+        <div className="flex items-center gap-2">
           <Button
-            type={'primary'}
-            size={'small'}
-            disabled={!selectionIsAvailable}
+            color={'primary'}
+            // size={'small'}
+            disabled={!selected}
             onClick={() => {
-              if (onSelected) {
-                onSelected(selectedEntryRef.current!);
-              }
+              onSelected?.(selected!);
             }}
           >
             {t('OK')}
           </Button>
           <Button
-            type={'normal'}
-            size={'small'}
+            // size={'small'}
             onClick={() => {
-              if (onCancel) {
-                onCancel();
-              }
+              onCancel?.();
             }}
           >
             {t('Cancel')}

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
 import { useTranslation } from 'react-i18next';
 import { ListboxItem } from '@nextui-org/react';
+import { useCookie } from 'react-use';
 import Psc from './cases/Psc';
 import Tour from './cases/Tour';
 import Sortable from './cases/Sortable';
@@ -30,22 +31,21 @@ const components = {
   Sortable: <Sortable />,
   FileSelector: (
     <Button
-      type={'normal'}
       onClick={() => {
         FileSystemSelectorDialog.show({
           targetType: 'file',
-          startPath: 'D:\\FE Test',
+          startPath: 'D:\\FE Test\\input2 - Copy.jpg',
+          defaultSelectedPath: 'D:\\FE Test\\input2 - Copy.jpg',
         });
       }}
     >File Selector</Button>
   ),
   FolderSelector: (
     <Button
-      type={'normal'}
       onClick={() => {
         FileSystemSelectorDialog.show({
           targetType: 'folder',
-          startPath: 'D:\\FE Test',
+          startPath: 'D:\\FE Test\\extract-inner',
         });
       }}
     >Folder Selector</Button>
@@ -81,9 +81,12 @@ export default () => {
   const { t } = useTranslation();
 
   const { createPortal } = useBakabaseContext();
-  const [testingKey, setTestingKey] = useState<string>(Object.keys(components)[0]);
+  const [testingKey, setTestingKey] = useCookie('test-component-key');
 
   useEffect(() => {
+    if (testingKey == null) {
+      setTestingKey(Object.keys(components)[0]);
+    }
   }, []);
 
   return (
@@ -95,7 +98,7 @@ export default () => {
           // document.getElementById(tk)?.scrollIntoView();
             setTestingKey(k as string);
         }}
-          selectedKeys={[testingKey]}
+          selectedKeys={testingKey ? [testingKey] : undefined}
         >
           {Object.keys(components).map(c => {
             return (

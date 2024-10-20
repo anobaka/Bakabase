@@ -1,42 +1,39 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Input } from '@alifd/next';
 import { useUpdateEffect } from 'react-use';
 import { AutoTextSize } from 'auto-text-size';
 import { buildLogger, createSelection, forceFocus, getFileNameWithoutExtension, useTraceUpdate } from '@/components/utils';
-import type { Entry } from '@/core/models/FileExplorer/Entry';
-import { IwFsType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
+import { Input } from '@/components/bakaui';
 
 interface Props {
-  entry: Entry;
+  path: string;
+  name: string;
+  isDirectory: boolean;
   disabled?: boolean;
 }
 
+const log = buildLogger('EditableText');
+
 const EditableText = memo((props: Props) => {
   const {
-    entry,
+    path,
+    name,
+    isDirectory,
     disabled = false,
   } = props;
+
+  const propsRef = useRef(props);
+
   const [editing, setEditing] = useState(false);
   const editingRef = useRef(editing);
   const nodeRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const [value, setValue] = useState(entry.name);
+  const [value, setValue] = useState(name);
   const valueRef = useRef(value);
 
-  const originalValueRef = useRef(entry.name);
-
-  const log = buildLogger('EditableText');
   useTraceUpdate(props, 'EditableText');
-  // log('Rendering', props);
-
-  useUpdateEffect(() => {
-    editingRef.current = editing;
-  }, [editing]);
-
-  useUpdateEffect(() => {
-    valueRef.current = value;
-  }, [value]);
+  log('Rendering', props);
 
   useEffect(() => {
     // log('Init');
@@ -45,82 +42,91 @@ const EditableText = memo((props: Props) => {
     };
   }, []);
 
-  const nameInputRefCallback = useCallback((node: any) => {
-    if (node) {
-      const selection = entry.type == IwFsType.Directory ? valueRef.current : getFileNameWithoutExtension(valueRef.current);
-      const input = node.getInputNode();
-      createSelection(input, 0, selection!.length);
-      forceFocus(input);
+  useUpdateEffect(() => {
+    editingRef.current = editing;
+    if (editing) {
+      const selection = isDirectory ? valueRef.current : getFileNameWithoutExtension(valueRef.current);
+      createSelection(inputRef.current, 0, selection!.length);
     }
-  }, []);
+  }, [editing]);
 
-  const onKeyDown = useCallback(
+  useUpdateEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  useUpdateEffect(() => {
+    if (!editingRef.current) {
+      setValue(name);
+    }
+  }, [name]);
+
+  const enterEditingModeKeyDownHandler = useCallback(
     (e) => {
-      if (disabled) {
+      if (disabled || editingRef.current) {
         return;
       }
+      if (e.key == 'F2') {
+        setEditing(true);
+        e.stopPropagation();
+      }
+    }, []);
+
+  const inputKeyDownHandler = useCallback(
+    (e) => {
       log('Key down', e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey, e);
       switch (e.key) {
-        case 'F2':
-          if (!editingRef.current) {
-            setEditing(true);
-          }
-          break;
         case 'Enter':
           submit();
           break;
         case 'Escape':
-          if (editingRef.current) {
-            cancel();
-          } else {
-            return;
-          }
+          cancel();
           break;
         case 'Delete':
           break;
         default:
+          // Propagation
           return;
       }
-      e.stopPropagation();
+      // e.stopPropagation();
     }, []);
 
   const cancel = useCallback(() => {
     if (editingRef.current) {
       setEditing(false);
-      setValue(originalValueRef.current);
       forceFocus(nodeRef.current);
     }
   }, []);
 
   const submit = useCallback(async () => {
-    if (valueRef.current && valueRef.current != entry.name) {
+    if (valueRef.current && valueRef.current != propsRef.current.name) {
       const rsp = await BApi.file.renameFile({
-        fullname: entry.path,
+        fullname: path,
         newName: valueRef.current,
       });
       if (!rsp.code) {
-        originalValueRef.current = valueRef.current;
-        setEditing(false);
+        setValue(valueRef.current);
       }
+      setEditing(false);
     } else {
       cancel();
     }
   }, []);
 
-  // log(originalValueRef.current);
+  log(props, valueRef.current, editingRef.current);
 
   return (
     <div
       className={'fp-te-et'}
       style={editing ? { flex: 1 } : undefined}
-      onKeyDown={onKeyDown}
+      onKeyDown={enterEditingModeKeyDownHandler}
       ref={r => {
         if (r) {
           nodeRef.current = r;
-          let e: HTMLElement | null = r;
+          let e: HTMLElement | null = r.parentElement;
           while (e) {
             if (e.className.includes('entry-keydown-listener')) {
-              e.addEventListener('keydown', onKeyDown);
+              e.removeEventListener('keydown', enterEditingModeKeyDownHandler);
+              e.addEventListener('keydown', enterEditingModeKeyDownHandler);
               break;
             } else {
               e = e.parentElement;
@@ -131,19 +137,22 @@ const EditableText = memo((props: Props) => {
     >
       {editing ? (
         <Input
-          style={{ width: '100%' }}
-          ref={nameInputRefCallback}
-          defaultValue={value}
+          // can't remove outline by outline-none or ring-0
+          className={'w-full'}
+          ref={inputRef}
           value={value}
-          size={'small'}
-          onChange={v => {
+          // autoFocus
+          size={'sm'}
+          data-focus={false}
+          onKeyDown={inputKeyDownHandler}
+          onValueChange={v => {
             setValue(v);
           }}
           onBlur={submit}
         />
       ) : (
         <AutoTextSize maxFontSizePx={14}>
-          {originalValueRef.current}
+          {value}
         </AutoTextSize>
       )}
     </div>

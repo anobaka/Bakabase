@@ -396,12 +396,14 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     category.GenerateNfo = model.GenerateNfo.Value;
                 }
-
-                if (!string.IsNullOrEmpty(model.ResourceDisplayNameTemplate))
-                {
-                    category.ResourceDisplayNameTemplate = model.ResourceDisplayNameTemplate;
-                }
             });
+        }
+
+        public async Task<BaseResponse> PutResourceDisplayNameTemplate(int id, string? template)
+        {
+            template = template?.Trim();
+            return await orm.UpdateByKey(id,
+                d => { d.ResourceDisplayNameTemplate = template.IsNullOrEmpty() ? null : template; });
         }
 
         /// <summary>

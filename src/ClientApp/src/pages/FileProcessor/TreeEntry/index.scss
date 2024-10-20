@@ -106,14 +106,14 @@
         background-color: #e5f3ff;
       }
 
-      &:hover {
+      &:hover:not(:has(.item:hover)):not(:has(button:hover)) {
         border-color: var(--theme-file-processor-entry-background-color-hover);
         background-color: var(--theme-file-processor-entry-background-color-hover);
       }
 
       &.selected {
-        border-color: var(--theme-file-processor-entry-background-color-selected);
-        background-color: var(--theme-file-processor-entry-background-color-selected);
+        border-color: var(--theme-file-processor-entry-background-color-selected) !important;
+        background-color: var(--theme-file-processor-entry-background-color-selected) !important;
       }
 
       .left, .right {

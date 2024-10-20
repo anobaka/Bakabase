@@ -353,7 +353,7 @@ export default ({
         <FileSystemEntryIcon
           size={24}
           path={segments.map(s => s.text).join('/')}
-          isDirectory={isDirectory}
+          showAsDirectory={isDirectory}
         />
       </div>
       {renderSegments()}

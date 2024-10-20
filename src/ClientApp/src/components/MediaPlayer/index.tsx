@@ -464,7 +464,7 @@ const MediaPlayer = (props: IProps) => {
     return (
       <div className={'file'}>
         <div className="icon">
-          <FileSystemEntryIcon path={path} isDirectory={false} />
+          <FileSystemEntryIcon path={path} showAsDirectory={false} />
         </div>
         <div className="path">
           {mainPath}
@@ -631,7 +631,7 @@ const MediaPlayer = (props: IProps) => {
                             gap: 5,
                           }}
                         >
-                          <FileSystemEntryIcon isDirectory={data.type == 'directory'} size={20} path={data.key} />
+                          <FileSystemEntryIcon showAsDirectory={data.type == 'directory'} size={20} path={data.key} />
                           <span
                             style={{
                               whiteSpace: 'nowrap',

@@ -1,53 +1,62 @@
-import React, { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
-import { Balloon, Button, Dialog, Icon, Message } from '@alifd/next';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Dialog, Icon, Message } from '@alifd/next';
 import { List } from 'react-virtualized';
 import { diff } from 'deep-diff';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
+import { EyeOutlined, FileOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import EditableFileName from './components/EditableFileName';
+import OperationButton from './components/OperationButton';
+import RightOperations from './components/RightOperations';
 import { IwFsEntryTaskType, IwFsType } from '@/sdk/constants';
-import CustomIcon from '@/components/CustomIcon';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
-import WrapEntriesDialog from '@/pages/FileProcessor/WrapEntriesDialog';
-import type { IEntryRef } from '@/core/models/FileExplorer/Entry';
+import type { IEntryFilter } from '@/core/models/FileExplorer/Entry';
 import { Entry, EntryProperty, EntryStatus, IwFsEntryAction } from '@/core/models/FileExplorer/Entry';
-import { buildLogger, humanFileSize, uuidv4 } from '@/components/utils';
+import { buildLogger, humanFileSize, standardizePath, uuidv4 } from '@/components/utils';
 import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
 import MediaPlayer from '@/components/MediaPlayer';
-import ContentsExtractionDialog from '@/pages/FileProcessor/ContentsExtractionDialog';
-import DecompressBalloon from '@/pages/FileProcessor/TreeEntry/components/DecompressBalloon';
 import BApi from '@/sdk/BApi';
-import FileEntryMover from '@/pages/FileProcessor/FileEntryMover';
 import './index.scss';
-import ClickableIcon from '@/components/ClickableIcon';
+import { Button, Chip, Spinner } from '@/components/bakaui';
+import TailingOperations from './components/TailingOperations';
+import LeftIcon from './components/LeftIcon';
 
-interface ITreeEntryProps {
+export type Capability = 'wrap' | 'extract' | 'move' | 'delete' | 'rename' | 'decompress' | 'delete-all-by-name' | 'group';
+
+export type TreeEntryProps = {
   entry: Entry;
-  trySelect?: (e: Entry) => boolean;
   onDoubleClick?: (event, entry: Entry) => void;
+  /*
+    * Return false will block the selection of the entry
+   */
+  switchSelective?: (e: Entry) => boolean;
+  onChildrenLoaded?: (e: Entry) => void;
+  filter?: IEntryFilter;
+  expandable?: boolean;
+
+  capabilities?: Capability[];
+
   onDeleteKeyDown?: (event, en: Entry) => void;
-  keyword?: string;
   onAllSelected?: (en) => void;
   style?: any;
-  onChildrenLoaded?: (entry) => void;
   onContextMenu?: (e, entry: Entry) => void;
   onLoadFail?: (rsp, entry: Entry) => void;
   refreshInterval?: number | undefined;
   basicMode?: boolean;
   onClick?: (e: Entry) => any;
-}
+};
 
 // todo: split this component into base components: simple, advance
-const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
+const TreeEntry = (props: TreeEntryProps) => {
   const {
     style: propsStyle,
-    entry,
-    trySelect = (e) => false,
-    onDoubleClick = (event, en) => {
-    },
+    entry: propsEntry,
+    filter,
+    switchSelective,
+    onDoubleClick,
+    capabilities,
     onDeleteKeyDown,
-    keyword,
     onChildrenLoaded,
     onAllSelected = (en) => {
     },
@@ -56,57 +65,104 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
     onLoadFail = (rsp, entry) => {
     },
     basicMode = false,
+    expandable = true,
   } = props;
   const { t } = useTranslation();
-  // useTraceUpdate(props, `[${entry.path}]`);
-  const log = buildLogger(entry.path);
   const forceUpdate = useUpdate();
 
-  // const prevStyle = usePrevious(propsStyle);
-  // log(prevStyle == propsStyle, prevStyle, propsStyle);
-
-
-  const entryRef = useRef(entry!);
+  const [entry, setEntry] = useState(propsEntry);
+  const entryRef = useRef(entry);
+  // useTraceUpdate(props, `[${entryRef.current.path}]`);
+  const log = buildLogger(entryRef.current.path);
 
   // Infrastructures
   const loadingChildrenRef = useRef(false);
-
   const childrenStylesRef = useRef({});
-
   const domRef = useRef<HTMLElement | null>(null);
-
   const hashRef = useRef(uuidv4());
+  const [loading, setLoading] = useState(false);
+  const pendingRenderingRef = useRef(false);
+
+  useUpdateEffect(() => {
+    entryRef.current = entry;
+  }, [entry]);
+
+  useUpdateEffect(() => {
+    setEntry(propsEntry);
+  }, [propsEntry]);
+
+  useEffect(() => {
+    loadingChildrenRef.current = loading;
+  }, [loading]);
 
   // Functions
   const currentEntryDomRef = useRef<any>();
 
-  const initialize = useCallback(async () => {
-    if (!entry.isRoot) {
-      await entry.initialize();
-    }
-    if (entry.expanded) {
-      const rendered = await expand();
-      if (!rendered) {
-        entry.renderChildren();
-      }
-    }
-    if (!entry.recalculateChildrenWidth()) {
-      forceUpdate();
+  const initialize = useCallback(async (e: Entry) => {
+    // console.trace();
+
+    e.path = standardizePath(e.path)!;
+    log('Initializing', e);
+
+    if (entryRef.current) {
+      log('Disposing previous entry', entryRef.current);
+      await entryRef.current.dispose();
     }
 
-    // if (entry.isRoot) {
-    //   MediaPlayer.show({
-    //     files: entry.children!.map(a => ({
-    //       path: a.path,
-    //     })),
-    //     defaultActiveIndex: 0,
-    //   });
-    // }
+    entryRef.current = e;
+
+    entryRef.current.ref = {
+      select: (selected) => {
+        if (entryRef.current?.selected != selected) {
+          entryRef.current.selected = selected;
+          if (selected) {
+            log('Focus');
+            currentEntryDomRef.current.focus();
+          }
+          forceUpdate();
+        }
+      },
+      get dom() {
+        return domRef.current;
+      },
+      forceUpdate,
+      renderChildren,
+      get filteredChildren(): Entry[] {
+        return entryRef.current.filteredChildren;
+      },
+      expand: expand,
+      collapse: collapse,
+      scrollTo: (path: string) => {
+        const row = entryRef.current.filteredChildren.findIndex(e => e.path == path);
+        log('scrolling to', path, row, virtualListRef.current);
+        virtualListRef.current?.scrollToRow(row);
+      },
+      setLoading,
+    };
+
+    log('initializing, status: ', EntryStatus[entryRef.current.status],
+      'expanded:', entryRef.current.expanded,
+      `children size:${entryRef.current.childrenWidth}x${entryRef.current.childrenHeight}`,
+      'filtered children', entryRef.current.filteredChildren);
+
+    await entryRef.current.initialize();
+
+    if (entryRef.current.expanded) {
+      log('Expanding');
+      const rendered = await expand();
+      if (!rendered) {
+        entryRef.current.renderChildren();
+      }
+    }
+    if (!entryRef.current.recalculateChildrenWidth()) {
+      forceUpdate();
+    }
+    log('Initialized');
   }, []);
 
   useEffect(() => {
-    log('initializing, status: ', EntryStatus[entry.status], 'expanded:', entry.expanded, `children size:${entry.childrenWidth}x${entry.childrenHeight}`, 'filtered children', entry.filteredChildren);
-    initialize();
+    // log('0987654321');
+    initialize(entry);
 
     const resizeObserver = new ResizeObserver((c) => {
       if (domRef.current) {
@@ -117,15 +173,14 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
     });
     resizeObserver.observe(domRef.current!);
 
-    log('initialized');
-
     return () => {
       resizeObserver.disconnect();
     };
   }, []);
 
-  useEffect(() => {
-    entryRef.current = entry;
+  useUpdateEffect(() => {
+    // log('1234567890');
+    initialize(entry);
   }, [entry]);
 
   const renderFileSystemInfo = useCallback(() => {
@@ -133,30 +188,34 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
     const en = entryRef.current;
     if (en.type != IwFsType.Invalid) {
       const elements: any[] = [];
-      if (en.childrenCount != undefined && en.type == IwFsType.Directory && en.properties.includes(EntryProperty.ChildrenCount)) {
+      if (en.childrenCount != undefined && en.isDirectoryOrDrive && en.properties.includes(EntryProperty.ChildrenCount)) {
         elements.push(
-          <>
-            <CustomIcon type={'file'} size={'xs'} />
+          <Chip
+            size={'sm'}
+            variant={'light'}
+            color={'secondary'}
+          >
+            <FileOutlined className={'text-sm'} />
             {en.childrenCount}
-          </>,
+          </Chip>,
         );
       }
       if (en.size != undefined && en.size > 0 && en.properties.includes(EntryProperty.Size)) {
-        return (
-          <div className={'file-system-info'}>
+        elements.push(
+          <Chip
+            size={'sm'}
+            variant={'light'}
+            color={'secondary'}
+          >
             {humanFileSize(en.size, false)}
-          </div>
+          </Chip>,
         );
       }
 
       if (elements.length > 0) {
         return (
-          <div className={'file-system-info'}>
-            {elements.map((e, i) => (
-              <div key={i}>
-                {e}
-              </div>
-            ))}
+          <div className={'flex items-center'}>
+            {elements}
           </div>
         );
       }
@@ -202,22 +261,21 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
     return (
       <MemoTreeEntry
         onContextMenu={onContextMenu}
-        keyword={keyword}
+        filter={filter}
         onDeleteKeyDown={onDeleteKeyDown}
+        capabilities={capabilities}
         onDoubleClick={onDoubleClick}
         key={e.id}
-        ref={(r: IEntryRef) => {
-          e.ref = r;
-        }}
         entry={e}
         onAllSelected={onAllSelected}
-        trySelect={trySelect}
+        switchSelective={switchSelective}
         style={s}
         onLoadFail={onLoadFail}
         basicMode={basicMode}
+        expandable={expandable}
       />
     );
-  }, [entryRef.current.children, entryRef.current.expanded]);
+  }, [entryRef.current.children, entryRef.current.expanded, onDoubleClick]);
 
 // todo
   useEffect(() => {
@@ -233,42 +291,20 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
 
   const virtualListRef = useRef<any>();
 
-  useImperativeHandle(ref, (): IEntryRef => ({
-    select: (selected) => {
-      if (entry?.selected != selected) {
-        entry.selected = selected;
-        if (selected) {
-          log('Focus');
-          currentEntryDomRef.current.focus();
-        }
-        forceUpdate();
-      }
-    },
-    get dom() {
-      return domRef.current;
-    },
-    forceUpdate,
-    renderChildren,
-    get filteredChildren(): Entry[] {
-      return entryRef.current.filteredChildren;
-    },
-    expand: expand,
-    collapse: collapse,
-  }), []);
-
   /**
    * Height of only one row will cause the full-re-rendering of the list, so we do not need to render a specific child.
    */
   const renderChildren = useCallback(() => {
-    log('Rendering children', entry, entry.filteredChildren);
+    log('Rendering children', entryRef.current, entryRef.current.filteredChildren);
+    pendingRenderingRef.current = true;
 
     if (domRef.current?.parentElement) {
-      const newWidth = domRef.current.parentElement.clientWidth + (entry.isRoot ? 0 : -15);
+      const newWidth = domRef.current.parentElement.clientWidth + (entryRef.current.isRoot ? 0 : -15);
       const newHeight = entryRef.current.childrenHeight;
 
       log(`Recalculated children size: ${newWidth}x${newHeight}`);
 
-      for (let i = 0; i < entry.filteredChildren.length; i++) {
+      for (let i = 0; i < entryRef.current.filteredChildren.length; i++) {
         virtualListRef.current?.recomputeRowHeights(i);
       }
 
@@ -279,12 +315,12 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
   const onKeyDown = useCallback((e) => {
     log('Key down', e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey, e);
     switch (e.key) {
-      case 'Delete':
-        if (onDeleteKeyDown) {
-          onDeleteKeyDown(e, entry);
-          e.stopPropagation();
-        }
-        break;
+      // case 'Delete':
+      //   if (onDeleteKeyDown) {
+      //     onDeleteKeyDown(e, entryRef.current);
+      //     e.stopPropagation();
+      //   }
+      //   break;
       case 'a':
         if (e.ctrlKey && !basicMode) {
           for (const e1 of entryRef.current.filteredChildren) {
@@ -294,15 +330,6 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
           e.stopPropagation();
         }
         break;
-      case 'e': {
-        if (!basicMode) {
-          ContentsExtractionDialog.show({
-            entry: entryRef.current,
-          });
-          e.stopPropagation();
-          break;
-        }
-      }
       case 'p': {
         if (!basicMode) {
           play(entryRef.current);
@@ -318,7 +345,7 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
   const collapse = useCallback(() => {
     if (entryRef.current.expanded) {
       entryRef.current.expanded = false;
-      entry.renderChildren();
+      entryRef.current.renderChildren();
     }
   }, []);
 
@@ -329,7 +356,8 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
    */
   const expand = async (refresh: boolean = false): Promise<boolean> => {
     if (refresh) {
-      entry.clearChildren();
+      entryRef.current.clearChildren();
+      log('Clear children');
     }
     if (!entryRef.current.expanded || !entryRef.current.children) {
       if (!entryRef.current.children) {
@@ -337,9 +365,11 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
           return false;
         }
         loadingChildrenRef.current = true;
-        const rsp = await BApi.file.getChildrenIwFsInfo({ root: entryRef.current.path });
+        setLoading(true);
+        // @ts-ignore
+        const rsp = await BApi.file.getChildrenIwFsInfo({ root: entryRef.current.path }, { ignoreError: () => true });
         log(`Loaded ${rsp.data?.entries?.length} children`);
-        loadingChildrenRef.current = false;
+        setLoading(false);
         if (rsp.code) {
           onLoadFail(rsp, entryRef.current);
           return false;
@@ -351,75 +381,30 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
           // @ts-ignore
           entryRef.current.children = entries!.map((e) => new Entry({
             ...e,
-            parent: entry,
-            properties: entry.properties,
+            parent: entryRef.current,
+            properties: entryRef.current.properties,
           }));
         }
       }
       entryRef.current.expanded = true;
-      // entryRef.current.root.patchFilter({ keyword });
-      entry.expireFilteredChildren();
-      entry.renderChildren();
-      // entry.parent?.renderChild(entry);
-      // onHeightChanged(entryRef.current);
-      onChildrenLoaded && onChildrenLoaded(entryRef.current);
+      entryRef.current.expireFilteredChildren();
+      entryRef.current.renderChildren();
       return true;
     }
     return false;
   };
 
+  const triggerChildrenLoaded = useCallback(() => {
+    log('Trigger onChildrenLoaded');
+    onChildrenLoaded?.(entryRef.current);
+  }, []);
+
   useUpdateEffect(() => {
-    entryRef.current.root.patchFilter({ keyword });
-  }, [keyword]);
+    entryRef.current.root.patchFilter(filter);
+    forceUpdate();
+  }, [filter]);
 
-  const { actions } = entry;
-
-  const optComponents: any[] = [];
-
-  if (actions.includes(IwFsEntryAction.Decompress)) {
-    optComponents.push(
-      <DecompressBalloon
-        key={'decompress'}
-        entry={entry}
-        passwords={entry.passwordsForDecompressing}
-        trigger={(
-          <Button size={'small'}>
-            <CustomIcon type={'rar'} />
-            {t('Decompress')}(D)
-          </Button>
-        )}
-      />,
-    );
-  }
-
-  optComponents.push(
-    <Button
-      key={'wrap'}
-      type={'normal'}
-      size={'small'}
-      onClick={() => {
-        WrapEntriesDialog.show({
-          entries: [entry],
-        });
-      }}
-    >
-      <CustomIcon type={'package'} size={'small'} />
-      {t('Wrap')}(W)
-    </Button>,
-  );
-
-  optComponents.splice(optComponents.length, 0,
-    <Button
-      key={'move'}
-      size={'small'}
-      onClick={(e) => {
-        FileEntryMover.show({ paths: [entry.path] });
-      }}
-    >
-      <CustomIcon type={'move'} size={'small'} />
-      {t('Move')}(M)
-    </Button>,
-  );
+  const { actions } = entryRef.current;
 
   const renderTaskError = () => {
     if (entryRef.current.task && entryRef.current.task.error) {
@@ -470,128 +455,33 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
         });
     } else {
       MediaPlayer.show({
-        files: [entry.path],
+        files: [{ path: entry.path }],
         defaultActiveIndex: 0,
       });
     }
   }, []);
 
-  const renderOperationsAfterEntryName = useCallback(() => {
-    const components = [
-      (
-        <ClickableIcon
-          key={1}
-          type={'folder-open'}
-          colorType={'normal'}
-          size={16}
-          onClick={(e) => {
-            e.stopPropagation();
-            BApi.tool.openFileOrDirectory({
-              path: entry.path,
-              openInDirectory: entry.type != IwFsType.Directory,
-            });
-          }}
-        />
-      ),
-    ];
-
-    if (entryRef.current.type == IwFsType.Directory && entryRef.current.childrenCount && entryRef.current.childrenCount > 0) {
-      if (!basicMode) {
-        components.push(
-          <Balloon.Tooltip
-            key={2}
-            triggerType={'hover'}
-            trigger={(
-              <ClickableIcon
-                type={'Arrowextractinterface'}
-                colorType={'normal'}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  ContentsExtractionDialog.show({
-                    entry,
-                  });
-                }}
-              />
-            )}
-          >
-            (E){t('Extract children to parent and delete current directory')}
-          </Balloon.Tooltip>,
-        );
-      }
-      components.push(
-        <ClickableIcon
-          size={16}
-          key={'refresh'}
-          type={'sync'}
-          colorType={'normal'}
-          onClick={(e) => {
-            e.stopPropagation();
-            expand(true);
-          }}
-        />,
-      );
-    }
-    return components;
-  }, []);
-
-  const renderEntryStatus = useCallback(() => {
-    switch (entryRef.current.status) {
-      case EntryStatus.Loading:
-        return (
-          <div className={'item'}>
-            <Icon type={'loading'} size={'small'} />
-          </div>
-        );
-      case EntryStatus.Error:
-        return (
-          <div className={'item'}>
-            <Balloon
-              trigger={<CustomIcon
-                onClick={e => e.stopPropagation()}
-                type={'warning-circle'}
-                style={{ color: 'red' }}
-                size={'small'}
-              />}
-              triggerType={'hover'}
-              align={'t'}
-              v2
-              closable={false}
-            >
-              <ul style={{ color: 'red' }}>
-                {Object.keys(entryRef.current.errors)
-                  .map(e => {
-                    return (
-                      <li key={e}>{entryRef.current.errors[e]}</li>
-                    );
-                  })}
-              </ul>
-            </Balloon>
-          </div>
-        );
-      default:
-        return;
-    }
-  }, []);
-
-  log('Rendering', 'children width', entry.childrenWidth, domRef.current?.clientWidth, domRef.current, entry);
+  // log('Rendering', 'children width', entryRef.current.childrenWidth, domRef.current?.clientWidth, domRef.current, entryRef.current);
 
   return (
     <div
-      className={'tree-entry'}
+      className={`tree-entry ${entryRef.current.isRoot ? 'h-full' : ''}`}
       tabIndex={0}
       style={propsStyle}
       ref={domCallback}
-      onClick={e => {
+      onDoubleClick={e => {
         e.stopPropagation();
-      }}
-      onDoubleClick={(e) => {
-        // console.log('double clicked');
-        e.stopPropagation();
-        onDoubleClick(e, entry);
+        log('Double clicked', entryRef.current);
+        onDoubleClick?.(e, entryRef.current);
       }}
     >
-      {!entry.isRoot && (
-        <div className={'entry-main-container'}>
+      {!entryRef.current.isRoot && (
+        <div
+          className={'entry-main-container'}
+          onClick={e => {
+            e.stopPropagation();
+          }}
+        >
           {entryRef.current.type == IwFsType.Invalid && (
             <div className="invalid-cover" />
           )}
@@ -607,8 +497,7 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
               </div>
               <div className="stop">
                 <Button
-                  warning
-                  type={'primary'}
+                  color={'warning'}
                   size={'small'}
                   onClick={() => {
                     Dialog.confirm({
@@ -635,13 +524,13 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
           )}
           <div
             onContextMenu={(e) => {
-              if (!entry.selected) {
-                if (trySelect(entry)) {
-                  entry.selected = !entry.selected;
+              if (!entryRef.current.selected) {
+                if (!switchSelective || switchSelective(entryRef.current)) {
+                  entryRef.current.selected = true;
                   forceUpdate();
                 }
               }
-              onContextMenu(e, entry);
+              onContextMenu(e, entryRef.current);
             }}
             ref={r => {
               currentEntryDomRef.current = r;
@@ -649,94 +538,86 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
             }}
             onKeyDown={onKeyDown}
             tabIndex={0}
-            className={`entry-main entry-keydown-listener ${entry?.selected ? 'selected' : ''} ${entry.expanded ? 'expanded' : ''}`}
+            className={`entry-main entry-keydown-listener ${entryRef.current?.selected ? 'selected' : ''} ${entryRef.current.expanded ? 'expanded' : ''}`}
             onClick={() => {
-              const r = trySelect(entry);
-              log(`Trying ${entry?.selected ? 'unselect' : 'select'} ${entry?.name}, and get blocked: ${!r}`);
+              const r = !switchSelective || switchSelective(entryRef.current);
+              log(`Trying ${entryRef.current?.selected ? 'unselect' : 'select'} ${entryRef.current?.name}, and get blocked: ${!r}`);
               if (r) {
-                entry.selected = !entry?.selected;
+                entryRef.current.selected = !entryRef.current?.selected;
                 forceUpdate();
               }
             }}
           >
             <div className="left">
               <div className="things-before-name">
-                {entry.status == EntryStatus.Default ? (
-                  // Expandable
+                <LeftIcon
+                  entry={entryRef.current}
+                  expandable={expandable}
+                  loading={loading}
+                />
+                {entryRef.current && (
                   <div className="item">
-                    {(entry.expandable) && (
-                      entry.expanded ? (
-                        <div
-                          className={'fold'}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            collapse();
-                          }}
-                        >
-                          <Icon type="minus" size={'xs'} />
-                        </div>
-                      ) : (
-                        <div
-                          className={'unfold'}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            expand();
-                          }}
-                        >
-                          <Icon type="add" size={'xs'} />
-                        </div>
-                      )
-                    )}
-                  </div>
-                ) : (
-                  // Status
-                  renderEntryStatus()
-                )}
-                {/* Icon */}
-                {entry && (
-                  <div className="item">
-                    <FileSystemEntryIcon size={18} path={entry.path} isDirectory={entry.type == IwFsType.Directory} />
+                    <FileSystemEntryIcon
+                      size={18}
+                      path={entryRef.current.path}
+                      showAsDirectory={entry.isDirectoryOrDrive}
+                    />
                   </div>
                 )}
               </div>
               <EditableFileName
-                entry={entry}
-                disabled={basicMode}
+                isDirectory={entry.isDirectoryOrDrive}
+                path={entry.path}
+                name={entry.name}
+                disabled={entry.isDrive || !capabilities?.includes('rename') || entry.status == EntryStatus.Error}
               />
-              <div className="things-after-name">
+              <div className="flex items-center">
                 {actions.includes(IwFsEntryAction.Play) && !basicMode && (
-                  <CustomIcon
-                    className={'preview'}
-                    type={'eye'}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      play(entry);
-                    }}
-                  />
+                  <OperationButton
+                    onClick={(e) => { play(entryRef.current); }}
+                    isIconOnly
+                    color={'primary'}
+                  >
+                    <EyeOutlined className={'text-base'} />
+                  </OperationButton>
                 )}
-                {renderOperationsAfterEntryName()}
+                <TailingOperations
+                  entry={entry}
+                  capabilities={capabilities}
+                />
                 {renderFileSystemInfo()}
                 {renderTaskError()}
               </div>
             </div>
             <div className="right">
               {!basicMode && (
-                optComponents
+                <RightOperations
+                  entry={entryRef.current}
+                  capabilities={capabilities}
+                />
               )}
             </div>
           </div>
         </div>
       )}
-      {entryRef.current.filteredChildren?.length > 0 && entryRef.current.expanded && (
+      {entryRef.current.expanded && ((entryRef.current.filteredChildren?.length > 0) ? (
         <div
-          className={`entry-children ${entry.isRoot ? 'root' : ''}`}
+          className={`entry-children ${entryRef.current.isRoot ? 'root' : ''}`}
         >
           {entryRef.current.childrenHeight > 0 && (
             <List
-              ref={virtualListRef}
+              ref={r => {
+                virtualListRef.current = r;
+                if (r) {
+                  if (pendingRenderingRef.current) {
+                    pendingRenderingRef.current = false;
+                    triggerChildrenLoaded();
+                  }
+                }
+              }}
               rowHeight={virtualListRowHeightCallback}
-              width={entry.childrenWidth}
-              height={entry.childrenHeight}
+              width={entryRef.current.childrenWidth}
+              height={entryRef.current.childrenHeight}
               rowCount={entryRef.current.filteredChildren.length}
               rowRenderer={virtualListRowRendererCallback}
               renderHash={hashRef.current}
@@ -744,10 +625,19 @@ const TreeEntry = React.forwardRef((props: ITreeEntryProps, ref) => {
             />
           )}
         </div>
-      )}
+      ) : loading ? (
+        <div className={'flex justify-center items-center py-2'}>
+          <Spinner size={'sm'} />
+        </div>
+      ) : (
+        <div className={'flex justify-center items-center gap-2 opacity-70 py-2'}>
+          <InfoCircleOutlined />
+          <div>{t('No content')}</div>
+        </div>
+      ))}
     </div>
   );
-});
+};
 const MemoTreeEntry = React.memo(TreeEntry);
 
 export default MemoTreeEntry;

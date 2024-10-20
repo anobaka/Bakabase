@@ -3,6 +3,7 @@ import i18n from 'i18next';
 import type { FullRequestParams, HttpResponse, ApiConfig } from '@/sdk/Api';
 import { Api, ContentType } from '@/sdk/Api';
 import serverConfig from '@/serverConfig';
+import { buildLogger } from '@/components/utils';
 
 interface BFullRequestParams extends FullRequestParams {
   ignoreError: (rsp) => boolean;
@@ -13,6 +14,8 @@ interface BResponse {
   message?: string;
 }
 
+const log = buildLogger('BApi');
+
 class BApi extends Api<any> {
   constructor() {
     super({
@@ -21,6 +24,7 @@ class BApi extends Api<any> {
     const originalRequest = this.request;
     this.request = async <T = any, E = any>(params: BFullRequestParams): Promise<T> => {
       try {
+        log(params);
         const rsp = await originalRequest<T, E>(params);
         const typedRsp = rsp as BResponse;
         switch (typedRsp?.code) {

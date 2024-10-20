@@ -1687,6 +1687,55 @@ export const DuplicateCategoryURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: PutCategoryResourceDisplayNameTemplate
+ * url: PutCategoryResourceDisplayNameTemplateURL
+ * method: PutCategoryResourceDisplayNameTemplate_TYPE
+ * raw_url: PutCategoryResourceDisplayNameTemplate_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const PutCategoryResourceDisplayNameTemplate = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{id}/resource-display-name-template'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PutCategoryResourceDisplayNameTemplate_RAW_URL = function() {
+  return '/category/{id}/resource-display-name-template'
+}
+export const PutCategoryResourceDisplayNameTemplate_TYPE = function() {
+  return 'put'
+}
+export const PutCategoryResourceDisplayNameTemplateURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{id}/resource-display-name-template'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: ConfigureCategoryComponents
  * url: ConfigureCategoryComponentsURL
  * method: ConfigureCategoryComponents_TYPE
@@ -4029,6 +4078,52 @@ export const GetAllEnhancerDescriptorsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetTopLevelFileSystemEntryNames
+ * url: GetTopLevelFileSystemEntryNamesURL
+ * method: GetTopLevelFileSystemEntryNames_TYPE
+ * raw_url: GetTopLevelFileSystemEntryNames_RAW_URL
+ * @param root - 
+ */
+export const GetTopLevelFileSystemEntryNames = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/file/top-level-file-system-entries'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['root'] !== undefined) {
+    queryParameters['root'] = parameters['root']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetTopLevelFileSystemEntryNames_RAW_URL = function() {
+  return '/file/top-level-file-system-entries'
+}
+export const GetTopLevelFileSystemEntryNames_TYPE = function() {
+  return 'get'
+}
+export const GetTopLevelFileSystemEntryNamesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/file/top-level-file-system-entries'
+  if (parameters['root'] !== undefined) {
+    queryParameters['root'] = parameters['root']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetEntryTaskInfo
  * url: GetEntryTaskInfoURL
  * method: GetEntryTaskInfo_TYPE
@@ -4885,16 +4980,16 @@ export const GetFileExtensionCountsURL = function(parameters = {}) {
 }
 /**
  * 
- * request: PreviewFileEntriesMergeResult
- * url: PreviewFileEntriesMergeResultURL
- * method: PreviewFileEntriesMergeResult_TYPE
- * raw_url: PreviewFileEntriesMergeResult_RAW_URL
+ * request: PreviewFileSystemEntriesGroupResult
+ * url: PreviewFileSystemEntriesGroupResultURL
+ * method: PreviewFileSystemEntriesGroupResult_TYPE
+ * raw_url: PreviewFileSystemEntriesGroupResult_RAW_URL
  * @param model - 
  */
-export const PreviewFileEntriesMergeResult = function(parameters = {}) {
+export const PreviewFileSystemEntriesGroupResult = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/file/merge-preview'
+  let path = '/file/group-preview'
   let body
   let queryParameters = {}
   let form = {}
@@ -4908,16 +5003,16 @@ export const PreviewFileEntriesMergeResult = function(parameters = {}) {
   }
   return request('put', domain + path, body, queryParameters, form, config)
 }
-export const PreviewFileEntriesMergeResult_RAW_URL = function() {
-  return '/file/merge-preview'
+export const PreviewFileSystemEntriesGroupResult_RAW_URL = function() {
+  return '/file/group-preview'
 }
-export const PreviewFileEntriesMergeResult_TYPE = function() {
+export const PreviewFileSystemEntriesGroupResult_TYPE = function() {
   return 'put'
 }
-export const PreviewFileEntriesMergeResultURL = function(parameters = {}) {
+export const PreviewFileSystemEntriesGroupResultURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/file/merge-preview'
+  let path = '/file/group-preview'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -4928,16 +5023,16 @@ export const PreviewFileEntriesMergeResultURL = function(parameters = {}) {
 }
 /**
  * 
- * request: PreviewFileEntriesMergeResultInRootPath
- * url: PreviewFileEntriesMergeResultInRootPathURL
- * method: PreviewFileEntriesMergeResultInRootPath_TYPE
- * raw_url: PreviewFileEntriesMergeResultInRootPath_RAW_URL
+ * request: MergeFileSystemEntries
+ * url: MergeFileSystemEntriesURL
+ * method: MergeFileSystemEntries_TYPE
+ * raw_url: MergeFileSystemEntries_RAW_URL
  * @param model - 
  */
-export const PreviewFileEntriesMergeResultInRootPath = function(parameters = {}) {
+export const MergeFileSystemEntries = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/file/merge-preview-in-root-path'
+  let path = '/file/group'
   let body
   let queryParameters = {}
   let form = {}
@@ -4951,155 +5046,16 @@ export const PreviewFileEntriesMergeResultInRootPath = function(parameters = {})
   }
   return request('put', domain + path, body, queryParameters, form, config)
 }
-export const PreviewFileEntriesMergeResultInRootPath_RAW_URL = function() {
-  return '/file/merge-preview-in-root-path'
+export const MergeFileSystemEntries_RAW_URL = function() {
+  return '/file/group'
 }
-export const PreviewFileEntriesMergeResultInRootPath_TYPE = function() {
+export const MergeFileSystemEntries_TYPE = function() {
   return 'put'
 }
-export const PreviewFileEntriesMergeResultInRootPathURL = function(parameters = {}) {
+export const MergeFileSystemEntriesURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/file/merge-preview-in-root-path'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: MergeFileEntries
- * url: MergeFileEntriesURL
- * method: MergeFileEntries_TYPE
- * raw_url: MergeFileEntries_RAW_URL
- * @param model - 
- */
-export const MergeFileEntries = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/file/merge'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const MergeFileEntries_RAW_URL = function() {
-  return '/file/merge'
-}
-export const MergeFileEntries_TYPE = function() {
-  return 'put'
-}
-export const MergeFileEntriesURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/file/merge'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: MergeFileEntriesInRootPath
- * url: MergeFileEntriesInRootPathURL
- * method: MergeFileEntriesInRootPath_TYPE
- * raw_url: MergeFileEntriesInRootPath_RAW_URL
- * @param model - 
- */
-export const MergeFileEntriesInRootPath = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/file/merge-by'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const MergeFileEntriesInRootPath_RAW_URL = function() {
-  return '/file/merge-by'
-}
-export const MergeFileEntriesInRootPath_TYPE = function() {
-  return 'put'
-}
-export const MergeFileEntriesInRootPathURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/file/merge-by'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetFileSystemEntriesInDirectory
- * url: GetFileSystemEntriesInDirectoryURL
- * method: GetFileSystemEntriesInDirectory_TYPE
- * raw_url: GetFileSystemEntriesInDirectory_RAW_URL
- * @param path - 
- * @param maxCount - 
- */
-export const GetFileSystemEntriesInDirectory = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/file/directory/file-entries'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['path'] !== undefined) {
-    queryParameters['path'] = parameters['path']
-  }
-  if (parameters['maxCount'] !== undefined) {
-    queryParameters['maxCount'] = parameters['maxCount']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetFileSystemEntriesInDirectory_RAW_URL = function() {
-  return '/file/directory/file-entries'
-}
-export const GetFileSystemEntriesInDirectory_TYPE = function() {
-  return 'get'
-}
-export const GetFileSystemEntriesInDirectoryURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/file/directory/file-entries'
-  if (parameters['path'] !== undefined) {
-    queryParameters['path'] = parameters['path']
-  }
-  if (parameters['maxCount'] !== undefined) {
-    queryParameters['maxCount'] = parameters['maxCount']
-  }
+  let path = '/file/group'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -5185,6 +5141,52 @@ export const StopWatchingChangesInFileProcessorWorkspaceURL = function(parameter
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/file/file-processor-watcher'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: CheckPathIsFile
+ * url: CheckPathIsFileURL
+ * method: CheckPathIsFile_TYPE
+ * raw_url: CheckPathIsFile_RAW_URL
+ * @param path - 
+ */
+export const CheckPathIsFile = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/file/is-file'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const CheckPathIsFile_RAW_URL = function() {
+  return '/file/is-file'
+}
+export const CheckPathIsFile_TYPE = function() {
+  return 'get'
+}
+export const CheckPathIsFileURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/file/is-file'
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

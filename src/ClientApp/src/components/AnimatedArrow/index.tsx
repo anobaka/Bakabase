@@ -3,8 +3,9 @@ import './index.scss';
 interface Props {
   color?: string;
   direction?: 'left' | 'right' | 'up' | 'down';
+  className?: string;
 }
-export default ({ color = '#999', direction = 'right' }: Props) => {
+export default ({ color = '#999', direction = 'right', className }: Props) => {
   const spans: any[] = [];
 
   let rotate = -90;
@@ -29,7 +30,7 @@ export default ({ color = '#999', direction = 'right' }: Props) => {
   }
 
   return (
-    <div className="animated-arrow">
+    <div className={`animated-arrow ${className}`}>
       <div className="arrow" style={{ transform: `rotate(${rotate}deg)` }}>
         {spans}
       </div>

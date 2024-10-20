@@ -7,9 +7,9 @@ import './index.scss';
 
 export default ({
                   path,
-                  isDirectory = false,
+                  showAsDirectory = false,
                   size = 14,
-                }: { path?: string; isDirectory?: boolean; size?: number | string }) => {
+                }: { path?: string; showAsDirectory?: boolean; size?: number | string }) => {
   const parts = path?.split('.') ?? [];
   const ext = parts.length <= 1 ? '' : `.${parts[parts.length - 1]}`;
 
@@ -20,7 +20,7 @@ export default ({
 
   useEffect(() => {
     // console.log(ext, icons);
-    if (!iconImgData && !isDirectory) {
+    if (!iconImgData && !showAsDirectory) {
       if (ext in icons) {
         setIconImgData(icons[ext]);
       } else {
@@ -50,7 +50,7 @@ export default ({
         minHeight: size,
       }}
     >
-      {isDirectory ? (
+      {showAsDirectory ? (
         <svg aria-hidden="true">
           <use xlinkHref="#icon-folder1" />
         </svg>
@@ -59,7 +59,7 @@ export default ({
       ) : (
         <CustomIcon
           type={'question-circle'}
-          style={{ color: '#ccc' }}
+          style={{ color: '#ccc', fontSize: size }}
           title={i18n.t('Unknown file type')}
         />
       )}

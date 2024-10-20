@@ -10,6 +10,5 @@ namespace Bakabase.Abstractions.Models.Input
         public CoverSelectOrder? CoverSelectionOrder { get; set; }
         public int? Order { get; set; }
         public bool? GenerateNfo { get; set; }
-        public string? ResourceDisplayNameTemplate { get; set; }
     }
 }

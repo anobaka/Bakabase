@@ -9,6 +9,6 @@ namespace Bakabase.InsideWorld.Models.RequestModels
     public class RemoveSameEntryInWorkingDirectoryRequestModel
     {
         public string WorkingDir { get; set; } = string.Empty;
-        public string EntryPath { get; set; } = string.Empty;
+        public string[] EntryPaths { get; set; } = [];
     }   
 }

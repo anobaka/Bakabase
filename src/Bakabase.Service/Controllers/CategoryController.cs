@@ -60,6 +60,13 @@ namespace Bakabase.Service.Controllers
             return await service.Patch(id, model);
         }
 
+        [HttpPut("{id}/resource-display-name-template")]
+        [SwaggerOperation(OperationId = "PutCategoryResourceDisplayNameTemplate")]
+        public async Task<BaseResponse> PutResourceDisplayNameTemplate(int id, [FromBody] string template)
+        {
+            return await service.PutResourceDisplayNameTemplate(id, template);
+        }
+
         [HttpPut("{id}/component")]
         [SwaggerOperation(OperationId = "ConfigureCategoryComponents")]
         public async Task<BaseResponse> ConfigureComponents(int id,

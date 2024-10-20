@@ -43,7 +43,7 @@ const FileSystemSelectorDialog = (props: IProps) => {
       footer={false}
       onDestroyed={props.onDestroyed}
       onClose={close}
-      className={''}
+      className={'h-full'}
     >
       <FileSystemSelector
         {...fsProps}

@@ -1,4 +1,4 @@
-import { Balloon, Button, Dialog, Input, Message, Tag, Notification } from '@alifd/next';
+import { Button, Dialog, Input, Message, Tag, Notification } from '@alifd/next';
 import React, { useCallback, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import './index.scss';
@@ -6,6 +6,7 @@ import i18n from 'i18next';
 import BApi from '@/sdk/BApi';
 import { PasswordSearchOrder } from '@/sdk/constants';
 import PasswordSelector from '@/components/PasswordSelector';
+import { Popover, Tooltip } from '@/components/bakaui';
 
 const QuickPasswordCount = 5;
 
@@ -132,9 +133,98 @@ export default (props: Props) => {
   }, [recentPasswords, frequentlyUsedPasswords]);
 
   return (
-    <Balloon
-      triggerType={'hover'}
-      trigger={React.cloneElement(trigger, {
+    <Tooltip
+      content={(<div>
+        <div className="common-tip">
+          {t('Contents will be decompressed to the same directory as the compressed file.')}
+        </div>
+        <div className="password-guides">
+          {passwords.length > 0 && (
+            <div className={'default'}>
+
+              <Trans
+                i18nKey={'fp.te.db.defaultPassword'}
+                values={{
+                  password: passwords[0],
+                }}
+              >
+                By default, we will use <Button type={'primary'} text>password</Button> as password.
+              </Trans>
+            </div>
+          )}
+          {passwords.length > 1 && (
+            <div className={'secondary'}>
+              <div className="tip">
+                {t('Alternatively, you can choose a password from the following candidates:')}
+              </div>
+              <div className="passwords">
+                {passwords.slice(1).map((password: string) => (
+                  <Button
+                    key={password}
+                    size={'small'}
+                    type={'normal'}
+                    onClick={() => {
+                      decompress(entry.path, password);
+                    }}
+                  >
+                    {password}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {renderTopNPasswords(PasswordSearchOrder.Latest)}
+          {renderTopNPasswords(PasswordSearchOrder.Frequency)}
+
+          <div className={'secondary'}>
+            <div className="tip">{t('Or you can use a custom password:')}</div>
+            <Input.Group addonAfter={(
+              <Button
+                type={'normal'}
+                size={'small'}
+                onClick={() => {
+                  if (customPasswordRef.current) {
+                    decompress(entry.path, customPasswordRef.current);
+                  } else {
+                    Message.error(i18n.t('Password can not be empty'));
+                  }
+                }}
+              >
+                {t('Use custom password to decompress')}
+              </Button>
+            )}
+            >
+              <Input
+                size={'small'}
+                placeholder={i18n.t('Password')}
+                style={{ width: '100%' }}
+                hasClear
+                onKeyDown={e => {
+                  e.stopPropagation();
+                }}
+                onChange={(v) => {
+                  customPasswordRef.current = v;
+                }}
+              />
+            </Input.Group>
+          </div>
+        </div>
+      </div>)}
+      onOpenChange={v => {
+        if (v) {
+          onBalloonVisible();
+        }
+      }}
+      delay={1000}
+      className="fp-te-db"
+      placement={'left'}
+      autoFocus={false}
+      onClick={e => {
+        e.stopPropagation();
+      }}
+    >
+      {React.cloneElement(trigger, {
         onContextMenu: e => {
           // e.stopPropagation();
           // e.preventDefault();
@@ -150,98 +240,6 @@ export default (props: Props) => {
           decompress(entry.path);
         },
       })}
-      onVisibleChange={v => {
-        if (v) {
-          onBalloonVisible();
-        }
-      }}
-      // visible={visible}
-      v2
-      delay={1000}
-      className="fp-te-db"
-      autoAdjust
-      align={'l'}
-      closable={false}
-      autoFocus={false}
-      onClick={e => {
-        e.stopPropagation();
-      }}
-    >
-      <div className="common-tip">
-        {t('Contents will be decompressed to the same directory as the compressed file.')}
-      </div>
-      <div className="password-guides">
-        {passwords.length > 0 && (
-          <div className={'default'}>
-
-            <Trans
-              i18nKey={'fp.te.db.defaultPassword'}
-              values={{
-                     password: passwords[0],
-                   }}
-            >
-              By default, we will use <Button type={'primary'} text>password</Button> as password.
-            </Trans>
-          </div>
-        )}
-        {passwords.length > 1 && (
-          <div className={'secondary'}>
-            <div className="tip">
-              {t('Alternatively, you can choose a password from the following candidates:')}
-            </div>
-            <div className="passwords">
-              {passwords.slice(1).map((password: string) => (
-                <Button
-                  key={password}
-                  size={'small'}
-                  type={'normal'}
-                  onClick={() => {
-                    decompress(entry.path, password);
-                  }}
-                >
-                  {password}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {renderTopNPasswords(PasswordSearchOrder.Latest)}
-        {renderTopNPasswords(PasswordSearchOrder.Frequency)}
-
-        <div className={'secondary'}>
-          <div className="tip">{t('Or you can use a custom password:')}</div>
-          <Input.Group addonAfter={(
-            <Button
-              type={'normal'}
-              size={'small'}
-              onClick={() => {
-                if (customPasswordRef.current) {
-                  decompress(entry.path, customPasswordRef.current);
-                } else {
-                  Message.error(i18n.t('Password can not be empty'));
-                }
-              }}
-            >
-              {t('Use custom password to decompress')}
-            </Button>
-          )}
-          >
-            <Input
-              size={'small'}
-              placeholder={i18n.t('Password')}
-              style={{ width: '100%' }}
-              hasClear
-              onKeyDown={e => {
-                e.stopPropagation();
-              }}
-              onChange={(v) => {
-                customPasswordRef.current = v;
-              }}
-            />
-          </Input.Group>
-        </div>
-      </div>
-    </Balloon>
+    </Tooltip>
   );
 };

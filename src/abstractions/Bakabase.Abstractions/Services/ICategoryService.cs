@@ -51,6 +51,7 @@ public interface ICategoryService
     Task<BaseResponse> ConfigureComponents(int id, CategoryComponentConfigureInputModel model);
     //
     Task<BaseResponse> Patch(int id, CategoryPatchInputModel model);
+    Task<BaseResponse> PutResourceDisplayNameTemplate(int id, string? template);
 
     Task<BaseResponse> Delete(int id);
     
