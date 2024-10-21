@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dialog, Icon, Message } from '@alifd/next';
+import { Message } from '@alifd/next';
 import { List } from 'react-virtualized';
 import { diff } from 'deep-diff';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
-import { EyeOutlined, FileOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { CloseCircleOutlined, EyeOutlined, FileOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import EditableFileName from './components/EditableFileName';
 import OperationButton from './components/OperationButton';
 import RightOperations from './components/RightOperations';
@@ -18,11 +18,21 @@ import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
 import MediaPlayer from '@/components/MediaPlayer';
 import BApi from '@/sdk/BApi';
 import './index.scss';
-import { Button, Chip, Spinner } from '@/components/bakaui';
+import { Button, Chip, Modal, Spinner } from '@/components/bakaui';
 import TailingOperations from './components/TailingOperations';
 import LeftIcon from './components/LeftIcon';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
-export type Capability = 'wrap' | 'extract' | 'move' | 'delete' | 'rename' | 'decompress' | 'delete-all-by-name' | 'group';
+export type Capability =
+  'wrap'
+  | 'extract'
+  | 'move'
+  | 'delete'
+  | 'rename'
+  | 'decompress'
+  | 'delete-all-by-name'
+  | 'group'
+  | 'play';
 
 export type TreeEntryProps = {
   entry: Entry;
@@ -34,17 +44,11 @@ export type TreeEntryProps = {
   onChildrenLoaded?: (e: Entry) => void;
   filter?: IEntryFilter;
   expandable?: boolean;
-
   capabilities?: Capability[];
 
-  onDeleteKeyDown?: (event, en: Entry) => void;
-  onAllSelected?: (en) => void;
   style?: any;
   onContextMenu?: (e, entry: Entry) => void;
   onLoadFail?: (rsp, entry: Entry) => void;
-  refreshInterval?: number | undefined;
-  basicMode?: boolean;
-  onClick?: (e: Entry) => any;
 };
 
 // todo: split this component into base components: simple, advance
@@ -56,19 +60,16 @@ const TreeEntry = (props: TreeEntryProps) => {
     switchSelective,
     onDoubleClick,
     capabilities,
-    onDeleteKeyDown,
     onChildrenLoaded,
-    onAllSelected = (en) => {
-    },
     onContextMenu = (e, entry) => {
     },
     onLoadFail = (rsp, entry) => {
     },
-    basicMode = false,
     expandable = true,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
+  const { createPortal } = useBakabaseContext();
 
   const [entry, setEntry] = useState(propsEntry);
   const entryRef = useRef(entry);
@@ -262,25 +263,17 @@ const TreeEntry = (props: TreeEntryProps) => {
       <MemoTreeEntry
         onContextMenu={onContextMenu}
         filter={filter}
-        onDeleteKeyDown={onDeleteKeyDown}
         capabilities={capabilities}
         onDoubleClick={onDoubleClick}
         key={e.id}
         entry={e}
-        onAllSelected={onAllSelected}
         switchSelective={switchSelective}
         style={s}
         onLoadFail={onLoadFail}
-        basicMode={basicMode}
         expandable={expandable}
       />
     );
   }, [entryRef.current.children, entryRef.current.expanded, onDoubleClick]);
-
-// todo
-  useEffect(() => {
-    // console.log(123221312444, 'entries changes');
-  }, [entryRef.current.children]);
 
   const domCallback = useCallback((node?: HTMLElement | null) => {
     domRef.current = node!;
@@ -309,36 +302,6 @@ const TreeEntry = (props: TreeEntryProps) => {
       }
 
       forceUpdate();
-    }
-  }, []);
-
-  const onKeyDown = useCallback((e) => {
-    log('Key down', e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey, e);
-    switch (e.key) {
-      // case 'Delete':
-      //   if (onDeleteKeyDown) {
-      //     onDeleteKeyDown(e, entryRef.current);
-      //     e.stopPropagation();
-      //   }
-      //   break;
-      case 'a':
-        if (e.ctrlKey && !basicMode) {
-          for (const e1 of entryRef.current.filteredChildren) {
-            e1.select(true);
-          }
-          onAllSelected(entryRef.current.parent);
-          e.stopPropagation();
-        }
-        break;
-      case 'p': {
-        if (!basicMode) {
-          play(entryRef.current);
-          e.stopPropagation();
-        }
-        break;
-      }
-      default:
-        return;
     }
   }, []);
 
@@ -410,26 +373,24 @@ const TreeEntry = (props: TreeEntryProps) => {
     if (entryRef.current.task && entryRef.current.task.error) {
       const text = `${IwFsEntryTaskType[entryRef.current.task.type]}:${entryRef.current.task.error}`;
       return (
-        <Icon
-          type={'error'}
-          className={'task-error info'}
-          title={text}
+        <Button
+          size={'sm'}
+          variant={'light'}
+          isIconOnly
+          color={'danger'}
           onClick={() => {
-            Dialog.show({
-              v2: true,
-              width: 'auto',
-              footerActions: ['cancel'],
-              cancelProps: {
-                children: t('Close'),
-              },
-              closeMode: ['close', 'mask', 'esc'],
+            createPortal(Modal, {
+              defaultVisible: true,
+              size: 'xl',
               title: t('Error'),
-              content: (
+              children: (
                 <pre>{text}</pre>
               ),
             });
           }}
-        />
+        >
+          <CloseCircleOutlined className={'text-base'} />
+        </Button>
       );
     }
     return;
@@ -491,7 +452,7 @@ const TreeEntry = (props: TreeEntryProps) => {
                 className="progress"
               >
                 <div className={'bar'} style={{ width: `${entryRef.current.task.percentage}%` }} />
-                <Icon type={'loading'} size={'small'} />
+                <Spinner size="sm" />
                 &nbsp;
                 <div className="percentage">{entryRef.current.task.name}&nbsp;{entryRef.current.task.percentage}%</div>
               </div>
@@ -500,7 +461,7 @@ const TreeEntry = (props: TreeEntryProps) => {
                   color={'warning'}
                   size={'small'}
                   onClick={() => {
-                    Dialog.confirm({
+                    createPortal(Modal, {
                       title: t('Sure to stop?'),
                       onOk: () => new Promise((resolve, reject) => {
                         BApi.backgroundTask.stopBackgroundTask(entryRef.current!.task!.backgroundTaskId)
@@ -536,7 +497,6 @@ const TreeEntry = (props: TreeEntryProps) => {
               currentEntryDomRef.current = r;
               // log('dom ref retrived', r);
             }}
-            onKeyDown={onKeyDown}
             tabIndex={0}
             className={`entry-main entry-keydown-listener ${entryRef.current?.selected ? 'selected' : ''} ${entryRef.current.expanded ? 'expanded' : ''}`}
             onClick={() => {
@@ -572,9 +532,11 @@ const TreeEntry = (props: TreeEntryProps) => {
                 disabled={entry.isDrive || !capabilities?.includes('rename') || entry.status == EntryStatus.Error}
               />
               <div className="flex items-center">
-                {actions.includes(IwFsEntryAction.Play) && !basicMode && (
+                {actions.includes(IwFsEntryAction.Play) && capabilities?.includes('play') && (
                   <OperationButton
-                    onClick={(e) => { play(entryRef.current); }}
+                    onClick={(e) => {
+                      play(entryRef.current);
+                    }}
                     isIconOnly
                     color={'primary'}
                   >
@@ -590,12 +552,10 @@ const TreeEntry = (props: TreeEntryProps) => {
               </div>
             </div>
             <div className="right">
-              {!basicMode && (
-                <RightOperations
-                  entry={entryRef.current}
-                  capabilities={capabilities}
-                />
-              )}
+              <RightOperations
+                entry={entryRef.current}
+                capabilities={capabilities}
+              />
             </div>
           </div>
         </div>

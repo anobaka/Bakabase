@@ -25,6 +25,7 @@ import WrapModal from '@/pages/FileProcessor/RootTreeEntry/components/WrapModal'
 import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
 import store from '@/store';
 import { UiTheme } from '@/sdk/constants';
+import ExtractModal from '@/pages/FileProcessor/RootTreeEntry/components/ExtractModal';
 
 
 type Props = {
@@ -211,6 +212,18 @@ export default ({
                     });
                   },
                 });
+              }
+              break;
+            }
+            case 'd': {
+              if (selectedEntriesRef.current.length > 0) {
+                BApi.file.decompressFiles({ paths: selectedEntriesRef.current.map(e => e.path) });
+              }
+              break;
+            }
+            case 'e': {
+              if (selectedEntriesRef.current.length > 0) {
+                createPortal(ExtractModal, { entries: selectedEntriesRef.current });
               }
               break;
             }
