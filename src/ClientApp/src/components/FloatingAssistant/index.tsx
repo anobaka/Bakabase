@@ -9,6 +9,7 @@ import { BackgroundTaskStatus } from '@/sdk/constants';
 import { ClearInactiveBackgroundTasks, RemoveBackgroundTask, StartResourceNfoGenerationTask, StopBackgroundTask, SyncMediaLibrary } from '@/sdk/apis';
 import { usePrevious } from 'react-use';
 import { useTranslation } from 'react-i18next';
+import { CloseCircleOutlined } from '@ant-design/icons';
 const { Popup } = Overlay;
 
 const AssistantStatus = {
@@ -262,8 +263,8 @@ export default () => {
           </svg>
         </div>
         {/* Failed */}
-        <div className={'failed'}>
-          <CustomIcon type={'warning-circle'} size={'large'} />
+        <div className={'failed flex items-center justify-center w-[48px] h-[48px] '}>
+          <CloseCircleOutlined className={'text-4xl'} />
         </div>
       </div>
       <Overlay

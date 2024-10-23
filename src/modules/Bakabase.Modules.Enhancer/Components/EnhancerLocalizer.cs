@@ -44,14 +44,14 @@ internal class EnhancerLocalizer(IStringLocalizer<EnhancerResource> localizer) :
         return localizer[nameof(Enhancer_Target_Options_PropertyTypeIsNotSupported), $"{(int) type}:{type}"];
     }
 
-    public string Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(PropertyPool type)
+    public string Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(PropertyPool type, string target)
     {
-        return localizer[nameof(Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot), $"{(int)type}:{type}"];
+        return localizer[nameof(Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot), $"{(int) type}:{type}", target];
     }
 
-    public string Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot(int id)
+    public string Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot(int id, string target)
     {
-        return localizer[nameof(Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot), id];
+        return localizer[nameof(Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot), id, target];
     }
 
     public string Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties(int id)

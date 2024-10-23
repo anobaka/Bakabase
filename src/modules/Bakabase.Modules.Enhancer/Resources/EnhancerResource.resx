@@ -246,13 +246,13 @@
     <value>You must first configure the correct capture groups on the configuration page, and then enter the group names here, otherwise the enhancement will not take effect.</value>
   </data>
   <data name="Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot" xml:space="preserve">
-    <value>Property id is null but property type [{0}] is not null</value>
+    <value>Property id is null but property type [{0}] is not null, please reset property for target [{1}]</value>
   </data>
   <data name="Enhancer_Target_Options_PropertyTypeIsNotSupported" xml:space="preserve">
     <value>Property type [{0}] is not supported</value>
   </data>
   <data name="Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot" xml:space="preserve">
-    <value>Property type is null but property id [{0}] is not null</value>
+    <value>Property type is null but property id [{0}] is not null, please reset property for target [{1}]</value>
   </data>
   <data name="Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties" xml:space="preserve">
     <value>Property id [{0}] is not found in reserved properties</value>

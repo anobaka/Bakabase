@@ -1,13 +1,10 @@
-import { data } from 'autoprefixer';
 import type { IEntryFilter } from '@/core/models/FileExplorer/Entry';
 import { Entry } from '@/core/models/FileExplorer/Entry';
 import BusinessConstants from '@/components/BusinessConstants';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
 import { buildLogger, splitPathIntoSegments } from '@/components/utils';
-import { IwFsEntryChangeType } from '@/sdk/constants';
-import filter from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter';
-import segments from '@/components/PathSegmentsConfiguration/Segments';
+import { IwFsEntryChangeType, IwFsType } from '@/sdk/constants';
 
 const log = buildLogger('TreeEntry');
 
@@ -22,9 +19,9 @@ class RenderingQueue {
 
   push(path: string, type: RenderType) {
     // console.log('pushing', path, RenderType[type]);
-    const last = this._queue[this._queue.length - 1];
-    if (last?.path == path) {
-      last.type |= type;
+    const item = this._queue.find(x => x.path == path);
+    if (item?.path == path) {
+      item.type |= type;
       // console.log(this._queue);
       return;
     }
@@ -49,7 +46,7 @@ class RenderingQueue {
 class RootEntry extends Entry {
   public nodeMap: Record<string, Entry> = {};
   public filter: IEntryFilter = {};
-  private _fsWatcher: NodeJS.Timer | undefined;
+  private _fsWatcher: ReturnType<typeof setInterval> | undefined;
   private _processingFsEvents: boolean = false;
   private _resizeObserver: ResizeObserver | undefined;
 
@@ -169,6 +166,7 @@ class RootEntry extends Entry {
           let actualRenderingTimes = 0;
 
           const rq = renderingQueue.deQueueAll();
+          log('RenderingQueue', rq);
           for (let i = 0; i < rq.length; i++) {
             const {
               path,
@@ -223,6 +221,7 @@ class RootEntry extends Entry {
     super({ path });
     this.root = this;
     this.expanded = true;
+    this.type = IwFsType.Directory;
     this.nodeMap[this.path] = this;
   }
 }

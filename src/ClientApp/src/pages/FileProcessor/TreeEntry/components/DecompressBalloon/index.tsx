@@ -216,7 +216,7 @@ export default (props: Props) => {
           onBalloonVisible();
         }
       }}
-      delay={1000}
+      delay={500}
       className="fp-te-db"
       placement={'left'}
       autoFocus={false}

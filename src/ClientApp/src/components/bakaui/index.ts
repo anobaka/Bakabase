@@ -41,6 +41,7 @@ import Pagination from './components/Pagination';
 import Rating from './components/Rating';
 import Image from './components/Image';
 import { RadioGroup, Radio } from './components/Radio';
+import Kbd from './components/Kbd';
 
 export {
   Button,
@@ -103,4 +104,5 @@ export {
   Rating,
   Image,
   TableRowProps,
+  Kbd,
 };

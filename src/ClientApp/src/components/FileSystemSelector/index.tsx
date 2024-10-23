@@ -2,18 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowUpOutlined, FolderAddOutlined, FolderOutlined } from '@ant-design/icons';
 import { useUpdate, useUpdateEffect } from 'react-use';
-import TreeEntry from '@/pages/FileProcessor/TreeEntry';
-import type { IEntryRef } from '@/core/models/FileExplorer/Entry';
 import type { Entry } from '@/core/models/FileExplorer/Entry';
-import RootEntry from '@/core/models/FileExplorer/RootEntry';
 import './index.scss';
 import BApi from '@/sdk/BApi';
 import { buildLogger, splitPathIntoSegments, standardizePath } from '@/components/utils';
-import BusinessConstants from '@/components/BusinessConstants';
 import { IwFsType } from '@/sdk/constants';
-import CustomIcon from '@/components/CustomIcon';
-import DeleteDialog from '@/pages/FileProcessor/DeleteDialog';
 import { Button, Chip, Input } from '@/components/bakaui';
+import type { RootTreeEntryRef } from '@/pages/FileProcessor/RootTreeEntry';
 import RootTreeEntry from '@/pages/FileProcessor/RootTreeEntry';
 
 export interface IFileSystemSelectorProps {
@@ -42,6 +37,7 @@ export default (props: IFileSystemSelectorProps) => {
 
   const [selected, setSelected] = useState<Entry>();
   const [currentDirPath, setCurrentDirPath] = useState<string>();
+  const rootRef = useRef<RootTreeEntryRef | null>(null);
 
   useEffect(() => {
   }, []);
@@ -73,8 +69,16 @@ export default (props: IFileSystemSelectorProps) => {
     return true;
   };
 
+  const trySelectRootOrClearSelection = () => {
+    if (rootRef.current?.root && filter(rootRef.current.root, 'select')) {
+      setSelected(rootRef.current.root);
+    } else {
+      setSelected(undefined);
+    }
+  };
+
   return (
-    <div className={'flex flex-col gap-2 grow max-h-full'} >
+    <div className={'flex flex-col gap-2 grow max-h-full'}>
       <RootTreeEntry
         rootPath={startPath}
         defaultSelectedPath={defaultSelectedPath}
@@ -84,13 +88,24 @@ export default (props: IFileSystemSelectorProps) => {
         selectable={'single'}
         onSelected={es => {
           const e = es[0];
-          if (e && filter(e, 'select')) {
-            setSelected(e);
+          log(rootRef.current);
+
+          if (e) {
+            if (filter(e, 'select')) {
+              setSelected(e);
+            } else {
+              setSelected(undefined);
+            }
           } else {
-            setSelected(undefined);
+            trySelectRootOrClearSelection();
           }
         }}
-        onRootPathChange={p => setCurrentDirPath(p)}
+        ref={rootRef}
+        onInitialized={() => {
+          if (rootRef.current?.root) {
+            trySelectRootOrClearSelection();
+          }
+        }}
       />
       {
         selected && (
@@ -116,11 +131,11 @@ export default (props: IFileSystemSelectorProps) => {
       }
       <div className="flex items-center justify-between mb-2">
         <Button
-            // size={'small'}
+          // size={'small'}
           isDisabled={!currentDirPath}
           onClick={() => {
-              BApi.file.createDirectory({ parent: currentDirPath });
-            }}
+            BApi.file.createDirectory({ parent: currentDirPath });
+          }}
         >
           <FolderAddOutlined className={'text-base'} />
           {t('New Folder')}

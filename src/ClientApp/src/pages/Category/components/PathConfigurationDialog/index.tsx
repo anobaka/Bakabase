@@ -216,13 +216,8 @@ export default ({
                 // size={'sm'}
                 color={'primary'}
                 onClick={() => {
-                  let startPath: string | undefined;
-                  if (pc?.path) {
-                    const segments = splitPathIntoSegments(pc.path);
-                    startPath = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
-                  }
                   createPortal(FileSystemSelectorDialog, {
-                    startPath: startPath,
+                    startPath: pc.path ?? undefined,
                     targetType: 'folder',
                     onSelected: e => {
                       save({ path: e.path });

@@ -204,17 +204,20 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 {
                     if (targetOptions.PropertyId.HasValue || targetOptions.PropertyPool.HasValue)
                     {
+                        var name = targetDescriptor.IsDynamic
+                            ? enhancement.DynamicTarget ?? string.Empty
+                            : targetDescriptor.Name;
+
                         if (!targetOptions.PropertyId.HasValue)
                         {
                             throw new Exception(
                                 _enhancerLocalizer.Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(
-                                    targetOptions.PropertyPool!.Value));
+                                    targetOptions.PropertyPool!.Value, name));
                         }
 
                         throw new Exception(
-                            _enhancerLocalizer
-                                .Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot(targetOptions.PropertyId
-                                    .Value));
+                            _enhancerLocalizer.Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot(
+                                targetOptions.PropertyId.Value, name));
                     }
                     else
                     {

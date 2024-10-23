@@ -622,6 +622,7 @@ export default (({
             <Button
               variant={'light'}
               size={'sm'}
+              color={category.resourceDisplayNameTemplate == undefined ? 'primary' : 'default'}
               onClick={() => {
                 createPortal(DisplayNameTemplateEditorDialog, {
                   categoryId: category.id,

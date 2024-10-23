@@ -75,13 +75,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
     resource,
     onRemove = (id) => {
     },
-    showBiggerCoverOnHover = true,
     onTagClick = (propertyId: number, value: TagValue) => {
     },
     queue,
     ct = new AbortController().signal,
     disableCache = false,
-    disableMediaPreviewer = false,
     biggerCoverPlacement,
     style: propStyle = {},
     selected = false,
@@ -266,8 +264,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
           <ResourceCover
             coverFit={uiOptions.resource?.coverFit}
             biggerCoverPlacement={biggerCoverPlacement}
-            disableCache={disableCache}
-            disableMediaPreviewer={disableMediaPreviewer}
+            disableCache={uiOptions?.resource?.disableCache}
+            disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
             onClick={() => {
               createPortal(ResourceDetailDialog, {
                 id: resource.id,
@@ -281,7 +279,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             resourceId={resource.id}
             coverPaths={resource.coverPaths}
             ref={coverRef}
-            showBiggerOnHover={showBiggerCoverOnHover}
+            showBiggerOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
           />
         </div>
         {playable && (

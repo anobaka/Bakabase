@@ -65,11 +65,11 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/text',
         icon: 'FieldStringOutlined',
       },
-      {
-        name: 'Enhancement Records',
-        path: '/enhancementrecord',
-        icon: 'ThunderboltOutlined',
-      },
+      // {
+      //   name: 'Enhancement Records',
+      //   path: '/enhancementrecord',
+      //   icon: 'ThunderboltOutlined',
+      // },
     ],
   },
   {
@@ -91,6 +91,11 @@ const asideMenuConfig: IMenuItem[] = [
         name: 'Bulk modification',
         path: '/bulkmodification',
         icon: 'EditOutlined',
+      },
+      {
+        name: 'File Mover',
+        path: '/filemover',
+        icon: 'FileSyncOutlined',
       },
       {
         name: 'Other tools',

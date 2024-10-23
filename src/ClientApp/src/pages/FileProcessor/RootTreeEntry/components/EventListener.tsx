@@ -11,7 +11,7 @@ type Props = {
   onSelectionModeChange: (mode: SelectionMode) => void;
   onClick?: () => void;
   onDelete?: () => any;
-  onKeyDown?: (key: string) => any;
+  onKeyDown?: (key: string, evt: KeyboardEvent) => any;
 };
 
 export default (props: Props) => {
@@ -54,7 +54,7 @@ export default (props: Props) => {
         propsRef.current.onDelete?.();
         break;
       default:
-        propsRef.current.onKeyDown?.(e.key);
+        propsRef.current.onKeyDown?.(e.key, e);
         break;
     }
   }, []);

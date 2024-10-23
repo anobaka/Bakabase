@@ -118,7 +118,7 @@ const TreeEntry = (props: TreeEntryProps) => {
           entryRef.current.selected = selected;
           if (selected) {
             log('Focus');
-            currentEntryDomRef.current.focus();
+            currentEntryDomRef.current?.focus();
           }
           forceUpdate();
         }
@@ -543,6 +543,7 @@ const TreeEntry = (props: TreeEntryProps) => {
                     <EyeOutlined className={'text-base'} />
                   </OperationButton>
                 )}
+                &nbsp;
                 <TailingOperations
                   entry={entry}
                   capabilities={capabilities}

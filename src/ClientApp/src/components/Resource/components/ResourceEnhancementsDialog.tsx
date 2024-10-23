@@ -78,8 +78,8 @@ function ResourceEnhancementsDialog({
         dt.enhancements?.forEach(e => {
           e.value = convertFromApiValue(e.value, e.valueType!);
           const v = e.customPropertyValue;
-          const p = v?.property;
-          if (p) {
+          const p = e.property;
+          if (p && v) {
             v.value = convertFromApiValue(v.value, p.dbValueType!);
             v.bizValue = convertFromApiValue(v.bizValue, p.bizValueType!);
           }

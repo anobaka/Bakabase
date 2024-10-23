@@ -246,13 +246,13 @@
     <value>您必须先在配置页面配置正确的捕获组，然后在这里填入组名，否则增强将不会生效</value>
   </data>
   <data name="Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot" xml:space="preserve">
-    <value>属性id为空，但属性类型[{0}]不为空</value>
+    <value>属性id为空，但属性类型[{0}]不为空，请重新为增强目标[{1}]绑定属性</value>
   </data>
   <data name="Enhancer_Target_Options_PropertyTypeIsNotSupported" xml:space="preserve">
     <value>暂不支持属性类型[{0}]</value>
   </data>
   <data name="Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot" xml:space="preserve">
-    <value>属性类型为空，但属性id[{0}]不为空</value>
+    <value>属性类型为空，但属性id[{0}]不为空，请重新为增强目标[{1}]绑定属性</value>
   </data>
   <data name="Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties" xml:space="preserve">
     <value>在预置属性中未能找到属性id为[{0}]的属性</value>

@@ -43,8 +43,7 @@ class BApi extends Api<any> {
                   title: `${params.path}: [${typedRsp.code}]`,
                   content: (
                     <pre>
-                      {/* @ts-ignore */}
-                      {i18n.t(typedRsp.message)}
+                      {typedRsp.message}
                     </pre>
                   ),
                   closeable: true,

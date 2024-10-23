@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Balloon, Button, Dialog, Dropdown, Icon, Input, Menu, Message, Switch, Table, TimePicker2 } from '@alifd/next';
+import { Balloon, Dialog, Dropdown, Icon, Input, Menu, Message, Table, TimePicker2 } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import { applyPatches } from 'immer';
-import { OpenFileOrDirectory } from '@/sdk/apis';
+import { DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import FileSelector from '@/components/FileSelector';
 import './index.scss';
-import MediaLibraryPathSelector from '@/components/MediaLibraryPathSelector';
 import CustomIcon from '@/components/CustomIcon';
 import AnimatedArrow from '@/components/AnimatedArrow';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
 import ClickableIcon from '@/components/ClickableIcon';
+import { Button, Switch, Tooltip } from '@/components/bakaui';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
 
 interface IValue {
   targets: {
@@ -29,6 +30,8 @@ class Value implements IValue {
 
 export default () => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
+
   const [preferredTarget, setPreferredTarget] = useState();
   const [preferredSource, setPreferredSource] = useState();
 
@@ -182,16 +185,20 @@ export default () => {
   const renderCommonOperations = (path) => {
     return (
       <>
-        <ClickableIcon
-          type={'folder-open'}
-          colorType={'normal'}
-          onClick={() => {
-            OpenFileOrDirectory({
-              path,
-            })
-              .invoke();
-          }}
-        />
+        <Button
+          size={'sm'}
+          variant={'light'}
+          isIconOnly
+        >
+          <FolderOpenOutlined
+            onClick={() => {
+              BApi.tool.openFileOrDirectory({
+                path,
+              });
+            }}
+            className={'text-base'}
+          />
+        </Button>
       </>
     );
   };
@@ -210,12 +217,12 @@ export default () => {
             if (i == quickEditModeData!.length - 1) {
               return (
                 <Button
-                  type={'primary'}
+                  color={'primary'}
+                  size={'sm'}
                   onClick={() => {
                     quickEditModeData?.splice(i, 0, {});
                     setQuickEditModeData([...quickEditModeData!]);
                   }}
-                  size={'small'}
                 >{t('Add')}</Button>
               );
             }
@@ -229,14 +236,20 @@ export default () => {
                     setQuickEditModeData([...quickEditModeData!]);
                   }}
                 />
-                <ClickableIcon
-                  type={'delete'}
-                  colorType={'danger'}
-                  onClick={() => {
-                    quickEditModeData!.splice(i, 1);
-                    setQuickEditModeData([...quickEditModeData!]);
-                  }}
-                />
+                <Button
+                  size={'sm'}
+                  variant={'light'}
+                  isIconOnly
+                  color={'danger'}
+                >
+                  <DeleteOutlined
+                    onClick={() => {
+                      quickEditModeData!.splice(i, 1);
+                      setQuickEditModeData([...quickEditModeData!]);
+                    }}
+                    className={'text-base'}
+                  />
+                </Button>
               </div>
             );
           }}
@@ -263,7 +276,10 @@ export default () => {
                 size={'small'}
                 placeholder={t('One path per line')}
                 width={'100%'}
-                autoHeight={{ minRows: 2, maxRows: 100 }}
+                autoHeight={{
+                  minRows: 2,
+                  maxRows: 100,
+                }}
                 value={s?.join('\n')}
                 onChange={v => {
                   quickEditModeData![i].sources = v.split('\n');
@@ -322,14 +338,13 @@ export default () => {
                   >
                     <Menu>
                       <Menu.Item onClick={() => {
-                        MediaLibraryPathSelector.show({
-                          onSelect: (newPath) => {
+                        createPortal(MediaLibraryPathSelectorV2, {
+                          onSelect: (id, path) => {
                             if (!target) {
-                              addTarget(newPath);
+                              addTarget(path);
                             } else {
-                              updateTarget(target, newPath);
+                              updateTarget(target, path);
                             }
-                            return;
                           },
                         });
                       }}
@@ -340,12 +355,14 @@ export default () => {
                   </Dropdown>
                 </div>
                 {target && (
-                  <div className={'right'}>
-                    <Balloon.Tooltip
-                      trigger={(
-                        <ClickableIcon
-                          type={'plus-circle'}
-                          colorType={'normal'}
+                  <div className={'flex items-center gap-1'}>
+                    <Tooltip content={t('Add source path')} >
+                      <Button
+                        size={'sm'}
+                        variant={'light'}
+                        isIconOnly
+                      >
+                        <PlusCircleOutlined
                           onClick={() => {
                             BApi.gui.openFolderSelector()
                               .then(a => {
@@ -354,32 +371,34 @@ export default () => {
                                 }
                               });
                           }}
+                          className={'text-base'}
                         />
-                      )}
-                      triggerType={'hover'}
-                      align={'t'}
-                      v2
-                    >
-                      {t('Add source path')}
-                    </Balloon.Tooltip>
+                      </Button>
+                    </Tooltip>
                     {renderCommonOperations(target)}
-                    <ClickableIcon
-                      colorType={'danger'}
-                      type={'delete'}
-                      onClick={() => {
-                        Dialog.confirm({
-                          title: t('Sure to remove?'),
-                          v2: true,
-                          onOk: () => new Promise(((resolve, reject) => {
-                            save({
-                              targets: targets.filter((a) => a.path != target),
-                            }, () => {
-                              resolve(undefined);
-                            });
-                          })),
-                        });
-                      }}
-                    />
+                    <Button
+                      size={'sm'}
+                      variant={'light'}
+                      isIconOnly
+                      color={'danger'}
+                    >
+                      <DeleteOutlined
+                        onClick={() => {
+                          Dialog.confirm({
+                            title: t('Sure to remove?'),
+                            v2: true,
+                            onOk: () => new Promise(((resolve, reject) => {
+                              save({
+                                targets: targets.filter((a) => a.path != target),
+                              }, () => {
+                                resolve(undefined);
+                              });
+                            })),
+                          });
+                        }}
+                        className={'text-base'}
+                      />
+                    </Button>
                   </div>
                 )}
               </div>
@@ -455,28 +474,34 @@ export default () => {
                     )}
                   </div>
                   {s && (
-                    <div className={'right'}>
+                    <div className={'flex items-center gap-1'}>
                       {renderCommonOperations(s)}
-                      <ClickableIcon
-                        type={'delete'}
-                        colorType={'danger'}
-                        onClick={() => {
-                          Dialog.confirm({
-                            title: t('Sure to remove?'),
-                            v2: true,
-                            onOk: () => new Promise(((resolve, reject) => {
-                              const { target: targetPath } = r;
-                              const target = targets.find((t) => t.path == targetPath)!;
-                              target.sources = target.sources?.filter((a) => a != s);
-                              save({
-                                targets,
-                              }, () => {
-                                resolve(undefined);
-                              });
-                            })),
-                          });
-                        }}
-                      />
+                      <Button
+                        size={'sm'}
+                        variant={'light'}
+                        isIconOnly
+                        color={'danger'}
+                      >
+                        <DeleteOutlined
+                          onClick={() => {
+                            Dialog.confirm({
+                              title: t('Sure to remove?'),
+                              v2: true,
+                              onOk: () => new Promise(((resolve, reject) => {
+                                const { target: targetPath } = r;
+                                const target = targets.find((t) => t.path == targetPath)!;
+                                target.sources = target.sources?.filter((a) => a != s);
+                                save({
+                                  targets,
+                                }, () => {
+                                  resolve(undefined);
+                                });
+                              })),
+                            });
+                          }}
+                          className={'text-base'}
+                        />
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -498,8 +523,9 @@ export default () => {
               {t(enabled ? 'Enabled' : 'Disabled')}
             </div>
             <Switch
-              checked={enabled}
-              onChange={(c) => {
+              size={'sm'}
+              isSelected={enabled}
+              onValueChange={(c) => {
                 save({
                   enabled: c,
                 });
@@ -507,18 +533,15 @@ export default () => {
             />
           </div>
           <div className="delay">
-            <Balloon.Tooltip
-              trigger={(
-                <div className={'label'}>
-                  {t('Delay')}
-                  <CustomIcon type={'question-circle'} />
-                </div>
-              )}
-              triggerType={'hover'}
-              align={'t'}
+            <Tooltip
+              placement={'bottom'}
+              content={t('Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.')}
             >
-              {t('Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.')}
-            </Balloon.Tooltip>
+              <div className={'flex items-center gap-1'}>
+                {t('Delay')}
+                <QuestionCircleOutlined className={'text-base'} />
+              </div>
+            </Tooltip>
             <TimePicker2
               value={value?.delay}
               onChange={(c) => {
@@ -532,7 +555,8 @@ export default () => {
         <div className="right">
           {quickEditModeData && (
             <Button
-              type={'primary'}
+              color={'primary'}
+              size={'sm'}
               onClick={() => {
                 const newTargets = quickEditModeData?.filter(d => !!d.path);
                 for (const nt of newTargets) {
@@ -552,7 +576,7 @@ export default () => {
             </Button>
           )}
           <Button
-            type={'normal'}
+            size={'sm'}
             onClick={() => {
               if (quickEditModeData) {
                 setQuickEditModeData(undefined);

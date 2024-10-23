@@ -1444,5 +1444,6 @@
   "Copy {{count}} names": "复制 {{count}} 个名称",
   "Copy {{count}} paths": "复制 {{count}} 个路径",
   "Removing all filesystem entries in {{workingDirectory}} that have the same names as the {{count}} selected filesystem entries": "在{{workingDirectory}}下寻找并删除所有和已选的{{count}}个文件(夹)同名的文件(夹)",
-  "Calculating changes...": "正在计算变更。。。"
+  "Calculating changes...": "正在计算变更。。。",
+  "File Mover": "文件移动器"
 }

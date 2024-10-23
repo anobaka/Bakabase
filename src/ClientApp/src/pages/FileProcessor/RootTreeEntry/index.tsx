@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import {
   ArrowLeftOutlined,
@@ -8,7 +8,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
+import { ControlledMenu, useMenuState } from '@szhsin/react-menu';
 import EventListener, { SelectionMode } from './components/EventListener';
 import ContextMenu from './components/ContextMenu';
 import type { TreeEntryProps } from '@/pages/FileProcessor/TreeEntry';
@@ -32,23 +32,25 @@ type Props = {
   rootPath?: string;
   onSelected?: (entries: Entry[]) => any;
   selectable: 'disabled' | 'single' | 'multiple';
-  onRootPathChange?: (path?: string) => void;
   defaultSelectedPath?: string;
+  onInitialized?: () => any;
 } & Pick<TreeEntryProps, 'capabilities' | 'expandable' | 'filter' | 'onDoubleClick'>;
 
 const log = buildLogger('RootTreeEntry');
 
-export default ({
-                  rootPath,
-                  onDoubleClick,
-                  filter,
-                  onSelected,
-                  selectable,
-                  onRootPathChange,
-                  defaultSelectedPath,
-                  expandable = false,
-                  capabilities,
-                }: Props) => {
+export type RootTreeEntryRef = { root?: Entry };
+
+const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
+                                                             rootPath,
+                                                             onDoubleClick,
+                                                             filter,
+                                                             onSelected,
+                                                             selectable,
+                                                             onInitialized,
+                                                             defaultSelectedPath,
+                                                             expandable = false,
+                                                             capabilities,
+                                                           }, ref) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const { createPortal } = useBakabaseContext();
@@ -108,9 +110,6 @@ export default ({
       }
     }
     shiftSelectionStartRef.current = undefined;
-    if (finalPath != path) {
-      onRootPathChange?.(finalPath);
-    }
 
     if (addToHistory && rootRef.current) {
       const history = historyRootPathsRef.current;
@@ -141,9 +140,18 @@ export default ({
     historyRootPathsRef.current = historyRootPaths;
   }, [historyRootPaths]);
 
+  useImperativeHandle(ref, (): RootTreeEntryRef => {
+    return {
+      root: rootRef.current,
+    };
+  });
+
   if (!root) {
     return null;
   }
+
+  const filteredChildrenCount = root?.filteredChildren.length ?? 0;
+  const childrenCount = root?.childrenCount ?? 0;
 
   return (
     <div
@@ -192,7 +200,7 @@ export default ({
             });
           }
         }}
-        onKeyDown={key => {
+        onKeyDown={(key, evt) => {
           switch (key) {
             case 'w': {
               if (selectedEntriesRef.current.length > 0) {
@@ -226,6 +234,34 @@ export default ({
                 createPortal(ExtractModal, { entries: selectedEntriesRef.current });
               }
               break;
+            }
+            case 'a': {
+              if (evt.ctrlKey) {
+                let parent: Entry | undefined;
+                for (const se of selectedEntriesRef.current) {
+                  if (se.parent) {
+                    if (!parent || parent.path.startsWith(se.parent.path)) {
+                      parent = se.parent;
+                    }
+                  }
+                }
+                parent ??= rootRef.current;
+
+                log('Select all filtered children of entry', parent);
+
+                if (parent) {
+                  const newSelectedEntries: Entry[] = [];
+                  for (const c of parent.filteredChildren) {
+                    newSelectedEntries.push(c);
+                    c.select(true);
+                  }
+                  const others = selectedEntriesRef.current.filter(s => !newSelectedEntries.includes(s));
+                  for (const o of others) {
+                    o.select(false);
+                  }
+                  setSelectedEntries(newSelectedEntries);
+                }
+              }
             }
           }
         }}
@@ -284,7 +320,7 @@ export default ({
               size={'sm'}
               variant={'light'}
             >
-              {selectedEntries.length} / {root?.childrenCount}
+              {selectedEntries.length} / {filteredChildrenCount == childrenCount ? childrenCount : `${filteredChildrenCount} / ${childrenCount}`}
             </Chip>
           }
           size={'sm'}
@@ -422,6 +458,7 @@ export default ({
                 }
               }
             }
+            onInitialized?.();
             forceUpdate();
           }}
           expandable={expandable}
@@ -438,4 +475,6 @@ export default ({
       </div>
     </div>
   );
-};
+});
+
+export default RootTreeEntry;

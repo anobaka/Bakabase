@@ -115,6 +115,7 @@ namespace Bakabase.Modules.Enhancer.Services
             if (targetOptions != null)
             {
                 targetOptions.PropertyId = null;
+                targetOptions.PropertyPool = null;
             }
 
             await orm.Update(data.ToDbModel());

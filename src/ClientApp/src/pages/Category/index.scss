@@ -241,7 +241,7 @@
         color: #ababab;
         display: grid;
         gap: 5px;
-        grid-template-columns: minmax(0, 6fr) minmax(0, 4fr) minmax(0, 4fr) minmax(0, 4fr);
+        grid-template-columns: minmax(0, 6fr) minmax(0, 4fr) minmax(0, 4fr);
       }
     }
   }
@@ -307,7 +307,7 @@
     }
 
     display: grid;
-    grid-template-columns: minmax(0, 6fr) minmax(0, 4fr) minmax(0, 4fr) minmax(0, 4fr);
+    grid-template-columns: minmax(0, 6fr) minmax(0, 4fr) minmax(0, 4fr);
     gap: 5px;
     align-items: center;
     justify-content: space-between;

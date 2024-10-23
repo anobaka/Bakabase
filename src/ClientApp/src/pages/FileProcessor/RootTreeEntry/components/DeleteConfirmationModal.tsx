@@ -17,13 +17,6 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
 
-  const deleteBtnRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    log('Delete button', deleteBtnRef.current);
-    deleteBtnRef.current?.focus();
-  }, []);
-
   return (
     <Modal
       defaultVisible
@@ -36,7 +29,6 @@ export default ({
           children: `${t('Delete')}(Enter)`,
           color: 'danger',
           autoFocus: true,
-          ref: deleteBtnRef,
         },
       }}
       onOk={async () => await BApi.file.removeFiles({ paths })}

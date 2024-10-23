@@ -17,6 +17,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
+using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
@@ -55,6 +56,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
 using Image = SixLabors.ImageSharp.Image;
 
@@ -215,13 +219,39 @@ namespace Bakabase.Service.Controllers
                 return NotFound();
             }
 
-            if (cover.Data != null)
+            var img = cover.Data != null
+                ? await Image.LoadAsync<Rgba32>(new MemoryStream(cover.Data))
+                : await Image.LoadAsync<Rgba32>(cover.Path);
+
+            var maxSize = 2048m;
+            string mimeType;
+            byte[] data;
+            if (img.Width > maxSize || img.Height > maxSize)
             {
-                var format = await Image.DetectFormatAsync(new MemoryStream(cover.Data!));
-                return File(cover.Data!, format.DefaultMimeType);
+                var scale = Math.Min(maxSize / img.Width, maxSize / img.Height);
+                var newSize = new Size((int)(scale * img.Width), (int)(scale * img.Height));
+                img.Mutate(x => x.Resize(newSize));
+                var ms = new MemoryStream();
+                await img.SaveAsJpegAsync(ms);
+                data = ms.ToArray();
+                mimeType = MimeTypes.GetMimeType(".jpg");
+            }
+            else
+            {
+                if (cover.Data != null)
+                {
+                    var format = await Image.DetectFormatAsync(new MemoryStream(cover.Data!));
+                    data = cover.Data;
+                    mimeType = format.DefaultMimeType;
+                }
+                else
+                {
+                    data = await System.IO.File.ReadAllBytesAsync(cover.Path);
+                    mimeType = MimeTypes.GetMimeType(cover.Path);
+                }   
             }
 
-            return File(System.IO.File.OpenRead(cover.Path), MimeTypes.GetMimeType(cover.Path));
+            return File(data, mimeType);
         }
 
         [HttpGet("{id}/playable-files")]
@@ -277,13 +307,19 @@ namespace Bakabase.Service.Controllers
                         if (resource.IsFile)
                         {
                             await FileUtils.MoveAsync(resource.Path, targetPath, false,
-                                async p => { await resourceTaskManager.Update(id, t => t.Percentage = p); },
+                                async p =>
+                                {
+                                    await resourceTaskManager.Update(id, t => t.Percentage = Math.Min(99, p));
+                                },
                                 bt.Cts.Token);
                         }
                         else
                         {
                             await DirectoryUtils.MoveAsync(resource.Path, targetPath, false,
-                                async p => { await resourceTaskManager.Update(id, t => t.Percentage = p); },
+                                async p =>
+                                {
+                                    await resourceTaskManager.Update(id, t => t.Percentage = Math.Min(99, p));
+                                },
                                 bt.Cts.Token);
                         }
 
@@ -299,6 +335,8 @@ namespace Bakabase.Service.Controllers
                         //     await Task.Delay(100, bt.Cts.Token);
                         //     await resourceTaskManager.Update(id, t => t.Percentage = p);
                         // }
+
+                        await resourceTaskManager.Update(id, t => t.Percentage = 100);
 
                         await resourceTaskManager.Clear(id);
                     }

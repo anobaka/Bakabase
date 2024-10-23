@@ -217,7 +217,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
             return (
               <div key={url}>
                 <div
-                  key={url}
                   style={{
                     width: containerRef.current?.clientWidth,
                     height: containerRef.current?.clientHeight,
@@ -229,12 +228,13 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                     key={url}
                     src={url}
                     onError={e => {
-                      console.log(e);
+                      log(e);
                     }}
                     onLoad={(e) => {
                       setLoaded(true);
                       // forceUpdate();
                       const img = e.target as HTMLImageElement;
+                      log('loaded', e, img);
                       if (img) {
                         if (!maxCoverRawSizeRef.current) {
                           maxCoverRawSizeRef.current = {
@@ -245,7 +245,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                           maxCoverRawSizeRef.current.w = Math.max(maxCoverRawSizeRef.current.w, img.naturalWidth);
                           maxCoverRawSizeRef.current.h = Math.max(maxCoverRawSizeRef.current.h, img.naturalHeight);
                         }
-                        // log('loaded', e);
                       }
                     }}
                     loader={(
@@ -331,7 +330,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
             dots
           >
             {urls?.map(url => (
-              <div >
+              <div key={url}>
                 <div
                   style={{
                     maxWidth: tooltipWidth,

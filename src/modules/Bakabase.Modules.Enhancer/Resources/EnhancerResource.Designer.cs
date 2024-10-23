@@ -439,5 +439,50 @@ namespace Bakabase.Modules.Enhancer.Resources {
                 return ResourceManager.GetString("Enhancer_Regex_Target_CaptureGroups_Name", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Property id [{0}] is not found in custom properties.
+        /// </summary>
+        public static string Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties {
+            get {
+                return ResourceManager.GetString("Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Property id [{0}] is not found in reserved properties.
+        /// </summary>
+        public static string Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties {
+            get {
+                return ResourceManager.GetString("Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Property id is null but property type [{0}] is not null, please reset property for target [{1}].
+        /// </summary>
+        public static string Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot {
+            get {
+                return ResourceManager.GetString("Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Property type [{0}] is not supported.
+        /// </summary>
+        public static string Enhancer_Target_Options_PropertyTypeIsNotSupported {
+            get {
+                return ResourceManager.GetString("Enhancer_Target_Options_PropertyTypeIsNotSupported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Property type is null but property id [{0}] is not null, please reset property for target [{1}].
+        /// </summary>
+        public static string Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot {
+            get {
+                return ResourceManager.GetString("Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot", resourceCulture);
+            }
+        }
     }
 }

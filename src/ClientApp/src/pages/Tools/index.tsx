@@ -4,7 +4,7 @@ import './index.scss';
 import i18n from 'i18next';
 import JavLibrary from '@/pages/Tools/JavLibrary';
 import Title from '@/components/Title';
-import FileMover from '@/pages/Tools/FileMover';
+import FileMover from '@/pages/FileMover';
 
 const { Row, Col } = Grid;
 
@@ -192,9 +192,9 @@ export default () => {
         {/*     </div> */}
         {/*   </div> */}
         {/* </Tab.Item> */}
-        <Tab.Item title={i18n.t('File mover')} key={2}>
-          <FileMover />
-        </Tab.Item>
+        {/* <Tab.Item title={i18n.t('File mover')} key={2}> */}
+        {/*   <FileMover /> */}
+        {/* </Tab.Item> */}
         <Tab.Item title={i18n.t('JavLibrary')} key={3}>
           <JavLibrary />
         </Tab.Item>

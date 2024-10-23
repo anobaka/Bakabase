@@ -73,7 +73,7 @@ export default ({
                 );
               })}
               {(sampleItems.length > SampleCount || i > 0) && (
-                <FileSystemEntryChangeExampleItem type={'deleted'} indent={2} text={`${t('Other files in {{parent}}', { parent: e.name })}...`} isDirectory={false} />
+                <FileSystemEntryChangeExampleItem type={'added'} indent={1} text={`${t('Other files in {{parent}}', { parent: e.name })}...`} isDirectory={false} />
               )}
             </>
           );

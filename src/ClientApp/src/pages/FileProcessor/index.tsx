@@ -82,10 +82,14 @@ export default () => {
             <RootTreeEntry
               selectable={'multiple'}
               expandable
-              rootPath={'I:\\Test\\file processor'}
               capabilities={['decompress', 'wrap', 'move', 'extract', 'delete', 'rename', 'delete-all-by-name', 'group']}
-              // rootPath={cookieRootPath}
-              // onRootPathChange={setCookieRootPath}
+              rootPath={cookieRootPath ?? undefined}
+              onRootPathChange={v => {
+                if (v != undefined) {
+                  log('setting cookie');
+                  setCookieRootPath(v);
+                }
+              }}
             />
           </div>
         </div>

@@ -34,8 +34,8 @@ const components = {
       onClick={() => {
         FileSystemSelectorDialog.show({
           targetType: 'file',
-          startPath: 'D:\\FE Test\\input2 - Copy.jpg',
-          defaultSelectedPath: 'D:\\FE Test\\input2 - Copy.jpg',
+          startPath: 'I:\\Test\\updater\\AppData\\configs\\updater.json',
+          defaultSelectedPath: 'I:\\Test\\updater\\AppData\\configs\\updater.json',
         });
       }}
     >File Selector</Button>
@@ -45,7 +45,7 @@ const components = {
       onClick={() => {
         FileSystemSelectorDialog.show({
           targetType: 'folder',
-          startPath: 'D:\\FE Test\\extract-inner',
+          startPath: 'I:\\Test',
         });
       }}
     >Folder Selector</Button>

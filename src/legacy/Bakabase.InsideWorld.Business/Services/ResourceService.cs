@@ -180,7 +180,14 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (save)
             {
-                await _optionsManager.SaveAsync(a => a.LastSearchV2 = model.ToDbModel());
+                try
+                {
+                    await _optionsManager.SaveAsync(a => a.LastSearchV2 = model.ToDbModel());
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to save search criteria");
+                }
             }
 
             return internalSearchModel.BuildResponse(dtoList, resources.TotalCount);

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import DecompressBalloon from '../DecompressBalloon';
 import type { Entry } from '@/core/models/FileExplorer/Entry';
 import { IwFsEntryAction } from '@/core/models/FileExplorer/Entry';
-import { Button } from '@/components/bakaui';
+import { Button, Kbd } from '@/components/bakaui';
 import type { TreeEntryProps } from '@/pages/FileProcessor/TreeEntry';
 import WrapModal from '@/pages/FileProcessor/RootTreeEntry/components/WrapModal';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -39,7 +39,7 @@ export default ({
               variant={'ghost'}
             >
               <FileZipOutlined className={'text-sm'} />
-              {t('Decompress')}(D)
+              {t('Decompress')}<Kbd>d</Kbd>
             </Button>
           )}
         />
@@ -58,7 +58,7 @@ export default ({
           }}
         >
           <ApartmentOutlined className={'text-sm'} />
-          {t('Wrap')}(W)
+          {t('Wrap')}<Kbd>w</Kbd>
         </Button>
       )}
       {isMovable && (
@@ -78,7 +78,7 @@ export default ({
           }}
         >
           <SendOutlined className={'text-sm'} />
-          {t('Move')}(M)
+          {t('Move')}<Kbd>m</Kbd>
         </Button>
       )}
     </>
