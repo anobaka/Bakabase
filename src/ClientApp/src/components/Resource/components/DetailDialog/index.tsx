@@ -125,17 +125,15 @@ export default ({
               </div>
               <BasicInfo resource={resource} />
             </div>
-            <div className="overflow-auto">
-              <div className={'grow'}>
-                <Properties
-                  resource={resource}
-                  reload={loadResource}
-                  restrictedPropertyPool={PropertyPool.Custom}
-                  propertyClassNames={{
-                    name: 'justify-end',
-                  }}
-                />
-              </div>
+            <div className="overflow-auto grow">
+              <Properties
+                resource={resource}
+                reload={loadResource}
+                restrictedPropertyPool={PropertyPool.Custom}
+                propertyClassNames={{
+                  name: 'justify-end',
+                }}
+              />
             </div>
             <Button
               size={'sm'}
