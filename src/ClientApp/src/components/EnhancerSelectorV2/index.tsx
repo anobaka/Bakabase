@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DeleteOutlined, MoreOutlined } from '@ant-design/icons';
+import { DeleteOutlined, FireOutlined, MoreOutlined } from '@ant-design/icons';
 import type { CategoryEnhancerFullOptions } from './components/CategoryEnhancerOptionsDialog/models';
 import { Button, Checkbox, Chip, Divider, Link, Listbox, ListboxItem, Modal, Popover, Tooltip } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
@@ -179,6 +179,10 @@ const EnhancerSelector = ({
                             title = t('Delete all enhancement records of this enhancer');
                             callApi = async () => await BApi.enhancer.deleteEnhancementsByEnhancer(e.id);
                             break;
+                          case 'ApplyContext':
+                            title = t('Re-apply all enhancement data of this enhancer for category {{categoryName}}', { categoryName: category?.name });
+                            callApi = async () => await BApi.category.applyEnhancementContextDataByEnhancerAndCategory(category!.id, e.id);
+                            break;
                           default:
                             return;
                         }
@@ -205,6 +209,14 @@ const EnhancerSelector = ({
                         startContent={<DeleteOutlined className={'text-base'} />}
                       >
                         {t('Delete all enhancement records of this enhancer')}
+                      </ListboxItem>
+                      <ListboxItem
+                        key={'ApplyContext'}
+                        color={'warning'}
+                        className={'text-warning'}
+                        startContent={<FireOutlined className={'text-base'} />}
+                      >
+                        {t('Re-apply all enhancement data of this enhancer for category {{categoryName}}', { categoryName: category?.name })}
                       </ListboxItem>
                     </Listbox>
                   </Popover>

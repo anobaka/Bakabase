@@ -60,6 +60,8 @@ export enum OsPlatform {Unknown = 0, Windows = 1, Osx = 2, Linux = 3, FreeBsd = 
 export const osPlatforms = Object.keys(OsPlatform).filter(k => typeof OsPlatform[k] === 'number').map(t => ({label: t, value: OsPlatform[t]}));
 export enum CategoryResourceDisplayNameSegmentType {StaticText = 1, Property = 2, LeftWrapper = 3, RightWrapper = 4}
 export const categoryResourceDisplayNameSegmentTypes = Object.keys(CategoryResourceDisplayNameSegmentType).filter(k => typeof CategoryResourceDisplayNameSegmentType[k] === 'number').map(t => ({label: t, value: CategoryResourceDisplayNameSegmentType[t]}));
+export enum EnhancementRecordStatus {ContextCreated = 1, ContextApplied = 2}
+export const enhancementRecordStatuses = Object.keys(EnhancementRecordStatus).filter(k => typeof EnhancementRecordStatus[k] === 'number').map(t => ({label: t, value: EnhancementRecordStatus[t]}));
 export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
 export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
 export enum InternalProperty {RootPath = 1, ParentResource = 2, Resource = 3, Filename = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21}

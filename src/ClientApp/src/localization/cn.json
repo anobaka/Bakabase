@@ -1445,5 +1445,13 @@
   "Copy {{count}} paths": "复制 {{count}} 个路径",
   "Removing all filesystem entries in {{workingDirectory}} that have the same names as the {{count}} selected filesystem entries": "在{{workingDirectory}}下寻找并删除所有和已选的{{count}}个文件(夹)同名的文件(夹)",
   "Calculating changes...": "正在计算变更。。。",
-  "File Mover": "文件移动器"
+  "File Mover": "文件移动器",
+  "The data has been created, indicating that the enhancer has completed the data retrieval process, which is typically done by accessing third-party sites or executing specific internal logic. You can check the status of the data retrieval in the table below. Frequent repeated data retrieval attempts may result in access denial from third-party services.": "数据被创建说明增强器已经完成了获取数据的步骤，获取数据通常是通过访问第三方站点或执行程序内部的特殊逻辑完成。您可以通过下方表格检查数据的获取情况，频繁重复获取数据可能会导致您被第三方服务拒绝访问。",
+  "The application of data indicates that the retrieved data has been successfully converted into attribute values. This step is conducted entirely within the program, without involving any third-party data exchange.": "数据被应用表示已经成功将已获取的数据转换为属性值，该步骤尽在程序内部进行，不涉及第三方数据交换。",
+  "Retrieve data then apply data. To reduce the possibility of access denial from third-party services, it is recommended to apply data only after all data has been retrieved. Configuring enhancer options in category won't affect the data retrieval process, it only affects the data applying process.": "先获取数据再应用数据。为了减少第三方服务拒绝访问的可能性，建议在数据获取完毕后仅进行应用数据操作。在分类中配置增强器不会影响数据获取过程，只会影响应用数据的过程。",
+  "Data created at": "数据创建于",
+  "Data applied at": "数据应用于",
+  "Apply data": "应用数据",
+  "Apply the data to property values of the resource.": "将数据应用到资源的属性值中。",
+  "Re-apply all enhancement data of this enhancer for category {{categoryName}}": "重新应用分类 {{categoryName}} 下所有当前增强器的增强数据"
 }

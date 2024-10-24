@@ -24,6 +24,16 @@ public abstract class AbstractEnhancementRecordService<TDbContext>(
         await orm.Add(record.ToDbModel());
     }
 
+    public async Task Update(EnhancementRecord record)
+    {
+        await orm.Update(record.ToDbModel());
+    }
+
+    public async Task Update(IEnumerable<EnhancementRecord> records)
+    {
+        await orm.UpdateRange(records.Select(r => r.ToDbModel()));
+    }
+
     public async Task DeleteAll(Expression<Func<Bakabase.Abstractions.Models.Db.EnhancementRecord, bool>>? exp)
     {
         await orm.RemoveAll(exp);

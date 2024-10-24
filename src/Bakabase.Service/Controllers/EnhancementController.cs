@@ -57,10 +57,13 @@ namespace Bakabase.Service.Controllers
             {
                 var ed = enhancerDescriptors[o.EnhancerId];
                 var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
+                var record = enhancementRecords.GetValueOrDefault(o.EnhancerId);
                 var re = new ResourceEnhancements
                 {
                     Enhancer = ed,
-                    EnhancedAt = enhancementRecords.GetValueOrDefault(o.EnhancerId)?.EnhancedAt,
+                    ContextCreatedAt = record?.ContextCreatedAt,
+                    ContextAppliedAt = record?.ContextAppliedAt,
+                    Status = record?.Status ?? default,
                     Targets = ed.Targets.Where(x => !x.IsDynamic).Select(t =>
                     {
                         var targetId = Convert.ToInt32(t.Id);
@@ -100,11 +103,27 @@ namespace Bakabase.Service.Controllers
         }
 
         [HttpPost("~/resource/{resourceId:int}/enhancer/{enhancerId:int}/enhancement")]
-        [SwaggerOperation(OperationId = "CreateEnhancementForResourceByEnhancer")]
-        public async Task<BaseResponse> CreateEnhancementForResourceByEnhancer(int resourceId, int enhancerId)
+        [SwaggerOperation(OperationId = "EnhanceResourceByEnhancer")]
+        public async Task<BaseResponse> EnhanceResourceByEnhancer(int resourceId, int enhancerId)
         {
             await DeleteResourceEnhancementRecords(resourceId, enhancerId);
             await enhancerService.EnhanceResource(resourceId, [enhancerId], CancellationToken.None);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("~/resource/{resourceId:int}/enhancer/{enhancerId:int}/enhancement/apply")]
+        [SwaggerOperation(OperationId = "ApplyEnhancementContextDataForResourceByEnhancer")]
+        public async Task<BaseResponse> ApplyEnhancementContextDataForResourceByEnhancer(int resourceId, int enhancerId)
+        {
+            await enhancerService.ReapplyEnhancementsByResources([resourceId], [enhancerId], CancellationToken.None);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("~/category/{categoryId:int}/enhancer/{enhancerId:int}/enhancement/apply")]
+        [SwaggerOperation(OperationId = "ApplyEnhancementContextDataByEnhancerAndCategory")]
+        public async Task<BaseResponse> ApplyEnhancementContextDataByEnhancerAndCategory(int categoryId, int enhancerId)
+        {
+            await enhancerService.ReapplyEnhancementsByCategory(categoryId, enhancerId, CancellationToken.None);
             return BaseResponseBuilder.Ok;
         }
 

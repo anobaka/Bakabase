@@ -3853,14 +3853,14 @@ export const DeleteResourceEnhancementURL = function(parameters = {}) {
 }
 /**
  * 
- * request: CreateEnhancementForResourceByEnhancer
- * url: CreateEnhancementForResourceByEnhancerURL
- * method: CreateEnhancementForResourceByEnhancer_TYPE
- * raw_url: CreateEnhancementForResourceByEnhancer_RAW_URL
+ * request: EnhanceResourceByEnhancer
+ * url: EnhanceResourceByEnhancerURL
+ * method: EnhanceResourceByEnhancer_TYPE
+ * raw_url: EnhanceResourceByEnhancer_RAW_URL
  * @param resourceId - 
  * @param enhancerId - 
  */
-export const CreateEnhancementForResourceByEnhancer = function(parameters = {}) {
+export const EnhanceResourceByEnhancer = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/resource/{resourceId}/enhancer/{enhancerId}/enhancement'
@@ -3882,17 +3882,119 @@ export const CreateEnhancementForResourceByEnhancer = function(parameters = {}) 
   }
   return request('post', domain + path, body, queryParameters, form, config)
 }
-export const CreateEnhancementForResourceByEnhancer_RAW_URL = function() {
+export const EnhanceResourceByEnhancer_RAW_URL = function() {
   return '/resource/{resourceId}/enhancer/{enhancerId}/enhancement'
 }
-export const CreateEnhancementForResourceByEnhancer_TYPE = function() {
+export const EnhanceResourceByEnhancer_TYPE = function() {
   return 'post'
 }
-export const CreateEnhancementForResourceByEnhancerURL = function(parameters = {}) {
+export const EnhanceResourceByEnhancerURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/{resourceId}/enhancer/{enhancerId}/enhancement'
   path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: ApplyEnhancementContextDataForResourceByEnhancer
+ * url: ApplyEnhancementContextDataForResourceByEnhancerURL
+ * method: ApplyEnhancementContextDataForResourceByEnhancer_TYPE
+ * raw_url: ApplyEnhancementContextDataForResourceByEnhancer_RAW_URL
+ * @param resourceId - 
+ * @param enhancerId - 
+ */
+export const ApplyEnhancementContextDataForResourceByEnhancer = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/{resourceId}/enhancer/{enhancerId}/enhancement/apply'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  if (parameters['resourceId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: resourceId'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const ApplyEnhancementContextDataForResourceByEnhancer_RAW_URL = function() {
+  return '/resource/{resourceId}/enhancer/{enhancerId}/enhancement/apply'
+}
+export const ApplyEnhancementContextDataForResourceByEnhancer_TYPE = function() {
+  return 'post'
+}
+export const ApplyEnhancementContextDataForResourceByEnhancerURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/{resourceId}/enhancer/{enhancerId}/enhancement/apply'
+  path = path.replace('{resourceId}', `${parameters['resourceId']}`)
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: ApplyEnhancementContextDataByEnhancerAndCategory
+ * url: ApplyEnhancementContextDataByEnhancerAndCategoryURL
+ * method: ApplyEnhancementContextDataByEnhancerAndCategory_TYPE
+ * raw_url: ApplyEnhancementContextDataByEnhancerAndCategory_RAW_URL
+ * @param categoryId - 
+ * @param enhancerId - 
+ */
+export const ApplyEnhancementContextDataByEnhancerAndCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{categoryId}/enhancer/{enhancerId}/enhancement/apply'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  if (parameters['categoryId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: categoryId'))
+  }
+  path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
+  if (parameters['enhancerId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: enhancerId'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const ApplyEnhancementContextDataByEnhancerAndCategory_RAW_URL = function() {
+  return '/category/{categoryId}/enhancer/{enhancerId}/enhancement/apply'
+}
+export const ApplyEnhancementContextDataByEnhancerAndCategory_TYPE = function() {
+  return 'post'
+}
+export const ApplyEnhancementContextDataByEnhancerAndCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{categoryId}/enhancer/{enhancerId}/enhancement/apply'
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
   path = path.replace('{enhancerId}', `${parameters['enhancerId']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {

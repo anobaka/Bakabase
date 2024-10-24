@@ -75,6 +75,12 @@ export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
 }
 
 /**
+ * [1: ContextCreated, 2: ContextApplied]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsEnhancementRecordStatus = 1 | 2;
+
+/**
  * [1: NotAcceptTerms, 2: NeedRestart]
  * @format int32
  */
@@ -1749,7 +1755,11 @@ export interface BakabaseServiceModelsViewPropertyViewModel {
 export interface BakabaseServiceModelsViewResourceEnhancements {
   enhancer: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor;
   /** @format date-time */
-  enhancedAt?: string | null;
+  contextCreatedAt?: string | null;
+  /** @format date-time */
+  contextAppliedAt?: string | null;
+  /** [1: ContextCreated, 2: ContextApplied] */
+  status: BakabaseAbstractionsModelsDomainConstantsEnhancementRecordStatus;
   targets: BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement[];
   dynamicTargets: BakabaseServiceModelsViewResourceEnhancementsDynamicTargetEnhancements[];
 }
@@ -4235,6 +4245,25 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
+     * @name ApplyEnhancementContextDataByEnhancerAndCategory
+     * @request POST:/category/{categoryId}/enhancer/{enhancerId}/enhancement/apply
+     */
+    applyEnhancementContextDataByEnhancerAndCategory: (
+      categoryId: number,
+      enhancerId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${categoryId}/enhancer/${enhancerId}/enhancement/apply`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
      * @name DeleteEnhancementsByCategory
      * @request DELETE:/category/{categoryId}/enhancement
      */
@@ -4896,12 +4925,31 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
-     * @name CreateEnhancementForResourceByEnhancer
+     * @name EnhanceResourceByEnhancer
      * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement
      */
-    createEnhancementForResourceByEnhancer: (resourceId: number, enhancerId: number, params: RequestParams = {}) =>
+    enhanceResourceByEnhancer: (resourceId: number, enhancerId: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name ApplyEnhancementContextDataForResourceByEnhancer
+     * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement/apply
+     */
+    applyEnhancementContextDataForResourceByEnhancer: (
+      resourceId: number,
+      enhancerId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement/apply`,
         method: "POST",
         format: "json",
         ...params,

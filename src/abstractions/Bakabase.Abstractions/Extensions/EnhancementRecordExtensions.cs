@@ -10,7 +10,9 @@ public static class EnhancementRecordExtensions
             Id = record.Id,
             ResourceId = record.ResourceId,
             EnhancerId = record.EnhancerId,
-            EnhancedAt = record.EnhancedAt
+            ContextAppliedAt = record.ContextAppliedAt,
+            ContextCreatedAt = record.ContextCreatedAt,
+            Status = record.Status
         };
     }
 
@@ -22,7 +24,9 @@ public static class EnhancementRecordExtensions
             Id = record.Id,
             ResourceId = record.ResourceId,
             EnhancerId = record.EnhancerId,
-            EnhancedAt = record.EnhancedAt
+            ContextAppliedAt = record.ContextAppliedAt,
+            ContextCreatedAt = record.ContextCreatedAt,
+            Status = record.Status
         };
     }
 }

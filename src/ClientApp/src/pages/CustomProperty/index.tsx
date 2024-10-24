@@ -11,7 +11,19 @@ import {
 import {
   CustomPropertyAdditionalItem,
 } from '@/sdk/constants';
-import { Button, Chip, Input, Modal, Table, TableColumn, TableRow, TableCell, TableHeader, TableBody } from '@/components/bakaui';
+import {
+  Button,
+  Chip,
+  Input,
+  Modal,
+  Table,
+  TableColumn,
+  TableRow,
+  TableCell,
+  TableHeader,
+  TableBody,
+  Divider,
+} from '@/components/bakaui';
 import Property from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -116,6 +128,8 @@ export default () => {
                   );
                 })}
               </div>
+              <div />
+              <Divider orientation={'horizontal'} />
             </>
           );
         })}

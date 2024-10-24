@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import BApi from '@/sdk/BApi';
 import { createPortalOfComponent } from '@/components/utils';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import {
   Button,
+  Chip,
   Modal,
   Snippet,
   Tab,
@@ -15,9 +17,10 @@ import {
   TableHeader,
   TableRow,
   Tabs,
+  Tooltip,
 } from '@/components/bakaui';
 import type { Enhancement } from '@/components/Enhancer/models';
-import { EnhancementAdditionalItem, ReservedProperty, PropertyPool } from '@/sdk/constants';
+import { EnhancementAdditionalItem, EnhancementRecordStatus, PropertyPool, ReservedProperty } from '@/sdk/constants';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
@@ -29,7 +32,9 @@ interface Props extends DestroyableProps {
 
 type ResourceEnhancements = {
   enhancer: EnhancerDescriptor;
-  enhancedAt: string;
+  contextCreatedAt?: string;
+  contextAppliedAt?: string;
+  status: EnhancementRecordStatus;
   targets: {
     target: number;
     targetName: string;
@@ -56,6 +61,7 @@ function ResourceEnhancementsDialog({
   });
   const { t } = useTranslation();
   const [enhancing, setEnhancing] = useState(false);
+  const [applyingContext, setApplyingContext] = useState(false);
 
   useEffect(() => {
     loadEnhancements();
@@ -179,28 +185,93 @@ function ResourceEnhancementsDialog({
             <Tab key={e.enhancer.id} title={e.enhancer.name}>
               <div className={'flex items-center justify-between'}>
                 <div className={'flex items-center gap-2'}>
-                  <div>{e.enhancedAt ? t('This enhancer enhanced this resource at {{enhancedAt}}.', { enhancedAt: e.enhancedAt }) : t('This enhancer has not enhance this resource yet.')}</div>
-                  <Button
-                    size={'sm'}
-                    variant={'light'}
-                    isLoading={enhancing}
-                    color={e.enhancedAt ? 'secondary' : 'primary'}
-                    onClick={() => {
-                      setEnhancing(true);
-                      BApi.resource.createEnhancementForResourceByEnhancer(resourceId, e.enhancer.id).then(() => {
-                        loadEnhancements();
-                        setEnhancing(false);
-                      });
-                    }}
+                  <div className={'flex items-center gap-2'}>
+                    <Chip
+                      // size={'sm'}
+                      radius={'sm'}
+                    >
+                      <div className={'flex items-center gap-1'}>
+                        {t('Data created at')}
+                        <Tooltip
+                          color={'secondary'}
+                          className={'max-w-[500px]'}
+                          placement={'top'}
+                          content={t('The data has been created, indicating that the enhancer has completed the data retrieval process, which is typically done by accessing third-party sites or executing specific internal logic. You can check the status of the data retrieval in the table below. Frequent repeated data retrieval attempts may result in access denial from third-party services.')}
+                        >
+                          <QuestionCircleOutlined className={'text-base'} />
+                        </Tooltip>
+                      </div>
+                    </Chip>
+                    {e.contextCreatedAt ?? t('None')}
+                  </div>
+                  <div className={'flex items-center gap-2'}>
+                    <Chip
+                      // size={'sm'}
+                      radius={'sm'}
+                    >
+                      <div className={'flex items-center gap-1'}>
+                        {t('Data applied at')}
+                        <Tooltip
+                          color={'secondary'}
+                          className={'max-w-[500px]'}
+                          placement={'top'}
+                          content={t('The application of data indicates that the retrieved data has been successfully converted into attribute values. This step is conducted entirely within the program, without involving any third-party data exchange.')}
+                        >
+                          <QuestionCircleOutlined className={'text-base'} />
+                        </Tooltip>
+                      </div>
+                    </Chip>
+                    {e.contextAppliedAt ?? t('None')}
+                  </div>
+                  <Tooltip
+                    content={t('Retrieve data then apply data. To reduce the possibility of access denial from third-party services, it is recommended to apply data only after all data has been retrieved. Configuring enhancer options in category won\'t affect the data retrieval process, it only affects the data applying process.')}
+                    color={'secondary'}
+                    className={'max-w-[500px]'}
                   >
-                    {t(e.enhancedAt ? 'Re-enhance now' : 'Enhance now')}
-                  </Button>
+                    <Button
+                      size={'sm'}
+                      variant={'light'}
+                      isLoading={enhancing}
+                      color={(e.status == EnhancementRecordStatus.ContextApplied || e.status == EnhancementRecordStatus.ContextCreated) ? 'warning' : 'primary'}
+                      onClick={() => {
+                        setEnhancing(true);
+                        BApi.resource.enhanceResourceByEnhancer(resourceId, e.enhancer.id).then(() => {
+                          loadEnhancements();
+                          setEnhancing(false);
+                        });
+                      }}
+                    >
+                      {t(e.status == EnhancementRecordStatus.ContextApplied ? 'Re-enhance now' : 'Enhance now')}
+                    </Button>
+                  </Tooltip>
+                  {(e.status == EnhancementRecordStatus.ContextApplied || e.status == EnhancementRecordStatus.ContextCreated) && (
+                    <Tooltip
+                      color={'secondary'}
+                      content={t('Apply the data to property values of the resource.')}
+                    >
+                      <Button
+                        size={'sm'}
+                        variant={'light'}
+                        isLoading={applyingContext}
+                        color={'primary'}
+                        onClick={() => {
+                          setApplyingContext(true);
+                          BApi.resource.applyEnhancementContextDataForResourceByEnhancer(resourceId, e.enhancer.id).then(() => {
+                            loadEnhancements();
+                            setApplyingContext(false);
+                          });
+                        }}
+                      >
+                        {t('Apply data')}
+                      </Button>
+                    </Tooltip>
+                  )}
                 </div>
                 <div className={'flex items-center gap-2'}>
                   <Button
                     size={'sm'}
                     variant={'light'}
-                    color={e.enhancedAt ? 'secondary' : 'primary'}
+                    color={'primary'}
                     onClick={() => {
                       CategoryEnhancerOptionsDialog.show({
                         categoryId: resource.categoryId,
