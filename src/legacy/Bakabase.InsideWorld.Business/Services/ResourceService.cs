@@ -248,7 +248,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         var propertyIds = filters.Where(x => x.PropertyPool == PropertyPool.Custom)
                             .Select(d => d.PropertyId).ToHashSet();
                         var cpValues =
-                            (await _customPropertyValueService.GetAll(x => propertyIds.Contains(x.Id),
+                            (await _customPropertyValueService.GetAll(x => propertyIds.Contains(x.PropertyId),
                                 CustomPropertyValueAdditionalItem.None, false)).GroupBy(d => d.PropertyId)
                             .ToDictionary(d => d.Key,
                                 d => d.GroupBy(x => x.ResourceId)
