@@ -1,5 +1,11 @@
-import { DeleteOutlined, DisconnectOutlined, EditOutlined, InfoCircleOutlined } from '@ant-design/icons';
-import { useEffect, useRef, useState } from 'react';
+import {
+  DeleteOutlined,
+  DisconnectOutlined,
+  EditOutlined,
+  InfoCircleOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
 import type { EnhancerTargetFullOptions } from '../../models';
@@ -7,16 +13,12 @@ import { defaultCategoryEnhancerTargetOptions } from '../../models';
 import type { EnhancerDescriptor, EnhancerTargetDescriptor } from '../../../../models';
 import PropertyTip from './PropertyTip';
 import TargetOptions from './TargetOptions';
-import { Button, Input, Tooltip } from '@/components/bakaui';
+import { Button, Chip, Input, Tooltip } from '@/components/bakaui';
 import PropertySelector from '@/components/PropertySelector';
 import BApi from '@/sdk/BApi';
 import { PropertyLabel } from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
-import {
-  PropertyPool,
-  SpecialTextType,
-  StandardValueType,
-} from '@/sdk/constants';
+import { PropertyPool, SpecialTextType, StandardValueType } from '@/sdk/constants';
 import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
 import { buildLogger } from '@/components/utils';
 
@@ -27,8 +29,8 @@ interface Props {
   options?: Partial<EnhancerTargetFullOptions>;
   otherDynamicTargetsInGroup?: string[];
   onDeleted?: () => any;
-  propertyMap?: {[key in PropertyPool]?: Record<number, IProperty>};
-  category: {name: string; id: number; customPropertyIds?: number[]};
+  propertyMap?: { [key in PropertyPool]?: Record<number, IProperty> };
+  category: { name: string; id: number; customPropertyIds?: number[] };
   onPropertyChanged?: () => any;
   onCategoryChanged?: () => any;
   enhancer: EnhancerDescriptor;
@@ -122,13 +124,20 @@ export default (props: Props) => {
     property = propertyMap?.[options.propertyPool]?.[options.propertyId];
   }
 
+  const noPropertyBound = !options.autoBindProperty && (!options.propertyId || !options.propertyPool);
+
   log(props, options, propsOptions, property);
 
   return (
-    <div className={'flex items-center gap-1'}>
+    <div className={`flex items-center gap-1 ${noPropertyBound ? 'opacity-60' : ''}`}>
       <div className={'w-5/12'}>
         <div className={'flex flex-col gap-2'}>
           <div className={'flex items-center gap-1'}>
+            {noPropertyBound && (
+              <Tooltip content={t('Target will not be applied because there is no property to store it.')}>
+                <DisconnectOutlined className={'text-base text-warning'} />
+              </Tooltip>
+            )}
             {(descriptor.isDynamic && !isDefaultTargetOfDynamic) ? editingDynamicTarget ? (
               <Input
                 size={'sm'}
@@ -150,7 +159,7 @@ export default (props: Props) => {
               />
             ) : (
               <Button
-                size={'sm'}
+                // size={'sm'}
                 variant={'light'}
                 // color={'success'}
                 onClick={() => {
@@ -163,7 +172,14 @@ export default (props: Props) => {
               </Button>
             ) : (
               <>
-                {targetLabel}
+                <Chip
+                  // size={'sm'}
+                  variant={'light'}
+                  // color={'success'}
+                >
+                  {targetLabel}
+                </Chip>
+                {/* {targetLabel} */}
                 {integratedSpecialTextType && (
                   <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
                 )}
@@ -186,12 +202,14 @@ export default (props: Props) => {
       </div>
       <div className={'w-1/4'}>
         {(isDefaultTargetOfDynamic) ? (
-          '/'
+          <Chip variant={'light'}>
+            /
+          </Chip>
         ) : (
           <div className={'flex items-center gap-1'}>
             <Button
               // size={'sm'}
-              disabled={options?.autoBindProperty}
+              isDisabled={options?.autoBindProperty}
               variant={'light'}
               color={property ? 'success' : 'primary'}
               onClick={() => {

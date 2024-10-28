@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import { ApiOutlined, QuestionCircleOutlined, ReloadOutlined, SyncOutlined } from '@ant-design/icons';
 import BApi from '@/sdk/BApi';
 import { createPortalOfComponent } from '@/components/utils';
 import type { DestroyableProps } from '@/components/bakaui/types';
@@ -188,6 +188,8 @@ function ResourceEnhancementsDialog({
                   <div className={'flex items-center gap-2'}>
                     <Chip
                       // size={'sm'}
+                      variant={'light'}
+                      color={'secondary'}
                       radius={'sm'}
                     >
                       <div className={'flex items-center gap-1'}>
@@ -207,6 +209,8 @@ function ResourceEnhancementsDialog({
                   <div className={'flex items-center gap-2'}>
                     <Chip
                       // size={'sm'}
+                      variant={'light'}
+                      color={'secondary'}
                       radius={'sm'}
                     >
                       <div className={'flex items-center gap-1'}>
@@ -241,6 +245,7 @@ function ResourceEnhancementsDialog({
                         });
                       }}
                     >
+                      <SyncOutlined className={'text-base'} />
                       {t(e.status == EnhancementRecordStatus.ContextApplied ? 'Re-enhance now' : 'Enhance now')}
                     </Button>
                   </Tooltip>
@@ -262,6 +267,7 @@ function ResourceEnhancementsDialog({
                           });
                         }}
                       >
+                        <ApiOutlined className={'text-base'} />
                         {t('Apply data')}
                       </Button>
                     </Tooltip>

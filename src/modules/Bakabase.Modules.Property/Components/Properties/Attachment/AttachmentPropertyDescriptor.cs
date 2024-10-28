@@ -14,8 +14,8 @@ public class AttachmentPropertyDescriptor : AbstractPropertyDescriptor<List<stri
 
         return operation switch
         {
-            SearchOperation.Contains => dbValue.Any(x => x.Contains(fv)),
-            SearchOperation.NotContains => dbValue.All(x => !x.Contains(fv)),
+            SearchOperation.Contains => dbValue.Any(x => x.Contains(fv, StringComparison.OrdinalIgnoreCase)),
+            SearchOperation.NotContains => dbValue.All(x => !x.Contains(fv, StringComparison.OrdinalIgnoreCase)),
             _ => true
         };
     }

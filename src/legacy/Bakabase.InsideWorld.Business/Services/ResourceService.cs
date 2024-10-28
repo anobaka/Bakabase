@@ -94,103 +94,30 @@ namespace Bakabase.InsideWorld.Business.Services
             Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
-            var data = await _orm.GetAll(selector);
+            var data = await _orm.GetAll(selector, false);
             var dtoList = await ToDomainModel(data.ToArray(), additionalItems);
             return dtoList;
         }
 
-        public async Task<SearchResponse<Resource>> Search(ResourceSearch model, bool save, bool asNoTracking)
+        public async Task<SearchResponse<Resource>> Search(ResourceSearch model, bool asNoTracking)
         {
             var allResources = await GetAll();
             var context = new ResourceSearchContext(allResources);
 
-            var allFilters = model.Group?.ExtractFilters();
-            var allCustomPropertyFilters = allFilters?.Where(f => f.PropertyPool == PropertyPool.Custom).ToList();
-            if (allCustomPropertyFilters?.Any() == true)
-            {
-                var customPropertyIds = allCustomPropertyFilters.Select(f => f.PropertyId).ToHashSet();
-                var customPropertyMap =
-                    (await _customPropertyService.GetByKeys(customPropertyIds)).ToDictionary(d => d.Id, d => d);
-                foreach (var f in allCustomPropertyFilters)
-                {
-                    f.Property = customPropertyMap.GetValueOrDefault(f.PropertyId)?.ToProperty();
-                }
-            }
-
-            var internalSearchModel = model.Copy();
-            internalSearchModel.Group = internalSearchModel.Group?.Optimize();
-
-            if (!string.IsNullOrEmpty(model.Keyword))
-            {
-                var newGroup = new ResourceSearchFilterGroup
-                {
-                    Combinator = SearchCombinator.Or, Filters =
-                    [
-                        new ResourceSearchFilter
-                        {
-                            DbValue = model.Keyword.SerializeAsStandardValue(StandardValueType.String),
-                            Operation = SearchOperation.Contains,
-                            PropertyPool = PropertyPool.Internal,
-                            PropertyId = (int) ResourceProperty.Filename
-                        }
-                    ]
-                };
-
-                var properties = await _customPropertyService.GetAll();
-                foreach (var p in properties)
-                {
-                    if (PropertyInternals.PropertySearchHandlerMap.TryGetValue(p.Type, out var pd))
-                    {
-                        var filter = pd.BuildSearchFilterByKeyword(p.ToProperty(), model.Keyword);
-                        if (filter != null)
-                        {
-                            newGroup.Filters.Add(filter);
-                        }
-                    }
-                }
-
-                if (internalSearchModel.Group == null)
-                {
-                    internalSearchModel.Group = newGroup;
-                }
-                else
-                {
-                    internalSearchModel.Group = new ResourceSearchFilterGroup
-                    {
-                        Combinator = SearchCombinator.And,
-                        Groups = [internalSearchModel.Group, newGroup]
-                    };
-                }
-            }
-
-            // var allFilters = internalSearchModel.Group?.ExtractFilters() ?? [];
-            // await _propertySearchService.PrepareProperties(allFilters);
-            await PreparePropertyDbValues(context, internalSearchModel.Group);
-            var resourceIds = SearchResourceIds(internalSearchModel.Group, context);
-            var ordersForSearch = internalSearchModel.Orders.BuildForSearch();
+            await PreparePropertyDbValues(context, model.Group);
+            var resourceIds = SearchResourceIds(model.Group, context);
+            var ordersForSearch = model.Orders.BuildForSearch();
 
             Func<Abstractions.Models.Db.Resource, bool>? exp = resourceIds == null
                 ? null
                 : r => resourceIds.Contains(r.Id);
 
-            var resources = await _orm.Search(exp, internalSearchModel.PageIndex, internalSearchModel.PageSize,
+            var resources = await _orm.Search(exp, model.PageIndex, model.PageSize,
                 ordersForSearch,
                 asNoTracking);
             var dtoList = await ToDomainModel(resources.Data!.ToArray(), ResourceAdditionalItem.All);
 
-            if (save)
-            {
-                try
-                {
-                    await _optionsManager.SaveAsync(a => a.LastSearchV2 = model.ToDbModel());
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to save search criteria");
-                }
-            }
-
-            return internalSearchModel.BuildResponse(dtoList, resources.TotalCount);
+            return model.BuildResponse(dtoList, resources.TotalCount);
         }
 
         private async Task PreparePropertyDbValues(ResourceSearchContext context, ResourceSearchFilterGroup? group)
@@ -281,29 +208,22 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (group.Filters?.Any() == true)
             {
-                foreach (var filter in group.Filters)
+                foreach (var filter in group.Filters.Where(f => f.IsValid()))
                 {
-                    var propertyType = filter.GetPropertyType();
-                    if (propertyType.HasValue)
+                    var propertyType = filter.Property.Type;
+                    var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(propertyType);
+                    if (psh != null)
                     {
-                        var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(propertyType.Value);
-                        if (psh != null)
+                        steps.Add(() =>
                         {
-                            steps.Add(() =>
+                            return context.ResourceIdCandidates.Where(id =>
                             {
-                                return context.ResourceIdCandidates.Where(id =>
-                                {
-                                    var values = context.PropertyValueMap?.GetValueOrDefault(filter.PropertyPool)
-                                        ?.GetValueOrDefault(filter.PropertyId)?.GetValueOrDefault(id);
-                                    if (values != null)
-                                    {
-                                        return values.Any(v => psh.IsMatch(v, filter.Operation, filter.DbValue));
-                                    }
-
-                                    return false;
-                                }).ToHashSet();
-                            });
-                        }
+                                var values = context.PropertyValueMap?.GetValueOrDefault(filter.PropertyPool)
+                                    ?.GetValueOrDefault(filter.PropertyId)?.GetValueOrDefault(id);
+                                return values?.Any(v => psh.IsMatch(v, filter.Operation, filter.DbValue)) ??
+                                       psh.IsMatch(null, filter.Operation, filter.DbValue);
+                            }).ToHashSet();
+                        });
                     }
                 }
             }

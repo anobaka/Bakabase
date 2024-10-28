@@ -15,7 +15,7 @@ namespace Bakabase.Abstractions.Components.Configuration
                 ".jpeg",
                 ".jpg",
                 ".png",
-                ".psd",
+                // ".psd",
                 ".tiff",
                 ".webp",
                 ".svg"
@@ -133,5 +133,7 @@ namespace Bakabase.Abstractions.Components.Configuration
 
         public const int MaxThumbnailWidth = 300;
         public const int MaxThumbnailHeight = 300;
+
+        public const int DefaultSearchPageSize = 100;
     }
 }

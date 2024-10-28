@@ -332,7 +332,7 @@ export default (({
                 <Chip
                   size={'sm'}
                   color={'success'}
-                  variant={'flat'}
+                  variant={'light'}
                 >{resourceCount}</Chip>
               </Tooltip>
             </>

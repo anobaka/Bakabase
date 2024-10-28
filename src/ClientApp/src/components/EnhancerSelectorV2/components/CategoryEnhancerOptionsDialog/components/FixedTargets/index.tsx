@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import TargetRow from '../TargetRow';
 import type { EnhancerFullOptions } from '../../models';
 import type { EnhancerDescriptor } from '../../../../models';
-import { Table, TableBody, TableColumn, TableHeader, TableRow } from '@/components/bakaui';
+import { Divider, Table, TableBody, TableColumn, TableHeader, TableRow } from '@/components/bakaui';
 import type { IProperty } from '@/components/Property/models';
 import type { PropertyPool } from '@/sdk/constants';
 
@@ -22,6 +22,9 @@ export default (props: Props) => {
     category,
     enhancer,
   } = props;
+
+  const fixedTargets = enhancer.targets.filter(t => !t.isDynamic);
+
   return (
     <>
       {/* NextUI doesn't support the wrap of TableRow, use div instead for now, waiting the updates of NextUI */}
@@ -37,21 +40,26 @@ export default (props: Props) => {
         <TableBody />
       </Table>
       <div className={'flex flex-col gap-y-2'}>
-        {enhancer.targets.filter(t => !t.isDynamic).map((target) => {
+        {fixedTargets.map((target, i) => {
           const targetOptions = options?.targetOptions?.find(x => x.target == target.id);
           const targetDescriptor = enhancer.targets.find(x => x.id == target.id)!;
           // console.log(target.name);
 
           return (
-            <TargetRow
-              key={`${target.id}-${targetOptions?.dynamicTarget}`}
-              category={category}
-              enhancer={enhancer}
-              target={target.id}
-              options={targetOptions}
-              propertyMap={propertyMap}
-              descriptor={targetDescriptor}
-            />
+            <>
+              <TargetRow
+                key={`${target.id}-${targetOptions?.dynamicTarget}`}
+                category={category}
+                enhancer={enhancer}
+                target={target.id}
+                options={targetOptions}
+                propertyMap={propertyMap}
+                descriptor={targetDescriptor}
+              />
+              {fixedTargets.length - 1 !== i && (
+                <Divider orientation={'horizontal'} />
+              )}
+            </>
           );
         })}
       </div>

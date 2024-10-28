@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
@@ -19,11 +20,18 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
         public bool HideChildren { get; set; }
         public PropertyValueScope[] PropertyValueScopePriority { get; set; } = [];
         public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; } = [];
+        public List<SavedSearch> SavedSearches { get; set; } = [];
 
         public record CoverOptionsModel
         {
             public CoverSaveLocation? SaveLocation { get; set; }
             public bool? Overwrite { get; set; }
+        }
+
+        public record SavedSearch
+        {
+            public ResourceSearchDbModel Search { get; set; } = null!;
+            public string Name { get; set; } = string.Empty;
         }
     }
 }

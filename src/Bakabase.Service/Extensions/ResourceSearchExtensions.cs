@@ -1,16 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Property.Models.Db;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
-using Microsoft.EntityFrameworkCore.Scaffolding;
+using Bootstrap.Extensions;
 
 namespace Bakabase.Service.Extensions;
 
@@ -24,7 +27,6 @@ public static class ResourceSearchExtensions
             Operation = model.Operation,
             PropertyId = model.PropertyId,
             PropertyPool = model.PropertyPool,
-            ValueType = model.ValueProperty!.Type.GetDbValueType()
         };
     }
 
@@ -45,88 +47,134 @@ public static class ResourceSearchExtensions
             Group = model.Group?.ToDbModel(),
             Keyword = model.Keyword,
             Orders = model.Orders,
-            PageIndex = model.PageIndex,
+            Page = model.Page,
             PageSize = model.PageSize
         };
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="filter"></param>
-    /// <returns>
-    /// <see cref="ResourceSearchFilter.Property"/> will not be populated.
-    /// </returns>
-    public static ResourceSearchFilter ToDomainModel(this ResourceSearchFilterInputModel filter)
+    private static bool IsValid(this ResourceSearchFilterInputModel filter)
     {
-        var valueType = filter.ValueProperty?.Type.GetDbValueType();
-        return new ResourceSearchFilter
-        {
-            DbValue = valueType.HasValue ? filter.DbValue?.DeserializeAsStandardValue(valueType.Value) : null,
-            Operation = filter.Operation,
-            PropertyId = filter.PropertyId,
-            PropertyPool = filter.PropertyPool,
-            Property = null
-        };
+        return filter is {PropertyId: not null, PropertyPool: not null, Operation: not null};
     }
 
-    public static ResourceSearchFilterGroup ToDomainModel(this ResourceSearchFilterGroupInputModel group)
+    private static ResourceSearchFilterGroup? ToDomainModel(this ResourceSearchFilterGroupInputModel group,
+        Dictionary<PropertyPool, Dictionary<int, Property>> propertyMap)
     {
-        return new ResourceSearchFilterGroup
+        var filters = group.Filters?.Select(f =>
         {
-            Combinator = group.Combinator,
-            Filters = group.Filters?.Select(x => x.ToDomainModel()).ToList(),
-            Groups = group.Groups?.Select(g => g.ToDomainModel()).ToList()
-        };
+            if (!f.IsValid())
+            {
+                return null;
+            }
+
+            var property = propertyMap.GetValueOrDefault(f.PropertyPool!.Value)
+                ?.GetValueOrDefault(f.PropertyId!.Value);
+            if (property == null)
+            {
+                return null;
+            }
+
+            return new ResourceSearchFilter
+            {
+                DbValue = f.DbValue?.DeserializeAsStandardValue(property.Type.GetDbValueType()),
+                Operation = f.Operation!.Value,
+                Property = property,
+                PropertyId = f.PropertyId!.Value,
+                PropertyPool = f.PropertyPool!.Value
+            };
+        }).OfType<ResourceSearchFilter>().ToList();
+
+        var groups = group.Groups?.Select(g => g.ToDomainModel(propertyMap)).OfType<ResourceSearchFilterGroup>()
+            .ToList();
+
+        if (filters?.Any() == true || groups?.Any() == true)
+        {
+            return new ResourceSearchFilterGroup {Combinator = group.Combinator, Filters = filters, Groups = groups};
+        }
+
+        return null;
     }
 
-    public static ResourceSearch ToDomainModel(this ResourceSearchInputModel model)
+    public static async Task<ResourceSearch> ToDomainModel(this ResourceSearchInputModel model,
+        IPropertyService propertyService)
     {
-        return new ResourceSearch
+        var validFilters = model.Group?.ExtractFilters().Where(f => f.IsValid()) ?? [];
+        var propertyPools =
+            validFilters.Aggregate<ResourceSearchFilterInputModel, PropertyPool>(default,
+                (current, f) => current | f.PropertyPool!.Value);
+        if (model.Keyword.IsNotEmpty())
         {
-            Group = model.Group?.ToDomainModel(),
-            Keyword = model.Keyword,
+            propertyPools |= PropertyPool.Custom | PropertyPool.Internal;
+        }
+
+        var propertyMap = (await propertyService.GetProperties(propertyPools)).GroupBy(d => d.Pool)
+            .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
+
+        var domainModel = new ResourceSearch
+        {
+            Group = model.Group?.ToDomainModel(propertyMap),
             Orders = model.Orders,
-            PageIndex = model.PageIndex,
-            PageSize = model.PageSize,
+            PageIndex = model.Page,
+            PageSize = model.PageSize
         };
-    }
 
-    public static ResourceSearchViewModel ToViewModel(this ResourceSearch model,
-        IPropertyLocalizer? propertyLocalizer = null)
-    {
-        return new ResourceSearchViewModel
+        if (!string.IsNullOrEmpty(model.Keyword))
         {
-            Keyword = model.Keyword,
-            Orders = model.Orders,
-            PageIndex = model.PageIndex,
-            PageSize = model.PageSize,
-            Group = model.Group?.ToViewModel(propertyLocalizer)
-        };
+            var newGroup = new ResourceSearchFilterGroup
+            {
+                Combinator = SearchCombinator.Or,
+                Filters =
+                [
+                    new ResourceSearchFilter
+                    {
+                        DbValue = model.Keyword.SerializeAsStandardValue(StandardValueType.String),
+                        Operation = SearchOperation.Contains,
+                        PropertyPool = PropertyPool.Internal,
+                        PropertyId = (int) ResourceProperty.Filename,
+                        Property = propertyMap[PropertyPool.Internal][(int) ResourceProperty.Filename]
+                    }
+                ]
+            };
+
+            foreach (var (pId, p) in propertyMap[PropertyPool.Custom])
+            {
+                if (PropertyInternals.PropertySearchHandlerMap.TryGetValue(p.Type, out var pd))
+                {
+                    var filter = pd.BuildSearchFilterByKeyword(p, model.Keyword);
+                    if (filter != null)
+                    {
+                        newGroup.Filters.Add(filter);
+                    }
+                }
+            }
+
+            if (domainModel.Group == null)
+            {
+                domainModel.Group = newGroup;
+            }
+            else
+            {
+                domainModel.Group = new ResourceSearchFilterGroup
+                {
+                    Combinator = SearchCombinator.And,
+                    Groups = [domainModel.Group, newGroup]
+                };
+            }
+        }
+
+        return domainModel;
     }
 
-    public static ResourceSearchFilterGroupViewModel ToViewModel(this ResourceSearchFilterGroup model,
-        IPropertyLocalizer? propertyLocalizer = null)
-    {
-        return new ResourceSearchFilterGroupViewModel
-        {
-            Filters = model.Filters?.Select(f => f.ToViewModel(propertyLocalizer)).ToList(),
-            Groups = model.Groups?.Select(g => g.ToViewModel()).ToList(),
-            Combinator = model.Combinator
-        };
-    }
-
-    public static ResourceSearchFilterViewModel ToViewModel(this ResourceSearchFilter model,
-        IPropertyLocalizer? propertyLocalizer = null)
+    private static ResourceSearchFilterViewModel ToViewModel(this ResourceSearchFilterDbModel model, Property? property,
+        IPropertyLocalizer propertyLocalizer)
     {
         var filter = new ResourceSearchFilterViewModel
         {
             PropertyId = model.PropertyId,
             PropertyPool = model.PropertyPool,
             Operation = model.Operation,
+            DbValue = model.Value,
         };
-
-        var property = model.TryGetProperty();
 
         if (property != null)
         {
@@ -135,26 +183,78 @@ public static class ResourceSearchExtensions
             {
                 filter.AvailableOperations = psh.SearchOperations.Keys.ToList();
                 filter.Property = property.ToViewModel(propertyLocalizer);
-                var convertProperty = psh.SearchOperations.GetValueOrDefault(filter.Operation)?.ConvertProperty;
-                var valueProperty = property;
-                if (convertProperty != null)
+                if (filter.Operation.HasValue)
                 {
-                    valueProperty = convertProperty(valueProperty);
-                }
+                    var convertProperty =
+                        psh.SearchOperations.GetValueOrDefault(filter.Operation.Value)?.ConvertProperty;
+                    var valueProperty = property;
+                    if (convertProperty != null)
+                    {
+                        valueProperty = convertProperty(valueProperty);
+                    }
 
-                filter.ValueProperty = valueProperty.ToViewModel(propertyLocalizer);
-
-                var asType = psh.SearchOperations.GetValueOrDefault(filter.Operation)?.AsType;
-                if (asType.HasValue)
-                {
-                    filter.DbValue = model.DbValue?.SerializeAsStandardValue(asType.Value.GetDbValueType());
-                    var pd = PropertyInternals.DescriptorMap.GetValueOrDefault(valueProperty.Type);
-                    filter.BizValue = pd?.GetBizValue(valueProperty, model.DbValue)
-                        ?.SerializeAsStandardValue(asType.Value.GetBizValueType());
+                    filter.ValueProperty = valueProperty.ToViewModel(propertyLocalizer);
+                    var asType = psh.SearchOperations.GetValueOrDefault(filter.Operation.Value)?.AsType;
+                    if (asType.HasValue)
+                    {
+                        var dbValue = model.Value?.DeserializeAsStandardValue(asType.Value.GetDbValueType());
+                        var pd = PropertyInternals.DescriptorMap.GetValueOrDefault(valueProperty.Type);
+                        filter.BizValue = pd?.GetBizValue(valueProperty, dbValue)
+                            ?.SerializeAsStandardValue(asType.Value.GetBizValueType());
+                    }
                 }
             }
         }
 
         return filter;
+    }
+
+    private static ResourceSearchFilterGroupViewModel ToViewModel(this ResourceSearchFilterGroupDbModel model,
+        Dictionary<PropertyPool, Dictionary<int, Property>> propertyMap, IPropertyLocalizer propertyLocalizer)
+    {
+        return new ResourceSearchFilterGroupViewModel
+        {
+            Groups = model.Groups?.Select(g => g.ToViewModel(propertyMap, propertyLocalizer)).ToList(),
+            Filters = model.Filters?.Select(f =>
+            {
+                if (f is {PropertyPool: not null, PropertyId: not null})
+                {
+                    var property = propertyMap.GetValueOrDefault(f.PropertyPool.Value)
+                        ?.GetValueOrDefault(f.PropertyId.Value);
+                    return f.ToViewModel(property, propertyLocalizer);
+                }
+
+                return f.ToViewModel(null, propertyLocalizer);
+            }).ToList(),
+            Combinator = model.Combinator
+        };
+    }
+
+    public static async Task<List<ResourceSearchViewModel>> ToViewModels(this IEnumerable<ResourceSearchDbModel> models,
+        IPropertyService propertyService, IPropertyLocalizer propertyLocalizer)
+    {
+        var modelsArray = models.ToArray();
+        var validFilters = modelsArray.SelectMany(m => m.Group?.ExtractFilters() ?? []).ToList();
+        var propertyPools =
+            validFilters.Aggregate<ResourceSearchFilterDbModel, PropertyPool>(default,
+                (current, f) => current | f.PropertyPool!.Value);
+
+        var propertyMap = (await propertyService.GetProperties(propertyPools)).GroupBy(d => d.Pool)
+            .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
+        var viewModels = new List<ResourceSearchViewModel>();
+        foreach (var model in modelsArray)
+        {
+            var viewModel = new ResourceSearchViewModel
+            {
+                Keyword = model.Keyword,
+                PageSize = model.PageSize,
+                Page = model.Page,
+                Group = model.Group?.ToViewModel(propertyMap, propertyLocalizer),
+                Orders = model.Orders
+            };
+            viewModels.Add(viewModel);
+        }
+
+        return viewModels;
     }
 }

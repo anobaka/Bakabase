@@ -58,7 +58,7 @@ type Props = {
   showBiggerCoverOnHover?: boolean;
   biggerCoverPlacement?: TooltipPlacement;
   searchEngines?: SimpleSearchEngine[] | null;
-  ct: AbortSignal;
+  ct?: AbortSignal;
   onTagClick?: (propertyId: number, value: TagValue) => any;
   disableCache?: boolean;
   disableMediaPreviewer?: boolean;
@@ -95,6 +95,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const { t } = useTranslation();
   const log = buildLogger(`Resource:${resource.id}|${resource.path}`);
+  const appContext = store.useModelState('appContext');
+
 
   const uiOptions = store.useModelState('uiOptions');
 

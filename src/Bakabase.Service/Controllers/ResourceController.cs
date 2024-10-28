@@ -40,6 +40,7 @@ using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.Property.Models.Db;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -56,10 +57,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
+using static Bakabase.InsideWorld.Models.Configs.UIOptions;
 using Image = SixLabors.ImageSharp.Image;
 
 namespace Bakabase.Service.Controllers
@@ -69,7 +72,7 @@ namespace Bakabase.Service.Controllers
         IResourceService service,
         ResourceTaskManager resourceTaskManager,
         FfMpegService ffMpegService,
-        IBOptions<ResourceOptions> resourceOptions,
+        IBOptionsManager<ResourceOptions> resourceOptions,
         FfMpegService ffMpegInstaller,
         ILogger<ResourceController> logger,
         ICategoryService categoryService,
@@ -132,39 +135,95 @@ namespace Bakabase.Service.Controllers
             return new SingletonResponse<PropertyViewModel>(p.ToViewModel(propertyLocalizer));
         }
 
-        [HttpGet("search-criteria")]
-        [SwaggerOperation(OperationId = "GetResourceSearchCriteria")]
-        public async Task<SingletonResponse<ResourceSearchViewModel?>> GetSearchCriteria()
+        [HttpGet("last-search")]
+        [SwaggerOperation(OperationId = "GetLastResourceSearch")]
+        public async Task<SingletonResponse<ResourceSearchViewModel?>> GetLastResourceSearch()
         {
-            var sc = resourceOptions.Value.LastSearchV2?.ToDomainModel();
-            if (sc?.Group != null)
+            var ls = resourceOptions.Value.LastSearchV2;
+            if (ls == null)
             {
-                var filters = sc.Group.ExtractFilters();
-                if (filters.Any())
-                {
-                    var pool = filters.Aggregate((PropertyPool) 0, (a, b) => a | b.PropertyPool);
-                    var propertyMap = (await propertyService.GetProperties(pool)).GroupBy(d => d.Pool)
-                        .ToDictionary(d => d.Key, d => d.ToDictionary(x => x.Id));
-                    foreach (var filter in filters)
-                    {
-                        var property = propertyMap.GetValueOrDefault(filter.PropertyPool)
-                            ?.GetValueOrDefault(filter.PropertyId);
-                        if (property != null)
-                        {
-                            filter.Property = property;
-                        }
-                    }
-                }
+                return new SingletonResponse<ResourceSearchViewModel?>(null);
             }
 
-            return new SingletonResponse<ResourceSearchViewModel?>(sc?.ToViewModel(propertyLocalizer));
+            ResourceSearchDbModel[] arr = [ls];
+            var viewModels = await arr.ToViewModels(propertyService, propertyLocalizer);
+            return new SingletonResponse<ResourceSearchViewModel?>(viewModels[0]);
+        }
+
+        [HttpPost("saved-search")]
+        [SwaggerOperation(OperationId = "SaveNewResourceSearch")]
+        public async Task<BaseResponse> SaveNewSearch([FromBody] SavedSearchAddInputModel model)
+        {
+            model.Search.StandardPageable();
+            await resourceOptions.SaveAsync(x =>
+            {
+                x.SavedSearches.Add(new ResourceOptions.SavedSearch
+                    {Search = model.Search.ToDbModel(), Name = model.Name});
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("saved-search/{idx:int}/name")]
+        [SwaggerOperation(OperationId = "PutSavedSearchName")]
+        public async Task<BaseResponse> PutSavedSearchName(int idx, [FromBody] string name)
+        {
+            var searches = resourceOptions.Value.SavedSearches ?? [];
+            if (searches.Count <= idx)
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Invalid {nameof(idx)}:{idx}");
+            }
+
+            searches[idx].Name = name;
+            await resourceOptions.SaveAsync(x => { x.SavedSearches = searches; });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("saved-search")]
+        [SwaggerOperation(OperationId = "GetSavedSearches")]
+        public async Task<ListResponse<SavedSearchViewModel>> GetSavedSearches()
+        {
+            var searches = resourceOptions.Value.SavedSearches;
+            var dbModels = searches.Select(x => x.Search).ToArray();
+            var viewModels = await dbModels.ToViewModels(propertyService, propertyLocalizer);
+            var ret = searches.Select((s, i) => new SavedSearchViewModel(viewModels[i], s.Name));
+            return new ListResponse<SavedSearchViewModel>(ret);
+        }
+
+        [HttpDelete("saved-search/{idx:int}")]
+        [SwaggerOperation(OperationId = "DeleteSavedSearch")]
+        public async Task<BaseResponse> DeleteSavedSearch(int idx)
+        {
+            await resourceOptions.SaveAsync(x =>
+            {
+                if (idx < x.SavedSearches.Count)
+                {
+                    x.SavedSearches.RemoveAt(idx);
+                }
+            });
+            return BaseResponseBuilder.Ok;
         }
 
         [HttpPost("search")]
         [SwaggerOperation(OperationId = "SearchResources")]
-        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model)
+        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch)
         {
-            return await service.Search(model.ToDomainModel(), model.SaveSearchCriteria, false);
+            model.StandardPageable();
+
+            if (saveSearch)
+            {
+                try
+                {
+                    await resourceOptions.SaveAsync(a => a.LastSearchV2 = model.ToDbModel());
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to save search criteria");
+                }
+            }
+
+            var domainModel = await model.ToDomainModel(propertyService);
+
+            return await service.Search(domainModel, false);
         }
 
         [HttpGet("keys")]
@@ -202,6 +261,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("{id}/cover")]
         [SwaggerOperation(OperationId = "DiscoverResourceCover")]
+        [ResponseCache(VaryByQueryKeys = [nameof(id), "t"], Duration = 20 * 60)]
         public async Task<IActionResult> DiscoverCover(int id)
         {
             var resource = await service.Get(id, ResourceAdditionalItem.None);
@@ -229,7 +289,7 @@ namespace Bakabase.Service.Controllers
             if (img.Width > maxSize || img.Height > maxSize)
             {
                 var scale = Math.Min(maxSize / img.Width, maxSize / img.Height);
-                var newSize = new Size((int)(scale * img.Width), (int)(scale * img.Height));
+                var newSize = new Size((int) (scale * img.Width), (int) (scale * img.Height));
                 img.Mutate(x => x.Resize(newSize));
                 var ms = new MemoryStream();
                 await img.SaveAsJpegAsync(ms);
@@ -248,7 +308,7 @@ namespace Bakabase.Service.Controllers
                 {
                     data = await System.IO.File.ReadAllBytesAsync(cover.Path);
                     mimeType = MimeTypes.GetMimeType(cover.Path);
-                }   
+                }
             }
 
             return File(data, mimeType);

@@ -2,14 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
 import { Icon, Loading } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import { Chart, LineAdvance } from 'bizcharts';
+import { Axis, Chart, Coordinate, Interval, Legend, LineAdvance, Tooltip } from 'bizcharts';
 import BApi from '@/sdk/BApi';
 import type {
   BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
   BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount,
 } from '@/sdk/Api';
-import { downloadTaskStatuses, ResourceProperty, ThirdPartyId } from '@/sdk/constants';
+import { downloadTaskStatuses, ThirdPartyId } from '@/sdk/constants';
 import { Chip } from '@/components/bakaui';
+
+const textColor = getComputedStyle(document.body).getPropertyValue('--bakaui-color');
 
 export default () => {
   const { t } = useTranslation();
@@ -86,24 +88,69 @@ export default () => {
           <div className="block" style={{ flex: 1 }}>
             <div className={'title'}>{t('Overview')}</div>
             <div className={'content'}>
-              {data.categoryResourceCounts && data.categoryResourceCounts.length > 0 && data.categoryResourceCounts.map((c, i) => {
-                return (
-                  <div className="t-t-c" title={c.name!} key={i}>
-                    <div className="left">
-                      <div className="text">
-                        {c.name}
-                      </div>
-                    </div>
-                    <div className="right">
-                      <div className="count">
-                        {c.count}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }) || (
-                t('No content')
-              )}
+
+              <Chart
+                height={240}
+                data={data.categoryResourceCounts}
+                // scale={{
+                //   count: {
+                //     formatter: (val) => {
+                //       val = `${val * 100}%`;
+                //       return val;
+                //     },
+                //   },
+                // }}
+                interactions={['element-active']}
+                autoFit
+              >
+                <Coordinate type="theta" radius={0.75} />
+                <Tooltip showTitle={false} />
+                <Axis visible={false} />
+                <Legend visible={false} />
+                <Interval
+                  position="count"
+                  adjust="stack"
+                  color="name"
+                  style={{
+                    lineWidth: 1,
+                    stroke: '#fff',
+                  }}
+                  label={[
+                    'name',
+                    (item) => {
+                      return {
+                        offset: 20,
+                        content: (data) => {
+                          return `${data.name}[${data.count}]`;
+                        },
+                        style: {
+                          // fill: colors[item],
+                          fill: textColor,
+                        },
+                      };
+                    },
+                  ]}
+                />
+              </Chart>
+
+              {/* {data.categoryResourceCounts && data.categoryResourceCounts.length > 0 && data.categoryResourceCounts.map((c, i) => { */}
+              {/*   return ( */}
+              {/*     <div className="t-t-c" title={c.name!} key={i}> */}
+              {/*       <div className="left"> */}
+              {/*         <div className="text"> */}
+              {/*           {c.name} */}
+              {/*         </div> */}
+              {/*       </div> */}
+              {/*       <div className="right"> */}
+              {/*         <div className="count"> */}
+              {/*           {c.count} */}
+              {/*         </div> */}
+              {/*       </div> */}
+              {/*     </div> */}
+              {/*   ); */}
+              {/* }) || ( */}
+              {/*   t('No content') */}
+              {/* )} */}
             </div>
           </div>
           <div className="block" style={{ flex: 1 }}>

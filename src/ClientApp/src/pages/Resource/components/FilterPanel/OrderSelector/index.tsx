@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
 import { SortAscendingOutlined } from '@ant-design/icons';
 import CustomIcon from '@/components/CustomIcon';
-import type { ISearchFormOrderModel } from '@/pages/Resource/models';
+import type { SearchFormOrderModel } from '@/pages/Resource/models';
 import { resourceSearchSortableProperties, type ResourceSearchSortableProperty } from '@/sdk/constants';
 import type { SelectProps } from '@/components/bakaui';
 import { Select } from '@/components/bakaui';
@@ -17,8 +17,8 @@ const directionDataSource: { label: string; asc: boolean }[] = [{
 }];
 
 interface IProps extends React.ComponentPropsWithoutRef<any> {
-  value?: ISearchFormOrderModel[];
-  onChange?: (value: ISearchFormOrderModel[]) => any;
+  value?: SearchFormOrderModel[];
+  onChange?: (value: SearchFormOrderModel[]) => any;
 }
 
 export default ({
@@ -80,7 +80,7 @@ export default ({
             orderAscMap[parseInt(vl[0], 10)] = vl[1] === 'true';
           }
 
-          const orders: ISearchFormOrderModel[] = [];
+          const orders: SearchFormOrderModel[] = [];
           for (const k in orderAscMap) {
             orders.push({
               property: parseInt(k, 10),

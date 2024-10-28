@@ -1,16 +1,17 @@
 import { PlusCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
-import { useUpdate } from 'react-use';
+import { useEffect, useRef, useState } from 'react';
+import { useUpdate, useUpdateEffect } from 'react-use';
 import type { EnhancerFullOptions, EnhancerTargetFullOptions } from '../../models';
 import { defaultCategoryEnhancerTargetOptions } from '../../models';
 import type { EnhancerDescriptor, EnhancerTargetDescriptor } from '../../../../models';
 import DynamicTargetLabel from '../DynamicTargetLabel';
 import TargetRow from '../TargetRow';
 import type { IProperty } from '@/components/Property/models';
-import { Button, Table, TableBody, TableColumn, TableHeader } from '@/components/bakaui';
+import { Button, Divider, Table, TableBody, TableColumn, TableHeader } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import type { PropertyPool } from '@/sdk/constants';
+import { buildLogger } from '@/components/utils';
 
 const sortOptions = (a: EnhancerTargetFullOptions, b: EnhancerTargetFullOptions) => {
   if (a.dynamicTarget == undefined) {
@@ -34,6 +35,8 @@ type Group = {
   subOptions: EnhancerTargetFullOptions[];
 };
 
+const log = buildLogger('DynamicTargets');
+
 export default (props: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -47,17 +50,23 @@ export default (props: Props) => {
   const dynamicTargetDescriptors = enhancer.targets.filter(x => x.isDynamic);
   const [groups, setGroups] = useState<Group[]>([]);
   const [options, setOptions] = useState(propsOptions ?? {});
+  const optionsRef = useRef(options);
 
   useEffect(() => {
   }, []);
 
+  useUpdateEffect(() => {
+    setOptions(propsOptions ?? {});
+  }, [propsOptions]);
+
   useEffect(() => {
+    optionsRef.current = options;
     updateGroups();
   }, [options]);
 
   const updateGroups = () => {
     const newGroups = dynamicTargetDescriptors.map(descriptor => {
-      const subOptions = options.targetOptions?.filter(x => x.target == descriptor.id) || [];
+      const subOptions = optionsRef.current?.targetOptions?.filter(x => x.target == descriptor.id) || [];
       let defaultOptions = subOptions.find(x => x.dynamicTarget == undefined);
       if (defaultOptions == undefined) {
         defaultOptions = defaultCategoryEnhancerTargetOptions(descriptor);
@@ -72,7 +81,7 @@ export default (props: Props) => {
       };
     });
     setGroups(newGroups);
-    console.log('updateGroups', newGroups);
+    log('updateGroups', newGroups);
   };
 
   const createNewOptions = (descriptor: EnhancerTargetDescriptor, otherOptions: EnhancerTargetFullOptions[] | undefined) => {
@@ -99,7 +108,7 @@ export default (props: Props) => {
     return options;
   };
 
-  console.log('rendering', options, groups);
+  log('rendering', options, groups);
 
   return groups.length > 0 ? (
     <div className={'flex flex-col gap-y-2'}>
@@ -130,27 +139,30 @@ export default (props: Props) => {
             <div className={'flex flex-col gap-y-2'}>
               {subOptions.map((data, i) => {
                 return (
-                  <TargetRow
-                    key={i}
-                    target={data.target}
-                    dynamicTarget={data.dynamicTarget}
-                    options={data}
-                    descriptor={descriptor}
-                    category={category}
-                    propertyMap={propertyMap}
-                    enhancer={enhancer}
-                    onDeleted={() => {
-                      const idx = options.targetOptions?.findIndex(x => x == data);
-                      if (idx != undefined) {
-                        options.targetOptions?.splice(idx, 1);
-                        setOptions({ ...options });
-                      }
-                    }}
-                    onChange={(newOptions) => {
-                      Object.assign(data, newOptions);
-                      forceUpdate();
-                    }}
-                  />
+                  <>
+                    <TargetRow
+                      key={i}
+                      target={data.target}
+                      dynamicTarget={data.dynamicTarget}
+                      options={data}
+                      descriptor={descriptor}
+                      category={category}
+                      propertyMap={propertyMap}
+                      enhancer={enhancer}
+                      onDeleted={() => {
+                        const idx = options.targetOptions?.findIndex(x => x == data);
+                        if (idx != undefined) {
+                          options.targetOptions?.splice(idx, 1);
+                          setOptions({ ...options });
+                        }
+                      }}
+                      onChange={(newOptions) => {
+                        Object.assign(data, newOptions);
+                        forceUpdate();
+                      }}
+                    />
+                    <Divider orientation={'horizontal'} />
+                  </>
                 );
               })}
             </div>

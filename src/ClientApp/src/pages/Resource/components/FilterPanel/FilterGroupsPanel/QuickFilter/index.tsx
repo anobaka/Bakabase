@@ -2,7 +2,7 @@ import { SearchOutlined } from '@ant-design/icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PropertyPool, ResourceProperty, SearchOperation } from '@/sdk/constants';
-import { Button } from '@/components/bakaui';
+import { Button, Spinner } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import type { ResourceSearchFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
 import type { IProperty } from '@/components/Property/models';
@@ -20,13 +20,14 @@ type Props = {
 export default ({ onAdded }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const [loading, setLoading] = useState(true);
 
   const [properties, setProperties] = useState<IProperty[]>([]);
-
 
   useEffect(() => {
     BApi.property.getPropertiesByPool(PropertyPool.Internal).then(r => {
       setProperties((r.data || []).filter(x => x.id in quickFilterMap));
+      setLoading(false);
     });
   }, []);
 
@@ -34,7 +35,9 @@ export default ({ onAdded }: Props) => {
     <>
       <div>{t('Quick filter')}</div>
       <div className={'flex items-center gap-2 flex-wrap'}>
-        {properties.map(p => {
+        {loading ? (
+          <Spinner size="sm" />
+        ) : properties.map(p => {
           const operation = quickFilterMap[p.id];
           const pool = PropertyPool.Internal;
           return (

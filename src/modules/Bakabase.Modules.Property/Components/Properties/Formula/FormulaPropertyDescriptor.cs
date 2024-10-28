@@ -14,10 +14,10 @@ public class FormulaPropertyDescriptor : AbstractPropertyDescriptor<string, stri
         var fv = (string) filterValue;
         return operation switch
         {
-            SearchOperation.Equals => dbValue == fv,
-            SearchOperation.NotEquals => dbValue != fv,
-            SearchOperation.Contains => dbValue.Contains(fv),
-            SearchOperation.NotContains => !dbValue.Contains(fv),
+            SearchOperation.Equals => dbValue.Equals(fv, StringComparison.OrdinalIgnoreCase),
+            SearchOperation.NotEquals => !dbValue.Equals(fv, StringComparison.OrdinalIgnoreCase),
+            SearchOperation.Contains => dbValue.Contains(fv, StringComparison.OrdinalIgnoreCase),
+            SearchOperation.NotContains => !dbValue.Contains(fv, StringComparison.OrdinalIgnoreCase),
             SearchOperation.Matches => Regex.IsMatch(dbValue, fv),
             SearchOperation.NotMatches => !Regex.IsMatch(dbValue, fv),
             _ => true

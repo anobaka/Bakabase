@@ -7,8 +7,7 @@ import type { ResourcesRef } from './components/Resources';
 import Resources from './components/Resources';
 import styles from './index.module.scss';
 import FilterPanel from './components/FilterPanel';
-import type { ISearchForm } from '@/pages/Resource/models';
-import { convertFilterGroupToDto } from '@/pages/Resource/helpers';
+import type { SearchForm } from '@/pages/Resource/models';
 import BApi from '@/sdk/BApi';
 import Resource from '@/components/Resource';
 import store from '@/store';
@@ -27,13 +26,6 @@ interface IPageable {
 
 const log = buildLogger('ResourcePage');
 
-const convertToInputModel = (form: ISearchForm) => {
-  return {
-    ...form,
-    group: convertFilterGroupToDto(form.group),
-  };
-};
-
 export default () => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -46,14 +38,11 @@ export default () => {
   const uiOptions = store.useModelState('uiOptions');
 
   const [columnCount, setColumnCount] = useState<number>(0);
-  const [searchForm, setSearchForm] = useState<ISearchForm>();
+  const [searchForm, setSearchForm] = useState<SearchForm>();
   const searchFormRef = useRef(searchForm);
 
   const [searching, setSearching] = useState(true);
   const searchingRef = useRef(false);
-
-  const [bulkOperationMode, setBulkOperationMode] = useState<boolean>(false);
-  const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const selectedIdsRef = useRef(selectedIds);
@@ -67,9 +56,8 @@ export default () => {
   const initStartPageRef = useRef(1);
 
   useEffect(() => {
-    BApi.resource.getResourceSearchCriteria().then(r => {
-      // @ts-ignore
-      search(r.data || {}, 'replace');
+    BApi.resource.getLastResourceSearch().then(r => {
+      search(r.data ?? { page: 1, pageSize: PageSize }, 'replace');
     });
 
     const handleScroll = () => {
@@ -145,26 +133,22 @@ export default () => {
 
   const pageContainerRef = useRef<any>();
 
-  const search = async (partialForm: Partial<ISearchForm>, renderMode: 'append' | 'replace' | 'prepend', replaceSearchCriteria: boolean = false, save: boolean = true) => {
+  const search = async (partialForm: Partial<SearchForm>, renderMode: 'append' | 'replace' | 'prepend', replaceSearchCriteria: boolean = false, save: boolean = true) => {
     const baseForm = replaceSearchCriteria ? {} : searchForm;
 
     const newForm = {
       ...baseForm,
       ...partialForm,
       pageSize: PageSize,
-    } as ISearchForm;
+    } as SearchForm;
 
     setSearchForm(newForm);
     log('Search resources', newForm);
 
-    const dto = {
-      ...convertToInputModel(newForm),
-      saveSearchCriteria: save,
-      skipCount: 0,
-    };
+    const dto = newForm;
 
     if (resourcesRef.current.length == 0 || renderMode == 'replace') {
-      initStartPageRef.current = newForm.pageIndex ?? 1;
+      initStartPageRef.current = newForm.page ?? 1;
     }
 
     if (renderMode == 'replace') {
@@ -172,7 +156,7 @@ export default () => {
     }
 
     setSearching(true);
-    const rsp = await BApi.resource.searchResources(dto);
+    const rsp = await BApi.resource.searchResources(dto, { saveSearch: save });
 
     if (renderMode == 'replace') {
       setPageable({
@@ -184,7 +168,7 @@ export default () => {
 
     setSearchForm({
       ...newForm,
-      pageIndex: rsp.pageIndex!,
+      page: rsp.pageIndex!,
     });
 
     const newResources = rsp.data || [];
@@ -249,7 +233,7 @@ export default () => {
     );
   }, [resources, multiSelection, columnCount, selectedIds]);
 
-  log(searchForm?.pageIndex, pageable?.page, 'aaaa');
+  log(searchForm?.page, pageable?.page, 'aaaa');
 
   return (
     <div
@@ -261,17 +245,10 @@ export default () => {
       <FilterPanel
         onSearch={f => search({
           ...f,
-          pageIndex: 1,
+          page: 1,
         }, 'replace')}
         multiSelection={multiSelection}
         searchForm={searchForm}
-        selectedResourceIds={selectedResourceIds}
-        onBulkOperationModeChange={m => {
-          setBulkOperationMode(m);
-          if (!m) {
-            setSelectedResourceIds([]);
-          }
-        }}
         reloadResources={ids => {
           BApi.resource.getResourcesByKeys({ ids }).then(r => {
             for (const res of (r.data || [])) {
@@ -297,7 +274,7 @@ export default () => {
                 page={pageable.page}
                 onChange={p => {
                   search({
-                    pageIndex: p,
+                    page: p,
                   }, 'replace');
                 }}
               />
@@ -322,9 +299,9 @@ export default () => {
               if (e.scrollHeight < e.scrollTop + e.clientHeight + 200 && !searchingRef.current) {
                 searchingRef.current = true;
                 const totalPage = Math.ceil((pageable?.totalCount ?? 0) / PageSize);
-                if (searchFormRef.current?.pageIndex != undefined && searchFormRef.current.pageIndex < totalPage) {
+                if (searchFormRef.current?.page != undefined && searchFormRef.current.page < totalPage) {
                   search({
-                    pageIndex: searchFormRef.current.pageIndex + 1,
+                    page: searchFormRef.current.page + 1,
                   }, 'append', false, false);
                 }
               }
@@ -356,10 +333,7 @@ export default () => {
                     page: currentPage,
                   });
                   BApi.options.patchResourceOptions({
-                    searchCriteria: convertToInputModel({
-                      ...searchFormRef.current!,
-                      pageIndex: currentPage,
-                    }),
+                    searchCriteria: searchFormRef.current,
                   });
                 }
               }
@@ -387,7 +361,7 @@ export default () => {
               radius={'sm'}
               color={'primary'}
               onClick={() => {
-                search({ pageIndex: 1 }, 'replace', true);
+                search({ page: 1 }, 'replace', true);
               }}
             >
               {t('Reset search criteria')}

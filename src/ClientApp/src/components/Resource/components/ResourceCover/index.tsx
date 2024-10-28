@@ -177,7 +177,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     } else {
       urls.push(`${serverAddress}/resource/${resourceId}/cover`);
     }
-    if (refresh) {
+    if (refresh || disableCache) {
       for (let i = 0; i < urls.length; i++) {
         urls[i] += urls[i].includes('?') ? `&v=${uuidv4()}` : `?v=${uuidv4()}`;
       }

@@ -7897,15 +7897,15 @@ export const GetFilterValuePropertyURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetResourceSearchCriteria
- * url: GetResourceSearchCriteriaURL
- * method: GetResourceSearchCriteria_TYPE
- * raw_url: GetResourceSearchCriteria_RAW_URL
+ * request: GetLastResourceSearch
+ * url: GetLastResourceSearchURL
+ * method: GetLastResourceSearch_TYPE
+ * raw_url: GetLastResourceSearch_RAW_URL
  */
-export const GetResourceSearchCriteria = function(parameters = {}) {
+export const GetLastResourceSearch = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/resource/search-criteria'
+  let path = '/resource/last-search'
   let body
   let queryParameters = {}
   let form = {}
@@ -7916,16 +7916,192 @@ export const GetResourceSearchCriteria = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetResourceSearchCriteria_RAW_URL = function() {
-  return '/resource/search-criteria'
+export const GetLastResourceSearch_RAW_URL = function() {
+  return '/resource/last-search'
 }
-export const GetResourceSearchCriteria_TYPE = function() {
+export const GetLastResourceSearch_TYPE = function() {
   return 'get'
 }
-export const GetResourceSearchCriteriaURL = function(parameters = {}) {
+export const GetLastResourceSearchURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/search-criteria'
+  let path = '/resource/last-search'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: SaveNewResourceSearch
+ * url: SaveNewResourceSearchURL
+ * method: SaveNewResourceSearch_TYPE
+ * raw_url: SaveNewResourceSearch_RAW_URL
+ * @param model - 
+ */
+export const SaveNewResourceSearch = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/saved-search'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const SaveNewResourceSearch_RAW_URL = function() {
+  return '/resource/saved-search'
+}
+export const SaveNewResourceSearch_TYPE = function() {
+  return 'post'
+}
+export const SaveNewResourceSearchURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/saved-search'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetSavedSearches
+ * url: GetSavedSearchesURL
+ * method: GetSavedSearches_TYPE
+ * raw_url: GetSavedSearches_RAW_URL
+ */
+export const GetSavedSearches = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/saved-search'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetSavedSearches_RAW_URL = function() {
+  return '/resource/saved-search'
+}
+export const GetSavedSearches_TYPE = function() {
+  return 'get'
+}
+export const GetSavedSearchesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/saved-search'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PutSavedSearchName
+ * url: PutSavedSearchNameURL
+ * method: PutSavedSearchName_TYPE
+ * raw_url: PutSavedSearchName_RAW_URL
+ * @param idx - 
+ * @param model - 
+ */
+export const PutSavedSearchName = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/saved-search/{idx}/name'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{idx}', `${parameters['idx']}`)
+  if (parameters['idx'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: idx'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PutSavedSearchName_RAW_URL = function() {
+  return '/resource/saved-search/{idx}/name'
+}
+export const PutSavedSearchName_TYPE = function() {
+  return 'put'
+}
+export const PutSavedSearchNameURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/saved-search/{idx}/name'
+  path = path.replace('{idx}', `${parameters['idx']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DeleteSavedSearch
+ * url: DeleteSavedSearchURL
+ * method: DeleteSavedSearch_TYPE
+ * raw_url: DeleteSavedSearch_RAW_URL
+ * @param idx - 
+ */
+export const DeleteSavedSearch = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/saved-search/{idx}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{idx}', `${parameters['idx']}`)
+  if (parameters['idx'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: idx'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteSavedSearch_RAW_URL = function() {
+  return '/resource/saved-search/{idx}'
+}
+export const DeleteSavedSearch_TYPE = function() {
+  return 'delete'
+}
+export const DeleteSavedSearchURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/saved-search/{idx}'
+  path = path.replace('{idx}', `${parameters['idx']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -7940,6 +8116,7 @@ export const GetResourceSearchCriteriaURL = function(parameters = {}) {
  * url: SearchResourcesURL
  * method: SearchResources_TYPE
  * raw_url: SearchResources_RAW_URL
+ * @param saveSearch - 
  * @param model - 
  */
 export const SearchResources = function(parameters = {}) {
@@ -7949,6 +8126,9 @@ export const SearchResources = function(parameters = {}) {
   let body
   let queryParameters = {}
   let form = {}
+  if (parameters['saveSearch'] !== undefined) {
+    queryParameters['saveSearch'] = parameters['saveSearch']
+  }
   if (parameters['model'] !== undefined) {
     body = parameters['model']
   }
@@ -7969,6 +8149,9 @@ export const SearchResourcesURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/search'
+  if (parameters['saveSearch'] !== undefined) {
+    queryParameters['saveSearch'] = parameters['saveSearch']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

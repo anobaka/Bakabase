@@ -1453,5 +1453,21 @@
   "Data applied at": "数据应用于",
   "Apply data": "应用数据",
   "Apply the data to property values of the resource.": "将数据应用到资源的属性值中。",
-  "Re-apply all enhancement data of this enhancer for category {{categoryName}}": "重新应用分类 {{categoryName}} 下所有当前增强器的增强数据"
+  "Re-apply all enhancement data of this enhancer for category {{categoryName}}": "重新应用分类 {{categoryName}} 下所有当前增强器的增强数据",
+  "Task list": "任务列表",
+  "Stopping task: {{taskName}}": "停止任务：{{taskName}}",
+  "Are you sure to stop this task?": "确定停止该任务吗？",
+  "Dismiss": "关闭",
+  "The value type of this target is": "该目标的值类型为",
+  "Successfully saved": "保存成功",
+  "Target will not be applied because there is no property to store it.": "目标不会被应用，因为没有属性来存储它。",
+  "Cookie is valid": "Cookie有效",
+  "Page": "页码",
+  "Untitled search": "未命名搜索",
+  "Save current search to quick search": "保存当前搜索条件至快捷搜索",
+  "Save current search": "保存当前搜索条件",
+  "Cover mode": "封面模式",
+  "Fill cover": "填充封面",
+  "Show": "展示",
+  "Cover cache": "封面缓存"
 }

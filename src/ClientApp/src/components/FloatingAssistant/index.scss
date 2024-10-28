@@ -1,126 +1,14 @@
+.floating-assistant-modal {
+  z-index: 100001;
+}
+
 .floating-assistant {
-  //position: fixed;
-  //bottom: 50px;
-  //z-index: 999;
-
-  &.main {
-    padding: 0;
-    //right: 110px;
-    height: auto;
-    display: flex;
-    width: 480px;
-    flex-direction: column;
-    overflow: hidden;
-    //transition: all ease-in-out 0.2s;
-    border-radius: 10px;
-    box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, var(--theme-border-color) 0px 0px 0px 1px inset;
-    background: var(--theme-body-background);
-
-    .content {
-      padding: 20px;
-      .tasks {
-        max-height: 70vh;
-        overflow-y: auto;
-        .no-task {
-          font-size: 14px;
-          text-align: center;
-          margin-bottom: 10px;
-          color: #999;
-        }
-        .task {
-          overflow: hidden;
-          border: 1px solid var(--theme-border-color-accent);
-          background: var(--theme-block-background);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 5px 10px;
-          border-radius: 4px;
-          margin: 5px 0;
-          transition: opacity 500ms;
-          opacity: 1;
-
-          &.removing {
-            opacity: 0;
-          }
-
-          .info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex: 1;
-
-            .title {
-              .name {
-                font-size: 14px;
-              }
-              .current {
-                font-size: 12px;
-                color: #999;
-              }
-            }
-
-            .status {
-              padding: 0 10px;
-              display: flex;
-              align-items: center;
-              .progress {
-                font-weight: lighter;
-                font-size: 14px;
-              }
-            }
-          }
-
-          .opts {
-            .opt {
-              padding: 0 2.5px;
-              color: #999;
-              cursor: pointer;
-              .icon-close {
-                color: red;
-              }
-
-              &:hover {
-                color: #333;
-                .icon-close {
-                  color: #c7254e;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      .opts {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        .opt {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-      }
-
-      .opts-container {
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        .opts {
-          .opt {
-
-          }
-        }
-      }
-    }
-  }
 
   &.portal {
     z-index: 1002;
     position: fixed;
-    bottom: 50px;
-    right: 50px;
+    left: 10px;
+    bottom: 20px;
     cursor: pointer;
     border-radius: 24px;
     box-shadow: rgba(6, 24, 44, 0.4) 0px 0px 0px 2px, rgba(6, 24, 44, 0.65) 0px 4px 6px -1px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset;
@@ -128,11 +16,7 @@
     width: 48px;
     background: var(--theme-block-background);
 
-    transition: width 0.5s, right 0.3s;
-
-    &.hide {
-      right: -25px;
-    }
+    transition: width 0.5s, left 0.3s;
 
     &.AllDone {
       .tick {
@@ -193,7 +77,8 @@
         display: block;
         position: absolute;
         top: 0; left: 0;
-        bottom: 0; right: 0;
+        bottom: 0;
+        right: 0;
         margin: auto;
         height: 32px;
         width: 32px;

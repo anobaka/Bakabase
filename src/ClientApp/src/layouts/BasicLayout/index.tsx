@@ -3,12 +3,14 @@ import { history, Outlet } from 'ice';
 import { Dialog } from '@alifd/next';
 import { TourProvider } from '@reactour/tour';
 import { useTranslation } from 'react-i18next';
+import { Toaster } from 'react-hot-toast';
 import styles from './index.module.scss';
 import PageNav from './components/PageNav';
 import { InitializationContentType } from '@/sdk/constants';
 import FloatingAssistant from '@/components/FloatingAssistant';
 import { ErrorBoundary } from '@/components/Error';
 import BApi from '@/sdk/BApi';
+
 export default function BasicLayout() {
   const { t } = useTranslation();
 
@@ -34,6 +36,15 @@ export default function BasicLayout() {
     <TourProvider steps={[]}>
       <ErrorBoundary>
         <div className={styles.insideWorld}>
+          <Toaster toastOptions={{
+            style: {
+              background: '#333',
+              // background: 'var(--bakaui-background)',
+              color: 'var(--bakaui-color)',
+              maxWidth: 800,
+            },
+          }}
+          />
           <FloatingAssistant />
           <PageNav />
           <div className={`${styles.main} pt-1 pb-1 pr-1`}>

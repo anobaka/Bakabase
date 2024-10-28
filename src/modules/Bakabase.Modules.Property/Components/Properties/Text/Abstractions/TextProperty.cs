@@ -18,14 +18,14 @@ public abstract class TextPropertyDescriptor<TDbValue, TBizValue> : AbstractProp
         var matchSources = GetMatchSources(dbValue);
         return matchSources.Any(s => operation switch
             {
-                SearchOperation.Equals => s.Equals(fv),
-                SearchOperation.NotEquals => !s.Equals(fv),
-                SearchOperation.Contains => s.Contains(fv),
-                SearchOperation.NotContains => !s.Contains(fv),
-                SearchOperation.StartsWith => s.StartsWith(fv),
-                SearchOperation.NotStartsWith => !s.StartsWith(fv),
-                SearchOperation.EndsWith => s.EndsWith(fv),
-                SearchOperation.NotEndsWith => !s.EndsWith(fv),
+                SearchOperation.Equals => s.Equals(fv, StringComparison.OrdinalIgnoreCase),
+                SearchOperation.NotEquals => !s.Equals(fv, StringComparison.OrdinalIgnoreCase),
+                SearchOperation.Contains => s.Contains(fv, StringComparison.OrdinalIgnoreCase),
+                SearchOperation.NotContains => !s.Contains(fv, StringComparison.OrdinalIgnoreCase),
+                SearchOperation.StartsWith => s.StartsWith(fv, StringComparison.OrdinalIgnoreCase),
+                SearchOperation.NotStartsWith => !s.StartsWith(fv, StringComparison.OrdinalIgnoreCase),
+                SearchOperation.EndsWith => s.EndsWith(fv, StringComparison.OrdinalIgnoreCase),
+                SearchOperation.NotEndsWith => !s.EndsWith(fv, StringComparison.OrdinalIgnoreCase),
                 SearchOperation.Matches => Regex.IsMatch(s, fv),
                 SearchOperation.NotMatches => !Regex.IsMatch(s, fv),
                 _ => true

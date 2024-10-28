@@ -7,7 +7,17 @@ import CustomIcon from '@/components/CustomIcon';
 import Title from '@/components/Title';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
-import { TableBody, TableCell, TableColumn, TableHeader, TableRow, Tooltip, Table, Popover } from '@/components/bakaui';
+import {
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+  Tooltip,
+  Table,
+  Popover,
+  Snippet,
+} from '@/components/bakaui';
 
 export default () => {
   const { t } = useTranslation();
@@ -41,14 +51,21 @@ export default () => {
                         )}
                         placement={'right'}
                       >
-                        <div style={{ userSelect: 'text' }}>
+                        <div style={{ userSelect: 'text' }} className={'py-1'}>
                           {c.description && (
                             <div>
                               {c.description}
                             </div>
                           )}
-                          <div>
-                            {t('Default location')}: {c.defaultLocation}
+                          <div className={'flex items-center gap-2'}>
+                            {t('Default location')}
+                            <Snippet
+                              size={'sm'}
+                              variant="bordered"
+                              hideSymbol
+                            >
+                              {c.defaultLocation}
+                            </Snippet>
                           </div>
                         </div>
 

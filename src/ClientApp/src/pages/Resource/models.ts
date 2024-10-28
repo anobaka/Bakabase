@@ -1,14 +1,15 @@
 import type { ResourceSearchFilterGroup } from './components/FilterPanel/FilterGroupsPanel/models';
 import type { ResourceSearchSortableProperty } from '@/sdk/constants';
 
-export interface ISearchForm {
+export type SearchForm = {
   group?: ResourceSearchFilterGroup;
-  orders?: ISearchFormOrderModel[];
+  orders?: SearchFormOrderModel[];
   keyword?: string;
-  pageIndex: number;
+  page: number;
   pageSize: number;
-}
+};
 
-export interface ISearchFormOrderModel {
-  property: ResourceSearchSortableProperty; asc: boolean;
-}
+export type SearchFormOrderModel = {
+  property: ResourceSearchSortableProperty;
+  asc: boolean;
+};

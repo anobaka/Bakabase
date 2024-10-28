@@ -25,7 +25,6 @@ using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.DependencyInjection;
@@ -629,7 +628,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 //             }]
                 PageIndex = 0,
                 PageSize = maxCount
-            }, false, true);
+            }, true);
 
             var resources = resourcesSearchResult.Data ?? [];
 

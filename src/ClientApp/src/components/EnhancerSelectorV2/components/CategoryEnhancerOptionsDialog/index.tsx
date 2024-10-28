@@ -1,34 +1,25 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useRef, useState } from 'react';
-import { DeleteOutlined, PlusCircleOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
 import { useUpdate } from 'react-use';
 import DynamicTargets from './components/DynamicTargets';
 import FixedTargets from './components/FixedTargets';
-import {
-  Button,
-  Input,
-  Modal,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-} from '@/components/bakaui';
+import RegexEnhancerOptions from './components/RegexEnhancerOptions';
+import { Modal } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
-import { PropertyPool } from '@/sdk/constants';
-import { CategoryAdditionalItem, SpecialTextType, StandardValueType } from '@/sdk/constants';
+import { CategoryAdditionalItem, EnhancerId, PropertyPool } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
-import type { EnhancerFullOptions } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
+import type {
+  EnhancerFullOptions,
+} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
 import type { IProperty } from '@/components/Property/models';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
-interface IProps extends DestroyableProps {
+type IProps = {
   enhancer: EnhancerDescriptor;
   categoryId: number;
-}
+} & DestroyableProps;
 
 const CategoryEnhancerOptionsDialog = ({
                                          enhancer,
@@ -46,7 +37,7 @@ const CategoryEnhancerOptionsDialog = ({
   });
 
   const [options, setOptions] = useState<EnhancerFullOptions>();
-  const [propertyMap, setPropertyMap] = useState<{[key in PropertyPool]?: Record<number, IProperty>}>({});
+  const [propertyMap, setPropertyMap] = useState<{ [key in PropertyPool]?: Record<number, IProperty> }>({});
 
   const init = async () => {
     await loadCategory();
@@ -79,7 +70,7 @@ const CategoryEnhancerOptionsDialog = ({
 
   const loadAllProperties = async () => {
     const psr = (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
-    const ps: {[key in PropertyPool]?: Record<number, IProperty>} = psr.reduce<{[key in PropertyPool]?: Record<number, IProperty>}>((s, t) => {
+    const ps: { [key in PropertyPool]?: Record<number, IProperty> } = psr.reduce<{ [key in PropertyPool]?: Record<number, IProperty> }>((s, t) => {
       const pt = t.pool!;
       s[pt] ??= {};
       // @ts-ignore
@@ -105,7 +96,14 @@ const CategoryEnhancerOptionsDialog = ({
         actions: ['cancel'],
       }}
     >
-      {options && (
+      {enhancer.id == EnhancerId.Regex ? (
+        <RegexEnhancerOptions
+          category={category}
+          enhancer={enhancer}
+          options={options}
+          propertyMap={propertyMap}
+        />
+      ) : (options && (
         <div className={'flex flex-col gap-y-4'}>
           <FixedTargets
             category={category}
@@ -120,7 +118,7 @@ const CategoryEnhancerOptionsDialog = ({
             propertyMap={propertyMap}
           />
         </div>
-      )}
+      ))}
     </Modal>
   );
 };

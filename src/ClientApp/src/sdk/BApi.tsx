@@ -1,9 +1,9 @@
-import { Message } from '@alifd/next';
-import i18n from 'i18next';
+import toast from 'react-hot-toast';
 import type { FullRequestParams, HttpResponse, ApiConfig } from '@/sdk/Api';
 import { Api, ContentType } from '@/sdk/Api';
 import serverConfig from '@/serverConfig';
 import { buildLogger } from '@/components/utils';
+import { ErrorToast } from '@/components/Error';
 
 interface BFullRequestParams extends FullRequestParams {
   ignoreError: (rsp) => boolean;
@@ -38,17 +38,8 @@ class BApi extends Api<any> {
             }
             if ((typedRsp?.code >= 400 || typedRsp?.code < 200)) {
               if (!params.ignoreError && !typedRsp.message?.includes('SQLite Error')) {
-                Message.error({
-                  duration: 5000,
-                  title: `${params.path}: [${typedRsp.code}]`,
-                  content: (
-                    <pre>
-                      {typedRsp.message}
-                    </pre>
-                  ),
-                  closeable: true,
-                  hasMask: true,
-                });
+                const title = `[${typedRsp.code}]${params.path}`;
+                toast(tst => <ErrorToast toast={tst} title={title} description={typedRsp.message} />, { duration: 5000 });
               }
             }
         }
@@ -61,17 +52,8 @@ class BApi extends Api<any> {
         // }
 
         if (!params.signal?.aborted) {
-          Message.error({
-            duration: 5000,
-            title: `${params.path}: 请求异常，请稍后再试。`,
-            content: (
-              <pre>
-                {error}
-              </pre>
-            ),
-            closeable: true,
-            hasMask: true,
-          });
+          const title = `${params.path}: 请求异常，请稍后再试。`;
+          toast(tst => <ErrorToast toast={tst} title={title} description={error} />, { duration: 5000 });
         }
 
         throw error;

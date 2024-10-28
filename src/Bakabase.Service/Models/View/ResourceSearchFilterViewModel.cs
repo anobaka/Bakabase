@@ -6,9 +6,9 @@ namespace Bakabase.Service.Models.View
 {
     public record ResourceSearchFilterViewModel
     {
-        public PropertyPool PropertyPool { get; set; }
-        public int PropertyId { get; set; }
-        public SearchOperation Operation { get; set; }
+        public PropertyPool? PropertyPool { get; set; }
+        public int? PropertyId { get; set; }
+        public SearchOperation? Operation { get; set; }
 
         /// <summary>
         /// Serialized

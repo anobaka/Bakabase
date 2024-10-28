@@ -9,7 +9,7 @@ import { GroupCombinator } from '../models';
 import styles from './index.module.scss';
 import Filter from './Filter';
 import ClickableIcon from '@/components/ClickableIcon';
-import { Button, Popover } from '@/components/bakaui';
+import { Button, Divider, Popover } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import QuickFilter from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/QuickFilter';
 
@@ -160,6 +160,8 @@ const FilterGroup = ({
             });
           }}
           />
+          <div />
+          <Divider orientation={'horizontal'} />
           <div>{t('Advance filter')}</div>
           <div className={'flex items-center gap-2'}>
             <Button

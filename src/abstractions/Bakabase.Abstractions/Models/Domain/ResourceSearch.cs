@@ -7,5 +7,4 @@ public record ResourceSearch : SearchRequestModel
 {
     public ResourceSearchFilterGroup? Group { get; set; }
     public ResourceSearchOrderInputModel[]? Orders { get; set; }
-    public string? Keyword { get; set; }
 }

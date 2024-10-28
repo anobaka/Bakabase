@@ -8,6 +8,8 @@ import { CookieValidatorTarget, ThirdPartyId } from '@/sdk/constants';
 import FileSelector from '@/components/FileSelector';
 import CustomIcon from '@/components/CustomIcon';
 
+type VisibleKey = 'cookie' | 'threads' | 'interval' | 'defaultdownloadpath' | 'namingconvention';
+
 // todo: extract abstractions
 const getCookieValidatorTarget = (tpId: ThirdPartyId) => {
   switch (tpId) {
@@ -24,7 +26,7 @@ export default ({
   GetApi, thirdPartyId, visibleKeys = [],
   namingDefinitions,
   onChange = (options) => {},
-}) => {
+}: any & {visibleKeys: VisibleKey[]}) => {
   const [options, setOptions] = useState();
 
   useEffect(() => {

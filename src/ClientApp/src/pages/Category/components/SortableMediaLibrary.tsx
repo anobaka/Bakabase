@@ -174,7 +174,7 @@ export default (({
               <Chip
                 color={'success'}
                 size={'sm'}
-                variant={'flat'}
+                variant={'light'}
               >
                 {library.resourceCount}
               </Chip>

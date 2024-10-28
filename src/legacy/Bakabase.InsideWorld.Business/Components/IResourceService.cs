@@ -24,7 +24,7 @@ public interface IResourceService
     // Task<List<Abstractions.Models.Db.Resource>> GetAll(Expression<Func<Abstractions.Models.Db.Resource, bool>> selector = null,
     //     bool asNoTracking = true);
     //
-    Task<SearchResponse<Abstractions.Models.Domain.Resource>> Search(ResourceSearch model, bool saveSearchCriteria, bool asNoTracking);
+    Task<SearchResponse<Abstractions.Models.Domain.Resource>> Search(ResourceSearch model, bool asNoTracking);
 
     // Task<Abstractions.Models.Db.Resource?> GetByKey(int id, bool asNoTracking);
     Task<Abstractions.Models.Domain.Resource?> Get(int id, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);

@@ -25,22 +25,22 @@ export interface BakabaseAbstractionsModelsDomainCategory {
   /** @format int32 */
   id: number;
   name: string;
-  color?: string | null;
+  color?: string;
   /** @format date-time */
   createDt: string;
   isValid: boolean;
   /** @deprecated */
-  message?: string | null;
+  message?: string;
   /** @format int32 */
   order: number;
-  componentsData?: BakabaseAbstractionsModelsDbCategoryComponent[] | null;
+  componentsData?: BakabaseAbstractionsModelsDbCategoryComponent[];
   /** [1: FilenameAscending, 2: FileModifyDtDescending] */
   coverSelectionOrder: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
   enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
   generateNfo: boolean;
-  resourceDisplayNameTemplate?: string | null;
-  customProperties?: BakabaseAbstractionsModelsDomainCustomProperty[] | null;
-  enhancerOptions?: BakabaseAbstractionsModelsDomainCategoryEnhancerOptions[] | null;
+  resourceDisplayNameTemplate?: string;
+  customProperties?: BakabaseAbstractionsModelsDomainCustomProperty[];
+  enhancerOptions?: BakabaseAbstractionsModelsDomainCategoryEnhancerOptions[];
 }
 
 export interface BakabaseAbstractionsModelsDomainCategoryEnhancerOptions {
@@ -60,18 +60,18 @@ export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
   componentType: BakabaseInsideWorldModelsConstantsComponentType;
   assemblyQualifiedTypeName: string;
   name: string;
-  description?: string | null;
-  message?: string | null;
-  optionsJson?: string | null;
+  description?: string;
+  message?: string;
+  optionsJson?: string;
   /** @format int32 */
-  optionsId?: number | null;
+  optionsId?: number;
   version: string;
   dataVersion: string;
   optionsType?: SystemType;
-  optionsJsonSchema?: string | null;
-  id?: string | null;
+  optionsJsonSchema?: string;
+  id?: string;
   canBeInstantiated: boolean;
-  associatedCategories?: BakabaseAbstractionsModelsDomainCategory[] | null;
+  associatedCategories?: BakabaseAbstractionsModelsDomainCategory[];
 }
 
 /**
@@ -176,10 +176,10 @@ export interface BakabaseAbstractionsModelsDomainCustomProperty {
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
   /** @format date-time */
   createdAt: string;
-  categories?: BakabaseAbstractionsModelsDomainCategory[] | null;
+  categories?: BakabaseAbstractionsModelsDomainCategory[];
   options?: any;
   /** @format int32 */
-  valueCount?: number | null;
+  valueCount?: number;
 }
 
 export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
@@ -210,12 +210,12 @@ export interface BakabaseAbstractionsModelsDomainMediaLibrary {
   resourceCount: number;
   fileSystemInformation?: Record<string, BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation>;
   category?: BakabaseAbstractionsModelsDomainCategory;
-  pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[] | null;
+  pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[];
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfiguration {
-  path?: string | null;
-  rpmValues?: BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue[] | null;
+  path?: string;
+  rpmValues?: BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue[];
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResult {
@@ -235,12 +235,12 @@ export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultReso
 export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceGlobalMatchedValue {
   propertyKey?: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey;
   /** @uniqueItems true */
-  textValues?: string[] | null;
+  textValues?: string[];
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentMatchResult {
-  segmentText?: string | null;
-  propertyKeys?: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey[] | null;
+  segmentText?: string;
+  propertyKeys?: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey[];
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey {
@@ -249,22 +249,11 @@ export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultReso
   isCustom: boolean;
 }
 
-export interface BakabaseAbstractionsModelsDomainProperty {
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  id: number;
-  name: string;
-  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
-  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
-  options?: any;
-}
-
 export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
-  fixedText?: string | null;
+  fixedText?: string;
   /** @format int32 */
-  layer?: number | null;
-  regex?: string | null;
+  layer?: number;
+  regex?: string;
   /** @format int32 */
   propertyId: number;
   isCustomProperty: boolean;
@@ -284,8 +273,8 @@ export interface BakabaseAbstractionsModelsDomainReservedPropertyValue {
   /** @format int32 */
   scope: number;
   /** @format double */
-  rating?: number | null;
-  introduction?: string | null;
+  rating?: number;
+  introduction?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResource {
@@ -300,7 +289,7 @@ export interface BakabaseAbstractionsModelsDomainResource {
   path: string;
   displayName: string;
   /** @format int32 */
-  parentId?: number | null;
+  parentId?: number;
   hasChildren: boolean;
   isFile: boolean;
   /** @format date-time */
@@ -311,16 +300,16 @@ export interface BakabaseAbstractionsModelsDomainResource {
   fileCreatedAt: string;
   /** @format date-time */
   fileModifiedAt: string;
-  coverPaths?: string[] | null;
+  coverPaths?: string[];
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
   category?: BakabaseAbstractionsModelsDomainCategory;
-  mediaLibraryName?: string | null;
+  mediaLibraryName?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceProperty {
-  name?: string | null;
-  values?: BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue[] | null;
+  name?: string;
+  values?: BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue[];
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   dbValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
@@ -340,7 +329,7 @@ export interface BakabaseAbstractionsModelsDomainSpecialText {
   /** @format int32 */
   id: number;
   value1: string;
-  value2?: string | null;
+  value2?: string;
   /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
   type: BakabaseAbstractionsModelsDomainConstantsSpecialTextType;
 }
@@ -349,7 +338,7 @@ export interface BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto {
   name: string;
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
-  options?: string | null;
+  options?: string;
 }
 
 export interface BakabaseAbstractionsModelsDtoMediaLibraryAddDto {
@@ -357,26 +346,26 @@ export interface BakabaseAbstractionsModelsDtoMediaLibraryAddDto {
   name: string;
   /** @format int32 */
   categoryId: number;
-  pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[] | null;
+  pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[];
 }
 
 export interface BakabaseAbstractionsModelsDtoMediaLibraryPatchDto {
-  name?: string | null;
-  pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[] | null;
+  name?: string;
+  pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[];
   /** @format int32 */
-  order?: number | null;
+  order?: number;
 }
 
 export interface BakabaseAbstractionsModelsInputCategoryAddInputModel {
   /** @format int32 */
   id: number;
-  name?: string | null;
-  color?: string | null;
+  name?: string;
+  color?: string;
   /** [1: FilenameAscending, 2: FileModifyDtDescending] */
   coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
   /** @format int32 */
-  order?: number | null;
-  generateNfo?: boolean | null;
+  order?: number;
+  generateNfo?: boolean;
   componentsData: BakabaseAbstractionsModelsInputCategoryAddInputModelSimpleCategoryComponent[];
   enhancementOptions?: BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions;
 }
@@ -396,7 +385,7 @@ export interface BakabaseAbstractionsModelsInputCategoryComponentConfigureInputM
 }
 
 export interface BakabaseAbstractionsModelsInputCategoryCustomPropertyBindInputModel {
-  customPropertyIds?: number[] | null;
+  customPropertyIds?: number[];
 }
 
 export interface BakabaseAbstractionsModelsInputCategoryDuplicateInputModel {
@@ -406,13 +395,13 @@ export interface BakabaseAbstractionsModelsInputCategoryDuplicateInputModel {
 export interface BakabaseAbstractionsModelsInputCategoryPatchInputModel {
   /** @format int32 */
   id: number;
-  name?: string | null;
-  color?: string | null;
+  name?: string;
+  color?: string;
   /** [1: FilenameAscending, 2: FileModifyDtDescending] */
   coverSelectionOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
   /** @format int32 */
-  order?: number | null;
-  generateNfo?: boolean | null;
+  order?: number;
+  generateNfo?: boolean;
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryAddInBulkInputModel {
@@ -432,7 +421,7 @@ export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputMod
   /** @format int32 */
   propertyId: number;
   isCustomProperty: boolean;
-  value?: string | null;
+  value?: string;
 }
 
 export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
@@ -445,12 +434,12 @@ export interface BakabaseAbstractionsModelsInputSpecialTextAddInputModel {
   /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
   type: BakabaseAbstractionsModelsDomainConstantsSpecialTextType;
   value1: string;
-  value2?: string | null;
+  value2?: string;
 }
 
 export interface BakabaseAbstractionsModelsInputSpecialTextPatchInputModel {
-  value1?: string | null;
-  value2?: string | null;
+  value1?: string;
+  value2?: string;
 }
 
 export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
@@ -464,7 +453,7 @@ export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewMo
   /** [1: StaticText, 2: Property, 3: LeftWrapper, 4: RightWrapper] */
   type: BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType;
   text: string;
-  wrapperPairId?: string | null;
+  wrapperPairId?: string;
 }
 
 /**
@@ -474,9 +463,9 @@ export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewMo
 export type BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType = 1 | 2 | 3 | 4;
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel {
-  language?: string | null;
-  enablePreReleaseChannel?: boolean | null;
-  enableAnonymousDataTracking?: boolean | null;
+  language?: string;
+  enablePreReleaseChannel?: boolean;
+  enableAnonymousDataTracking?: boolean;
   /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
   closeBehavior?: BakabaseInfrastructuresComponentsGuiCloseBehavior;
   /** [0: FollowSystem, 1: Light, 2: Dark] */
@@ -489,38 +478,38 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreData
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
-  appDataPath?: string | null;
-  coreVersion?: string | null;
-  logPath?: string | null;
-  backupPath?: string | null;
-  tempFilesPath?: string | null;
+  appDataPath?: string;
+  coreVersion?: string;
+  logPath?: string;
+  backupPath?: string;
+  tempFilesPath?: string;
   notAcceptTerms: boolean;
   needRestart: boolean;
 }
 
 export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo {
-  version?: string | null;
-  installers?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller[] | null;
+  version?: string;
+  installers?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller[];
 }
 
 export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller {
   osPlatform?: SystemRuntimeInteropServicesOSPlatform;
   /** [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x, 6: LoongArch64, 7: Armv6, 8: Ppc64le] */
   osArchitecture: SystemRuntimeInteropServicesArchitecture;
-  name?: string | null;
-  url?: string | null;
+  name?: string;
+  url?: string;
   /** @format int64 */
   size: number;
 }
 
 export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
-  language?: string | null;
-  version?: string | null;
+  language?: string;
+  version?: string;
   enablePreReleaseChannel: boolean;
   enableAnonymousDataTracking: boolean;
-  wwwRootPath?: string | null;
-  dataPath?: string | null;
-  prevDataPath?: string | null;
+  wwwRootPath?: string;
+  dataPath?: string;
+  prevDataPath?: string;
   /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
   closeBehavior: BakabaseInfrastructuresComponentsGuiCloseBehavior;
   /** [0: FollowSystem, 1: Light, 2: Dark] */
@@ -542,33 +531,33 @@ export type BakabaseInfrastructuresComponentsGuiUiTheme = 0 | 1 | 2;
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilter {
   /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt] */
   property: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty;
-  propertyKey?: string | null;
+  propertyKey?: string;
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
   operation: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterOperation;
-  target?: string | null;
+  target?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup {
   /** [1: And, 2: Or] */
   operation: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterGroupOperation;
-  filters?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilter[] | null;
-  groups?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup[] | null;
+  filters?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilter[];
+  groups?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess {
   /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt] */
   property: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty;
-  propertyKey?: string | null;
-  value?: string | null;
+  propertyKey?: string;
+  value?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable {
   key: string;
-  name?: string | null;
+  name?: string;
   /** [1: None, 2: FileName, 3: FileNameWithoutExtension, 4: FullPath, 5: DirectoryName] */
   source: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationVariableSource;
-  find?: string | null;
-  value?: string | null;
+  find?: string;
+  value?: string;
 }
 
 /**
@@ -631,45 +620,43 @@ export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractio
   status: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationStatus;
   /** @format date-time */
   createdAt: string;
-  variables?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable[] | null;
+  variables?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable[];
   filter?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup;
-  processes?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[] | null;
-  diffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[] | null;
-  filteredResourceIds?: number[] | null;
+  processes?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[];
+  diffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[];
+  filteredResourceIds?: number[];
   /** @format date-time */
-  filteredAt?: string | null;
+  filteredAt?: string;
   /** @format date-time */
-  calculatedAt?: string | null;
+  calculatedAt?: string;
   /** @format date-time */
-  appliedAt?: string | null;
+  appliedAt?: string;
   /** @format date-time */
-  revertedAt?: string | null;
+  revertedAt?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationPutRequestModel {
   name: string;
   filter?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationFilterGroup;
-  processes?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[] | null;
-  variables?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable[] | null;
+  processes?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationProcess[];
+  variables?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsBulkModificationVariable[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffs {
   /** @format int32 */
   id: number;
   path: string;
-  diffs?:
-    | BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffsDiff[]
-    | null;
+  diffs?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffsDiff[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffsDiff {
   /** [1: Category, 2: MediaLibrary, 4: FileName, 5: DirectoryPath, 7: CreateDt, 8: FileCreateDt, 9: FileModifyDt] */
   property: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationFilterableProperty;
-  propertyKey?: string | null;
+  propertyKey?: string;
   /** [1: Added, 2: Removed, 3: Modified] */
   type: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffType;
-  currentValue?: string | null;
-  newValue?: string | null;
+  currentValue?: string;
+  newValue?: string;
   /** [0: None, 1: Ignore, 2: Replace, 3: Merge] */
   operation: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsConstantsBulkModificationDiffOperation;
 }
@@ -684,7 +671,7 @@ export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileE
 
 export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
   version: string;
-  description?: string | null;
+  description?: string;
   canUpdate: boolean;
 }
 
@@ -693,7 +680,7 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCom
   files: string[];
   extension: string;
   missEntry: boolean;
-  password?: string | null;
+  password?: string;
   passwordCandidates: string[];
 }
 
@@ -728,13 +715,13 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
   /** [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 1000: Drive, 10000: Invalid] */
   type: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType;
   /** @format int64 */
-  size?: number | null;
+  size?: number;
   /** @format int32 */
-  childrenCount?: number | null;
+  childrenCount?: number;
   /** @format date-time */
-  creationTime?: string | null;
+  creationTime?: string;
   /** @format date-time */
-  lastWriteTime?: string | null;
+  lastWriteTime?: string;
   passwordsForDecompressing: string[];
 }
 
@@ -797,17 +784,23 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
   hideChildren: boolean;
   propertyValueScopePriority: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
   additionalCoverDiscoveringSources: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[];
+  savedSearches: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSavedSearch[];
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
   /** [1: ResourceDirectory, 2: TempDirectory] */
   saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
-  overwrite?: boolean | null;
+  overwrite?: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSavedSearch {
+  search: BakabaseModulesPropertyModelsDbResourceSearchDbModel;
+  name: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsBilibiliOptions {
   downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
-  cookie?: string | null;
+  cookie?: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsEnhancerOptions {
@@ -815,12 +808,12 @@ export interface BakabaseInsideWorldModelsConfigsEnhancerOptions {
 }
 
 export interface BakabaseInsideWorldModelsConfigsEnhancerOptionsRegexEnhancerModel {
-  expressions?: string[] | null;
+  expressions?: string[];
 }
 
 export interface BakabaseInsideWorldModelsConfigsExHentaiOptions {
   downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
-  cookie?: string | null;
+  cookie?: string;
   enhancer?: BakabaseInsideWorldModelsConfigsExHentaiOptionsExHentaiEnhancerOptions;
 }
 
@@ -829,13 +822,13 @@ export interface BakabaseInsideWorldModelsConfigsExHentaiOptionsExHentaiEnhancer
 }
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptions {
-  recentMovingDestinations?: string[] | null;
+  recentMovingDestinations?: string[];
   fileMover?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions;
   fileProcessor?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions;
 }
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions {
-  targets?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptionsTarget[] | null;
+  targets?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptionsTarget[];
   enabled: boolean;
   delay: SystemTimeSpan;
 }
@@ -854,25 +847,25 @@ export interface BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloader
   threads: number;
   /** @format int32 */
   interval: number;
-  defaultPath?: string | null;
-  namingConvention?: string | null;
+  defaultPath?: string;
+  namingConvention?: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsJavLibraryOptions {
-  cookie?: string | null;
+  cookie?: string;
   collector?: BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptions;
 }
 
 export interface BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptions {
-  path?: string | null;
+  path?: string;
   /** @uniqueItems true */
-  urls?: string[] | null;
+  urls?: string[];
   /** @uniqueItems true */
-  torrentOrLinkKeywords?: string[] | null;
+  torrentOrLinkKeywords?: string[];
 }
 
 export interface BakabaseInsideWorldModelsConfigsNetworkOptions {
-  customProxies?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions[] | null;
+  customProxies?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions[];
   proxy: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
 }
 
@@ -885,7 +878,7 @@ export type BakabaseInsideWorldModelsConfigsNetworkOptionsProxyMode = 0 | 1 | 2;
 export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel {
   /** [0: DoNotUse, 1: UseSystem, 2: UseCustom] */
   mode: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyMode;
-  customProxyId?: string | null;
+  customProxyId?: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions {
@@ -896,17 +889,17 @@ export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptions {
 
 export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials {
   username: string;
-  password?: string | null;
-  domain?: string | null;
+  password?: string;
+  domain?: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsPixivOptions {
-  cookie?: string | null;
+  cookie?: string;
   downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
 }
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
-  simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[] | null;
+  simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[];
 }
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions {
@@ -1163,8 +1156,8 @@ export interface BakabaseInsideWorldModelsModelsAosResourceDiff {
   newValue?: any;
   /** [1: Added, 2: Removed, 3: Modified] */
   type: BakabaseInsideWorldModelsConstantsResourceDiffType;
-  key?: string | null;
-  subDiffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[] | null;
+  key?: string;
+  subDiffs?: BakabaseInsideWorldModelsModelsAosResourceDiff[];
 }
 
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
@@ -1207,7 +1200,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyA
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount {
-  label?: string | null;
+  label?: string;
   name: string;
   /** @format int32 */
   count: number;
@@ -1243,11 +1236,11 @@ export interface BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
   /** @format date-time */
   downloadStatusUpdateDt: string;
   /** @format int64 */
-  interval?: number | null;
+  interval?: number;
   /** @format int32 */
-  startPage?: number | null;
+  startPage?: number;
   /** @format int32 */
-  endPage?: number | null;
+  endPage?: number;
   message: string;
   checkpoint: string;
   /** [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled] */
@@ -1257,7 +1250,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
   /** @format int32 */
   failureTimes: number;
   /** @format date-time */
-  nextStartDt?: string | null;
+  nextStartDt?: string;
   /** @uniqueItems true */
   availableActions: BakabaseInsideWorldModelsConstantsDownloadTaskAction[];
   displayName: string;
@@ -1268,7 +1261,7 @@ export interface BakabaseInsideWorldModelsModelsDtosPlaylistDto {
   /** @format int32 */
   id: number;
   name: string;
-  items?: BakabaseInsideWorldModelsModelsDtosPlaylistItemDto[] | null;
+  items?: BakabaseInsideWorldModelsModelsDtosPlaylistItemDto[];
   /** @format int32 */
   interval: number;
   /** @format int32 */
@@ -1279,8 +1272,8 @@ export interface BakabaseInsideWorldModelsModelsDtosPlaylistItemDto {
   /** [1: Resource, 2: Video, 3: Image, 4: Audio] */
   type: BakabaseInsideWorldModelsConstantsPlaylistItemType;
   /** @format int32 */
-  resourceId?: number | null;
-  file?: string | null;
+  resourceId?: number;
+  file?: string;
   startTime?: SystemTimeSpan;
   endTime?: SystemTimeSpan;
 }
@@ -1299,7 +1292,7 @@ export interface BakabaseInsideWorldModelsModelsEntitiesComponentOptions {
   componentAssemblyQualifiedTypeName: string;
   /** @minLength 1 */
   name: string;
-  description?: string | null;
+  description?: string;
   /** @minLength 1 */
   json: string;
 }
@@ -1309,7 +1302,7 @@ export interface BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
   id: number;
   /** @minLength 1 */
   key: string;
-  name?: string | null;
+  name?: string;
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
@@ -1319,13 +1312,13 @@ export interface BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
   /** @format date-time */
   downloadStatusUpdateDt: string;
   /** @format int64 */
-  interval?: number | null;
+  interval?: number;
   /** @format int32 */
-  startPage?: number | null;
+  startPage?: number;
   /** @format int32 */
-  endPage?: number | null;
-  message?: string | null;
-  checkpoint?: string | null;
+  endPage?: number;
+  message?: string;
+  checkpoint?: string;
   /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
   status: BakabaseInsideWorldModelsConstantsDownloadTaskStatus;
   /** @minLength 1 */
@@ -1345,7 +1338,7 @@ export interface BakabaseInsideWorldModelsModelsEntitiesPassword {
 export interface BakabaseInsideWorldModelsRequestModelsComponentOptionsAddRequestModel {
   /** @minLength 1 */
   name: string;
-  description?: string | null;
+  description?: string;
   /** @minLength 1 */
   componentAssemblyQualifiedTypeName: string;
   /** @minLength 1 */
@@ -1359,12 +1352,12 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequest
   type: number;
   keyAndNames?: Record<string, string>;
   /** @format int64 */
-  interval?: number | null;
+  interval?: number;
   /** @format int32 */
-  startPage?: number | null;
+  startPage?: number;
   /** @format int32 */
-  endPage?: number | null;
-  checkpoint?: string | null;
+  endPage?: number;
+  checkpoint?: string;
   forceCreating: boolean;
   /** @minLength 1 */
   downloadPath: string;
@@ -1378,7 +1371,7 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestM
 
 export interface BakabaseInsideWorldModelsRequestModelsFileDecompressRequestModel {
   paths: string[];
-  password?: string | null;
+  password?: string;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsFileMoveRequestModel {
@@ -1400,12 +1393,12 @@ export interface BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel {
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel {
-  customProxies?: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModelProxyOptions[] | null;
+  customProxies?: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModelProxyOptions[];
   proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModelProxyOptions {
-  id?: string | null;
+  id?: string;
   address: string;
   credentials?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials;
 }
@@ -1436,19 +1429,19 @@ export interface BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestMode
 
 export interface BakabaseModulesAliasAbstractionsModelsDomainAlias {
   text: string;
-  preferred?: string | null;
+  preferred?: string;
   /** @uniqueItems true */
-  candidates?: string[] | null;
+  candidates?: string[];
 }
 
 export interface BakabaseModulesAliasModelsInputAliasAddInputModel {
   /** @minLength 1 */
   text: string;
-  preferred?: string | null;
+  preferred?: string;
 }
 
 export interface BakabaseModulesAliasModelsInputAliasPatchInputModel {
-  text?: string | null;
+  text?: string;
   isPreferred: boolean;
 }
 
@@ -1458,7 +1451,7 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescripto
   /** @format int32 */
   id: number;
   name: string;
-  description?: string | null;
+  description?: string;
   targets: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDescriptor[];
   /** @format int32 */
   propertyValueScope: number;
@@ -1474,8 +1467,8 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   propertyType: BakabaseAbstractionsModelsDomainConstantsPropertyType;
   isDynamic: boolean;
-  description?: string | null;
-  optionsItems?: number[] | null;
+  description?: string;
+  optionsItems?: number[];
   enhancementConverter?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter;
   /** [12: Introduction, 13: Rating] */
   reservedPropertyCandidate?: BakabaseAbstractionsModelsDomainConstantsReservedProperty;
@@ -1488,17 +1481,17 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
 export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementAdditionalItem = 0 | 1;
 
 export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions {
-  targetOptions?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions[] | null;
+  targetOptions?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions[];
 }
 
 export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions {
   /** @format int32 */
   target: number;
-  dynamicTarget?: string | null;
-  autoMatchMultilevelString?: boolean | null;
-  autoBindProperty?: boolean | null;
+  dynamicTarget?: string;
+  autoMatchMultilevelString?: boolean;
+  autoBindProperty?: boolean;
   /** @format int32 */
-  propertyId?: number | null;
+  propertyId?: number;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** [1: FilenameAscending, 2: FileModifyDtDescending] */
@@ -1507,58 +1500,50 @@ export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFu
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
   options?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions;
-  active?: boolean | null;
+  active?: boolean;
 }
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptionsPatchInputModel {
-  autoMatchMultilevelString?: boolean | null;
-  autoBindProperty?: boolean | null;
+  autoMatchMultilevelString?: boolean;
+  autoBindProperty?: boolean;
   /** [1: FilenameAscending, 2: FileModifyDtDescending] */
   coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
   /** @format int32 */
-  propertyId?: number | null;
+  propertyId?: number;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  dynamicTarget?: string | null;
+  dynamicTarget?: string;
 }
 
 export interface BakabaseModulesPropertyModelsDbResourceSearchDbModel {
-  /** @format int32 */
-  pageIndex: number;
-  /**
-   * @format int32
-   * @min 0
-   * @max 100
-   */
-  pageSize: number;
-  /** @format int32 */
-  skipCount: number;
   group?: BakabaseModulesPropertyModelsDbResourceSearchFilterGroupDbModel;
-  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[] | null;
-  keyword?: string | null;
+  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
+  keyword?: string;
+  /** @format int32 */
+  page: number;
+  /** @format int32 */
+  pageSize: number;
 }
 
 export interface BakabaseModulesPropertyModelsDbResourceSearchFilterDbModel {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
-  propertyId: number;
+  propertyId?: number;
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
-  value?: string | null;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
-  valueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+  value?: string;
 }
 
 export interface BakabaseModulesPropertyModelsDbResourceSearchFilterGroupDbModel {
   /** [1: And, 2: Or] */
   combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
-  groups?: BakabaseModulesPropertyModelsDbResourceSearchFilterGroupDbModel[] | null;
-  filters?: BakabaseModulesPropertyModelsDbResourceSearchFilterDbModel[] | null;
+  groups?: BakabaseModulesPropertyModelsDbResourceSearchFilterGroupDbModel[];
+  filters?: BakabaseModulesPropertyModelsDbResourceSearchFilterDbModel[];
 }
 
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
-  results?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTin[] | null;
+  results?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTin[];
 }
 
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTin {
@@ -1566,8 +1551,8 @@ export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionEx
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
-  serializedBizValue?: string | null;
-  outputs?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTout[] | null;
+  serializedBizValue?: string;
+  outputs?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTout[];
 }
 
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTout {
@@ -1575,7 +1560,7 @@ export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionEx
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
-  serializedBizValue?: string | null;
+  serializedBizValue?: string;
 }
 
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel {
@@ -1589,8 +1574,8 @@ export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionPr
 }
 
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionPreviewViewModelChange {
-  serializedFromValue?: string | null;
-  serializedToValue?: string | null;
+  serializedFromValue?: string;
+  serializedToValue?: string;
 }
 
 /**
@@ -1620,7 +1605,7 @@ export interface BakabaseModulesStandardValueModelsViewStandardValueConversionRu
   /** [1: Directly, 2: Incompatible, 4: ValuesWillBeMerged, 8: DateWillBeLost, 16: StringToTag, 64: OnlyFirstValidRemains, 128: StringToDateTime, 256: StringToTime, 1024: UrlWillBeLost, 2048: StringToNumber, 8192: Trim, 16384: StringToLink, 32768: ValueWillBeSplit, 65536: BooleanToNumber, 131072: TimeToDateTime, 262144: TagGroupWillBeLost, 524288: ValueToBoolean] */
   rule: BakabaseModulesStandardValueAbstractionsModelsDomainConstantsStandardValueConversionRule;
   name: string;
-  description?: string | null;
+  description?: string;
 }
 
 export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
@@ -1637,45 +1622,42 @@ export interface BakabaseServiceModelsInputFileSystemEntryGroupInputModel {
 }
 
 export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
-  additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[] | null;
+  additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[];
   coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
-  propertyValueScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[] | null;
+  propertyValueScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
   searchCriteria?: BakabaseServiceModelsInputResourceSearchInputModel;
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
   /** [1: And, 2: Or] */
   combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
-  groups?: BakabaseServiceModelsInputResourceSearchFilterGroupInputModel[] | null;
-  filters?: BakabaseServiceModelsInputResourceSearchFilterInputModel[] | null;
+  groups?: BakabaseServiceModelsInputResourceSearchFilterGroupInputModel[];
+  filters?: BakabaseServiceModelsInputResourceSearchFilterInputModel[];
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterInputModel {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
-  propertyId: number;
+  propertyId?: number;
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
-  dbValue?: string | null;
-  valueProperty?: BakabaseAbstractionsModelsDomainProperty;
+  operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+  dbValue?: string;
 }
 
 export interface BakabaseServiceModelsInputResourceSearchInputModel {
+  group?: BakabaseServiceModelsInputResourceSearchFilterGroupInputModel;
+  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
+  keyword?: string;
   /** @format int32 */
-  pageIndex: number;
-  /**
-   * @format int32
-   * @min 0
-   * @max 100
-   */
   pageSize: number;
   /** @format int32 */
-  skipCount: number;
-  group?: BakabaseServiceModelsInputResourceSearchFilterGroupInputModel;
-  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[] | null;
-  keyword?: string | null;
-  saveSearchCriteria: boolean;
+  page: number;
+}
+
+export interface BakabaseServiceModelsInputSavedSearchAddInputModel {
+  search: BakabaseServiceModelsInputResourceSearchInputModel;
+  name: string;
 }
 
 export interface BakabaseServiceModelsViewCustomPropertyViewModel {
@@ -1694,8 +1676,8 @@ export interface BakabaseServiceModelsViewCustomPropertyViewModel {
   poolName: string;
   typeName: string;
   /** @format int32 */
-  valueCount?: number | null;
-  categories?: BakabaseAbstractionsModelsDomainCategory[] | null;
+  valueCount?: number;
+  categories?: BakabaseAbstractionsModelsDomainCategory[];
 }
 
 export interface BakabaseServiceModelsViewEnhancementViewModel {
@@ -1709,12 +1691,12 @@ export interface BakabaseServiceModelsViewEnhancementViewModel {
   valueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** @format int32 */
   target: number;
-  dynamicTarget?: string | null;
+  dynamicTarget?: string;
   value?: any;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
-  propertyId?: number | null;
+  propertyId?: number;
   customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
   reservedPropertyValue?: BakabaseAbstractionsModelsDomainReservedPropertyValue;
   property?: BakabaseServiceModelsViewPropertyViewModel;
@@ -1755,9 +1737,9 @@ export interface BakabaseServiceModelsViewPropertyViewModel {
 export interface BakabaseServiceModelsViewResourceEnhancements {
   enhancer: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor;
   /** @format date-time */
-  contextCreatedAt?: string | null;
+  contextCreatedAt?: string;
   /** @format date-time */
-  contextAppliedAt?: string | null;
+  contextAppliedAt?: string;
   /** [1: ContextCreated, 2: ContextApplied] */
   status: BakabaseAbstractionsModelsDomainConstantsEnhancementRecordStatus;
   targets: BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement[];
@@ -1768,7 +1750,7 @@ export interface BakabaseServiceModelsViewResourceEnhancementsDynamicTargetEnhan
   /** @format int32 */
   target: number;
   targetName: string;
-  enhancements?: BakabaseServiceModelsViewEnhancementViewModel[] | null;
+  enhancements?: BakabaseServiceModelsViewEnhancementViewModel[];
 }
 
 export interface BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement {
@@ -1781,38 +1763,37 @@ export interface BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement 
 export interface BakabaseServiceModelsViewResourceSearchFilterGroupViewModel {
   /** [1: And, 2: Or] */
   combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
-  groups?: BakabaseServiceModelsViewResourceSearchFilterGroupViewModel[] | null;
-  filters?: BakabaseServiceModelsViewResourceSearchFilterViewModel[] | null;
+  groups?: BakabaseServiceModelsViewResourceSearchFilterGroupViewModel[];
+  filters?: BakabaseServiceModelsViewResourceSearchFilterViewModel[];
 }
 
 export interface BakabaseServiceModelsViewResourceSearchFilterViewModel {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
-  propertyId: number;
+  propertyId?: number;
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
-  dbValue?: string | null;
-  bizValue?: string | null;
-  availableOperations?: BakabaseAbstractionsModelsDomainConstantsSearchOperation[] | null;
+  operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+  dbValue?: string;
+  bizValue?: string;
+  availableOperations?: BakabaseAbstractionsModelsDomainConstantsSearchOperation[];
   property?: BakabaseServiceModelsViewPropertyViewModel;
   valueProperty?: BakabaseServiceModelsViewPropertyViewModel;
 }
 
 export interface BakabaseServiceModelsViewResourceSearchViewModel {
-  /** @format int32 */
-  pageIndex: number;
-  /**
-   * @format int32
-   * @min 0
-   * @max 100
-   */
-  pageSize: number;
-  /** @format int32 */
-  skipCount: number;
   group?: BakabaseServiceModelsViewResourceSearchFilterGroupViewModel;
-  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[] | null;
-  keyword?: string | null;
+  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
+  keyword?: string;
+  /** @format int32 */
+  page: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BakabaseServiceModelsViewSavedSearchViewModel {
+  search: BakabaseServiceModelsViewResourceSearchViewModel;
+  name: string;
 }
 
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -1822,193 +1803,198 @@ export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   dateTime: string;
   /** [0: Trace, 1: Debug, 2: Information, 3: Warning, 4: Error, 5: Critical, 6: None] */
   level: MicrosoftExtensionsLoggingLogLevel;
-  logger?: string | null;
-  event?: string | null;
-  message?: string | null;
+  logger?: string;
+  event?: string;
+  message?: string;
   read: boolean;
 }
 
 export interface BootstrapModelsResponseModelsBaseResponse {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseAbstractionsModelsDomainCategory[] | null;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainCategory[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainComponentDescriptor {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseAbstractionsModelsDomainComponentDescriptor[] | null;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainComponentDescriptor[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainConstantsSearchOperation {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseAbstractionsModelsDomainConstantsSearchOperation[] | null;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainConstantsSearchOperation[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibrary {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseAbstractionsModelsDomainMediaLibrary[] | null;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainMediaLibrary[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseAbstractionsModelsDomainResource[] | null;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResource[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel[] | null;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto[] | null;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffs {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?:
-    | BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffs[]
-    | null;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationResourceDiffs[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[] | null;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto[] | null;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsAosPreviewerItem[] | null;
+  message?: string;
+  data?: BakabaseInsideWorldModelsModelsAosPreviewerItem[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosDownloadTaskDto[] | null;
+  message?: string;
+  data?: BakabaseInsideWorldModelsModelsDtosDownloadTaskDto[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto[] | null;
+  message?: string;
+  data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsEntitiesPassword[] | null;
+  message?: string;
+  data?: BakabaseInsideWorldModelsModelsEntitiesPassword[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor[] | null;
+  message?: string;
+  data?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites[] | null;
+  message?: string;
+  data?: BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseServiceModelsViewCustomPropertyViewModel[] | null;
+  message?: string;
+  data?: BakabaseServiceModelsViewCustomPropertyViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileSystemEntryNameViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseServiceModelsViewFileSystemEntryNameViewModel[] | null;
+  message?: string;
+  data?: BakabaseServiceModelsViewFileSystemEntryNameViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewPropertyViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseServiceModelsViewPropertyViewModel[] | null;
+  message?: string;
+  data?: BakabaseServiceModelsViewPropertyViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceEnhancements {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseServiceModelsViewResourceEnhancements[] | null;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceEnhancements[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewSavedSearchViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BootstrapComponentsLoggingLogServiceModelsEntitiesLog[] | null;
+  message?: string;
+  data?: BootstrapComponentsLoggingLogServiceModelsEntitiesLog[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1SystemCollectionsGenericList1SystemString {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: string[][] | null;
+  message?: string;
+  data?: string[][];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1SystemInt32 {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: number[] | null;
+  message?: string;
+  data?: number[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1SystemString {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: string[] | null;
+  message?: string;
+  data?: string[];
 }
 
 export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDomainResource {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseAbstractionsModelsDomainResource[] | null;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResource[];
   /** @format int32 */
   totalCount: number;
   /** @format int32 */
@@ -2020,8 +2006,8 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstraction
 export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsEntitiesPassword[] | null;
+  message?: string;
+  data?: BakabaseInsideWorldModelsModelsEntitiesPassword[];
   /** @format int32 */
   totalCount: number;
   /** @format int32 */
@@ -2033,8 +2019,8 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorld
 export interface BootstrapModelsResponseModelsSearchResponse1BakabaseModulesAliasAbstractionsModelsDomainAlias {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseModulesAliasAbstractionsModelsDomainAlias[] | null;
+  message?: string;
+  data?: BakabaseModulesAliasAbstractionsModelsDomainAlias[];
   /** @format int32 */
   totalCount: number;
   /** @format int32 */
@@ -2046,8 +2032,8 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseModulesAlia
 export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BootstrapComponentsLoggingLogServiceModelsEntitiesLog[] | null;
+  message?: string;
+  data?: BootstrapComponentsLoggingLogServiceModelsEntitiesLog[];
   /** @format int32 */
   totalCount: number;
   /** @format int32 */
@@ -2059,28 +2045,28 @@ export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponents
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategoryEnhancerOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseAbstractionsModelsDomainCategoryEnhancerOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseAbstractionsModelsDomainCategory;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainComponentDescriptor {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseAbstractionsModelsDomainComponentDescriptor;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainConstantsInitializationContentType {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   /** [1: NotAcceptTerms, 2: NeedRestart] */
   data: BakabaseAbstractionsModelsDomainConstantsInitializationContentType;
 }
@@ -2088,287 +2074,287 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseAbstractionsModelsDomainCustomProperty;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibrary {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseAbstractionsModelsDomainMediaLibrary;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathConfigurationTestResult {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseAbstractionsModelsDomainPathConfigurationTestResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseAbstractionsModelsDomainSpecialText;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldBusinessComponentsBulkModificationAbstractionsModelsDtosBulkModificationDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsBilibiliOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsConfigsBilibiliOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsEnhancerOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsConfigsEnhancerOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsExHentaiOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsConfigsExHentaiOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsFileSystemOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsConfigsFileSystemOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsJavLibraryOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsConfigsJavLibraryOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsNetworkOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsConfigsNetworkOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsPixivOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsConfigsPixivOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsThirdPartyOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsConfigsThirdPartyOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsConfigsUIOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics[] | null;
+  message?: string;
+  data?: BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics[];
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsModelsDtosDashboardStatistics;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsModelsDtosDownloadTaskDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesComponentOptions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseInsideWorldModelsModelsEntitiesComponentOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewPropertyViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseServiceModelsViewPropertyViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: BakabaseServiceModelsViewResourceSearchViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemBoolean {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data: boolean;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: Record<string, BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: Record<string, Record<string, BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel[]>>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseAbstractionsModelsDomainSpecialText {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: Record<string, BakabaseAbstractionsModelsDomainSpecialText[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldModelsConstantsMediaType {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: Record<string, BakabaseInsideWorldModelsConstantsMediaType>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemInt32 {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   data?: Record<string, number | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemInt32 {
   /** @format int32 */
   code: number;
-  message?: string | null;
+  message?: string;
   /** @format int32 */
   data: number;
 }
@@ -2376,8 +2362,8 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemInt32 {
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
   /** @format int32 */
   code: number;
-  message?: string | null;
-  data?: string | null;
+  message?: string;
+  data?: string;
 }
 
 /**
@@ -2399,9 +2385,9 @@ export interface SystemReflectionAssembly {
   definedTypes: SystemReflectionTypeInfo[];
   exportedTypes: SystemType[];
   /** @deprecated */
-  codeBase?: string | null;
+  codeBase?: string;
   entryPoint?: SystemReflectionMethodInfo;
-  fullName?: string | null;
+  fullName?: string;
   imageRuntimeVersion: string;
   isDynamic: boolean;
   location: string;
@@ -2754,7 +2740,7 @@ export interface SystemReflectionParameterInfo {
   /** [0: None, 1: In, 2: Out, 4: Lcid, 8: Retval, 16: Optional, 4096: HasDefault, 8192: HasFieldMarshal, 16384: Reserved3, 32768: Reserved4, 61440: ReservedMask] */
   attributes: SystemReflectionParameterAttributes;
   member: SystemReflectionMemberInfo;
-  name?: string | null;
+  name?: string;
   parameterType: SystemType;
   /** @format int32 */
   position: number;
@@ -2839,9 +2825,9 @@ export interface SystemReflectionTypeInfo {
   isInterface: boolean;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType: SystemReflectionMemberTypes;
-  namespace?: string | null;
-  assemblyQualifiedName?: string | null;
-  fullName?: string | null;
+  namespace?: string;
+  assemblyQualifiedName?: string;
+  fullName?: string;
   assembly: SystemReflectionAssembly;
   module: SystemReflectionModule;
   isNested: boolean;
@@ -3002,9 +2988,9 @@ export interface SystemType {
   isInterface: boolean;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType: SystemReflectionMemberTypes;
-  namespace?: string | null;
-  assemblyQualifiedName?: string | null;
-  fullName?: string | null;
+  namespace?: string;
+  assemblyQualifiedName?: string;
+  fullName?: string;
   assembly: SystemReflectionAssembly;
   module: SystemReflectionModule;
   isNested: boolean;
@@ -5012,16 +4998,80 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name GetResourceSearchCriteria
-     * @request GET:/resource/search-criteria
+     * @name GetLastResourceSearch
+     * @request GET:/resource/last-search
      */
-    getResourceSearchCriteria: (params: RequestParams = {}) =>
+    getLastResourceSearch: (params: RequestParams = {}) =>
       this.request<
         BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel,
         any
       >({
-        path: `/resource/search-criteria`,
+        path: `/resource/last-search`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SaveNewResourceSearch
+     * @request POST:/resource/saved-search
+     */
+    saveNewResourceSearch: (data: BakabaseServiceModelsInputSavedSearchAddInputModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/saved-search`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetSavedSearches
+     * @request GET:/resource/saved-search
+     */
+    getSavedSearches: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel, any>({
+        path: `/resource/saved-search`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PutSavedSearchName
+     * @request PUT:/resource/saved-search/{idx}/name
+     */
+    putSavedSearchName: (idx: number, data: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/saved-search/${idx}/name`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name DeleteSavedSearch
+     * @request DELETE:/resource/saved-search/{idx}
+     */
+    deleteSavedSearch: (idx: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/saved-search/${idx}`,
+        method: "DELETE",
         format: "json",
         ...params,
       }),
@@ -5033,10 +5083,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SearchResources
      * @request POST:/resource/search
      */
-    searchResources: (data: BakabaseServiceModelsInputResourceSearchInputModel, params: RequestParams = {}) =>
+    searchResources: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      query?: {
+        saveSearch?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDomainResource, any>({
         path: `/resource/search`,
         method: "POST",
+        query: query,
         body: data,
         type: ContentType.Json,
         format: "json",
