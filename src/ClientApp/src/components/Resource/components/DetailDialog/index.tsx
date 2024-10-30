@@ -2,12 +2,18 @@ import React, { useEffect, useState } from 'react';
 
 import './index.scss';
 import { useTranslation } from 'react-i18next';
-import { DatabaseOutlined, FolderOpenOutlined, PlayCircleOutlined, SettingOutlined } from '@ant-design/icons';
+import {
+  DatabaseOutlined,
+  DisconnectOutlined,
+  FolderOpenOutlined,
+  PlayCircleOutlined,
+  SettingOutlined,
+} from '@ant-design/icons';
 import BasicInfo from './BasicInfo';
 import Properties from './Properties';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
-import { Button, ButtonGroup, Modal } from '@/components/bakaui';
+import { Button, ButtonGroup, Link, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import BApi from '@/sdk/BApi';
 import { ReservedProperty, ResourceAdditionalItem, PropertyPool } from '@/sdk/constants';
@@ -133,6 +139,20 @@ export default ({
                 propertyClassNames={{
                   name: 'justify-end',
                 }}
+                noPropertyContent={(
+                  <div className={'flex flex-col items-center gap-2 justify-center'}>
+                    <div className={'w-4/5'}>
+                      <DisconnectOutlined className={'text-base mr-1'} />
+                      {t('No property available. Please bind properties to category if you need to show them.')}
+                      <Link
+                        href={'#/category'}
+                        size={'sm'}
+                        underline={'none'}
+                        isBlock
+                      >{t('Go to category page')}</Link>
+                    </div>
+                  </div>
+                )}
               />
             </div>
             <Button

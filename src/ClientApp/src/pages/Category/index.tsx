@@ -1,7 +1,6 @@
 import React, { useEffect, useReducer, useRef, useState } from 'react';
 import { Dropdown, Loading, Menu } from '@alifd/next';
 import './index.scss';
-import { history } from 'ice';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
@@ -11,7 +10,6 @@ import MediaLibrarySynchronization from '@/pages/Category/components/MediaLibrar
 import store from '@/store';
 import BApi from '@/sdk/BApi';
 import { CategoryAdditionalItem, MediaLibraryAdditionalItem } from '@/sdk/constants';
-import SimpleOneStepDialog from '@/components/SimpleOneStepDialog';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Button, Input, Modal } from '@/components/bakaui';
@@ -200,7 +198,7 @@ export default () => {
           <div className={'last-sync-time'}>
             {t('Last sync time')}: {resourceOptions?.lastSyncDt ? dayjs(resourceOptions.lastSyncDt).format('YYYY-MM-DD HH:mm:ss') : t('Never')}
           </div>
-          <MediaLibrarySynchronization />
+          <MediaLibrarySynchronization onComplete={() => loadAllMediaLibraries()} />
         </div>
       </div>
       <Loading visible={loading} fullScreen />

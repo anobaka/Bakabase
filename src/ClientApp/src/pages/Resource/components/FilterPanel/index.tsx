@@ -11,7 +11,7 @@ import BApi from '@/sdk/BApi';
 import store from '@/store';
 import { PlaylistCollection } from '@/components/Playlist';
 import type { SearchForm } from '@/pages/Resource/models';
-import { Button, Chip, Input, Modal, Popover, Tooltip } from '@/components/bakaui';
+import { Button, Chip, Input, Kbd, Modal, Popover, Tooltip } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
 import DeleteUnknownResources from '@/components/DeleteUnknownResources';
 import type { SavedSearchRef } from '@/pages/Resource/components/FilterPanel/SavedSearches';
@@ -110,6 +110,7 @@ export default ({
               keyword: v,
             });
           }}
+          isClearable
           value={searchForm.keyword}
           onKeyDown={e => {
             if (e.key == 'Enter') {

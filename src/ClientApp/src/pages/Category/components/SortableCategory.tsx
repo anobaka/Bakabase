@@ -41,6 +41,22 @@ const ComponentTips = {
   [ComponentType.Enhancer]: 'Expand properties of resources, such as publisher(property), publication date(property), tags(property), cover(file), etc',
 };
 
+type CategoryColor = {
+  hex?: string;
+};
+
+type Props = {
+  category: any;
+  libraries: any[];
+  loadAllCategories: () => void;
+  loadAllMediaLibraries: () => void;
+  reloadCategory: (id: number) => any;
+  reloadMediaLibrary: (id: number) => any;
+  allComponents: any[];
+  enhancers: any[];
+  forceUpdate: () => void;
+};
+
 export default (({
                    category,
                    loadAllCategories,
@@ -51,7 +67,7 @@ export default (({
                    forceUpdate,
                    allComponents,
                    enhancers,
-                 }) => {
+                 }: Props) => {
   const {
     attributes,
     listeners,
@@ -73,7 +89,7 @@ export default (({
     transition,
   };
 
-  const [categoryColor, setCategoryColor] = useState(undefined);
+  const [categoryColor, setCategoryColor] = useState<CategoryColor>(undefined);
   const [colorPickerVisible, setColorPickerVisible] = useState(false);
   const [editMode, setEditMode] = useState<number>();
   const [name, setName] = useState<string>();
@@ -128,9 +144,47 @@ export default (({
 
   const resourceCount = libraries.reduce((s, t) => s + t.resourceCount, 0);
 
-  if (category.id == 14) {
-    console.log(category);
-  }
+  const renderMediaLibraryAddModal = () => {
+    let n;
+    createPortal(Modal, {
+      defaultVisible: true,
+      title: t('Add a media library'),
+      children: (
+        <Input
+          size={'large'}
+          placeholder={t('Name of media library')}
+          style={{ width: '100%' }}
+          defaultValue={n}
+          onChange={(v) => {
+            n = v;
+          }}
+        />
+      ),
+      onOk: async () => {
+        if (n?.length > 0) {
+          const r = await BApi.mediaLibrary.addMediaLibrary({
+            categoryId: category.id,
+            name: n,
+          });
+          if (!r.code) {
+            loadAllMediaLibraries();
+          } else {
+            throw new Error(r.message!);
+          }
+        } else {
+          Message.error(t('Invalid data'));
+          throw new Error('Invalid data');
+        }
+      },
+    });
+  };
+
+  const renderMediaLibraryAddInBulkModal = () => {
+    AddMediaLibraryInBulkDialog.show({
+      categoryId: category.id,
+      onSubmitted: loadAllMediaLibraries,
+    });
+  };
 
   return (
     <div
@@ -442,7 +496,7 @@ export default (({
             <span
               className="hover-area"
               onClick={() => {
-                const order = (category.coverSelectionOrder || CoverSelectOrder.FilenameAscending) % coverSelectOrders.length + 1;
+                const order: CoverSelectOrder = (category.coverSelectionOrder || CoverSelectOrder.FilenameAscending) % coverSelectOrders.length + 1;
                 BApi.category.patchCategory(
                   category.id,
                   {
@@ -485,19 +539,19 @@ export default (({
             isDisabled
             checked={category.generateNfo}
             onValueChange={(checked) => {
-                BApi.category.patchCategory(
-                  category.id,
-                  {
-                    generateNfo: checked,
-                  },
-                )
-                  .then((t) => {
-                    if (!t.code) {
-                      category.generateNfo = checked;
-                      forceUpdate();
-                    }
-                  });
-              }}
+              BApi.category.patchCategory(
+                category.id,
+                {
+                  generateNfo: checked,
+                },
+              )
+                .then((t) => {
+                  if (!t.code) {
+                    category.generateNfo = checked;
+                    forceUpdate();
+                  }
+                });
+            }}
           />
         </div>
         <div className={'col-span-3'}>
@@ -561,12 +615,14 @@ export default (({
           className={'col-span-3'}
         >
           <div className={'flex flex-wrap items-center gap-2'}>
-            <Chip
-              size={'sm'}
-              radius={'sm'}
-            >
-              {t('Custom properties')}
-            </Chip>
+            <Tooltip content={t('Unassociated custom properties will not be displayed')}>
+              <Chip
+                size={'sm'}
+                radius={'sm'}
+              >
+                {t('Custom properties')}
+              </Chip>
+            </Tooltip>
             {
               category.customProperties?.length > 0 ? (
                 <div
@@ -661,45 +717,11 @@ export default (({
                 onAction={key => {
                   switch (key) {
                     case 'add': {
-                      let n;
-                      createPortal(Modal, {
-                        defaultVisible: true,
-                        title: t('Add a media library'),
-                        children: (
-                          <Input
-                            size={'large'}
-                            placeholder={t('Name of media library')}
-                            style={{ width: '100%' }}
-                            defaultValue={n}
-                            onChange={(v) => {
-                              n = v;
-                            }}
-                          />
-                        ),
-                        onOk: async () => {
-                          if (n?.length > 0) {
-                            const r = await BApi.mediaLibrary.addMediaLibrary({
-                              categoryId: category.id,
-                              name: n,
-                            });
-                            if (!r.code) {
-                              loadAllMediaLibraries();
-                            } else {
-                              throw new Error(r.message!);
-                            }
-                          } else {
-                            Message.error(t('Invalid data'));
-                            throw new Error('Invalid data');
-                          }
-                        },
-                      });
+                      renderMediaLibraryAddModal();
                       break;
                     }
                     case 'add-in-bulk': {
-                      AddMediaLibraryInBulkDialog.show({
-                        categoryId: category.id,
-                        onSubmitted: loadAllMediaLibraries,
-                      });
+                      renderMediaLibraryAddInBulkModal();
                       break;
                     }
                   }
@@ -730,12 +752,40 @@ export default (({
           </div>
         </div>
         <div className="libraries">
-          <SortableMediaLibraryList
-            libraries={libraries}
-            loadAllMediaLibraries={loadAllMediaLibraries}
-            reloadMediaLibrary={reloadMediaLibrary}
-            forceUpdate={forceUpdate}
-          />
+          {libraries.length > 0 ? (
+            <SortableMediaLibraryList
+              libraries={libraries}
+              loadAllMediaLibraries={loadAllMediaLibraries}
+              reloadMediaLibrary={reloadMediaLibrary}
+              forceUpdate={forceUpdate}
+            />
+          ) : (
+            <div className={'flex flex-col gap-2'}>
+              <div className={'text-center'}>
+                {t('You should set up a media library first to visit your resources')}
+              </div>
+              <div className={'flex items-center gap-4 justify-center'}>
+                <Button
+                  color={'primary'}
+                  size={'sm'}
+                  onClick={() => {
+                    renderMediaLibraryAddModal();
+                  }}
+                >
+                  {t('Set up now')}
+                </Button>
+                <Button
+                  color={'secondary'}
+                  size={'sm'}
+                  onClick={() => {
+                    renderMediaLibraryAddInBulkModal();
+                  }}
+                >
+                  {t('Set up in bulk')}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

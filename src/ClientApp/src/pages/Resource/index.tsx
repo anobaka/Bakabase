@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useUpdate, useUpdateEffect } from 'react-use';
+import { DisconnectOutlined } from '@ant-design/icons';
 import type { ResourcesRef } from './components/Resources';
 import Resources from './components/Resources';
 import styles from './index.module.scss';
@@ -12,7 +13,7 @@ import BApi from '@/sdk/BApi';
 import Resource from '@/components/Resource';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
-import { Button, Pagination, Spinner } from '@/components/bakaui';
+import { Button, Chip, Link, Pagination, Spinner } from '@/components/bakaui';
 import { buildLogger } from '@/components/utils';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
@@ -353,20 +354,39 @@ export default () => {
         {searching ? (
           <Spinner label={t('Searching...')} />
         ) : (resources.length == 0) && (
-          <>
-            {t('Resource not found')}
-            <Button
-              size={'sm'}
-              variant={'light'}
-              radius={'sm'}
-              color={'primary'}
-              onClick={() => {
-                search({ page: 1 }, 'replace', true);
-              }}
-            >
-              {t('Reset search criteria')}
-            </Button>
-          </>
+          <div className={'flex flex-col gap-2'}>
+            <div className={'mb-2 flex items-center gap-1'}>
+              <DisconnectOutlined className={'text-base'} />
+              <Chip variant={'light'} >
+                {t('Resource Not Found. You can try the following solutions:')}
+              </Chip>
+            </div>
+            <div className={'flex flex-col gap-2'}>
+              <div className={'flex items-center gap-1'}>
+                {t('1. Please check if the search criteria is correct.')}
+                <Button
+                  size={'sm'}
+                  variant={'light'}
+                  radius={'sm'}
+                  color={'primary'}
+                  onClick={() => {
+                    search({ page: 1 }, 'replace', true);
+                  }}
+                >
+                  {t('Reset search criteria')}
+                </Button>
+              </div>
+              <div className={'flex items-center gap-1'}>
+                {t('2. Please make sure you have executed synchronization operation after modifying the media library configuration in category.')}
+                <Link
+                  size={'sm'}
+                  isBlock
+                  underline={'none'}
+                  href={'#/category'}
+                >{t('Go to category page')}</Link>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

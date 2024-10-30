@@ -1428,7 +1428,7 @@
   "Visible scopes": "可见维度",
   "This filter is used for quick check and does not change the priority of property value scopes.": "这个过滤器仅用于快速查阅，不会改变属性值维度的优先级",
   "The numbers represent the priority of property dimensions, and the property values will be displayed according to the priority of the dimensions.": "数字代表属性维度的优先级，属性值将会根据维度的优先级展示。",
-  "indicates this scope is not enabled.": "表示该维度未启用。",
+  "indicates this scope is not enabled": "表示该维度未启用",
   "You can click on the scope button to change the priority of the property value scopes.": "您可以点击维度按钮来改变它的优先级。",
   "Importing, please wait...": "导入中，请稍后。。。",
   "Other files": "其他文件",
@@ -1469,5 +1469,17 @@
   "Cover mode": "封面模式",
   "Fill cover": "填充封面",
   "Show": "展示",
-  "Cover cache": "封面缓存"
+  "Cover cache": "封面缓存",
+  "Resource Not Found. You can try the following solutions:": "未找到资源。您可以尝试以下方案：",
+  "1. Please check if the search criteria is correct.": "1. 请检查搜索条件是否正确。",
+  "2. Please make sure you have executed synchronization operation after modifying the media library configuration in category.": "2. 请确保您在分类中修改了媒体库配置后执行了同步操作。",
+  "Go to category page": "前往分类页面",
+  "Keyboard.Enter": "回车",
+  "Unassociated custom properties will not be displayed.": "未关联的自定义属性将不会被展示。",
+  "You should set up a media library first to visit your resources": "您需要先设置一个媒体库才能访问您的资源",
+  "Set up now": "立即设置",
+  "Set up in bulk": "批量设置",
+  "Resource not found? Please try to perform the synchronization operation.": "未找到资源？请尝试执行同步操作。",
+  "To get your resources loaded, you must add at least one root path containing your local resources to this media library": "为了加载您的资源，您必须至少添加一个包含您本地资源的根目录到该媒体库",
+  "No property available. Please bind properties to category if you need to show them.": "没有可用的属性。如果您需要展示属性，请将属性绑定至分类。"
 }

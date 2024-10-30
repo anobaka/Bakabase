@@ -243,52 +243,54 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<SingletonResponse<Category>> Add(CategoryAddInputModel model)
         {
-            var componentKeys = model.ComponentsData?.Select(a => a.ComponentKey).ToArray();
-            if (componentKeys?.Any() == true)
-            {
-                var validation = await ValidateComponentsData(componentKeys);
-                if (validation.Code != 0)
-                {
-                    return SingletonResponseBuilder<Category>.Build((ResponseCode) validation.Code,
-                        validation.Message);
-                }
-            }
-
-            model.EnhancementOptions?.Standardize(model.ComponentsData
-                ?.Where(a => a.ComponentType == ComponentType.Enhancer).Select(a => a.ComponentKey).ToArray());
-
+            // var componentKeys = model.ComponentsData?.Select(a => a.ComponentKey).ToArray();
+            // if (componentKeys?.Any() == true)
+            // {
+            //     var validation = await ValidateComponentsData(componentKeys);
+            //     if (validation.Code != 0)
+            //     {
+            //         return SingletonResponseBuilder<Category>.Build((ResponseCode) validation.Code,
+            //             validation.Message);
+            //     }
+            // }
+            //
+            // model.EnhancementOptions?.Standardize(model.ComponentsData
+            //     ?.Where(a => a.ComponentType == ComponentType.Enhancer).Select(a => a.ComponentKey).ToArray());
+            //
             var category = new Category
             {
-                Color = model.Color,
+                // Color = model.Color,
                 CreateDt = DateTime.Now,
                 Name = model.Name,
-                CoverSelectionOrder = model.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending,
-                Order = model.Order ?? 0,
-                GenerateNfo = model.GenerateNfo ?? false,
-                EnhancementOptions = model.EnhancementOptions,
+                // CoverSelectionOrder = model.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending,
+                // Order = model.Order ?? 0,
+                // GenerateNfo = model.GenerateNfo ?? false,
+                // EnhancementOptions = model.EnhancementOptions,
             };
 
-            if (componentKeys?.Any() == true)
-            {
-                var externalTran = orm.DbContext.Database.CurrentTransaction;
-                IDbContextTransaction tran = null;
-                if (externalTran == null)
-                {
-                    tran = await orm.DbContext.Database.BeginTransactionAsync();
-                }
+            // if (componentKeys?.Any() == true)
+            // {
+            //     var externalTran = orm.DbContext.Database.CurrentTransaction;
+            //     IDbContextTransaction tran = null;
+            //     if (externalTran == null)
+            //     {
+            //         tran = await orm.DbContext.Database.BeginTransactionAsync();
+            //     }
+            //
+            //     category = (await orm.Add(category.ToDbModel())).Data.ToDomainModel();
+            //     await CategoryComponentService.Configure(category.Id, componentKeys);
+            //
+            //     if (externalTran == null)
+            //     {
+            //         await tran.CommitAsync();
+            //     }
+            // }
+            // else
+            // {
+            //     category = (await orm.Add(category.ToDbModel())).Data.ToDomainModel();
+            // }
 
-                category = (await orm.Add(category.ToDbModel())).Data.ToDomainModel();
-                await CategoryComponentService.Configure(category.Id, componentKeys);
-
-                if (externalTran == null)
-                {
-                    await tran.CommitAsync();
-                }
-            }
-            else
-            {
-                category = (await orm.Add(category.ToDbModel())).Data.ToDomainModel();
-            }
+            category = (await orm.Add(category.ToDbModel())).Data!.ToDomainModel();
 
             return new SingletonResponse<Category>(category);
         }
@@ -435,110 +437,110 @@ namespace Bakabase.InsideWorld.Business.Services
             return await orm.UpdateRange(changed.Select(c => c.ToDbModel()));
         }
 
-        public async Task<BaseResponse> SaveDataFromSetupWizard(CategorySetupWizardInputModel model)
-        {
-            var categoryModel = new CategoryAddInputModel
-            {
-                Color = model.Category.Color,
-                ComponentsData = model.Category.ComponentsData,
-                CoverSelectionOrder = model.Category.CoverSelectionOrder,
-                EnhancementOptions = model.Category.EnhancementOptions,
-                GenerateNfo = model.Category.GenerateNfo,
-                Name = model.Category.Name,
-                Order = model.Category.Order
-            };
-
-            BaseResponse categoryOperationRsp;
-            var categoryId = model.Category.Id;
-
-            await using var tran = await orm.DbContext.Database.BeginTransactionAsync();
-
-            if (model.Category.Id > 0)
-            {
-                ResourceCategoryEnhancementOptions eo = null;
-                var componentKeys = model.Category.ComponentsData?.Select(a => a.ComponentKey).ToArray() ??
-                                    Array.Empty<string>();
-                if (componentKeys.Any())
-                {
-                    var validation = await ValidateComponentsData(componentKeys);
-                    if (validation.Code != 0)
-                    {
-                        return validation;
-                    }
-
-                    var descriptors = await ComponentService.GetDescriptors(componentKeys);
-                    var enhancerKeys = descriptors.Where(a => a.ComponentType == ComponentType.Enhancer)
-                        .Select(a => a.Id).ToArray();
-                    if (enhancerKeys.Any())
-                    {
-                        eo = model.Category.EnhancementOptions ?? new();
-                        eo.Standardize(enhancerKeys);
-                    }
-                }
-
-                await CategoryComponentService.Configure(model.Category.Id, componentKeys);
-                var category = await orm.GetByKey(model.Category.Id);
-                category.EnhancementOptionsJson = eo == null ? null : JsonConvert.SerializeObject(eo);
-                await orm.DbContext.SaveChangesAsync();
-
-                categoryOperationRsp = await Patch(model.Category.Id, categoryModel);
-            }
-            else
-            {
-                categoryOperationRsp = await Add(categoryModel);
-                if (categoryOperationRsp.Code == 0)
-                {
-                    categoryId = ((SingletonResponse<Category>) categoryOperationRsp).Data.Id;
-                }
-            }
-
-            if (categoryOperationRsp.Code != 0)
-            {
-                return categoryOperationRsp;
-            }
-
-            if (model.MediaLibraries?.Length > 0)
-            {
-                foreach (var m in model.MediaLibraries)
-                {
-                    BaseResponse mediaLibraryOperationRsp;
-
-                    if (m.Id > 0)
-                    {
-                        mediaLibraryOperationRsp = await MediaLibraryService.Patch(m.Id,
-                            new MediaLibraryPatchDto()
-                            {
-                                Name = m.Name,
-                                Order = m.Order,
-                                PathConfigurations = m.PathConfigurations
-                            });
-                    }
-                    else
-                    {
-                        mediaLibraryOperationRsp = await MediaLibraryService.Add(new MediaLibraryAddDto
-                        {
-                            CategoryId = categoryId,
-                            Name = m.Name,
-                            PathConfigurations = m.PathConfigurations
-                        });
-                    }
-
-                    if (mediaLibraryOperationRsp.Code != 0)
-                    {
-                        return mediaLibraryOperationRsp;
-                    }
-                }
-            }
-
-            await tran.CommitAsync();
-
-            if (model.SyncAfterSaving)
-            {
-                MediaLibraryService.StartSyncing([categoryId], null);
-            }
-
-            return BaseResponseBuilder.Ok;
-        }
+        // public async Task<BaseResponse> SaveDataFromSetupWizard(CategorySetupWizardInputModel model)
+        // {
+        //     var categoryModel = new CategoryAddInputModel
+        //     {
+        //         Color = model.Category.Color,
+        //         ComponentsData = model.Category.ComponentsData,
+        //         CoverSelectionOrder = model.Category.CoverSelectionOrder,
+        //         EnhancementOptions = model.Category.EnhancementOptions,
+        //         GenerateNfo = model.Category.GenerateNfo,
+        //         Name = model.Category.Name,
+        //         Order = model.Category.Order
+        //     };
+        //
+        //     BaseResponse categoryOperationRsp;
+        //     var categoryId = model.Category.Id;
+        //
+        //     await using var tran = await orm.DbContext.Database.BeginTransactionAsync();
+        //
+        //     if (model.Category.Id > 0)
+        //     {
+        //         ResourceCategoryEnhancementOptions eo = null;
+        //         var componentKeys = model.Category.ComponentsData?.Select(a => a.ComponentKey).ToArray() ??
+        //                             Array.Empty<string>();
+        //         if (componentKeys.Any())
+        //         {
+        //             var validation = await ValidateComponentsData(componentKeys);
+        //             if (validation.Code != 0)
+        //             {
+        //                 return validation;
+        //             }
+        //
+        //             var descriptors = await ComponentService.GetDescriptors(componentKeys);
+        //             var enhancerKeys = descriptors.Where(a => a.ComponentType == ComponentType.Enhancer)
+        //                 .Select(a => a.Id).ToArray();
+        //             if (enhancerKeys.Any())
+        //             {
+        //                 eo = model.Category.EnhancementOptions ?? new();
+        //                 eo.Standardize(enhancerKeys);
+        //             }
+        //         }
+        //
+        //         await CategoryComponentService.Configure(model.Category.Id, componentKeys);
+        //         var category = await orm.GetByKey(model.Category.Id);
+        //         category.EnhancementOptionsJson = eo == null ? null : JsonConvert.SerializeObject(eo);
+        //         await orm.DbContext.SaveChangesAsync();
+        //
+        //         categoryOperationRsp = await Patch(model.Category.Id, categoryModel);
+        //     }
+        //     else
+        //     {
+        //         categoryOperationRsp = await Add(categoryModel);
+        //         if (categoryOperationRsp.Code == 0)
+        //         {
+        //             categoryId = ((SingletonResponse<Category>) categoryOperationRsp).Data.Id;
+        //         }
+        //     }
+        //
+        //     if (categoryOperationRsp.Code != 0)
+        //     {
+        //         return categoryOperationRsp;
+        //     }
+        //
+        //     if (model.MediaLibraries?.Length > 0)
+        //     {
+        //         foreach (var m in model.MediaLibraries)
+        //         {
+        //             BaseResponse mediaLibraryOperationRsp;
+        //
+        //             if (m.Id > 0)
+        //             {
+        //                 mediaLibraryOperationRsp = await MediaLibraryService.Patch(m.Id,
+        //                     new MediaLibraryPatchDto()
+        //                     {
+        //                         Name = m.Name,
+        //                         Order = m.Order,
+        //                         PathConfigurations = m.PathConfigurations
+        //                     });
+        //             }
+        //             else
+        //             {
+        //                 mediaLibraryOperationRsp = await MediaLibraryService.Add(new MediaLibraryAddDto
+        //                 {
+        //                     CategoryId = categoryId,
+        //                     Name = m.Name,
+        //                     PathConfigurations = m.PathConfigurations
+        //                 });
+        //             }
+        //
+        //             if (mediaLibraryOperationRsp.Code != 0)
+        //             {
+        //                 return mediaLibraryOperationRsp;
+        //             }
+        //         }
+        //     }
+        //
+        //     await tran.CommitAsync();
+        //
+        //     if (model.SyncAfterSaving)
+        //     {
+        //         MediaLibraryService.StartSyncing([categoryId], null);
+        //     }
+        //
+        //     return BaseResponseBuilder.Ok;
+        // }
 
         public async Task<BaseResponse> BindCustomProperty(int categoryId, int propertyId)
         {

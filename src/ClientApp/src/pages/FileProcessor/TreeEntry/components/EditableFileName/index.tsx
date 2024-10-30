@@ -94,6 +94,7 @@ const EditableText = memo((props: Props) => {
     if (editingRef.current) {
       setEditing(false);
       forceFocus(nodeRef.current);
+      setValue(propsRef.current.name);
     }
   }, []);
 
@@ -141,6 +142,16 @@ const EditableText = memo((props: Props) => {
           className={'w-full'}
           ref={inputRef}
           value={value}
+          onClick={e => {
+            log('onClick', e);
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          onDoubleClick={e => {
+            log('onDoubleClick', e);
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           // autoFocus
           size={'sm'}
           data-focus={false}

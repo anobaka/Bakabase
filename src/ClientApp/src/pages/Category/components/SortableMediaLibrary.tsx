@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useReducer, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -7,6 +7,7 @@ import {
   DeleteOutlined,
   FolderOpenOutlined,
   PlusCircleOutlined,
+  QuestionCircleOutlined,
   SyncOutlined,
   UnorderedListOutlined,
 } from '@ant-design/icons';
@@ -17,11 +18,10 @@ import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
 import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import PathConfigurationDialog from '@/pages/Category/components/PathConfigurationDialog';
-import ClickableIcon from '@/components/ClickableIcon';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsInBulkDialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Chip, Badge, Tooltip, Button, Modal } from '@/components/bakaui';
+import { Button, Chip, Modal, Tooltip } from '@/components/bakaui';
 
 export default (({
                    library,
@@ -115,6 +115,30 @@ export default (({
       }) : t('Not set');
   }, []);
 
+  const renderAddRootPathInBulkModal = () => {
+    AddRootPathsInBulkDialog.show({
+      libraryId: library.id,
+      onSubmitted: () => loadAllMediaLibraries(),
+    });
+  };
+
+  const renderAddRootPathModal = () => {
+    FileSystemSelectorDialog.show({
+      targetType: 'folder',
+      onSelected: e => {
+        BApi.mediaLibrary.addMediaLibraryPathConfiguration(library.id,
+          {
+            path: e.path,
+          })
+          .then((b) => {
+            if (!b.code) {
+              loadAllMediaLibraries();
+            }
+          });
+      },
+    });
+  };
+
   return (
     <div
       className={'category-page-draggable-media-library libraries-grid'}
@@ -167,7 +191,7 @@ export default (({
           >
             {library.name}
           </div>
-          {library.resourceCount > 0 && (
+          {library.resourceCount > 0 ? (
             <Tooltip
               content={t('Count of resources')}
             >
@@ -179,6 +203,12 @@ export default (({
                 {library.resourceCount}
               </Chip>
             </Tooltip>
+          ) : (
+            library.pathConfigurations?.length > 0 && (
+              <Tooltip content={t('Resource not found? Please try to perform the synchronization operation.')}>
+                <QuestionCircleOutlined className={'text-base'} />
+              </Tooltip>
+            )
           )}
           <div>
             <Tooltip content={t('Sync current media library')}>
@@ -204,20 +234,7 @@ export default (({
                   <PlusCircleOutlined
                     className={'text-base'}
                     onClick={() => {
-                      FileSystemSelectorDialog.show({
-                        targetType: 'folder',
-                        onSelected: e => {
-                          BApi.mediaLibrary.addMediaLibraryPathConfiguration(library.id,
-                            {
-                              path: e.path,
-                            })
-                            .then((b) => {
-                              if (!b.code) {
-                                loadAllMediaLibraries();
-                              }
-                            });
-                        },
-                      });
+                      renderAddRootPathModal();
                     }}
                   />
                 </Button>
@@ -227,10 +244,7 @@ export default (({
               <Menu>
                 <Menu.Item
                   onClick={() => {
-                    AddRootPathsInBulkDialog.show({
-                      libraryId: library.id,
-                      onSubmitted: () => loadAllMediaLibraries(),
-                    });
+                    renderAddRootPathInBulkModal();
                   }}
                 >
                   <CustomIcon
@@ -311,7 +325,7 @@ export default (({
         </div>
       </div>
       <div className="path-configurations">
-        {library.pathConfigurations?.map((p, i) => {
+        {library.pathConfigurations?.length > 0 ? library.pathConfigurations?.map((p, i) => {
           return (
             <div
               className={'path-configuration item'}
@@ -388,7 +402,35 @@ export default (({
               </div>
             </div>
           );
-        })}
+        }) : (
+          <div className={'flex flex-col gap-2'}>
+            <div className={'text-center'}>
+              {t('To get your resources loaded, you must add at least one root path containing your local resources to this media library')}
+            </div>
+            <div
+              className={'flex items-center gap-4 justify-center'}
+            >
+              <Button
+                size={'sm'}
+                color={'primary'}
+                onClick={() => {
+                  renderAddRootPathModal();
+                }}
+              >
+                {t('Add root path')}
+              </Button>
+              <Button
+                size={'sm'}
+                color={'secondary'}
+                onClick={() => {
+                  renderAddRootPathInBulkModal();
+                }}
+              >
+                {t('Add root paths in bulk')}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

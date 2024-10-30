@@ -199,7 +199,7 @@ namespace Bakabase.Service.Controllers
 
             var entries = files.AsParallel().Select(t => new IwFsEntry(t))
                 // .OrderBy(t => t.Type == IwFsType.Directory ? 0 : 1)
-                .OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase).ToArray();
+                .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToArray();
 
             // var entriesMap = entries.ToDictionary(t => t.Path, t => t);
             // var unknownTypePaths =

@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowUpOutlined, FolderAddOutlined, FolderOutlined } from '@ant-design/icons';
-import { useUpdate, useUpdateEffect } from 'react-use';
+import { FolderAddOutlined } from '@ant-design/icons';
+import { useUpdate } from 'react-use';
 import type { Entry } from '@/core/models/FileExplorer/Entry';
 import './index.scss';
 import BApi from '@/sdk/BApi';
-import { buildLogger, splitPathIntoSegments, standardizePath } from '@/components/utils';
+import { buildLogger } from '@/components/utils';
 import { IwFsType } from '@/sdk/constants';
-import { Button, Chip, Input } from '@/components/bakaui';
+import { Button, Chip } from '@/components/bakaui';
 import type { RootTreeEntryRef } from '@/pages/FileProcessor/RootTreeEntry';
 import RootTreeEntry from '@/pages/FileProcessor/RootTreeEntry';
 
@@ -40,9 +40,18 @@ export default (props: IFileSystemSelectorProps) => {
   const rootRef = useRef<RootTreeEntryRef | null>(null);
 
   useEffect(() => {
+    // return () => {
+    //   log('disposing', rootRef);
+    //   rootRef.current?.root?.dispose();
+    // };
   }, []);
 
+
   const filter = (e: Entry, mode: 'visible' | 'select') => {
+    log('filter', e, mode, targetType);
+    if (!e.path) {
+      return false;
+    }
     if (targetType) {
       switch (targetType) {
         case 'file':
@@ -57,7 +66,7 @@ export default (props: IFileSystemSelectorProps) => {
           }
           break;
         case 'folder':
-          if (e.type != IwFsType.Directory) {
+          if (e.type != IwFsType.Directory && e.type != IwFsType.Drive) {
             return false;
           }
           break;
@@ -68,6 +77,8 @@ export default (props: IFileSystemSelectorProps) => {
     }
     return true;
   };
+
+  log('selected', selected);
 
   const trySelectRootOrClearSelection = () => {
     if (rootRef.current?.root && filter(rootRef.current.root, 'select')) {
@@ -86,6 +97,7 @@ export default (props: IFileSystemSelectorProps) => {
           custom: e => filter(e, 'visible'),
         }}
         selectable={'single'}
+        capabilities={['rename']}
         onSelected={es => {
           const e = es[0];
           log(rootRef.current);
@@ -100,10 +112,17 @@ export default (props: IFileSystemSelectorProps) => {
             trySelectRootOrClearSelection();
           }
         }}
-        ref={rootRef}
+        ref={r => {
+          rootRef.current = r;
+          log('ref', r);
+        }}
         onInitialized={() => {
+          log('onInitialized', rootRef.current?.root);
           if (rootRef.current?.root) {
             trySelectRootOrClearSelection();
+            if (rootRef.current.root.isDirectory) {
+              setCurrentDirPath(rootRef.current.root.path);
+            }
           }
         }}
       />

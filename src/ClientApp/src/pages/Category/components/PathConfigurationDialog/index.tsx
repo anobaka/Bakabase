@@ -260,7 +260,7 @@ export default ({
                   color={'primary'}
                   onClick={() => {
                     createPortal(FileSystemSelectorDialog, {
-                      // targetType: 'folder',
+                      targetType: 'folder',
                       startPath: pc.path!,
                       // targetType: 'file',
                       onSelected: (e) => {

@@ -23,6 +23,7 @@ type Props = {
   propertyInnerDirection?: 'hoz' | 'ver';
   hidePropertyName?: boolean;
   propertyClassNames?: PropertyContainerProps['classNames'];
+  noPropertyContent?: any;
 };
 
 type PropertyRenderContext = {
@@ -46,6 +47,7 @@ export default (props: Props) => {
     propertyInnerDirection = 'hoz',
     hidePropertyName = false,
     propertyClassNames,
+    noPropertyContent,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -210,6 +212,9 @@ export default (props: Props) => {
           })}
         </div>
       )}
+      {renderContext.length == 0 ? (
+        noPropertyContent
+      ) : null}
       {!showInvisibleProperties && renderContext.some(r => !r.visible) && (
         <div className={'flex items-center justify-center my-2'}>
           <Button

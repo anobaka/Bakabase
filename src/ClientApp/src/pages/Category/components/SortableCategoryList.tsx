@@ -2,12 +2,22 @@ import React from 'react';
 import { closestCorners, DndContext, DragOverlay, MouseSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableCategory from '@/pages/Category/components/SortableCategory';
-import SortableTagGroup from '@/pages/Tag/components/SortableTagGroup';
-import SortableTag from '@/pages/Tag/components/SortableTag';
 import { SortCategories } from '@/sdk/apis';
 
+type Props = {
+  categories: any[];
+  libraries: any[];
+  loadAllMediaLibraries: () => void;
+  loadAllCategories: () => void;
+  allComponents: any[];
+  forceUpdate: () => void;
+  enhancers: any[];
+  reloadCategory: (id: number) => any;
+  reloadMediaLibrary: (id: number) => any;
+};
+
 export default (({ categories, libraries,
-  loadAllMediaLibraries, loadAllCategories, allComponents, forceUpdate, enhancers, reloadCategory, reloadMediaLibrary }) => {
+  loadAllMediaLibraries, loadAllCategories, allComponents, forceUpdate, enhancers, reloadCategory, reloadMediaLibrary }: Props) => {
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {

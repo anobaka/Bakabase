@@ -66,132 +66,132 @@ class RootEntry extends Entry {
       log('Initializing...', this);
       await this._stop();
       // @ts-ignore
-      await BApi.file.startWatchingChangesInFileProcessorWorkspace({ path: this.path }, { ignoreError: () => true });
-      store.dispatch.iwFsEntryChangeEvents.clear();
+      if (this.path) {
+        await BApi.file.startWatchingChangesInFileProcessorWorkspace({ path: this.path }, { ignoreError: () => true });
+        const renderingQueue = new RenderingQueue();
+        this._fsWatcher = setInterval(async () => {
+          if (this._processingFsEvents) {
+            return;
+          }
+          this._processingFsEvents = true;
 
-      const renderingQueue = new RenderingQueue();
-      this._fsWatcher = setInterval(async () => {
-        if (this._processingFsEvents) {
-          return;
-        }
-        this._processingFsEvents = true;
+          const [data, dispatchers] = store.getModel('iwFsEntryChangeEvents');
+          const { events } = data;
+          if (events.length > 0) {
+            log('handling events', events);
+            dispatchers.clear();
 
-        const [data, dispatchers] = store.getModel('iwFsEntryChangeEvents');
-        const { events } = data;
-        if (events.length > 0) {
-          log('handling events', events);
-          dispatchers.clear();
+            // Performance optimization
+            // 1. Continuous created and deleted events in same directory can be merged safely;
+            // 2. We keep the last task info for each entry;
+            // 3. [Warning]Merge others events may cause unstable behavior
 
-          // Performance optimization
-          // 1. Continuous created and deleted events in same directory can be merged safely;
-          // 2. We keep the last task info for each entry;
-          // 3. [Warning]Merge others events may cause unstable behavior
-
-          // ignore previous tasks
-          // path - event index
-          const taskCache: Record<string, number> = {};
-          const redundantTaskEventIndexes: number[] = [];
-          for (let i = 0; i < events.length; i++) {
-            const e = events[i];
-            if (e.type == IwFsEntryChangeType.TaskChanged) {
-              if (e.path in taskCache) {
-                redundantTaskEventIndexes.push(taskCache[e.path]);
+            // ignore previous tasks
+            // path - event index
+            const taskCache: Record<string, number> = {};
+            const redundantTaskEventIndexes: number[] = [];
+            for (let i = 0; i < events.length; i++) {
+              const e = events[i];
+              if (e.type == IwFsEntryChangeType.TaskChanged) {
+                if (e.path in taskCache) {
+                  redundantTaskEventIndexes.push(taskCache[e.path]);
+                }
+                taskCache[e.path] = i;
               }
-              taskCache[e.path] = i;
             }
-          }
-          const filteredEvents = events.filter((_, i) => !redundantTaskEventIndexes.includes(i));
-          if (filteredEvents.length != events.length) {
-            log(`Reduced ${events.length - filteredEvents.length} task events for same path`, filteredEvents);
-          }
+            const filteredEvents = events.filter((_, i) => !redundantTaskEventIndexes.includes(i));
+            if (filteredEvents.length != events.length) {
+              log(`Reduced ${events.length - filteredEvents.length} task events for same path`, filteredEvents);
+            }
 
-          for (let i = 0; i < filteredEvents.length; i++) {
-            const evt = filteredEvents[i];
-            const changedEntryPath = evt.type == IwFsEntryChangeType.Renamed ? evt.prevPath! : evt.path;
-            const changedEntry: Entry | undefined = this.nodeMap[changedEntryPath];
-            const segments = splitPathIntoSegments(evt.path);
-            const parentPath = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
-            const parent: Entry | undefined = this.nodeMap[parentPath];
-            log('Try to locate parent', 'path:', parentPath, 'parent:', parent, 'nodeMap:', this.nodeMap);
-            log(`File system entry changed: [${IwFsEntryChangeType[evt.type]}]${evt.path}`, 'Event: ', evt, 'Entry: ', changedEntry);
+            for (let i = 0; i < filteredEvents.length; i++) {
+              const evt = filteredEvents[i];
+              const changedEntryPath = evt.type == IwFsEntryChangeType.Renamed ? evt.prevPath! : evt.path;
+              const changedEntry: Entry | undefined = this.nodeMap[changedEntryPath];
+              const segments = splitPathIntoSegments(evt.path);
+              const parentPath = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
+              const parent: Entry | undefined = this.nodeMap[parentPath];
+              log('Try to locate parent', 'path:', parentPath, 'parent:', parent, 'nodeMap:', this.nodeMap);
+              log(`File system entry changed: [${IwFsEntryChangeType[evt.type]}]${evt.path}`, 'Event: ', evt, 'Entry: ', changedEntry);
 
-            if (!changedEntry) {
-              if (parent) {
+              if (!changedEntry) {
+                if (parent) {
+                  switch (evt.type) {
+                    case IwFsEntryChangeType.Created:
+                      await parent.addChildByPath(evt.path, false);
+                      renderingQueue.push(parent.path, RenderType.Children);
+                      break;
+                    case IwFsEntryChangeType.Renamed:
+                      // Not rendered, ignore
+                      break;
+                    case IwFsEntryChangeType.Changed:
+                      // Not rendered, ignore
+                      break;
+                    case IwFsEntryChangeType.Deleted:
+                      if (parent.childrenCount != undefined) {
+                        parent.childrenCount! -= 1;
+                      }
+                      renderingQueue.push(parent.path, RenderType.ForceUpdate);
+                      break;
+                    case IwFsEntryChangeType.TaskChanged:
+                      // Not rendered, ignore
+                      break;
+                  }
+                }
+              } else {
                 switch (evt.type) {
                   case IwFsEntryChangeType.Created:
-                    await parent.addChildByPath(evt.path, false);
-                    renderingQueue.push(parent.path, RenderType.Children);
+                    // Never happens
                     break;
                   case IwFsEntryChangeType.Renamed:
-                    // Not rendered, ignore
+                    await parent.replaceChildByPath(evt.prevPath!, evt.path, false);
+                    renderingQueue.push(parent.path, RenderType.Children);
                     break;
                   case IwFsEntryChangeType.Changed:
-                    // Not rendered, ignore
+                    // Ignore
                     break;
                   case IwFsEntryChangeType.Deleted:
-                    if (parent.childrenCount != undefined) {
-                      parent.childrenCount! -= 1;
-                    }
-                    renderingQueue.push(parent.path, RenderType.ForceUpdate);
+                    await changedEntry.delete(false);
+                    renderingQueue.push(parent.path, RenderType.Children);
                     break;
                   case IwFsEntryChangeType.TaskChanged:
-                    // Not rendered, ignore
+                    changedEntry.task = evt.task;
+                    renderingQueue.push(changedEntry.path, RenderType.ForceUpdate);
                     break;
                 }
               }
-            } else {
-              switch (evt.type) {
-                case IwFsEntryChangeType.Created:
-                  // Never happens
-                  break;
-                case IwFsEntryChangeType.Renamed:
-                  await parent.replaceChildByPath(evt.prevPath!, evt.path, false);
-                  renderingQueue.push(parent.path, RenderType.Children);
-                  break;
-                case IwFsEntryChangeType.Changed:
-                  // Ignore
-                  break;
-                case IwFsEntryChangeType.Deleted:
-                  await changedEntry.delete(false);
-                  renderingQueue.push(parent.path, RenderType.Children);
-                  break;
-                case IwFsEntryChangeType.TaskChanged:
-                  changedEntry.task = evt.task;
-                  renderingQueue.push(changedEntry.path, RenderType.ForceUpdate);
-                  break;
+            }
+
+            let actualRenderingTimes = 0;
+
+            const rq = renderingQueue.deQueueAll();
+            log('RenderingQueue', rq);
+            for (let i = 0; i < rq.length; i++) {
+              const {
+                path,
+                type,
+              } = rq[i];
+              const entry = this.nodeMap[path];
+              if (entry) {
+                if (type & RenderType.Children) {
+                  await entry.renderChildren();
+                  actualRenderingTimes++;
+                }
+                if (type & RenderType.ForceUpdate) {
+                  entry.forceUpdate();
+                  actualRenderingTimes++;
+                }
               }
+            }
+
+            if (actualRenderingTimes != filteredEvents.length) {
+              log(`Reduced ${filteredEvents.length - actualRenderingTimes} rendering times totally`, rq);
             }
           }
 
-          let actualRenderingTimes = 0;
-
-          const rq = renderingQueue.deQueueAll();
-          log('RenderingQueue', rq);
-          for (let i = 0; i < rq.length; i++) {
-            const {
-              path,
-              type,
-            } = rq[i];
-            const entry = this.nodeMap[path];
-            if (entry) {
-              if (type & RenderType.Children) {
-                await entry.renderChildren();
-                actualRenderingTimes++;
-              }
-              if (type & RenderType.ForceUpdate) {
-                entry.forceUpdate();
-                actualRenderingTimes++;
-              }
-            }
-          }
-
-          if (actualRenderingTimes != filteredEvents.length) {
-            log(`Reduced ${filteredEvents.length - actualRenderingTimes} rendering times totally`, rq);
-          }
-        }
-
-        this._processingFsEvents = false;
-      }, 500);
+          this._processingFsEvents = false;
+        }, 500);
+      }
 
       this.childrenWidth = this._ref?.dom!.parentElement?.clientWidth ?? 0;
 
@@ -205,11 +205,13 @@ class RootEntry extends Entry {
   }
 
   async _stop() {
-    if (this._fsWatcher) {
+    // if (this._fsWatcher) {
       // console.trace();
+      log('Stopping watcher', this.path);
       clearInterval(this._fsWatcher);
       await BApi.file.stopWatchingChangesInFileProcessorWorkspace();
-    }
+      store.dispatch.iwFsEntryChangeEvents.clear();
+    // }
   }
 
 

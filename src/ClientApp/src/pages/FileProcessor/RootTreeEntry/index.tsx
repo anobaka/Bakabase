@@ -125,6 +125,11 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
 
   useEffect(() => {
     initialize(rootPath);
+
+    return () => {
+      log('Disposing', rootRef);
+      rootRef?.current?.dispose();
+    };
   }, []);
 
   useUpdateEffect(() => {
@@ -142,9 +147,9 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
 
   useImperativeHandle(ref, (): RootTreeEntryRef => {
     return {
-      root: rootRef.current,
+      root,
     };
-  });
+  }, [root]);
 
   if (!root) {
     return null;
