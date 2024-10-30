@@ -377,7 +377,7 @@ export default () => {
                 </Button>
               </div>
               <div className={'flex items-center gap-1'}>
-                {t('2. Please make sure you have executed synchronization operation after modifying the media library configuration in category.')}
+                {t('2. Please make sure that categories have been created, the media library has been configured, and synchronization has been completed.')}
                 <Link
                   size={'sm'}
                   isBlock

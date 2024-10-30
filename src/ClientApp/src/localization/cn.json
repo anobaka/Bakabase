@@ -1472,7 +1472,7 @@
   "Cover cache": "封面缓存",
   "Resource Not Found. You can try the following solutions:": "未找到资源。您可以尝试以下方案：",
   "1. Please check if the search criteria is correct.": "1. 请检查搜索条件是否正确。",
-  "2. Please make sure you have executed synchronization operation after modifying the media library configuration in category.": "2. 请确保您在分类中修改了媒体库配置后执行了同步操作。",
+  "2. Please make sure that categories have been created, the media library has been configured, and synchronization has been completed.": "2. 请确保已经创建了分类、配置了媒体库并且完成了同步操作。",
   "Go to category page": "前往分类页面",
   "Keyboard.Enter": "回车",
   "Unassociated custom properties will not be displayed.": "未关联的自定义属性将不会被展示。",
@@ -1481,5 +1481,6 @@
   "Set up in bulk": "批量设置",
   "Resource not found? Please try to perform the synchronization operation.": "未找到资源？请尝试执行同步操作。",
   "To get your resources loaded, you must add at least one root path containing your local resources to this media library": "为了加载您的资源，您必须至少添加一个包含您本地资源的根目录到该媒体库",
-  "No property available. Please bind properties to category if you need to show them.": "没有可用的属性。如果您需要展示属性，请将属性绑定至分类。"
+  "No property available. Please bind properties to category if you need to show them.": "没有可用的属性。如果您需要展示属性，请将属性绑定至分类。",
+  "Categories have not been created yet. To load your resources, please ensure that at least one category is created.": "暂未创建分类，为了加载您的资源，请确保至少创建一个分类。"
 }

@@ -88,50 +88,54 @@ export default () => {
           <div className="block" style={{ flex: 1 }}>
             <div className={'title'}>{t('Overview')}</div>
             <div className={'content'}>
+              {(data.categoryResourceCounts && data.categoryResourceCounts.length > 0) ? (
+                <Chart
+                  height={240}
+                  data={data.categoryResourceCounts}
+                  // scale={{
+                  //   count: {
+                  //     formatter: (val) => {
+                  //       val = `${val * 100}%`;
+                  //       return val;
+                  //     },
+                  //   },
+                  // }}
+                  interactions={['element-active']}
+                  autoFit
+                >
+                  <Coordinate type="theta" radius={0.75} />
+                  <Tooltip showTitle={false} />
+                  <Axis visible={false} />
+                  <Legend visible={false} />
+                  <Interval
+                    position="count"
+                    adjust="stack"
+                    color="name"
+                    style={{
+                      lineWidth: 1,
+                      stroke: '#fff',
+                    }}
+                    label={[
+                      'name',
+                      (item) => {
+                        return {
+                          offset: 20,
+                          content: (data) => {
+                            return `${data.name}[${data.count}]`;
+                          },
+                          style: {
+                            // fill: colors[item],
+                            fill: textColor,
+                          },
+                        };
+                      },
+                    ]}
+                  />
+                </Chart>
+              ) : (
+                t('No content')
+              )}
 
-              <Chart
-                height={240}
-                data={data.categoryResourceCounts}
-                // scale={{
-                //   count: {
-                //     formatter: (val) => {
-                //       val = `${val * 100}%`;
-                //       return val;
-                //     },
-                //   },
-                // }}
-                interactions={['element-active']}
-                autoFit
-              >
-                <Coordinate type="theta" radius={0.75} />
-                <Tooltip showTitle={false} />
-                <Axis visible={false} />
-                <Legend visible={false} />
-                <Interval
-                  position="count"
-                  adjust="stack"
-                  color="name"
-                  style={{
-                    lineWidth: 1,
-                    stroke: '#fff',
-                  }}
-                  label={[
-                    'name',
-                    (item) => {
-                      return {
-                        offset: 20,
-                        content: (data) => {
-                          return `${data.name}[${data.count}]`;
-                        },
-                        style: {
-                          // fill: colors[item],
-                          fill: textColor,
-                        },
-                      };
-                    },
-                  ]}
-                />
-              </Chart>
 
               {/* {data.categoryResourceCounts && data.categoryResourceCounts.length > 0 && data.categoryResourceCounts.map((c, i) => { */}
               {/*   return ( */}

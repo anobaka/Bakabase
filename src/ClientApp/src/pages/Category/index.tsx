@@ -3,6 +3,7 @@ import { Dropdown, Loading, Menu } from '@alifd/next';
 import './index.scss';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
+import { DisconnectOutlined } from '@ant-design/icons';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
 import { GetComponentDescriptors } from '@/sdk/apis';
 import SortableCategoryList from '@/pages/Category/components/SortableCategoryList';
@@ -202,17 +203,24 @@ export default () => {
         </div>
       </div>
       <Loading visible={loading} fullScreen />
-      <SortableCategoryList
-        forceUpdate={forceUpdate}
-        allComponents={allComponents}
-        loadAllCategories={loadAllCategories}
-        loadAllMediaLibraries={loadAllMediaLibraries}
-        reloadCategory={reloadCategory}
-        reloadMediaLibrary={reloadMediaLibrary}
-        categories={categories}
-        libraries={libraries}
-        enhancers={enhancers}
-      />
+      {categories.length > 0 ? (
+        <SortableCategoryList
+          forceUpdate={forceUpdate}
+          allComponents={allComponents}
+          loadAllCategories={loadAllCategories}
+          loadAllMediaLibraries={loadAllMediaLibraries}
+          reloadCategory={reloadCategory}
+          reloadMediaLibrary={reloadMediaLibrary}
+          categories={categories}
+          libraries={libraries}
+          enhancers={enhancers}
+        />
+      ) : (
+        <div className={'flex items-center gap-1 justify-center mt-10'}>
+          <DisconnectOutlined className={'text-base'} />
+          {t('Categories have not been created yet. To load your resources, please ensure that at least one category is created.')}
+        </div>
+      )}
     </div>
   );
 };
