@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Radio, RadioGroup, TableHeader } from '@nextui-org/react';
 import AceEditor from 'react-ace';
 import type { Key } from '@react-types/shared';
+import toast from 'react-hot-toast';
 import ChoiceList from './components/ChoiceList';
 import TagList from './components/TagList';
 import { buildLogger, createPortalOfComponent } from '@/components/utils';
@@ -56,8 +57,8 @@ interface IProps extends DestroyableProps{
 
 interface CustomPropertyForm {
   id?: number;
-  name?: string;
-  type?: PropertyType;
+  name: string;
+  type: PropertyType;
   options?: any;
 }
 
@@ -417,23 +418,23 @@ const PropertyDialog = ({
       visible={visible}
       title={t('Custom property')}
       onClose={close}
+      footer={{
+        actions: ['ok', 'cancel'],
+        okProps: {
+          isDisabled: property.name == undefined || property.name.length == 0 || property.type == undefined || !(property.type > 0),
+        },
+      }}
       onOk={async () => {
         const model = {
           ...property,
           // todo: this serialization is a hardcode
           options: JSON.stringify(property.options),
         };
+
         const rsp = (property.id != undefined && property.id > 0) ? await BApi.customProperty.putCustomProperty(property.id, model) : await BApi.customProperty.addCustomProperty(model);
         if (!rsp.code) {
           // console.log('on saved', onSaved);
-          onSaved?.({
-            id: rsp.data!.id!,
-            name: rsp.data!.name!,
-            dbValueType: rsp.data!.dbValueType!,
-            bizValueType: rsp.data!.bizValueType!,
-            type: rsp.data!.type!,
-            pool: PropertyPool.Custom,
-          });
+          onSaved?.(rsp.data!);
           close();
         }
       }}

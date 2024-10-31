@@ -6,7 +6,7 @@ import store from '@/store';
 import { buildLogger, splitPathIntoSegments } from '@/components/utils';
 import { IwFsEntryChangeType, IwFsType } from '@/sdk/constants';
 
-const log = buildLogger('TreeEntry');
+const log = buildLogger('RootEntry');
 
 enum RenderType {
   ForceUpdate = 1,
@@ -67,18 +67,20 @@ class RootEntry extends Entry {
       await this._stop();
       // @ts-ignore
       if (this.path) {
+        log('Start watching', this.path, this);
         await BApi.file.startWatchingChangesInFileProcessorWorkspace({ path: this.path }, { ignoreError: () => true });
         const renderingQueue = new RenderingQueue();
+        const self = this;
         this._fsWatcher = setInterval(async () => {
-          if (this._processingFsEvents) {
+          if (self._processingFsEvents) {
             return;
           }
-          this._processingFsEvents = true;
+          self._processingFsEvents = true;
 
           const [data, dispatchers] = store.getModel('iwFsEntryChangeEvents');
           const { events } = data;
           if (events.length > 0) {
-            log('handling events', events);
+            log('handling events', events, self);
             dispatchers.clear();
 
             // Performance optimization
@@ -107,11 +109,11 @@ class RootEntry extends Entry {
             for (let i = 0; i < filteredEvents.length; i++) {
               const evt = filteredEvents[i];
               const changedEntryPath = evt.type == IwFsEntryChangeType.Renamed ? evt.prevPath! : evt.path;
-              const changedEntry: Entry | undefined = this.nodeMap[changedEntryPath];
+              const changedEntry: Entry | undefined = self.nodeMap[changedEntryPath];
               const segments = splitPathIntoSegments(evt.path);
               const parentPath = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
-              const parent: Entry | undefined = this.nodeMap[parentPath];
-              log('Try to locate parent', 'path:', parentPath, 'parent:', parent, 'nodeMap:', this.nodeMap);
+              const parent: Entry | undefined = self.nodeMap[parentPath];
+              log('Try to locate parent', 'path:', parentPath, 'parent:', parent, 'nodeMap:', self.nodeMap);
               log(`File system entry changed: [${IwFsEntryChangeType[evt.type]}]${evt.path}`, 'Event: ', evt, 'Entry: ', changedEntry);
 
               if (!changedEntry) {
@@ -119,6 +121,7 @@ class RootEntry extends Entry {
                   switch (evt.type) {
                     case IwFsEntryChangeType.Created:
                       await parent.addChildByPath(evt.path, false);
+                      log('Add to children', evt.path, parent.children);
                       renderingQueue.push(parent.path, RenderType.Children);
                       break;
                     case IwFsEntryChangeType.Renamed:
@@ -171,10 +174,10 @@ class RootEntry extends Entry {
                 path,
                 type,
               } = rq[i];
-              const entry = this.nodeMap[path];
+              const entry = self.nodeMap[path];
               if (entry) {
                 if (type & RenderType.Children) {
-                  await entry.renderChildren();
+                  entry.renderChildren();
                   actualRenderingTimes++;
                 }
                 if (type & RenderType.ForceUpdate) {
@@ -189,7 +192,7 @@ class RootEntry extends Entry {
             }
           }
 
-          this._processingFsEvents = false;
+          self._processingFsEvents = false;
         }, 500);
       }
 
@@ -207,7 +210,7 @@ class RootEntry extends Entry {
   async _stop() {
     // if (this._fsWatcher) {
       // console.trace();
-      log('Stopping watcher', this.path);
+      log('Stopping watcher', this, this.path, this._fsWatcher);
       clearInterval(this._fsWatcher);
       await BApi.file.stopWatchingChangesInFileProcessorWorkspace();
       store.dispatch.iwFsEntryChangeEvents.clear();

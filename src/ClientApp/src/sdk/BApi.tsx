@@ -16,10 +16,11 @@ interface BResponse {
 
 const log = buildLogger('BApi');
 
-class BApi extends Api<any> {
-  constructor() {
+export class BApi extends Api<any> {
+  constructor(endpoint: string) {
+    log('Initialize new instance with endpoint', endpoint);
     super({
-      baseUrl: serverConfig.apiEndpoint,
+      baseUrl: endpoint,
     });
     const originalRequest = this.request;
     this.request = async <T = any, E = any>(params: BFullRequestParams): Promise<T> => {
@@ -62,4 +63,4 @@ class BApi extends Api<any> {
   }
 }
 
-export default new BApi();
+export default new BApi(serverConfig.apiEndpoint!);

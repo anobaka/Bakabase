@@ -170,7 +170,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   // useTraceUpdate(props, '[ResourceCover]');
 
   const loadCover = useCallback((refresh: boolean) => {
-    const serverAddress = appContext.serverAddresses?.[1] ?? serverConfig.apiEndpoint;
+    const serverAddresses = appContext.serverAddresses ?? [serverConfig.apiEndpoint];
+    const serverAddress = serverAddresses[serverAddresses.length - 1];
     const urls: string[] = [];
     if (coverPaths && coverPaths.length > 0) {
       urls.push(...coverPaths.map(coverPath => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`));

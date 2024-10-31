@@ -19,10 +19,10 @@ public static class PropertyExtensions
                 .ToDictionary(d => d.Key, d => d.Select(c => c.Key).ToArray()));
 
     public static StandardValueType GetDbValueType(this PropertyType type) =>
-        PropertyInternals.PropertyAttributeMap[type].DbValueType;
+        PropertyInternals.PropertyAttributeMap.GetValueOrDefault(type)?.DbValueType ?? default;
 
     public static StandardValueType GetBizValueType(this PropertyType type) =>
-        PropertyInternals.PropertyAttributeMap[type].BizValueType;
+        PropertyInternals.PropertyAttributeMap.GetValueOrDefault(type)?.BizValueType ?? default;
 
     public static PropertyType[]? GetCompatibleCustomPropertyTypes(this StandardValueType bizValueType) =>
         StandardValueTypeCustomPropertyTypesMap.GetValueOrDefault(bizValueType);
@@ -56,8 +56,8 @@ public static class PropertyExtensions
         };
         if (dbModel.Options.IsNotEmpty())
         {
-            var pd = PropertyInternals.DescriptorMap[dbModel.Type];
-            if (pd.OptionsType != null)
+            var pd = PropertyInternals.DescriptorMap.GetValueOrDefault(dbModel.Type);
+            if (pd?.OptionsType != null)
             {
                 p.Options = JsonConvert.DeserializeObject(dbModel.Options, pd.OptionsType);
             }

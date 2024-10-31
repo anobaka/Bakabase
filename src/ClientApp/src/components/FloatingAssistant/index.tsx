@@ -14,6 +14,7 @@ import { BackgroundTaskStatus } from '@/sdk/constants';
 import { Button, Chip, Divider, Modal, Popover } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { buildLogger } from '@/components/utils';
 
 const AssistantStatus = {
   Idle: 0,
@@ -33,6 +34,8 @@ type Task = {
 
 const SyncTaskName = 'MediaLibraryService:Sync';
 const NfoGenerationTaskName = 'ResourceService:NfoGeneration';
+
+const log = buildLogger('FloatingAssistant');
 
 export default () => {
   const [allDoneCircleDrawn, setAllDoneCircleDrawn] = useState('');
@@ -207,7 +210,7 @@ export default () => {
         return (
           <div
             key={t.id}
-            className={`flex items-center justify-between gap-16 transition-opacity ${removingTaskId ? 'opacity-0' : ''}`}
+            className={`flex items-center justify-between gap-16 transition-opacity ${t.id == removingTaskId ? 'opacity-0' : ''}`}
             onTransitionEnd={(evt) => {
               if (evt.propertyName == 'opacity' && t.id == removingTaskId) {
                 BApi.backgroundTask.removeBackgroundTask(t.id);
@@ -245,6 +248,8 @@ export default () => {
   const syncDisabled = tasks.some((a) => a.name == SyncTaskName && a.status == BackgroundTaskStatus.Running);
   // const nfoGenerationDisabled = tasks.some((a) => a.name == NfoGenerationTaskName && a.status == BackgroundTaskStatus.Running);
   const activeTasks = tasks.filter((t) => t.status != BackgroundTaskStatus.Running);
+
+  log(tasks);
 
   return (
     <>

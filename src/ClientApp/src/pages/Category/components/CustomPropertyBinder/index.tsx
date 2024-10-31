@@ -21,6 +21,7 @@ const CategoryCustomPropertyBinderDialog = ({
   return (
     <PropertySelector
       multiple
+      addable
       pool={PropertyPool.Custom}
       selection={category.customProperties?.map(c => ({ id: c.id, pool: PropertyPool.Custom }))}
       title={t('Binding custom properties to category {{categoryName}}', { categoryName: category.name })}

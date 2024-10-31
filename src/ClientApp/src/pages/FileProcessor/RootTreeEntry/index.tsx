@@ -84,11 +84,6 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
 
   const contextMenuEntryRef = useRef<Entry>();
 
-  useUpdateEffect(() => {
-    rootRef.current = root;
-    rootRef.current?.patchFilter(filter);
-  }, [root]);
-
   const onSelectedRef = useRef(onSelected);
 
   useUpdateEffect(() => {
@@ -138,6 +133,8 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
 
   useUpdateEffect(() => {
     setInputValue(root?.path);
+    rootRef.current = root;
+    rootRef.current?.patchFilter(filter);
     log('root changed', root);
   }, [root]);
 

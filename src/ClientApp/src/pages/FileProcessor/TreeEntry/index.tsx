@@ -85,10 +85,6 @@ const TreeEntry = (props: TreeEntryProps) => {
   const pendingRenderingRef = useRef(false);
 
   useUpdateEffect(() => {
-    entryRef.current = entry;
-  }, [entry]);
-
-  useUpdateEffect(() => {
     setEntry(propsEntry);
   }, [propsEntry]);
 
@@ -289,6 +285,7 @@ const TreeEntry = (props: TreeEntryProps) => {
    */
   const renderChildren = useCallback(() => {
     log('Rendering children', entryRef.current, entryRef.current.filteredChildren);
+
     pendingRenderingRef.current = true;
 
     if (domRef.current?.parentElement) {
@@ -302,6 +299,10 @@ const TreeEntry = (props: TreeEntryProps) => {
       }
 
       forceUpdate();
+    }
+
+    if (entryRef.current.filteredChildren.length == 0) {
+      triggerChildrenLoaded();
     }
   }, []);
 
@@ -358,7 +359,7 @@ const TreeEntry = (props: TreeEntryProps) => {
   };
 
   const triggerChildrenLoaded = useCallback(() => {
-    log('Trigger onChildrenLoaded');
+    log('Trigger onChildrenLoaded', entryRef.current);
     onChildrenLoaded?.(entryRef.current);
   }, []);
 
@@ -568,6 +569,7 @@ const TreeEntry = (props: TreeEntryProps) => {
           {entryRef.current.childrenHeight > 0 && (
             <List
               ref={r => {
+                log('VirtualList ref', r);
                 virtualListRef.current = r;
                 if (r) {
                   if (pendingRenderingRef.current) {

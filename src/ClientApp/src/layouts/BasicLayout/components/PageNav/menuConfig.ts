@@ -97,11 +97,11 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/filemover',
         icon: 'FileSyncOutlined',
       },
-      {
-        name: 'Other tools',
-        path: '/tools',
-        icon: 'ToolOutlined',
-      },
+      // {
+      //   name: 'Other tools',
+      //   path: '/tools',
+      //   icon: 'ToolOutlined',
+      // },
       // {
       //   name: 'Migration',
       //   path: '/migration',

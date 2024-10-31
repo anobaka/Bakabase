@@ -3,7 +3,7 @@ import PscProperty from './models/PscProperty';
 import type { IPscPropertyMatcherValue } from './models/PscPropertyMatcherValue';
 import { PscMatcherValue } from './models/PscMatcherValue';
 import { execAll } from '@/components/utils';
-import { MatchResultType, ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
+import { MatchResultType, ResourceMatcherValueType } from '@/sdk/constants';
 import type { BakabaseAbstractionsModelsDomainPathConfiguration } from '@/sdk/Api';
 import { PscContext } from '@/components/PathSegmentsConfiguration/models/PscContext';
 import type { PscMatchResult } from '@/components/PathSegmentsConfiguration/models/PscMatchResult';
@@ -201,7 +201,13 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
     }
 
     pmvs!.filter(v => !v.property.isResource && !v.property.isRootPath).forEach((pmv) => {
-      const result = PscMatcher.match(segments, pmv.value, rootSegmentIndex, resourceSegmentIndex == undefined ? undefined : resourceSegmentIndex + 1);
+      let endIndex = resourceSegmentIndex == undefined ? undefined : resourceSegmentIndex + 1;
+      // for matcher with layer value, we should exclude the resource segment
+      if (pmv.value?.valueType == ResourceMatcherValueType.Layer) {
+        endIndex = endIndex == undefined ? undefined : (endIndex - 1);
+      }
+      const result = PscMatcher.match(segments, pmv.value, rootSegmentIndex, endIndex);
+      log('Match result for', pmv, 'result', result);
       allPropertyMatchResults.push({
         pmv,
         result,

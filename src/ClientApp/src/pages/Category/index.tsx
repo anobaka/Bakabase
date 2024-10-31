@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer, useRef, useState } from 'react';
-import { Dropdown, Loading, Menu } from '@alifd/next';
+import { Loading, Menu } from '@alifd/next';
 import './index.scss';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,7 @@ import BApi from '@/sdk/BApi';
 import { CategoryAdditionalItem, MediaLibraryAdditionalItem } from '@/sdk/constants';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Button, Input, Modal } from '@/components/bakaui';
+import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Modal } from '@/components/bakaui';
 import DeleteUnknownResources from '@/components/DeleteUnknownResources';
 
 export default () => {
@@ -38,7 +38,8 @@ export default () => {
 
   const loadAllCategories = (cb: () => void = () => {
   }): Promise<any> => {
-    return BApi.category.getAllCategories({ additionalItems:
+    return BApi.category.getAllCategories({
+      additionalItems:
         CategoryAdditionalItem.Validation |
         CategoryAdditionalItem.CustomProperties |
         CategoryAdditionalItem.EnhancerOptions,
@@ -76,9 +77,11 @@ export default () => {
   }
 
   const reloadCategory = async (id: number) => {
-    const c = (await BApi.category.getCategory(id, { additionalItems: CategoryAdditionalItem.Validation |
+    const c = (await BApi.category.getCategory(id, {
+      additionalItems: CategoryAdditionalItem.Validation |
         CategoryAdditionalItem.CustomProperties |
-        CategoryAdditionalItem.EnhancerOptions })).data ?? {};
+        CategoryAdditionalItem.EnhancerOptions,
+    })).data ?? {};
     const idx = categories.findIndex(x => x.id == id);
     categories[idx] = c;
     setCategories([...categories]);
@@ -151,26 +154,31 @@ export default () => {
             {t('Add')}
           </Button>
           {categories.length > 1 && (
-            <Dropdown
-              trigger={(
-                <Button size={'small'} className={'elevator'}>
+            <Dropdown>
+              <DropdownTrigger>
+                <Button
+                  size={'small'}
+                  className={'elevator'}
+                >
                   {t('QuickJump')}
                 </Button>
-              )}
-              triggerType={'click'}
-            >
-              <Menu>
+              </DropdownTrigger>
+              <DropdownMenu
+                selectionMode="single"
+                aria-label="Categories"
+                onSelectionChange={keys => {
+                  const arr = Array.from(keys ?? []);
+                  const id = arr?.[0] as number;
+                  // console.log(keys, id);
+                  document.getElementById(`category-${id}`)?.scrollIntoView();
+                }}
+              >
                 {categories?.map((c) => (
-                  <Menu.Item
-                    key={c.id}
-                    onClick={() => {
-                      document.getElementById(`category-${c.id}`)?.scrollIntoView();
-                    }}
-                  >
+                  <DropdownItem key={c.id} >
                     {c.name}
-                  </Menu.Item>
+                  </DropdownItem>
                 ))}
-              </Menu>
+              </DropdownMenu>
             </Dropdown>
           )}
         </div>

@@ -65,16 +65,18 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost]
         [SwaggerOperation(OperationId = "AddCustomProperty")]
-        public async Task<SingletonResponse<CustomProperty>> Add([FromBody] CustomPropertyAddOrPutDto model)
+        public async Task<SingletonResponse<CustomPropertyViewModel>> Add([FromBody] CustomPropertyAddOrPutDto model)
         {
-            return new SingletonResponse<CustomProperty>(await service.Add(model));
+            return new SingletonResponse<CustomPropertyViewModel>(
+                (await service.Add(model)).ToViewModel(propertyLocalizer));
         }
 
         [HttpPut("{id:int}")]
         [SwaggerOperation(OperationId = "PutCustomProperty")]
-        public async Task<SingletonResponse<CustomProperty>> Put(int id, [FromBody] CustomPropertyAddOrPutDto model)
+        public async Task<SingletonResponse<CustomPropertyViewModel>> Put(int id,
+            [FromBody] CustomPropertyAddOrPutDto model)
         {
-            return new(await service.Put(id, model));
+            return new((await service.Put(id, model)).ToViewModel(propertyLocalizer));
         }
 
         [HttpDelete("{id:int}")]

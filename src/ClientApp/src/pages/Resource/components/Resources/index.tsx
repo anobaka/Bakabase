@@ -39,13 +39,13 @@ export type ResourcesRef = {
 const log = buildLogger('Resources');
 
 const Resources = forwardRef<ResourcesRef, Props>(({
-                                            columnCount,
-                                            loadMore,
-                                            renderCell,
-                                            cellCount,
-                                            onScroll,
-                                            onScrollToTop,
-                                          }, ref) => {
+                                                     columnCount,
+                                                     loadMore,
+                                                     renderCell,
+                                                     cellCount,
+                                                     onScroll,
+                                                     onScrollToTop,
+                                                   }, ref) => {
   const loadingRef = useRef<boolean>(false);
   const gridRef = useRef<any>();
   const cacheRef = useRef(new CellMeasurerCache({
@@ -155,29 +155,44 @@ const Resources = forwardRef<ResourcesRef, Props>(({
               }) => (
                 <Grid
                   ref={gridRef}
-                  // height={containerHeight}
-                  // width={containerWidth}
+                // height={containerHeight}
+                // width={containerWidth}
                   width={width}
                   height={height}
                   cellRenderer={cellRenderer}
-                  overscanRowCount={2}
+                  overscanIndicesGetter={({
+                                          cellCount,
+                                          overscanCellsCount,
+                                          startIndex,
+                                          stopIndex,
+                                        }) => ({
+                  overscanStartIndex: Math.max(
+                    0,
+                    startIndex - overscanCellsCount,
+                  ),
+                  overscanStopIndex: Math.min(
+                    cellCount - 1,
+                    stopIndex + overscanCellsCount,
+                  ),
+                })}
+                  overscanRowCount={4}
                   columnCount={columnCount}
                   columnWidth={columnWidth}
                   rowCount={Math.ceil(cellCount / columnCount)}
                   rowHeight={cacheRef.current.rowHeight}
                   onScrollbarPresenceChange={e => {
-                    log('onScrollbarPresenceChange', e);
-                    const newWidth = e.vertical ? e.size : 0;
-                    if (newWidth != verScrollbarWidthRef.current) {
-                      verScrollbarWidthRef.current = newWidth;
-                      onResize(true);
-                    }
-                  }}
+                  log('onScrollbarPresenceChange', e);
+                  const newWidth = e.vertical ? e.size : 0;
+                  if (newWidth != verScrollbarWidthRef.current) {
+                    verScrollbarWidthRef.current = newWidth;
+                    onResize(true);
+                  }
+                }}
                   onScroll={e => {
-                    log('onScroll', e);
-                    scrollTopRef.current = e.scrollTop;
-                    onScroll?.(e);
-                  }}
+                  log('onScroll', e);
+                  scrollTopRef.current = e.scrollTop;
+                  onScroll?.(e);
+                }}
                 />)}
           </AutoSizer>
         )}

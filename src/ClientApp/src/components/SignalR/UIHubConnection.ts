@@ -42,7 +42,7 @@ export default class UIHubConnection {
           store.dispatch.fileMovingProgresses.setState(data);
           break;
         case 'AppContext':
-          store.dispatch.appContext.setState(data);
+          store.dispatch.appContext.update(data);
           break;
       }
     });

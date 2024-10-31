@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } 
 import type Queue from 'queue';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
-import { PlayCircleOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { ControlledMenu, MenuItem } from '@szhsin/react-menu';
 import styles from './index.module.scss';
 import { OpenResourceDirectory } from '@/sdk/apis';
@@ -135,7 +135,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     if (disableCacheRef.current) {
       rp.cache = 'no-cache';
     }
-    const pRsp = await BApi.resource.getResourcePlayableFiles(resource.id, rp);
+    const pRsp = await appContext.bApi2.resource.getResourcePlayableFiles(resource.id, rp);
     setPlayableFiles(pRsp.data || []);
   }, [disableCache]);
 
@@ -284,6 +284,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
             showBiggerOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
           />
         </div>
+        {resource.hasChildren && (
+          <Tooltip content={t('This is a parent resource')}>
+            <ApartmentOutlined className={'absolute top-1 left-1'} />
+          </Tooltip>
+        )}
         {playable && (
           <div className={styles.play}>
             <Tooltip

@@ -28,13 +28,13 @@ type Library = { id: number; pathConfigurations: BakabaseAbstractionsModelsDomai
 interface Props extends DestroyableProps {
   libraryId: number;
   pcIdx: number;
-  onSaved: (pc: BakabaseAbstractionsModelsDomainPathConfiguration) => any;
+  onClosed: (pc: BakabaseAbstractionsModelsDomainPathConfiguration) => any;
 }
 
 export default ({
                   libraryId,
                   pcIdx,
-                  onSaved,
+                  onClosed,
                   ...props
                 }: Props) => {
   const { t } = useTranslation();
@@ -124,7 +124,7 @@ export default ({
         const dto = convertToPathConfigurationDtoFromPscValue(tmpValue);
         console.log(5555, dto);
         await save(dto);
-        onSaved(dto);
+        onClosed(dto);
         // await save({
         //   rpmValues: dto.rpmValues ?? undefined,
         //   path: dto.path ?? undefined,
@@ -204,6 +204,9 @@ export default ({
         onDestroyed={props.onDestroyed}
         footer={{
           actions: ['cancel'],
+        }}
+        onClose={() => {
+          onClosed?.(pc);
         }}
         title={t('Path configuration')}
       >

@@ -12,6 +12,7 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons';
 import { useUpdate } from 'react-use';
+import { AutoTextSize } from 'auto-text-size';
 import CustomIcon from '@/components/CustomIcon';
 import DragHandle from '@/components/DragHandle';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
@@ -149,7 +150,7 @@ export default (({
         <DragHandle {...listeners} {...attributes} />
         <div className="flex items-center gap-1">
           <div
-            className={'edit'}
+            className={'edit relative'}
             onClick={() => {
               let n = library.name;
               Dialog.show({
@@ -189,28 +190,31 @@ export default (({
               });
             }}
           >
-            {library.name}
-          </div>
-          {library.resourceCount > 0 ? (
-            <Tooltip
-              content={t('Count of resources')}
-            >
-              <Chip
-                color={'success'}
-                size={'sm'}
-                variant={'light'}
+            <AutoTextSize maxFontSizePx={14}>
+              {library.name}
+            </AutoTextSize>
+            {library.resourceCount > 0 ? (
+              <Tooltip
+                content={t('Count of resources')}
               >
-                {library.resourceCount}
-              </Chip>
-            </Tooltip>
-          ) : (
-            library.pathConfigurations?.length > 0 && (
-              <Tooltip content={t('Resource not found? Please try to perform the synchronization operation.')}>
-                <QuestionCircleOutlined className={'text-base'} />
+                <Chip
+                  color={'success'}
+                  size={'sm'}
+                  variant={'light'}
+                  className={'p-0 absolute right-[-14px] top-[-14px]'}
+                >
+                  {library.resourceCount}
+                </Chip>
               </Tooltip>
-            )
-          )}
-          <div>
+            ) : (
+              library.pathConfigurations?.length > 0 && (
+                <Tooltip content={t('Resource not found? Please try to perform the synchronization operation.')}>
+                  <QuestionCircleOutlined className={'text-base'} />
+                </Tooltip>
+              )
+            )}
+          </div>
+          <div className={'pl-2'}>
             <Tooltip content={t('Sync current media library')}>
               <Button
                 isIconOnly
@@ -220,6 +224,7 @@ export default (({
                 onClick={() => {
                   BApi.mediaLibrary.startSyncingMediaLibraryResources(library.id);
                 }}
+                className={'w-auto min-w-fit px-1'}
               >
                 <SyncOutlined className={'text-base'} />
               </Button>
@@ -230,6 +235,7 @@ export default (({
                   variant={'light'}
                   size={'sm'}
                   isIconOnly
+                  className={'w-auto min-w-fit px-1'}
                 >
                   <PlusCircleOutlined
                     className={'text-base'}
@@ -261,6 +267,7 @@ export default (({
                   variant={'light'}
                   size={'sm'}
                   isIconOnly
+                  className={'w-auto min-w-fit px-1'}
                 >
                   <UnorderedListOutlined
                     className={'text-base'}
@@ -332,7 +339,7 @@ export default (({
               key={i}
               onClick={() => {
                 createPortal(PathConfigurationDialog, {
-                  onSaved: (pc) => {
+                  onClosed: (pc) => {
                     Object.assign(library.pathConfigurations[i], pc);
                     loadAllMediaLibraries();
                   },
@@ -358,6 +365,7 @@ export default (({
                     size={'sm'}
                     isIconOnly
                     variant={'light'}
+                    className={'w-auto min-w-fit px-1'}
                   >
                     <FolderOpenOutlined
                       className={'text-base'}
@@ -373,6 +381,7 @@ export default (({
                     isIconOnly
                     variant={'light'}
                     color={'danger'}
+                    className={'w-auto min-w-fit px-1'}
                   >
                     <DeleteOutlined
                       className={'text-base'}

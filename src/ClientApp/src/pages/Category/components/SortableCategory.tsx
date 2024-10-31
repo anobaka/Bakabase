@@ -449,7 +449,7 @@ export default (({
             const comp = components.find((a) => a.componentType == type.value);
             // console.log(components, comp);
             return (
-              <div className={'component setting'} key={type.value}>
+              <div className={'flex items-center gap-1'} key={type.value}>
                 <Tooltip
                   content={t(ComponentTips[type.value])}
                 >
@@ -459,50 +459,49 @@ export default (({
                   >{t(type.label)}
                   </Chip>
                 </Tooltip>
-
-                &emsp;
-                {comp ? (
-                  <span
-                    className="editable"
-                    onClick={() => {
-                      renderBasicComponentSelector(type.value, comp.componentKey);
-                    }}
-                  >
-                    <span className="hover-area">
-                      {t(comp.descriptor?.name)}
-                      &nbsp;
-                      <CustomIcon type="edit-square" size={'small'} />
-                    </span>
-                  </span>
-                ) : (
-                  <CustomIcon
-                    onClick={() => {
-                      renderBasicComponentSelector(type.value);
-                    }}
-                    type="edit-square"
-                    className={'text-small'}
-                  />
-                )}
+                <Button
+                  size={'sm'}
+                  color={comp ? 'default' : 'primary'}
+                  onClick={() => {
+                    renderBasicComponentSelector(type.value, comp?.componentKey);
+                  }}
+                  variant={'light'}
+                >
+                  {t(comp?.descriptor?.name ?? 'Click to set')}
+                </Button>
               </div>
             );
           })}
-        <div className={'setting'}>
+        <div className={'flex items-center gap-1'}>
           <Chip
             size={'sm'}
             radius={'sm'}
           >{t('Priority on cover selection')}</Chip>
-          &emsp;
-          <span className="editable">
-            <span
-              className="hover-area"
-              onClick={() => {
-                const order: CoverSelectOrder = (category.coverSelectionOrder || CoverSelectOrder.FilenameAscending) % coverSelectOrders.length + 1;
-                BApi.category.patchCategory(
-                  category.id,
-                  {
-                    coverSelectionOrder: order,
-                  },
-                )
+          <Dropdown>
+            <DropdownTrigger>
+              <Button
+                variant={'light'}
+                size={'sm'}
+                color={category.coverSelectionOrder > 0 ? 'default' : 'primary'}
+              >
+                {category.coverSelectionOrder > 0 ? (
+                  t(CoverSelectOrder[category.coverSelectionOrder])
+                ) : (
+                  t('Click to set')
+                )}
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              aria-label="Cover select order"
+              variant="flat"
+              disallowEmptySelection
+              selectionMode="single"
+              selectedKeys={[category.coverSelectionOrder]}
+              onSelectionChange={keys => {
+                const arr = Array.from(keys ?? []);
+                const order = arr?.[0] as CoverSelectOrder;
+                console.log(keys);
+                BApi.category.patchCategory(category.id, { coverSelectionOrder: order })
                   .then((t) => {
                     if (!t.code) {
                       category.coverSelectionOrder = order;
@@ -511,48 +510,13 @@ export default (({
                   });
               }}
             >
-              <span>{t(CoverSelectOrder[category.coverSelectionOrder] ?? CoverSelectOrder[CoverSelectOrder.FilenameAscending])}</span>
-              &nbsp;
-              <CustomIcon
-                type="sorting"
-                className={'text-small'}
-              />
-            </span>
-          </span>
-        </div>
-        <div className={'setting'}>
-          <Tooltip
-            content={
-              <div>
-                {t('You can share tags and rate of same physical filesystem item from different app instances by enabling this option, but it may cause poor performance of tag-related operations.')}
-                <FeatureStatusTip status={'developing'} name={t('NFO generator')} />
-              </div>
-            }
-          >
-            <Chip
-              size={'sm'}
-              radius={'sm'}
-            >{t('Generate nfo')}</Chip>
-          </Tooltip>
-          &emsp;
-          <Checkbox
-            isDisabled
-            checked={category.generateNfo}
-            onValueChange={(checked) => {
-              BApi.category.patchCategory(
-                category.id,
-                {
-                  generateNfo: checked,
-                },
-              )
-                .then((t) => {
-                  if (!t.code) {
-                    category.generateNfo = checked;
-                    forceUpdate();
-                  }
-                });
-            }}
-          />
+              {coverSelectOrders.map(c => {
+                return (
+                  <DropdownItem key={c.value}>{t(CoverSelectOrder[c.value])}</DropdownItem>
+                );
+              })}
+            </DropdownMenu>
+          </Dropdown>
         </div>
         <div className={'col-span-3'}>
           <div className={'flex items-center gap-2'}>

@@ -467,7 +467,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                     {
                                         CategoryId = pr.CategoryId,
                                         MediaLibraryId = pr.MediaLibraryId,
-                                        IsFile = false
+                                        IsFile = false,
+                                        Path = firstValue
                                     };
                                 }
 
