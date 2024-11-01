@@ -19,10 +19,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
 {
     public abstract class HttpSourceComponentService(ILoggerFactory loggerFactory, AppService appService,
             string directoryName,
-            IHttpClientFactory httpClientFactory)
-        : DependentComponentService(loggerFactory, appService, directoryName)
+            IHttpClientFactory httpClientFactory, IServiceProvider globalServiceProvider)
+        : DependentComponentService(loggerFactory, appService, directoryName, globalServiceProvider)
     {
         protected HttpClient HttpClient = httpClientFactory.CreateClient(InternalOptions.HttpClientNames.Default);
+        private readonly ILoggerFactory _loggerFactory = loggerFactory;
 
         protected abstract Task<Dictionary<string, string>> GetDownloadUrls(DependentComponentVersion version,
             CancellationToken ct);
@@ -57,7 +58,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations
                     Directory.CreateDirectory(TempDirectory);
                     var perFileProgress = (decimal) InstallationProgressForDownloading / urlAndFileNames.Count;
                     var singleFileDownloader = new SingleFileHttpDownloader(HttpClient,
-                        loggerFactory.CreateLogger<SingleFileHttpDownloader>());
+                        _loggerFactory.CreateLogger<SingleFileHttpDownloader>());
                     var allFilePaths = new List<string>();
                     singleFileDownloader.OnProgress += async (progress) =>
                     {

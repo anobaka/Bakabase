@@ -53,7 +53,7 @@ export default () => {
 
   const loadAllMediaLibraries = (cb: () => void = () => {
   }): Promise<any> => {
-    return BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category | MediaLibraryAdditionalItem.FileSystemInfo | MediaLibraryAdditionalItem.PathConfigurationCustomProperties }).then((x) => {
+    return BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category | MediaLibraryAdditionalItem.FileSystemInfo | MediaLibraryAdditionalItem.PathConfigurationBoundProperties }).then((x) => {
       x.data?.sort((a, b) => a.order - b.order);
       setLibraries(x.data || []);
     });
@@ -88,7 +88,7 @@ export default () => {
   };
 
   const reloadMediaLibrary = async (id: number) => {
-    const c = (await BApi.mediaLibrary.getMediaLibrary(id, { additionalItems: MediaLibraryAdditionalItem.Category | MediaLibraryAdditionalItem.FileSystemInfo | MediaLibraryAdditionalItem.PathConfigurationCustomProperties })).data ?? {};
+    const c = (await BApi.mediaLibrary.getMediaLibrary(id, { additionalItems: MediaLibraryAdditionalItem.Category | MediaLibraryAdditionalItem.FileSystemInfo | MediaLibraryAdditionalItem.PathConfigurationBoundProperties })).data ?? {};
     const idx = libraries.findIndex(x => x.id == id);
     libraries[idx] = c;
     setLibraries({ ...libraries });

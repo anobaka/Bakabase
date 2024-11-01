@@ -12,15 +12,24 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Models.Constants;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency
 {
     public abstract class DependentComponentService : IDependentComponentService
     {
+        private readonly IServiceProvider _globalServiceProvider;
         public abstract string Id { get; }
-        public abstract string DisplayName { get; }
-        public abstract string? Description { get; }
+
+        public string DisplayName =>
+            _globalServiceProvider.GetRequiredService<IDependencyLocalizer>()
+                .Dependency_Component_Name(KeyInLocalizer) ?? GetType().Name;
+
+        public string? Description => _globalServiceProvider.GetRequiredService<IDependencyLocalizer>()
+            .Dependency_Component_Description(KeyInLocalizer);
+
+        protected abstract string KeyInLocalizer { get; }
         public string DefaultLocation { get; }
         public abstract bool IsRequired { get; }
         protected ILogger Logger;
@@ -28,8 +37,9 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
         protected string TempDirectory { get; }
 
         protected DependentComponentService(ILoggerFactory loggerFactory, AppService appService,
-            string directoryName)
+            string directoryName, IServiceProvider globalServiceProvider)
         {
+            _globalServiceProvider = globalServiceProvider;
             Logger = loggerFactory.CreateLogger(GetType());
 
             DirectoryName = directoryName;

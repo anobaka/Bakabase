@@ -38,6 +38,9 @@ namespace Bakabase.Abstractions.Models.Domain
                 public bool IsCustom { get; set; } = IsCustom;
             }
 
+            /// <summary>
+            /// Value should be standardized BizValue
+            /// </summary>
             public Dictionary<int, object?> CustomPropertyIdValueMap { get; set; } = [];
         }
     }

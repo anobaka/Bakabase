@@ -26,16 +26,19 @@ using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux
 {
-    public class LuxService
-    (IServiceProvider serviceProvider, ILoggerFactory loggerFactory, AppService appService,
+    public class LuxService(
+        IServiceProvider serviceProvider,
+        ILoggerFactory loggerFactory,
+        AppService appService,
         IHttpClientFactory httpClientFactory,
-        CompressedFileService compressedFileService) :
-        HttpSourceComponentService(loggerFactory, appService, "lux", httpClientFactory)
+        CompressedFileService compressedFileService,
+        IServiceProvider globalServiceProvider) :
+        HttpSourceComponentService(loggerFactory, appService, "lux", httpClientFactory, globalServiceProvider)
     {
         public override string Id => "6cb4ac7f-f60d-45c9-86bc-a48918623654";
-        public override string DisplayName => "lux";
+
         public override bool IsRequired => false;
-        public override string? Description => "https://github.com/iawia002/lux";
+        protected override string KeyInLocalizer => "lux";
         private const string LatestReleaseApiUrl = "https://api.github.com/repos/iawia002/lux/releases/latest";
         protected FfMpegService FfMpegService => serviceProvider.GetRequiredService<FfMpegService>();
 

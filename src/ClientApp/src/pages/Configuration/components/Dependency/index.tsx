@@ -46,16 +46,18 @@ export default () => {
                     <div className={'flex gap-1 items-center'}>
                       {c.name}
                       <Popover
+                        // color={'primary'}
+                        showArrow
                         trigger={(
                           <QuestionCircleOutlined className={'text-base'} />
                         )}
                         placement={'right'}
                       >
-                        <div style={{ userSelect: 'text' }} className={'py-1'}>
+                        <div style={{ userSelect: 'text' }} className={'px-2 py-4 flex flex-col gap-2'}>
                           {c.description && (
-                            <div>
+                            <pre>
                               {c.description}
-                            </div>
+                            </pre>
                           )}
                           <div className={'flex items-center gap-2'}>
                             {t('Default location')}

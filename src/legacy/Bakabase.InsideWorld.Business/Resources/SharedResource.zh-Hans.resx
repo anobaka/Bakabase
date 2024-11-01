@@ -312,4 +312,28 @@
   <data name="BuiltinPropertyForDisplayName.Filename" xml:space="preserve">
     <value>文件名</value>
   </data>
+  <data name="Dependency_Component_ffmpeg_Name" xml:space="preserve">
+    <value>ffmpeg</value>
+  </data>
+  <data name="Dependency_Component_lux_Name" xml:space="preserve">
+    <value>lux</value>
+  </data>
+  <data name="Dependency_Component_ffmpeg_Description" xml:space="preserve">
+    <value>该组件用于处理媒体文件。
+您可以在 https://www.ffmpeg.org/ 下载可执行文件。 
+请确保目录中包含ffmpeg.exe和ffprobe.exe文件。
+本程序对ffmpeg的版本不作要求。</value>
+  </data>
+  <data name="Dependency_Component_lux_Description" xml:space="preserve">
+    <value>该组件用于下载在线视频。
+您可以在 https://github.com/iawia002/lux 下载可执行文件。 
+请确保目录中包含lux.exe文件。
+本程序对lux的版本不作要求。</value>
+  </data>
+  <data name="Dependency_Component_Bakabase.Updater_Description" xml:space="preserve">
+    <value>该组件用于更新Bakabase本体。</value>
+  </data>
+  <data name="Dependency_Component_Bakabase.Updater_Name" xml:space="preserve">
+    <value>Bakabase更新器</value>
+  </data>
 </root>

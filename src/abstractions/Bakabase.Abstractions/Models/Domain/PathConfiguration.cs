@@ -1,5 +1,4 @@
 ﻿using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Aos;
 
 namespace Bakabase.Abstractions.Models.Domain
 {

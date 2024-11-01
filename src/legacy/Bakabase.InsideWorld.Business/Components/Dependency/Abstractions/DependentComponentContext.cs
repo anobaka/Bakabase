@@ -7,5 +7,6 @@
         public int InstallationProgress { get; set; }
         public string? Version { get; set; }
         public string? Location { get; set; }
+        public bool IsRequired { get; set; }
     }
 }

@@ -196,6 +196,66 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to This component is used to update Bakabase app..
+        /// </summary>
+        internal static string Dependency_Component_Bakabase_Updater_Description {
+            get {
+                return ResourceManager.GetString("Dependency_Component_Bakabase.Updater_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Bakabase Updater.
+        /// </summary>
+        internal static string Dependency_Component_Bakabase_Updater_Name {
+            get {
+                return ResourceManager.GetString("Dependency_Component_Bakabase.Updater_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This component is used to process media files. 
+        ///You can go to https://www.ffmpeg.org/ to download the executables. 
+        ///Please make sure there are ffmpeg.exe and ffprobe.exe in your folder. 
+        ///The version of ffmpeg is not limited..
+        /// </summary>
+        internal static string Dependency_Component_ffmpeg_Description {
+            get {
+                return ResourceManager.GetString("Dependency_Component_ffmpeg_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ffmpeg.
+        /// </summary>
+        internal static string Dependency_Component_ffmpeg_Name {
+            get {
+                return ResourceManager.GetString("Dependency_Component_ffmpeg_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This component is used to download online videos. 
+        ///You can go to https://github.com/iawia002/lux to download the executables manually. 
+        ///Please make sure there is a lux.exe in your folder. 
+        ///The version of lux is not limited..
+        /// </summary>
+        internal static string Dependency_Component_lux_Description {
+            get {
+                return ResourceManager.GetString("Dependency_Component_lux_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to lux.
+        /// </summary>
+        internal static string Dependency_Component_lux_Name {
+            get {
+                return ResourceManager.GetString("Dependency_Component_lux_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Can not get mid from cookie, please make sure cookie is correct.
         /// </summary>
         internal static string Downloader_BilibiliCookieIsInvalid {

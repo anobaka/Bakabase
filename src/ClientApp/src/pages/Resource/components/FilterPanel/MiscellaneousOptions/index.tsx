@@ -109,6 +109,7 @@ export default ({ rearrangeResources }: Props) => {
       <DropdownMenu
         aria-label="Multiple selection example"
         variant="flat"
+        color={'primary'}
         closeOnSelect={false}
         selectionMode="multiple"
         // selectedKeys={selectableResourceDisplayContents.filter(c => currentResourceDisplayContents & c.value).map(c => c.value.toString())}

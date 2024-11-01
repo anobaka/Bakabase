@@ -259,7 +259,7 @@ export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue
   isCustomProperty: boolean;
   /** [1: Layer, 2: Regex, 3: FixedText] */
   valueType: BakabaseInsideWorldModelsConstantsResourceMatcherValueType;
-  customProperty?: BakabaseAbstractionsModelsDomainCustomProperty;
+  propertyName?: string;
   isSecondaryProperty: boolean;
   isResourceProperty: boolean;
   isValid: boolean;
@@ -931,7 +931,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptor
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 1 | 2;
 
 /**
- * [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationCustomProperties]
+ * [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationBoundProperties]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
@@ -5306,7 +5306,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllMediaLibraries: (
       query?: {
-        /** [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationCustomProperties] */
+        /** [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationBoundProperties] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem;
       },
       params: RequestParams = {},
@@ -5346,7 +5346,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getMediaLibrary: (
       id: number,
       query?: {
-        /** [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationCustomProperties] */
+        /** [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationBoundProperties] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem;
       },
       params: RequestParams = {},

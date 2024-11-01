@@ -169,7 +169,7 @@ export default ({
                 let name = `${t('Untitled search')}1`;
                 createPortal(Modal, {
                   defaultVisible: true,
-                  size: 'xl',
+                  size: 'lg',
                   title: t('Save current search'),
                   children: (
                     <Input

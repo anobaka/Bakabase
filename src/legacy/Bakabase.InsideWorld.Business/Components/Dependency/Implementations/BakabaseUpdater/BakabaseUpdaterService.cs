@@ -26,8 +26,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
     public class BakabaseUpdaterService : HttpSourceComponentService, IBakabaseUpdater
     {
         public override string Id => "274f8ab5-a0a6-4415-8466-137d986d3ddb";
-        public override string DisplayName => "Bakabase.Updater";
-        public override string? Description => string.Empty;
+        protected override string KeyInLocalizer => "Bakabase.Updater";
         private readonly IBOptions<UpdaterOptions> _options;
         private const string OssPrefix = "app/bakabase/updater/";
         public override bool IsRequired => true;
@@ -38,8 +37,9 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
 
         public BakabaseUpdaterService(ILoggerFactory loggerFactory, AppService appService,
             IBOptions<UpdaterOptions> options,
-            IHttpClientFactory httpClientFactory, IHubContext<WebGuiHub, IWebGuiClient> uiHub) :
-            base(loggerFactory, appService, "updater", httpClientFactory)
+            IHttpClientFactory httpClientFactory, IHubContext<WebGuiHub, IWebGuiClient> uiHub,
+            IServiceProvider globalServiceProvider) :
+            base(loggerFactory, appService, "updater", httpClientFactory, globalServiceProvider)
         {
             _options = options;
             _uiHub = uiHub;

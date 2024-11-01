@@ -651,14 +651,14 @@ namespace Bakabase.InsideWorld.Business.Services
                 var existedResources = dbResources.Where(a => a.Id > 0).ToList();
                 var newResources = dbResources.Except(existedResources).ToList();
                 await _orm.UpdateRange(existedResources);
-                dbResources = (await _orm.AddRange(newResources)).Data.Concat(existedResources).ToList();
+                dbResources = (await _orm.AddRange(newResources)).Data!.Concat(existedResources).ToList();
                 dbResources.ForEach(a => { resourceDtoMap[a.Path].Id = a.Id; });
 
                 // Alias
                 await _aliasService.SaveByResources(resources);
 
                 // Built-in properties
-                // todo:
+                await _reservedPropertyValueService.PutByResources(resources);
 
                 // Custom properties
                 await _customPropertyValueService.SaveByResources(resources);

@@ -13,7 +13,7 @@ namespace Bakabase.Abstractions.Models.Domain
         public int PropertyId { get; set; }
         public bool IsCustomProperty { get; set; }
         public ResourceMatcherValueType ValueType { get; set; }
-        public CustomProperty? CustomProperty { get; set; }
+        public string? PropertyName { get; set; }
 
         /// <summary>
         /// <see cref="ResourceProperty.ParentResource"/> or custom properties.

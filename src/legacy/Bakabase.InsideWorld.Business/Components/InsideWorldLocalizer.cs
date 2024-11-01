@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
@@ -17,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components
     /// todo: Redirect raw <see cref="IStringLocalizer"/> callings to here
     /// </summary>
     public class InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
-        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer
+        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, IDependencyLocalizer
     {
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
             localizer.GetAllStrings(includeParentCultures);
@@ -98,8 +100,9 @@ namespace Bakabase.InsideWorld.Business.Components
         {
             return property switch
             {
-                Abstractions.Models.Domain.Constants.ReservedProperty.Introduction or Abstractions.Models.Domain.Constants.ReservedProperty.Rating => this[
-                    $"{nameof(Reserved_Resource_Property_Name)}_{property}"],
+                Abstractions.Models.Domain.Constants.ReservedProperty.Introduction
+                    or Abstractions.Models.Domain.Constants.ReservedProperty.Rating => this[
+                        $"{nameof(Reserved_Resource_Property_Name)}_{property}"],
                 _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
             };
         }
@@ -107,6 +110,18 @@ namespace Bakabase.InsideWorld.Business.Components
         public string Property_DescriptorIsNotFound(PropertyPool type, int propertyId)
         {
             return this[nameof(Property_DescriptorIsNotFound), type, propertyId];
+        }
+
+        public string? Dependency_Component_Name(string key)
+        {
+            var d = this[$"Dependency_Component_{key}_Name"];
+            return d.ResourceNotFound ? null : (string?) d;
+        }
+
+        public string? Dependency_Component_Description(string key)
+        {
+            var d = this[$"Dependency_Component_{key}_Description"];
+            return d.ResourceNotFound ? null : (string?) d;
         }
     }
 }

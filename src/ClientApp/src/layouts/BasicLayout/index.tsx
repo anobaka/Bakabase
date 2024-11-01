@@ -10,11 +10,15 @@ import { InitializationContentType } from '@/sdk/constants';
 import FloatingAssistant from '@/components/FloatingAssistant';
 import { ErrorBoundary } from '@/components/Error';
 import BApi from '@/sdk/BApi';
+import { buildLogger } from '@/components/utils';
+
+const log = buildLogger('BasicLayout');
 
 export default function BasicLayout() {
   const { t } = useTranslation();
 
   useEffect(() => {
+    log('Initializing...');
     BApi.app.checkAppInitialized().then((a) => {
       switch (a.data) {
         case InitializationContentType.NotAcceptTerms:

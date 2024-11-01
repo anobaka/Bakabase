@@ -102,8 +102,9 @@ export default (({
   }, []);
 
   const renderCustomProperties = useCallback(p => {
-    const properties = p.rpmValues?.filter((a, j) => j == p.rpmValues.findIndex((b) => b.isCustomProperty && b.propertyId == a.propertyId)) || [];
-    return properties.length > 0 ? properties.map((s) => s.customProperty?.name)
+    let properties = p.rpmValues?.filter(x => !x.isResourceProperty).map(x => x.propertyName) ?? [];
+    properties = properties.filter((p, i) => properties.indexOf(p) === i);
+    return properties.length > 0 ? properties
       .map(n => {
         return (
           <Chip
@@ -190,7 +191,7 @@ export default (({
               });
             }}
           >
-            <AutoTextSize maxFontSizePx={14}>
+            <AutoTextSize className={'cursor-pointer'} maxFontSizePx={14}>
               {library.name}
             </AutoTextSize>
             {library.resourceCount > 0 ? (

@@ -712,7 +712,7 @@ export default (({
             <div className="path">{t('Root path')}</div>
             <div className="filter">{t('Resource discovery')}</div>
             {/* <div className="tags">{t('Fixed tags')}</div> */}
-            <div className="tags">{t('Custom properties')}</div>
+            <div className="tags">{t('Generated properties')}</div>
           </div>
         </div>
         <div className="libraries">

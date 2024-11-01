@@ -318,4 +318,28 @@
   <data name="BuiltinPropertyForDisplayName.Filename" xml:space="preserve">
     <value>Filename</value>
   </data>
+  <data name="Dependency_Component_ffmpeg_Name" xml:space="preserve">
+    <value>ffmpeg</value>
+  </data>
+  <data name="Dependency_Component_lux_Name" xml:space="preserve">
+    <value>lux</value>
+  </data>
+  <data name="Dependency_Component_ffmpeg_Description" xml:space="preserve">
+    <value>This component is used to process media files. 
+You can go to https://www.ffmpeg.org/ to download the executables. 
+Please make sure there are ffmpeg.exe and ffprobe.exe in your folder. 
+The version of ffmpeg is not limited.</value>
+  </data>
+  <data name="Dependency_Component_lux_Description" xml:space="preserve">
+    <value>This component is used to download online videos. 
+You can go to https://github.com/iawia002/lux to download the executables manually. 
+Please make sure there is a lux.exe in your folder. 
+The version of lux is not limited.</value>
+  </data>
+  <data name="Dependency_Component_Bakabase.Updater_Description" xml:space="preserve">
+    <value>This component is used to update Bakabase app.</value>
+  </data>
+  <data name="Dependency_Component_Bakabase.Updater_Name" xml:space="preserve">
+    <value>Bakabase Updater</value>
+  </data>
 </root>

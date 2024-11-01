@@ -4,7 +4,7 @@ import { DeleteOutlined, FolderOpenOutlined } from '@ant-design/icons';
 import { useUpdate } from 'react-use';
 import BApi from '@/sdk/BApi';
 import { buildLogger, splitPathIntoSegments, standardizePath } from '@/components/utils';
-import { ResourceProperty } from '@/sdk/constants';
+import { MediaLibraryAdditionalItem, ResourceProperty } from '@/sdk/constants';
 import PathSegmentsConfiguration, {
   PathSegmentConfigurationPropsMatcherOptions,
 } from '@/components/PathSegmentsConfiguration';
@@ -59,7 +59,7 @@ export default ({
   }, []);
 
   const loadLibrary = async () => {
-    const r = await BApi.mediaLibrary.getMediaLibrary(libraryId);
+    const r = await BApi.mediaLibrary.getMediaLibrary(libraryId, { additionalItems: MediaLibraryAdditionalItem.PathConfigurationBoundProperties });
     const l = r.data;
     if (l) {
       setLibrary({
@@ -144,7 +144,7 @@ export default ({
     return (
       <div className="flex flex-col gap-1 my-1">
         {(values).map((s, i) => {
-          let label = s.isCustomProperty ? customPropertyMap[s.propertyId!]?.name : t(ResourceProperty[s.propertyId!]);
+          let label = s.propertyName;
           if (label == undefined || label.length == 0) {
             label = t('Unknown property');
           }

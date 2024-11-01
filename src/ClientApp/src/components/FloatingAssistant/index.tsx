@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
-import { usePrevious } from 'react-use';
+import { usePrevious, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
 import {
   CheckCircleOutlined,
@@ -40,7 +40,7 @@ const log = buildLogger('FloatingAssistant');
 export default () => {
   const [allDoneCircleDrawn, setAllDoneCircleDrawn] = useState('');
   const [status, setStatus] = useState(AssistantStatus.Working);
-  const prevStatus = usePrevious(status);
+  const statusRef = useRef(status);
   const [removingTaskId, setRemovingTaskId] = useState<string | undefined>();
   const [tasksVisible, setTasksVisible] = useState(false);
   const { createPortal } = useBakabaseContext();
@@ -76,7 +76,13 @@ export default () => {
 
   // console.log(status);
 
+  useUpdateEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
   useEffect(() => {
+    log('Initializing...');
+
     const queryTask = setInterval(() => {
       const tempTasks = store.getState().backgroundTasks;
       let newStatus = AssistantStatus.AllDone;
@@ -97,7 +103,7 @@ export default () => {
         }
       }
 
-      if (newStatus != prevStatus) {
+      if (newStatus != statusRef.current) {
         setStatus(newStatus);
         if (newStatus == AssistantStatus.AllDone) {
           setTimeout(() => {
@@ -105,11 +111,12 @@ export default () => {
           }, 300);
         }
       }
-
-      return () => {
-        clearInterval(queryTask);
-      };
     }, 100);
+
+    return () => {
+      log('Destroying...');
+      clearInterval(queryTask);
+    };
   }, []);
 
   const renderTaskStatus = (task: Task) => {
@@ -249,7 +256,7 @@ export default () => {
   // const nfoGenerationDisabled = tasks.some((a) => a.name == NfoGenerationTaskName && a.status == BackgroundTaskStatus.Running);
   const activeTasks = tasks.filter((t) => t.status != BackgroundTaskStatus.Running);
 
-  log(tasks);
+  // log(tasks);
 
   return (
     <>

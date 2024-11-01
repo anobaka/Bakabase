@@ -189,6 +189,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                     if (!current.Properties.TryGetValue(pt, out var cpm))
                     {
                         current.Properties[pt] = pm;
+                        changed = true;
                         continue;
                     }
 
@@ -197,6 +198,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                         if (!cpm.TryGetValue(pId, out var cp))
                         {
                             cpm[pId] = p;
+                            changed = true;
                             continue;
                         }
 
@@ -208,10 +210,15 @@ namespace Bakabase.InsideWorld.Business.Extensions
                                 if (cv == null)
                                 {
                                     (cp.Values ??= []).Add(v);
+                                    changed = true;
                                 }
                                 else
                                 {
-                                    cv.BizValue = v.BizValue;
+                                    if (cv.BizValue != v.BizValue)
+                                    {
+                                        cv.BizValue = v.BizValue;
+                                        changed = true;
+                                    }
                                 }
                             }
                         }

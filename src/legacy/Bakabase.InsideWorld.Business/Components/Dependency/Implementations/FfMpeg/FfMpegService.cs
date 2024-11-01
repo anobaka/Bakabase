@@ -22,14 +22,16 @@ using Newtonsoft.Json.Linq;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg
 {
-    public class FfMpegService(ILoggerFactory loggerFactory, AppService appService,
-        IHttpClientFactory httpClientFactory, InsideWorldLocalizer localizer,
-        CompressedFileService compressedFileService) : HttpSourceComponentService(loggerFactory,
-        appService, "ffmpeg", httpClientFactory)
+    public class FfMpegService(
+        ILoggerFactory loggerFactory,
+        AppService appService,
+        IHttpClientFactory httpClientFactory,
+        CompressedFileService compressedFileService,
+        IServiceProvider globalServiceProvider) : HttpSourceComponentService(loggerFactory,
+        appService, "ffmpeg", httpClientFactory, globalServiceProvider)
     {
         public override string Id => "364e3884-4c6f-446f-b72c-1ec84e8da2c2";
-        public override string DisplayName => "ffmpeg";
-        public override string? Description => "https://www.ffmpeg.org/";
+        protected override string KeyInLocalizer => "ffmpeg";
         public override bool IsRequired => false;
 
         protected override IDiscoverer Discoverer { get; } = new FfMpegDiscoverer(loggerFactory);

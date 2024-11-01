@@ -21,7 +21,9 @@ using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.DependencyInjection;
@@ -44,6 +46,8 @@ namespace Bakabase.InsideWorld.Business.Services
     {
         private readonly ResourceService<InsideWorldDbContext,
             Abstractions.Models.Db.MediaLibrary, int> _orm;
+
+        private readonly IPropertyService _propertyService;
         private const decimal MinimalFreeSpace = 1_000_000_000;
         protected BackgroundTaskManager BackgroundTaskManager => GetRequiredService<BackgroundTaskManager>();
         protected ICategoryService ResourceCategoryService => GetRequiredService<ICategoryService>();
@@ -56,11 +60,15 @@ namespace Bakabase.InsideWorld.Business.Services
             GetRequiredService<InsideWorldOptionsManagerPool>();
         protected IStandardValueService StandardValueService => GetRequiredService<IStandardValueService>();
 
+        private readonly IPropertyLocalizer _propertyLocalizer;
+
         public MediaLibraryService(IServiceProvider serviceProvider, InsideWorldLocalizer localizer,
-            ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibrary, int> orm) : base(serviceProvider)
+            ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibrary, int> orm, IPropertyService propertyService, IPropertyLocalizer propertyLocalizer) : base(serviceProvider)
         {
             _localizer = localizer;
             _orm = orm;
+            _propertyService = propertyService;
+            _propertyLocalizer = propertyLocalizer;
         }
 
         public async Task<BaseResponse> Add(MediaLibraryAddDto model)
@@ -217,13 +225,10 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             break;
                         }
-                        case MediaLibraryAdditionalItem.PathConfigurationCustomProperties:
+                        case MediaLibraryAdditionalItem.PathConfigurationBoundProperties:
                         {
-                            var customPropertyIds = dtoList.Where(t => t.PathConfigurations != null).SelectMany(t =>
-                                t.PathConfigurations!.SelectMany(a => a.RpmValues ?? []).Where(a => a.IsCustomProperty)
-                                    .Select(a => a.PropertyId)).ToHashSet();
-                            var customProperty = (await CustomPropertyService.GetByKeys(customPropertyIds,
-                                CustomPropertyAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
+                            var customPropertyMap =
+                                (await _propertyService.GetProperties(PropertyPool.Custom)).ToDictionary(x => x.Id);
                             foreach (var ml in dtoList)
                             {
                                 if (ml.PathConfigurations != null)
@@ -234,7 +239,10 @@ namespace Bakabase.InsideWorld.Business.Services
                                         {
                                             foreach (var rv in pathConfiguration.RpmValues)
                                             {
-                                                rv.CustomProperty = customProperty.GetValueOrDefault(rv.PropertyId);
+                                                rv.PropertyName = rv.IsCustomProperty
+                                                    ? customPropertyMap.GetValueOrDefault(rv.PropertyId)?.Name
+                                                    : _propertyLocalizer.BuiltinPropertyName(
+                                                        (ResourceProperty) rv.PropertyId); 
                                             }
                                         }
                                     }
@@ -414,14 +422,14 @@ namespace Bakabase.InsideWorld.Business.Services
                 });
         }
 
-        private void SetPropertiesByMatchers(string rootPath, PathConfigurationTestResult.Resource e, Resource pr,
+        private async Task SetPropertiesByMatchers(string rootPath, PathConfigurationTestResult.Resource e, Resource pr,
             Dictionary<string, Resource> parentResources, Dictionary<int, CustomProperty> customPropertyMap)
         {
             if (parentResources == null) throw new ArgumentNullException(nameof(parentResources));
             // property - custom key/string.empty - values
             // PropertyId - Values
             // For Property=ParentResource, value will be an absolute path.
-            var reservedPropertyValues = new Dictionary<ResourceProperty, List<string>>();
+            var builtinPropertyValues = new Dictionary<ResourceProperty, List<string>>();
             for (var i = 0; i < e.SegmentAndMatchedValues.Count; i++)
             {
                 var t = e.SegmentAndMatchedValues[i];
@@ -429,7 +437,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     foreach (var p in t.PropertyKeys.Where(x => !x.IsCustom))
                     {
-                        var propertyIdAndValues = reservedPropertyValues.GetOrAdd((ResourceProperty) p.Id, () => new());
+                        var propertyIdAndValues = builtinPropertyValues.GetOrAdd((ResourceProperty) p.Id, () => new());
                         var v = t.SegmentText;
                         if (p is {IsCustom: false, Id: (int) ResourceProperty.ParentResource})
                         {
@@ -446,13 +454,13 @@ namespace Bakabase.InsideWorld.Business.Services
 
             foreach (var t in e.GlobalMatchedValues.Where(p => !p.PropertyKey.IsCustom))
             {
-                var values = reservedPropertyValues.GetOrAdd((ResourceProperty) t.PropertyKey.Id, () => new());
+                var values = builtinPropertyValues.GetOrAdd((ResourceProperty) t.PropertyKey.Id, () => new());
                 values.AddRange(t.TextValues);
             }
 
-            if (reservedPropertyValues.Any())
+            if (builtinPropertyValues.Any())
             {
-                foreach (var (propertyId, values) in reservedPropertyValues)
+                foreach (var (propertyId, values) in builtinPropertyValues)
                 {
                     var firstValue = values.First();
                     switch (propertyId)
@@ -477,6 +485,34 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             break;
                         }
+                        case ResourceProperty.Introduction:
+                        case ResourceProperty.Rating:
+                        {
+                            var property = PropertyInternals.BuiltinPropertyMap.GetValueOrDefault(propertyId);
+                            if (property != null)
+                            {
+                                var bizValue = await StandardValueService.Convert(values, StandardValueType.ListString,
+                                    property.Type.GetBizValueType());
+                                pr.Properties ??= [];
+                                var propertyValues = pr.Properties.GetOrAdd((int) PropertyPool.Reserved,
+                                    () => new Dictionary<int, Resource.Property>()).GetOrAdd((int) propertyId,
+                                    () => new Resource.Property(property.Name, property.Type.GetDbValueType(),
+                                        property.Type.GetBizValueType(), null));
+                                propertyValues.Values ??= [];
+                                var v = propertyValues.Values!.FirstOrDefault(x =>
+                                    x.Scope == (int) PropertyValueScope.Synchronization);
+                                if (v == null)
+                                {
+                                    v = new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization,
+                                        null, null, null);
+                                    propertyValues.Values.Add(v);
+                                }
+
+                                v.BizValue = bizValue;
+                            }
+
+                            break;
+                        }
                         case ResourceProperty.RootPath:
                         case ResourceProperty.Resource:
                             break;
@@ -488,7 +524,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (e.CustomPropertyIdValueMap.Any())
             {
-                foreach (var (pId, rawValue) in e.CustomPropertyIdValueMap)
+                foreach (var (pId, bizValue) in e.CustomPropertyIdValueMap)
                 {
                     var property = customPropertyMap.GetValueOrDefault(pId);
                     if (property != null)
@@ -498,7 +534,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             () => new Resource.Property(property.Name, property.Type.GetDbValueType(), property.Type.GetBizValueType(), null));
                         rp.Values ??= [];
                         rp.Values.Add(new Resource.Property.PropertyValue((int)PropertyValueScope.Synchronization,
-                            rawValue, rawValue, rawValue));
+                            bizValue, bizValue, bizValue));
                     }
                 }
             }
@@ -628,7 +664,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                         if (pathConfiguration.RpmValues?.Any() ==
                                             true)
                                         {
-                                            SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr, parentResources,
+                                            await SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr, parentResources,
                                                 pscResult.Data.CustomPropertyMap);
                                         }
 
@@ -894,7 +930,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             customPropertyIdValueMap[property.Id] =
                                 await StandardValueService.Convert(listString.ToList(), StandardValueType.ListString,
-                                    property.Type.GetDbValueType());
+                                    property.Type.GetBizValueType());
                         }
                     }
 
