@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Input;
@@ -8,6 +9,8 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Models.Input;
+using Bakabase.Service.Extensions;
+using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -25,18 +28,19 @@ namespace Bakabase.Service.Controllers
     {
         [HttpGet("{id:int}")]
         [SwaggerOperation(OperationId = "GetCategory")]
-        public async Task<SingletonResponse<Category?>> Get(int id,
+        public async Task<SingletonResponse<CategoryViewModel?>> Get(int id,
             [FromQuery] CategoryAdditionalItem additionalItems = CategoryAdditionalItem.None)
         {
-            return new SingletonResponse<Category?>(await service.Get(id, additionalItems));
+            return new SingletonResponse<CategoryViewModel?>((await service.Get(id, additionalItems))?.ToViewModel());
         }
 
         [HttpGet]
         [SwaggerOperation(OperationId = "GetAllCategories")]
-        public async Task<ListResponse<Category>> GetAll(
+        public async Task<ListResponse<CategoryViewModel>> GetAll(
             [FromQuery] CategoryAdditionalItem additionalItems = CategoryAdditionalItem.None)
         {
-            return new ListResponse<Category>(await service.GetAll(null, additionalItems));
+            return new ListResponse<CategoryViewModel>(
+                (await service.GetAll(null, additionalItems))?.Select(x => x.ToViewModel()));
         }
 
         [HttpPost]
@@ -53,7 +57,7 @@ namespace Bakabase.Service.Controllers
             return await service.Duplicate(id, model);
         }
 
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         [SwaggerOperation(OperationId = "PatchCategory")]
         public async Task<BaseResponse> Patch(int id, [FromBody] CategoryPatchInputModel model)
         {

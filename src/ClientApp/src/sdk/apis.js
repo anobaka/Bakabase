@@ -1481,13 +1481,13 @@ export const PatchCategory = function(parameters = {}) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
     });
   }
-  return request('put', domain + path, body, queryParameters, form, config)
+  return request('patch', domain + path, body, queryParameters, form, config)
 }
 export const PatchCategory_RAW_URL = function() {
   return '/category/{id}'
 }
 export const PatchCategory_TYPE = function() {
-  return 'put'
+  return 'patch'
 }
 export const PatchCategoryURL = function(parameters = {}) {
   let queryParameters = {}

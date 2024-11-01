@@ -1641,6 +1641,30 @@ export interface BakabaseServiceModelsInputSavedSearchAddInputModel {
   name: string;
 }
 
+export interface BakabaseServiceModelsViewCategoryViewModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+  color?: string;
+  /** @format date-time */
+  createDt: string;
+  /** @format int32 */
+  order: number;
+  componentsData?: BakabaseAbstractionsModelsDbCategoryComponent[];
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectionOrder: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  generateNfo: boolean;
+  resourceDisplayNameTemplate?: string;
+  customProperties?: BakabaseServiceModelsViewCategoryViewModelCustomPropertyViewModel[];
+  enhancerOptions?: BakabaseAbstractionsModelsDomainCategoryEnhancerOptions[];
+}
+
+export interface BakabaseServiceModelsViewCategoryViewModelCustomPropertyViewModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+}
+
 export interface BakabaseServiceModelsViewCustomPropertyViewModel {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -1796,13 +1820,6 @@ export interface BootstrapModelsResponseModelsBaseResponse {
   message?: string;
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDomainCategory[];
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainComponentDescriptor {
   /** @format int32 */
   code: number;
@@ -1906,6 +1923,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesThirdP
   code: number;
   message?: string;
   data?: BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCategoryViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewCategoryViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel {
@@ -2028,13 +2052,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainCategoryEnhancerOptions;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDomainCategory;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainComponentDescriptor {
@@ -2260,6 +2277,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   code: number;
   message?: string;
   data?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewCategoryViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewCategoryViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewCustomPropertyViewModel {
@@ -3850,7 +3874,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategory, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewCategoryViewModel, any>({
         path: `/category/${id}`,
         method: "GET",
         query: query,
@@ -3863,7 +3887,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      *
      * @tags Category
      * @name PatchCategory
-     * @request PUT:/category/{id}
+     * @request PATCH:/category/{id}
      */
     patchCategory: (
       id: number,
@@ -3872,7 +3896,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/${id}`,
-        method: "PUT",
+        method: "PATCH",
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -3908,7 +3932,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainCategory, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCategoryViewModel, any>({
         path: `/category`,
         method: "GET",
         query: query,
