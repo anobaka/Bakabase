@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Dialog, Icon } from '@alifd/next';
 import { usePrevious } from 'react-use';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import BApi from '@/sdk/BApi';
 import SimpleLabel from '@/components/SimpleLabel';
 import CustomIcon from '@/components/CustomIcon';
@@ -103,7 +104,7 @@ export default ({ id }: { id: string }) => {
           }
         } else {
           elements.push(
-            <CustomIcon style={{ color: 'green' }} type={'check-circle'} />,
+            <CheckCircleOutlined className={'text-base text-success'} />,
           );
         }
       }

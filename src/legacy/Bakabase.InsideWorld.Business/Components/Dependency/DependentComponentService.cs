@@ -123,6 +123,14 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
                 _latestVersion = await GetLatestVersion(ct);
             }
 
+            if (_latestVersion.CanUpdate)
+            {
+                if (Context.Version == _latestVersion.Version)
+                {
+                    _latestVersion.CanUpdate = false;
+                }
+            }
+
             return _latestVersion;
         }
 
