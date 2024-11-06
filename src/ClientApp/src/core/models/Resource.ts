@@ -1,4 +1,4 @@
-import type { PropertyValueScope, StandardValueType } from '@/sdk/constants';
+import type { PropertyValueScope, ResourceCacheType, StandardValueType } from '@/sdk/constants';
 import type { PropertyPool } from '@/sdk/constants';
 
 type Value = {
@@ -36,4 +36,11 @@ export type Resource = {
   coverPaths?: string[];
   mediaLibraryName?: string;
   category?: {id: number; name: string};
+  pinned: boolean;
+  cache?: {
+    playableFilePaths?: string[];
+    hasMorePlayableFiles: boolean;
+    coverPaths?: string[];
+    cachedTypes: ResourceCacheType[];
+  };
 };

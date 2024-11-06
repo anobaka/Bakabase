@@ -2,13 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import './index.scss';
 import { useTranslation } from 'react-i18next';
-import {
-  DatabaseOutlined,
-  DisconnectOutlined,
-  FolderOpenOutlined,
-  PlayCircleOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
+import { DisconnectOutlined, FolderOpenOutlined, PlayCircleOutlined, SettingOutlined } from '@ant-design/icons';
 import BasicInfo from './BasicInfo';
 import Properties from './Properties';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
@@ -16,24 +10,21 @@ import type { Resource as ResourceModel } from '@/core/models/Resource';
 import { Button, ButtonGroup, Link, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import BApi from '@/sdk/BApi';
-import { ReservedProperty, ResourceAdditionalItem, PropertyPool } from '@/sdk/constants';
+import { PropertyPool, ReservedProperty, ResourceAdditionalItem } from '@/sdk/constants';
 import { convertFromApiValue } from '@/components/StandardValue/helpers';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import PropertyValueScopePicker from '@/components/Resource/components/DetailDialog/PropertyValueScopePicker';
+import PlayableFiles from '@/components/Resource/components/PlayableFiles';
 
 
 interface Props extends DestroyableProps {
   id: number;
-  onPlay?: () => void;
   onRemoved?: () => void;
-  noPlayableFile?: boolean;
 }
 
 export default ({
                   id,
-                  onPlay,
                   onRemoved,
-                  noPlayableFile = false,
                   ...props
                 }: Props) => {
   const { t } = useTranslation();
@@ -84,9 +75,9 @@ export default ({
             <div className="min-w-[400px] w-[400px] max-w-[400px] flex flex-col gap-4">
               <div className={'h-[400px] max-h-[400px] overflow-hidden rounded flex items-center justify-center'}>
                 <ResourceCover
-                  resourceId={resource.id}
+                  resource={resource}
+                  useCache={false}
                   showBiggerOnHover={false}
-                  coverPaths={resource.coverPaths}
                 />
               </div>
               <div className={'flex justify-center'}>
@@ -101,14 +92,19 @@ export default ({
               </div>
               <div className={'flex items-center justify-center'}>
                 <ButtonGroup size={'sm'}>
-                  <Button
-                    color="primary"
-                    onClick={() => !noPlayableFile && onPlay?.()}
-                    disabled={noPlayableFile}
-                  >
-                    <PlayCircleOutlined />
-                    {t('Play')}
-                  </Button>
+                  <PlayableFiles
+                    PortalComponent={({ onClick }) => (
+                      <Button
+                        color="primary"
+                        onClick={onClick}
+                      >
+                        <PlayCircleOutlined />
+                        {t('Play')}
+                      </Button>
+                    )}
+                    resource={resource}
+                    autoInitialize
+                  />
                   <Button
                     color="default"
                     onClick={() => {

@@ -26,7 +26,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableF
             return Task.FromResult((string) null);
         }
 
-        public virtual Task<string[]> GetStartFiles(string fileOrDirectory, CancellationToken ct)
+        public virtual Task<string[]> GetPlayableFiles(string fileOrDirectory, CancellationToken ct)
         {
             // Relative - Fullname
             try

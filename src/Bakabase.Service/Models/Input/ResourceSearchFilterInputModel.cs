@@ -12,4 +12,5 @@ public record ResourceSearchFilterInputModel
     /// Serialized
     /// </summary>
     public string? DbValue { get; set; }
+    public bool Disabled { get; set; }
 }

@@ -39,12 +39,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         {
             var rsp = await _client.SendAsync(new HttpRequestMessage(HttpMethod.Head, url), ct);
             var remoteMd5Bytes = rsp.Content.Headers.ContentMD5;
-            if (remoteMd5Bytes == null)
-            {
-                throw new Exception($"Got empty Content-MD5 from {url}");
-            }
+            // if (remoteMd5Bytes == null)
+            // {
+            //     throw new Exception($"Got empty Content-MD5 from {url}");
+            // }
 
-            var remoteMd5 = Convert.ToHexString(remoteMd5Bytes);
             var fileSize = rsp.Content.Headers.ContentLength!.Value;
             var downloadUrl = rsp.RequestMessage!.RequestUri!.ToString();
 
@@ -91,16 +90,23 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 }
 
                 fs.Seek(0, SeekOrigin.Begin);
-                var localMd5Bytes = await MD5.Create().ComputeHashAsync(fs, ct);
-                var localMd5 = Convert.ToHexString(localMd5Bytes);
+                var ms = new MemoryStream();
+                await fs.CopyToAsync(ms, ct);
+                ms.Seek(0, SeekOrigin.Begin);
 
                 await fs.DisposeAsync();
 
-                if (localMd5 != remoteMd5)
+                if (remoteMd5Bytes != null)
                 {
-                    File.Delete(filePath);
-                    throw new Exception(
-                        $"Failed to check MD5 for downloaded file, got: {localMd5} but expected: {remoteMd5}");
+                    var remoteMd5 = Convert.ToHexString(remoteMd5Bytes);
+                    var localMd5Bytes = await MD5.Create().ComputeHashAsync(ms, ct);
+                    var localMd5 = Convert.ToHexString(localMd5Bytes);
+                    if (localMd5 != remoteMd5)
+                    {
+                        File.Delete(filePath);
+                        throw new Exception(
+                            $"Failed to check MD5 for downloaded file, got: {localMd5} but expected: {remoteMd5}");
+                    }
                 }
             }
             finally

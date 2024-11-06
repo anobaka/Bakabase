@@ -4,15 +4,20 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Bakabase.Abstractions.Components.Cover;
 
-public record CoverDiscoveryResult(string Path, string Ext, byte[]? Data = null)
+public record CoverDiscoveryResult(bool IsVirtualPath, string Path, string Ext, byte[]? Data = null)
 {
     /// <summary>
     /// The path may be an inner path inside a compressed file, video, etc. You should check its existence before apply io operations on it.
     /// </summary>
-    public string Path { get; set; } = Path;
+    public string Path { get; } = Path;
 
-    public byte[]? Data { get; set; } = Data;
+    public byte[]? Data { get; } = Data;
     private readonly string _ext = Ext;
+
+    /// <summary>
+    /// It means <see cref="Path"/> is not a real path if it is true.
+    /// </summary>
+    public bool IsVirtualPath { get; } = IsVirtualPath;
 
     public async Task<string> SaveTo(string pathWithoutExtension, bool overwrite, CancellationToken ct)
     {
@@ -36,5 +41,12 @@ public record CoverDiscoveryResult(string Path, string Ext, byte[]? Data = null)
         }
 
         return path;
+    }
+
+    public async Task<Image<Argb32>> LoadByImageSharp(CancellationToken ct)
+    {
+        return IsVirtualPath
+            ? await Image.LoadAsync<Argb32>(new MemoryStream(Data!), ct)
+            : await Image.LoadAsync<Argb32>(Path, ct);
     }
 }

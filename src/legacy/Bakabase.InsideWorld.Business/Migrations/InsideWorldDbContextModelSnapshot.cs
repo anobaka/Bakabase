@@ -262,6 +262,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Pinned")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdateDt")
                         .HasColumnType("TEXT");
 
@@ -469,6 +472,29 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("UpdateDt");
 
                     b.ToTable("Resources");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Models.Db.ResourceCacheDbModel", b =>
+                {
+                    b.Property<int>("ResourceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CachedTypes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CoverPaths")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("HasMorePlayableFiles")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PlayableFilePaths")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ResourceId");
+
+                    b.ToTable("ResourceCaches");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.AliasGroup", b =>

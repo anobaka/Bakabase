@@ -19,6 +19,7 @@ namespace Bakabase.Service.Models.View
         /// Serialized
         /// </summary>
         public string? BizValue { get; set; }
+        public bool Disabled { get; set; }
 
         public List<SearchOperation>? AvailableOperations { get; set; }
 

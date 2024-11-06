@@ -127,6 +127,12 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 
 export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13;
 
 /**
+ * [0: Covers, 1: PlayableFiles]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 0 | 1;
+
+/**
  * [1: And, 2: Or]
  * @format int32
  */
@@ -303,6 +309,8 @@ export interface BakabaseAbstractionsModelsDomainResource {
   coverPaths?: string[];
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
+  pinned: boolean;
+  cache?: BakabaseAbstractionsModelsDomainResourceCache;
   category?: BakabaseAbstractionsModelsDomainCategory;
   mediaLibraryName?: string;
 }
@@ -323,6 +331,13 @@ export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {
   value?: any;
   bizValue?: any;
   aliasAppliedBizValue?: any;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceCache {
+  coverPaths?: string[];
+  hasMorePlayableFiles: boolean;
+  playableFilePaths?: string[];
+  cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
 }
 
 export interface BakabaseAbstractionsModelsDomainSpecialText {
@@ -760,7 +775,7 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
   lastSyncDt: string;
   /** @format date-time */
   lastNfoGenerationDt: string;
-  lastSearchV2?: BakabaseModulesPropertyModelsDbResourceSearchDbModel;
+  lastSearchV2?: BakabaseInsideWorldBusinessModelsDbResourceSearchDbModel;
   coverOptions: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
   hideChildren: boolean;
   propertyValueScopePriority: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
@@ -775,8 +790,37 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSavedSearch {
-  search: BakabaseModulesPropertyModelsDbResourceSearchDbModel;
+  search: BakabaseInsideWorldBusinessModelsDbResourceSearchDbModel;
   name: string;
+}
+
+export interface BakabaseInsideWorldBusinessModelsDbResourceSearchDbModel {
+  group?: BakabaseInsideWorldBusinessModelsDbResourceSearchFilterGroupDbModel;
+  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
+  keyword?: string;
+  /** @format int32 */
+  page: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BakabaseInsideWorldBusinessModelsDbResourceSearchFilterDbModel {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId?: number;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+  value?: string;
+  disabled: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessModelsDbResourceSearchFilterGroupDbModel {
+  /** [1: And, 2: Or] */
+  combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
+  groups?: BakabaseInsideWorldBusinessModelsDbResourceSearchFilterGroupDbModel[];
+  filters?: BakabaseInsideWorldBusinessModelsDbResourceSearchFilterDbModel[];
+  disabled: boolean;
 }
 
 export interface BakabaseInsideWorldModelsConfigsBilibiliOptions {
@@ -937,7 +981,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAddit
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
- * [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4064: All]
+ * [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4096: Cache, 8160: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
@@ -949,7 +993,8 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalI
   | 512
   | 1024
   | 2048
-  | 4064;
+  | 4096
+  | 8160;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -1496,33 +1541,6 @@ export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptions
   dynamicTarget?: string;
 }
 
-export interface BakabaseModulesPropertyModelsDbResourceSearchDbModel {
-  group?: BakabaseModulesPropertyModelsDbResourceSearchFilterGroupDbModel;
-  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
-  keyword?: string;
-  /** @format int32 */
-  page: number;
-  /** @format int32 */
-  pageSize: number;
-}
-
-export interface BakabaseModulesPropertyModelsDbResourceSearchFilterDbModel {
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  propertyId?: number;
-  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
-  value?: string;
-}
-
-export interface BakabaseModulesPropertyModelsDbResourceSearchFilterGroupDbModel {
-  /** [1: And, 2: Or] */
-  combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
-  groups?: BakabaseModulesPropertyModelsDbResourceSearchFilterGroupDbModel[];
-  filters?: BakabaseModulesPropertyModelsDbResourceSearchFilterDbModel[];
-}
-
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
   results?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTin[];
 }
@@ -1614,6 +1632,7 @@ export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
   combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
   groups?: BakabaseServiceModelsInputResourceSearchFilterGroupInputModel[];
   filters?: BakabaseServiceModelsInputResourceSearchFilterInputModel[];
+  disabled: boolean;
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterInputModel {
@@ -1624,6 +1643,7 @@ export interface BakabaseServiceModelsInputResourceSearchFilterInputModel {
   /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
   operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
   dbValue?: string;
+  disabled: boolean;
 }
 
 export interface BakabaseServiceModelsInputResourceSearchInputModel {
@@ -1770,6 +1790,7 @@ export interface BakabaseServiceModelsViewResourceSearchFilterGroupViewModel {
   combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
   groups?: BakabaseServiceModelsViewResourceSearchFilterGroupViewModel[];
   filters?: BakabaseServiceModelsViewResourceSearchFilterViewModel[];
+  disabled: boolean;
 }
 
 export interface BakabaseServiceModelsViewResourceSearchFilterViewModel {
@@ -1781,6 +1802,7 @@ export interface BakabaseServiceModelsViewResourceSearchFilterViewModel {
   operation?: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
   dbValue?: string;
   bizValue?: string;
+  disabled: boolean;
   availableOperations?: BakabaseAbstractionsModelsDomainConstantsSearchOperation[];
   property?: BakabaseServiceModelsViewPropertyViewModel;
   valueProperty?: BakabaseServiceModelsViewPropertyViewModel;
@@ -5121,7 +5143,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4064: All] */
+        /** [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4096: Cache, 8160: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -5301,6 +5323,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
         path: `/resource/unknown/count`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PinResource
+     * @request PUT:/resource/{id}/pin
+     */
+    pinResource: (
+      id: number,
+      query?: {
+        pin?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/pin`,
+        method: "PUT",
+        query: query,
         format: "json",
         ...params,
       }),

@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { Balloon, Progress } from '@alifd/next';
+import { Progress } from '@alifd/next';
 import { usePrevious } from 'react-use';
 import { SyncOutlined } from '@ant-design/icons';
+import SynchronizationModal from '../SynchronizationModal';
 import { BackgroundTaskStatus } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
@@ -9,6 +10,7 @@ import store from '@/store';
 import { useTranslation } from 'react-i18next';
 import { Button, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 const testData = {
   status: BackgroundTaskStatus.Running,
@@ -30,8 +32,9 @@ type Props = {
 
 export default ({
                   onComplete,
-}: Props) => {
+                }: Props) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const backgroundTasks = store.useModelState('backgroundTasks');
   const sortedTasks = backgroundTasks.slice().sort((a, b) => b.startDt.localeCompare(a.startDt));
   const taskInfo = sortedTasks.find((t) => t.name == 'MediaLibraryService:Sync');
@@ -64,7 +67,11 @@ export default ({
               color={'secondary'}
               size={'small'}
               onClick={() => {
-                BApi.mediaLibrary.startSyncMediaLibrary();
+                createPortal(
+                  SynchronizationModal, {
+                    onOk: async () => await BApi.mediaLibrary.startSyncMediaLibrary(),
+                  },
+                );
               }}
             >
               <SyncOutlined className={'text-base'} />
@@ -108,9 +115,15 @@ export default ({
         <div className="bottom">
           <div className="status">
             {isSyncing && (
-            <div className={'syncing'}>
-              <Progress size="small" backgroundColor={'#d8d8d8'} progressive percent={taskInfo?.percentage} textRender={() => ''} />
-            </div>
+              <div className={'syncing'}>
+                <Progress
+                  size="small"
+                  backgroundColor={'#d8d8d8'}
+                  progressive
+                  percent={taskInfo?.percentage}
+                  textRender={() => ''}
+                />
+              </div>
             )}
           </div>
         </div>

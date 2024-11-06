@@ -16,24 +16,6 @@
     justify-content: center;
   }
 
-  .removable {
-    position: relative;
-    &:hover {
-      &>.remove {
-        display: block;
-      }
-    }
-
-    .remove {
-      display: none;
-      position: absolute;
-      top: 0;
-      right: 0;
-      cursor: pointer;
-      transform: translate(50%, -50%);
-    }
-  }
-
   &.root {
     background: unset;
     border: unset;

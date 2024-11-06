@@ -50,6 +50,7 @@ public record Resource
                     _directory = System.IO.Path.GetDirectoryName(_path).StandardizePath()!;
                 }
             }
+
             return _directory;
         }
         set
@@ -99,16 +100,19 @@ public record Resource
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
     public DateTime FileCreatedAt { get; set; }
     public DateTime FileModifiedAt { get; set; }
-    /// <summary>
-    /// Will be populated only when custom properties are loaded.
-    /// </summary>
-    public string[]? CoverPaths { get; set; }
+    public List<string>? CoverPaths { get; set; }
+
 
     public Resource? Parent { get; set; }
+
     /// <summary>
     /// ResourcePropertyType - PropertyId - Property
     /// </summary>
     public Dictionary<int, Dictionary<int, Property>>? Properties { get; set; }
+
+    public bool Pinned { get; set; }
+
+    public ResourceCache? Cache { get; set; }
 
     public record Property(
         string? Name,

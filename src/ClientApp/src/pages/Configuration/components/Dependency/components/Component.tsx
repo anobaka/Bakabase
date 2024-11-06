@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Dialog, Icon } from '@alifd/next';
+import { Button, Icon } from '@alifd/next';
 import { usePrevious } from 'react-use';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import BApi from '@/sdk/BApi';
-import SimpleLabel from '@/components/SimpleLabel';
-import CustomIcon from '@/components/CustomIcon';
 import store from '@/store';
 import { DependentComponentStatus } from '@/sdk/constants';
 import ClickableIcon from '@/components/ClickableIcon';
-import { Chip } from '@/components/bakaui';
+import { Chip, Modal } from '@/components/bakaui';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 export default ({ id }: { id: string }) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const context = store.useModelState('dependentComponentContexts').find(a => a.id == id);
   const [latestVersion, setLatestVersion] = useState<{ version?: string; canUpdate: boolean; error?: string | null }>();
   // const prevInstallationProgress = usePrevious(context);
@@ -55,6 +55,8 @@ export default ({ id }: { id: string }) => {
       } finally {
         setFindingNewVersion(false);
       }
+    } else {
+      setLatestVersion(undefined);
     }
   }, []);
 
@@ -76,12 +78,15 @@ export default ({ id }: { id: string }) => {
             colorType={'danger'}
             useInBuildIcon
             onClick={() => {
-              Dialog.error({
+              createPortal(Modal, {
+                defaultVisible: true,
                 title: t('Failed to get information of new version'),
-                content: latestVersion.error,
-                v2: true,
-                width: 'auto',
-                closeMode: ['close', 'esc', 'mask'],
+                children: (
+                  <pre>
+                    {latestVersion.error}
+                  </pre>
+                ),
+                size: 'lg',
               });
             }}
           />,
@@ -132,12 +137,15 @@ export default ({ id }: { id: string }) => {
           colorType={'danger'}
           useInBuildIcon
           onClick={() => {
-            Dialog.error({
+            createPortal(Modal, {
+              defaultVisible: true,
               title: t('Error'),
-              content: context.error,
-              v2: true,
-              width: 'auto',
-              closeMode: ['close', 'esc', 'mask'],
+              children: (
+                <pre>
+                  {context.error}
+                </pre>
+              ),
+              size: 'lg',
             });
           }}
         />,
@@ -169,7 +177,14 @@ export default ({ id }: { id: string }) => {
         }
       </div>
       {!discovering && (
-        <div className="new-version" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div
+          className="new-version"
+          style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+        }}
+        >
           {renderNewVersionInner()}
         </div>
       )}

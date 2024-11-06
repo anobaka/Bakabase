@@ -24,6 +24,7 @@ namespace Bakabase.InsideWorld.Business.Components.Jobs
             await ScheduleJob<EnhancementTrigger>(TimeSpan.FromMinutes(1));
             await ScheduleJob<FileMovingTrigger>(TimeSpan.FromMinutes(1));
             await ScheduleJob<DownloaderTrigger>(TimeSpan.FromMinutes(1));
+            await ScheduleJob<CacheTrigger>(TimeSpan.FromMinutes(0.1));
         }
     }
 }

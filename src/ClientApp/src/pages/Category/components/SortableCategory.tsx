@@ -29,6 +29,7 @@ import {
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
+import SynchronizationModal from '@/pages/Category/components/SynchronizationModal';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -394,7 +395,11 @@ export default (({
 
         </div>
         <div className="right flex items-center gap-2">
-          <Tooltip content={t('Sync all media libraries in current category')}>
+          <Tooltip
+            content={t('Sync all media libraries in current category')}
+            placement={'left'}
+            color={'secondary'}
+          >
             <Button
               // isIconOnly
               color={'secondary'}
@@ -402,7 +407,11 @@ export default (({
               // variant={'light'}
               variant={'bordered'}
               onClick={() => {
-                BApi.category.startSyncingCategoryResources(category.id);
+                createPortal(
+                  SynchronizationModal, {
+                    onOk: async () => await BApi.category.startSyncingCategoryResources(category.id),
+                  },
+                );
               }}
             >
               <SyncOutlined className={'text-base'} />

@@ -57,7 +57,7 @@ export default ({ onAdded }: Props) => {
 
                 const newFilter: ResourceSearchFilter = {
                   propertyId: p.id,
-                  operation: SearchOperation.In,
+                  operation: operation,
                   propertyPool: p.pool,
                   property: p,
                   valueProperty: vp,

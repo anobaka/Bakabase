@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Cookies from 'universal-cookie';
 import { useTranslation } from 'react-i18next';
 import type { Key } from '@react-types/shared';
+import toast from 'react-hot-toast';
 import Title from '@/components/Title';
 import CustomIcon from '@/components/CustomIcon';
 import { MoveCoreData, PatchAppOptions } from '@/sdk/apis';
@@ -116,7 +117,7 @@ export default ({
                   console.log(key, keys, patches);
                   BApi.options.patchNetworkOptions(patches).then(x => {
                     if (!x.code) {
-                      Notification.success(t('Saved'));
+                      toast.success(t('Saved'));
                     }
                   });
                 }}
@@ -156,51 +157,9 @@ export default ({
               {t('Add')}
             </Button>
           </div>
-          // <Input
-          //   size={'small'}
-          //   value={proxy?.address}
-          //   onChange={v => {
-          //     setProxy({
-          //       address: v,
-          //     });
-          //   }}
-          //   onBlur={() => {
-          //     BApi.options.patchNetworkOptions({
-          //       proxy,
-          //     }).then(t => {
-          //       if (!t.code) {
-          //         Message.success(i18n.t('Saved'));
-          //       }
-          //     });
-          //   }}
-          // />
         );
       },
     },
-    // {
-    //   label: 'FFmpeg bin directory',
-    //   tip: 'You can download binary files from https://ffmpeg.org/download.html, and make sure you have ffprobe.exe and ffmpeg.exe in your directory.',
-    //   renderValue: () => {
-    //     return (
-    //       <FileSelector
-    //         size={'small'}
-    //         value={thirdPartyOptions.fFmpeg?.binDirectory}
-    //         type={'folder'}
-    //         // multiple
-    //         onChange={(path) => {
-    //           if (path) {
-    //             applyPatches(PatchThirdPartyOptions, {
-    //               fFmpeg: {
-    //                 ...(thirdPartyOptions.fFmpeg || {}),
-    //                 binDirectory: path,
-    //               },
-    //             });
-    //           }
-    //         }}
-    //       />
-    //     );
-    //   },
-    // },
     {
       label: 'Enable pre-release channel',
       tip: 'Prefer pre-release version which has new features but less stability',
@@ -234,47 +193,6 @@ export default ({
               });
             }}
           />
-        );
-      },
-    },
-    {
-      label: 'Move core data',
-      tip: 'Move core data to another directory',
-      renderValue: () => {
-        return (
-          <FeatureStatusTip status={'deprecated'} name={t('Move core data')} />
-          // <FileSelector
-          //   size={'small'}
-          //   value={appOptions.dataPath}
-          //   type={'folder'}
-          //   // multiple
-          //   onChange={(path) => {
-          //     if (path) {
-          //       const dialog = Dialog.show({
-          //         title: i18n.t('Moving files'),
-          //         closeable: false,
-          //         closeMode: [],
-          //         footer: false,
-          //       });
-          //       MoveCoreData({
-          //         model: {
-          //           dataPath: path,
-          //         },
-          //       }).invoke((a) => {
-          //         if (!a.code) {
-          //           Dialog.show({
-          //             title: i18n.t('Moving files successfully, please restart app'),
-          //             closeable: false,
-          //             closeMode: [],
-          //             footer: false,
-          //           });
-          //         }
-          //       }).finally(() => {
-          //         dialog.hide();
-          //       });
-          //     }
-          //   }}
-          // />
         );
       },
     },

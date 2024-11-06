@@ -1,3 +1,4 @@
+'use strict';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
@@ -18,13 +19,13 @@ export default ({
                 }: IProps) => {
   const { t } = useTranslation();
 
-  const [group, setGroup] = useState<ResourceSearchFilterGroup>(propsGroup ?? { combinator: GroupCombinator.And });
+  const [group, setGroup] = useState<ResourceSearchFilterGroup>(propsGroup ?? { combinator: GroupCombinator.And, disabled: false });
 
   useEffect(() => {
   }, []);
 
   useUpdateEffect(() => {
-    setGroup(propsGroup ?? { combinator: GroupCombinator.And });
+    setGroup(propsGroup ?? { combinator: GroupCombinator.And, disabled: false });
   }, [propsGroup]);
 
   return (

@@ -8,4 +8,5 @@ public record ResourceSearchFilterGroupViewModel
     public SearchCombinator Combinator { get; set; }
     public List<ResourceSearchFilterGroupViewModel>? Groups { get; set; }
     public List<ResourceSearchFilterViewModel>? Filters { get; set; }
+    public bool Disabled { get; set; }
 }

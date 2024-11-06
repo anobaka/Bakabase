@@ -5,7 +5,9 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
+using Bakabase.Abstractions.Helpers;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
 using Bakabase.InsideWorld.Models.Constants;
@@ -76,51 +78,55 @@ namespace Bakabase.Service.Controllers
         [ResponseCache(VaryByQueryKeys = [nameof(path), nameof(w), nameof(h)], Duration = 30 * 60)]
         public async Task<IActionResult> GetThumbnail(string path, int? w, int? h)
         {
-            var result = await coverDiscoverer.Discover(path, CoverSelectOrder.FilenameAscending, true,
-                HttpContext.RequestAborted);
-            if (result == null)
+            var isFile = System.IO.File.Exists(path);
+            if (isFile)
             {
-                return NotFound();
-            }
-            else
-            {
-                if (!w.HasValue && !h.HasValue)
+                var ext = Path.GetExtension(path);
+                if (InternalOptions.ImageExtensions.Contains(ext))
                 {
-                    var contentType = MimeTypes.GetMimeType(result.Ext);
-                    if (result.Data != null)
+                    if (!w.HasValue && !h.HasValue)
                     {
-                        return File(result.Data, contentType);
+                        var contentType = MimeTypes.GetMimeType(ext);
+                        return File(System.IO.File.OpenRead(path), contentType);
                     }
 
-                    return File(System.IO.File.OpenRead(result.Path), contentType);
+                    var img = await Image.LoadAsync<Argb32>(path);
+
+                    var scale = 1m;
+                    if (w > 0 && img.Width > w)
+                    {
+                        scale = Math.Min(scale, (decimal) w / img.Width);
+                    }
+
+                    if (h > 0 && img.Height > h)
+                    {
+                        scale = Math.Min(scale, (decimal) h / img.Height);
+                    }
+
+                    var ms = new MemoryStream();
+
+                    if (scale < 1)
+                    {
+                        img.Mutate(x => x.Resize((int) (img.Width * scale), (int) (img.Height * scale)));
+                    }
+
+                    await img.SaveAsPngAsync(ms, HttpContext.RequestAborted);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    return File(ms, MimeTypes.GetMimeType(".png"));
                 }
 
-                var img = result.Data != null
-                    ? await Image.LoadAsync<Argb32>(new MemoryStream(result.Data))
-                    : await Image.LoadAsync<Argb32>(result.Path);
-
-                var scale = 1m;
-                if (w > 0 && img.Width > w)
-                {
-                    scale = Math.Min(scale, (decimal) w / img.Width);
-                }
-
-                if (h > 0 && img.Height > h)
-                {
-                    scale = Math.Min(scale, (decimal) h / img.Height);
-                }
-
-                var ms = new MemoryStream();
-
-                if (scale < 1)
-                {
-                    img.Mutate(x => x.Resize((int) (img.Width * scale), (int) (img.Height * scale)));
-                }
-
-                await img.SaveAsPngAsync(ms, HttpContext.RequestAborted);
-                ms.Seek(0, SeekOrigin.Begin);
-                return File(ms, MimeTypes.GetMimeType(".png"));
             }
+
+            if (isFile || Directory.Exists(path))
+            {
+                var iconData = ImageHelpers.ExtractIconAsPng(path);
+                if (iconData != null)
+                {
+                    return File(iconData, MimeTypes.GetMimeType(".png"));
+                }
+            }
+
+            return NotFound();
         }
     }
 }

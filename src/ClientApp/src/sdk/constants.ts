@@ -74,6 +74,8 @@ export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhance
 export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
 export enum ReservedProperty {Introduction = 12, Rating = 13}
 export const reservedProperties = Object.keys(ReservedProperty).filter(k => typeof ReservedProperty[k] === 'number').map(t => ({label: t, value: ReservedProperty[t]}));
+export enum ResourceCacheType {Covers = 0, PlayableFiles = 1}
+export const resourceCacheTypes = Object.keys(ResourceCacheType).filter(k => typeof ResourceCacheType[k] === 'number').map(t => ({label: t, value: ResourceCacheType[t]}));
 export enum SearchCombinator {And = 1, Or = 2}
 export const searchCombinators = Object.keys(SearchCombinator).filter(k => typeof SearchCombinator[k] === 'number').map(t => ({label: t, value: SearchCombinator[t]}));
 export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
@@ -172,7 +174,7 @@ export enum CustomPropertyValueAdditionalItem {None = 0, BizValue = 1}
 export const customPropertyValueAdditionalItems = Object.keys(CustomPropertyValueAdditionalItem).filter(k => typeof CustomPropertyValueAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyValueAdditionalItem[t]}));
 export enum MediaLibraryAdditionalItem {None = 0, Category = 1, FileSystemInfo = 2, PathConfigurationBoundProperties = 4}
 export const mediaLibraryAdditionalItems = Object.keys(MediaLibraryAdditionalItem).filter(k => typeof MediaLibraryAdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryAdditionalItem[t]}));
-export enum ResourceAdditionalItem {None = 0, Alias = 64, Category = 128, CustomProperties = 160, DisplayName = 416, HasChildren = 512, ReservedProperties = 1024, MediaLibraryName = 2048, All = 4064}
+export enum ResourceAdditionalItem {None = 0, Alias = 64, Category = 128, CustomProperties = 160, DisplayName = 416, HasChildren = 512, ReservedProperties = 1024, MediaLibraryName = 2048, Cache = 4096, All = 8160}
 export const resourceAdditionalItems = Object.keys(ResourceAdditionalItem).filter(k => typeof ResourceAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceAdditionalItem[t]}));
 export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));

@@ -23,6 +23,7 @@ import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsInBulkDialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Button, Chip, Modal, Tooltip } from '@/components/bakaui';
+import SynchronizationModal from '@/pages/Category/components/SynchronizationModal';
 
 export default (({
                    library,
@@ -216,14 +217,22 @@ export default (({
             )}
           </div>
           <div className={'pl-2'}>
-            <Tooltip content={t('Sync current media library')}>
+            <Tooltip
+              content={t('Sync current media library')}
+              placement={'top'}
+              color={'secondary'}
+            >
               <Button
                 isIconOnly
                 variant={'light'}
                 color={'secondary'}
                 size={'sm'}
                 onClick={() => {
-                  BApi.mediaLibrary.startSyncingMediaLibraryResources(library.id);
+                  createPortal(
+                    SynchronizationModal, {
+                      onOk: async () => await BApi.mediaLibrary.startSyncingMediaLibraryResources(library.id),
+                    },
+                  );
                 }}
                 className={'w-auto min-w-fit px-1'}
               >

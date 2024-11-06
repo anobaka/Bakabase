@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Legacy.Models;
+using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
@@ -61,6 +62,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<Resource> ResourcesV2 { get; set; }
         public DbSet<ReservedPropertyValue> ReservedPropertyValues { get; set; }
         public DbSet<Modules.Alias.Abstractions.Models.Db.Alias> AliasesV2 { get; set; }
+        public DbSet<ResourceCacheDbModel> ResourceCaches { get; set; }
 
         public InsideWorldDbContext()
         {

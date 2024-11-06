@@ -131,9 +131,12 @@ namespace Bakabase.Abstractions.Components.Configuration
         public const string TempDirectoryName = "temp";
         public const string ComponentInfoFileName = "i.json";
 
-        public const int MaxThumbnailWidth = 300;
-        public const int MaxThumbnailHeight = 300;
+        public const int MaxThumbnailWidth = 600;
+        public const int MaxThumbnailHeight = 600;
 
         public const int DefaultSearchPageSize = 100;
+
+        public const int MaxFallbackCoverCount = 10;
+        public const int MaxPlayableFilesPerTypeAndSubDir = 3;
     }
 }

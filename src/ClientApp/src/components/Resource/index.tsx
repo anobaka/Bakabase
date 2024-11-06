@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } 
 import type Queue from 'queue';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
-import { ApartmentOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, PlayCircleOutlined, PushpinOutlined } from '@ant-design/icons';
 import { ControlledMenu, MenuItem } from '@szhsin/react-menu';
 import styles from './index.module.scss';
 import { OpenResourceDirectory } from '@/sdk/apis';
@@ -30,6 +30,8 @@ import {
 import type { TagValue } from '@/components/StandardValue/models';
 import store from '@/store';
 import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
+import type { PlayableFilesRef } from '@/components/Resource/components/PlayableFiles';
+import PlayableFiles from '@/components/Resource/components/PlayableFiles';
 
 export interface IResourceHandler {
   id: number;
@@ -101,7 +103,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const uiOptions = store.useModelState('uiOptions');
 
   const forceUpdate = useUpdate();
-  const [playableFiles, setPlayableFiles] = useState<string[]>([]);
+
+  const playableFilesRef = useRef<PlayableFilesRef>(null);
 
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
   const [contextMenuAnchorPoint, setContextMenuAnchorPoint] = useState({
@@ -130,17 +133,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const displayContents = uiOptions.resource?.displayContents ?? ResourceDisplayContent.All;
   // log('Rendering');
 
-  const loadPlayableFiles = useCallback(async (ct?: AbortSignal) => {
-    const rp: RequestParams = { signal: ct };
-    if (disableCacheRef.current) {
-      rp.cache = 'no-cache';
-    }
-    const pRsp = await appContext.bApi2.resource.getResourcePlayableFiles(resource.id, rp);
-    setPlayableFiles(pRsp.data || []);
-  }, [disableCache]);
-
   const initialize = useCallback(async (ct: AbortSignal) => {
-    await loadPlayableFiles(ct);
+    if (playableFilesRef.current) {
+      await playableFilesRef.current.initialize();
+    }
     // log('Initialized');
   }, []);
 
@@ -163,14 +159,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
       });
   };
 
-  const play = (file) =>
-    BApi.resource.playResourceFile(resource.categoryId, {
-      file,
-    }).then((a) => {
-      if (!a.code) {
-        Message.success(t('Opened'));
-      }
-    });
 
   const reload = useCallback(async (ct?: AbortSignal) => {
     const newResourceRsp = await BApi.resource.getResourcesByKeys({
@@ -185,48 +173,12 @@ const Resource = React.forwardRef((props: Props, ref) => {
             resource[k] = nr[k];
           });
         coverRef.current?.load(true);
-        await loadPlayableFiles(ct);
+        playableFilesRef.current?.initialize();
       }
     } else {
       throw new Error(newResourceRsp.message!);
     }
   }, []);
-
-  const clickPlayButton = useCallback(() => {
-    console.log(playableFiles);
-    if (playableFiles.length == 1) {
-      play(playableFiles[0]);
-    } else {
-      createPortal(
-        Modal, {
-          defaultVisible: true,
-          size: 'lg',
-          title: t('Please select a file to play'),
-          children: (
-            <div className={'flex flex-wrap gap-2 pb-2'}>
-              {playableFiles.map((a) => {
-                const segments = splitPathIntoSegments(a);
-                return (
-                  <Button
-                    radius={'full'}
-                    size={'sm'}
-                    className={'whitespace-break-spaces py-2 h-auto text-left'}
-                    onClick={() => {
-                      play(a);
-                    }}
-                  >
-                    <PlayCircleOutlined className={'text-base'} />
-                    <span className={'break-all overflow-hidden text-ellipsis'}>{segments[segments.length - 1]}</span>
-                  </Button>
-                );
-              })}
-            </div>
-          ),
-          footer: false,
-        },
-      );
-    }
-  }, [playableFiles]);
 
   const open = () => {
     openFile(resource.id);
@@ -256,7 +208,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const renderCover = () => {
     const elementId = `resource-${resource.id}`;
-    const playable = playableFiles.length > 0;
     return (
       <div
         className={styles.coverRectangle}
@@ -266,44 +217,51 @@ const Resource = React.forwardRef((props: Props, ref) => {
           <ResourceCover
             coverFit={uiOptions.resource?.coverFit}
             biggerCoverPlacement={biggerCoverPlacement}
-            disableCache={uiOptions?.resource?.disableCache}
+            useCache={!uiOptions?.resource?.disableCache}
             disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
             onClick={() => {
               createPortal(ResourceDetailDialog, {
                 id: resource.id,
-                onPlay: clickPlayButton,
-                noPlayableFile: !(playableFiles?.length > 0),
                 onDestroyed: () => {
                   reload();
                 },
               });
             }}
-            resourceId={resource.id}
-            coverPaths={resource.coverPaths}
+            resource={resource}
             ref={coverRef}
             showBiggerOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
           />
         </div>
-        {resource.hasChildren && (
-          <Tooltip content={t('This is a parent resource')}>
-            <ApartmentOutlined className={'absolute top-1 left-1'} />
-          </Tooltip>
-        )}
-        {playable && (
-          <div className={styles.play}>
-            <Tooltip
-              content={t('Use player to play')}
-            >
-              <Button
-                onClick={clickPlayButton}
-                // variant={'light'}
-                isIconOnly
-              >
-                <PlayCircleOutlined className={'text-2xl'} />
-              </Button>
+        {/* lef-top */}
+        <div className={'absolute top-1 left-1 flex gap-1 items-center'}>
+          {resource.pinned && (
+            <PushpinOutlined />
+          )}
+          {resource.hasChildren && (
+            <Tooltip content={t('This is a parent resource')}>
+              <ApartmentOutlined className={''} />
             </Tooltip>
-          </div>
+          )}
+        </div>
+        <PlayableFiles
+          PortalComponent={({ onClick }) => (
+            <div className={styles.play}>
+              <Tooltip
+                content={t('Use player to play')}
+              >
+                <Button
+                  onClick={onClick}
+                // variant={'light'}
+                  isIconOnly
+                >
+                  <PlayCircleOutlined className={'text-2xl'} />
+                </Button>
+              </Tooltip>
+            </div>
         )}
+          resource={resource}
+          ref={playableFilesRef}
+        />
         <div className={'flex flex-col gap-1 absolute bottom-0 right-0 items-end'}>
           {(displayContents & ResourceDisplayContent.MediaLibrary) ? (resource.mediaLibraryName != undefined && (
             <Chip

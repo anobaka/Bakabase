@@ -25,6 +25,7 @@ using Bakabase.Abstractions;
 using Bakabase.Abstractions.Components;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Services;
+using ImageHelpers = Bakabase.Abstractions.Helpers.ImageHelpers;
 
 namespace Bakabase.InsideWorld.Business.Components;
 
@@ -62,14 +63,15 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
             imageExtensions.Any(e => t.Name.Equals($"cover{e}", StringComparison.OrdinalIgnoreCase)));
         if (coverImg != null)
         {
-            return new CoverDiscoveryResult(_buildCoverPath(coverImg.FullName), Path.GetExtension(coverImg.FullName));
+            return new CoverDiscoveryResult(false, _buildCoverPath(coverImg.FullName),
+                Path.GetExtension(coverImg.FullName));
         }
 
         // Find first image
         var firstImage = files.FirstOrDefault(a => imageExtensions.Contains(a.Extension));
         if (firstImage != null)
         {
-            return new CoverDiscoveryResult(_buildCoverPath(firstImage.FullName),
+            return new CoverDiscoveryResult(false, _buildCoverPath(firstImage.FullName),
                 Path.GetExtension(firstImage.FullName));
         }
 
@@ -100,7 +102,7 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
                         var screenshotTime = duration * 0.2;
                         var ms = await ffMpegService.CaptureFrame(firstVideoFile.FullName, screenshotTime, ct);
                         const string ext = ".jpg";
-                        return new CoverDiscoveryResult(
+                        return new CoverDiscoveryResult(true,
                             _buildCoverPath(firstVideoFile.FullName,
                                 $"{screenshotTime.ToString("g").Replace(':', '.')}{ext}"), ext, ms.ToArray());
                     }
@@ -194,7 +196,7 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
 
                                     if (imageStream != null)
                                     {
-                                        return new CoverDiscoveryResult(_buildCoverPath(file.FullName, key),
+                                        return new CoverDiscoveryResult(true, _buildCoverPath(file.FullName, key),
                                             Path.GetExtension(key)!, imageStream.ToArray());
                                     }
                                 }
@@ -221,17 +223,11 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
 
         if (useIconAsFallback)
         {
-            using var icon = File.Exists(path) ? Icon.ExtractAssociatedIcon(path) : DefaultIcons.GetStockIcon(3, 0x04);
-
-            if (icon != null)
+            var iconData = ImageHelpers.ExtractIconAsPng(path);
+            if (iconData != null)
             {
-                var ms = new MemoryStream();
-                // Ico encoder is not found.
-                icon.ToBitmap().Save(ms, ImageFormat.Png);
-                icon.Dispose();
-                ms.Seek(0, SeekOrigin.Begin);
                 const string ext = ".png";
-                return new CoverDiscoveryResult(_buildCoverPath(path, $"icon{ext}"), ext, ms.ToArray());
+                return new CoverDiscoveryResult(true, _buildCoverPath(path, $"icon{ext}"), "", iconData);
             }
         }
 

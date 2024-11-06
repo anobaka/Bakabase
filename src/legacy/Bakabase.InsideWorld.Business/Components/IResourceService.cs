@@ -17,7 +17,8 @@ public interface IResourceService
     Task DeleteByKeys(int[] ids);
 
     // Task LogicallyRemoveByCategoryId(int categoryId);
-    Task<List<Abstractions.Models.Domain.Resource>> GetAll(Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
+    Task<List<Abstractions.Models.Domain.Resource>> GetAll(
+        Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
 
     //
@@ -27,9 +28,11 @@ public interface IResourceService
     Task<SearchResponse<Abstractions.Models.Domain.Resource>> Search(ResourceSearch model, bool asNoTracking);
 
     // Task<Abstractions.Models.Db.Resource?> GetByKey(int id, bool asNoTracking);
-    Task<Abstractions.Models.Domain.Resource?> Get(int id, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
+    Task<Abstractions.Models.Domain.Resource?> Get(int id,
+        ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
 
-    Task<List<Abstractions.Models.Domain.Resource>> GetByKeys(int[] ids, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
+    Task<List<Abstractions.Models.Domain.Resource>> GetByKeys(int[] ids,
+        ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
 
     //
     // Task<Resource> ToDomainModel(Abstractions.Models.Db.Resource resource,
@@ -88,11 +91,14 @@ public interface IResourceService
     /// <param name="id"></param>
     /// <param name="ct"></param>
     /// <returns>File path</returns>
-    Task<(string? Path, byte[]? ImageBytes)?> DiscoverCover(int id, CancellationToken ct);
+    Task<string?> DiscoverAndCacheCover(int id, CancellationToken ct);
 
     Task<BaseResponse> Play(int resourceId, string file);
     Task DeleteUnknown();
     Task<int> GetUnknownCount();
 
     Task<BaseResponse> ChangeMediaLibraryAndPath(int id, int mediaLibraryId, string path);
+
+    Task Pin(int id, bool pin);
+    Task PrepareCache(Action<int> onProgressChange, CancellationToken ct);
 }

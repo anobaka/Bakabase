@@ -1,7 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Input;
-using Bootstrap.Models.RequestModels;
 
-namespace Bakabase.Modules.Property.Models.Db;
+namespace Bakabase.InsideWorld.Business.Models.Db;
 
 public record ResourceSearchDbModel
 {

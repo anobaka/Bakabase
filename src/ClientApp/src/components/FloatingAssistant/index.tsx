@@ -314,7 +314,7 @@ export default () => {
         <div className={'flex flex-col gap-2 p-2 min-w-[300px]'}>
           <div className={'font-bold'}>{t('Task list')}</div>
           <Divider orientation={'horizontal'} />
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 max-h-[600px] overflow-auto">
             {renderTasks()}
           </div>
           <Divider orientation={'horizontal'} />

@@ -8,4 +8,5 @@ public record ResourceSearchFilterGroup : IFilterExtractable<ResourceSearchFilte
     public SearchCombinator Combinator { get; set; }
     public List<ResourceSearchFilterGroup>? Groups { get; set; }
     public List<ResourceSearchFilter>? Filters { get; set; }
+    public bool Disabled { get; set; }
 }

@@ -1,15 +1,17 @@
+'use strict';
+
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef } from 'react';
 import { useUpdateEffect } from 'react-use';
 import type { Root } from 'react-dom/client';
 import { createRoot } from 'react-dom/client';
-import { AppstoreOutlined, FilterOutlined, SearchOutlined } from '@ant-design/icons';
-import type { ResourceSearchFilter, ResourceSearchFilterGroup } from '../models';
+import { ApiOutlined, AppstoreOutlined, DeleteOutlined, DisconnectOutlined, FilterOutlined } from '@ant-design/icons';
+import type { ResourceSearchFilterGroup } from '../models';
 import { GroupCombinator } from '../models';
 import styles from './index.module.scss';
 import Filter from './Filter';
 import ClickableIcon from '@/components/ClickableIcon';
-import { Button, Divider, Popover } from '@/components/bakaui';
+import { Button, Divider, Popover, Tooltip } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import QuickFilter from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/QuickFilter';
 
@@ -171,7 +173,7 @@ const FilterGroup = ({
                   ...groupRef.current,
                   filters: [
                     ...(groupRef.current.filters || []),
-                    {},
+                    { disabled: false },
                   ],
                 });
               }}
@@ -186,7 +188,10 @@ const FilterGroup = ({
                   ...groupRef.current,
                   groups: [
                     ...(groupRef.current.groups || []),
-                    { combinator: GroupCombinator.And },
+                    {
+                      combinator: GroupCombinator.And,
+                      disabled: false,
+                    },
                   ],
                 });
               }}
@@ -200,22 +205,79 @@ const FilterGroup = ({
     );
   };
 
-  return (
-    <div className={`${styles.filterGroup} p-1 ${isRoot ? styles.root : ''} ${styles.removable}`}>
-      <ClickableIcon
-        colorType={'danger'}
-        className={styles.remove}
-        type={'delete'}
-        size={'small'}
-        onClick={() => {
-          onRemove?.();
-        }}
-      />
-      {allElements}
-      {!portalContainer && (
-        renderAddHandler()
-      )}
-    </div>
+  const renderGroup = () => {
+    return (
+      <div
+        className={`${styles.filterGroup} p-1 ${isRoot ? styles.root : ''} ${styles.removable} relative`}
+      >
+        {group.disabled && (
+          <div
+            className={'absolute top-0 left-0 w-full h-full flex items-center justify-center z-20 group/group-disable-cover rounded cursor-not-allowed'}
+            style={{ backgroundColor: 'hsla(from var(--bakaui-color) h s l / 50%)' }}
+          >
+            <Tooltip
+              content={t('Click to enable')}
+            >
+              <Button
+                size={'sm'}
+                variant={'light'}
+                isIconOnly
+                onClick={() => {
+                  setGroup({
+                    ...group,
+                    disabled: false,
+                  });
+                }}
+              >
+                <ApiOutlined className={'text-base group-hover/group-disable-cover:block text-success hidden'} />
+                <DisconnectOutlined className={'text-base group-hover/group-disable-cover:hidden block'} />
+              </Button>
+            </Tooltip>
+          </div>
+        )}
+        {allElements}
+        {
+          !portalContainer && (
+            renderAddHandler()
+          )
+        }
+      </div>
+    );
+  };
+
+  return isRoot ? renderGroup() : (
+    <Tooltip content={(
+      <div
+        className={'flex items-center gap-1'}
+      >
+        <Button
+          size={'sm'}
+          variant={'light'}
+          color={'warning'}
+          onClick={() => {
+            setGroup({
+              ...group,
+              disabled: true,
+            });
+          }}
+        >
+          <DisconnectOutlined className={'text-base'} />
+          {t('Disable group')}
+        </Button>
+        <Button
+          size={'sm'}
+          variant={'light'}
+          color={'danger'}
+          onClick={onRemove}
+        >
+          <DeleteOutlined className={'text-base'} />
+          {t('Delete group')}
+        </Button>
+      </div>
+    )}
+    >
+      {renderGroup()}
+    </Tooltip>
   );
 };
 

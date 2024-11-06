@@ -1,19 +1,17 @@
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Checkbox, Dialog, Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { Img } from 'react-image';
 import { LoadingOutlined } from '@ant-design/icons';
 import serverConfig from '@/serverConfig';
 import { buildLogger, uuidv4 } from '@/components/utils';
-import BApi from '@/sdk/BApi';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import './index.scss';
 import store from '@/store';
-import type { CoverSaveLocation } from '@/sdk/constants';
-import { CoverFit, ResponseCode } from '@/sdk/constants';
+import { CoverFit } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import { Carousel, Tooltip } from '@/components/bakaui';
+import type { Resource as ResourceModel } from '@/core/models/Resource';
 
 type TooltipPlacement =
   | 'top'
@@ -29,33 +27,30 @@ type TooltipPlacement =
   | 'right-start'
   | 'right-end';
 
-interface Props {
-  resourceId: number;
+type Props = {
+  resource: ResourceModel;
   onClick?: () => any;
   showBiggerOnHover?: boolean;
-  disableCache?: boolean;
+  useCache?: boolean;
   disableMediaPreviewer?: boolean;
   biggerCoverPlacement?: TooltipPlacement;
-  coverPaths?: string[];
   coverFit?: CoverFit;
-}
+};
 
 export interface IResourceCoverRef {
-  save: (base64Image: string, saveTarget?: CoverSaveLocation) => any;
-  load: (refresh?: boolean) => void;
+  load: (disableBrowserCache?: boolean) => void;
 }
 
 const log = buildLogger('ResourceCover');
 
 const ResourceCover = React.forwardRef((props: Props, ref) => {
   const {
-    resourceId,
+    resource,
     onClick: propsOnClick,
     showBiggerOnHover = true,
-    disableCache = false,
+    useCache = false,
     disableMediaPreviewer = false,
     biggerCoverPlacement,
-    coverPaths,
     coverFit = CoverFit.Contain,
   } = props;
   // log('rendering', props);
@@ -68,7 +63,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const [previewerVisible, setPreviewerVisible] = useState(false);
   const previewerHoverTimerRef = useRef<any>();
 
-  const disableCacheRef = useRef(disableCache);
+  const disableCacheRef = useRef(useCache);
 
   const appContext = store.useModelState('appContext');
 
@@ -89,8 +84,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   }, [urls]);
 
   useEffect(() => {
-    disableCacheRef.current = disableCache;
-  }, [disableCache]);
+    disableCacheRef.current = useCache;
+  }, [useCache]);
 
   useEffect(() => {
     loadCover(false);
@@ -103,82 +98,33 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     return () => resizeObserver.disconnect(); // clean up
   }, []);
 
-  const saveThumbnailInternal = useCallback((base64Image: string, overwrite?: boolean, saveLocation?: CoverSaveLocation) => {
-    return BApi.resource.saveThumbnail(resourceId, {
-      base64Image,
-      overwrite,
-      saveLocation,
-    }, {
-      // @ts-ignore
-      ignoreError: rsp => rsp.code == ResponseCode.Conflict,
-    })
-      .then(a => {
-        if (!a.code) {
-          loadCover(true);
-          Message.success(t('Cover saved successfully'));
-          return a;
-        }
-        if (a.code == ResponseCode.Conflict) {
-          return a;
-        }
-        throw new Error(a.message!);
-      });
-  }, []);
-
-  const saveThumbnail = useCallback(async (base64Image: string, saveLocation?: CoverSaveLocation) => {
-    const rsp = await saveThumbnailInternal(base64Image, undefined, saveLocation);
-    if (rsp.code == ResponseCode.Conflict) {
-      let remember = false;
-      Dialog.confirm({
-        title: t('Sure to set new cover?'),
-        content: (
-          <div>
-            <div>{t('Current cover file will be overwritten.')}</div>
-            <div style={{
-              wordBreak: 'break-word',
-              marginBottom: 10,
-            }}
-            >{rsp.message}</div>
-            <Checkbox label={t('Remember my choice')} onChange={c => remember = c} />
-          </div>
-        ),
-        closeMode: ['mask', 'close', 'esc'],
-        v2: true,
-        onOk: async () => {
-          if (remember) {
-            const options = store.getModelState('resourceOptions').coverOptions || {};
-            await BApi.options.patchResourceOptions({
-              coverOptions: {
-                ...options,
-                overwrite: true,
-              },
-            });
-          }
-          await saveThumbnailInternal(base64Image, true, saveLocation);
-        },
-      });
-    }
-  }, [loaded, loading]);
-
   useImperativeHandle(ref, (): IResourceCoverRef => {
     return {
-      save: saveThumbnail,
       load: loadCover,
     };
-  }, [saveThumbnail]);
+  }, []);
 
   // useTraceUpdate(props, '[ResourceCover]');
 
-  const loadCover = useCallback((refresh: boolean) => {
+  const loadCover = useCallback((disableBrowserCache: boolean) => {
     const serverAddresses = appContext.serverAddresses ?? [serverConfig.apiEndpoint];
     const serverAddress = serverAddresses[serverAddresses.length - 1];
     const urls: string[] = [];
-    if (coverPaths && coverPaths.length > 0) {
-      urls.push(...coverPaths.map(coverPath => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`));
+
+    if (useCache) {
+      const cps = resource.coverPaths ?? [];
+      if (cps.length == 0) {
+        cps.push(...(resource.cache?.coverPaths ?? []));
+      }
+      if (cps.length == 0) {
+        cps.push(resource.path);
+      }
+      urls.push(...cps.map(coverPath => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`));
     } else {
-      urls.push(`${serverAddress}/resource/${resourceId}/cover`);
+      urls.push(`${serverAddress}/resource/${resource.id}/cover`);
     }
-    if (refresh || disableCache) {
+
+    if (disableBrowserCache) {
       for (let i = 0; i < urls.length; i++) {
         urls[i] += urls[i].includes('?') ? `&v=${uuidv4()}` : `?v=${uuidv4()}`;
       }
@@ -293,7 +239,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         }}
       >
         {previewerVisible && (
-          <MediaPreviewer resourceId={resourceId} />
+          <MediaPreviewer resourceId={resource.id} />
         )}
         {renderCover()}
       </div>

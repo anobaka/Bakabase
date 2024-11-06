@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
-using Bakabase.Modules.Property.Models.Db;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -27,6 +27,7 @@ public static class ResourceSearchExtensions
             Operation = model.Operation,
             PropertyId = model.PropertyId,
             PropertyPool = model.PropertyPool,
+            Disabled = model.Disabled
         };
     }
 
@@ -36,7 +37,8 @@ public static class ResourceSearchExtensions
         {
             Filters = model.Filters?.Select(f => f.ToDbModel()).ToList(),
             Groups = model.Groups?.Select(g => g.ToDbModel()).ToList(),
-            Combinator = model.Combinator
+            Combinator = model.Combinator,
+            Disabled = model.Disabled
         };
     }
 
@@ -80,7 +82,8 @@ public static class ResourceSearchExtensions
                 Operation = f.Operation!.Value,
                 Property = property,
                 PropertyId = f.PropertyId!.Value,
-                PropertyPool = f.PropertyPool!.Value
+                PropertyPool = f.PropertyPool!.Value,
+                Disabled = f.Disabled
             };
         }).OfType<ResourceSearchFilter>().ToList();
 
@@ -89,7 +92,14 @@ public static class ResourceSearchExtensions
 
         if (filters?.Any() == true || groups?.Any() == true)
         {
-            return new ResourceSearchFilterGroup {Combinator = group.Combinator, Filters = filters, Groups = groups};
+            return new ResourceSearchFilterGroup
+            {
+                Combinator = group.Combinator,
+                Filters = filters,
+                Groups = groups,
+                Disabled = group.Disabled
+
+            };
         }
 
         return null;
@@ -174,6 +184,7 @@ public static class ResourceSearchExtensions
             PropertyPool = model.PropertyPool,
             Operation = model.Operation,
             DbValue = model.Value,
+            Disabled = model.Disabled
         };
 
         if (property != null)
@@ -226,7 +237,8 @@ public static class ResourceSearchExtensions
 
                 return f.ToViewModel(null, propertyLocalizer);
             }).ToList(),
-            Combinator = model.Combinator
+            Combinator = model.Combinator,
+            Disabled = model.Disabled
         };
     }
 

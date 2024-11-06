@@ -118,6 +118,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
             foreach (var fullFilename in files)
             {
                 await compressedFileService.ExtractToCurrentDirectory(fullFilename, true, ct);
+                FileUtils.Delete(fullFilename, true, true);
             }
 
             await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, ct);

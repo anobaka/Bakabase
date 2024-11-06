@@ -1,21 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Notification } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import Dependency from './components/Dependency';
-import { GetAppInfo } from '@/sdk/apis';
 import './index.scss';
 import AppInfo from '@/pages/Configuration/components/AppInfo';
 import ContactUs from '@/pages/Configuration/components/ContactUs';
 import Functional from '@/pages/Configuration/components/Functional';
 import Others from '@/pages/Configuration/components/Others';
+import BApi from '@/sdk/BApi';
+import type { BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo } from '@/sdk/Api';
 
 const ConfigurationPage = function (props) {
   const { t } = useTranslation();
-  const [appInfo, setAppInfo] = useState({});
+  const [appInfo, setAppInfo] = useState<Partial<BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo>>({});
 
   useEffect(() => {
-    GetAppInfo().invoke((a) => {
-      setAppInfo(a.data);
+    BApi.app.getAppInfo().then((a) => {
+      setAppInfo(a.data || {});
     });
   }, []);
 
@@ -24,9 +25,7 @@ const ConfigurationPage = function (props) {
       model: patches,
     }).invoke((a) => {
       if (!a.code) {
-        Notification.success({
-          title: t('Saved'),
-        });
+        toast.success(t('Saved'));
         success(a);
       }
     });

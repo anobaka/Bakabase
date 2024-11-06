@@ -23,11 +23,13 @@ type Props = {
 const log = buildLogger('MiscellaneousOptions');
 
 type Item = {
-  key: string;
+  key: ListBoxItemKey;
   label: string;
   Icon: React.FC<{ className?: string }>;
   tip?: any;
 };
+
+type ListBoxItemKey = 'FillCover' | 'ShowLargerCoverOnHover' | 'PreviewOnHover' | 'UseCache' ;
 
 export default ({ rearrangeResources }: Props) => {
   const { t } = useTranslation();
@@ -42,7 +44,7 @@ export default ({ rearrangeResources }: Props) => {
 
   const items: Item[] = [
     ...selectableResourceDisplayContents.map(d => ({
-      key: `DisplayContent-${d.value.toString()}`,
+      key: `DisplayContent-${d.value.toString()}` as ListBoxItemKey,
       label: d.label,
       Icon: EyeOutlined,
     })),
@@ -62,20 +64,24 @@ export default ({ rearrangeResources }: Props) => {
       Icon: PlayCircleOutlined,
     },
     {
-      key: 'CoverCache',
-      label: t('Cover cache'),
+      key: 'UseCache',
+      label: t('Use cache'),
       Icon: DashboardOutlined,
-      tip: t('Enabling caching can improve loading speed'),
+      tip: (
+        <div className={'max-w-[400px]'}>
+          {t('Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.')}
+        </div>
+      ),
     },
   ];
 
   const buildSelectedKeys = () => {
-    const keys: string[] = [];
+    const keys: ListBoxItemKey[] = [];
     if (options?.coverFit === CoverFit.Cover) {
       keys.push('FillCover');
     }
     if (!options?.disableCache) {
-      keys.push('CoverCache');
+      keys.push('UseCache');
     }
     if (options?.showBiggerCoverWhileHover) {
       keys.push('ShowLargerCoverOnHover');
@@ -85,7 +91,7 @@ export default ({ rearrangeResources }: Props) => {
     }
     for (const d of selectableResourceDisplayContents) {
       if (currentResourceDisplayContents & d.value) {
-        keys.push(`DisplayContent-${d.value}`);
+        keys.push(`DisplayContent-${d.value}` as ListBoxItemKey);
       }
     }
     return keys;
@@ -116,7 +122,7 @@ export default ({ rearrangeResources }: Props) => {
         selectedKeys={selectedKeys}
         onSelectionChange={keys => {
           if (keys instanceof Set) {
-            const stringKeys = Array.from(keys).map(k => k.toString());
+            const stringKeys: ListBoxItemKey[] = Array.from(keys).map(k => k.toString() as ListBoxItemKey);
             let dc: ResourceDisplayContent = 0;
             for (const key of stringKeys) {
               if (key.startsWith('DisplayContent-')) {
@@ -127,7 +133,7 @@ export default ({ rearrangeResources }: Props) => {
             const newOptions: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions = {
               ...options,
               coverFit: stringKeys.includes('FillCover') ? CoverFit.Cover : CoverFit.Contain,
-              disableCache: !stringKeys.includes('CoverCache'),
+              disableCache: !stringKeys.includes('UseCache'),
               showBiggerCoverWhileHover: stringKeys.includes('ShowLargerCoverOnHover'),
               disableMediaPreviewer: !stringKeys.includes('PreviewOnHover'),
               displayContents: dc,
@@ -156,7 +162,11 @@ export default ({ rearrangeResources }: Props) => {
               {item.tip ? (
                 <div className={'flex items-center gap-1'}>
                   {item.label}
-                  <Tooltip content={t(item.tip)}>
+                  <Tooltip
+                    placement={'left'}
+                    content={item.tip}
+                    color={'primary'}
+                  >
                     <QuestionCircleOutlined className={'text-base'} />
                   </Tooltip>
                 </div>

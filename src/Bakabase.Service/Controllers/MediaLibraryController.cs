@@ -80,6 +80,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "SortMediaLibrariesInCategory")]
         public async Task<BaseResponse> Sort([FromBody] IdBasedSortRequestModel model)
         {
+            
             return await service.Sort(model.Ids);
         }
 

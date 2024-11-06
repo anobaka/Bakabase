@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <Folder Include="Abstractions\Models\Domain\" />
+    <Folder Include="Models\Db\" />
   </ItemGroup>
 
 </Project>

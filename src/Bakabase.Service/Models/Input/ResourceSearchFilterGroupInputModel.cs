@@ -11,4 +11,5 @@ public record
     public SearchCombinator Combinator { get; set; }
     public List<ResourceSearchFilterGroupInputModel>? Groups { get; set; }
     public List<ResourceSearchFilterInputModel>? Filters { get; set; }
+    public bool Disabled { get; set; }
 }

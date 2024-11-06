@@ -12,9 +12,9 @@ public class FileManager : IFileManager
         return Path.Combine([BaseDir, ..segments.Select(s => s.ToString()!)]).StandardizePath()!;
     }
 
-    public async Task<string> Save(string filename, byte[] data, CancellationToken ct)
+    public async Task<string> Save(string relativePath, byte[] data, CancellationToken ct)
     {
-        var path = BuildAbsolutePath(filename);
+        var path = BuildAbsolutePath(relativePath);
         var dir = Path.GetDirectoryName(path)!;
         Directory.CreateDirectory(dir);
         await File.WriteAllBytesAsync(path, data, ct);

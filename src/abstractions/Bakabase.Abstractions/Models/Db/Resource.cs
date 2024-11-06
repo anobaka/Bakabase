@@ -14,8 +14,7 @@ namespace Bakabase.Abstractions.Models.Db
     public record Resource
     {
         public int Id { get; set; }
-        [Required]
-        public string Path { get; set; } = null!;
+        [Required] public string Path { get; set; } = null!;
         public bool IsFile { get; set; }
         public DateTime CreateDt { get; set; } = DateTime.Now;
         public DateTime UpdateDt { get; set; } = DateTime.Now;
@@ -25,5 +24,6 @@ namespace Bakabase.Abstractions.Models.Db
         public int CategoryId { get; set; }
         public int? ParentId { get; set; }
         public bool HasChildren { get; set; }
+        public bool Pinned { get; set; }
     }
 }

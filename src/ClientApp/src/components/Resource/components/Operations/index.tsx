@@ -5,7 +5,7 @@ import { Link } from '@ice/runtime/router';
 import {
   FireOutlined,
   FolderOpenOutlined, PlayCircleOutlined,
-  ProductOutlined,
+  ProductOutlined, PushpinOutlined,
   SearchOutlined,
   VideoCameraAddOutlined,
 } from '@ant-design/icons';
@@ -118,6 +118,20 @@ export default ({
           }}
         >
           <FireOutlined className={'text-base'} />
+        </Button>
+
+        <Button
+          size={'sm'}
+          color={resource.pinned ? 'warning' : 'default'}
+          title={resource.pinned ? t('Unpin') : t('Pin')}
+          isIconOnly
+          onClick={() => {
+            BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then(r => {
+              reload?.();
+            });
+          }}
+        >
+          <PushpinOutlined className={'text-base'} />
         </Button>
       </div>
     </Popover>

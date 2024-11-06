@@ -1,6 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
 
-namespace Bakabase.Modules.Property.Models.Db
+namespace Bakabase.InsideWorld.Business.Models.Db
 {
     public record ResourceSearchFilterDbModel
     {
@@ -17,5 +17,6 @@ namespace Bakabase.Modules.Property.Models.Db
         // /// Redundancy 
         // /// </summary>
         // public StandardValueType? ValueType { get; set; }
+        public bool Disabled { get; set; }
     }
 }

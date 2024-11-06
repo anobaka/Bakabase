@@ -16,7 +16,10 @@ using System.IO;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Components;
+using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.InsideWorld.Business.Models.Db;
 
 namespace Bakabase.InsideWorld.Business.Extensions
 {
@@ -43,6 +46,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 ParentId = r.ParentId,
                 Directory = Path.GetDirectoryName(r.Path)!.StandardizePath()!,
                 FileName = Path.GetFileName(r.Path),
+                Pinned = r.Pinned,
             };
         }
 
@@ -63,9 +67,10 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 FileCreateDt = r.FileCreatedAt,
                 FileModifyDt = r.FileModifiedAt,
                 HasChildren = r.HasChildren,
-                ParentId = r.Parent?.Id ?? r.ParentId, 
-                IsFile = r.IsFile, 
-                Path = r.Path
+                ParentId = r.Parent?.Id ?? r.ParentId,
+                IsFile = r.IsFile,
+                Path = r.Path,
+                Pinned = r.Pinned,
             };
         }
 
@@ -158,7 +163,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
         //         ? getter
         //         : throw new InvalidOperationException($"Can\'t get getter of property [{(int)property}:{property}]");
 
-		public static bool MergeOnSynchronization(this Resource current, Resource patches)
+        public static bool MergeOnSynchronization(this Resource current, Resource patches)
         {
             var changed = false;
 
@@ -204,7 +209,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
 
                         if (p.Values != null)
                         {
-                            foreach(var v in p.Values)
+                            foreach (var v in p.Values)
                             {
                                 var cv = cp.Values?.FirstOrDefault(x => x.Scope == v.Scope);
                                 if (cv == null)

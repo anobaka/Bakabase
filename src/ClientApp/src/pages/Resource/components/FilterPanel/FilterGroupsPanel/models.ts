@@ -1,7 +1,7 @@
 'use strict';
 
 import type { IProperty } from '@/components/Property/models';
-import type { PropertyPool, PropertyType, SearchOperation } from '@/sdk/constants';
+import type { PropertyPool, SearchOperation } from '@/sdk/constants';
 
 export enum GroupCombinator {
   And = 1,
@@ -17,10 +17,12 @@ export type ResourceSearchFilter = {
   availableOperations?: SearchOperation[];
   property?: IProperty;
   valueProperty?: IProperty;
+  disabled: boolean;
 };
 
 export type ResourceSearchFilterGroup = {
   groups?: ResourceSearchFilterGroup[];
   filters?: ResourceSearchFilter[];
   combinator: GroupCombinator;
+  disabled: boolean;
 };

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.Property.Models.Db;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Doc.Swagger;
 

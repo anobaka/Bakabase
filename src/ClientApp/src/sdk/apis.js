@@ -8663,6 +8663,58 @@ export const GetUnknownResourcesCountURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: PinResource
+ * url: PinResourceURL
+ * method: PinResource_TYPE
+ * raw_url: PinResource_RAW_URL
+ * @param id - 
+ * @param pin - 
+ */
+export const PinResource = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/{id}/pin'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['pin'] !== undefined) {
+    queryParameters['pin'] = parameters['pin']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PinResource_RAW_URL = function() {
+  return '/resource/{id}/pin'
+}
+export const PinResource_TYPE = function() {
+  return 'put'
+}
+export const PinResourceURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/{id}/pin'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['pin'] !== undefined) {
+    queryParameters['pin'] = parameters['pin']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllSpecialTexts
  * url: GetAllSpecialTextsURL
  * method: GetAllSpecialTexts_TYPE

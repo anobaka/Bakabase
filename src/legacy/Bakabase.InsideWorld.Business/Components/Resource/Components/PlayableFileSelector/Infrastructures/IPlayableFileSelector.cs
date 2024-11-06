@@ -6,6 +6,6 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableF
 {
     public interface IPlayableFileSelector : IComponent
     {
-        Task<string[]> GetStartFiles(string fileOrDirectory, CancellationToken ct);
+        Task<string[]> GetPlayableFiles(string fileOrDirectory, CancellationToken ct);
     }
 }

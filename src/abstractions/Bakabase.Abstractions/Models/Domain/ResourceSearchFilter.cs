@@ -9,4 +9,5 @@ public record ResourceSearchFilter
     public SearchOperation Operation { get; set; }
     public object? DbValue { get; set; }
     public Property Property { get; set; } = null!;
+    public bool Disabled { get; set; }
 }

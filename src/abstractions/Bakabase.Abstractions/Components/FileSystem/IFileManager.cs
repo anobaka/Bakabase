@@ -4,5 +4,5 @@ public interface IFileManager
 {
     string BaseDir { get; }
     string BuildAbsolutePath(params object[] segments);
-    Task<string> Save(string filename, byte[] data, CancellationToken ct);
+    Task<string> Save(string relativePath, byte[] data, CancellationToken ct);
 }

@@ -13,6 +13,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -20,6 +21,7 @@ using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Property;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
@@ -34,12 +36,17 @@ using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.Alias.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
+using Bakabase.InsideWorld.Business.Models.Db;
+using Bakabase.InsideWorld.Business.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
-using Bakabase.Modules.Property.Models.Db;
+using Bootstrap.Components.Orm.Extensions;
+using Microsoft.EntityFrameworkCore;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -48,6 +55,8 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>
             _orm;
 
+        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>
+            _resourceCacheOrm;
         private readonly ISpecialTextService _specialTextService;
         private readonly IMediaLibraryService _mediaLibraryService;
         private readonly ICategoryService _categoryService;
@@ -60,12 +69,15 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IReservedPropertyValueService _reservedPropertyValueService;
         private readonly ICoverDiscoverer _coverDiscoverer;
         private readonly IPropertyService _propertyService;
+        private readonly IFileManager _fileManager;
+
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
             ILogger<ResourceService> logger,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IReservedPropertyValueService reservedPropertyValueService,
-            ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager, IPropertyService propertyService)
+            ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager,
+            IPropertyService propertyService, FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm, IFileManager fileManager)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -78,6 +90,8 @@ namespace Bakabase.InsideWorld.Business.Services
             _coverDiscoverer = coverDiscoverer;
             _optionsManager = optionsManager;
             _propertyService = propertyService;
+            _resourceCacheOrm = resourceCacheOrm;
+            _fileManager = fileManager;
             _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(
                 serviceProvider);
         }
@@ -199,7 +213,7 @@ namespace Bakabase.InsideWorld.Business.Services
         /// </returns>
         private HashSet<int>? SearchResourceIds(ResourceSearchFilterGroup? group, ResourceSearchContext context)
         {
-            if (group == null)
+            if (group == null || group.Disabled)
             {
                 return null;
             }
@@ -208,7 +222,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (group.Filters?.Any() == true)
             {
-                foreach (var filter in group.Filters.Where(f => f.IsValid()))
+                foreach (var filter in group.Filters.Where(f => f.IsValid() && !f.Disabled))
                 {
                     var propertyType = filter.Property.Type;
                     var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(propertyType);
@@ -230,7 +244,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             if (group.Groups?.Any() == true)
             {
-                foreach (var subGroup in group.Groups)
+                foreach (var subGroup in group.Groups.Where(g => !g.Disabled))
                 {
                     steps.Add(() => SearchResourceIds(subGroup, context));
                 }
@@ -377,7 +391,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                     return null;
                                 });
 
-                            var reservedPropertyMap = (await _propertyService.GetProperties(PropertyPool.Reserved)).ToDictionary(d => d.Id, d => d);
+                            var reservedPropertyMap =
+                                (await _propertyService.GetProperties(PropertyPool.Reserved)).ToDictionary(d => d.Id,
+                                    d => d);
 
                             foreach (var r in doList)
                             {
@@ -511,7 +527,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                                         x.InferMediaType() == MediaType.Image).ToArray();
                                                     if (images?.Any() == true)
                                                     {
-                                                        @do.CoverPaths = images;
+                                                        @do.CoverPaths = images.ToList();
                                                         found = true;
                                                         break;
                                                     }
@@ -580,6 +596,19 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 resource.MediaLibraryName =
                                     mediaLibraryMap.GetValueOrDefault(resource.MediaLibraryId)?.Name;
+                            }
+
+                            break;
+                        }
+                        case ResourceAdditionalItem.Cache:
+                        {
+                            var cacheMap = (await _orm.DbContext.ResourceCaches
+                                .Where(x => resourceIds.Contains(x.ResourceId))
+                                .ToListAsync()).ToDictionary(d => d.ResourceId, d => d);
+                            foreach (var r in doList)
+                            {
+                                var cache = cacheMap.GetValueOrDefault(r.Id);
+                                r.Cache = cache?.ToDomainModel();
                             }
 
                             break;
@@ -723,55 +752,48 @@ namespace Bakabase.InsideWorld.Business.Services
             return null;
         }
 
-        public async Task<(string? Path, byte[]? ImageBytes)?> DiscoverCover(int id, CancellationToken ct)
+        public async Task<string?> DiscoverAndCacheCover(int id, CancellationToken ct)
         {
-            return await GetCover(id, true, ct);
-        }
+            var resource = await _orm.GetByKey(id, false);
+            var coverSelectOrder =
+                (await _categoryService.Get(resource.CategoryId))?.CoverSelectionOrder ??
+                CoverSelectOrder.FilenameAscending;
+            var coverDiscoverResult =
+                await _coverDiscoverer.Discover(resource.Path, coverSelectOrder, false,
+                    ct);
 
-        protected async Task<(string? Path, byte[]? ImageBytes)?> GetCover(int id, bool useIconAsFallback,
-            CancellationToken ct)
-        {
-            var r = await Get(id, ResourceAdditionalItem.CustomProperties | ResourceAdditionalItem.Category);
-            if (r == null)
+            if (coverDiscoverResult != null)
             {
-                return null;
-            }
+                var image = await coverDiscoverResult.LoadByImageSharp(ct);
 
-            string? coverFile = null;
-            var customPropertyValues = r.Properties?.GetValueOrDefault((int) PropertyPool.Custom);
-            var propertyIds = customPropertyValues?.Keys.ToHashSet();
-            if (propertyIds?.Any() == true)
-            {
-                var propertyMap =
-                    (await _customPropertyService.GetByKeys(propertyIds, CustomPropertyAdditionalItem.None))
-                    .ToDictionary(
-                        d => d.Id, d => d);
-                foreach (var (pId, pvs) in customPropertyValues!)
+                var pathWithoutExt = Path
+                    .Combine(_fileManager.BuildAbsolutePath("cache", "cover"),
+                        resource.Id.ToString())
+                    .StandardizePath()!;
+                var path = await image.SaveAsThumbnail(pathWithoutExt, ct);
+                var cache = await _resourceCacheOrm.GetByKey(id, true);
+                var isNewCache = false;
+                if (cache == null)
                 {
-                    if (propertyMap.GetValueOrDefault(pId)?.Type == PropertyType.Attachment)
-                    {
-                        coverFile = _findCoverInAttachmentProperty(pvs);
-                        if (!string.IsNullOrEmpty(coverFile))
-                        {
-                            return (coverFile, null);
-                        }
-                    }
+                    cache = new ResourceCacheDbModel {ResourceId = id};
+                    isNewCache = true;
                 }
-            }
 
-            if (string.IsNullOrEmpty(coverFile))
-            {
-                var discoveryResult = await _coverDiscoverer.Discover(r.Path,
-                    r.Category?.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending, useIconAsFallback, ct);
-                if (discoveryResult != null)
+                var serializedCoverPaths =
+                    new ListStringValueBuilder([path]).Value!
+                        .SerializeAsStandardValue(StandardValueType.ListString);
+                if (cache.CoverPaths != serializedCoverPaths ||
+                    !cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
                 {
-                    if (discoveryResult.Data != null)
+                    cache.CoverPaths = serializedCoverPaths;
+                    cache.CachedTypes |= ResourceCacheType.Covers;
+                    if (isNewCache)
                     {
-                        return (null, discoveryResult.Data);
+                        await _resourceCacheOrm.Add(cache);
                     }
                     else
                     {
-                        return (discoveryResult.Path, null);
+                        await _resourceCacheOrm.Update(cache);
                     }
                 }
             }
@@ -788,7 +810,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     ComponentType.PlayableFileSelector);
                 if (selector.Data != null)
                 {
-                    var files = await selector.Data.GetStartFiles(r.Path, ct);
+                    var files = await selector.Data.GetPlayableFiles(r.Path, ct);
                     return files.Select(f => f.StandardizePath()!).ToArray();
                 }
             }
@@ -807,6 +829,103 @@ namespace Bakabase.InsideWorld.Business.Services
             return (await _orm.AddRange(resources.ToList())).Data;
         }
 
+        public async Task PrepareCache(Action<int> onProgressChange, CancellationToken ct)
+        {
+            var caches = await _resourceCacheOrm.GetAll();
+            var cachedResourceIds = caches.Select(c => c.ResourceId).ToList();
+            var resourceIds = (await GetAllDbModels(null, false)).Select(r => r.Id).ToList();
+            var newCaches = resourceIds.Except(cachedResourceIds).Select(x => new ResourceCacheDbModel
+            {
+                ResourceId = x
+            }).ToList();
+            await _resourceCacheOrm.AddRange(newCaches);
+            _resourceCacheOrm.DbContext.DetachAll(caches.Concat(newCaches));
+
+            var fullCacheType = (ResourceCacheType) SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int) x);
+            var percentage = 0m;
+            var itemPercentage = resourceIds.Count == 0 ? 0 : (100m / resourceIds.Count);
+            while (true)
+            {
+                var cache = await _resourceCacheOrm.GetFirstOrDefault(x => x.CachedTypes != fullCacheType);
+                if (cache != null)
+                {
+                    var cached = false;
+                    foreach (var cacheType in SpecificEnumUtils<ResourceCacheType>.Values)
+                    {
+                        if (!cache.CachedTypes.HasFlag(cacheType))
+                        {
+                            var resource = await Get(cache.ResourceId, ResourceAdditionalItem.None);
+                            if (resource != null)
+                            {
+                                switch (cacheType)
+                                {
+                                    case ResourceCacheType.Covers:
+                                    {
+                                        var coverPath = await DiscoverAndCacheCover(resource.Id, ct);
+                                        cache.CoverPaths = coverPath.IsNotEmpty()
+                                            ? new ListStringValueBuilder([coverPath]).Value?.SerializeAsStandardValue(
+                                                StandardValueType.ListString)
+                                            : null;
+                                        cache.CachedTypes |= ResourceCacheType.Covers;
+                                        break;
+                                    }
+                                    case ResourceCacheType.PlayableFiles:
+                                    {
+                                        var pfs = (await _categoryService.GetFirstComponent<IPlayableFileSelector>(
+                                            resource.CategoryId, ComponentType.PlayableFileSelector)).Data;
+                                        if (pfs != null)
+                                        {
+                                            var playableFiles =
+                                                (await pfs.GetPlayableFiles(resource.Path, CancellationToken.None))
+                                                .Select(f => f.StandardizePath()!).ToList();
+                                            var trimmedPlayableFiles = playableFiles
+                                                .GroupBy(d => $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
+                                                .SelectMany(x =>
+                                                    x.Take(InternalOptions.MaxPlayableFilesPerTypeAndSubDir)).ToList();
+                                            cache.HasMorePlayableFiles = trimmedPlayableFiles.Any();
+                                            cache.HasMorePlayableFiles =
+                                                trimmedPlayableFiles.Count < playableFiles.Count;
+                                        }
+                                        else
+                                        {
+                                            cache.HasMorePlayableFiles = false;
+                                            cache.PlayableFilePaths = null;
+                                        }
+
+                                        cache.CachedTypes |= ResourceCacheType.PlayableFiles;
+
+                                        break;
+                                    }
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
+
+                                cached = true;
+                            }
+                        }
+                    }
+
+                    if (cached)
+                    {
+                        await _resourceCacheOrm.Update(cache);
+                    }
+
+                    var newPercentage = percentage + itemPercentage;
+                    if ((int) newPercentage != (int) percentage)
+                    {
+                        onProgressChange((int) newPercentage);
+                    }
+
+                    percentage = newPercentage;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            onProgressChange(100);
+        }
 
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)
         {
@@ -1143,6 +1262,11 @@ namespace Bakabase.InsideWorld.Business.Services
             await _orm.Update(resource);
 
             return BaseResponseBuilder.Ok;
+        }
+
+        public async Task Pin(int id, bool pin)
+        {
+            await _orm.UpdateByKey(id, r => { r.Pinned = pin; });
         }
 
         private async Task DeleteRelatedData(List<int> ids)

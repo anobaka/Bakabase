@@ -28,6 +28,7 @@ using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
@@ -40,7 +41,6 @@ using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
-using Bakabase.Modules.Property.Models.Db;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -261,57 +261,21 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("{id}/cover")]
         [SwaggerOperation(OperationId = "DiscoverResourceCover")]
-        [ResponseCache(VaryByQueryKeys = [nameof(id), "t"], Duration = 20 * 60)]
         public async Task<IActionResult> DiscoverCover(int id)
         {
-            var resource = await service.Get(id, ResourceAdditionalItem.None);
-            if (resource == null)
+            var coverPath = await service.DiscoverAndCacheCover(id, HttpContext.RequestAborted);
+            if (coverPath.IsNullOrEmpty())
             {
-                return NotFound();
-            }
-
-            var category = await categoryService.Get(resource.CategoryId, CategoryAdditionalItem.None);
-
-            var cover = await coverDiscoverer.Discover(resource.Path,
-                category?.CoverSelectionOrder ?? CoverSelectOrder.FilenameAscending, true, HttpContext.RequestAborted);
-            if (cover == null)
-            {
-                return NotFound();
-            }
-
-            var img = cover.Data != null
-                ? await Image.LoadAsync<Rgba32>(new MemoryStream(cover.Data))
-                : await Image.LoadAsync<Rgba32>(cover.Path);
-
-            var maxSize = 2048m;
-            string mimeType;
-            byte[] data;
-            if (img.Width > maxSize || img.Height > maxSize)
-            {
-                var scale = Math.Min(maxSize / img.Width, maxSize / img.Height);
-                var newSize = new Size((int) (scale * img.Width), (int) (scale * img.Height));
-                img.Mutate(x => x.Resize(newSize));
-                var ms = new MemoryStream();
-                await img.SaveAsJpegAsync(ms);
-                data = ms.ToArray();
-                mimeType = MimeTypes.GetMimeType(".jpg");
-            }
-            else
-            {
-                if (cover.Data != null)
+                var resource = await service.Get(id, ResourceAdditionalItem.None);
+                if (resource == null)
                 {
-                    var format = await Image.DetectFormatAsync(new MemoryStream(cover.Data!));
-                    data = cover.Data;
-                    mimeType = format.DefaultMimeType;
+                    return NotFound();
                 }
-                else
-                {
-                    data = await System.IO.File.ReadAllBytesAsync(cover.Path);
-                    mimeType = MimeTypes.GetMimeType(cover.Path);
-                }
+
+                coverPath = resource.Path;
             }
 
-            return File(data, mimeType);
+            return RedirectToAction("GetThumbnail", "Tool", new {path = coverPath});
         }
 
         [HttpGet("{id}/playable-files")]
@@ -521,6 +485,14 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<int>> GetUnknownCount()
         {
             return new SingletonResponse<int>(data: await service.GetUnknownCount());
+        }
+
+        [HttpPut("{id:int}/pin")]
+        [SwaggerOperation(OperationId = "PinResource")]
+        public async Task<BaseResponse> Pin(int id, bool pin)
+        {
+            await service.Pin(id, pin);
+            return BaseResponseBuilder.Ok;
         }
     }
 }

@@ -5,8 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Cover;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -14,6 +17,7 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
@@ -26,6 +30,7 @@ using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
+using Bootstrap.Components.Cryptography;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -545,13 +550,13 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             var isPartialSynchronization = categoryIds?.Any() == true || mediaLibraryIds?.Any() == true;
             List<MediaLibrary> libraries;
-            Dictionary<int, Category> categories;
+            Dictionary<int, Category> categoryMap;
             if (mediaLibraryIds?.Any() == true)
             {
                 // ignore categoryIds
                 libraries = await GetAll(x => mediaLibraryIds.Contains(x.Id), MediaLibraryAdditionalItem.None);
                 var cIds = libraries.Select(l => l.CategoryId).ToHashSet();
-                categories =
+                categoryMap =
                     (await ResourceCategoryService.GetByKeys(cIds, CategoryAdditionalItem.None)).ToDictionary(a => a.Id,
                         a => a);
             }
@@ -559,7 +564,7 @@ namespace Bakabase.InsideWorld.Business.Services
             {
                 if (categoryIds?.Any() == true)
                 {
-                    categories =
+                    categoryMap =
                         (await ResourceCategoryService.GetByKeys(categoryIds, CategoryAdditionalItem.None))
                         .ToDictionary(a => a.Id,
                             a => a);
@@ -568,7 +573,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 else
                 {
                     libraries = await GetAll(null, MediaLibraryAdditionalItem.None);
-                    categories = (await ResourceCategoryService.GetAll()).ToDictionary(a => a.Id, a => a);
+                    categoryMap = (await ResourceCategoryService.GetAll()).ToDictionary(a => a.Id, a => a);
                 }
             }
 
@@ -577,7 +582,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 var ignoredLibraries = new List<MediaLibrary>();
                 foreach (var library in libraries)
                 {
-                    if (!categories.TryGetValue(library.CategoryId, out var c))
+                    if (!categoryMap.TryGetValue(library.CategoryId, out var c))
                     {
                         await LogService.Log(SyncTaskBackgroundTaskName, LogLevel.Error, "CategoryValidationFailed",
                             $"Media library [{library.Id}:{library.Name}] will not be synchronized because its category [id:{library.CategoryId}] is not found");
