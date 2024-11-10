@@ -4,8 +4,10 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Cover;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
 using Bakabase.InsideWorld.Models.Constants;
@@ -121,6 +123,15 @@ namespace Bakabase.Service.Controllers
                 ms.Seek(0, SeekOrigin.Begin);
                 return File(ms, MimeTypes.GetMimeType(".png"));
             }
+        }
+
+        [HttpPost("match-all")]
+        [SwaggerOperation(OperationId = "TestMatchAll")]
+        public async Task<SingletonResponse<Dictionary<string, List<string>>>> TestMatchAll(string regex, string text)
+        {
+            var r = new Regex(regex);
+            var groupValues = r.MatchAllAndMergeByNamedGroups(text);
+            return new SingletonResponse<Dictionary<string, List<string>>>(groupValues);
         }
     }
 }

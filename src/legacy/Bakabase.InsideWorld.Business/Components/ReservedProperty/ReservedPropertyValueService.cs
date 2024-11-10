@@ -29,7 +29,7 @@ public class ReservedPropertyValueService(
     public async Task<ReservedPropertyValue?> GetFirst(
         Expression<Func<Abstractions.Models.Db.ReservedPropertyValue, bool>> selector)
     {
-        return (await orm.GetFirst(selector))?.ToDomainModel();
+        return (await orm.GetFirstOrDefault(selector))?.ToDomainModel();
     }
 
     public async Task<List<ReservedPropertyValue>> GetAll(

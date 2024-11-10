@@ -102,6 +102,8 @@ const CategoryEnhancerOptionsDialog = ({
           enhancer={enhancer}
           options={options}
           propertyMap={propertyMap}
+          onPropertyChanged={loadAllProperties}
+          onCategoryChanged={loadCategory}
         />
       ) : (options && (
         <div className={'flex flex-col gap-y-4'}>
@@ -110,12 +112,16 @@ const CategoryEnhancerOptionsDialog = ({
             enhancer={enhancer}
             options={options}
             propertyMap={propertyMap}
+            onPropertyChanged={loadAllProperties}
+            onCategoryChanged={loadCategory}
           />
           <DynamicTargets
             category={category}
             enhancer={enhancer}
             options={options}
             propertyMap={propertyMap}
+            onPropertyChanged={loadAllProperties}
+            onCategoryChanged={loadCategory}
           />
         </div>
       ))}

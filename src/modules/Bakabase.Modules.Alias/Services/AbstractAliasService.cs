@@ -36,7 +36,7 @@ public abstract class AbstractAliasService<TDbContext>(
 
     public async Task<SingletonResponse<Abstractions.Models.Domain.Alias>> Add(AliasAddInputModel model)
     {
-        var dbAlias = await orm.GetFirst(x => x.Text == model.Text);
+        var dbAlias = await orm.GetFirstOrDefault(x => x.Text == model.Text);
         if (dbAlias != null)
         {
             return new SingletonResponse<Abstractions.Models.Domain.Alias>(dbAlias.ToDomainModel());
@@ -49,7 +49,7 @@ public abstract class AbstractAliasService<TDbContext>(
 
     public async Task<BaseResponse> Patch(string text, AliasPatchInputModel model)
     {
-        var alias = await orm.GetFirst(x => x.Text == text);
+        var alias = await orm.GetFirstOrDefault(x => x.Text == text);
         if (!string.IsNullOrEmpty(model.Text))
         {
             alias.Text = model.Text;

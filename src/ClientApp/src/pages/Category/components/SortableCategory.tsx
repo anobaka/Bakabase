@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, Input, Message } from '@alifd/next';
+import { Dialog, Message } from '@alifd/next';
 import { SketchPicker } from 'react-color';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -22,7 +22,7 @@ import {
   Dropdown,
   DropdownItem,
   DropdownMenu,
-  DropdownTrigger,
+  DropdownTrigger, Input,
   Modal,
   Tooltip,
 } from '@/components/bakaui';
@@ -151,11 +151,10 @@ export default (({
       title: t('Add a media library'),
       children: (
         <Input
-          size={'large'}
           placeholder={t('Name of media library')}
           style={{ width: '100%' }}
           defaultValue={n}
-          onChange={(v) => {
+          onValueChange={(v) => {
             n = v;
           }}
         />
@@ -200,7 +199,7 @@ export default (({
           <div className={'name'}>
             {(editMode == EditMode.NameAndColor) ? (
               <div className={'editing'}>
-                <Input value={name} onChange={(v) => setName(v)} />
+                <Input value={name} onValueChange={(v) => setName(v)} />
                 &nbsp;
                 <div style={{
                   position: 'relative',
@@ -419,10 +418,9 @@ export default (({
                 title: t('Duplicating a category'),
                 content: (
                   <Input
-                    size={'large'}
                     style={{ width: 400 }}
                     placeholder={t('Please input a new name for the duplicated category')}
-                    onChange={v => name = v}
+                    onValueChange={v => name = v}
                   />
                 ),
                 v2: true,

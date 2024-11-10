@@ -224,6 +224,7 @@ export default (props: Props) => {
                       propertyId: properties[0].id,
                       propertyPool: properties[0].pool,
                     });
+                    onPropertyChanged?.();
                   },
                 });
               }}
