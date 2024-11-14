@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.Components.Localization;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
@@ -36,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<BilibiliClient>();
 
         services.AddTransient<IThirdPartyLocalizer, ThirdPartyLocalizer>();
+        services.TryAddSingleton<ThirdPartyHttpRequestLogger>();
         return services;
     }
 }
