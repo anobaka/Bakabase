@@ -42,6 +42,7 @@ import Rating from './components/Rating';
 import Image from './components/Image';
 import { RadioGroup, Radio } from './components/Radio';
 import Kbd from './components/Kbd';
+import NumberInput from './components/NumberInput';
 
 export {
   Button,
@@ -105,4 +106,5 @@ export {
   Image,
   TableRowProps,
   Kbd,
+  NumberInput,
 };

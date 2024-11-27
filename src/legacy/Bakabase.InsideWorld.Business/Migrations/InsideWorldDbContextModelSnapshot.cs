@@ -228,7 +228,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("ReservedPropertyValues");
                 });
 
-            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.Resource", b =>
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ResourceDbModel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -297,102 +297,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SpecialTexts");
-                });
-
-            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime?>("AppliedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("CalculatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Filter")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("FilteredAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Processes")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("RevertedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Variables")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("BulkModifications");
-                });
-
-            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModificationDiff", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("BulkModificationId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("CurrentValue")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("NewValue")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Operation")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Property")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("PropertyKey")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ResourceId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ResourcePath")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("BulkModificationDiffs");
-                });
-
-            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.BulkModificationTempData", b =>
-                {
-                    b.Property<int>("BulkModificationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ResourceIds")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("BulkModificationId");
-
-                    b.ToTable("BulkModificationTempData");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Legacy.Models.LegacyDbResource", b =>
@@ -1046,6 +950,67 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AliasesV2");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.BulkModification.Models.Db.BulkModificationDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Filter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FilteredResourceIds")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Processes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Variables")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BulkModifications");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.BulkModification.Models.Db.BulkModificationDiffDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BulkModificationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Diffs")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResourcePath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BulkModificationId", "ResourceId")
+                        .IsUnique();
+
+                    b.ToTable("BulkModificationDiffs");
                 });
 
             modelBuilder.Entity("Bakabase.Modules.Property.Abstractions.Models.Db.CustomPropertyDbModel", b =>

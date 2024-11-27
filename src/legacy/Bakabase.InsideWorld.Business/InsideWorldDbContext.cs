@@ -1,9 +1,11 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Db;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Legacy.Models;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.BulkModification.Abstractions.Models;
+using Bakabase.Modules.BulkModification.Components;
+using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +15,7 @@ using Tag = Bakabase.InsideWorld.Models.Models.Entities.Tag;
 
 namespace Bakabase.InsideWorld.Business
 {
-    public class InsideWorldDbContext : DbContext
+    public class InsideWorldDbContext : DbContext, IBulkModificationDbContext
     {
         [Obsolete] public DbSet<LegacyAlias> Aliases { get; set; }
         [Obsolete] public DbSet<AliasGroup> AliasGroups { get; set; }
@@ -47,9 +49,8 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<Password> Passwords { get; set; }
 
-        public DbSet<BulkModification> BulkModifications { get; set; }
-        public DbSet<BulkModificationDiff> BulkModificationDiffs { get; set; }
-        public DbSet<BulkModificationTempData> BulkModificationTempData { get; set; }
+        public DbSet<BulkModificationDbModel> BulkModifications { get; set; }
+        public DbSet<BulkModificationDiffDbModel> BulkModificationDiffs { get; set; }
 
         public DbSet<CustomPropertyDbModel> CustomProperties { get; set; }
         public DbSet<CustomPropertyValueDbModel> CustomPropertyValues { get; set; }
@@ -59,7 +60,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<CategoryEnhancerOptions> CategoryEnhancerOptions { get; set; }
         public DbSet<EnhancementRecord> EnhancementRecords { get; set; }
 
-        public DbSet<Resource> ResourcesV2 { get; set; }
+        public DbSet<ResourceDbModel> ResourcesV2 { get; set; }
         public DbSet<ReservedPropertyValue> ReservedPropertyValues { get; set; }
         public DbSet<Modules.Alias.Abstractions.Models.Db.Alias> AliasesV2 { get; set; }
         public DbSet<ResourceCacheDbModel> ResourceCaches { get; set; }
@@ -182,13 +183,20 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => new {x.ResourceId, x.Scope}).IsUnique();
             });
 
-            modelBuilder.Entity<Resource>(r => { r.HasIndex(x => x.Path).IsUnique(); });
+            modelBuilder.Entity<ResourceDbModel>(r => { r.HasIndex(x => x.Path).IsUnique(); });
 
             modelBuilder.Entity<EnhancementRecord>(er =>
             {
                 er.HasIndex(x => x.EnhancerId);
                 er.HasIndex(x => x.ResourceId);
                 er.HasIndex(x => new {x.EnhancerId, x.ResourceId}).IsUnique();
+            });
+
+            modelBuilder.Entity<BulkModificationDbModel>(bm => { });
+
+            modelBuilder.Entity<BulkModificationDiffDbModel>(bmd =>
+            {
+                bmd.HasIndex(x => new {x.BulkModificationId, x.ResourceId}).IsUnique();
             });
         }
     }

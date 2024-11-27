@@ -27,4 +27,23 @@ public record TagValue(string? Group, string Name)
             ? new TagValue(null, parts[0])
             : new TagValue(parts[0], string.Join(Separator, parts[1..]));
     }
+
+    private sealed class GroupNameEqualityComparer : IEqualityComparer<TagValue>
+    {
+        public bool Equals(TagValue? x, TagValue? y)
+        {
+            if (ReferenceEquals(x, y)) return true;
+            if (x is null) return false;
+            if (y is null) return false;
+            if (x.GetType() != y.GetType()) return false;
+            return x.Group == y.Group && x.Name == y.Name;
+        }
+
+        public int GetHashCode(TagValue obj)
+        {
+            return HashCode.Combine(obj.Group, obj.Name);
+        }
+    }
+
+    public static IEqualityComparer<TagValue> GroupNameComparer { get; } = new GroupNameEqualityComparer();
 }

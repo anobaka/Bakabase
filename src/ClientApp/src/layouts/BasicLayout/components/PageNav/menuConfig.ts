@@ -50,6 +50,11 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/customproperty',
         icon: 'RadarChartOutlined',
       },
+      {
+        name: 'Bulk modification',
+        path: '/bulkmodification2',
+        icon: 'FormOutlined',
+      },
       // {
       //   name: 'Tag',
       //   path: '/tag',
@@ -86,11 +91,6 @@ const asideMenuConfig: IMenuItem[] = [
         name: 'Downloader',
         path: '/downloader',
         icon: 'DownloadOutlined',
-      },
-      {
-        name: 'Bulk modification',
-        path: '/bulkmodification',
-        icon: 'EditOutlined',
       },
       {
         name: 'File Mover',

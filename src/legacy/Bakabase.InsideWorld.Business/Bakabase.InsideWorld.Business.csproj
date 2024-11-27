@@ -2,15 +2,17 @@
 
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
-		<LangVersion>preview</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\miscellaneous\Bakabase.Prefabs\Bakabase.Prefabs.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.BulkModification\Bakabase.Modules.BulkModification.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.Search\Bakabase.Modules.Search.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.ThirdParty\Bakabase.Modules.ThirdParty.csproj" />
 		<ProjectReference Include="..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />

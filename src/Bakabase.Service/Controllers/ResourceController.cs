@@ -1,49 +1,32 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Abstractions;
-using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.Localization;
-using Bakabase.Abstractions.Components.Property;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
-using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
-using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Storage.Services;
-using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
-using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Components.Tasks;
-using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
-using Bakabase.InsideWorld.Business.Models.Db;
-using Bakabase.InsideWorld.Business.Models.Input;
-using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
-using Bakabase.Modules.Property.Extensions;
-using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Extensions;
-using Bakabase.Modules.StandardValue.Models.Domain;
+using Bakabase.Modules.Search.Models.Db;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -52,18 +35,10 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Swashbuckle.AspNetCore.Annotations;
-using static Bakabase.InsideWorld.Models.Configs.UIOptions;
-using Image = SixLabors.ImageSharp.Image;
 
 namespace Bakabase.Service.Controllers
 {
@@ -223,7 +198,7 @@ namespace Bakabase.Service.Controllers
 
             var domainModel = await model.ToDomainModel(propertyService);
 
-            return await service.Search(domainModel, false);
+            return await service.Search(domainModel);
         }
 
         [HttpGet("keys")]

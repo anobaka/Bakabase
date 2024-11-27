@@ -1494,5 +1494,7 @@
   "Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.": "启用缓存可以提高加载速度，但是您的封面和可播放文件将不会及时更新，除非您手动清除或禁用缓存。",
   "Synchronize resource data": "同步资源数据",
   "Please note that if you modify the path of the resource, the new path will be considered as a new resource, at meantime the old resource data will be deleted.": "请注意，如果您修改了资源的路径，那么它将会被视作一个新的资源，同时老的资源数据将会被删除。",
-  "All eligible files or folders under the specified root directory will be saved to the media library.": "所有指定根目录下符合条件的文件或文件夹将会被保存至媒体库中。"
+  "All eligible files or folders under the specified root directory will be saved to the media library.": "所有指定根目录下符合条件的文件或文件夹将会被保存至媒体库中。",
+  "Add a bulk modification": "添加一个批量修改批次",
+  "{{count}} resources related": "{{count}}个相关资源"
 }

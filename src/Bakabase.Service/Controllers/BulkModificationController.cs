@@ -1,163 +1,116 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
-using Bakabase.InsideWorld.Business.Components;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Services;
+using Bakabase.Modules.BulkModification.Abstractions.Components;
+using Bakabase.Modules.BulkModification.Abstractions.Models;
+using Bakabase.Modules.BulkModification.Abstractions.Services;
+using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Service.Extensions;
+using Bakabase.Service.Models.Input;
+using Bakabase.Service.Models.View;
+using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
 {
     [Route("bulk-modification")]
-    public class BulkModificationController : Controller
+    public class BulkModificationController(
+        IBulkModificationService service,
+        IResourceService resourceService,
+        IPropertyLocalizer propertyLocalizer,
+        IPropertyService propertyService,
+        IBulkModificationLocalizer localizer
+    )
+        : Controller
     {
-        private readonly BulkModificationService _service;
-        private readonly IResourceService _resourceService;
-        private readonly BulkModificationDiffService _diffService;
-        private readonly BulkModificationTempDataService _tempDataService;
-
-        public BulkModificationController(BulkModificationService service, IResourceService resourceService,
-            BulkModificationDiffService diffService, BulkModificationTempDataService tempDataService)
-        {
-            _service = service;
-            _resourceService = resourceService;
-            _diffService = diffService;
-            _tempDataService = tempDataService;
-        }
-
         [HttpGet("{id:int}")]
-        [SwaggerOperation(OperationId = "GetBulkModificationById")]
-        public async Task<SingletonResponse<BulkModificationDto>> Get(int id)
+        [SwaggerOperation(OperationId = "GetBulkModification")]
+        public async Task<SingletonResponse<BulkModificationViewModel?>> Get(int id)
         {
-            return new SingletonResponse<BulkModificationDto>(await _service.GetDto(id));
+            var domainModel = await service.Get(id);
+            var viewModel = domainModel?.ToViewModel(propertyLocalizer);
+            return new SingletonResponse<BulkModificationViewModel?>(viewModel);
         }
 
-        [HttpGet]
+        [HttpGet("all")]
         [SwaggerOperation(OperationId = "GetAllBulkModifications")]
-        public async Task<ListResponse<BulkModificationDto>> GetAll()
+        public async Task<ListResponse<BulkModificationViewModel>> GetAll()
         {
-            return new ListResponse<BulkModificationDto>(
-                (await _service.GetAllDto()).OrderByDescending(x => x.CreatedAt));
+            var domainModels = await service.GetAll();
+            var viewModels = domainModels.Select(x => x.ToViewModel(propertyLocalizer));
+            return new ListResponse<BulkModificationViewModel>(viewModels);
         }
 
         [HttpPost]
-        [SwaggerOperation(OperationId = "CreateBulkModification")]
-        public async Task<SingletonResponse<BulkModificationDto>> Add([FromBody] BulkModificationPutRequestModel model)
+        [SwaggerOperation(OperationId = "AddBulkModification")]
+        public async Task<BaseResponse> Add()
         {
-            var data = await _service.Add(new BulkModification
-            {
-                Name = model.Name,
-                Filter = JsonConvert.SerializeObject(model.Filter),
-                Processes = JsonConvert.SerializeObject(model.Processes),
-                Variables = JsonConvert.SerializeObject(model.Variables),
-            });
-            return new SingletonResponse<BulkModificationDto>(data.Data.ToDto(null));
+            await service.Add(new BulkModification
+                {CreatedAt = DateTime.Now, IsActive = true, Name = localizer.DefaultName()});
+            return BaseResponseBuilder.Ok;
         }
 
-        [HttpPost("{id:int}/duplication")]
+
+        [HttpPost("{id:int}")]
         [SwaggerOperation(OperationId = "DuplicateBulkModification")]
-        public async Task<SingletonResponse<BulkModificationDto>> Duplicate(int id)
+        public async Task<BaseResponse> Duplicate(int id)
         {
-            return new SingletonResponse<BulkModificationDto>(await _service.Duplicate(id));
+            await service.Duplicate(id);
+            return BaseResponseBuilder.Ok;
         }
 
-        [HttpPut("{id:int}/close")]
-        [SwaggerOperation(OperationId = "CloseBulkModification")]
-        public async Task<BaseResponse> Close(int id)
+        [HttpPatch("{id:int}")]
+        [SwaggerOperation(OperationId = "PatchBulkModification")]
+        public async Task<BaseResponse> Patch(int id, [FromBody] BulkModificationPatchInputModel model)
         {
-            return await _service.Close(id);
-        }
-
-        [HttpPut("{id:int}")]
-        [SwaggerOperation(OperationId = "PutBulkModification")]
-        public async Task<BaseResponse> Put(int id, [FromBody] BulkModificationPutRequestModel model)
-        {
-            return await _service.UpdateByKey(id, d =>
-            {
-                d.Name = model.Name;
-                d.Filter = JsonConvert.SerializeObject(model.Filter);
-                d.Processes = JsonConvert.SerializeObject(model.Processes);
-                d.Variables = JsonConvert.SerializeObject(model.Variables);
-            });
-        }
-
-        [HttpPut("{id:int}/filter")]
-        [SwaggerOperation(OperationId = "PerformBulkModificationFiltering")]
-        public async Task<ListResponse<int>> PerformFiltering(int id)
-        {
-            return await _service.PerformFiltering(id);
-        }
-
-        [HttpGet("{id:int}/filtered-resources")]
-        [SwaggerOperation(OperationId = "GetBulkModificationFilteredResources")]
-        public async Task<ListResponse<Resource>> GetFilteredResources(int id)
-        {
-            var ids = (await _tempDataService.GetByKey(id))?.GetResourceIds().ToArray();
-            if (ids == null)
-            {
-                return new ListResponse<Resource>(new List<Resource>());
-            }
-
-            var resources = await _resourceService.GetByKeys(ids);
-            return new ListResponse<Resource>(resources);
+            var domainModel = await model.ToDomainModel(propertyService);
+            await service.Patch(id, domainModel);
+            return BaseResponseBuilder.Ok;
         }
 
         [HttpDelete("{id:int}")]
         [SwaggerOperation(OperationId = "DeleteBulkModification")]
         public async Task<BaseResponse> Delete(int id)
         {
-            return await _service.RemoveByKey(id);
+            await service.Delete(id);
+            return BaseResponseBuilder.Ok;
         }
 
-        [HttpGet("{bmId:int}/diffs")]
-        [SwaggerOperation(OperationId = "GetBulkModificationResourceDiffs")]
-        public async Task<ListResponse<BulkModificationResourceDiffs>> GetDiffs(int bmId)
+        [HttpPut("{id:int}/filtered-resources")]
+        [SwaggerOperation(OperationId = "FilterResourcesInBulkModification")]
+        public async Task<BaseResponse> Filter(int id)
         {
-            var diffs = await _diffService.GetByBmId(bmId);
-            return new ListResponse<BulkModificationResourceDiffs>(diffs.GroupBy(a => a.ResourceId).Select(x =>
-                new BulkModificationResourceDiffs
-                {
-                    Id = x.Key,
-                    Path = x.First().ResourcePath,
-                    Diffs = x.Select(b => new BulkModificationResourceDiffs.Diff
-                    {
-                        Property = b.Property,
-                        PropertyKey = b.PropertyKey,
-                        CurrentValue = b.CurrentValue,
-                        NewValue = b.NewValue,
-                        Operation = b.Operation,
-                        Type = b.Type
-                    }).ToList()
-                }));
+            await service.Filter(id);
+            return BaseResponseBuilder.Ok;
         }
 
-        [HttpPost("{id:int}/diffs")]
-        [SwaggerOperation(OperationId = "CalculateBulkModificationResourceDiffs")]
+        [HttpPut("{id:int}/preview")]
+        [SwaggerOperation(OperationId = "PreviewBulkModification")]
         public async Task<BaseResponse> Preview(int id)
         {
-            var data = await _service.Preview(id, HttpContext.RequestAborted);
-            return new BaseResponse(data.Code, data.Message);
+            await service.Preview(id);
+            return BaseResponseBuilder.Ok;
         }
 
         [HttpPost("{id:int}/apply")]
         [SwaggerOperation(OperationId = "ApplyBulkModification")]
         public async Task<BaseResponse> Apply(int id)
         {
-            return await _service.Apply(id);
+            await service.Apply(id);
+            return BaseResponseBuilder.Ok;
         }
 
-        [HttpPost("{id:int}/revert")]
+        [HttpDelete("{id:int}/apply")]
         [SwaggerOperation(OperationId = "RevertBulkModification")]
         public async Task<BaseResponse> Revert(int id)
         {
-            return await _service.Revert(id);
+            await service.Revert(id);
+            return BaseResponseBuilder.Ok;
         }
     }
 }

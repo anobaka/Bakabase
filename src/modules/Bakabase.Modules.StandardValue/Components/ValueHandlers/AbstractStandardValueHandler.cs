@@ -116,6 +116,28 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
             ? ExtractTextsForConvertingToDateTimeInternal(tv)
             : null;
 
+        public bool Compare(object? a, object? b)
+        {
+            if (a == null && b == null)
+            {
+                return true;
+            }
+
+            if (a == null && b != null || a != null && b == null)
+            {
+                return false;
+            }
+
+            if (a is not TValue ta || b is not TValue tb)
+            {
+                return false;
+            }
+
+            return CompareInternal(ta, tb);
+        }
+
+        protected virtual bool CompareInternal(TValue a, TValue b) => a!.Equals(b);
+
         protected virtual List<string>? ExtractTextsForConvertingToTime(TValue optimizedValue) => null;
 
         public virtual TimeSpan? ConvertToTime(TValue optimizedValue)

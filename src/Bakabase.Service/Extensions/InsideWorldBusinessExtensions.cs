@@ -7,8 +7,6 @@ using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Services;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Processors;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Enhancer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
@@ -29,6 +27,7 @@ using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.Migrations.V190;
 using Bakabase.Modules.Alias.Extensions;
+using Bakabase.Modules.BulkModification.Extensions;
 using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -48,9 +47,9 @@ namespace Bakabase.Service.Extensions
         {
             services.AddScoped<DownloadTaskService>();
             services.AddScoped<PlaylistService>();
-            services.AddScoped<BulkModificationService>();
-            services.AddScoped<BulkModificationDiffService>();
-            services.AddScoped<BulkModificationTempDataService>();
+            // services.AddScoped<BulkModificationService>();
+            // services.AddScoped<BulkModificationDiffService>();
+            // services.AddScoped<BulkModificationTempDataService>();
             services.TryAddScoped<ComponentService>();
             services.TryAddScoped<ComponentOptionsService>();
             services.TryAddScoped<CategoryComponentService>();
@@ -101,8 +100,8 @@ namespace Bakabase.Service.Extensions
 
             services.TryAddSingleton<IwFsWatcher>();
 
-            services.AddScoped<BmCategoryProcessor>();
-            services.AddScoped<BmMediaLibraryProcessor>();
+            // services.AddScoped<BmCategoryProcessor>();
+            // services.AddScoped<BmMediaLibraryProcessor>();
             // services.AddScoped<BmTagProcessor>();
 
             #region Optimized after V190
@@ -121,7 +120,7 @@ namespace Bakabase.Service.Extensions
             services.AddStandardValue<SpecialTextService>();
             services.AddReservedProperty();
 
-            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Resource, int>>();
+            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ResourceDbModel, int>>();
             services.AddScoped<IResourceService, ResourceService>();
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, SpecialText, int>>();
             services.AddScoped<SpecialTextService>();
@@ -138,6 +137,8 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<Abstractions.Components.Cover.ICoverDiscoverer, CoverDiscoverer>();
 
             services.AddThirdParty();
+
+            services.AddBulkModification<InsideWorldDbContext>();
 
             #endregion
 

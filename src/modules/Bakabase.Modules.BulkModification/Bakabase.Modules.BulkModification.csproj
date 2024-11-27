@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />
+		<ProjectReference Include="..\Bakabase.Modules.Search\Bakabase.Modules.Search.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Abstractions\Extensions\" />
+		<Folder Include="Abstractions\Services\" />
+		<Folder Include="Models\Domain\Constants\" />
+		<Folder Include="Models\View\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Update="Resources\BulkModificationResource.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>BulkModificationResource.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Resources\BulkModificationResource.zh-hans.resx">
+		  <DependentUpon>BulkModificationResource.resx</DependentUpon>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Resources\BulkModificationResource.zh-Hans.resx">
+	    <Generator>ResXFileCodeGenerator</Generator>
+	    <LastGenOutput>BulkModificationResource.Designer.cs</LastGenOutput>
+	  </None>
+	</ItemGroup>
+</Project>

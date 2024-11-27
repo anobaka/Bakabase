@@ -1,10 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
-import { toast } from 'react-toastify';
 import type { SpecialText } from '@/pages/Text/models';
 import { Input } from '@/components/bakaui';
 import { SpecialTextType } from '@/sdk/constants';
-import update = toast.update;
 
 interface Props {
   value: SpecialText;

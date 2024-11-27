@@ -8,8 +8,6 @@ using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Configurations;
 using Bakabase.Infrastructures.Components.Configurations.App;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Models.Dtos;
-using Bakabase.InsideWorld.Business.Components.BulkModification.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Extensions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Models.Dto;
@@ -99,8 +97,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
             await Clients.Caller.GetAppUpdaterState(_appUpdater.State);
 
-            await Clients.Caller.GetData(nameof(BulkModificationConfiguration),
-                BulkModificationService.GetConfiguration());
+            // await Clients.Caller.GetData(nameof(BulkModificationConfiguration),
+                // BulkModificationService.GetConfiguration());
 
             await Clients.Caller.GetData(nameof(AppContext), _appContext);
         }

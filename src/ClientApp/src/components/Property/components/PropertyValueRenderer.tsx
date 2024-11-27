@@ -240,7 +240,7 @@ export default (props: Props) => {
           getDataSource={async () => {
             return property?.options?.data || [];
           }}
-          multiple
+          multiple={property?.options?.hasSingleValue ?? true}
           defaultEditing={defaultEditing}
         />
       );

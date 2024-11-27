@@ -52,7 +52,7 @@ namespace Bakabase.InsideWorld.Business.Services
 {
     public class ResourceService : IResourceService
     {
-        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>
+        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int>
             _orm;
 
         private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>
@@ -92,7 +92,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _propertyService = propertyService;
             _resourceCacheOrm = resourceCacheOrm;
             _fileManager = fileManager;
-            _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.Resource, int>(
+            _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int>(
                 serviceProvider);
         }
 
@@ -105,7 +105,7 @@ namespace Bakabase.InsideWorld.Business.Services
         }
 
         public async Task<List<Resource>> GetAll(
-            Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
+            Expression<Func<Abstractions.Models.Db.ResourceDbModel, bool>>? selector = null,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
             var data = await _orm.GetAll(selector, false);
@@ -113,7 +113,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return dtoList;
         }
 
-        public async Task<SearchResponse<Resource>> Search(ResourceSearch model, bool asNoTracking)
+        public async Task<SearchResponse<Resource>> Search(ResourceSearch model)
         {
             var allResources = await GetAll();
             var context = new ResourceSearchContext(allResources);
@@ -122,13 +122,13 @@ namespace Bakabase.InsideWorld.Business.Services
             var resourceIds = SearchResourceIds(model.Group, context);
             var ordersForSearch = model.Orders.BuildForSearch();
 
-            Func<Abstractions.Models.Db.Resource, bool>? exp = resourceIds == null
+            Func<Abstractions.Models.Db.ResourceDbModel, bool>? exp = resourceIds == null
                 ? null
                 : r => resourceIds.Contains(r.Id);
 
             var resources = await _orm.Search(exp, model.PageIndex, model.PageSize,
                 ordersForSearch,
-                asNoTracking);
+                false);
             var dtoList = await ToDomainModel(resources.Data!.ToArray(), ResourceAdditionalItem.All);
 
             return model.BuildResponse(dtoList, resources.TotalCount);
@@ -331,13 +331,13 @@ namespace Bakabase.InsideWorld.Business.Services
             return dtoList;
         }
 
-        public async Task<Resource> ToDomainModel(Abstractions.Models.Db.Resource resource,
+        public async Task<Resource> ToDomainModel(Abstractions.Models.Db.ResourceDbModel resource,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
             return (await ToDomainModel([resource], additionalItems)).FirstOrDefault()!;
         }
 
-        public async Task<List<Resource>> ToDomainModel(Abstractions.Models.Db.Resource[] resources,
+        public async Task<List<Resource>> ToDomainModel(Abstractions.Models.Db.ResourceDbModel[] resources,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
             var doList = resources.Select(r => r.ToDomainModel()!).ToList();
@@ -648,8 +648,8 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<List<Abstractions.Models.Db.Resource>> GetAllDbModels(
-            Expression<Func<Abstractions.Models.Db.Resource, bool>>? selector = null,
+        public async Task<List<Abstractions.Models.Db.ResourceDbModel>> GetAllDbModels(
+            Expression<Func<Abstractions.Models.Db.ResourceDbModel, bool>>? selector = null,
             bool returnCopy = true)
         {
             return await _orm.GetAll(selector, returnCopy);
@@ -818,13 +818,13 @@ namespace Bakabase.InsideWorld.Business.Services
             return null;
         }
 
-        public async Task<bool> Any(Func<Abstractions.Models.Db.Resource, bool>? selector = null)
+        public async Task<bool> Any(Func<Abstractions.Models.Db.ResourceDbModel, bool>? selector = null)
         {
             return await _orm.Any(selector);
         }
 
-        public async Task<List<Abstractions.Models.Db.Resource>> AddAll(
-            IEnumerable<Abstractions.Models.Db.Resource> resources)
+        public async Task<List<Abstractions.Models.Db.ResourceDbModel>> AddAll(
+            IEnumerable<Abstractions.Models.Db.ResourceDbModel> resources)
         {
             return (await _orm.AddRange(resources.ToList())).Data;
         }
@@ -1216,7 +1216,7 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        private async Task<List<Abstractions.Models.Db.Resource>> GetUnknownResources()
+        private async Task<List<Abstractions.Models.Db.ResourceDbModel>> GetUnknownResources()
         {
             var categories = await _categoryService.GetAll();
             var mediaLibraries = await _mediaLibraryService.GetAll();

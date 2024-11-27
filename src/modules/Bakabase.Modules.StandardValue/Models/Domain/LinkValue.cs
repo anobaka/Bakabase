@@ -54,4 +54,23 @@ public record LinkValue(string? Text, string? Url)
         var url = match.Groups["url"].Value.Trim();
         return new LinkValue(t.IsNullOrEmpty() ? null : t, url.IsNullOrEmpty() ? null : url);
     }
+
+    private sealed class TextUrlEqualityComparer : IEqualityComparer<LinkValue>
+    {
+        public bool Equals(LinkValue? x, LinkValue? y)
+        {
+            if (ReferenceEquals(x, y)) return true;
+            if (x is null) return false;
+            if (y is null) return false;
+            if (x.GetType() != y.GetType()) return false;
+            return x.Text == y.Text && x.Url == y.Url;
+        }
+
+        public int GetHashCode(LinkValue obj)
+        {
+            return HashCode.Combine(obj.Text, obj.Url);
+        }
+    }
+
+    public static IEqualityComparer<LinkValue> TextUrlComparer { get; } = new TextUrlEqualityComparer();
 }

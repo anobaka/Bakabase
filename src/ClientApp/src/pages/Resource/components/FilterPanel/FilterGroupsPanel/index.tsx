@@ -29,7 +29,7 @@ export default ({
   }, [propsGroup]);
 
   return (
-    <div className={'group flex flex-wrap gap-2 item-center mt-2'}>
+    <div className={'group flex flex-wrap gap-2 item-center'}>
       <FilterGroup
         group={group}
         isRoot

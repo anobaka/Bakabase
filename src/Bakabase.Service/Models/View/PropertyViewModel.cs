@@ -12,7 +12,6 @@ public record PropertyViewModel
     public string Name { get; set; } = null!;
     public PropertyType Type { get; set; }
     public object? Options { get; set; }
-
     public StandardValueType DbValueType => Type.GetDbValueType();
     public StandardValueType BizValueType => Type.GetBizValueType();
     public string PoolName { get; set; } = null!;

@@ -73,10 +73,29 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
                     : new TagValue(x[0], string.Join(InternalOptions.LayerTextSeparator, x.Skip(1)))).ToList();
         }
 
-        protected override List<string>? ExtractTextsForConvertingToDateTimeInternal(List<List<string>> optimizedValue) =>
+        protected override List<string>?
+            ExtractTextsForConvertingToDateTimeInternal(List<List<string>> optimizedValue) =>
             optimizedValue.SelectMany(o => o).ToList();
 
         protected override List<string>? ExtractTextsForConvertingToTime(List<List<string>> optimizedValue) =>
             optimizedValue.SelectMany(o => o).ToList();
+
+        protected override bool CompareInternal(List<List<string>> a, List<List<string>> b)
+        {
+            if (a.Count != b.Count)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < a.Count; i++)
+            {
+                if (!a[i].SequenceEqual(b[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }

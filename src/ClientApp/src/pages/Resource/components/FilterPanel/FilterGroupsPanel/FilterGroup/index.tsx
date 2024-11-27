@@ -51,13 +51,16 @@ const FilterGroup = ({
 
   useUpdateEffect(() => {
     groupRef.current = group;
-    onChange?.(group);
   }, [group]);
 
   useUpdateEffect(() => {
     setGroup(propsGroup);
-    // console.log(propsGroup, 123);
   }, [propsGroup]);
+
+  const changeGroup = (newGroup: ResourceSearchFilterGroup) => {
+    setGroup(newGroup);
+    onChange?.(newGroup);
+  };
 
   const {
     filters,
@@ -70,7 +73,7 @@ const FilterGroup = ({
       key={`f-${i}`}
       filter={f}
       onRemove={() => {
-        setGroup(
+        changeGroup(
           {
             ...group,
             filters: (group.filters || []).filter(fil => fil !== f),
@@ -78,7 +81,7 @@ const FilterGroup = ({
         );
       }}
       onChange={tf => {
-        setGroup(
+        changeGroup(
           {
             ...group,
             filters: (group.filters || []).map(fil => (fil === f ? tf : fil)),
@@ -91,13 +94,13 @@ const FilterGroup = ({
       key={`g-${i}`}
       group={g}
       onRemove={() => {
-        setGroup({
+        changeGroup({
           ...group,
           groups: (group.groups || []).filter(gr => gr !== g),
         });
       }}
       onChange={tg => {
-        setGroup({
+        changeGroup({
           ...group,
           groups: (group.groups || []).map(gr => (gr === g ? tg : gr)),
         });
@@ -116,7 +119,7 @@ const FilterGroup = ({
           variant={'light'}
           size={'sm'}
           onClick={() => {
-            setGroup({
+            changeGroup({
               ...group,
               combinator: GroupCombinator.And == group.combinator ? GroupCombinator.Or : GroupCombinator.And,
             });
@@ -153,7 +156,7 @@ const FilterGroup = ({
           style={{ gridTemplateColumns: 'auto auto' }}
         >
           <QuickFilter onAdded={newFilter => {
-            setGroup({
+            changeGroup({
               ...groupRef.current,
               filters: [
                 ...(groupRef.current.filters || []),
@@ -169,7 +172,7 @@ const FilterGroup = ({
             <Button
               size={'sm'}
               onClick={() => {
-                setGroup({
+                changeGroup({
                   ...groupRef.current,
                   filters: [
                     ...(groupRef.current.filters || []),
@@ -184,7 +187,7 @@ const FilterGroup = ({
             <Button
               size={'sm'}
               onClick={() => {
-                setGroup({
+                changeGroup({
                   ...groupRef.current,
                   groups: [
                     ...(groupRef.current.groups || []),
@@ -223,7 +226,7 @@ const FilterGroup = ({
                 variant={'light'}
                 isIconOnly
                 onClick={() => {
-                  setGroup({
+                  changeGroup({
                     ...group,
                     disabled: false,
                   });
@@ -255,7 +258,7 @@ const FilterGroup = ({
           variant={'light'}
           color={'warning'}
           onClick={() => {
-            setGroup({
+            changeGroup({
               ...group,
               disabled: true,
             });

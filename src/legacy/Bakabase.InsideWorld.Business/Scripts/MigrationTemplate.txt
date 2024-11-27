@@ -1,6 +1,6 @@
 ﻿Add-Migration Init -v -p Bakabase.InsideWorld.Business -s Bakabase.Service -Context InsideWorldDbContext;
 
-Remove-Migration -v -c InsideWorldDbContext -p Bakabase.InsideWorld.Business -s Bakabase.InsideWorld.App.Core;
+Remove-Migration -v -c InsideWorldDbContext -p Bakabase.InsideWorld.Business -s Bakabase.Service;
 
 
 

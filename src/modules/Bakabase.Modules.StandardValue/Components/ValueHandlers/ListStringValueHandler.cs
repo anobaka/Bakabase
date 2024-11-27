@@ -84,5 +84,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
         public override List<TagValue>? ConvertToListTag(List<string> optimizedValue) =>
             optimizedValue.Select(TagValue.TryParse).OfType<TagValue>().ToList().ToNullIfEmpty();
+
+        protected override bool CompareInternal(List<string> a, List<string> b) => a.SequenceEqual(b);
     }
 }

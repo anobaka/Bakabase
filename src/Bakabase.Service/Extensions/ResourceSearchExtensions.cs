@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.Search.Models.Db;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -59,7 +59,7 @@ public static class ResourceSearchExtensions
         return filter is {PropertyId: not null, PropertyPool: not null, Operation: not null};
     }
 
-    private static ResourceSearchFilterGroup? ToDomainModel(this ResourceSearchFilterGroupInputModel group,
+    public static ResourceSearchFilterGroup? ToDomainModel(this ResourceSearchFilterGroupInputModel group,
         Dictionary<PropertyPool, Dictionary<int, Property>> propertyMap)
     {
         var filters = group.Filters?.Select(f =>
@@ -268,5 +268,58 @@ public static class ResourceSearchExtensions
         }
 
         return viewModels;
+    }
+
+    public static ResourceSearchFilterGroupViewModel ToViewModel(this ResourceSearchFilterGroup domainModel,
+        IPropertyLocalizer propertyLocalizer)
+    {
+        return new ResourceSearchFilterGroupViewModel
+        {
+            Combinator = domainModel.Combinator,
+            Disabled = domainModel.Disabled,
+            Filters = domainModel.Filters?.Select(f => f.ToViewModel(propertyLocalizer)).ToList(),
+            Groups = domainModel.Groups?.Select(g => g.ToViewModel(propertyLocalizer)).ToList()
+        };
+    }
+
+    public static ResourceSearchFilterViewModel ToViewModel(this ResourceSearchFilter domainModel,
+        IPropertyLocalizer propertyLocalizer)
+    {
+        var filter = new ResourceSearchFilterViewModel
+        {
+            PropertyId = domainModel.PropertyId,
+            PropertyPool = domainModel.PropertyPool,
+            Operation = domainModel.Operation,
+            Disabled = domainModel.Disabled,
+            DbValue = domainModel.DbValue?.SerializeAsStandardValue(domainModel.Property.Type.GetDbValueType())
+        };
+
+        var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(domainModel.Property.Type);
+        if (psh != null)
+        {
+            filter.AvailableOperations = psh.SearchOperations.Keys.ToList();
+            filter.Property = domainModel.Property.ToViewModel(propertyLocalizer);
+            if (filter.Operation.HasValue)
+            {
+                var convertProperty =
+                    psh.SearchOperations.GetValueOrDefault(filter.Operation.Value)?.ConvertProperty;
+                var valueProperty = domainModel.Property;
+                if (convertProperty != null)
+                {
+                    valueProperty = convertProperty(valueProperty);
+                }
+
+                filter.ValueProperty = valueProperty.ToViewModel(propertyLocalizer);
+                var asType = psh.SearchOperations.GetValueOrDefault(filter.Operation.Value)?.AsType;
+                if (asType.HasValue)
+                {
+                    var pd = PropertyInternals.DescriptorMap.GetValueOrDefault(valueProperty.Type);
+                    filter.BizValue = pd?.GetBizValue(valueProperty, domainModel.DbValue)
+                        ?.SerializeAsStandardValue(asType.Value.GetBizValueType());
+                }
+            }
+        }
+
+        return filter;
     }
 }

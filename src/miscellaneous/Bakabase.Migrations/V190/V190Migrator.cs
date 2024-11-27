@@ -125,7 +125,7 @@ namespace Bakabase.Migrations.V190
             if (!await _resourceService.Any())
             {
                 var legacyResources = await _legacyResourceService.GetAll();
-                var resources = legacyResources.Select(lr => new Resource
+                var resources = legacyResources.Select(lr => new ResourceDbModel
                 {
                     Id = lr.Id,
                     CategoryId = lr.CategoryId,

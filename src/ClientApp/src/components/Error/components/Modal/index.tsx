@@ -1,8 +1,7 @@
-
 import { Trans, useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { history } from 'ice';
-import { Accordion, AccordionItem, Divider, Link, Modal, Snippet, Spacer } from '@/components/bakaui';
+import { Accordion, AccordionItem, Link, Modal, Snippet, Spacer } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { createPortalOfComponent } from '@/components/utils';
 
@@ -12,7 +11,7 @@ interface IProps {
 const ErrorModal = ({}: IProps) => {
   const { t } = useTranslation();
 
-  const [appInfo, setAppInfo] = useState<{logPath: string}>();
+  const [appInfo, setAppInfo] = useState<{ logPath: string }>();
 
   useEffect(() => {
     BApi.app.getAppInfo().then(rsp => {
@@ -30,8 +29,8 @@ const ErrorModal = ({}: IProps) => {
       title={t('We have encountered some problems. You could try the following steps:')}
       size={'lg'}
       footer={{
-          actions: ['cancel'],
-        }}
+        actions: ['cancel'],
+      }}
     >
       <Accordion
         selectedKeys={'all'}
@@ -42,7 +41,7 @@ const ErrorModal = ({}: IProps) => {
           key="1"
           title={(
             <span className={'font-bold'}>{t('Simply retry')}</span>
-            )}
+          )}
         >
           {t('Press \'F5\' to reload the page.')}
         </AccordionItem>
@@ -50,7 +49,7 @@ const ErrorModal = ({}: IProps) => {
           key="2"
           title={(
             <span className={'font-bold'}>{t('Restart the app')}</span>
-            )}
+          )}
         >
           {t('Shutdown and restart the app completely.')}
         </AccordionItem>
@@ -58,7 +57,7 @@ const ErrorModal = ({}: IProps) => {
           key="3"
           title={(
             <span className={'font-bold'}>{t('Contact support')}</span>
-            )}
+          )}
         >
           <div className={'flex flex-col gap-1 mb-2'}>
             <div>
@@ -70,10 +69,10 @@ const ErrorModal = ({}: IProps) => {
                 style={{ color: 'var(--bakaui-primary)' }}
                 className={'cursor-pointer'}
                 onClick={() => {
-                    if (appInfo?.logPath) {
-                      BApi.tool.openFileOrDirectory({ path: appInfo.logPath });
-                    }
-                  }}
+                  if (appInfo?.logPath) {
+                    BApi.tool.openFileOrDirectory({ path: appInfo.logPath });
+                  }
+                }}
               >
                 <span className={'break-all whitespace-break-spaces'}>
                   {appInfo?.logPath}
@@ -104,8 +103,8 @@ const ErrorModal = ({}: IProps) => {
                   size={'sm'}
                   className={'cursor-pointer'}
                   onClick={() => {
-                      history!.push('/configuration');
-                    }}
+                    history!.push('/configuration');
+                  }}
                 >
                   {t('Configuration page')}
                 </Link>
@@ -117,14 +116,14 @@ const ErrorModal = ({}: IProps) => {
           key="4"
           title={(
             <span className={'font-bold'}>{t('Try other features')}</span>
-            )}
+          )}
         >
           <Link
             size={'sm'}
             className={'cursor-pointer'}
             onClick={() => {
-                history!.push('/');
-              }}
+              history!.push('/');
+            }}
           >
             {t('Return to homepage')}
           </Link>

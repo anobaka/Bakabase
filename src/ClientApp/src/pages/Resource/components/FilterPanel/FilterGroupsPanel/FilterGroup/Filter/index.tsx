@@ -32,12 +32,13 @@ export default ({
   const [filter, setFilter] = useState<ResourceSearchFilter>(propsFilter);
 
   useUpdateEffect(() => {
-    onChange?.(filter);
-  }, [filter]);
-
-  useUpdateEffect(() => {
     setFilter(propsFilter);
   }, [propsFilter]);
+
+  const changeFilter = (newFilter: ResourceSearchFilter) => {
+    setFilter(newFilter);
+    onChange?.(newFilter);
+  };
 
   log(propsFilter, filter);
 
@@ -118,14 +119,14 @@ export default ({
       filter.valueProperty = undefined;
       filter.dbValue = undefined;
       filter.bizValue = undefined;
-      setFilter({
+      changeFilter({
         ...filter,
       });
     } else {
       BApi.resource.getFilterValueProperty(filter).then(r => {
         const p = r.data;
         filter.valueProperty = p;
-        setFilter({
+        changeFilter({
           ...filter,
         });
       });
@@ -144,7 +145,7 @@ export default ({
         bizValue={filter.bizValue}
         dbValue={filter.dbValue}
         onValueChange={(dbValue, bizValue) => {
-          setFilter({
+          changeFilter({
             ...filter,
             dbValue: dbValue,
             bizValue: bizValue,
@@ -173,7 +174,7 @@ export default ({
               variant={'light'}
               isIconOnly
               onClick={() => {
-                setFilter({
+                changeFilter({
                   ...filter,
                   disabled: false,
                 });
@@ -195,7 +196,7 @@ export default ({
           isIconOnly
           className={'w-auto min-w-fit px-1'}
           onClick={() => {
-            setFilter({
+            changeFilter({
               ...filter,
               disabled: true,
             });

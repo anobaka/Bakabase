@@ -17,4 +17,5 @@ public interface IStandardValueHandler
     Type ExpectedType { get; }
     string? BuildDisplayValue(object? value);
     public List<string>? ExtractTextsForConvertingToDateTime(object optimizedValue) => null;
+    bool Compare(object? a, object? b);
 }

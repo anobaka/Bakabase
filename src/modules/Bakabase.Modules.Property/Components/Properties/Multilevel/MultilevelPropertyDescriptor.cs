@@ -54,6 +54,11 @@ public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<Multileve
             var options =
                 ((property.Options ??= new MultilevelPropertyOptions() {AllowAddingNewDataDynamically = true}) as
                     MultilevelPropertyOptions)!;
+            if (options.HasSingleValue)
+            {
+                bizValue = bizValue.Take(1).ToList();
+            }
+
             var propertyChanged = options.AddBranchOptions(bizValue);
 
             var branches = options.Data ?? [];

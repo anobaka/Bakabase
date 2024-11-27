@@ -67,5 +67,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
         public override List<TagValue>? ConvertToListTag(LinkValue optimizedValue) =>
             optimizedValue.Text.ConvertToListTag();
+
+        protected override bool CompareInternal(LinkValue? a, LinkValue? b) => LinkValue.TextUrlComparer.Equals(a, b);
     }
 }

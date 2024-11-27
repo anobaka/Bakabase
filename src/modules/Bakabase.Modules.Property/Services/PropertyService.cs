@@ -57,7 +57,8 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                         Value = l.Id.ToString()
                     }).ToList()
                 };
-            }).OfType<MultilevelDataOptions>().ToList()
+            }).OfType<MultilevelDataOptions>().ToList(),
+            HasSingleValue = true
         };
     }
 

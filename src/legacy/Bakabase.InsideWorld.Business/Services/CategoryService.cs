@@ -630,7 +630,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 //             }]
                 PageIndex = 0,
                 PageSize = maxCount
-            }, true);
+            });
 
             var resources = resourcesSearchResult.Data ?? [];
 

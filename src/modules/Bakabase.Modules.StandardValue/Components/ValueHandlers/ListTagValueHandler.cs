@@ -77,4 +77,6 @@ public class ListTagValueHandler : AbstractStandardValueHandler<List<TagValue>>
 
     protected override List<string>? ExtractTextsForConvertingToTime(List<TagValue> optimizedValue) =>
         optimizedValue.Select(t => t.Name).ToList();
+
+    protected override bool CompareInternal(List<TagValue> a, List<TagValue> b) => a.SequenceEqual(b, TagValue.GroupNameComparer);
 }
