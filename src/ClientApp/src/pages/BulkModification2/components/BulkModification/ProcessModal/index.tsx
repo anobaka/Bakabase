@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
-import TextProcessor from '../Processors/TextProcessor';
+import TextProcessor from '../Processes/TextProcess';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { Button, Card, Modal, Select } from '@/components/bakaui';
 import PropertySelector from '@/components/PropertySelector';

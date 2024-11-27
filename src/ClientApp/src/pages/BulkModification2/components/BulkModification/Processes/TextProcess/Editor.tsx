@@ -1,37 +1,34 @@
-'use strict';
 import { Trans, useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import type { TextProcessOptions } from './models';
+import {
+  type BulkModificationProcessorValueType,
+  PropertyType,
+  TextProcessingOperation,
+  textProcessingOperations,
+} from '@/sdk/constants';
+import {
+  ValueWithMultipleTypeEditor,
+} from '@/pages/BulkModification2/components/BulkModification/ValueWithMultipleType';
 import { Input, NumberInput, Select, Textarea } from '@/components/bakaui';
-import { buildLogger } from '@/components/utils';
 import DirectionSelector from '@/pages/BulkModification2/components/BulkModification/DirectionSelector';
-import type { BulkModificationProcessorValueType } from '@/sdk/constants';
-import { TextProcessingOperation, textProcessingOperations } from '@/sdk/constants';
+import type { IProperty } from '@/components/Property/models';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
-import ValueWithMultipleType from '@/pages/BulkModification2/components/BulkModification/ValueWithMultipleType';
+import { buildLogger } from '@/components/utils';
 
-type TextProcessorOptions = {
-  value?: string;
-  index?: number;
-  isOperationDirectionReversed?: boolean;
-  isPositioningDirectionReversed?: boolean;
-  count?: number;
-  find?: string;
-  replace?: string;
-  valueType?: BulkModificationProcessorValueType;
-};
 
 type Props = {
-  useTextarea?: boolean;
+  property: IProperty;
   operation?: TextProcessingOperation;
-  options?: TextProcessorOptions;
+  options?: TextProcessOptions;
   variables?: BulkModificationVariable[];
   availableValueTypes?: BulkModificationProcessorValueType[];
-  onChange?: (operation: TextProcessingOperation, options: TextProcessorOptions) => any;
+  onChange?: (operation: TextProcessingOperation, options: TextProcessOptions) => any;
 };
 
 const log = buildLogger('TextProcessor');
 
-const validate = (operation: TextProcessingOperation, options?: TextProcessorOptions): boolean => {
+const validate = (operation: TextProcessingOperation, options?: TextProcessOptions): boolean => {
   if (operation == TextProcessingOperation.Delete) {
     return true;
   }
@@ -71,8 +68,8 @@ const validate = (operation: TextProcessingOperation, options?: TextProcessorOpt
   }
 };
 
-const Options = ({
-                   useTextarea,
+export default ({
+                   property,
                    operation: propsOperation,
                    options: propsOptions,
                    onChange,
@@ -80,10 +77,12 @@ const Options = ({
                    availableValueTypes,
                  }: Props) => {
   const { t } = useTranslation();
-  const [options, setOptions] = useState<TextProcessorOptions>(propsOptions ?? {});
+  const [options, setOptions] = useState<TextProcessOptions>(propsOptions ?? {});
   const [operation, setOperation] = useState<TextProcessingOperation>(propsOperation ?? TextProcessingOperation.SetWithFixedValue);
 
-  const changeOptions = (patches: Partial<TextProcessorOptions>) => {
+  log('operation', operation, 'options', options);
+
+  const changeOptions = (patches: Partial<TextProcessOptions>) => {
     const newOptions = {
       ...options,
       ...patches,
@@ -106,8 +105,9 @@ const Options = ({
   };
 
   const renderValueCell = () => {
+    const useTextarea = property.type == PropertyType.MultilineText;
     return (
-      <ValueWithMultipleType
+      <ValueWithMultipleTypeEditor
         valueTypes={availableValueTypes}
         Component={({ onChange }) => (useTextarea ? (
           <Textarea
@@ -125,11 +125,23 @@ const Options = ({
           valueType,
         })}
         variables={variables}
-      />
+      >
+        {/* {useTextarea ? ( */}
+        {/*   <Textarea */}
+        {/*     value={options.value} */}
+        {/*     onValueChange={value => changeOptions({ value })} */}
+        {/*   /> */}
+        {/* ) : ( */}
+        {/*   <Input */}
+        {/*     value={options.value} */}
+        {/*     onValueChange={value => changeOptions({ value })} */}
+        {/*   /> */}
+        {/* )} */}
+      </ValueWithMultipleTypeEditor>
     );
   };
 
-  const renderSubOptions = (options: TextProcessorOptions) => {
+  const renderSubOptions = (options: TextProcessOptions) => {
     log('renderOptions', options);
 
     if (!operation) {
@@ -326,15 +338,3 @@ const Options = ({
     </div>
   );
 };
-
-const Demonstrator = ({
-                        operation,
-                        options,
-                      }: Props) => {
-
-};
-
-export default class TextProcessor {
-  static Options = Options;
-  static Demonstrator = Demonstrator;
-}

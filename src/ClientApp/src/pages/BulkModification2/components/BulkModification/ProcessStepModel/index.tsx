@@ -1,13 +1,14 @@
 'use strict';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import TextProcessor from '../Processors/TextProcessor';
+import { TextProcessEditor } from '../Processes/TextProcess';
 import { Modal } from '@/components/bakaui';
 import type { IProperty } from '@/components/Property/models';
 import type { BulkModificationProcessorValueType } from '@/sdk/constants';
 import { PropertyType } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
+import { buildLogger } from '@/components/utils';
 
 type Props = {
   property: IProperty;
@@ -18,11 +19,23 @@ type Props = {
   availableValueTypes?: BulkModificationProcessorValueType[];
 } & DestroyableProps;
 
-export default ({ property, operation: propsOperation, options: propsOptions, onDestroyed, onSubmit, variables, availableValueTypes }: Props) => {
+const log = buildLogger('ProcessStepModel');
+
+export default ({
+                  property,
+                  operation: propsOperation,
+                  options: propsOptions,
+                  onDestroyed,
+                  onSubmit,
+                  variables,
+                  availableValueTypes,
+                }: Props) => {
   const { t } = useTranslation();
 
   const [operation, setOperation] = useState<number | undefined>(propsOperation);
   const [options, setOptions] = useState<any>(propsOptions);
+
+  log('property', property, 'operation', operation, 'options', options);
 
   const renderOptions = () => {
     switch (property.type) {
@@ -31,10 +44,10 @@ export default ({ property, operation: propsOperation, options: propsOptions, on
       case PropertyType.Formula:
       case PropertyType.SingleChoice:
         return (
-          <TextProcessor.Options
+          <TextProcessEditor
             options={options}
             operation={operation}
-            useTextarea={(property.type == PropertyType.MultilineText || property.type == PropertyType.Formula)}
+            property={property}
             onChange={(operation, options) => {
               setOperation(operation);
               setOptions(options);
@@ -71,8 +84,15 @@ export default ({ property, operation: propsOperation, options: propsOptions, on
       defaultVisible
       size={'xl'}
       onDestroyed={onDestroyed}
+      footer={{
+        actions: ['ok', 'cancel'],
+        okProps: {
+          isDisabled: operation == undefined,
+        },
+      }}
       onOk={() => {
         if (operation != undefined) {
+          log('onSubmit', 'operation', operation, 'options', options);
           onSubmit?.(operation!, options);
         }
       }}
