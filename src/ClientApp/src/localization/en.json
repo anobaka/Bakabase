@@ -25,7 +25,7 @@
   "BulkModificationFilterOperation.NotIn": "Not In",
   "BulkModificationFilterOperation.Matches": "Matches",
   "BulkModificationFilterOperation.NotMatches": "Not Matches",
-  "BulkModification.Processor.Demonstrator.Operation.SetWithFixedValue": "<0> Replace </0> with fixed value",
+  "BulkModification.Processor.Demonstrator.Operation.SetDirectly": "<0> Change </0> to",
   "BulkModification.Processor.Demonstrator.Operation.SetWithDynamicValue": "<0> Replace </0> with dynamic value",
   "BulkModification.Processor.Demonstrator.Operation.Replace": "Find<1>{{find}}</1>then replace with<3>{{replace}}</3>",
   "BulkModification.Processor.Demonstrator.Operation.RemoveFromStartOrEnd": "Delete <1>{{count}}</1> character(s) from <3>{{direction}}</3>",

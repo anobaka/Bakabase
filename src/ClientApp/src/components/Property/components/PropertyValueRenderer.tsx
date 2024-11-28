@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React from 'react';
 import type { IProperty } from '@/components/Property/models';
-import { PropertyType, ResourceProperty, PropertyPool, StandardValueType } from '@/sdk/constants';
+import { PropertyType, StandardValueType } from '@/sdk/constants';
 import {
   AttachmentValueRenderer,
   BooleanValueRenderer,
@@ -16,8 +16,11 @@ import {
   TagsValueRenderer,
   TimeValueRenderer,
 } from '@/components/StandardValue';
-import type { MultilevelData } from '@/components/StandardValue/models';
-import { deserializeStandardValue, serializeStandardValue } from '@/components/StandardValue/helpers';
+import {
+  deserializeStandardValue,
+  findNodeChainInMultilevelData,
+  serializeStandardValue,
+} from '@/components/StandardValue/helpers';
 import { buildLogger } from '@/components/utils';
 
 
@@ -53,9 +56,9 @@ export default (props: Props) => {
     defaultEditing,
   } = props;
   const { t } = useTranslation();
-  // log(props);
+  log(props);
 
-  const bv = deserializeStandardValue(bizValue ?? null, property.bizValueType);
+  let bv = deserializeStandardValue(bizValue ?? null, property.bizValueType);
   const dv = deserializeStandardValue(dbValue ?? null, property.dbValueType);
 
   const simpleOnValueChange: ((dbValue?: any, bizValue?: any) => any) | undefined = onValueChange
@@ -75,6 +78,7 @@ export default (props: Props) => {
 
   switch (property.type!) {
     case PropertyType.SingleLineText: {
+      bv ??= dv;
       return (
         <StringValueRenderer
           value={bv}
@@ -85,6 +89,7 @@ export default (props: Props) => {
       );
     }
     case PropertyType.MultilineText: {
+      bv ??= dv;
       return (
         <StringValueRenderer
           value={bv}
@@ -108,7 +113,9 @@ export default (props: Props) => {
         onValueChange: oc,
       } : undefined;
 
-      console.log(editor, property);
+      // console.log(editor, property);
+
+      bv ??= (property.options?.choices ?? []).find(x => x.value == dv)?.label;
 
       return (
         <ChoiceValueRenderer
@@ -123,6 +130,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.MultipleChoice: {
+      bv ??= (property.options?.choices ?? []).filter(x => dv?.includes(x.value)).map(x => x.label);
+
       return (
         <ChoiceValueRenderer
           value={bv}
@@ -137,6 +146,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Number: {
+      bv ??= dv;
+
       return (
         <NumberValueRenderer
           value={bv}
@@ -148,6 +159,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Percentage: {
+      bv ??= dv;
+
       return (
         <NumberValueRenderer
           value={bv}
@@ -160,6 +173,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Rating: {
+      bv ??= dv;
+
       return (
         <RatingValueRenderer
           value={bv}
@@ -170,6 +185,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Boolean: {
+      bv ??= dv;
+
       return (
         <BooleanValueRenderer
           value={bv}
@@ -180,6 +197,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Link: {
+      bv ??= dv;
+
       return (
         <LinkValueRenderer
           value={bv}
@@ -190,6 +209,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Attachment: {
+      bv ??= dv;
+
       return (
         <AttachmentValueRenderer
           value={bv}
@@ -201,6 +222,8 @@ export default (props: Props) => {
     }
     case PropertyType.Date:
     case PropertyType.DateTime: {
+      bv ??= dv;
+
       return (
         <DateTimeValueRenderer
           value={bv}
@@ -212,6 +235,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Time: {
+      bv ??= dv;
+
       return (
         <TimeValueRenderer
           value={bv}
@@ -222,6 +247,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Formula: {
+      bv ??= dv;
+
       return (
         <FormulaValueRenderer
           value={bv}
@@ -232,6 +259,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Multilevel: {
+      bv ??= dv?.map(v => findNodeChainInMultilevelData(property?.options?.data || [], v));
+
       return (
         <MultilevelValueRenderer
           value={bv}
@@ -246,6 +275,10 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Tags: {
+      bv ??= (property.options?.tags || []).filter(x => dv?.includes(x.value)).map(x => ({
+        group: x.group,
+        name: x.name,
+      }));
       return (
         <TagsValueRenderer
           value={bv}

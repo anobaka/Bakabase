@@ -1,7 +1,7 @@
 'use strict';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
-import { TextProcessDemonstrator } from '../Processes/TextProcess';
+import { TextProcessDemonstrator } from '../Processes/TextValueProcess';
 import { Chip } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IProperty } from '@/components/Property/models';
@@ -10,14 +10,16 @@ import type {
   BulkModificationVariable,
 } from '@/pages/BulkModification2/components/BulkModification/models';
 import ProcessStepModel from '@/pages/BulkModification2/components/BulkModification/ProcessStepModel';
-import { PropertyType } from '@/sdk/constants';
+import { type BulkModificationProcessorValueType, PropertyType } from '@/sdk/constants';
 
 type Props = {
-  no: number;
+  no: string;
   step: BulkModificationProcessStep;
   property: IProperty;
   onChange?: (step: BulkModificationProcessStep) => any;
   variables?: BulkModificationVariable[];
+  availableValueTypes?: BulkModificationProcessorValueType[];
+  editable?: boolean;
 };
 
 export default ({
@@ -26,6 +28,8 @@ export default ({
                   property,
                   onChange,
                   variables,
+                  editable,
+                  availableValueTypes,
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -71,11 +75,12 @@ export default ({
 
   return (
     <div
-      className={'flex items-center flex-wrap gap-1 cursor-pointer'}
-      onClick={() => {
+      className={`flex items-center flex-wrap gap-1 ${editable ? 'cursor-pointer hover:bg-[var(--bakaui-overlap-background)] rounded' : ''}`}
+      onClick={editable ? () => {
         createPortal(
           ProcessStepModel, {
             property: property,
+            availableValueTypes,
             onSubmit: (operation, options) => {
               const newStep = {
                 ...step,
@@ -86,68 +91,17 @@ export default ({
               onChange?.(newStep);
             },
             variables: variables,
+            operation: step.operation,
+            options: step.options,
           },
         );
-      }}
+      } : undefined}
     >
+      <Chip
+        size={'sm'}
+        radius={'sm'}
+      >{no}</Chip>
       {renderDemonstrator()}
-      {/* <Chip */}
-      {/*   size={'sm'} */}
-      {/*   radius={'sm'} */}
-      {/* >{no}</Chip> */}
-      {/* 针对 */}
-      {/* <Chip */}
-      {/*   size={'sm'} */}
-      {/*   radius={'sm'} */}
-      {/*   variant={'light'} */}
-      {/*   color={'primary'} */}
-      {/* > */}
-      {/*   全部 */}
-      {/* </Chip> */}
-      {/* 数据，从 */}
-      {/* <Chip */}
-      {/*   size={'sm'} */}
-      {/*   radius={'sm'} */}
-      {/*   variant={'light'} */}
-      {/*   color={'primary'} */}
-      {/* > */}
-      {/*   全部 */}
-      {/* </Chip> */}
-      {/* 第 */}
-      {/* <Chip */}
-      {/*   size={'sm'} */}
-      {/*   radius={'sm'} */}
-      {/*   variant={'light'} */}
-      {/*   color={'primary'} */}
-      {/* > */}
-      {/*   全部 */}
-      {/* </Chip> */}
-      {/* 个字符 */}
-      {/* <Chip */}
-      {/*   size={'sm'} */}
-      {/*   radius={'sm'} */}
-      {/*   variant={'light'} */}
-      {/*   color={'primary'} */}
-      {/* > */}
-      {/*   向后 */}
-      {/* </Chip> */}
-      {/* <Chip */}
-      {/*   size={'sm'} */}
-      {/*   radius={'sm'} */}
-      {/*   variant={'light'} */}
-      {/*   color={'primary'} */}
-      {/* > */}
-      {/*   移除 */}
-      {/* </Chip> */}
-      {/* <Chip */}
-      {/*   size={'sm'} */}
-      {/*   radius={'sm'} */}
-      {/*   variant={'light'} */}
-      {/*   color={'primary'} */}
-      {/* > */}
-      {/*   5 */}
-      {/* </Chip> */}
-      {/* 个字符 */}
     </div>
   );
 };

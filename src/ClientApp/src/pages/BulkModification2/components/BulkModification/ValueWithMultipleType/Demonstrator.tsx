@@ -1,3 +1,4 @@
+'use strict';
 import { useTranslation } from 'react-i18next';
 import React from 'react';
 import { BulkModificationProcessorValueType } from '@/sdk/constants';
@@ -10,22 +11,20 @@ type Props = {
   variables?: BulkModificationVariable[];
   valueType?: BulkModificationProcessorValueType;
   value?: string;
-  convertToBizValue?: (value?: string) => string | undefined;
   property: IProperty;
 };
 
 export default ({
-                  valueType = BulkModificationProcessorValueType.BizValue,
+                  valueType = BulkModificationProcessorValueType.Static,
                   variables,
                   value,
                   property,
-                  convertToBizValue,
                 }: Props) => {
   const { t } = useTranslation();
 
   const renderValue = () => {
     switch (valueType!) {
-      case BulkModificationProcessorValueType.BizValue:
+      case BulkModificationProcessorValueType.Static:
         return (
           <PropertyValueRenderer
             bizValue={value}
@@ -33,15 +32,15 @@ export default ({
             variant={'light'}
           />
         );
-      case BulkModificationProcessorValueType.DbValue:
+      case BulkModificationProcessorValueType.Dynamic:
         return (
           <PropertyValueRenderer
-            bizValue={convertToBizValue ? convertToBizValue?.(value) : value}
+            dbValue={value}
             property={property}
             variant={'light'}
           />
         );
-      case BulkModificationProcessorValueType.VariableKey:
+      case BulkModificationProcessorValueType.Variable:
         return (
           <Chip
             size={'sm'}
@@ -59,6 +58,7 @@ export default ({
         size={'sm'}
         radius={'sm'}
         color={'secondary'}
+        variant={'flat'}
       >
         {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[valueType]}`)}
       </Chip>

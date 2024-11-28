@@ -38,6 +38,7 @@ export default ({
 
   return (
     <Select
+      aria-label={'Select'}
       items={dataSource ?? []}
       isMultiline={isMultiline}
       renderValue={renderValue}
@@ -49,6 +50,7 @@ export default ({
             key={data.value}
             value={data.value}
             textValue={data.textValue ?? data.label?.toString()}
+            aria-label={data.label?.toString()}
           >
             {data.label}
           </SelectItem>

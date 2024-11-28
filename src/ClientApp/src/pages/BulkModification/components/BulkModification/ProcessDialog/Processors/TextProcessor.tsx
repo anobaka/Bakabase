@@ -305,7 +305,7 @@ const Demonstrator = ({ value }: { value: ITextProcessorValue }) => {
       return (
         <>
           <Trans
-            i18nKey={'BulkModification.Processor.Demonstrator.Operation.SetWithFixedValue'}
+            i18nKey={'BulkModification.Processor.Demonstrator.Operation.SetDirectly'}
           >
             <div className="primary" />
             with fixed value

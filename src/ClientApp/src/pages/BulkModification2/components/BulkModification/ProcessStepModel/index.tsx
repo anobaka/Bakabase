@@ -1,10 +1,10 @@
 'use strict';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TextProcessEditor } from '../Processes/TextProcess';
+import { TextProcessEditor } from '../Processes/TextValueProcess';
 import { Modal } from '@/components/bakaui';
 import type { IProperty } from '@/components/Property/models';
-import type { BulkModificationProcessorValueType } from '@/sdk/constants';
+import { BulkModificationProcessorValueType } from '@/sdk/constants';
 import { PropertyType } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
@@ -28,7 +28,7 @@ export default ({
                   onDestroyed,
                   onSubmit,
                   variables,
-                  availableValueTypes,
+                  availableValueTypes = [BulkModificationProcessorValueType.Static],
                 }: Props) => {
   const { t } = useTranslation();
 

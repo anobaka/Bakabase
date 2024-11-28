@@ -8,21 +8,6 @@ import type { BulkModification as BulkModificationModel } from '@/pages/BulkModi
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
-const testData: BulkModificationModel[] = [
-  {
-    id: 1,
-    name: 'asddasdasdsa',
-    isActive: true,
-    createdAt: '2024-11-11',
-  },
-  {
-    id: 2,
-    name: 'asddasdasdsa',
-    isActive: false,
-    createdAt: '2024-11-11',
-  },
-];
-
 export default () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -112,8 +97,13 @@ export default () => {
                       >
                         <Button
                           size={'sm'}
-                          color={bm.isActive ? 'success' : 'default'}
+                          color={bm.isActive ? 'success' : 'warning'}
                           variant={'light'}
+                          onClick={() => {
+                            BApi.bulkModification.patchBulkModification(bm.id, { isActive: !bm.isActive }).then(r => {
+                              loadAllBulkModifications();
+                            });
+                          }}
                         >
                           {t(bm.isActive ? 'Enabled' : 'Disabled')}
                         </Button>

@@ -1,14 +1,15 @@
-import type { CSSProperties } from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import Variables from './Variables';
 import Processes from './Processes';
-import { Button, Divider, Tab, Tabs } from '@/components/bakaui';
+import { Button, Chip, Divider } from '@/components/bakaui';
 import FilterGroupsPanel from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel';
 import type { ResourceSearchFilterGroup } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
-import type { IBulkModificationProcess } from '@/pages/BulkModification/components/BulkModification';
 import FilteredResourcesDialog from '@/pages/BulkModification/components/BulkModification/FilteredResourcesDialog';
-import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
+import type {
+  BulkModificationProcess,
+  BulkModificationVariable,
+} from '@/pages/BulkModification2/components/BulkModification/models';
 import BApi from '@/sdk/BApi';
 
 export type BulkModification = {
@@ -18,7 +19,7 @@ export type BulkModification = {
   createdAt: string;
   variables?: BulkModificationVariable[];
   filter?: ResourceSearchFilterGroup;
-  processes?: IBulkModificationProcess[];
+  processes?: BulkModificationProcess[];
   filteredResourceIds?: number[];
 };
 
@@ -35,7 +36,6 @@ export default ({
                   onChange,
                 }: Props) => {
   const { t } = useTranslation();
-  const [selectedTab, setSelectedTab] = useState<BlockKey>();
 
   const reload = useCallback(async () => {
     const r = await BApi.bulkModification.getBulkModification(bm.id);
@@ -44,19 +44,6 @@ export default ({
 
   return (
     <div className={'flex items-start gap-2'}>
-      <Tabs
-        selectedKey={selectedTab}
-        isVertical
-        onSelectionChange={key => {
-          setSelectedTab(key as BlockKey);
-        }}
-      >
-        {Blocks.map(b => {
-          return (
-            <Tab key={b} title={t(b)} />
-          );
-        })}
-      </Tabs>
       <div className={'flex flex-col gap-2 grow'}>
         {Blocks.map((bk, i) => {
           let blockInner: any;
@@ -129,25 +116,67 @@ export default ({
               break;
             case 'Processes':
               blockInner = (
-                <Processes />
+                <Processes
+                  variables={bm.variables}
+                  processes={bm.processes}
+                  onChange={ps => {
+                    bm.processes = ps;
+                    BApi.bulkModification.patchBulkModification(bm.id, {
+                      processes: ps.map(v => ({
+                        ...v,
+                        steps: JSON.stringify(v.steps),
+                      })),
+                    }).then(r => {
+                      reload();
+                    });
+                  }}
+                />
               );
               break;
             case 'Result':
+              blockInner = (
+                <div className={'flex items-center gap-1'}>
+                  <Button
+                    size={'sm'}
+                    variant={'bordered'}
+                    color={'primary'}
+                  >
+                    {t('Calculate diffs')}
+                  </Button>
+                  {bm.filteredResourceIds && (
+                    <Button
+                      size={'sm'}
+                      variant={'light'}
+                      color={'primary'}
+                    >
+                      {t('Check diffs')}
+                    </Button>
+                  )}
+                  <Button
+                    size={'sm'}
+                    color={'primary'}
+                  >
+                    {t('Apply diffs')}
+                  </Button>
+                  <Button
+                    size={'sm'}
+                    color={'warning'}
+                    variant={'bordered'}
+                  >
+                    {t('Revert diffs')}
+                  </Button>
+                </div>
+              );
               break;
-          }
-          const style: CSSProperties = {};
-          if (bk == selectedTab) {
-            style.backgroundColor = 'var(--bakaui-overlap-background)';
           }
           return (
             <>
-              <div
-                style={style}
-                onClick={() => {
-                  setSelectedTab(bk);
-                }}
-              >
-                {/* <div>{t(bk)}</div> */}
+              <div className={'flex items-start gap-4'}>
+                <div className={'w-[80px] text-right'}>
+                  <Chip
+                    radius={'sm'}
+                  >{t(bk)}</Chip>
+                </div>
                 {blockInner}
               </div>
               {i != Blocks.length - 1 && <Divider orientation={'horizontal'} />}

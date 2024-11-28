@@ -34,11 +34,11 @@ namespace Bakabase.Modules.BulkModification.Components.Processors
             {
                 switch (ValueType.Value)
                 {
-                    case BulkModificationProcessorValueType.BizValue:
-                    case BulkModificationProcessorValueType.DbValue:
+                    case BulkModificationProcessorValueType.Static:
+                    case BulkModificationProcessorValueType.Dynamic:
                         options.Value = options.Value?.DeserializeAsStandardValue(StandardValueType.String) as string;
                         break;
-                    case BulkModificationProcessorValueType.VariableKey:
+                    case BulkModificationProcessorValueType.Variable:
                         if (variableMap?.TryGetValue(Value, out var tv) == true)
                         {
                             var stdHandler = tv.Type.GetHandler();

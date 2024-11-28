@@ -1,63 +1,104 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
-import React from 'react';
-import ProcessDemonstrator from '../ProcessDemonstrator';
-import { Button, Divider } from '@/components/bakaui';
-import { InternalProperty, PropertyPool, PropertyValueScope, ReservedProperty } from '@/sdk/constants';
+import React, { useEffect, useState } from 'react';
+import { Button, Chip, Divider } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import ProcessModal from '@/pages/BulkModification2/components/BulkModification/ProcessModal';
-import type { BulkModificationProcess } from '@/pages/BulkModification2/components/BulkModification/models';
-
-const testProcesses: BulkModificationProcess[] = [
-  {
-    propertyPool: PropertyPool.Internal,
-    propertyId: InternalProperty.Category,
-  },
-  {
-    propertyPool: PropertyPool.Reserved,
-    propertyId: ReservedProperty.Rating,
-  },
-  {
-    propertyPool: PropertyPool.Custom,
-    propertyId: 4,
-  },
-];
+import type {
+  BulkModificationProcess,
+  BulkModificationVariable,
+} from '@/pages/BulkModification2/components/BulkModification/models';
+import ProcessStep from '@/pages/BulkModification2/components/BulkModification/ProcessStep';
+import { PropertyPool } from '@/sdk/constants';
 
 type Props = {
   processes?: BulkModificationProcess[];
-  multipleValueType?: boolean;
-  fixProperty?: boolean;
+  variables?: BulkModificationVariable[];
+  onChange?: (processes: BulkModificationProcess[]) => void;
 };
 
-export default ({ processes: propsProcesses, fixProperty, multipleValueType }: Props) => {
+export default ({
+                  processes: propsProcesses,
+                  onChange,
+                  variables,
+                }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const [processes, setProcesses] = useState<BulkModificationProcess[]>(propsProcesses || testProcesses);
+  const [processes, setProcesses] = useState<BulkModificationProcess[]>(propsProcesses ?? []);
 
   useEffect(() => {
   }, []);
 
   return (
-    <div className={'p-1'}>
-      <div className={'flex flex-col gap-1'}>
-        {processes.map((process, i) => {
-          return (
-            <React.Fragment key={i}>
-              <ProcessDemonstrator
-                process={process}
-              />
-              { i != processes.length - 1 && (
-                <div className={'px-2'}>
-                  <Divider
-                    orientation={'horizontal'}
-                  />
+    <div className={'grow'}>
+      {processes.length > 0 && (
+        <div className={'flex flex-col gap-1 mb-2'}>
+          {processes.map((process, i) => {
+            return (
+              <React.Fragment key={i}>
+                <div
+                  className={'flex gap-1 cursor-pointer hover:bg-[var(--bakaui-overlap-background)] rounded'}
+                  onClick={() => {
+                    createPortal(ProcessModal, {
+                      process: process,
+                      variables: variables,
+                      onSubmit: (p) => {
+                        processes[i] = p;
+                        const nps = [...processes];
+                        setProcesses(nps);
+                        onChange?.(nps);
+                      },
+                    });
+                  }}
+                >
+                  <div className={'flex items-center gap-1'}>
+                    <Chip
+                      size={'sm'}
+                      radius={'sm'}
+                    >{i + 1}</Chip>
+                    <div>
+                      <Chip
+                        size={'sm'}
+                        radius={'sm'}
+                        variant={'flat'}
+                        color={'secondary'}
+                      >{process.property?.poolName}</Chip>
+                      <Chip
+                        size={'sm'}
+                        radius={'sm'}
+                        variant={'light'}
+                        color={'primary'}
+                      >
+                        {process.property?.name}
+                      </Chip>
+                    </div>
+                  </div>
+                  <div className={'pl-2 flex flex-col gap-1'}>
+                    {process.steps?.map((step, j) => {
+                      return (
+                        <ProcessStep
+                          step={step}
+                          editable={false}
+                          property={process.property}
+                          variables={variables}
+                          no={`${i + 1}.${j + 1}`}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
+                {i != processes.length - 1 && (
+                  <div className={'px-2'}>
+                    <Divider
+                      orientation={'horizontal'}
+                    />
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      )}
       <div>
         <Button
           size={'sm'}
@@ -65,7 +106,12 @@ export default ({ processes: propsProcesses, fixProperty, multipleValueType }: P
           variant={'ghost'}
           onClick={() => {
             createPortal(ProcessModal, {
-              fixProperty,
+              variables: variables,
+              onSubmit: (p) => {
+                const nps = [...processes, p];
+                setProcesses(nps);
+                onChange?.(nps);
+              },
             });
           }}
         >

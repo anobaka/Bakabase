@@ -7,10 +7,9 @@ import { BulkModificationProcessorValueType } from '@/sdk/constants';
 import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Select } from '@/components/bakaui';
 import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
 import type { IProperty } from '@/components/Property/models';
+import { buildLogger } from '@/components/utils';
 
 type Props = {
-  Component: React.FC<{ onChange: (bv: string, dv: string) => any }>;
-  // children?: any;
   onChange?: (valueType: BulkModificationProcessorValueType, value?: string) => any;
   variables?: BulkModificationVariable[];
   valueTypes?: BulkModificationProcessorValueType[];
@@ -18,31 +17,34 @@ type Props = {
   value?: string;
 };
 
-export default ({
-                  // children,
-  Component,
-                  onChange,
-                  valueTypes = [BulkModificationProcessorValueType.BizValue],
-                  variables,
-                  property,
-                  value: propsValue,
-                }: Props) => {
+const log = buildLogger('ValueWithMultipleTypeEditor');
+
+export default (props: Props) => {
+  const {
+    onChange,
+    valueTypes = [BulkModificationProcessorValueType.Static],
+    variables,
+    property,
+    value: propsValue,
+  } = props;
   const { t } = useTranslation();
-  const [valueType, setValueType] = useState<BulkModificationProcessorValueType>(BulkModificationProcessorValueType.BizValue);
+  const [valueType, setValueType] = useState<BulkModificationProcessorValueType>(BulkModificationProcessorValueType.Static);
   const [value, setValue] = useState<string | undefined>(propsValue);
+
+  log(props, valueType, value);
 
   const renderEditor = () => {
     switch (valueType) {
-      case BulkModificationProcessorValueType.BizValue:
-        // return children;
-        // return (
-        //   <Component onChange={(bv, dv) => {
-        //     setValue(bv);
-        //     onChange?.(valueType, bv);
-        //   }
-        //   />
-        // );
-      case BulkModificationProcessorValueType.DbValue:
+      case BulkModificationProcessorValueType.Static:
+        return (
+          <PropertyValueRenderer
+            property={property}
+            bizValue={value}
+            variant={'light'}
+            onValueChange={(dbValue, bizValue) => { onChange?.(valueType, bizValue); }}
+          />
+        );
+      case BulkModificationProcessorValueType.Dynamic:
         return (
           <PropertyValueRenderer
             property={property}
@@ -51,35 +53,31 @@ export default ({
             onValueChange={(dbValue, bizValue) => { onChange?.(valueType, dbValue); }}
           />
         );
-        // return children;
-        // return (
-        //   <Component onChange={(bv, dv) => {
-        //     setValue(dv);
-        //     onChange?.(valueType, dv);
-        //   }}
-        //   />
-        // );
-      case BulkModificationProcessorValueType.VariableKey:
-        return (
-          <Select
-            dataSource={variables?.map(v => ({
-              label: v.name,
-              value: v.key,
-            }))}
-            value={value}
-            onSelectionChange={keys => {
-              const key = Array.from(keys)[0] as string;
-              setValue(key);
-              onChange?.(valueType, key);
-            }}
-            multiple={false}
-          />
-        );
+      case BulkModificationProcessorValueType.Variable:
+        if (variables && variables.length > 0) {
+          return (
+            <Select
+              size={'sm'}
+              dataSource={variables?.map(v => ({
+                label: v.name,
+                value: v.key,
+              }))}
+              selectedKeys={value ? new Set([value]) : new Set()}
+              onSelectionChange={keys => {
+                const key = Array.from(keys)[0] as string;
+                setValue(key);
+                onChange?.(valueType, key);
+              }}
+              multiple={false}
+            />
+          );
+        }
+        return t('No variables available');
     }
   };
 
   return (
-    <div>
+    <div className={'flex items-center gap-1'}>
       {valueTypes.length > 1 && (
         <Dropdown>
           <DropdownTrigger>
@@ -94,7 +92,7 @@ export default ({
             selectionMode={'single'}
             aria-label="Static Actions"
             onSelectionChange={keys => {
-              const vt = Array.from(keys)[0] as number;
+              const vt = parseInt(Array.from(keys)[0] as string, 10) as BulkModificationProcessorValueType;
               setValue(undefined);
               setValueType(vt);
 

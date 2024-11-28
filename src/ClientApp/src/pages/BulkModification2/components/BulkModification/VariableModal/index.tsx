@@ -147,26 +147,32 @@ export default ({
           </div>
         </CardHeader>
         <CardBody>
-          {(variable?.preprocesses && variable.preprocesses.length > 0) ? (
-            <div className={'flex flex-col gap-1'}>
+          {(variable?.preprocesses && variable.preprocesses.length > 0) && (
+            <div className={'flex flex-col gap-1 mb-2'}>
               {variable.preprocesses.map((step, i) => {
                 return (
                   <ProcessStep
                     no={i + 1}
                     step={step}
                     property={variable.property!}
+                    onChange={(newStep) => {
+                      variable.preprocesses![i] = newStep;
+                      setVariable({
+                        ...variable,
+                      });
+                    }}
                   />
                 );
               })}
             </div>
-          ) : (
-            <div>
-              <Button
-                size={'sm'}
-                isDisabled={!variable?.property}
-                color={'secondary'}
-                variant={'ghost'}
-                onClick={() => {
+          )}
+          <div>
+            <Button
+              size={'sm'}
+              isDisabled={!variable?.property}
+              color={'secondary'}
+              variant={'ghost'}
+              onClick={() => {
                   if (variable?.property) {
                     createPortal(
                       ProcessStepModel, {
@@ -187,11 +193,10 @@ export default ({
                     );
                   }
                 }}
-              >
-                {t('Add a preprocess')}
-              </Button>
-            </div>
-          )}
+            >
+              {t('Add a preprocess')}
+            </Button>
+          </div>
         </CardBody>
       </Card>
     </Modal>

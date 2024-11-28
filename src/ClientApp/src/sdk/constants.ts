@@ -62,7 +62,7 @@ export enum TextProcessingOperation {Delete = 1, SetWithFixedValue = 2, AddToSta
 export const textProcessingOperations = Object.keys(TextProcessingOperation).filter(k => typeof TextProcessingOperation[k] === 'number').map(t => ({label: t, value: TextProcessingOperation[t]}));
 export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
 export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
-export enum BulkModificationProcessorValueType {BizValue = 1, DbValue = 2, VariableKey = 3}
+export enum BulkModificationProcessorValueType {Static = 1, Dynamic = 2, Variable = 3}
 export const bulkModificationProcessorValueTypes = Object.keys(BulkModificationProcessorValueType).filter(k => typeof BulkModificationProcessorValueType[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorValueType[t]}));
 export enum CoverDiscoverResultType {LocalFile = 1, FromAdditionalSource = 2, Icon = 3}
 export const coverDiscoverResultTypes = Object.keys(CoverDiscoverResultType).filter(k => typeof CoverDiscoverResultType[k] === 'number').map(t => ({label: t, value: CoverDiscoverResultType[t]}));

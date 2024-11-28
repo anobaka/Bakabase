@@ -3,14 +3,13 @@ import React, { useState } from 'react';
 import type { TextProcessOptions } from './models';
 import {
   type BulkModificationProcessorValueType,
-  PropertyType,
   TextProcessingOperation,
   textProcessingOperations,
 } from '@/sdk/constants';
 import {
   ValueWithMultipleTypeEditor,
 } from '@/pages/BulkModification2/components/BulkModification/ValueWithMultipleType';
-import { Input, NumberInput, Select, Textarea } from '@/components/bakaui';
+import { Input, NumberInput, Select } from '@/components/bakaui';
 import DirectionSelector from '@/pages/BulkModification2/components/BulkModification/DirectionSelector';
 import type { IProperty } from '@/components/Property/models';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
@@ -26,7 +25,7 @@ type Props = {
   onChange?: (operation: TextProcessingOperation, options: TextProcessOptions) => any;
 };
 
-const log = buildLogger('TextProcessor');
+const log = buildLogger('TextProcessorEditor');
 
 const validate = (operation: TextProcessingOperation, options?: TextProcessOptions): boolean => {
   if (operation == TextProcessingOperation.Delete) {
@@ -69,18 +68,18 @@ const validate = (operation: TextProcessingOperation, options?: TextProcessOptio
 };
 
 export default ({
-                   property,
-                   operation: propsOperation,
-                   options: propsOptions,
-                   onChange,
-                   variables,
-                   availableValueTypes,
-                 }: Props) => {
+                  property,
+                  operation: propsOperation,
+                  options: propsOptions,
+                  onChange,
+                  variables,
+                  availableValueTypes,
+                }: Props) => {
   const { t } = useTranslation();
   const [options, setOptions] = useState<TextProcessOptions>(propsOptions ?? {});
   const [operation, setOperation] = useState<TextProcessingOperation>(propsOperation ?? TextProcessingOperation.SetWithFixedValue);
 
-  log('operation', operation, 'options', options);
+  log('operation', operation, 'options', options, typeof operation);
 
   const changeOptions = (patches: Partial<TextProcessOptions>) => {
     const newOptions = {
@@ -104,45 +103,23 @@ export default ({
     }
   };
 
-  const renderValueCell = () => {
-    const useTextarea = property.type == PropertyType.MultilineText;
+  const renderValueCell = (field: string = 'value') => {
     return (
       <ValueWithMultipleTypeEditor
         valueTypes={availableValueTypes}
-        Component={({ onChange }) => (useTextarea ? (
-          <Textarea
-            value={options.value}
-            onValueChange={value => onChange(value, value)}
-          />
-        ) : (
-          <Input
-            value={options.value}
-            onValueChange={value => onChange(value, value)}
-          />
-        ))}
+        value={options[field]}
         onChange={(valueType, value) => changeOptions({
-          value,
+          [field]: value,
           valueType,
         })}
         variables={variables}
-      >
-        {/* {useTextarea ? ( */}
-        {/*   <Textarea */}
-        {/*     value={options.value} */}
-        {/*     onValueChange={value => changeOptions({ value })} */}
-        {/*   /> */}
-        {/* ) : ( */}
-        {/*   <Input */}
-        {/*     value={options.value} */}
-        {/*     onValueChange={value => changeOptions({ value })} */}
-        {/*   /> */}
-        {/* )} */}
-      </ValueWithMultipleTypeEditor>
+        property={property}
+      />
     );
   };
 
   const renderSubOptions = (options: TextProcessOptions) => {
-    log('renderOptions', options);
+    log('renderOptions', operation, options);
 
     if (!operation) {
       return null;
@@ -161,12 +138,7 @@ export default ({
       case TextProcessingOperation.AddToEnd:
         components.push({
           label: t('Value'),
-          comp: (
-            <Input
-              value={options.value}
-              onValueChange={value => changeOptions({ value })}
-            />
-          ),
+          comp: renderValueCell(),
         });
         break;
       case TextProcessingOperation.AddToAnyPosition:
@@ -183,12 +155,7 @@ export default ({
                 {/* 0 */}
                 Add&nbsp;
                 {/* 1 */}
-                <Input
-                  className={'grow'}
-                  // className={'w-auto'}
-                  value={options.value}
-                  onValueChange={value => changeOptions({ value })}
-                />
+                {renderValueCell()}
                 {/* 2 */}
                 &nbsp;to the&nbsp;
                 {/* 3 */}
@@ -299,10 +266,7 @@ export default ({
                 {/* 2 */}
                 &nbsp;with&nbsp;
                 {/* 3 */}
-                <Input
-                  onValueChange={replace => changeOptions({ replace })}
-                  value={options.replace}
-                />
+                {renderValueCell('replace')}
               </Trans>
             </div>
           ),
@@ -330,6 +294,7 @@ export default ({
           value: tpo.value,
         }))}
         selectionMode={'single'}
+        selectedKeys={operation == undefined ? undefined : [operation.toString()]}
         onSelectionChange={keys => {
           changeOperation(parseInt(Array.from(keys || [])[0] as string, 10) as TextProcessingOperation);
         }}

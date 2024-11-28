@@ -988,7 +988,7 @@
   "ReplaceFromEnd": "从末尾替换",
   "ReplaceFromAnyPosition": "从任意位置替换",
   "ReplaceWithRegex": "正则替换",
-  "BulkModification.Processor.Demonstrator.Operation.SetWithFixedValue": "<0> 替换 </0> 为固定值",
+  "BulkModification.Processor.Demonstrator.Operation.SetDirectly": "<0> 变更 </0> 为",
   "BulkModification.Processor.Demonstrator.Operation.SetWithDynamicValue": "<0> 替换 </0> 为动态值",
   "SetWithFixedValue": "设置为固定值",
   "SetWithDynamicValue": "设置为动态值",
@@ -1496,5 +1496,8 @@
   "Please note that if you modify the path of the resource, the new path will be considered as a new resource, at meantime the old resource data will be deleted.": "请注意，如果您修改了资源的路径，那么它将会被视作一个新的资源，同时老的资源数据将会被删除。",
   "All eligible files or folders under the specified root directory will be saved to the media library.": "所有指定根目录下符合条件的文件或文件夹将会被保存至媒体库中。",
   "Add a bulk modification": "添加一个批量修改批次",
-  "{{count}} resources related": "{{count}}个相关资源"
+  "{{count}} resources related": "{{count}}个相关资源",
+  "BulkModificationProcessorValueType.Static": "固定值",
+  "BulkModificationProcessorValueType.Dynamic": "动态值",
+  "BulkModificationProcessorValueType.Variable": "变量"
 }
