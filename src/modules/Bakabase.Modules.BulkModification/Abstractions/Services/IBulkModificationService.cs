@@ -1,4 +1,5 @@
 ﻿using Bakabase.Modules.BulkModification.Abstractions.Models;
+using Bakabase.Modules.BulkModification.Models.Input;
 using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Modules.BulkModification.Abstractions.Services;
@@ -18,4 +19,6 @@ public interface IBulkModificationService
     Task Preview(int id);
     Task Apply(int id);
     Task Revert(int id);
+
+    Task<SearchResponse<BulkModificationDiff>> SearchDiffs(int bmId, BulkModificationResourceDiffsSearchInputModel model);
 }

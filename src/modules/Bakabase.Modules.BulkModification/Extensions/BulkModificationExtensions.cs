@@ -23,13 +23,17 @@ namespace Bakabase.Modules.BulkModification.Extensions;
 
 public static class BulkModificationExtensions
 {
-    public static async Task<List<Abstractions.Models.BulkModification>> ToDomainModels(this List<BulkModificationDbModel> dbModels,
+    public static async Task<List<Abstractions.Models.BulkModification>> ToDomainModels(
+        this List<BulkModificationDbModel> dbModels,
         IPropertyService propertyService)
     {
-        var filterGroupDbModels = dbModels.Select(d => d.Filter.JsonDeserializeOrDefault<ResourceSearchFilterGroupDbModel>()).ToList();
-        var processesDbModels = dbModels.Select(d => d.Processes.JsonDeserializeOrDefault<List<BulkModificationProcessDbModel>>()).ToList();
+        var filterGroupDbModels = dbModels
+            .Select(d => d.Filter.JsonDeserializeOrDefault<ResourceSearchFilterGroupDbModel>()).ToList();
+        var processesDbModels = dbModels
+            .Select(d => d.Processes.JsonDeserializeOrDefault<List<BulkModificationProcessDbModel>>()).ToList();
         var variablesDbModels =
-            dbModels.Select(d => d.Variables.JsonDeserializeOrDefault<List<BulkModificationVariableDbModel>>()).ToList();
+            dbModels.Select(d => d.Variables.JsonDeserializeOrDefault<List<BulkModificationVariableDbModel>>())
+                .ToList();
 
         var propertyPools =
             filterGroupDbModels.SelectMany(x => x?.ExtractFilters().Select(f => f.PropertyPool) ?? [])
@@ -205,7 +209,7 @@ public static class BulkModificationExtensions
         var dbModel = new BulkModificationProcessDbModel
         {
             PropertyId = domainModel.PropertyId,
-            PropertyPool = domainModel.PropertyPool, 
+            PropertyPool = domainModel.PropertyPool,
             Steps = domainModel.Steps.ToJson()
         };
 
@@ -288,4 +292,17 @@ public static class BulkModificationExtensions
 
         return propertyMap;
     }
+
+    // public static BulkModificationDiff ToDomainModel(this BulkModificationDiffDbModel dbModel)
+    // {
+    //     return new BulkModificationDiff
+    //     {
+    //         Id = dbModel.Id,
+    //         BulkModificationId = dbModel.BulkModificationId,
+    //         ResourceId = dbModel.ResourceId,
+    //         ResourcePath = dbModel.ResourcePath,
+    //         Diffs = dbModel.Diffs.JsonDeserializeOrDefault<List<ResourceDiffDbModel>>()?.Select(d => d.ToDomainModel())
+    //             .ToList()
+    //     };
+    // }
 }

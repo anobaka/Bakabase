@@ -9,7 +9,6 @@ namespace Bakabase.Modules.BulkModification.Models.Input
 {
     public record BulkModificationResourceDiffsSearchInputModel : SearchRequestModel
     {
-        public int BmId { get; set; }
         public string? Path { get; set; }
     }
 }

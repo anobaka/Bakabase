@@ -11,6 +11,8 @@ import type {
   BulkModificationVariable,
 } from '@/pages/BulkModification2/components/BulkModification/models';
 import BApi from '@/sdk/BApi';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import DiffsModal from '@/pages/BulkModification2/components/BulkModification/DiffsModal';
 
 export type BulkModification = {
   id: number;
@@ -28,14 +30,15 @@ type Props = {
   onChange: (bm: BulkModification) => any;
 };
 
-type BlockKey = 'Filters' | 'Variables' | 'Processes' | 'Result';
-const Blocks: BlockKey[] = ['Filters', 'Variables', 'Processes', 'Result'];
+type BlockKey = 'Filters' | 'Variables' | 'Processes' | 'Diffs' | 'Final';
+const Blocks: BlockKey[] = ['Filters', 'Variables', 'Processes', 'Diffs', 'Final'];
 
 export default ({
                   bm,
                   onChange,
                 }: Props) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   const reload = useCallback(async () => {
     const r = await BApi.bulkModification.getBulkModification(bm.id);
@@ -133,25 +136,41 @@ export default ({
                 />
               );
               break;
-            case 'Result':
+            case 'Diffs':
               blockInner = (
                 <div className={'flex items-center gap-1'}>
                   <Button
                     size={'sm'}
                     variant={'bordered'}
                     color={'primary'}
+                    onClick={() => {
+                      BApi.bulkModification.previewBulkModification(bm.id).then(r => {
+                        reload();
+                      });
+                    }}
                   >
                     {t('Calculate diffs')}
                   </Button>
-                  {bm.filteredResourceIds && (
-                    <Button
-                      size={'sm'}
-                      variant={'light'}
-                      color={'primary'}
-                    >
-                      {t('Check diffs')}
-                    </Button>
-                  )}
+                  <Button
+                    size={'sm'}
+                    variant={'light'}
+                    color={'primary'}
+                    onClick={() => {
+                      createPortal(
+                        DiffsModal, {
+                          bmId: bm.id,
+                        },
+                      );
+                    }}
+                  >
+                    {t('Check diffs')}
+                  </Button>
+                </div>
+              );
+              break;
+            case 'Final':
+              blockInner = (
+                <div className={'flex items-center gap-1'}>
                   <Button
                     size={'sm'}
                     color={'primary'}
@@ -161,7 +180,7 @@ export default ({
                   <Button
                     size={'sm'}
                     color={'warning'}
-                    variant={'bordered'}
+                    variant={'flat'}
                   >
                     {t('Revert diffs')}
                   </Button>

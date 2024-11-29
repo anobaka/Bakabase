@@ -1527,6 +1527,17 @@ export interface BakabaseServiceModelsInputSavedSearchAddInputModel {
   name: string;
 }
 
+export interface BakabaseServiceModelsViewBulkModificationDiffViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  bulkModificationId: number;
+  resourcePath: string;
+  /** @format int32 */
+  resourceId: number;
+  diffs: BakabaseServiceModelsViewResourceDiffViewModel[];
+}
+
 export interface BakabaseServiceModelsViewBulkModificationProcessViewModel {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -1658,6 +1669,12 @@ export interface BakabaseServiceModelsViewPropertyViewModel {
   bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   poolName: string;
   typeName: string;
+}
+
+export interface BakabaseServiceModelsViewResourceDiffViewModel {
+  property: BakabaseServiceModelsViewPropertyViewModel;
+  value1?: string;
+  value2?: string;
 }
 
 export interface BakabaseServiceModelsViewResourceEnhancements {
@@ -1935,6 +1952,19 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseModulesAlia
   code: number;
   message?: string;
   data?: BakabaseModulesAliasAbstractionsModelsDomainAlias[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseServiceModelsViewBulkModificationDiffViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewBulkModificationDiffViewModel[];
   /** @format int32 */
   totalCount: number;
   /** @format int32 */
@@ -3671,6 +3701,41 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}/preview`,
         method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BulkModification
+     * @name SearchBulkModificationDiffs
+     * @request GET:/bulk-modification/{bmId}/diffs
+     */
+    searchBulkModificationDiffs: (
+      bmId: number,
+      query?: {
+        path?: string;
+        /** @format int32 */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @min 0
+         * @max 100
+         */
+        pageSize?: number;
+        /** @format int32 */
+        skipCount?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseServiceModelsViewBulkModificationDiffViewModel,
+        any
+      >({
+        path: `/bulk-modification/${bmId}/diffs`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),

@@ -8,13 +8,17 @@ using Bakabase.Modules.BulkModification.Abstractions.Services;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Extensions;
 using Bakabase.Modules.BulkModification.Models.Db;
+using Bakabase.Modules.BulkModification.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Orm.Infrastructures;
+using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Linq.Expressions;
+using Bootstrap.Extensions;
 using ResourceDiff = Bakabase.Abstractions.Models.Domain.ResourceDiff;
 
 namespace Bakabase.Modules.BulkModification.Services
@@ -187,6 +191,23 @@ namespace Bakabase.Modules.BulkModification.Services
         public async Task Revert(int id)
         {
             await ApplyOrRevert(id, diff => diff.Value2, diff => diff.Value1);
+        }
+
+        public async Task<SearchResponse<BulkModificationDiff>> SearchDiffs(int bmId, BulkModificationResourceDiffsSearchInputModel model)
+        {
+            Expression<Func<BulkModificationDiffDbModel, bool>> exp = x => x.BulkModificationId == bmId;
+            if (model.Path.IsNotEmpty())
+            {
+                exp = exp.And(x => x.ResourcePath.Contains(model.Path));
+            }
+
+            var result = await diffOrm.Search(exp, model.PageIndex, model.PageSize);
+
+            var data = result.Data ?? [];
+
+            var domainModels = await data.ToDomainModels(PropertyService);
+
+            return model.BuildResponse(domainModels, result.TotalCount);
         }
 
         private async Task ApplyOrRevert(int id, Func<ResourceDiff, object?> selectExpected,

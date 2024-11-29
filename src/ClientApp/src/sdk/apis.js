@@ -1174,6 +1174,79 @@ export const PreviewBulkModificationURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: SearchBulkModificationDiffs
+ * url: SearchBulkModificationDiffsURL
+ * method: SearchBulkModificationDiffs_TYPE
+ * raw_url: SearchBulkModificationDiffs_RAW_URL
+ * @param bmId - 
+ * @param path - 
+ * @param pageIndex - 
+ * @param pageSize - 
+ * @param skipCount - 
+ */
+export const SearchBulkModificationDiffs = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/bulk-modification/{bmId}/diffs'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{bmId}', `${parameters['bmId']}`)
+  if (parameters['bmId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: bmId'))
+  }
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
+  if (parameters['pageIndex'] !== undefined) {
+    queryParameters['pageIndex'] = parameters['pageIndex']
+  }
+  if (parameters['pageSize'] !== undefined) {
+    queryParameters['pageSize'] = parameters['pageSize']
+  }
+  if (parameters['skipCount'] !== undefined) {
+    queryParameters['skipCount'] = parameters['skipCount']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const SearchBulkModificationDiffs_RAW_URL = function() {
+  return '/bulk-modification/{bmId}/diffs'
+}
+export const SearchBulkModificationDiffs_TYPE = function() {
+  return 'get'
+}
+export const SearchBulkModificationDiffsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/bulk-modification/{bmId}/diffs'
+  path = path.replace('{bmId}', `${parameters['bmId']}`)
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
+  if (parameters['pageIndex'] !== undefined) {
+    queryParameters['pageIndex'] = parameters['pageIndex']
+  }
+  if (parameters['pageSize'] !== undefined) {
+    queryParameters['pageSize'] = parameters['pageSize']
+  }
+  if (parameters['skipCount'] !== undefined) {
+    queryParameters['skipCount'] = parameters['skipCount']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: ApplyBulkModification
  * url: ApplyBulkModificationURL
  * method: ApplyBulkModification_TYPE

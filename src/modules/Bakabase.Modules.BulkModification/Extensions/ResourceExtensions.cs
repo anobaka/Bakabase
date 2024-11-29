@@ -31,9 +31,9 @@ public static class ResourceExtensions
             foreach (var propertyId in comparePropertyIds)
             {
                 var aPv = aPvs?.GetValueOrDefault(propertyId)?.Values?
-                    .FirstOrDefault(x => x.Scope == (int) PropertyValueScope.Manual)?.AliasAppliedBizValue;
+                    .FirstOrDefault(x => x.Scope == (int) PropertyValueScope.Manual)?.BizValue;
                 var bPv = bPvs?.GetValueOrDefault(propertyId)?.Values
-                    ?.FirstOrDefault(x => x.Scope == (int) PropertyValueScope.Manual)?.AliasAppliedBizValue;
+                    ?.FirstOrDefault(x => x.Scope == (int) PropertyValueScope.Manual)?.BizValue;
 
                 var bizValueType = (aPvs?.GetValueOrDefault(propertyId) ?? bPvs?.GetValueOrDefault(propertyId))!
                     .BizValueType;

@@ -6,12 +6,14 @@ using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.BulkModification.Abstractions.Components;
 using Bakabase.Modules.BulkModification.Abstractions.Models;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Extensions;
+using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
@@ -19,6 +21,7 @@ using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
+using static Aliyun.OSS.Model.LiveChannelStat;
 
 namespace Bakabase.Service.Extensions;
 
@@ -135,5 +138,29 @@ public static class BulkModificationExtensions
             Scope = inputModel.Scope,
             Preprocesses = preprocesses
         };
+    }
+
+    public static async Task<List<BulkModificationDiffViewModel>> ToViewModels(
+        this List<BulkModificationDiff> domainModels, IPropertyService propertyService, IPropertyLocalizer? propertyLocalizer = null)
+    {
+
+        var propertyPools = domainModels.SelectMany(y => y.Diffs.Select(z => z.PropertyPool)).Distinct()
+            .Aggregate((ps, p) => ps | p);
+        var propertyMap = (await propertyService.GetProperties(propertyPools)).ToMap();
+
+        var viewModels = domainModels.Select(dbModel => new BulkModificationDiffViewModel
+        {
+            Id = dbModel.Id,
+            BulkModificationId = dbModel.BulkModificationId,
+            ResourceId = dbModel.ResourceId,
+            ResourcePath = dbModel.ResourcePath,
+            Diffs = dbModel.Diffs.Select(x =>
+            {
+                var property = propertyMap.GetValueOrDefault(x.PropertyPool)?.GetValueOrDefault(x.PropertyId);
+                return property == null ? null : x.ToViewModel(property, propertyLocalizer);
+            }).OfType<ResourceDiffViewModel>().ToList()
+        }).ToList();
+
+        return viewModels;
     }
 }

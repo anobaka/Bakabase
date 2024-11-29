@@ -6,12 +6,14 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Modules.BulkModification.Abstractions.Components;
 using Bakabase.Modules.BulkModification.Abstractions.Models;
 using Bakabase.Modules.BulkModification.Abstractions.Services;
+using Bakabase.Modules.BulkModification.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -95,6 +97,21 @@ namespace Bakabase.Service.Controllers
         {
             await service.Preview(id);
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("{bmId:int}/diffs")]
+        [SwaggerOperation(OperationId = "SearchBulkModificationDiffs")]
+        public async Task<SearchResponse<BulkModificationDiffViewModel>> SearchDiffs(int bmId, 
+            BulkModificationResourceDiffsSearchInputModel model)
+        {
+            var result = await service.SearchDiffs(bmId, model);
+            if (result.Data == null)
+            {
+                return new SearchResponse<BulkModificationDiffViewModel>();
+            }
+
+            var viewModels = await result.Data.ToViewModels(propertyService, propertyLocalizer);
+            return model.BuildResponse(viewModels, result.TotalCount);
         }
 
         [HttpPost("{id:int}/apply")]
