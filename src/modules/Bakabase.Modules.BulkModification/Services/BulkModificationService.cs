@@ -18,6 +18,7 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Linq.Expressions;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bootstrap.Extensions;
 using ResourceDiff = Bakabase.Abstractions.Models.Domain.ResourceDiff;
 
@@ -115,7 +116,7 @@ namespace Bakabase.Modules.BulkModification.Services
                 bm.FilteredResourceIds ??= (await Filter(id)).ToList();
                 if (bm.FilteredResourceIds!.Any() && bm.Processes?.Any() == true)
                 {
-                    var resources = await ResourceService.GetByKeys(bm.FilteredResourceIds.ToArray());
+                    var resources = await ResourceService.GetByKeys(bm.FilteredResourceIds.ToArray(), ResourceAdditionalItem.All);
                     var allDiffs = new List<BulkModificationDiff>();
 
                     foreach (var resource in resources)
@@ -168,13 +169,18 @@ namespace Bakabase.Modules.BulkModification.Services
                             copyProperties.SetPropertyBizValue(process.Property, newValue, PropertyValueScope.Manual);
                         }
 
-                        allDiffs.Add(new BulkModificationDiff
+                        var diffs = resource.Properties.Compare(copyProperties);
+
+                        if (diffs.Any())
                         {
-                            ResourceId = resource.Id,
-                            Diffs = resource.Properties.Compare(copyProperties),
-                            BulkModificationId = bm.Id,
-                            ResourcePath = resource.Path
-                        });
+                            allDiffs.Add(new BulkModificationDiff
+                            {
+                                ResourceId = resource.Id,
+                                Diffs = diffs,
+                                BulkModificationId = bm.Id,
+                                ResourcePath = resource.Path
+                            });
+                        }
                     }
 
                     await diffOrm.RemoveAll(x => x.BulkModificationId == bm.Id);
@@ -185,15 +191,16 @@ namespace Bakabase.Modules.BulkModification.Services
 
         public async Task Apply(int id)
         {
-            await ApplyOrRevert(id, diff => diff.Value1, diff => diff.Value2);
+            await ApplyOrRevert(id, true);
         }
 
         public async Task Revert(int id)
         {
-            await ApplyOrRevert(id, diff => diff.Value2, diff => diff.Value1);
+            await ApplyOrRevert(id, false);
         }
 
-        public async Task<SearchResponse<BulkModificationDiff>> SearchDiffs(int bmId, BulkModificationResourceDiffsSearchInputModel model)
+        public async Task<SearchResponse<BulkModificationDiff>> SearchDiffs(int bmId,
+            BulkModificationResourceDiffsSearchInputModel model)
         {
             Expression<Func<BulkModificationDiffDbModel, bool>> exp = x => x.BulkModificationId == bmId;
             if (model.Path.IsNotEmpty())
@@ -210,8 +217,7 @@ namespace Bakabase.Modules.BulkModification.Services
             return model.BuildResponse(domainModels, result.TotalCount);
         }
 
-        private async Task ApplyOrRevert(int id, Func<ResourceDiff, object?> selectExpected,
-            Func<ResourceDiff, object?> selectTarget)
+        private async Task ApplyOrRevert(int id, bool apply)
         {
             var bm = await Get(id);
             if (bm == null)
@@ -224,10 +230,15 @@ namespace Bakabase.Modules.BulkModification.Services
                 throw new Exception("Can't operate on a inactive bulk modification.");
             }
 
+            if (!apply && !bm.AppliedAt.HasValue)
+            {
+                throw new Exception("Can't operate on a bulk modification which is not applied yet.");
+            }
+
             var dbBmDiffs = await diffOrm.GetAll(x => x.BulkModificationId == id);
             var bmDiffs = await dbBmDiffs.ToDomainModels(PropertyService);
             var resourceIds = dbBmDiffs.Select(r => r.ResourceId).ToList();
-            var resourcesMap = (await ResourceService.GetByKeys(resourceIds.ToArray())).ToDictionary(d => d.Id, d => d);
+            var resourcesMap = (await ResourceService.GetByKeys(resourceIds.ToArray(), ResourceAdditionalItem.All)).ToDictionary(d => d.Id, d => d);
             var propertyMap = await bmDiffs.PreparePropertyMap(PropertyService, true);
 
             if (bmDiffs.Count != resourcesMap.Count)
@@ -245,9 +256,9 @@ namespace Bakabase.Modules.BulkModification.Services
                     {
                         var property = propertyMap[rDiff.PropertyPool][rDiff.PropertyId];
                         var currentValue = resource.Properties.GetPropertyBizValue(rDiff.PropertyPool, rDiff.PropertyId,
-                            PropertyValueScope.Manual);
+                            PropertyValueScope.Manual)?.Value;
 
-                        var expectedValue = selectExpected(rDiff);
+                        var expectedValue = apply ? rDiff.Value1 : rDiff.Value2;
 
                         var stdHandler = StandardValueInternals.HandlerMap[property.Type.GetBizValueType()];
                         if (!stdHandler.Compare(currentValue, expectedValue))
@@ -256,7 +267,7 @@ namespace Bakabase.Modules.BulkModification.Services
                                 $"Validation failed: Current value [{currentValue?.SerializeAsStandardValue(property.Type.GetBizValueType())}] of property {property.Name} of resource {resource.Path} does not match the expected value [{expectedValue?.SerializeAsStandardValue(property.Type.GetBizValueType())}]. Please perform a preview again.");
                         }
 
-                        var targetValue = selectTarget(rDiff);
+                        var targetValue = apply ? rDiff.Value2 : rDiff.Value1;
 
                         resource.Properties.SetPropertyBizValue(property, targetValue, PropertyValueScope.Manual);
                     }
@@ -264,6 +275,17 @@ namespace Bakabase.Modules.BulkModification.Services
             }
 
             await ResourceService.AddOrPutRange(resourcesMap.Values.ToList());
+
+            if (apply)
+            {
+                bm.AppliedAt = DateTime.Now;
+            }
+            else
+            {
+                bm.AppliedAt = null;
+            }
+
+            await Put(bm);
         }
     }
 }

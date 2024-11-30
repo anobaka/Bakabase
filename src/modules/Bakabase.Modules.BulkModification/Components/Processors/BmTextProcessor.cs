@@ -36,7 +36,7 @@ namespace Bakabase.Modules.BulkModification.Components.Processors
                 {
                     case BulkModificationProcessorValueType.Static:
                     case BulkModificationProcessorValueType.Dynamic:
-                        options.Value = options.Value?.DeserializeAsStandardValue(StandardValueType.String) as string;
+                        options.Value = Value?.DeserializeAsStandardValue(StandardValueType.String) as string;
                         break;
                     case BulkModificationProcessorValueType.Variable:
                         if (variableMap?.TryGetValue(Value, out var tv) == true)

@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Variables from './Variables';
 import Processes from './Processes';
-import { Button, Chip, Divider } from '@/components/bakaui';
+import { Button, Chip, Divider, Modal } from '@/components/bakaui';
 import FilterGroupsPanel from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel';
 import type { ResourceSearchFilterGroup } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
 import FilteredResourcesDialog from '@/pages/BulkModification/components/BulkModification/FilteredResourcesDialog';
@@ -23,6 +23,7 @@ export type BulkModification = {
   filter?: ResourceSearchFilterGroup;
   processes?: BulkModificationProcess[];
   filteredResourceIds?: number[];
+  appliedAt?: string;
 };
 
 type Props = {
@@ -39,6 +40,8 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+
+  const [calculatingDiffs, setCalculatingDiffs] = useState(false);
 
   const reload = useCallback(async () => {
     const r = await BApi.bulkModification.getBulkModification(bm.id);
@@ -83,16 +86,16 @@ export default ({
                     {/* <div className={'filtered-at'}>{t('Filtered at {{datetime}}', { datetime: bm.filteredAt })}</div> */}
                     {/* )} */}
                     {/* {bm.filteredResourceIds && bm.filteredResourceIds.length > 0 && ( */}
-                    <Button
-                      color={'primary'}
-                      variant={'light'}
-                      size={'sm'}
-                      onClick={() => {
-                        FilteredResourcesDialog.show({
-                          bmId: bm.id!,
-                        });
-                      }}
-                    >{t('Check all the resources that have been filtered out')}</Button>
+                    {/* <Button */}
+                    {/*   color={'primary'} */}
+                    {/*   variant={'light'} */}
+                    {/*   size={'sm'} */}
+                    {/*   onClick={() => { */}
+                    {/*     FilteredResourcesDialog.show({ */}
+                    {/*       bmId: bm.id!, */}
+                    {/*     }); */}
+                    {/*   }} */}
+                    {/* >{t('Check all the resources that have been filtered out')}</Button> */}
                     {/* )} */}
                   </div>
 
@@ -143,9 +146,13 @@ export default ({
                     size={'sm'}
                     variant={'bordered'}
                     color={'primary'}
+                    isLoading={calculatingDiffs}
                     onClick={() => {
+                      setCalculatingDiffs(true);
                       BApi.bulkModification.previewBulkModification(bm.id).then(r => {
                         reload();
+                      }).finally(() => {
+                        setCalculatingDiffs(false);
                       });
                     }}
                   >
@@ -174,16 +181,40 @@ export default ({
                   <Button
                     size={'sm'}
                     color={'primary'}
+                    onClick={() => {
+                      createPortal(Modal, {
+                        defaultVisible: true,
+                        title: t('Apply bulk modification'),
+                        children: t('Please check diffs before applying, and changed value may not be reverted perfectly in some situations,  are you sure to apply?'),
+                        onOk: async () => {
+                          await BApi.bulkModification.applyBulkModification(bm.id);
+                          reload();
+                        },
+                      });
+                    }}
                   >
                     {t('Apply diffs')}
                   </Button>
-                  <Button
-                    size={'sm'}
-                    color={'warning'}
-                    variant={'flat'}
-                  >
-                    {t('Revert diffs')}
-                  </Button>
+                  {bm.appliedAt && (
+                    <Button
+                      size={'sm'}
+                      color={'warning'}
+                      variant={'flat'}
+                      onClick={() => {
+                        createPortal(Modal, {
+                          defaultVisible: true,
+                          title: t('Revert bulk modification'),
+                          children: t('Are you sure to revert the bulk modification?'),
+                          onOk: async () => {
+                            await BApi.bulkModification.revertBulkModification(bm.id);
+                            reload();
+                          },
+                        });
+                      }}
+                    >
+                      {t('Revert diffs')}
+                    </Button>
+                  )}
                 </div>
               );
               break;

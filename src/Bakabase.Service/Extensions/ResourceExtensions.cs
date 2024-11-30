@@ -14,7 +14,7 @@ public static class ResourceExtensions
         {
             Property = property.ToViewModel(propertyLocalizer),
             Value1 = dbModel.SerializedValue1,
-            Value2 = dbModel.SerializedValue1
+            Value2 = dbModel.SerializedValue2
         };
     }
 }

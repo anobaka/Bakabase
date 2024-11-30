@@ -40,6 +40,7 @@ public static class BulkModificationExtensions
             Filter = domainModel.Filter?.ToViewModel(propertyLocalizer),
             Processes = domainModel.Processes?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
+            AppliedAt = domainModel.AppliedAt
         };
     }
 
@@ -141,11 +142,12 @@ public static class BulkModificationExtensions
     }
 
     public static async Task<List<BulkModificationDiffViewModel>> ToViewModels(
-        this List<BulkModificationDiff> domainModels, IPropertyService propertyService, IPropertyLocalizer? propertyLocalizer = null)
+        this List<BulkModificationDiff> domainModels, IPropertyService propertyService,
+        IPropertyLocalizer? propertyLocalizer = null)
     {
 
         var propertyPools = domainModels.SelectMany(y => y.Diffs.Select(z => z.PropertyPool)).Distinct()
-            .Aggregate((ps, p) => ps | p);
+            .Aggregate((PropertyPool) 0, (ps, p) => ps | p);
         var propertyMap = (await propertyService.GetProperties(propertyPools)).ToMap();
 
         var viewModels = domainModels.Select(dbModel => new BulkModificationDiffViewModel

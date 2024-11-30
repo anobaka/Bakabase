@@ -56,10 +56,11 @@ export default (props: Props) => {
     defaultEditing,
   } = props;
   const { t } = useTranslation();
-  log(props);
 
   let bv = deserializeStandardValue(bizValue ?? null, property.bizValueType);
   const dv = deserializeStandardValue(dbValue ?? null, property.dbValueType);
+
+  log(props, bv, dv);
 
   const simpleOnValueChange: ((dbValue?: any, bizValue?: any) => any) | undefined = onValueChange
     ? (dv, bv) => {
@@ -259,7 +260,9 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Multilevel: {
-      bv ??= dv?.map(v => findNodeChainInMultilevelData(property?.options?.data || [], v));
+      bv ??= dv?.map(v => findNodeChainInMultilevelData(property?.options?.data || [], v)).filter(x => x != undefined);
+
+      log(bv);
 
       return (
         <MultilevelValueRenderer

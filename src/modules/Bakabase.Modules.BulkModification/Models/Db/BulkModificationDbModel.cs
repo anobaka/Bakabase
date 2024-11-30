@@ -14,5 +14,6 @@ namespace Bakabase.Modules.BulkModification.Models.Db
         public string? Variables { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string? FilteredResourceIds { get; set; }
+        public DateTime? AppliedAt { get; set; }
     }
 }

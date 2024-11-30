@@ -12,4 +12,5 @@ public record BulkModification
     public ResourceSearchFilterGroup? Filter { get; set; }
     public List<BulkModificationProcess>? Processes { get; set; }
     public List<int>? FilteredResourceIds { get; set; }
+    public DateTime? AppliedAt { get; set; }
 }

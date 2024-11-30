@@ -58,6 +58,7 @@ export default ({ bmId, onDestroyed }: Props) => {
       return (
         <div className={'flex justify-end'}>
           <Pagination
+            size={'sm'}
             total={pageable.total}
             page={pageable.page}
             onChange={page => {
@@ -83,7 +84,7 @@ export default ({ bmId, onDestroyed }: Props) => {
       setData(r.data || []);
       setPageable({
         ...pageable,
-        total: r.totalCount / PageSize,
+        total: Math.ceil(r.totalCount / PageSize),
       });
     });
   };
@@ -95,8 +96,9 @@ export default ({ bmId, onDestroyed }: Props) => {
       size={'xl'}
     >
       <div>
-        <div className={'flex items-center'}>
+        <div className={'flex items-center gap-8'}>
           <Input
+            size={'sm'}
             startContent={<SearchOutlined className={'text-base'} />}
             placeholder={t('Search')}
             value={keyword}
@@ -106,11 +108,11 @@ export default ({ bmId, onDestroyed }: Props) => {
                 search(keyword, 1);
               }
             }}
-            endContent={<Kbd keys={['enter']}>K</Kbd>}
+            endContent={<Kbd keys={['enter']} />}
           />
+          <TPagination />
         </div>
       </div>
-      <TPagination />
       {data ? data.length == 0 ? (
         <div className={'flex justify-center mt-4'}>
           <div>
@@ -121,7 +123,7 @@ export default ({ bmId, onDestroyed }: Props) => {
           </div>
         </div>
       ) : (
-        <Table>
+        <Table removeWrapper>
           <TableHeader>
             <TableColumn>{t('Resource')}</TableColumn>
             <TableColumn>{t('Diffs')}</TableColumn>
@@ -130,7 +132,11 @@ export default ({ bmId, onDestroyed }: Props) => {
             {data.map(d => {
               return (
                 <TableRow>
-                  <TableCell>{d.resourcePath}</TableCell>
+                  <TableCell>
+                    <div className={'max-w-[600px] break-all'}>
+                      {d.resourcePath}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {d.diffs.map(diff => {
                       return (

@@ -58,7 +58,8 @@ public static class BulkModificationExtensions
             FilteredResourceIds = dbModel.FilteredResourceIds.JsonDeserializeOrDefault<List<int>>(),
             Filter = filterGroupDbModels[i]?.ToDomainModel(propertyMap),
             Processes = processesDbModels[i]?.Select(p => p.ToDomainModel(propertyMap)).ToList(),
-            Variables = variablesDbModels[i]?.Select(v => v.ToDomainModel(propertyMap)).ToList()
+            Variables = variablesDbModels[i]?.Select(v => v.ToDomainModel(propertyMap)).ToList(),
+            AppliedAt = dbModel.AppliedAt
         }).ToList();
     }
 
@@ -184,7 +185,8 @@ public static class BulkModificationExtensions
             Processes = domainModel.Processes?.Select(p => p.ToDbModel()).ToJson(),
             Variables = domainModel.Variables?.Select(v => v.ToDbModel()).ToJson(),
             CreatedAt = domainModel.CreatedAt,
-            FilteredResourceIds = domainModel.FilteredResourceIds?.ToJson()
+            FilteredResourceIds = domainModel.FilteredResourceIds?.ToJson(),
+            AppliedAt = domainModel.AppliedAt
         };
 
         return dbModel;

@@ -14,4 +14,5 @@ public record BulkModificationViewModel
     public ResourceSearchFilterGroupViewModel? Filter { get; set; }
     public List<BulkModificationProcessViewModel>? Processes { get; set; }
     public List<int>? FilteredResourceIds { get; set; }
+    public DateTime? AppliedAt { get; set; }
 }

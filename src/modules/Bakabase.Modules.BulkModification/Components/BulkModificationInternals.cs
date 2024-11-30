@@ -16,12 +16,15 @@ public class BulkModificationInternals
     public static ConcurrentDictionary<PropertyType, BulkModificationProcessDescriptor>
         PropertyTypeProcessorDescriptorMap = new ConcurrentDictionary<PropertyType, BulkModificationProcessDescriptor>(
             new Dictionary<PropertyType, BulkModificationProcessDescriptor>()
-                {{PropertyType.SingleLineText, TextValueProcessDescriptor}});
+            {
+                {PropertyType.SingleLineText, TextValueProcessDescriptor},
+                {PropertyType.MultilineText, TextValueProcessDescriptor}
+            });
 
     public static ConcurrentDictionary<StandardValueType, IBulkModificationProcessor> ProcessorMap =
         new ConcurrentDictionary<StandardValueType, IBulkModificationProcessor>(
             new Dictionary<StandardValueType, IBulkModificationProcessor>()
             {
-
+                {StandardValueType.String, new BmTextProcessor()}
             });
 }
