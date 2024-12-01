@@ -28,6 +28,8 @@ interface Props {
   options?: EnhancerFullOptions;
   category: { name: string; id: number; customPropertyIds?: number[] };
   enhancer: EnhancerDescriptor;
+  onPropertyChanged?: () => any;
+  onCategoryChanged?: () => any;
 }
 
 type Group = {
@@ -46,6 +48,8 @@ export default (props: Props) => {
     options: propsOptions,
     category,
     enhancer,
+    onPropertyChanged,
+    onCategoryChanged,
   } = props;
   const dynamicTargetDescriptors = enhancer.targets.filter(x => x.isDynamic);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -141,6 +145,7 @@ export default (props: Props) => {
                 return (
                   <>
                     <TargetRow
+                      onCategoryChanged={onCategoryChanged}
                       key={i}
                       target={data.target}
                       dynamicTarget={data.dynamicTarget}
@@ -149,6 +154,7 @@ export default (props: Props) => {
                       category={category}
                       propertyMap={propertyMap}
                       enhancer={enhancer}
+                      onPropertyChanged={onPropertyChanged}
                       onDeleted={() => {
                         const idx = options.targetOptions?.findIndex(x => x == data);
                         if (idx != undefined) {

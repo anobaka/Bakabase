@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Models.Configs;
@@ -38,22 +39,16 @@ public class RegexEnhancer(
         foreach (var exp in expressions)
         {
             var regex = new System.Text.RegularExpressions.Regex(exp, RegexOptions.IgnoreCase);
-            var match = regex.Match(resource.FileName);
-            if (match.Success)
+            var mergedNamedGroups = regex.MatchAllAndMergeByNamedGroups(resource.FileName);
+            foreach (var (gn, values) in mergedNamedGroups)
             {
-                foreach (var name in regex.GetGroupNames())
+                ctx.CaptureGroupsAndValues ??= [];
+                if (!ctx.CaptureGroupsAndValues.TryGetValue(gn, out var list))
                 {
-                    if (!int.TryParse(name, out _))
-                    {
-                        ctx.CaptureGroupsAndValues ??= [];
-                        if (!ctx.CaptureGroupsAndValues.TryGetValue(name, out var values))
-                        {
-                            ctx.CaptureGroupsAndValues[name] = values = new List<string>();
-                        }
-
-                        values.Add(match.Groups[name].Value);
-                    }
+                    ctx.CaptureGroupsAndValues[gn] = list = [];
                 }
+
+                list.AddRange(values);
             }
         }
 

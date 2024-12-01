@@ -494,9 +494,9 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
         public static (string Title, string PageUrl)[] GetImageTitleAndPageUrlsFromDetailHtml(string detailHtml)
         {
             var cq = new CQ(detailHtml);
-            var data = cq["#gdt"].Children().Where(a => a.ClassName.Contains("gdt")).Select(a => a.Cq())
-                .Select(a => (Regex.Match(a.Find("img").Attr("title"), "\\:.*").Value.Trim(':').Trim(),
-                    a.Find("a").Attr("href"))).Where(t => t.Item2.IsNotEmpty()).ToArray();
+            var data = cq["#gdt"].Children("a").Select(a => a.Cq())
+                .Select(a => (Regex.Match(a.Children("div").Attr("title"), "\\:.*").Value.Trim(':').Trim(),
+                    a.Attr("href"))).Where(t => t.Item2.IsNotEmpty()).ToArray();
             return data;
         }
 

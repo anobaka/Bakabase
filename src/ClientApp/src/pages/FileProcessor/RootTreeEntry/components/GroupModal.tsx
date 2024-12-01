@@ -39,9 +39,7 @@ export default ({
       onDestroyed={onDestroyed}
       title={t(groupInternal ? 'Group internal items' : 'Group {{count}} items', { count: entries.length })}
       onOk={async () => {
-        for (const e of entries) {
-          await BApi.file.extractAndRemoveDirectory({ directory: e.path });
-        }
+        await BApi.file.mergeFileSystemEntries({ paths: entries.map(e => e.path), groupInternal });
       }}
       footer={{
         actions: ['ok', 'cancel'],

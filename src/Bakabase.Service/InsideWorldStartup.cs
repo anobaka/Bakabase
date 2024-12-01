@@ -75,8 +75,6 @@ namespace Bakabase.Service
 
             services.AddSingleton<DownloaderManager>();
 
-            services.TryAddSingleton<ThirdPartyHttpRequestLogger>();
-
             services.AddTransient<BilibiliDownloader>();
             services.TryAddSingleton<BilibiliDownloaderOptionsValidator>();
             services.TryAddSingleton<BilibiliCookieValidator>();

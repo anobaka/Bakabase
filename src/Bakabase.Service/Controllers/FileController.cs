@@ -977,7 +977,7 @@ namespace Bakabase.Service.Controllers
             }
             else
             {
-                if (model.Paths.GroupBy(Path.GetDirectoryName).Count() > 1)
+                if (model.Paths.GroupBy(Path.GetDirectoryName, StringComparer.OrdinalIgnoreCase).Count() > 1)
                 {
                     return SingletonResponseBuilder<FileSystemEntryGroupResultViewModel>.BuildBadRequest(
                         _localizer.PathsShouldBeInSameDirectory());
@@ -999,7 +999,8 @@ namespace Bakabase.Service.Controllers
             var vm = new FileSystemEntryGroupResultViewModel
             {
                 RootPath = rootPath,
-                Groups = files.GroupBy(d => Path.GetFileNameWithoutExtension(d) ?? string.Empty)
+                Groups = files.GroupBy(d => Path.GetFileNameWithoutExtension(d) ?? string.Empty,
+                        StringComparer.OrdinalIgnoreCase)
                     .Where(x => x.Key.IsNotEmpty()).Select(x => new FileSystemEntryGroupResultViewModel.GroupViewModel
                     {
                         DirectoryName = x.Key,

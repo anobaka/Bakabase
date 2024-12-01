@@ -22,6 +22,8 @@ type Props = {
   options?: EnhancerFullOptions;
   category: { name: string; id: number; customPropertyIds?: number[] };
   enhancer: EnhancerDescriptor;
+  onPropertyChanged?: () => any;
+  onCategoryChanged?: () => any;
 };
 
 const extractCaptureGroups = (expressions: string[]) => expressions.reduce<string[]>((s, t) => {
@@ -34,6 +36,8 @@ export default ({
                   enhancer,
                   propertyMap,
                   category,
+                  onPropertyChanged,
+                  onCategoryChanged,
                 }: Props) => {
   const { t } = useTranslation();
   const enhancerOptions = store.useModelState('enhancerOptions');
@@ -143,6 +147,8 @@ export default ({
             enhancer={enhancer}
             options={options}
             propertyMap={propertyMap}
+            onPropertyChanged={onPropertyChanged}
+            onCategoryChanged={onCategoryChanged}
           />
         </div>
       )}

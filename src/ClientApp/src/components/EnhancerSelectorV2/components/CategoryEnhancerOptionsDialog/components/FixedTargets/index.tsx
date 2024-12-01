@@ -11,6 +11,8 @@ interface Props {
   options?: EnhancerFullOptions;
   category: { name: string; id: number; customPropertyIds?: number[] };
   enhancer: EnhancerDescriptor;
+  onPropertyChanged?: () => any;
+  onCategoryChanged?: () => any;
 }
 
 export default (props: Props) => {
@@ -21,6 +23,8 @@ export default (props: Props) => {
     options,
     category,
     enhancer,
+    onPropertyChanged,
+    onCategoryChanged,
   } = props;
 
   const fixedTargets = enhancer.targets.filter(t => !t.isDynamic);
@@ -55,6 +59,8 @@ export default (props: Props) => {
                 options={targetOptions}
                 propertyMap={propertyMap}
                 descriptor={targetDescriptor}
+                onPropertyChanged={onPropertyChanged}
+                onCategoryChanged={onCategoryChanged}
               />
               {fixedTargets.length - 1 !== i && (
                 <Divider orientation={'horizontal'} />

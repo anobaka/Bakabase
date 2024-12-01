@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
-import { Dialog, Dropdown, Input, Menu, Message } from '@alifd/next';
+import { Dialog, Dropdown, Menu, Message } from '@alifd/next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +22,7 @@ import PathConfigurationDialog from '@/pages/Category/components/PathConfigurati
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsInBulkDialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Button, Chip, Modal, Tooltip } from '@/components/bakaui';
+import { Button, Chip, Input, Modal, Tooltip } from '@/components/bakaui';
 import SynchronizationModal from '@/pages/Category/components/SynchronizationModal';
 
 export default (({
@@ -152,16 +152,15 @@ export default (({
         <DragHandle {...listeners} {...attributes} />
         <div className="flex items-center gap-1">
           <div
-            className={'edit relative'}
+            className={'edit relative flex items-center gap-1'}
             onClick={() => {
               let n = library.name;
               Dialog.show({
                 title: t('Change name'),
                 content: (<Input
-                  size={'large'}
                   style={{ width: '100%' }}
                   defaultValue={n}
-                  onChange={(v) => {
+                  onValueChange={(v) => {
                     n = v;
                   }}
                 />),
