@@ -41,7 +41,8 @@ namespace Bakabase.Modules.BulkModification.Services
                 return null;
             }
 
-            return await bm.ToDomainModel(GetRequiredService<IPropertyService>());
+            return await bm.ToDomainModel(GetRequiredService<IPropertyService>(),
+                await diffOrm.Count(x => x.BulkModificationId == id));
         }
 
         public async Task Add(Abstractions.Models.BulkModification bm)
@@ -84,7 +85,12 @@ namespace Bakabase.Modules.BulkModification.Services
         public async Task<List<Abstractions.Models.BulkModification>> GetAll()
         {
             var dbModels = await base.GetAll();
-            var domainModels = await dbModels.ToDomainModels(GetRequiredService<IPropertyService>());
+            var diffCounts = await DbContext.BulkModificationDiffs
+                .GroupBy(d => d.BulkModificationId)
+                .Select(x => new {BmId = x.Key, DiffsCount = x.Count()})
+                .ToListAsync();
+            var domainModels = await dbModels.ToDomainModels(GetRequiredService<IPropertyService>(),
+                diffCounts.ToDictionary(d => d.BmId, d => d.DiffsCount));
             return domainModels.OrderByDescending(x => x.Id).ToList();
         }
 
@@ -114,10 +120,11 @@ namespace Bakabase.Modules.BulkModification.Services
             if (bm != null)
             {
                 bm.FilteredResourceIds ??= (await Filter(id)).ToList();
+                var allDiffs = new List<BulkModificationDiff>();
                 if (bm.FilteredResourceIds!.Any() && bm.Processes?.Any() == true)
                 {
-                    var resources = await ResourceService.GetByKeys(bm.FilteredResourceIds.ToArray(), ResourceAdditionalItem.All);
-                    var allDiffs = new List<BulkModificationDiff>();
+                    var resources =
+                        await ResourceService.GetByKeys(bm.FilteredResourceIds.ToArray(), ResourceAdditionalItem.All);
 
                     foreach (var resource in resources)
                     {
@@ -182,10 +189,10 @@ namespace Bakabase.Modules.BulkModification.Services
                             });
                         }
                     }
-
-                    await diffOrm.RemoveAll(x => x.BulkModificationId == bm.Id);
-                    await diffOrm.AddRange(allDiffs.Select(d => d.ToDbModel()));
                 }
+
+                await diffOrm.RemoveAll(x => x.BulkModificationId == bm.Id);
+                await diffOrm.AddRange(allDiffs.Select(d => d.ToDbModel()));
             }
         }
 
@@ -233,6 +240,11 @@ namespace Bakabase.Modules.BulkModification.Services
             if (!apply && !bm.AppliedAt.HasValue)
             {
                 throw new Exception("Can't operate on a bulk modification which is not applied yet.");
+            }
+
+            if (bm.ResourceDiffCount == 0)
+            {
+                throw new Exception("No resource diff is found, please calculate diffs first.");
             }
 
             var dbBmDiffs = await diffOrm.GetAll(x => x.BulkModificationId == id);

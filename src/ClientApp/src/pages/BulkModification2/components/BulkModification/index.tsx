@@ -24,6 +24,7 @@ export type BulkModification = {
   processes?: BulkModificationProcess[];
   filteredResourceIds?: number[];
   appliedAt?: string;
+  resourceDiffCount: number;
 };
 
 type Props = {
@@ -158,20 +159,22 @@ export default ({
                   >
                     {t('Calculate diffs')}
                   </Button>
-                  <Button
-                    size={'sm'}
-                    variant={'light'}
-                    color={'primary'}
-                    onClick={() => {
-                      createPortal(
-                        DiffsModal, {
-                          bmId: bm.id,
-                        },
-                      );
-                    }}
-                  >
-                    {t('Check diffs')}
-                  </Button>
+                  {bm.resourceDiffCount > 0 && (
+                    <Button
+                      size={'sm'}
+                      variant={'light'}
+                      color={'primary'}
+                      onClick={() => {
+                        createPortal(
+                          DiffsModal, {
+                            bmId: bm.id,
+                          },
+                        );
+                      }}
+                    >
+                      {t('Check {{count}} diffs', { count: bm.resourceDiffCount })}
+                    </Button>
+                  )}
                 </div>
               );
               break;
@@ -181,6 +184,7 @@ export default ({
                   <Button
                     size={'sm'}
                     color={'primary'}
+                    isDisabled={!bm.processes || bm.processes.length === 0 || bm.resourceDiffCount == 0}
                     onClick={() => {
                       createPortal(Modal, {
                         defaultVisible: true,

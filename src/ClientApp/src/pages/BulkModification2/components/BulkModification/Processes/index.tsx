@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
-import { Button, Chip, Divider } from '@/components/bakaui';
+import { DeleteOutlined } from '@ant-design/icons';
+import { Button, Chip, Divider, Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import ProcessModal from '@/pages/BulkModification2/components/BulkModification/ProcessModal';
 import type {
@@ -37,7 +38,7 @@ export default ({
             return (
               <React.Fragment key={i}>
                 <div
-                  className={'flex gap-1 cursor-pointer hover:bg-[var(--bakaui-overlap-background)] rounded'}
+                  className={'flex gap-1 cursor-pointer hover:bg-[var(--bakaui-overlap-background)] rounded items-center'}
                   onClick={() => {
                     createPortal(ProcessModal, {
                       process: process,
@@ -72,6 +73,28 @@ export default ({
                         {process.property?.name}
                       </Chip>
                     </div>
+                    <Button
+                      size={'sm'}
+                      variant={'light'}
+                      color={'danger'}
+                      className={'min-w-fit px-2'}
+                      onClick={() => {
+                        createPortal(
+                          Modal, {
+                            defaultVisible: true,
+                            title: t('Delete a process'),
+                            children: t('Are you sure you want to delete this process?'),
+                            onOk: async () => {
+                              const nps = processes.filter((_, j) => j !== i);
+                              setProcesses(nps);
+                              onChange?.(nps);
+                            },
+                          },
+                        );
+                      }}
+                    >
+                      <DeleteOutlined className={'text-base'} />
+                    </Button>
                   </div>
                   <div className={'pl-2 flex flex-col gap-1'}>
                     {process.steps?.map((step, j) => {
@@ -82,6 +105,11 @@ export default ({
                           property={process.property}
                           variables={variables}
                           no={`${i + 1}.${j + 1}`}
+                          onDelete={() => {
+                            process.steps?.splice(i, 1);
+                            setProcesses([...processes]);
+                            onChange?.(processes);
+                          }}
                         />
                       );
                     })}

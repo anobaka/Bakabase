@@ -12,6 +12,7 @@ import dependentComponentContexts from '@/models/dependentComponentContexts';
 import fileMovingProgresses from '@/models/fileMovingProgresses';
 import appUpdaterState from '@/models/appUpdaterState';
 import appContext from '@/models/appContext';
+import bulkModificationInternals from '@/models/bulkModificationInternals';
 
 const {
   appOptions,
@@ -39,6 +40,7 @@ export default createStore({
   fileMovingProgresses,
   appUpdaterState,
   appContext,
+  bulkModificationInternals,
 
   appOptions,
   uiOptions,

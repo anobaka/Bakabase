@@ -44,6 +44,9 @@ export default class UIHubConnection {
         case 'AppContext':
           store.dispatch.appContext.update(data);
           break;
+        case 'BulkModificationInternals':
+          store.dispatch.bulkModificationInternals.update(data);
+          break;
       }
     });
 

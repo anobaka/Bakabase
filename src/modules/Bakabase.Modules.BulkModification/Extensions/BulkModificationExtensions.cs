@@ -25,7 +25,7 @@ public static class BulkModificationExtensions
 {
     public static async Task<List<Abstractions.Models.BulkModification>> ToDomainModels(
         this List<BulkModificationDbModel> dbModels,
-        IPropertyService propertyService)
+        IPropertyService propertyService, Dictionary<int, int>? resourceDiffCountMap = null)
     {
         var filterGroupDbModels = dbModels
             .Select(d => d.Filter.JsonDeserializeOrDefault<ResourceSearchFilterGroupDbModel>()).ToList();
@@ -59,13 +59,15 @@ public static class BulkModificationExtensions
             Filter = filterGroupDbModels[i]?.ToDomainModel(propertyMap),
             Processes = processesDbModels[i]?.Select(p => p.ToDomainModel(propertyMap)).ToList(),
             Variables = variablesDbModels[i]?.Select(v => v.ToDomainModel(propertyMap)).ToList(),
-            AppliedAt = dbModel.AppliedAt
+            AppliedAt = dbModel.AppliedAt,
+            ResourceDiffCount = resourceDiffCountMap?.GetValueOrDefault(dbModel.Id) ?? 0
         }).ToList();
     }
 
     public static async Task<Abstractions.Models.BulkModification> ToDomainModel(this BulkModificationDbModel dbModel,
-        IPropertyService propertyService) =>
-        (await new List<BulkModificationDbModel> {dbModel}.ToDomainModels(propertyService))[0];
+        IPropertyService propertyService, int resourceDiffCount = 0) =>
+        (await new List<BulkModificationDbModel> {dbModel}.ToDomainModels(propertyService,
+            new Dictionary<int, int> {{dbModel.Id, resourceDiffCount}}))[0];
 
     private static BulkModificationVariable ToDomainModel(this BulkModificationVariableDbModel dbModel,
         Dictionary<PropertyPool, Dictionary<int, Bakabase.Abstractions.Models.Domain.Property>> propertyMap)

@@ -1,8 +1,9 @@
 'use strict';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { DeleteOutlined } from '@ant-design/icons';
 import { TextProcessDemonstrator } from '../Processes/TextValueProcess';
-import { Chip } from '@/components/bakaui';
+import { Button, Chip, Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IProperty } from '@/components/Property/models';
 import type {
@@ -20,6 +21,7 @@ type Props = {
   variables?: BulkModificationVariable[];
   availableValueTypes?: BulkModificationProcessorValueType[];
   editable?: boolean;
+  onDelete: () => any;
 };
 
 export default ({
@@ -30,6 +32,7 @@ export default ({
                   variables,
                   editable,
                   availableValueTypes,
+                  onDelete,
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -102,6 +105,26 @@ export default ({
         radius={'sm'}
       >{no}</Chip>
       {renderDemonstrator()}
+      <Button
+        size={'sm'}
+        variant={'light'}
+        color={'danger'}
+        className={'min-w-fit px-2'}
+        onClick={() => {
+          createPortal(
+            Modal, {
+              defaultVisible: true,
+              title: t('Delete a process'),
+              children: t('Are you sure you want to delete this process?'),
+              onOk: async () => {
+                onDelete();
+              },
+            },
+          );
+        }}
+      >
+        <DeleteOutlined className={'text-base'} />
+      </Button>
     </div>
   );
 };

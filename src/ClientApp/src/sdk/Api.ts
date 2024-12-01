@@ -1571,6 +1571,8 @@ export interface BakabaseServiceModelsViewBulkModificationViewModel {
   filter?: BakabaseServiceModelsViewResourceSearchFilterGroupViewModel;
   processes?: BakabaseServiceModelsViewBulkModificationProcessViewModel[];
   filteredResourceIds?: number[];
+  /** @format date-time */
+  appliedAt?: string;
 }
 
 export interface BakabaseServiceModelsViewCategoryViewModel {

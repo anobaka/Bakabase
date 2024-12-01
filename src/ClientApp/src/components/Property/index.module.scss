@@ -1,5 +1,5 @@
 .property {
-  background: var(--theme-block-background);
+  //background: var(--theme-block-background);
   border: 1px solid var(--theme-border-color);
 
   .line1 {
@@ -25,8 +25,7 @@
     font-size: 12px;
   }
 
-  &:hover {
-    cursor: pointer;
-    background: var(--theme-block-background-accent);
-  }
+  //&:hover {
+  //  background: var(--theme-block-background-accent);
+  //}
 }

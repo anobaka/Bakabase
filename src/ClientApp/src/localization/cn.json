@@ -1499,5 +1499,6 @@
   "{{count}} resources related": "{{count}}个相关资源",
   "BulkModificationProcessorValueType.Static": "固定值",
   "BulkModificationProcessorValueType.Dynamic": "动态值",
-  "BulkModificationProcessorValueType.Variable": "变量"
+  "BulkModificationProcessorValueType.Variable": "变量",
+  "Check {{count}} diffs": "查看{{count}}个变化"
 }

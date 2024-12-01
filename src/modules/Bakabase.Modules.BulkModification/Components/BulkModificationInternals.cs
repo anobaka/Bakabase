@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Bakabase.Abstractions.Components.Property;
 using Bakabase.Abstractions.Components.TextProcessing;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.BulkModification.Abstractions.Components;
@@ -27,4 +28,10 @@ public class BulkModificationInternals
             {
                 {StandardValueType.String, new BmTextProcessor()}
             });
+
+    public static ConcurrentDictionary<PropertyPool, ConcurrentBag<int>> DisabledPropertyKeys =
+        new ConcurrentDictionary<PropertyPool, ConcurrentBag<int>>(new Dictionary<PropertyPool, ConcurrentBag<int>>
+        {
+            {PropertyPool.Internal, new ConcurrentBag<int>(SpecificEnumUtils<InternalProperty>.Values.Cast<int>())}
+        });
 }

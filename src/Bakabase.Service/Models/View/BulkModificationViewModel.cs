@@ -15,4 +15,5 @@ public record BulkModificationViewModel
     public List<BulkModificationProcessViewModel>? Processes { get; set; }
     public List<int>? FilteredResourceIds { get; set; }
     public DateTime? AppliedAt { get; set; }
+    public int ResourceDiffCount { get; set; }
 }

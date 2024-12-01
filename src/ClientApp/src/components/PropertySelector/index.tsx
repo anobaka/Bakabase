@@ -3,20 +3,20 @@ import { useTranslation } from 'react-i18next';
 import PropertyDialog from '../PropertyDialog';
 import type { IProperty } from '@/components/Property/models';
 import Property from '@/components/Property';
-import { createPortalOfComponent } from '@/components/utils';
+import { buildLogger, createPortalOfComponent } from '@/components/utils';
 import type { PropertyType } from '@/sdk/constants';
 import { PropertyPool, StandardValueType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import { Button, Chip, Modal, Spacer, Tab, Tabs } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
-interface IKey {
+type Key = {
   id: number;
   pool: PropertyPool;
-}
+};
 
 interface IProps extends DestroyableProps{
-  selection?: IKey[];
+  selection?: Key[];
   onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
   multiple?: boolean;
   pool: PropertyPool;
@@ -25,25 +25,31 @@ interface IProps extends DestroyableProps{
   addable?: boolean;
   removable?: boolean;
   title?: any;
+  disabledKeys?: Key[];
 }
 
-const PropertySelector = ({
-                            selection: propsSelection,
-                            onSubmit: propsOnSubmit,
-                            multiple = true,
-                            pool,
-                            valueTypes,
-                            addable,
-                            editable,
-                            removable,
-                            title,
-                            ...props
-                          }: IProps) => {
+const log = buildLogger('PropertySelector');
+
+const PropertySelector = (props: IProps) => {
+  log('props', props);
   const { t } = useTranslation();
+  const {
+    selection: propsSelection,
+    onSubmit: propsOnSubmit,
+    multiple = true,
+    pool,
+    valueTypes,
+    addable,
+    editable,
+    removable,
+    title,
+    onDestroyed,
+    disabledKeys,
+  } = props;
   const [visible, setVisible] = useState(true);
 
   const [properties, setProperties] = useState<IProperty[]>([]);
-  const [selection, setSelection] = useState<IKey[]>(propsSelection || []);
+  const [selection, setSelection] = useState<Key[]>(propsSelection || []);
 
   const [currentTab, setCurrentTab] = useState<string>('selected');
 
@@ -69,7 +75,7 @@ const PropertySelector = ({
 
   const renderProperty = (property: IProperty) => {
     const selected = selection.some(s => s.id == property.id && s.pool == property.pool);
-    console.log(selection, property);
+    // console.log(selection, property);
     return (
       <Property
         key={`${property.id}-${property.pool}`}
@@ -88,7 +94,7 @@ const PropertySelector = ({
             if (selected) {
               setSelection([]);
             } else {
-              const ns: IKey[] = [{
+              const ns: Key[] = [{
                 id: property.id,
                 pool: property.pool,
               }];
@@ -101,11 +107,12 @@ const PropertySelector = ({
         editable={editable}
         removable={removable}
         onSaved={loadProperties}
+        disabled={disabledKeys?.some(k => k.id == property.id && k.pool == property.pool)}
       />
     );
   };
 
-  const onSubmit = async (selection: IKey[]) => {
+  const onSubmit = async (selection: Key[]) => {
     // console.log(customProperties, selection);
     if (propsOnSubmit) {
       await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.pool == s.pool)).filter(x => x != undefined) as IProperty[]);
@@ -251,7 +258,7 @@ const PropertySelector = ({
         await onSubmit(selection);
         close();
       }}
-      onDestroyed={props.onDestroyed}
+      onDestroyed={onDestroyed}
       title={title ?? t(multiple ? 'Select properties' : 'Select a property')}
       footer={(multiple === true && propertyCount > 0) ? true : (<Spacer />)}
     >

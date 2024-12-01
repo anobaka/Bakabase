@@ -11,11 +11,11 @@ import PropertyDialog from '@/components/PropertyDialog';
 import { Chip, Icon, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { PropertyPool, PropertyType, ResourceProperty } from '@/sdk/constants';
-import { StandardValueIcon } from '@/components/StandardValue';
 
-interface IProps {
+type Props = {
   property: IProperty;
   onClick?: () => any;
+  disabled?: boolean;
 
   removable?: boolean;
   editable?: boolean;
@@ -24,7 +24,7 @@ interface IProps {
   onRemoved?: () => any;
 
   onDialogDestroyed?: () => any;
-}
+};
 
 export {
   Label as PropertyLabel,
@@ -37,8 +37,9 @@ export default ({
                   onSaved,
                   onRemoved,
                   onDialogDestroyed,
+                  disabled,
                   ...props
-                }: IProps) => {
+                }: Props) => {
   const { t } = useTranslation();
 
   const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] = useState(false);
@@ -127,8 +128,11 @@ export default ({
   return (
     <div
       key={property.id}
-      className={`${styles.property} group px-2 py-1 rounded`}
+      className={`${styles.property} group px-2 py-1 rounded ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-[var(--bakaui-overlap-background)]'}`}
       onClick={() => {
+        if (disabled) {
+          return;
+        }
         if (editable && editablePortal == 'click') {
           showDetail();
         }
@@ -148,9 +152,7 @@ export default ({
       </Modal>
       <div className={`${styles.line1} flex item-center justify-between gap-1`}>
         <div className={`${styles.left}`}>
-          <div className={styles.name}>{
-            property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id])
-          }</div>
+          <div className={styles.name}>{property.name}</div>
           <Tooltip
             color={'foreground'}
             content={t(PropertyType[property.type!])}

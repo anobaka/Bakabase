@@ -13,6 +13,7 @@ import type {
 } from '@/pages/BulkModification2/components/BulkModification/models';
 import ProcessStep from '@/pages/BulkModification2/components/BulkModification/ProcessStep';
 import ProcessStepModel from '@/pages/BulkModification2/components/BulkModification/ProcessStepModel';
+import store from '@/store';
 
 type Props = {
   process?: Partial<BulkModificationProcess>;
@@ -20,7 +21,7 @@ type Props = {
   onSubmit?: (process: BulkModificationProcess) => void;
 } & DestroyableProps;
 
-const validate = (p?: Partial<BulkModificationProcess>) => !(!p || !p.propertyId || !p.propertyPool);
+const validate = (p?: Partial<BulkModificationProcess>) => !(!p || !p.propertyId || !p.propertyPool || !p.steps || p.steps.length === 0);
 
 const AllBulkModificationValueTypes = [BulkModificationProcessorValueType.Static, BulkModificationProcessorValueType.Dynamic, BulkModificationProcessorValueType.Variable];
 
@@ -32,6 +33,8 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+
+  const bmInternals = store.getModelState('bulkModificationInternals');
 
   const [process, setProcess] = useState<Partial<BulkModificationProcess>>(propsProcess ?? {});
 
@@ -67,6 +70,16 @@ export default ({
                   createPortal(
                     PropertySelector, {
                       pool: PropertyPool.All,
+                      disabledKeys: Object.keys(bmInternals.disabledPropertyKeys || {}).reduce<{
+                        pool: PropertyPool;
+                        id: number;
+                      }[]>((s, t) => {
+                        s.push(...bmInternals.disabledPropertyKeys[t].map(id => ({
+                          id,
+                          pool: parseInt(t, 10) as PropertyPool,
+                        })));
+                        return s;
+                      }, []),
                       multiple: false,
                       onSubmit: async (ps) => {
                         const p = ps[0];
@@ -116,6 +129,12 @@ export default ({
                     availableValueTypes={AllBulkModificationValueTypes}
                     onChange={(newStep) => {
                       process.steps![i] = newStep;
+                      setProcess({
+                        ...process,
+                      });
+                    }}
+                    onDelete={() => {
+                      process.steps?.splice(i, 1);
                       setProcess({
                         ...process,
                       });

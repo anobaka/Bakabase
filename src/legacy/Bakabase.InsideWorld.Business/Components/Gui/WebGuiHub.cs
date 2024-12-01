@@ -18,10 +18,12 @@ using Bakabase.InsideWorld.Business.Components.FileMover.Models;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Models.View;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using Bakabase.Modules.BulkModification.Components;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Humanizer;
@@ -101,6 +103,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
                 // BulkModificationService.GetConfiguration());
 
             await Clients.Caller.GetData(nameof(AppContext), _appContext);
+
+            await Clients.Caller.GetData(nameof(BulkModificationInternals), new BulkModificationInternalsViewModel());
         }
     }
 }

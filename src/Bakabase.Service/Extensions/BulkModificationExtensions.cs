@@ -40,7 +40,8 @@ public static class BulkModificationExtensions
             Filter = domainModel.Filter?.ToViewModel(propertyLocalizer),
             Processes = domainModel.Processes?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
-            AppliedAt = domainModel.AppliedAt
+            AppliedAt = domainModel.AppliedAt,
+            ResourceDiffCount = domainModel.ResourceDiffCount
         };
     }
 
