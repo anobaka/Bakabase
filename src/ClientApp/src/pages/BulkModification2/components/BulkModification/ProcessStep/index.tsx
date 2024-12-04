@@ -14,7 +14,7 @@ import ProcessStepModel from '@/pages/BulkModification2/components/BulkModificat
 import { type BulkModificationProcessorValueType, PropertyType } from '@/sdk/constants';
 
 type Props = {
-  no: string;
+  no: any;
   step: BulkModificationProcessStep;
   property: IProperty;
   onChange?: (step: BulkModificationProcessStep) => any;

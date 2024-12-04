@@ -1,11 +1,13 @@
-import BApi, { BApi as BApiType } from '@/sdk/BApi';
+import type { StandardValueType } from '@/sdk/constants';
 
 type BulkModificationInternals = {
   disabledPropertyKeys: Record<number, number[]>;
+  supportedStandardValueTypes: StandardValueType[];
 };
 export default {
   state: {
     disabledPropertyKeys: {},
+    supportedStandardValueTypes: [],
   } as BulkModificationInternals,
 
   // 定义改变该模型状态的纯函数

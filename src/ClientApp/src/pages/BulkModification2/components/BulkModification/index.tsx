@@ -225,7 +225,7 @@ export default ({
           }
           return (
             <>
-              <div className={'flex items-start gap-4'}>
+              <div className={'flex gap-4 items-center'}>
                 <div className={'w-[80px] text-right'}>
                   <Chip
                     radius={'sm'}

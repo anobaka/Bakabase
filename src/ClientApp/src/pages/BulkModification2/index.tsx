@@ -7,10 +7,14 @@ import { Accordion, AccordionItem, Button, Chip, Modal, Spinner, Tooltip } from 
 import type { BulkModification as BulkModificationModel } from '@/pages/BulkModification2/components/BulkModification';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import store from '@/store';
+import { StandardValueType } from '@/sdk/constants';
 
 export default () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+
+  const bmInternals = store.getModelState('bulkModificationInternals');
 
   const [bulkModifications, setBulkModifications] = useState<BulkModificationModel[]>();
 
@@ -25,7 +29,7 @@ export default () => {
 
   return (
     <div>
-      <div>
+      <div className={'flex items-center gap-2'}>
         <Button
           color={'primary'}
           size={'sm'}
@@ -37,6 +41,14 @@ export default () => {
         >
           {t('Add a bulk modification')}
         </Button>
+        <div className={'flex items-center gap-1'}>
+          {t('Under development, currently supported data types')}
+          {bmInternals.supportedStandardValueTypes?.map(x => {
+              return (
+                <Chip size={'sm'} radius={'sm'}>{t(`StandardValueType.${StandardValueType[x]}`)}</Chip>
+              );
+            })}
+        </div>
       </div>
       {bulkModifications ? bulkModifications.length == 0 ? (
         <div className={'flex items-center justify-center min-h-[400px]'}>

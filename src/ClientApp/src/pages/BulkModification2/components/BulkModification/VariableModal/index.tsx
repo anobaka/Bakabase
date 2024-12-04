@@ -1,3 +1,4 @@
+'use strict';
 import { CardHeader } from '@nextui-org/react';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import React, { useState } from 'react';
@@ -12,6 +13,7 @@ import ProcessStepModel from '@/pages/BulkModification2/components/BulkModificat
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { buildLogger } from '@/components/utils';
+import store from '@/store';
 
 type Props = {
   variable?: Partial<BulkModificationVariable>;
@@ -29,6 +31,8 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+
+  const bmInternals = store.getModelState('bulkModificationInternals');
 
   const [variable, setVariable] = useState<Partial<BulkModificationVariable>>(propsVariable ?? {});
 
@@ -71,6 +75,7 @@ export default ({
                     PropertySelector, {
                       pool: PropertyPool.All,
                       multiple: false,
+                      isDisabled: p => !bmInternals.supportedStandardValueTypes?.includes(p.bizValueType),
                       onSubmit: async (ps) => {
                         const p = ps[0];
                         setVariable({
@@ -152,6 +157,12 @@ export default ({
               {variable.preprocesses.map((step, i) => {
                 return (
                   <ProcessStep
+                    onDelete={() => {
+                      variable.preprocesses?.splice(i, 1);
+                      setVariable({
+                        ...variable,
+                      });
+                    }}
                     no={i + 1}
                     step={step}
                     property={variable.property!}

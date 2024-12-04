@@ -1500,5 +1500,6 @@
   "BulkModificationProcessorValueType.Static": "固定值",
   "BulkModificationProcessorValueType.Dynamic": "动态值",
   "BulkModificationProcessorValueType.Variable": "变量",
-  "Check {{count}} diffs": "查看{{count}}个变化"
+  "Check {{count}} diffs": "查看{{count}}个变化",
+  "Under development, currently supported data types": "正在开发中，目前支持的数据类型"
 }

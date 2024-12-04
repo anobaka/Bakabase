@@ -70,16 +70,7 @@ export default ({
                   createPortal(
                     PropertySelector, {
                       pool: PropertyPool.All,
-                      disabledKeys: Object.keys(bmInternals.disabledPropertyKeys || {}).reduce<{
-                        pool: PropertyPool;
-                        id: number;
-                      }[]>((s, t) => {
-                        s.push(...bmInternals.disabledPropertyKeys[t].map(id => ({
-                          id,
-                          pool: parseInt(t, 10) as PropertyPool,
-                        })));
-                        return s;
-                      }, []),
+                      isDisabled: p => bmInternals.disabledPropertyKeys?.[p.pool]?.includes(p.id) || !bmInternals.supportedStandardValueTypes?.includes(p.bizValueType),
                       multiple: false,
                       onSubmit: async (ps) => {
                         const p = ps[0];

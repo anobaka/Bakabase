@@ -25,7 +25,7 @@ interface IProps extends DestroyableProps{
   addable?: boolean;
   removable?: boolean;
   title?: any;
-  disabledKeys?: Key[];
+  isDisabled?: (p: IProperty) => boolean;
 }
 
 const log = buildLogger('PropertySelector');
@@ -44,7 +44,7 @@ const PropertySelector = (props: IProps) => {
     removable,
     title,
     onDestroyed,
-    disabledKeys,
+    isDisabled,
   } = props;
   const [visible, setVisible] = useState(true);
 
@@ -107,7 +107,7 @@ const PropertySelector = (props: IProps) => {
         editable={editable}
         removable={removable}
         onSaved={loadProperties}
-        disabled={disabledKeys?.some(k => k.id == property.id && k.pool == property.pool)}
+        disabled={isDisabled?.(property)}
       />
     );
   };
