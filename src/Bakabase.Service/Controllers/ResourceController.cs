@@ -455,6 +455,14 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        [HttpGet("unknown")]
+        [SwaggerOperation(OperationId = "GetUnknownResources")]
+        public async Task<ListResponse<Resource>> GetUnknownResources()
+        {
+            var resources = await service.GetUnknownResources();
+            return new ListResponse<Resource>(resources);
+        }
+
         [HttpGet("unknown/count")]
         [SwaggerOperation(OperationId = "GetUnknownResourcesCount")]
         public async Task<SingletonResponse<int>> GetUnknownCount()
@@ -468,6 +476,26 @@ namespace Bakabase.Service.Controllers
         {
             await service.Pin(id, pin);
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("transfer")]
+        [SwaggerOperation(OperationId = "TransferResourceData")]
+        public async Task<BaseResponse> Transfer([FromBody] ResourceTransferInputModel model)
+        {
+            await service.Transfer(model);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("paths")]
+        [SwaggerOperation(OperationId = "SearchResourcePaths")]
+        public async Task<ListResponse<ResourcePathInfoViewModel>> SearchPaths(string keyword)
+        {
+            var resources =
+                await service.GetAll(x => x.Path.Contains(keyword, StringComparison.OrdinalIgnoreCase),
+                    ResourceAdditionalItem.None);
+            var viewModels = resources.Select(r => new ResourcePathInfoViewModel(r.Id, r.Path, r.FileName));
+
+            return new ListResponse<ResourcePathInfoViewModel>(viewModels);
         }
     }
 }

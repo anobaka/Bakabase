@@ -18,9 +18,11 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import type { ResourceSearchFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
 import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector';
 import VirtualList from '@/pages/Test/cases/VirtualList';
+import ResourceTransfer from '@/pages/Test/cases/ResourceTransfer';
 
 
 const components = {
+  ResourceTransfer: <ResourceTransfer />,
   Filter: <ResourceFilter />,
   VirtualList: <VirtualList />,
   CategoryEnhancerOptions: <CategoryEnhancerOptionsDialog />,

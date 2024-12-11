@@ -27,10 +27,10 @@ export type Resource = {
   parentId?: number;
   hasChildren: boolean;
   isFile: boolean;
-  createDt: string;
-  updateDt: string;
-  fileCreateDt: string;
-  fileUpdateDt: string;
+  createdAt: string;
+  updatedAt: string;
+  fileCreatedAt: string;
+  fileModifiedAt: string;
   parent?: Resource;
   properties?: {[key in PropertyPool]?: Record<number, Property>};
   coverPaths?: string[];

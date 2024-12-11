@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ApiOutlined, QuestionCircleOutlined, ReloadOutlined, SyncOutlined } from '@ant-design/icons';
+import { ApiOutlined, ExclamationCircleOutlined, QuestionCircleOutlined, SyncOutlined } from '@ant-design/icons';
 import BApi from '@/sdk/BApi';
 import { createPortalOfComponent } from '@/components/utils';
 import type { DestroyableProps } from '@/components/bakaui/types';
@@ -290,45 +290,70 @@ function ResourceEnhancementsDialog({
                 </div>
               </div>
               <div className={'flex flex-col gap-y-2 min-w-0'}>
-                <Table isStriped className={'break-all'}>
-                  <TableHeader>
-                    <TableColumn>{t('Target')}</TableColumn>
-                    <TableColumn>{t('Raw data')}</TableColumn>
-                    <TableColumn>{t('Generated custom property value')}</TableColumn>
-                  </TableHeader>
-                  <TableBody>
-                    {targets.map((e) => {
-                      return (
-                        <TableRow>
-                          <TableCell>{e.targetName}</TableCell>
-                          <TableCell>{JSON.stringify(e.enhancement?.value)}</TableCell>
-                          <TableCell>{renderConvertedValue(e.enhancement)}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-
+                <div>
+                  {targets.every(x => !x.enhancement) && (
+                    <Chip
+                      size={'sm'}
+                      radius={'sm'}
+                      variant={'light'}
+                      className={'opacity-60'}
+                    >
+                      <ExclamationCircleOutlined className={'text-sm mr-1'} />
+                      {t('No data retrieved for fixed targets, please check configuration if necessary')}
+                    </Chip>
+                  )}
+                  <Table isStriped className={'break-all'}>
+                    <TableHeader>
+                      <TableColumn>{t('Target')}</TableColumn>
+                      <TableColumn>{t('Raw data')}</TableColumn>
+                      <TableColumn>{t('Generated custom property value')}</TableColumn>
+                    </TableHeader>
+                    <TableBody>
+                      {targets.map((e) => {
+                        return (
+                          <TableRow>
+                            <TableCell>{e.targetName}</TableCell>
+                            <TableCell>{JSON.stringify(e.enhancement?.value)}</TableCell>
+                            <TableCell>{renderConvertedValue(e.enhancement)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
                 {e.dynamicTargets?.map(dt => {
                   return (
-                    <Table isStriped className={'break-all'}>
-                      <TableHeader>
-                        <TableColumn>{dt.targetName}({dt.enhancements?.length ?? 0})</TableColumn>
-                        <TableColumn>{t('Raw data')}</TableColumn>
-                        <TableColumn>{t('Generated custom property value')}</TableColumn>
-                      </TableHeader>
-                      <TableBody>
-                        {dt.enhancements?.map((e) => {
-                          return (
-                            <TableRow>
-                              <TableCell>{e.dynamicTarget}</TableCell>
-                              <TableCell>{JSON.stringify(e.value)}</TableCell>
-                              <TableCell>{renderConvertedValue(e)}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                    <div>
+                      {(!dt.enhancements || dt.enhancements.length == 0) && (
+                        <Chip
+                          size={'sm'}
+                          radius={'sm'}
+                          variant={'light'}
+                          className={'opacity-60'}
+                        >
+                          <ExclamationCircleOutlined className={'text-sm mr-1'} />
+                          {t('No data retrieved for dynamic targets, please check configuration if necessary')}
+                        </Chip>
+                      )}
+                      <Table isStriped className={'break-all'}>
+                        <TableHeader>
+                          <TableColumn>{dt.targetName}({dt.enhancements?.length ?? 0})</TableColumn>
+                          <TableColumn>{t('Raw data')}</TableColumn>
+                          <TableColumn>{t('Generated custom property value')}</TableColumn>
+                        </TableHeader>
+                        <TableBody>
+                          {dt.enhancements?.map((e) => {
+                            return (
+                              <TableRow>
+                                <TableCell>{e.dynamicTarget}</TableCell>
+                                <TableCell>{JSON.stringify(e.value)}</TableCell>
+                                <TableCell>{renderConvertedValue(e)}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
                   );
                 })}
               </div>

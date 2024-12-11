@@ -54,7 +54,8 @@ public interface IResourceService
 
     Task<bool> Any(Func<Abstractions.Models.Db.ResourceDbModel, bool>? selector = null);
 
-    Task<List<Abstractions.Models.Db.ResourceDbModel>> AddAll(IEnumerable<Abstractions.Models.Db.ResourceDbModel> resources);
+    Task<List<Abstractions.Models.Db.ResourceDbModel>> AddAll(
+        IEnumerable<Abstractions.Models.Db.ResourceDbModel> resources);
 
     Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model);
 
@@ -91,10 +92,12 @@ public interface IResourceService
 
     Task<BaseResponse> Play(int resourceId, string file);
     Task DeleteUnknown();
+    Task<List<Resource>> GetUnknownResources();
     Task<int> GetUnknownCount();
 
     Task<BaseResponse> ChangeMediaLibraryAndPath(int id, int mediaLibraryId, string path);
 
     Task Pin(int id, bool pin);
     Task PrepareCache(Action<int> onProgressChange, CancellationToken ct);
+    Task Transfer(ResourceTransferInputModel model);
 }

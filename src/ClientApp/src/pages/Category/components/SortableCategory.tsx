@@ -4,7 +4,13 @@ import { SketchPicker } from 'react-color';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
-import { CopyOutlined, EditOutlined, SyncOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import {
+  CopyOutlined,
+  EditOutlined,
+  QuestionCircleOutlined,
+  SyncOutlined,
+  UnorderedListOutlined,
+} from '@ant-design/icons';
 import AddMediaLibraryInBulkDialog from './AddMediaLibraryInBulkDialog';
 import DisplayNameTemplateEditorDialog from './DisplayNameTemplateEditorDialog';
 import CustomIcon from '@/components/CustomIcon';
@@ -22,14 +28,15 @@ import {
   Dropdown,
   DropdownItem,
   DropdownMenu,
-  DropdownTrigger, Input,
+  DropdownTrigger,
+  Input,
   Modal,
   Tooltip,
 } from '@/components/bakaui';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import FeatureStatusTip from '@/components/FeatureStatusTip';
 import SynchronizationModal from '@/pages/Category/components/SynchronizationModal';
+import DeleteEnhancementsModal from '@/pages/Category/components/DeleteEnhancementsModal';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -331,14 +338,14 @@ export default (({
                     break;
                   }
                   case 'delete-enhancements': {
-                    createPortal(Modal, {
-                      defaultVisible: true,
-                      title: t('Removing all enhancement records of resources under this category'),
-                      children: t('This operation cannot be undone. Would you like to proceed?'),
-                      onOk: async () => {
-                        await BApi.category.deleteEnhancementsByCategory(category.id);
+                    createPortal(
+                      DeleteEnhancementsModal, {
+                        title: t('Deleting all enhancement records of resources under this category'),
+                        onOk: async (deleteEmptyOnly) => {
+                          await BApi.category.deleteEnhancementsByCategory(category.id, { deleteEmptyOnly: deleteEmptyOnly });
+                        },
                       },
-                    });
+                    );
                     break;
                   }
                   case 'delete-category': {
@@ -366,7 +373,7 @@ export default (({
                 color="danger"
                 key={'delete-enhancements'}
               >
-                {t('Remove all enhancement records')}
+                {t('Delete all enhancement records')}
               </DropdownItem>
               <DropdownItem
                 className="text-danger"

@@ -16,17 +16,10 @@ import Divider from './components/Divider';
 import Spacer from './components/Spacer';
 import { Listbox, ListboxItem, ListboxSection } from './components/Listbox';
 import Spinner from './components/Spinner';
-import { Breadcrumbs, BreadcrumbItem } from './components/Breadcumbs';
+import { BreadcrumbItem, Breadcrumbs } from './components/Breadcumbs';
 import { Accordion, AccordionItem } from './components/Accordion';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableColumn,
-  TableRow,
-  TableCell,
-  TableRowProps,
-} from './components/Table';
+import { Autocomplete, AutocompleteItem } from './components/Autocomplete';
+import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, TableRowProps } from './components/Table';
 import Checkbox from './components/Checkbox';
 import Badge from './components/Badge';
 import Code from './components/Code';
@@ -40,11 +33,13 @@ import { TimeInput } from './components/Time';
 import Pagination from './components/Pagination';
 import Rating from './components/Rating';
 import Image from './components/Image';
-import { RadioGroup, Radio } from './components/Radio';
+import { Radio, RadioGroup } from './components/Radio';
 import Kbd from './components/Kbd';
 import NumberInput from './components/NumberInput';
 
 export {
+  Autocomplete,
+  AutocompleteItem,
   Button,
   ButtonProps,
   ButtonGroup,

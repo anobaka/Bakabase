@@ -129,32 +129,110 @@ namespace Bakabase.Service.Controllers
 
         [HttpDelete("~/media-library/{mediaLibraryId:int}/enhancement")]
         [SwaggerOperation(OperationId = "DeleteByEnhancementsMediaLibrary")]
-        public async Task<BaseResponse> DeleteMediaLibraryEnhancementRecords(int mediaLibraryId)
+        public async Task<BaseResponse> DeleteMediaLibraryEnhancementRecords(int mediaLibraryId, bool deleteEmptyOnly)
         {
             var resourceIds = (await resourceService.GetAll(t => t.MediaLibraryId == mediaLibraryId))
                 .Select(t => t.Id).ToArray();
-            await enhancementService.RemoveAll(t => resourceIds.Contains(t.Id), true);
-            await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
+
+            if (deleteEmptyOnly)
+            {
+                var records = await enhancementRecordService.GetAll(x => resourceIds.Contains(x.ResourceId));
+                var enhancements = await enhancementService.GetAll(x => resourceIds.Contains(x.ResourceId));
+                var resourceIdEnhancerIdMap = enhancements.GroupBy(x => x.ResourceId)
+                    .ToDictionary(d => d.Key, d => d.Select(x => x.EnhancerId).ToHashSet());
+                var recordIdsWithEmptyEnhancements =
+                    records.Where(x =>
+                        !resourceIdEnhancerIdMap.TryGetValue(x.ResourceId, out var enhancerIds) ||
+                        !enhancerIds.Contains(x.EnhancerId)).Select(x => x.Id).ToList();
+                await enhancementRecordService.DeleteAll(r => recordIdsWithEmptyEnhancements.Contains(r.Id));
+            }
+            else
+            {
+                await enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
+                await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
+            }
+
             return BaseResponseBuilder.Ok;
         }
 
         [HttpDelete("~/category/{categoryId:int}/enhancement")]
         [SwaggerOperation(OperationId = "DeleteEnhancementsByCategory")]
-        public async Task<BaseResponse> DeleteCategoryEnhancementRecords(int categoryId)
+        public async Task<BaseResponse> DeleteCategoryEnhancementRecords(int categoryId, bool deleteEmptyOnly)
         {
             var resourceIds = (await resourceService.GetAll(t => t.CategoryId == categoryId))
                 .Select(t => t.Id).ToArray();
-            await enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
-            await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
+            if (deleteEmptyOnly)
+            {
+                var records = await enhancementRecordService.GetAll(x => resourceIds.Contains(x.ResourceId));
+                var enhancements = await enhancementService.GetAll(x => resourceIds.Contains(x.ResourceId));
+                var resourceIdEnhancerIdMap = enhancements.GroupBy(x => x.ResourceId)
+                    .ToDictionary(d => d.Key, d => d.Select(x => x.EnhancerId).ToHashSet());
+                var recordIdsWithEmptyEnhancements =
+                    records.Where(x =>
+                        !resourceIdEnhancerIdMap.TryGetValue(x.ResourceId, out var enhancerIds) ||
+                        !enhancerIds.Contains(x.EnhancerId)).Select(x => x.Id).ToList();
+                await enhancementRecordService.DeleteAll(r => recordIdsWithEmptyEnhancements.Contains(r.Id));
+            }
+            else
+            {
+                await enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
+                await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpDelete("~/category/{categoryId:int}/enhancer/{enhancerId:int}/enhancements")]
+        [SwaggerOperation(OperationId = "DeleteEnhancementsByCategoryAndEnhancer")]
+        public async Task<BaseResponse> DeleteEnhancementRecordsByCategoryAndEnhancer(int categoryId, int enhancerId,
+            bool deleteEmptyOnly)
+        {
+            var resourceIds = (await resourceService.GetAll(t => t.CategoryId == categoryId))
+                .Select(t => t.Id).ToArray();
+            if (deleteEmptyOnly)
+            {
+                var records = await enhancementRecordService.GetAll(x =>
+                    x.EnhancerId == enhancerId && resourceIds.Contains(x.ResourceId));
+                var enhancements = await enhancementService.GetAll(x =>
+                    x.EnhancerId == enhancerId && resourceIds.Contains(x.ResourceId));
+                var resourceIdEnhancerIdMap = enhancements.GroupBy(x => x.ResourceId)
+                    .ToDictionary(d => d.Key, d => d.Select(x => x.EnhancerId).ToHashSet());
+                var recordIdsWithEmptyEnhancements =
+                    records.Where(x =>
+                        !resourceIdEnhancerIdMap.TryGetValue(x.ResourceId, out var enhancerIds) ||
+                        !enhancerIds.Contains(x.EnhancerId)).Select(x => x.Id).ToList();
+                await enhancementRecordService.DeleteAll(r => recordIdsWithEmptyEnhancements.Contains(r.Id));
+            }
+            else
+            {
+                await enhancementService.RemoveAll(
+                    t => t.EnhancerId == enhancerId && resourceIds.Contains(t.ResourceId), true);
+                await enhancementRecordService.DeleteAll(t =>
+                    t.EnhancerId == enhancerId && resourceIds.Contains(t.ResourceId));
+            }
+
             return BaseResponseBuilder.Ok;
         }
 
         [HttpDelete("~/enhancer/{enhancerId:int}/enhancement")]
         [SwaggerOperation(OperationId = "DeleteEnhancementsByEnhancer")]
-        public async Task<BaseResponse> DeleteEnhancerEnhancementRecords(int enhancerId)
+        public async Task<BaseResponse> DeleteEnhancerEnhancementRecords(int enhancerId, bool deleteEmptyOnly)
         {
-            await enhancementService.RemoveAll(t => t.EnhancerId == enhancerId, true);
-            await enhancementRecordService.DeleteAll(t => t.EnhancerId == enhancerId);
+            if (deleteEmptyOnly)
+            {
+                var records = await enhancementRecordService.GetAll(x => enhancerId == x.EnhancerId);
+                var enhancements = await enhancementService.GetAll(x => x.EnhancerId == enhancerId);
+                var resourceIdsWithEnhancements = enhancements.Select(x => x.ResourceId).ToHashSet();
+                var recordIdsWithEmptyEnhancements =
+                    records.Where(x => !resourceIdsWithEnhancements.Contains(x.ResourceId)).Select(x => x.Id).ToList();
+                await enhancementRecordService.DeleteAll(r => recordIdsWithEmptyEnhancements.Contains(r.Id));
+            }
+            else
+            {
+                await enhancementService.RemoveAll(t => t.EnhancerId == enhancerId, true);
+                await enhancementRecordService.DeleteAll(t => t.EnhancerId == enhancerId);
+            }
+
             return BaseResponseBuilder.Ok;
         }
     }

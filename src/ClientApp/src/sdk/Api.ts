@@ -426,6 +426,21 @@ export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
   asc: boolean;
 }
 
+export interface BakabaseAbstractionsModelsInputResourceTransferInputModel {
+  items: BakabaseAbstractionsModelsInputResourceTransferInputModelItem[];
+  keepMediaLibraryForAll: boolean;
+  deleteAllSourceResources: boolean;
+}
+
+export interface BakabaseAbstractionsModelsInputResourceTransferInputModelItem {
+  /** @format int32 */
+  fromId: number;
+  /** @format int32 */
+  toId: number;
+  keepMediaLibrary: boolean;
+  deleteSourceResource: boolean;
+}
+
 export interface BakabaseAbstractionsModelsInputSpecialTextAddInputModel {
   /** [1: Useless, 3: Wrapper, 4: Standardization, 6: Volume, 7: Trim, 8: DateTime, 9: Language] */
   type: BakabaseAbstractionsModelsDomainConstantsSpecialTextType;
@@ -1707,6 +1722,13 @@ export interface BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement 
   enhancement?: BakabaseServiceModelsViewEnhancementViewModel;
 }
 
+export interface BakabaseServiceModelsViewResourcePathInfoViewModel {
+  /** @format int32 */
+  id: number;
+  path: string;
+  fileName: string;
+}
+
 export interface BakabaseServiceModelsViewResourceSearchFilterGroupViewModel {
   /** [1: And, 2: Or] */
   combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
@@ -1895,6 +1917,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourceEnhancements[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePathInfoViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourcePathInfoViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel {
@@ -4181,10 +4210,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name DeleteEnhancementsByCategory
      * @request DELETE:/category/{categoryId}/enhancement
      */
-    deleteEnhancementsByCategory: (categoryId: number, params: RequestParams = {}) =>
+    deleteEnhancementsByCategory: (
+      categoryId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/${categoryId}/enhancement`,
         method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByCategoryAndEnhancer
+     * @request DELETE:/category/{categoryId}/enhancer/{enhancerId}/enhancements
+     */
+    deleteEnhancementsByCategoryAndEnhancer: (
+      categoryId: number,
+      enhancerId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${categoryId}/enhancer/${enhancerId}/enhancements`,
+        method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -5217,6 +5276,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name GetUnknownResources
+     * @request GET:/resource/unknown
+     */
+    getUnknownResources: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource, any>({
+        path: `/resource/unknown`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name GetUnknownResourcesCount
      * @request GET:/resource/unknown/count
      */
@@ -5249,6 +5323,47 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name TransferResourceData
+     * @request PUT:/resource/transfer
+     */
+    transferResourceData: (
+      data: BakabaseAbstractionsModelsInputResourceTransferInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/transfer`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SearchResourcePaths
+     * @request GET:/resource/paths
+     */
+    searchResourcePaths: (
+      query?: {
+        keyword?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePathInfoViewModel, any>({
+        path: `/resource/paths`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
   };
   mediaLibrary = {
     /**
@@ -5258,10 +5373,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name DeleteByEnhancementsMediaLibrary
      * @request DELETE:/media-library/{mediaLibraryId}/enhancement
      */
-    deleteByEnhancementsMediaLibrary: (mediaLibraryId: number, params: RequestParams = {}) =>
+    deleteByEnhancementsMediaLibrary: (
+      mediaLibraryId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${mediaLibraryId}/enhancement`,
         method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -5541,10 +5663,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name DeleteEnhancementsByEnhancer
      * @request DELETE:/enhancer/{enhancerId}/enhancement
      */
-    deleteEnhancementsByEnhancer: (enhancerId: number, params: RequestParams = {}) =>
+    deleteEnhancementsByEnhancer: (
+      enhancerId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/enhancer/${enhancerId}/enhancement`,
         method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),

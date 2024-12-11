@@ -52,11 +52,13 @@ namespace Bakabase.InsideWorld.Business.Services
 {
     public class ResourceService : IResourceService
     {
-        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int>
+        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel,
+                int>
             _orm;
 
         private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>
             _resourceCacheOrm;
+
         private readonly ISpecialTextService _specialTextService;
         private readonly IMediaLibraryService _mediaLibraryService;
         private readonly ICategoryService _categoryService;
@@ -77,7 +79,9 @@ namespace Bakabase.InsideWorld.Business.Services
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IReservedPropertyValueService reservedPropertyValueService,
             ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager,
-            IPropertyService propertyService, FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm, IFileManager fileManager)
+            IPropertyService propertyService,
+            FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
+            IFileManager fileManager)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -92,8 +96,9 @@ namespace Bakabase.InsideWorld.Business.Services
             _propertyService = propertyService;
             _resourceCacheOrm = resourceCacheOrm;
             _fileManager = fileManager;
-            _orm = new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int>(
-                serviceProvider);
+            _orm =
+                new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int>(
+                    serviceProvider);
         }
 
         public InsideWorldDbContext DbContext => _orm.DbContext;
@@ -927,6 +932,65 @@ namespace Bakabase.InsideWorld.Business.Services
             onProgressChange(100);
         }
 
+        public async Task Transfer(ResourceTransferInputModel model)
+        {
+            var fromIds = model.Items.Select(i => i.FromId).ToList();
+            var toIds = model.Items.Select(i => i.ToId).ToList();
+
+            if (toIds.GroupBy(x => x).Any(x => x.Count() > 1))
+            {
+                throw new Exception("Can not transfer multiple resources into a single resource.");
+            }
+
+            if (fromIds.Intersect(toIds).Any())
+            {
+                throw new Exception("Can not transfer a resource into itself directly or indirectly.");
+            }
+
+            var resourceIds = model.Items.Select(i => i.FromId).Concat(model.Items.Select(i => i.ToId)).ToHashSet();
+            var resourceMap =
+                (await GetAll(x => resourceIds.Contains(x.Id), ResourceAdditionalItem.All)).ToDictionary(d => d.Id,
+                    d => d);
+
+            var changedResources = new List<Resource>();
+            var discardResourceIds = new List<int>();
+
+            foreach (var item in model.Items)
+            {
+                var fromResource = resourceMap.GetValueOrDefault(item.FromId);
+                var toResource = resourceMap.GetValueOrDefault(item.ToId);
+
+                if (fromResource == null || toResource == null)
+                {
+                    continue;
+                }
+
+                var keepMediaLibrary = item.KeepMediaLibrary || model.KeepMediaLibraryForAll;
+                var deleteSource = item.DeleteSourceResource || model.DeleteAllSourceResources;
+
+                var resource = fromResource with { };
+                resource.Id = toResource.Id;
+                resource.CreatedAt = toResource.CreatedAt;
+                resource.FileCreatedAt = toResource.FileCreatedAt;
+                resource.FileModifiedAt = toResource.FileModifiedAt;
+                resource.UpdatedAt = DateTime.Now;
+                if (keepMediaLibrary)
+                {
+                    resource.CategoryId = toResource.CategoryId;
+                    resource.MediaLibraryId = toResource.MediaLibraryId;
+                }
+
+                changedResources.Add(resource);
+                if (deleteSource)
+                {
+                    discardResourceIds.Add(fromResource.Id);
+                }
+            }
+
+            await AddOrPutRange(changedResources);
+            await DeleteByKeys(discardResourceIds.ToArray());
+        }
+
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)
         {
             if (model.IsCustomProperty)
@@ -1206,7 +1270,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task DeleteUnknown()
         {
-            var unknownResources = await GetUnknownResources();
+            var unknownResources = await GetUnknownResourceDbModels();
 
             if (unknownResources.Any())
             {
@@ -1216,7 +1280,14 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        private async Task<List<Abstractions.Models.Db.ResourceDbModel>> GetUnknownResources()
+        public async Task<List<Resource>> GetUnknownResources()
+        {
+            var dbModels = await GetUnknownResourceDbModels();
+            var domainModels = await ToDomainModel(dbModels.ToArray(), ResourceAdditionalItem.All);
+            return domainModels;
+        }
+
+        private async Task<List<Abstractions.Models.Db.ResourceDbModel>> GetUnknownResourceDbModels()
         {
             var categories = await _categoryService.GetAll();
             var mediaLibraries = await _mediaLibraryService.GetAll();
@@ -1231,7 +1302,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<int> GetUnknownCount()
         {
-            var unknownResources = await GetUnknownResources();
+            var unknownResources = await GetUnknownResourceDbModels();
             return unknownResources.Count;
         }
 

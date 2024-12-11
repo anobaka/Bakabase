@@ -24,6 +24,7 @@ import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsIn
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Button, Chip, Input, Modal, Tooltip } from '@/components/bakaui';
 import SynchronizationModal from '@/pages/Category/components/SynchronizationModal';
+import DeleteEnhancementsModal from '@/pages/Category/components/DeleteEnhancementsModal';
 
 export default (({
                    library,
@@ -291,25 +292,21 @@ export default (({
                 <Menu.Item
                   className={'warning'}
                   onClick={() => {
-                    Dialog.confirm({
-                      title: `${t('Removing all enhancement records of resources under this media library')}`,
-                      closeable: true,
-                      onOk: () => new Promise(((resolve, reject) => {
-                        BApi.mediaLibrary.deleteByEnhancementsMediaLibrary(library.id)
-                          .then((a) => {
-                            if (!a.code) {
-                              resolve(a);
-                            }
-                          });
-                      })),
-                    });
+                    createPortal(
+                      DeleteEnhancementsModal, {
+                        title: t('Deleting all enhancement records of resources under this media library'),
+                        onOk: async (deleteEmptyOnly) => {
+                          await BApi.mediaLibrary.deleteByEnhancementsMediaLibrary(library.id, { deleteEmptyOnly: deleteEmptyOnly });
+                        },
+                      },
+                    );
                   }}
                 >
                   <CustomIcon
                     type="flashlight"
                     className={'text-base'}
                   />
-                  {t('Remove all enhancement records')}
+                  {t('Delete all enhancement records')}
                 </Menu.Item>
                 <Menu.Item
                   className={'warning'}

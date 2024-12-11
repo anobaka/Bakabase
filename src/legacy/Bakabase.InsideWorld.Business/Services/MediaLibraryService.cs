@@ -47,7 +47,7 @@ using SearchOption = System.IO.SearchOption;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class MediaLibraryService: BootstrapService,  IMediaLibraryService
+    public class MediaLibraryService : BootstrapService, IMediaLibraryService
     {
         private readonly ResourceService<InsideWorldDbContext,
             Abstractions.Models.Db.MediaLibrary, int> _orm;
@@ -61,14 +61,17 @@ namespace Bakabase.InsideWorld.Business.Services
         private InsideWorldLocalizer _localizer;
         protected LogService LogService => GetRequiredService<LogService>();
         protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
+
         protected InsideWorldOptionsManagerPool InsideWorldAppService =>
             GetRequiredService<InsideWorldOptionsManagerPool>();
+
         protected IStandardValueService StandardValueService => GetRequiredService<IStandardValueService>();
 
         private readonly IPropertyLocalizer _propertyLocalizer;
 
         public MediaLibraryService(IServiceProvider serviceProvider, InsideWorldLocalizer localizer,
-            ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibrary, int> orm, IPropertyService propertyService, IPropertyLocalizer propertyLocalizer) : base(serviceProvider)
+            ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibrary, int> orm,
+            IPropertyService propertyService, IPropertyLocalizer propertyLocalizer) : base(serviceProvider)
         {
             _localizer = localizer;
             _orm = orm;
@@ -126,7 +129,8 @@ namespace Bakabase.InsideWorld.Business.Services
             return await _orm.Update(dto.ToDbModel()!);
         }
 
-        public async Task<MediaLibrary?> Get(int id, MediaLibraryAdditionalItem additionalItems = MediaLibraryAdditionalItem.None)
+        public async Task<MediaLibrary?> Get(int id,
+            MediaLibraryAdditionalItem additionalItems = MediaLibraryAdditionalItem.None)
         {
             var ml = await _orm.GetByKey(id);
             return (await ToDomainModels([ml], additionalItems)).FirstOrDefault();
@@ -247,7 +251,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 rv.PropertyName = rv.IsCustomProperty
                                                     ? customPropertyMap.GetValueOrDefault(rv.PropertyId)?.Name
                                                     : _propertyLocalizer.BuiltinPropertyName(
-                                                        (ResourceProperty) rv.PropertyId); 
+                                                        (ResourceProperty) rv.PropertyId);
                                             }
                                         }
                                     }
@@ -534,11 +538,12 @@ namespace Bakabase.InsideWorld.Business.Services
                     var property = customPropertyMap.GetValueOrDefault(pId);
                     if (property != null)
                     {
-                        var propertyMap = (pr.Properties ??= []).GetOrAdd((int)PropertyPool.Custom, () => [])!;
+                        var propertyMap = (pr.Properties ??= []).GetOrAdd((int) PropertyPool.Custom, () => [])!;
                         var rp = propertyMap.GetOrAdd(property.Id,
-                            () => new Resource.Property(property.Name, property.Type.GetDbValueType(), property.Type.GetBizValueType(), null));
+                            () => new Resource.Property(property.Name, property.Type.GetDbValueType(),
+                                property.Type.GetBizValueType(), null));
                         rp.Values ??= [];
-                        rp.Values.Add(new Resource.Property.PropertyValue((int)PropertyValueScope.Synchronization,
+                        rp.Values.Add(new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization,
                             bizValue, bizValue, bizValue));
                     }
                 }
@@ -649,7 +654,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                 }
 
                                 var pscResult = await Test(pathConfiguration, int.MaxValue);
-                                if (pscResult.Code == (int) ResponseCode.Success && pscResult.Data?.Resources.Any() == true)
+                                if (pscResult.Code == (int) ResponseCode.Success &&
+                                    pscResult.Data?.Resources.Any() == true)
                                 {
                                     var percentagePerItem =
                                         (decimal) 1 / pscResult.Data.Resources.Count * percentagePerPathConfiguration;
@@ -669,7 +675,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                         if (pathConfiguration.RpmValues?.Any() ==
                                             true)
                                         {
-                                            await SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr, parentResources,
+                                            await SetPropertiesByMatchers(pscResult.Data.RootPath, e, pr,
+                                                parentResources,
                                                 pscResult.Data.CustomPropertyMap);
                                         }
 
@@ -730,8 +737,8 @@ namespace Bakabase.InsideWorld.Business.Services
                         // Delete resources with unknown paths
                         invalidResources.AddRange(prevResources.Where(x => !patchingResources.Keys.Contains(x.Path)));
 
-                        var invalidIds = invalidResources.Select(r => r.Id).ToArray();
-                        await ResourceService.DeleteByKeys(invalidIds);
+                        // var invalidIds = invalidResources.Select(r => r.Id).ToArray();
+                        // await ResourceService.DeleteByKeys(invalidIds);
                         prevResources.RemoveAll(x => invalidResources.Contains(x));
 
                         prevPathResourceMap = prevResources.ToDictionary(t => t.Path);

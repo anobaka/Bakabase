@@ -2,18 +2,17 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DeleteOutlined, FireOutlined, MoreOutlined } from '@ant-design/icons';
 import type { CategoryEnhancerFullOptions } from './components/CategoryEnhancerOptionsDialog/models';
-import { Button, Checkbox, Chip, Divider, Link, Listbox, ListboxItem, Modal, Popover, Tooltip } from '@/components/bakaui';
+import { Button, Checkbox, Divider, Listbox, ListboxItem, Modal, Popover, Tooltip } from '@/components/bakaui';
 import { createPortalOfComponent } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
-import CustomIcon from '@/components/CustomIcon';
 import { StandardValueIcon } from '@/components/StandardValue';
 import { CategoryAdditionalItem, StandardValueType } from '@/sdk/constants';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
-import { BakabaseContext, useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import TargetNotSetupTip from '@/components/Enhancer/components/TargetNotSetupTip';
 import { EnhancerTargetNotSetupTip } from '@/components/Enhancer';
+import DeleteEnhancementsModal from '@/pages/Category/components/DeleteEnhancementsModal';
 
 interface IProps extends DestroyableProps {
   categoryId: number;
@@ -46,7 +45,10 @@ const EnhancerSelector = ({
     // @ts-ignore
     await BApi.category.getCategory(categoryId, { additionalItems: CategoryAdditionalItem.EnhancerOptions | CategoryAdditionalItem.CustomProperties }).then(r => {
       const data = r.data!;
-      setCategory({ id: data.id!, name: data.name! });
+      setCategory({
+        id: data.id!,
+        name: data.name!,
+      });
       setCategoryEnhancerOptionsList(data.enhancerOptions?.map(eo => (eo as CategoryEnhancerFullOptions)) || []);
     });
   };
@@ -172,26 +174,27 @@ const EnhancerSelector = ({
 
                         switch (key) {
                           case 'Category':
-                            title = t('Delete all enhancement records of this enhancer for category {{categoryName}}', { categoryName: category!.name });
-                            callApi = async () => await BApi.category.deleteEnhancementsByCategory(category!.id);
+                            createPortal(DeleteEnhancementsModal, {
+                              title: t('Delete all enhancement records of this enhancer for category {{categoryName}}', { categoryName: category!.name }),
+                              onOk: async (deleteEmptyOnly) => await BApi.category.deleteEnhancementsByCategoryAndEnhancer(category!.id, e.id, { deleteEmptyOnly }),
+                            });
                             break;
                           case 'All':
-                            title = t('Delete all enhancement records of this enhancer');
-                            callApi = async () => await BApi.enhancer.deleteEnhancementsByEnhancer(e.id);
+                            createPortal(DeleteEnhancementsModal, {
+                              title: t('Delete all enhancement records of this enhancer'),
+                              onOk: async (deleteEmptyOnly) => await BApi.enhancer.deleteEnhancementsByEnhancer(e!.id, { deleteEmptyOnly }),
+                            });
                             break;
                           case 'ApplyContext':
-                            title = t('Re-apply all enhancement data of this enhancer for category {{categoryName}}', { categoryName: category?.name });
-                            callApi = async () => await BApi.category.applyEnhancementContextDataByEnhancerAndCategory(category!.id, e.id);
+                            createPortal(Modal, {
+                              defaultVisible: true,
+                              title: t('Re-apply all enhancement data of this enhancer for category {{categoryName}}', { categoryName: category?.name }),
+                              onOk: async () => await BApi.category.applyEnhancementContextDataByEnhancerAndCategory(category!.id, e.id),
+                            });
                             break;
                           default:
                             return;
                         }
-
-                        createPortal(Modal, {
-                          defaultVisible: true,
-                          title,
-                          onOk: callApi,
-                        });
                       }}
                     >
                       <ListboxItem

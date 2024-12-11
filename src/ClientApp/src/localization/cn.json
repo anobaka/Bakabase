@@ -450,11 +450,10 @@
   "Quick filter": "快速筛选",
   "Move to ...": "移动至...",
   "Hide all": "隐藏全部",
-  "Remove all enhancement records": "删除全部增强记录",
-  "Removing all enhancement records of resources under this category": "即将删除该分类下全部增强记录",
-  "Removing all enhancement records of resources under this media library": "即将删除该媒体库下全部增强记录",
+  "Delete all enhancement records": "删除全部增强记录",
+  "Deleting all enhancement records of resources under this category": "即将删除该分类下全部增强记录",
+  "Deleting all enhancement records of resources under this media library": "即将删除该媒体库下全部增强记录",
   "Enhancement records": "增强记录",
-  "Remove all records": "删除全部增强记录",
   "Enhancer": "增强器",
   "Enhancement": "增强内容",
   "Enhance Dt": "增强时间",
@@ -1501,5 +1500,10 @@
   "BulkModificationProcessorValueType.Dynamic": "动态值",
   "BulkModificationProcessorValueType.Variable": "变量",
   "Check {{count}} diffs": "查看{{count}}个变化",
-  "Under development, currently supported data types": "正在开发中，目前支持的数据类型"
+  "Under development, currently supported data types": "正在开发中，目前支持的数据类型",
+  "When the enhancement is successfully executed but no data available for enhancement is retrieved, an empty enhancement record is generated.": "当增强成功执行，但获取到任何可用于增强的数据时，会产生空的增强记录。",
+  "Delete empty records only": "仅删除空记录",
+  "Enhancement will only be executed when there are no existing enhancement records, so in some cases, you may only need to delete the empty enhancement records.": "增强仅会在没有增强记录时执行，所以有些情况下您也许仅需要删除空的增强记录。",
+  "No data retrieved for dynamic targets, please check configuration if necessary": "未获取到动态目标数据，有必要的话请检查配置",
+  "No data retrieved for fixed targets, please check configuration if necessary": "未获取到固定目标数据，有必要的话请检查配置"
 }
