@@ -1485,5 +1485,6 @@
   "Categories have not been created yet. To load your resources, please ensure that at least one category is created.": "暂未创建分类，为了加载您的资源，请确保至少创建一个分类。",
   "Unassociated custom properties will not be displayed": "未关联的自定义属性将不会被展示",
   "Generated properties": "生成的属性",
-  "Please set a name for current search": "请为当前搜索设置一个名称"
+  "Please set a name for current search": "请为当前搜索设置一个名称",
+  "Cover carousel": "封面轮播"
 }

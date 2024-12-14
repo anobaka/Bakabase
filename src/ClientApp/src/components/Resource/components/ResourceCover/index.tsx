@@ -38,6 +38,7 @@ interface Props {
   biggerCoverPlacement?: TooltipPlacement;
   coverPaths?: string[];
   coverFit?: CoverFit;
+  disableCarousel?: boolean;
 }
 
 export interface IResourceCoverRef {
@@ -57,6 +58,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     biggerCoverPlacement,
     coverPaths,
     coverFit = CoverFit.Contain,
+    disableCarousel = false,
   } = props;
   // log('rendering', props);
   const { t } = useTranslation();
@@ -192,29 +194,30 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     }
   }, [propsOnClick]);
 
-
   const renderCover = useCallback(() => {
     if (urls) {
+      let dynamicClassNames: string[] = [];
+      if (containerRef.current && maxCoverRawSizeRef.current) {
+        if (maxCoverRawSizeRef.current.w > containerRef.current.clientWidth) {
+          dynamicClassNames.push('w-full');
+        }
+        if (maxCoverRawSizeRef.current.h > containerRef.current.clientHeight) {
+          dynamicClassNames.push('h-full');
+        }
+        dynamicClassNames.push(coverFit == CoverFit.Cover ? 'object-cover' : 'object-contain');
+      }
+      const dynamicClassName = dynamicClassNames.join(' ');
+
+      const renderingUrls = disableCarousel ? urls.slice(0, 1) : urls;
+
       return (
         <Carousel
-          key={urls.join(',')}
-          autoplay={urls && urls.length > 1}
+          key={renderingUrls.join(',')}
+          autoplay={renderingUrls && renderingUrls.length > 1}
           // autoplay={false}
           dots
         >
-          {urls?.map(url => {
-            let dynamicClassNames: string[] = [];
-            if (containerRef.current && maxCoverRawSizeRef.current) {
-              if (maxCoverRawSizeRef.current.w > containerRef.current.clientWidth) {
-                dynamicClassNames.push('w-full');
-              }
-              if (maxCoverRawSizeRef.current.h > containerRef.current.clientHeight) {
-                dynamicClassNames.push('h-full');
-              }
-              dynamicClassNames.push(coverFit == CoverFit.Cover ? 'object-cover' : 'object-contain');
-            }
-
-            const dynamicClassName = dynamicClassNames.join(' ');
+          {renderingUrls?.map(url => {
             return (
               <div key={url}>
                 <div
@@ -263,7 +266,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       );
     }
     return null;
-  }, [urls, coverFit]);
+  }, [urls, coverFit, disableCarousel]);
 
   const renderContainer = () => {
     return (

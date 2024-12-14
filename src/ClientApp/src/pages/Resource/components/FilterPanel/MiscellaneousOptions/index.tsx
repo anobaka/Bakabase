@@ -5,6 +5,7 @@ import {
   FullscreenOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
+  RightSquareOutlined,
   ZoomInOutlined,
 } from '@ant-design/icons';
 import React, { useEffect, useRef } from 'react';
@@ -67,6 +68,11 @@ export default ({ rearrangeResources }: Props) => {
       Icon: DashboardOutlined,
       tip: t('Enabling caching can improve loading speed'),
     },
+    {
+      key: 'CoverCarousel',
+      label: t('Cover carousel'),
+      Icon: RightSquareOutlined,
+    },
   ];
 
   const buildSelectedKeys = () => {
@@ -88,6 +94,11 @@ export default ({ rearrangeResources }: Props) => {
         keys.push(`DisplayContent-${d.value}`);
       }
     }
+
+    if (!options?.disableCoverCarousel) {
+      keys.push('CoverCarousel');
+    }
+
     return keys;
   };
 
@@ -131,6 +142,7 @@ export default ({ rearrangeResources }: Props) => {
               showBiggerCoverWhileHover: stringKeys.includes('ShowLargerCoverOnHover'),
               disableMediaPreviewer: !stringKeys.includes('PreviewOnHover'),
               displayContents: dc,
+              disableCoverCarousel: !stringKeys.includes('CoverCarousel'),
             };
 
             log(keys, newOptions);

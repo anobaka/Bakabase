@@ -904,6 +904,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   coverFit: BakabaseInsideWorldModelsConstantsCoverFit;
   /** [1: MediaLibrary, 2: Category, 4: Tags, 7: All] */
   displayContents: BakabaseInsideWorldModelsConstantsResourceDisplayContent;
+  disableCoverCarousel: boolean;
 }
 
 /**
@@ -2347,6 +2348,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   code: number;
   message?: string;
   data?: Record<string, BakabaseInsideWorldModelsConstantsMediaType>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemCollectionsGenericList1SystemString {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: Record<string, string[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemInt32 {
@@ -7121,6 +7129,31 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/tool/thumbnail`,
         method: "GET",
         query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Tool
+     * @name TestMatchAll
+     * @request POST:/tool/match-all
+     */
+    testMatchAll: (
+      query?: {
+        regex?: string;
+        text?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemCollectionsGenericList1SystemString,
+        any
+      >({
+        path: `/tool/match-all`,
+        method: "POST",
+        query: query,
+        format: "json",
         ...params,
       }),
   };
