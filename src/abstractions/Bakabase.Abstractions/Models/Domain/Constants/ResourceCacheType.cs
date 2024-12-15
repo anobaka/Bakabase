@@ -3,6 +3,6 @@
 [Flags]
 public enum ResourceCacheType
 {
-    Covers,
+    Covers = 1,
     PlayableFiles
 }

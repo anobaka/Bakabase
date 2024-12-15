@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Autocomplete, AutocompleteItem } from '@/components/bakaui';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
 import BApi from '@/sdk/BApi';
+import { buildLogger } from '@/components/utils';
 
 type Props = {
   onSelect: (id: number) => any;
@@ -14,6 +15,8 @@ type Item = {
   path?: string;
   id: number;
 };
+
+const log = buildLogger('ToResourceSelector');
 
 export default ({ onSelect }: Props) => {
   const { t } = useTranslation();
@@ -60,8 +63,9 @@ export default ({ onSelect }: Props) => {
       listboxProps={{
         emptyContent: t('Can not find any resource'),
       }}
-      onValueChange={v => {
-        const id = parseInt(v, 10);
+      onSelectionChange={key => {
+        log(key);
+        const id = key as number;
         if (id) {
           onSelect(id);
         }

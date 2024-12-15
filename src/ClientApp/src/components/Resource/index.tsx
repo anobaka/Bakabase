@@ -327,7 +327,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   return (
     <div
-      className={`flex flex-col p-1 rounded relative border-1 border-default-200 group ${styles.resource} ${props.className}`}
+      className={`flex flex-col p-1 rounded relative border-1 border-default-200 group/resource ${styles.resource} ${props.className}`}
       key={resource.id}
       style={style}
       role={'resource'}

@@ -48,7 +48,7 @@ export default ({
         <Button
           isIconOnly
           size={'sm'}
-          className={'absolute top-1 right-1 z-10 hidden group-hover:block'}
+          className={'absolute top-1 right-1 z-10 hidden group-hover/resource:block'}
         >
           <ProductOutlined className={'text-base'} />
         </Button>
