@@ -168,12 +168,16 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
             var error = new StringBuilder();
             var image = new MemoryStream();
             var timeString = $"{time.Hours:D2}:{time.Minutes:D2}:{time.Seconds:D2}";
+
+            var errorCts = new CancellationTokenSource();
+
             var cmd = Cli.Wrap(FfMpegExecutable)
                 .WithArguments(new[]
                 {
                     "-ss", timeString,
                     "-r", "1:1",
                     "-i", videoFilePath,
+                    "-loglevel", "error",
                     "-c:v", "mjpeg",
                     "-f", "image2pipe",
                     "-vframes:v", "1",
@@ -182,11 +186,30 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
                 }, true)
                 .WithValidation(CommandResultValidation.None)
                 .WithStandardOutputPipe(PipeTarget.ToStream(image))
-                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(error));
-            var rsp = await cmd.ExecuteAsync(ct);
-            if (rsp.ExitCode != 0)
+                .WithStandardErrorPipe(PipeTarget.ToDelegate(e =>
+                {
+                    error.AppendLine(e);
+                    errorCts.Cancel();
+                }, Encoding.UTF8));
+
+            var mixedCts = CancellationTokenSource.CreateLinkedTokenSource(errorCts.Token, ct);
+
+            try
             {
-                throw new Exception(error.ToString());
+                var rsp = await cmd.ExecuteAsync(mixedCts.Token);
+                if (rsp.ExitCode != 0)
+                {
+                    throw new Exception(error.ToString());
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                if (errorCts.Token.IsCancellationRequested)
+                {
+                    throw new Exception(error.ToString());
+                }
+
+                throw;
             }
 
             image.Seek(0, SeekOrigin.Begin);

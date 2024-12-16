@@ -763,33 +763,24 @@ namespace Bakabase.InsideWorld.Business.Services
             var coverSelectOrder =
                 (await _categoryService.Get(resource.CategoryId))?.CoverSelectionOrder ??
                 CoverSelectOrder.FilenameAscending;
-            var coverDiscoverResult =
-                await _coverDiscoverer.Discover(resource.Path, coverSelectOrder, false,
-                    ct);
+            var coverDiscoverResult = await _coverDiscoverer.Discover(resource.Path, coverSelectOrder, false, ct);
 
-            if (coverDiscoverResult == null)
+            string? path = null;
+            if (coverDiscoverResult != null)
             {
-                return null;
+                var image = await coverDiscoverResult.LoadByImageSharp(ct);
+                var pathWithoutExt =
+                    Path.Combine(_fileManager.BuildAbsolutePath("cache", "cover"), resource.Id.ToString())
+                        .StandardizePath()!;
+                path = await image.SaveAsThumbnail(pathWithoutExt, ct);
             }
 
-            var image = await coverDiscoverResult.LoadByImageSharp(ct);
-
-            var pathWithoutExt = Path
-                .Combine(_fileManager.BuildAbsolutePath("cache", "cover"),
-                    resource.Id.ToString())
-                .StandardizePath()!;
-            var path = await image.SaveAsThumbnail(pathWithoutExt, ct);
             var cache = await _resourceCacheOrm.GetByKey(id, true);
-            var isNewCache = false;
-            if (cache == null)
-            {
-                cache = new ResourceCacheDbModel { ResourceId = id };
-                isNewCache = true;
-            }
-
+            var isNewCache = cache == null;
+            cache ??= new ResourceCacheDbModel { ResourceId = id };
             var serializedCoverPaths =
-                new ListStringValueBuilder([path]).Value!
-                    .SerializeAsStandardValue(StandardValueType.ListString);
+                new ListStringValueBuilder(path.IsNullOrEmpty() ? null : [path]).Value!.SerializeAsStandardValue(
+                    StandardValueType.ListString);
             if (cache.CoverPaths != serializedCoverPaths ||
                 !cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
             {
@@ -805,6 +796,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
+            // Use cached cover path instead
             return path;
         }
 
@@ -856,64 +848,71 @@ namespace Bakabase.InsideWorld.Business.Services
                 var cache = await _resourceCacheOrm.GetFirstOrDefault(x => x.CachedTypes != fullCacheType);
                 if (cache != null)
                 {
-                    var cached = false;
-                    foreach (var cacheType in SpecificEnumUtils<ResourceCacheType>.Values)
+                    if (SpecificEnumUtils<ResourceCacheType>.Values.Any(v => !cache.CachedTypes.HasFlag(v)))
                     {
-                        if (!cache.CachedTypes.HasFlag(cacheType))
+                        var resource = await Get(cache.ResourceId, ResourceAdditionalItem.None);
+                        if (resource == null)
                         {
-                            var resource = await Get(cache.ResourceId, ResourceAdditionalItem.None);
-                            if (resource == null)
+                            await _resourceCacheOrm.Remove(cache);
+                        }
+                        else
+                        {
+                            foreach (var cacheType in SpecificEnumUtils<ResourceCacheType>.Values)
                             {
-                                await _resourceCacheOrm.Remove(cache);
-                                break;
+                                if (!cache.CachedTypes.HasFlag(cacheType))
+                                {
+                                    switch (cacheType)
+                                    {
+                                        case ResourceCacheType.Covers:
+                                        {
+                                            var coverPath = await DiscoverAndCacheCover(resource.Id, ct);
+                                            cache.CoverPaths = coverPath.IsNotEmpty()
+                                                ? new ListStringValueBuilder([coverPath]).Value
+                                                    ?.SerializeAsStandardValue(
+                                                        StandardValueType.ListString)
+                                                : null;
+                                            cache.CachedTypes |= ResourceCacheType.Covers;
+                                            break;
+                                        }
+                                        case ResourceCacheType.PlayableFiles:
+                                        {
+                                            var pfs = (await _categoryService.GetFirstComponent<IPlayableFileSelector>(
+                                                resource.CategoryId, ComponentType.PlayableFileSelector)).Data;
+                                            if (pfs != null)
+                                            {
+                                                var playableFiles =
+                                                    (await pfs.GetPlayableFiles(resource.Path, CancellationToken.None))
+                                                    .Select(f => f.StandardizePath()!).ToList();
+                                                var trimmedPlayableFiles = playableFiles
+                                                    .GroupBy(d => $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
+                                                    .SelectMany(x =>
+                                                        x.Take(InternalOptions.MaxPlayableFilesPerTypeAndSubDir))
+                                                    .ToList();
+                                                cache.HasMorePlayableFiles = trimmedPlayableFiles.Any();
+                                                cache.HasMorePlayableFiles =
+                                                    trimmedPlayableFiles.Count < playableFiles.Count;
+                                            }
+                                            else
+                                            {
+                                                cache.HasMorePlayableFiles = false;
+                                                cache.PlayableFilePaths = null;
+                                            }
+
+                                            cache.CachedTypes |= ResourceCacheType.PlayableFiles;
+
+                                            break;
+                                        }
+                                        default:
+                                            throw new ArgumentOutOfRangeException();
+                                    }
+                                }
                             }
 
-                            switch (cacheType)
-                            {
-                                case ResourceCacheType.Covers:
-                                {
-                                    await DiscoverAndCacheCover(resource.Id, ct);
-                                    break;
-                                }
-                                case ResourceCacheType.PlayableFiles:
-                                {
-                                    var pfs = (await _categoryService.GetFirstComponent<IPlayableFileSelector>(
-                                        resource.CategoryId, ComponentType.PlayableFileSelector)).Data;
-                                    if (pfs != null)
-                                    {
-                                        var playableFiles =
-                                            (await pfs.GetPlayableFiles(resource.Path, CancellationToken.None))
-                                            .Select(f => f.StandardizePath()!).ToList();
-                                        var trimmedPlayableFiles = playableFiles
-                                            .GroupBy(d => $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
-                                            .SelectMany(x =>
-                                                x.Take(InternalOptions.MaxPlayableFilesPerTypeAndSubDir)).ToList();
-                                        cache.HasMorePlayableFiles = trimmedPlayableFiles.Any();
-                                        cache.HasMorePlayableFiles =
-                                            trimmedPlayableFiles.Count < playableFiles.Count;
-                                    }
-                                    else
-                                    {
-                                        cache.HasMorePlayableFiles = false;
-                                        cache.PlayableFilePaths = null;
-                                    }
-
-                                    cache.CachedTypes |= ResourceCacheType.PlayableFiles;
-
-                                    break;
-                                }
-                                default:
-                                    throw new ArgumentOutOfRangeException();
-                            }
-
-                            cached = true;
+                            await _resourceCacheOrm.Update(cache);
                         }
                     }
 
-                    if (cached)
-                    {
-                        await _resourceCacheOrm.Update(cache);
-                    }
+                    _logger.LogInformation($"Cache for {cache.ResourceId} has been prepared.");
 
                     var newPercentage = percentage + itemPercentage;
                     if ((int) newPercentage != (int) percentage)

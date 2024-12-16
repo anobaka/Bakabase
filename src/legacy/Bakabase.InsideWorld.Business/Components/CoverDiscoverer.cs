@@ -95,16 +95,30 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
                     }
 
                     await FindCoverInVideoSm.WaitAsync(ct);
+                    var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                     try
                     {
-                        var durationSeconds = await ffMpegService.GetDuration(firstVideoFile.FullName, ct);
+                        var mixedCt = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, ct);
+                        var durationSeconds = await ffMpegService.GetDuration(firstVideoFile.FullName, mixedCt.Token);
                         var duration = TimeSpan.FromSeconds(durationSeconds);
                         var screenshotTime = duration * 0.2;
-                        var ms = await ffMpegService.CaptureFrame(firstVideoFile.FullName, screenshotTime, ct);
+                        var ms = await ffMpegService.CaptureFrame(firstVideoFile.FullName, screenshotTime, mixedCt.Token);
                         const string ext = ".jpg";
                         return new CoverDiscoveryResult(true,
                             _buildCoverPath(firstVideoFile.FullName,
                                 $"{screenshotTime.ToString("g").Replace(':', '.')}{ext}"), ext, ms.ToArray());
+                    }
+                    catch (OperationCanceledException tce)
+                    {
+                        if (timeoutCts.Token.IsCancellationRequested)
+                        {
+                            _logger.LogWarning(
+                                $"Timeout occurred during capture a frame from video file {firstVideoFile.FullName}.");
+                        }
+                        else
+                        {
+                            _logger.LogError(tce, "An error occurred during capture a frame from video file");
+                        }
                     }
                     catch (Exception e)
                     {
