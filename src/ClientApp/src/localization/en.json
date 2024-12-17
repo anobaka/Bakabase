@@ -60,5 +60,6 @@
   "Move {{count}} resources to media library (Including file system entries)": "Move {{count}} resources to media library (Including file system entries)",
   "Move to media library (Including file system entries)": "Move to media library (Including file system entries)",
   "Move {{count}} resources to media library (Data only)": "Move {{count}} resources to media library (Data only)",
-  "Move to media library (Data only)": "Move to media library (Data only)"
+  "Move to media library (Data only)": "Move to media library (Data only)",
+  "Handle {{count}} unknown resources": "Handle {{count}} unknown resources"
 }

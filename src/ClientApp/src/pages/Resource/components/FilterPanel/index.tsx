@@ -206,7 +206,7 @@ export default ({
               <SnippetsOutlined className={'text-base'} />
             </Chip>
           )}
-          <HandleUnknownResources onDeleted={() => search({})} />
+          <HandleUnknownResources onHandled={() => search({})} />
           <OrderSelector
             className={'mr-2'}
             value={searchForm.orders}

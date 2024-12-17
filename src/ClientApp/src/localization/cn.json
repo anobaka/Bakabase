@@ -1509,5 +1509,15 @@
   "Move {{count}} resources to media library (Including file system entries)": "移动{{count}}个资源至媒体库（包括文件）",
   "Move to media library (Including file system entries)": "移动至媒体库（包括文件）",
   "Move {{count}} resources to media library (Data only)": "移动{{count}}个资源至媒体库（仅数据）",
-  "Move to media library (Data only)": "移动至媒体库（仅数据）"
+  "Move to media library (Data only)": "移动至媒体库（仅数据）",
+  "Delete {{count}} unknown resources permanently": "永久删除{{count}}个未知资源",
+  "Choose a method to handle unknown (path does not exist) resources": "选择一个方法来处理未知（路径不存在）资源",
+  "Transfer data": "转移数据",
+  "You can transfer the data of unknown resources to existing resources.": "您可以将未知资源的数据转移至现有资源。",
+  "You can also transfer the data of some of unknown resources to existing resources first, and then delete the remaining unknown resources.": "您也可以先将部分未知资源的数据转移至现有资源，然后再删除剩余的未知资源。",
+  "You can delete all unknown resources permanently.": "您可以永久删除这些未知资源。",
+  "Choose a method to handle unknown resources": "选择一个方法来处理未知资源",
+  "When the system fails to find the file or folder corresponding to the resource path, the resource is marked as an unknown resource.": "当系统无法找到与资源路径对应的文件或文件夹时，该资源会被标记为未知资源。",
+  "In most cases, this is caused by changes in the names of files or folders.": "在大多数情况下，这是由文件或文件夹名称变化导致的。",
+  "Handle {{count}} unknown resources": "处理{{count}}个未知资源"
 }

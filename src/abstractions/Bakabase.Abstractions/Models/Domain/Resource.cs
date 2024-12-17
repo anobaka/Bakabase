@@ -101,8 +101,7 @@ public record Resource
     public DateTime FileCreatedAt { get; set; }
     public DateTime FileModifiedAt { get; set; }
     public List<string>? CoverPaths { get; set; }
-
-
+    public HashSet<ResourceTag> Tags { get; set; } = [];
     public Resource? Parent { get; set; }
 
     /// <summary>

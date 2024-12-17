@@ -761,7 +761,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 changedResources[path] = resource;
                             }
 
-                            onProgressChange(basePercentage + (int) (++count / resourceCountPerPercentage));
+                            onProgressChange(basePercentage  + (int) (++count / resourceCountPerPercentage));
                         }
 
                         foreach (var (_, r) in changedResources)
@@ -774,6 +774,9 @@ namespace Bakabase.InsideWorld.Business.Services
                     case MediaLibrarySyncStep.SaveResources:
                     {
                         var resourcesToBeSaved = changedResources.Values.ToList();
+                        resourcesToBeSaved.AddRange(invalidResources.Where(ir =>
+                            ir.Tags.Add(ResourceTag.PathDoesNotExist)));
+
                         var newResources = resourcesToBeSaved.Where(a => a.Id == 0).ToArray();
                         await ResourceService.AddOrPutRange(resourcesToBeSaved);
                         // Update sync result
