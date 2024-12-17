@@ -48,7 +48,7 @@ export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhance
 export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
 export enum ReservedProperty {Introduction = 12, Rating = 13}
 export const reservedProperties = Object.keys(ReservedProperty).filter(k => typeof ReservedProperty[k] === 'number').map(t => ({label: t, value: ReservedProperty[t]}));
-export enum ResourceCacheType {Covers = 0, PlayableFiles = 1}
+export enum ResourceCacheType {Covers = 1, PlayableFiles = 2}
 export const resourceCacheTypes = Object.keys(ResourceCacheType).filter(k => typeof ResourceCacheType[k] === 'number').map(t => ({label: t, value: ResourceCacheType[t]}));
 export enum SearchCombinator {And = 1, Or = 2}
 export const searchCombinators = Object.keys(SearchCombinator).filter(k => typeof SearchCombinator[k] === 'number').map(t => ({label: t, value: SearchCombinator[t]}));

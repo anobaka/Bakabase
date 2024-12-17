@@ -95,7 +95,7 @@ public interface IResourceService
     Task<List<Resource>> GetUnknownResources();
     Task<int> GetUnknownCount();
 
-    Task<BaseResponse> ChangeMediaLibraryAndPath(int id, int mediaLibraryId, string path);
+    Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null);
 
     Task Pin(int id, bool pin);
     Task PrepareCache(Action<int> onProgressChange, CancellationToken ct);

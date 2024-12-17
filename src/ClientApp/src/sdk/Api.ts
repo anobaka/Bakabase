@@ -127,10 +127,10 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 
 export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13;
 
 /**
- * [0: Covers, 1: PlayableFiles]
+ * [1: Covers, 2: PlayableFiles]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 0 | 1;
+export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2;
 
 /**
  * [1: And, 2: Or]
@@ -663,6 +663,7 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
   propertyValueScopePriority: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
   additionalCoverDiscoveringSources: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[];
   savedSearches: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSavedSearch[];
+  idsOfMediaLibraryRecentlyMovedTo?: number[];
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
@@ -1260,8 +1261,7 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel 
   ids: number[];
   /** @format int32 */
   mediaLibraryId: number;
-  /** @minLength 1 */
-  path: string;
+  path?: string;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel {

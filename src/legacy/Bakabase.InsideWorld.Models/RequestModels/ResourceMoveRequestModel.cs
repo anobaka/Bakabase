@@ -12,6 +12,6 @@ namespace Bakabase.InsideWorld.Models.RequestModels
     {
         [Required] [BindRequired] public int[] Ids { get; set; } = null!;
         public int MediaLibraryId { get; set; }
-        [Required] public string Path { get; set; } = null!;
+        public string? Path { get; set; }
     }
 }

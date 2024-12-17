@@ -146,7 +146,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           key={urls.join(',')}
           autoplay={urls && urls.length > 1}
           // autoplay={false}
-          dots
+          dots={urls && urls.length > 1}
         >
           {urls?.map(url => {
             let dynamicClassNames: string[] = [];
@@ -274,7 +274,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           <Carousel
             autoplay={urls && urls.length > 1}
             adaptiveHeight
-            dots
+            dots={urls && urls.length > 1}
           >
             {urls?.map(url => (
               <div key={url}>

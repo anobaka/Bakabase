@@ -838,6 +838,9 @@ namespace Bakabase.InsideWorld.Business.Services
                 ResourceId = x
             }).ToList();
             await _resourceCacheOrm.AddRange(newCaches);
+            var badCachedResourceIds = cachedResourceIds.Except(resourceIds).ToHashSet();
+            var badCaches = caches.Where(c => badCachedResourceIds.Contains(c.ResourceId)).ToList();
+            await _resourceCacheOrm.RemoveRange(badCaches);
             _resourceCacheOrm.DbContext.DetachAll(caches.Concat(newCaches));
 
             var fullCacheType = (ResourceCacheType) SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int) x);
@@ -851,11 +854,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     if (SpecificEnumUtils<ResourceCacheType>.Values.Any(v => !cache.CachedTypes.HasFlag(v)))
                     {
                         var resource = await Get(cache.ResourceId, ResourceAdditionalItem.None);
-                        if (resource == null)
-                        {
-                            await _resourceCacheOrm.Remove(cache);
-                        }
-                        else
+                        if (resource != null)
                         {
                             foreach (var cacheType in SpecificEnumUtils<ResourceCacheType>.Values)
                             {
@@ -1305,15 +1304,18 @@ namespace Bakabase.InsideWorld.Business.Services
             return unknownResources.Count;
         }
 
-        public async Task<BaseResponse> ChangeMediaLibraryAndPath(int id, int mediaLibraryId, string path)
+        public async Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId,
+            Dictionary<int, string>? newPaths = null)
         {
-            var resource = await _orm.GetByKey(id);
-            if (resource == null)
+            var resources = await _orm.GetByKeys(ids);
+            if (resources == null)
             {
                 return BaseResponseBuilder.NotFound;
             }
 
-            if (resource.MediaLibraryId == mediaLibraryId)
+            var resourcesToBeChanged = resources.Where(r => r.MediaLibraryId != mediaLibraryId).ToList();
+
+            if (!resourcesToBeChanged.Any())
             {
                 return BaseResponseBuilder.Ok;
             }
@@ -1325,11 +1327,18 @@ namespace Bakabase.InsideWorld.Business.Services
                 return BaseResponseBuilder.NotFound;
             }
 
-            resource.CategoryId = library.CategoryId;
-            resource.MediaLibraryId = library.Id;
-            resource.Path = path.StandardizePath()!;
+            foreach (var resource in resourcesToBeChanged)
+            {
+                resource.CategoryId = library.CategoryId;
+                resource.MediaLibraryId = library.Id;
+                var newPath = newPaths?.GetValueOrDefault(resource.Id);
+                if (newPath.IsNotEmpty())
+                {
+                    resource.Path = newPath.StandardizePath()!;
+                }
+            }
 
-            await _orm.Update(resource);
+            await _orm.UpdateRange(resources);
 
             return BaseResponseBuilder.Ok;
         }

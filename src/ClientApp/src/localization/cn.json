@@ -1505,5 +1505,9 @@
   "Delete empty records only": "仅删除空记录",
   "Enhancement will only be executed when there are no existing enhancement records, so in some cases, you may only need to delete the empty enhancement records.": "增强仅会在没有增强记录时执行，所以有些情况下您也许仅需要删除空的增强记录。",
   "No data retrieved for dynamic targets, please check configuration if necessary": "未获取到动态目标数据，有必要的话请检查配置",
-  "No data retrieved for fixed targets, please check configuration if necessary": "未获取到固定目标数据，有必要的话请检查配置"
+  "No data retrieved for fixed targets, please check configuration if necessary": "未获取到固定目标数据，有必要的话请检查配置",
+  "Move {{count}} resources to media library (Including file system entries)": "移动{{count}}个资源至媒体库（包括文件）",
+  "Move to media library (Including file system entries)": "移动至媒体库（包括文件）",
+  "Move {{count}} resources to media library (Data only)": "移动{{count}}个资源至媒体库（仅数据）",
+  "Move to media library (Data only)": "移动至媒体库（仅数据）"
 }

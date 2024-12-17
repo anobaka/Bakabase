@@ -16,6 +16,7 @@ import BusinessConstants from '@/components/BusinessConstants';
 import { Button, Chip, Link, Pagination, Spinner } from '@/components/bakaui';
 import { buildLogger } from '@/components/utils';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { ResourceAdditionalItem } from '@/sdk/constants';
 
 const PageSize = 100;
 
@@ -221,6 +222,18 @@ export default () => {
           biggerCoverPlacement={index % columnCount < columnCount / 2 ? 'right' : 'left'}
           mode={multiSelection ? 'select' : 'default'}
           selected={selected}
+          onSelectedResourcesChanged={ids => {
+            BApi.resource.getResourcesByKeys({ ids, additionalItems: ResourceAdditionalItem.All }).then(res => {
+              const rs = res.data || [];
+              for (const r of rs) {
+                const idx = resourcesRef.current.findIndex(x => x.id == r.id);
+                if (idx > -1) {
+                  resourcesRef.current[idx] = r;
+                }
+              }
+              setResources([...resourcesRef.current]);
+            });
+          }}
           onSelected={() => {
             if (selected) {
               setSelectedIds(selectedIds.filter(id => id != resource.id));

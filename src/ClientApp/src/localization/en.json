@@ -56,5 +56,9 @@
   "FeatureRequestTip.Deprecated": "The <1>name</1> feature has been deprecated. If you need this feature, please propose it on <3>Github</3> or <5>QQ group</5>",
   "FeatureRequestTip.Deprecating": "The <1>name</1> feature will be deprecated. If you need this feature, please propose it on <3>Github</3> or <5>QQ group</5>",
   "Keyboard.Enter": "Enter",
-  "Filter(Verb)": "Filter"
+  "Filter(Verb)": "Filter",
+  "Move {{count}} resources to media library (Including file system entries)": "Move {{count}} resources to media library (Including file system entries)",
+  "Move to media library (Including file system entries)": "Move to media library (Including file system entries)",
+  "Move {{count}} resources to media library (Data only)": "Move {{count}} resources to media library (Data only)",
+  "Move to media library (Data only)": "Move to media library (Data only)"
 }

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SearchOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
 import {
-  Button,
   Checkbox,
-  Chip, Input,
+  Chip,
+  Input,
   Modal,
   Pagination,
   Table,
@@ -153,21 +153,21 @@ export default ({
                 {t('Show unfinished only')}
               </Checkbox>
             </div>
-            <Tooltip content={(
-              <div>
-                <div>1.123123123123</div>
-                <div>2.3212313213</div>
-              </div>
-            )}
-            >
-              <Button
-                size={'sm'}
-                color={'secondary'}
-                // variant={'flat'}
-              >
-                {t('Auto select overwritten resources')}
-              </Button>
-            </Tooltip>
+            {/* <Tooltip content={( */}
+            {/*   <div> */}
+            {/*     <div>1.123123123123</div> */}
+            {/*     <div>2.3212313213</div> */}
+            {/*   </div> */}
+            {/* )} */}
+            {/* > */}
+            {/*   <Button */}
+            {/*     size={'sm'} */}
+            {/*     color={'secondary'} */}
+            {/*     // variant={'flat'} */}
+            {/*   > */}
+            {/*     {t('Auto select overwritten resources')} */}
+            {/*   </Button> */}
+            {/* </Tooltip> */}
           </div>
           <div className={'flex items-center gap-2'}>
             <div className={'flex items-center gap-1'}>
@@ -181,7 +181,16 @@ export default ({
               {fromResources.filter(r => inputModel.items?.find(i => i!.fromId == r.id)?.toId != undefined).length}/{fromResources.length}
             </div>
             <div>
-              Tips
+              <Tooltip
+                color={'secondary'}
+                content={(
+                  <div>
+                    <div>{t('')}</div>
+                  </div>
+                )}
+              >
+                <QuestionCircleOutlined className={'text-base'} />
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -229,7 +238,10 @@ export default ({
                           <div className={'h-full flex flex-col gap-2'}>
                             <ToResourceSelector onSelect={id => {
                               item.toId = id;
-                              BApi.resource.getResourcesByKeys({ ids: [id], additionalItems: ResourceAdditionalItem.All }).then(res => {
+                              BApi.resource.getResourcesByKeys({
+                                ids: [id],
+                                additionalItems: ResourceAdditionalItem.All,
+                              }).then(res => {
                                 const r = res.data?.[0];
                                 if (r) {
                                   setResourcePool({

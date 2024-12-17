@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Models.Db;
@@ -22,6 +23,17 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
         public PropertyValueScope[] PropertyValueScopePriority { get; set; } = [];
         public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; } = [];
         public List<SavedSearch> SavedSearches { get; set; } = [];
+        public int[]? IdsOfMediaLibraryRecentlyMovedTo { get; set; }
+
+        public void AddIdOfMediaLibraryRecentlyMovedTo(int id)
+        {
+            const int capacity = 5;
+
+            IdsOfMediaLibraryRecentlyMovedTo ??= [];
+            var ids = IdsOfMediaLibraryRecentlyMovedTo.Where(x => x != id).ToList();
+            ids.Insert(0, id);
+            IdsOfMediaLibraryRecentlyMovedTo = ids.Take(capacity).ToArray();
+        }
 
         public record CoverOptionsModel
         {

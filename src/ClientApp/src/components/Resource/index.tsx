@@ -8,13 +8,12 @@ import { ApartmentOutlined, PlayCircleOutlined, PushpinOutlined } from '@ant-des
 import { ControlledMenu, MenuItem } from '@szhsin/react-menu';
 import styles from './index.module.scss';
 import { OpenResourceDirectory } from '@/sdk/apis';
-import { buildLogger, splitPathIntoSegments, useTraceUpdate } from '@/components/utils';
+import { buildLogger, useTraceUpdate } from '@/components/utils';
 import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
 import BApi from '@/sdk/BApi';
 import type { IResourceCoverRef } from '@/components/Resource/components/ResourceCover';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
 import type SimpleSearchEngine from '@/core/models/SimpleSearchEngine';
-import type { RequestParams } from '@/sdk/Api';
 import Operations from '@/components/Resource/components/Operations';
 import TaskCover from '@/components/Resource/components/TaskCover';
 import type { Property, Resource as ResourceModel } from '@/core/models/Resource';
@@ -32,6 +31,7 @@ import store from '@/store';
 import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
 import type { PlayableFilesRef } from '@/components/Resource/components/PlayableFiles';
 import PlayableFiles from '@/components/Resource/components/PlayableFiles';
+import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';
 
 export interface IResourceHandler {
   id: number;
@@ -70,6 +70,7 @@ type Props = {
   mode?: 'default' | 'select';
   onSelected?: () => any;
   selectedResourceIds?: number[];
+  onSelectedResourcesChanged?: (ids: number[]) => any;
 };
 
 const Resource = React.forwardRef((props: Props, ref) => {
@@ -89,6 +90,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     onSelected = () => {
     },
     selectedResourceIds: propsSelectedResourceIds,
+    onSelectedResourcesChanged,
   } = props;
 
   // console.log(`showBiggerCoverOnHover: ${showBiggerCoverOnHover}, disableMediaPreviewer: ${disableMediaPreviewer}, disableCache: ${disableCache}`);
@@ -251,14 +253,14 @@ const Resource = React.forwardRef((props: Props, ref) => {
               >
                 <Button
                   onClick={onClick}
-                // variant={'light'}
+                  // variant={'light'}
                   isIconOnly
                 >
                   <PlayCircleOutlined className={'text-2xl'} />
                 </Button>
               </Tooltip>
             </div>
-        )}
+          )}
           resource={resource}
           ref={playableFilesRef}
         />
@@ -378,6 +380,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
                       ids: selectedResourceIds,
                       path,
                       mediaLibraryId: id,
+                    }).then(r => {
+                      // todo: moving files is a asynchronized operation, we need some way to update other resources after moving
+                      // onSelectedResourcesChanged?.(selectedResourceIds);
                     });
                   }
                 },
@@ -386,7 +391,25 @@ const Resource = React.forwardRef((props: Props, ref) => {
             onClickCapture={() => {
               log('inner', 'click capture');
             }}
-          >{selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library', { count: selectedResourceIds.length }) : t('Move to media library')}</MenuItem>
+          >{selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Including file system entries)', { count: selectedResourceIds.length }) : t('Move to media library (Including file system entries)')}</MenuItem>
+          <MenuItem
+            onClick={() => {
+              log('inner', 'click');
+              createPortal(MediaLibrarySelectorV2, {
+                onSelect: async (id) => {
+                  await BApi.resource.moveResources({
+                    ids: selectedResourceIds,
+                    mediaLibraryId: id,
+                  }).then(r => {
+                    onSelectedResourcesChanged?.(selectedResourceIds);
+                  });
+                },
+              });
+            }}
+            onClickCapture={() => {
+              log('inner', 'click capture');
+            }}
+          >{selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Data only)', { count: selectedResourceIds.length }) : t('Move to media library (Data only)')}</MenuItem>
         </ControlledMenu>
         <div onClickCapture={e => {
           log('outer', 'click capture');

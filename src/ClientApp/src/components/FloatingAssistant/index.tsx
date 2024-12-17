@@ -4,10 +4,10 @@ import { usePrevious, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
 import {
   CheckCircleOutlined,
-  CheckOutlined,
+  CheckOutlined, ClearOutlined,
   CloseCircleOutlined,
   CloseOutlined,
-  StopOutlined,
+  StopOutlined, SyncOutlined,
 } from '@ant-design/icons';
 import store from '@/store';
 import { BackgroundTaskStatus } from '@/sdk/constants';
@@ -197,7 +197,7 @@ export default () => {
       case BackgroundTaskStatus.Failed:
         return (
           <Button
-            color={'success'}
+            // color={'success'}
             variant={'light'}
             size={'sm'}
             isIconOnly
@@ -205,7 +205,7 @@ export default () => {
               setRemovingTaskId(task.id);
             }}
           >
-            <CheckOutlined className={'text-base'} />
+            <ClearOutlined className={'text-base'} />
           </Button>
         );
     }
@@ -327,6 +327,7 @@ export default () => {
                 BApi.mediaLibrary.startSyncMediaLibrary();
               }}
             >
+              <SyncOutlined className={'text-base'} />
               {t('Sync media libraries')}
             </Button>
             {/* <Balloon.Tooltip */}
@@ -353,7 +354,9 @@ export default () => {
                 size={'sm'}
                 variant={'ghost'}
                 onClick={() => BApi.backgroundTask.clearInactiveBackgroundTasks()}
-              >{t('Clear inactive tasks')}
+              >
+                <ClearOutlined className={'text-base'} />
+                {t('Clear inactive tasks')}
               </Button>
             )}
           </div>

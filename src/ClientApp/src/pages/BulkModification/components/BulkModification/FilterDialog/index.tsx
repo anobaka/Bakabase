@@ -17,7 +17,6 @@ import BApi from '@/sdk/BApi';
 import { createPortalOfComponent } from '@/components/utils';
 import CustomIcon from '@/components/CustomIcon';
 import ResourceCategorySelector from '@/components/ResourceCategorySelector';
-import MediaLibrarySelectPanel from '@/components/MediaLibrarySelectPanel';
 import { Tag as TagDto } from '@/core/models/Tag';
 
 interface IProps {

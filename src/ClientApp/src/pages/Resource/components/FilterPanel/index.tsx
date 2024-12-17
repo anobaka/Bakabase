@@ -13,7 +13,7 @@ import { PlaylistCollection } from '@/components/Playlist';
 import type { SearchForm } from '@/pages/Resource/models';
 import { Button, Chip, Input, Kbd, Modal, Popover, Tooltip } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
-import DeleteUnknownResources from '@/components/DeleteUnknownResources';
+import HandleUnknownResources from '@/components/HandleUnknownResources';
 import type { SavedSearchRef } from '@/pages/Resource/components/FilterPanel/SavedSearches';
 import SavedSearches from '@/pages/Resource/components/FilterPanel/SavedSearches';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -206,7 +206,7 @@ export default ({
               <SnippetsOutlined className={'text-base'} />
             </Chip>
           )}
-          <DeleteUnknownResources onDeleted={() => search({})} />
+          <HandleUnknownResources onDeleted={() => search({})} />
           <OrderSelector
             className={'mr-2'}
             value={searchForm.orders}

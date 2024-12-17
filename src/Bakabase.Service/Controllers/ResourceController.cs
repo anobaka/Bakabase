@@ -47,7 +47,7 @@ namespace Bakabase.Service.Controllers
         IResourceService service,
         ResourceTaskManager resourceTaskManager,
         FfMpegService ffMpegService,
-        IBOptionsManager<ResourceOptions> resourceOptions,
+        IBOptionsManager<ResourceOptions> resourceOptionsManager,
         FfMpegService ffMpegInstaller,
         ILogger<ResourceController> logger,
         ICategoryService categoryService,
@@ -114,7 +114,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetLastResourceSearch")]
         public async Task<SingletonResponse<ResourceSearchViewModel?>> GetLastResourceSearch()
         {
-            var ls = resourceOptions.Value.LastSearchV2;
+            var ls = resourceOptionsManager.Value.LastSearchV2;
             if (ls == null)
             {
                 return new SingletonResponse<ResourceSearchViewModel?>(null);
@@ -130,7 +130,7 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> SaveNewSearch([FromBody] SavedSearchAddInputModel model)
         {
             model.Search.StandardPageable();
-            await resourceOptions.SaveAsync(x =>
+            await resourceOptionsManager.SaveAsync(x =>
             {
                 x.SavedSearches.Add(new ResourceOptions.SavedSearch
                     {Search = model.Search.ToDbModel(), Name = model.Name});
@@ -142,14 +142,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PutSavedSearchName")]
         public async Task<BaseResponse> PutSavedSearchName(int idx, [FromBody] string name)
         {
-            var searches = resourceOptions.Value.SavedSearches ?? [];
+            var searches = resourceOptionsManager.Value.SavedSearches ?? [];
             if (searches.Count <= idx)
             {
                 return BaseResponseBuilder.BuildBadRequest($"Invalid {nameof(idx)}:{idx}");
             }
 
             searches[idx].Name = name;
-            await resourceOptions.SaveAsync(x => { x.SavedSearches = searches; });
+            await resourceOptionsManager.SaveAsync(x => { x.SavedSearches = searches; });
             return BaseResponseBuilder.Ok;
         }
 
@@ -157,7 +157,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetSavedSearches")]
         public async Task<ListResponse<SavedSearchViewModel>> GetSavedSearches()
         {
-            var searches = resourceOptions.Value.SavedSearches;
+            var searches = resourceOptionsManager.Value.SavedSearches;
             var dbModels = searches.Select(x => x.Search).ToArray();
             var viewModels = await dbModels.ToViewModels(propertyService, propertyLocalizer);
             var ret = searches.Select((s, i) => new SavedSearchViewModel(viewModels[i], s.Name));
@@ -168,7 +168,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "DeleteSavedSearch")]
         public async Task<BaseResponse> DeleteSavedSearch(int idx)
         {
-            await resourceOptions.SaveAsync(x =>
+            await resourceOptionsManager.SaveAsync(x =>
             {
                 if (idx < x.SavedSearches.Count)
                 {
@@ -188,7 +188,7 @@ namespace Bakabase.Service.Controllers
             {
                 try
                 {
-                    await resourceOptions.SaveAsync(a => a.LastSearchV2 = model.ToDbModel());
+                    await resourceOptionsManager.SaveAsync(a => a.LastSearchV2 = model.ToDbModel());
                 }
                 catch (Exception ex)
                 {
@@ -279,6 +279,13 @@ namespace Bakabase.Service.Controllers
                 return BaseResponseBuilder.BuildBadRequest($"Invalid {nameof(model.MediaLibraryId)}");
             }
 
+            if (model.Path.IsNullOrEmpty())
+            {
+                await resourceOptionsManager.SaveAsync(x => x.AddIdOfMediaLibraryRecentlyMovedTo(model.MediaLibraryId));
+                await service.ChangeMediaLibrary(model.Ids, mediaLibrary.Id);
+                return BaseResponseBuilder.Ok;
+            }
+
             await fsOptionsManager.SaveAsync(x => x.AddRecentMovingDestination(model.Path.StandardizePath()!));
 
             var taskName = $"Resource:BulkMove:{DateTime.Now:HH:mm:ss}";
@@ -324,7 +331,8 @@ namespace Bakabase.Service.Controllers
 
                         if (resource.MediaLibraryId != mediaLibrary.Id)
                         {
-                            await resourceService.ChangeMediaLibraryAndPath(resource.Id, mediaLibrary.Id, targetPath);
+                            await resourceService.ChangeMediaLibrary([resource.Id], mediaLibrary.Id,
+                                new Dictionary<int, string> {{resource.Id, targetPath}});
                         }
 
                         // var p = 0;

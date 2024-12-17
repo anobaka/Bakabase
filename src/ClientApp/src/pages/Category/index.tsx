@@ -14,7 +14,7 @@ import { CategoryAdditionalItem, MediaLibraryAdditionalItem } from '@/sdk/consta
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Modal } from '@/components/bakaui';
-import DeleteUnknownResources from '@/components/DeleteUnknownResources';
+import HandleUnknownResources from '@/components/HandleUnknownResources';
 
 export default () => {
   const { t } = useTranslation();
@@ -183,7 +183,7 @@ export default () => {
           )}
         </div>
         <div className="right">
-          <DeleteUnknownResources />
+          <HandleUnknownResources />
           <Button
             color={'default'}
             size={'small'}
