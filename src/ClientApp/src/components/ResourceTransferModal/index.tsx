@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DeleteOutlined, QuestionCircleOutlined, SearchOutlined } from '@ant-design/icons';
+import toast from 'react-hot-toast';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
 import {
   Checkbox,
@@ -69,6 +70,30 @@ type FilterForm = {
 
 const log = buildLogger('ResourceTransferModal');
 
+const validateInputModel = (inputModel: RecursivePartial<InputModel>): InputModel | undefined => {
+  const items: InputModelItem[] = [];
+  if (inputModel.items) {
+    for (const item of inputModel.items) {
+      if (item && item.fromId != undefined && item.toId != undefined) {
+        items.push({
+          fromId: item.fromId,
+          toId: item.toId,
+          keepMediaLibrary: item.keepMediaLibrary ?? defaultInputModelItem.keepMediaLibrary!,
+          deleteSourceResource: item.deleteSourceResource ?? defaultInputModelItem.deleteSourceResource!,
+        });
+      }
+    }
+  }
+  if (items.length > 0) {
+    return {
+      items,
+      keepMediaLibraryForAll: inputModel.keepMediaLibraryForAll ?? defaultInputModel.keepMediaLibraryForAll!,
+      deleteAllSourceResources: inputModel.deleteAllSourceResources ?? defaultInputModel.deleteAllSourceResources!,
+    };
+  }
+  return undefined;
+};
+
 export default ({
                   fromResources,
                   onDestroyed,
@@ -110,7 +135,7 @@ export default ({
     return null;
   }, []);
 
-  log(inputModel);
+  log(inputModel, !!validateInputModel(inputModel));
 
   return (
     <Modal
@@ -120,11 +145,22 @@ export default ({
       onDestroyed={onDestroyed}
       className={'max-h-[90%]'}
       onOk={async () => {
-        log('Transfering resources', inputModel);
-        throw new Error('Not implemented');
+        log('Transferring resources', inputModel);
+        const dto = validateInputModel(inputModel);
+        if (dto) {
+          await BApi.resource.transferResourceData(dto);
+        } else {
+          toast.error(t('Invalid data'));
+        }
+      }}
+      footer={{
+        actions: ['ok', 'cancel'],
+        okProps: {
+          isDisabled: !validateInputModel(inputModel),
+        },
       }}
     >
-      <div className={'flex flex-col gap-1 max-h-full overflow-hidden'}>
+      <div className={'flex flex-col gap-1 max-h-full grow overflow-hidden'}>
         <div className={'flex items-center justify-between'}>
           <div className={'flex items-center gap-2'}>
             <div>
@@ -155,7 +191,7 @@ export default ({
                   });
                 }}
               >
-                {t('Show unfinished only')}
+                {t('Show unselected only')}
               </Checkbox>
             </div>
             {/* <Tooltip content={( */}
@@ -248,27 +284,33 @@ export default ({
                             ? toResource ? (
                               <Resource resource={toResource} />
                             ) : t('Unknown resource')
-                            : t('Please select an target resource on the right side')}
+                            : (<div
+                                className={'text-warning'}
+                            >
+                              {t('Please select an target resource on the right side')}
+                            </div>)}
                         </TableCell>
                         <TableCell className={'flex flex-col'}>
                           <div className={'h-full flex flex-col gap-2'}>
-                            <ToResourceSelector onSelect={id => {
-                              item.toId = id;
-                              BApi.resource.getResourcesByKeys({
-                                ids: [id],
-                                additionalItems: ResourceAdditionalItem.All,
-                              }).then(res => {
-                                const r = res.data?.[0];
-                                if (r) {
-                                  setResourcePool({
-                                    ...resourcePool,
-                                    [id]: r,
-                                  });
-                                }
-                              });
-                              addItem(inputModel, item);
-                              setInputModel({ ...inputModel });
-                            }}
+                            <ToResourceSelector
+                              onSelect={id => {
+                                item.toId = id;
+                                BApi.resource.getResourcesByKeys({
+                                  ids: [id],
+                                  additionalItems: ResourceAdditionalItem.All,
+                                }).then(res => {
+                                  const r = res.data?.[0];
+                                  if (r) {
+                                    setResourcePool({
+                                      ...resourcePool,
+                                      [id]: r,
+                                    });
+                                  }
+                                });
+                                addItem(inputModel, item);
+                                setInputModel({ ...inputModel });
+                              }}
+                              fromResourcePath={x.path}
                             />
                             <Checkbox
                               isDisabled={inputModel.deleteAllSourceResources}
@@ -280,7 +322,7 @@ export default ({
                                 setInputModel({ ...inputModel });
                               }}
                               isSelected={inputModel.deleteAllSourceResources || item.deleteSourceResource}
-                            >{t('Delete source')}</Checkbox>
+                            >{t('Delete source resource')}</Checkbox>
                             <Checkbox
                               isDisabled={inputModel.keepMediaLibraryForAll}
                               isSelected={inputModel.keepMediaLibraryForAll || item.keepMediaLibrary}
@@ -289,7 +331,7 @@ export default ({
                                 addItem(inputModel, item);
                                 setInputModel({ ...inputModel });
                               }}
-                            >{t('Keep media library')}</Checkbox>
+                            >{t('Keep media library for target resource')}</Checkbox>
                           </div>
                         </TableCell>
                       </TableRow>

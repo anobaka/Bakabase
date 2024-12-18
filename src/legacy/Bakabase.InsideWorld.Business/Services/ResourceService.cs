@@ -380,7 +380,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<List<Resource>> ToDomainModel(Abstractions.Models.Db.ResourceDbModel[] resources,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
-            var doList = resources.Select(r => r.ToDomainModel()!).ToList();
+            var doList = resources.Select(r => r.ToDomainModel()).ToList();
             var resourceIds = resources.Select(a => a.Id).ToList();
             foreach (var i in SpecificEnumUtils<ResourceAdditionalItem>.Values.OrderBy(x => x))
             {
@@ -598,13 +598,13 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
                         case ResourceAdditionalItem.HasChildren:
                         {
-                            var children = await _orm.GetAll(a =>
-                                a.ParentId.HasValue && resourceIds.Contains(a.ParentId.Value));
-                            var parentIds = children.Select(a => a.ParentId!.Value).ToHashSet();
-                            foreach (var r in doList)
-                            {
-                                r.HasChildren = parentIds.Contains(r.Id);
-                            }
+                            //var children = await _orm.GetAll(a =>
+                            //    a.ParentId.HasValue && resourceIds.Contains(a.ParentId.Value));
+                            //var parentIds = children.Select(a => a.ParentId!.Value).ToHashSet();
+                            //foreach (var r in doList)
+                            //{
+                            //    r.HasChildren = parentIds.Contains(r.Id);
+                            //}
 
                             break;
                         }
@@ -716,7 +716,7 @@ namespace Bakabase.InsideWorld.Business.Services
             try
             {
                 // Resource
-                var dbResources = resources.Select(a => a.ToDbModel()!).ToList();
+                var dbResources = resources.Select(a => a.ToDbModel()).ToList();
                 var existedResources = dbResources.Where(a => a.Id > 0).ToList();
                 var newResources = dbResources.Except(existedResources).ToList();
                 await _orm.UpdateRange(existedResources);
@@ -1006,6 +1006,10 @@ namespace Bakabase.InsideWorld.Business.Services
                 resource.CreatedAt = toResource.CreatedAt;
                 resource.FileCreatedAt = toResource.FileCreatedAt;
                 resource.FileModifiedAt = toResource.FileModifiedAt;
+                resource.Tags = toResource.Tags;
+                resource.Path = toResource.Path;
+                resource.IsFile = toResource.IsFile;
+                resource.ParentId = toResource.ParentId;
                 resource.UpdatedAt = DateTime.Now;
                 if (keepMediaLibrary)
                 {
@@ -1368,7 +1372,17 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task Pin(int id, bool pin)
         {
-            await _orm.UpdateByKey(id, r => { r.Pinned = pin; });
+            await _orm.UpdateByKey(id, r =>
+            {
+                if (pin)
+                {
+                    r.Tags |= ResourceTag.Pinned;
+                }
+                else
+                {
+                    r.Tags &= ~ResourceTag.Pinned;
+                }
+            });
         }
 
         private async Task DeleteRelatedData(List<int> ids)

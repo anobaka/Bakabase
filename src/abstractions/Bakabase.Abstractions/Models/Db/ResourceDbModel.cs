@@ -24,13 +24,6 @@ namespace Bakabase.Abstractions.Models.Db
         public int MediaLibraryId { get; set; }
         public int CategoryId { get; set; }
         public int? ParentId { get; set; }
-
-        [Obsolete($"Use {nameof(Tags)} instead")]
-        public bool HasChildren { get; set; }
-
-        [Obsolete($"Use {nameof(Tags)} instead")]
-        public bool Pinned { get; set; }
-
         public ResourceTag Tags { get; set; }
     }
 }

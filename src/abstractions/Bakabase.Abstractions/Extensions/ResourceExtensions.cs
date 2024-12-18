@@ -35,7 +35,7 @@ namespace Bakabase.Abstractions.Extensions
 
             if (!ordersForSearch.Any())
             {
-                ordersForSearch.Add((t => t.Pinned, false, null));
+                ordersForSearch.Add((t => (t.Tags & ResourceTag.Pinned) == ResourceTag.Pinned, false, null));
                 ordersForSearch.Add((t => t.Id, false, null));
             }
 

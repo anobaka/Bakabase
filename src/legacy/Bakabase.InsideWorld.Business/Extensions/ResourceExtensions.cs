@@ -26,53 +26,43 @@ namespace Bakabase.InsideWorld.Business.Extensions
 {
     public static class ResourceExtensions
     {
-        public static Resource? ToDomainModel(this Abstractions.Models.Db.ResourceDbModel? r)
+        public static Resource ToDomainModel(this Abstractions.Models.Db.ResourceDbModel dbModel)
         {
-            if (r == null)
+            var domainModel = new Resource()
             {
-                return null;
-            }
-
-            return new()
-            {
-                Id = r.Id,
-                CategoryId = r.CategoryId,
-                MediaLibraryId = r.MediaLibraryId,
-                CreatedAt = r.CreateDt,
-                UpdatedAt = r.UpdateDt,
-                FileCreatedAt = r.FileCreateDt,
-                FileModifiedAt = r.FileModifyDt,
-                IsFile = r.IsFile,
-                HasChildren = r.HasChildren,
-                ParentId = r.ParentId,
-                Directory = Path.GetDirectoryName(r.Path)!.StandardizePath()!,
-                FileName = Path.GetFileName(r.Path),
-                Pinned = r.Pinned,
+                Id = dbModel.Id,
+                CategoryId = dbModel.CategoryId,
+                MediaLibraryId = dbModel.MediaLibraryId,
+                CreatedAt = dbModel.CreateDt,
+                UpdatedAt = dbModel.UpdateDt,
+                FileCreatedAt = dbModel.FileCreateDt,
+                FileModifiedAt = dbModel.FileModifyDt,
+                IsFile = dbModel.IsFile,
+                ParentId = dbModel.ParentId,
+                Directory = Path.GetDirectoryName(dbModel.Path)!.StandardizePath()!,
+                FileName = Path.GetFileName(dbModel.Path),
+                Tags = SpecificEnumUtils<ResourceTag>.Values.Where(t => (dbModel.Tags & t) == t).ToHashSet()
             };
+            return domainModel;
         }
 
-        public static Abstractions.Models.Db.ResourceDbModel? ToDbModel(this Resource? r)
+        public static Abstractions.Models.Db.ResourceDbModel ToDbModel(this Resource domainModel)
         {
-            if (r == null)
+            var dbModel = new Abstractions.Models.Db.ResourceDbModel
             {
-                return null;
-            }
-
-            return new()
-            {
-                Id = r.Id,
-                CreateDt = r.CreatedAt,
-                CategoryId = r.CategoryId,
-                MediaLibraryId = r.MediaLibraryId,
-                UpdateDt = r.UpdatedAt,
-                FileCreateDt = r.FileCreatedAt,
-                FileModifyDt = r.FileModifiedAt,
-                HasChildren = r.HasChildren,
-                ParentId = r.Parent?.Id ?? r.ParentId,
-                IsFile = r.IsFile,
-                Path = r.Path,
-                Pinned = r.Pinned,
+                Id = domainModel.Id,
+                CreateDt = domainModel.CreatedAt,
+                CategoryId = domainModel.CategoryId,
+                MediaLibraryId = domainModel.MediaLibraryId,
+                UpdateDt = domainModel.UpdatedAt,
+                FileCreateDt = domainModel.FileCreatedAt,
+                FileModifyDt = domainModel.FileModifiedAt,
+                ParentId = domainModel.Parent?.Id ?? domainModel.ParentId,
+                IsFile = domainModel.IsFile,
+                Path = domainModel.Path,
+                Tags = domainModel.Tags.Aggregate((s, t) => s |= t)
             };
+            return dbModel;
         }
 
 

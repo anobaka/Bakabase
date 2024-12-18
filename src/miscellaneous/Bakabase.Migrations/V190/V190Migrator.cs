@@ -135,9 +135,9 @@ namespace Bakabase.Migrations.V190
                     UpdateDt = lr.UpdateDt,
                     FileCreateDt = lr.FileCreateDt,
                     FileModifyDt = lr.FileModifyDt,
-                    HasChildren = lr.HasChildren,
                     IsFile = lr.IsSingleFile,
-                    Path = lr.RawFullname
+                    Path = lr.RawFullname,
+                    Tags = lr.HasChildren ? ResourceTag.IsParent : default
                 });
                 await _resourceService.AddAll(resources);
             }

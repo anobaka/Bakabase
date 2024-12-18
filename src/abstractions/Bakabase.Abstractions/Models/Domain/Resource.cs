@@ -93,7 +93,7 @@ public record Resource
     }
 
     public int? ParentId { get; set; }
-    public bool HasChildren { get; set; }
+    public bool HasChildren => Tags.Contains(ResourceTag.IsParent);
     public bool IsFile { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -109,7 +109,7 @@ public record Resource
     /// </summary>
     public Dictionary<int, Dictionary<int, Property>>? Properties { get; set; }
 
-    public bool Pinned { get; set; }
+    public bool Pinned => Tags.Contains(ResourceTag.Pinned);
 
     public ResourceCache? Cache { get; set; }
 
