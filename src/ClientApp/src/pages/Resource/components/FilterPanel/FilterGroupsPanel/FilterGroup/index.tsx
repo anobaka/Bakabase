@@ -1,8 +1,8 @@
 'use strict';
 
 import { useTranslation } from 'react-i18next';
-import React, { useEffect, useRef } from 'react';
-import { useUpdateEffect } from 'react-use';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { useUpdate, useUpdateEffect } from 'react-use';
 import type { Root } from 'react-dom/client';
 import { createRoot } from 'react-dom/client';
 import { ApiOutlined, AppstoreOutlined, DeleteOutlined, DisconnectOutlined, FilterOutlined } from '@ant-design/icons';
@@ -11,17 +11,24 @@ import { GroupCombinator } from '../models';
 import styles from './index.module.scss';
 import Filter from './Filter';
 import ClickableIcon from '@/components/ClickableIcon';
-import { Button, Divider, Popover, Tooltip } from '@/components/bakaui';
+import { Button, Checkbox, CheckboxGroup, Divider, Popover, Tooltip } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import QuickFilter from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/QuickFilter';
+import type { ResourceTag } from '@/sdk/constants';
+import { resourceTags } from '@/sdk/constants';
+import { buildLogger } from '@/components/utils';
 
-interface IProps {
+type Props = {
   group: ResourceSearchFilterGroup;
   onRemove?: () => void;
   onChange?: (group: ResourceSearchFilterGroup) => void;
   isRoot?: boolean;
   portalContainer?: any;
-}
+  tags?: ResourceTag[];
+  onTagsChange?: (tags: ResourceTag[]) => void;
+};
+
+const log = buildLogger('FilterGroup');
 
 const FilterGroup = ({
                        group: propsGroup,
@@ -29,25 +36,129 @@ const FilterGroup = ({
                        onChange,
                        isRoot = false,
                        portalContainer,
-                     }: IProps) => {
+                       tags,
+                       onTagsChange,
+                     }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const forceUpdate = useUpdate();
 
   const [group, setGroup] = React.useState<ResourceSearchFilterGroup>(propsGroup);
   const groupRef = useRef(group);
+  const reactDomRootRef = useRef<Root>();
 
 
   useEffect(() => {
-    let portal: Root;
-    if (portalContainer) {
-      portal = createRoot(portalContainer);
-      portal.render(renderAddHandler());
-    }
-
     return () => {
-      portal?.unmount();
+      reactDomRootRef.current?.unmount();
     };
   }, []);
+
+  const changeGroup = useCallback((newGroup: ResourceSearchFilterGroup) => {
+    setGroup(newGroup);
+    onChange?.(newGroup);
+  }, [onChange]);
+
+  const renderAddHandler = useCallback(() => {
+    return (
+      <Popover
+        showArrow
+        trigger={(
+          <Button
+            size={'sm'}
+            isIconOnly
+          >
+            <ClickableIcon
+              colorType={'normal'}
+              type={'add-filter'}
+              className={'text-xl'}
+            />
+          </Button>
+        )}
+        placement={'bottom'}
+        style={{ zIndex: 10 }}
+      >
+        <div
+          className={'grid items-center gap-2 my-3 mx-1'}
+          style={{ gridTemplateColumns: 'auto auto' }}
+        >
+          <QuickFilter onAdded={newFilter => {
+            changeGroup({
+              ...groupRef.current,
+              filters: [
+                ...(groupRef.current.filters || []),
+                newFilter,
+              ],
+            });
+          }}
+          />
+          <div />
+          <Divider orientation={'horizontal'} />
+          <div>{t('Advance filter')}</div>
+          <div className={'flex items-center gap-2'}>
+            <Button
+              size={'sm'}
+              onClick={() => {
+                changeGroup({
+                  ...groupRef.current,
+                  filters: [
+                    ...(groupRef.current.filters || []),
+                    { disabled: false },
+                  ],
+                });
+              }}
+            >
+              <FilterOutlined className={'text-base'} />
+              {t('Filter')}
+            </Button>
+            <Button
+              size={'sm'}
+              onClick={() => {
+                changeGroup({
+                  ...groupRef.current,
+                  groups: [
+                    ...(groupRef.current.groups || []),
+                    {
+                      combinator: GroupCombinator.And,
+                      disabled: false,
+                    },
+                  ],
+                });
+              }}
+            >
+              <AppstoreOutlined className={'text-base'} />
+              {t('Filter group')}
+            </Button>
+          </div>
+          <div />
+          <Divider orientation={'horizontal'} />
+          <div>{t('Special filters')}</div>
+          <div>
+            <CheckboxGroup
+              value={tags?.map(t => t.toString())}
+              onChange={ts => {
+                onTagsChange?.(ts.map(t => parseInt(t, 10) as ResourceTag));
+              }}
+              size={'sm'}
+            >
+              {resourceTags.map(rt => {
+                return (
+                  <Checkbox value={rt.value.toString()}>{t(`ResourceTag.${rt.label}`)}</Checkbox>
+                );
+              })}
+            </CheckboxGroup>
+          </div>
+        </div>
+      </Popover>
+    );
+  }, [changeGroup, tags, onTagsChange, t]);
+
+  useEffect(() => {
+    if (portalContainer) {
+      reactDomRootRef.current ??= createRoot(portalContainer);
+      reactDomRootRef.current.render(renderAddHandler());
+    }
+  }, [portalContainer, tags, onTagsChange, renderAddHandler]);
 
   useUpdateEffect(() => {
     groupRef.current = group;
@@ -56,11 +167,6 @@ const FilterGroup = ({
   useUpdateEffect(() => {
     setGroup(propsGroup);
   }, [propsGroup]);
-
-  const changeGroup = (newGroup: ResourceSearchFilterGroup) => {
-    setGroup(newGroup);
-    onChange?.(newGroup);
-  };
 
   const {
     filters,
@@ -132,83 +238,10 @@ const FilterGroup = ({
     return acc;
   }, []);
 
-  const renderAddHandler = () => {
-    return (
-      <Popover
-        showArrow
-        trigger={(
-          <Button
-            size={'sm'}
-            isIconOnly
-          >
-            <ClickableIcon
-              colorType={'normal'}
-              type={'add-filter'}
-              className={'text-xl'}
-            />
-          </Button>
-        )}
-        placement={'bottom'}
-        style={{ zIndex: 10 }}
-      >
-        <div
-          className={'grid items-center gap-2 my-3 mx-1'}
-          style={{ gridTemplateColumns: 'auto auto' }}
-        >
-          <QuickFilter onAdded={newFilter => {
-            changeGroup({
-              ...groupRef.current,
-              filters: [
-                ...(groupRef.current.filters || []),
-                newFilter,
-              ],
-            });
-          }}
-          />
-          <div />
-          <Divider orientation={'horizontal'} />
-          <div>{t('Advance filter')}</div>
-          <div className={'flex items-center gap-2'}>
-            <Button
-              size={'sm'}
-              onClick={() => {
-                changeGroup({
-                  ...groupRef.current,
-                  filters: [
-                    ...(groupRef.current.filters || []),
-                    { disabled: false },
-                  ],
-                });
-              }}
-            >
-              <FilterOutlined className={'text-base'} />
-              {t('Filter')}
-            </Button>
-            <Button
-              size={'sm'}
-              onClick={() => {
-                changeGroup({
-                  ...groupRef.current,
-                  groups: [
-                    ...(groupRef.current.groups || []),
-                    {
-                      combinator: GroupCombinator.And,
-                      disabled: false,
-                    },
-                  ],
-                });
-              }}
-            >
-              <AppstoreOutlined className={'text-base'} />
-              {t('Filter group')}
-            </Button>
-          </div>
-        </div>
-      </Popover>
-    );
-  };
+  // log('tags ', tags?.map(t => t.toString()));
 
   const renderGroup = () => {
+    log('render group');
     return (
       <div
         className={`${styles.filterGroup} p-1 ${isRoot ? styles.root : ''} ${styles.removable} relative`}

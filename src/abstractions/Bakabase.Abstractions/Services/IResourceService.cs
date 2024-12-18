@@ -10,7 +10,7 @@ namespace Bakabase.Abstractions.Services;
 public interface IResourceService
 {
     // Task RemoveByMediaLibraryIdsNotIn(int[] ids);
-    Task DeleteByKeys(int[] ids);
+    Task DeleteByKeys(int[] ids, bool deleteFiles);
 
     // Task LogicallyRemoveByCategoryId(int categoryId);
     Task<List<Abstractions.Models.Domain.Resource>> GetAll(
@@ -91,7 +91,6 @@ public interface IResourceService
     Task<string?> DiscoverAndCacheCover(int id, CancellationToken ct);
 
     Task<BaseResponse> Play(int resourceId, string file);
-    Task DeleteUnknown();
     Task<List<Resource>> GetUnknownResources();
     Task<int> GetUnknownCount();
 

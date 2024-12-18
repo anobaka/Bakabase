@@ -20,7 +20,7 @@ import { BreadcrumbItem, Breadcrumbs } from './components/Breadcumbs';
 import { Accordion, AccordionItem } from './components/Accordion';
 import { Autocomplete, AutocompleteItem } from './components/Autocomplete';
 import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow, TableRowProps } from './components/Table';
-import Checkbox from './components/Checkbox';
+import { Checkbox, CheckboxGroup } from './components/Checkbox';
 import Badge from './components/Badge';
 import Code from './components/Code';
 import Carousel from './components/Carousel';
@@ -78,6 +78,7 @@ export {
   Accordion,
   AccordionItem,
   Checkbox,
+  CheckboxGroup,
   Badge,
   Code,
   Carousel,

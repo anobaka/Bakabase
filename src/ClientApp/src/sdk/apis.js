@@ -8598,18 +8598,26 @@ export const PlayResourceFileURL = function(parameters = {}) {
 }
 /**
  * 
- * request: DeleteUnknownResources
- * url: DeleteUnknownResourcesURL
- * method: DeleteUnknownResources_TYPE
- * raw_url: DeleteUnknownResources_RAW_URL
+ * request: DeleteResourcesByKeys
+ * url: DeleteResourcesByKeysURL
+ * method: DeleteResourcesByKeys_TYPE
+ * raw_url: DeleteResourcesByKeys_RAW_URL
+ * @param ids - 
+ * @param deleteFiles - 
  */
-export const DeleteUnknownResources = function(parameters = {}) {
+export const DeleteResourcesByKeys = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/resource/unknown'
+  let path = '/resource/ids'
   let body
   let queryParameters = {}
   let form = {}
+  if (parameters['ids'] !== undefined) {
+    queryParameters['ids'] = parameters['ids']
+  }
+  if (parameters['deleteFiles'] !== undefined) {
+    queryParameters['deleteFiles'] = parameters['deleteFiles']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -8617,16 +8625,22 @@ export const DeleteUnknownResources = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const DeleteUnknownResources_RAW_URL = function() {
-  return '/resource/unknown'
+export const DeleteResourcesByKeys_RAW_URL = function() {
+  return '/resource/ids'
 }
-export const DeleteUnknownResources_TYPE = function() {
+export const DeleteResourcesByKeys_TYPE = function() {
   return 'delete'
 }
-export const DeleteUnknownResourcesURL = function(parameters = {}) {
+export const DeleteResourcesByKeysURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/unknown'
+  let path = '/resource/ids'
+  if (parameters['ids'] !== undefined) {
+    queryParameters['ids'] = parameters['ids']
+  }
+  if (parameters['deleteFiles'] !== undefined) {
+    queryParameters['deleteFiles'] = parameters['deleteFiles']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

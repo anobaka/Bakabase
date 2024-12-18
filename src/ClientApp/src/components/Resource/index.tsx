@@ -4,8 +4,8 @@ import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } 
 import type Queue from 'queue';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
-import { ApartmentOutlined, PlayCircleOutlined, PushpinOutlined } from '@ant-design/icons';
-import { ControlledMenu, MenuItem } from '@szhsin/react-menu';
+import { ApartmentOutlined, DisconnectOutlined, FileUnknownOutlined, PlayCircleOutlined, PushpinOutlined } from '@ant-design/icons';
+import { ControlledMenu } from '@szhsin/react-menu';
 import styles from './index.module.scss';
 import { OpenResourceDirectory } from '@/sdk/apis';
 import { buildLogger, useTraceUpdate } from '@/components/utils';
@@ -18,20 +18,20 @@ import Operations from '@/components/Resource/components/Operations';
 import TaskCover from '@/components/Resource/components/TaskCover';
 import type { Property, Resource as ResourceModel } from '@/core/models/Resource';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Button, Chip, Link, Modal, Tooltip } from '@/components/bakaui';
+import { Button, Chip, Link, Tooltip } from '@/components/bakaui';
 import {
   IwFsEntryTaskType,
   PropertyPool,
   ResourceAdditionalItem,
   ResourceDisplayContent,
+  ResourceTag,
   StandardValueType,
 } from '@/sdk/constants';
 import type { TagValue } from '@/components/StandardValue/models';
 import store from '@/store';
-import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
 import type { PlayableFilesRef } from '@/components/Resource/components/PlayableFiles';
 import PlayableFiles from '@/components/Resource/components/PlayableFiles';
-import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';
+import ContextMenuItems from '@/components/Resource/components/ContextMenuItems';
 
 export interface IResourceHandler {
   id: number;
@@ -236,12 +236,22 @@ const Resource = React.forwardRef((props: Props, ref) => {
         </div>
         {/* lef-top */}
         <div className={'absolute top-1 left-1 flex gap-1 items-center'}>
-          {resource.pinned && (
+          {resource.tags.includes(ResourceTag.Pinned) && (
             <PushpinOutlined />
           )}
-          {resource.hasChildren && (
+          {resource.tags.includes(ResourceTag.IsParent) && (
             <Tooltip content={t('This is a parent resource')}>
               <ApartmentOutlined className={''} />
+            </Tooltip>
+          )}
+          {resource.tags.includes(ResourceTag.PathDoesNotExist) && (
+            <Tooltip content={t('File does not exist')}>
+              <FileUnknownOutlined className={'text-warning'} />
+            </Tooltip>
+          )}
+          {resource.tags.includes(ResourceTag.UnknownMediaLibrary) && (
+            <Tooltip content={t('Not linked to media')}>
+              <DisconnectOutlined className={'text-warning'} />
             </Tooltip>
           )}
         </div>
@@ -370,46 +380,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
             e.stopPropagation();
           }}
         >
-          <MenuItem
-            onClick={() => {
-              log('inner', 'click');
-              createPortal(MediaLibraryPathSelectorV2, {
-                onSelect: (id, path) => {
-                  if (selectedResourceIds.length > 0) {
-                    BApi.resource.moveResources({
-                      ids: selectedResourceIds,
-                      path,
-                      mediaLibraryId: id,
-                    }).then(r => {
-                      // todo: moving files is a asynchronized operation, we need some way to update other resources after moving
-                      // onSelectedResourcesChanged?.(selectedResourceIds);
-                    });
-                  }
-                },
-              });
-            }}
-            onClickCapture={() => {
-              log('inner', 'click capture');
-            }}
-          >{selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Including file system entries)', { count: selectedResourceIds.length }) : t('Move to media library (Including file system entries)')}</MenuItem>
-          <MenuItem
-            onClick={() => {
-              log('inner', 'click');
-              createPortal(MediaLibrarySelectorV2, {
-                onSelect: async (id) => {
-                  await BApi.resource.moveResources({
-                    ids: selectedResourceIds,
-                    mediaLibraryId: id,
-                  }).then(r => {
-                    onSelectedResourcesChanged?.(selectedResourceIds);
-                  });
-                },
-              });
-            }}
-            onClickCapture={() => {
-              log('inner', 'click capture');
-            }}
-          >{selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Data only)', { count: selectedResourceIds.length }) : t('Move to media library (Data only)')}</MenuItem>
+          <ContextMenuItems
+            selectedResourceIds={selectedResourceIds}
+            onSelectedResourcesChanged={onSelectedResourcesChanged}
+          />
         </ControlledMenu>
         <div onClickCapture={e => {
           log('outer', 'click capture');

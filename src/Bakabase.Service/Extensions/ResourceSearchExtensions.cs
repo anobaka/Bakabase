@@ -50,7 +50,8 @@ public static class ResourceSearchExtensions
             Keyword = model.Keyword,
             Orders = model.Orders,
             Page = model.Page,
-            PageSize = model.PageSize
+            PageSize = model.PageSize,
+            Tags = model.Tags
         };
     }
 
@@ -125,7 +126,8 @@ public static class ResourceSearchExtensions
             Group = model.Group?.ToDomainModel(propertyMap),
             Orders = model.Orders,
             PageIndex = model.Page,
-            PageSize = model.PageSize
+            PageSize = model.PageSize,
+            Tags = model.Tags
         };
 
         if (!string.IsNullOrEmpty(model.Keyword))
@@ -262,7 +264,8 @@ public static class ResourceSearchExtensions
                 PageSize = model.PageSize,
                 Page = model.Page,
                 Group = model.Group?.ToViewModel(propertyMap, propertyLocalizer),
-                Orders = model.Orders
+                Orders = model.Orders,
+                Tags = model.Tags
             };
             viewModels.Add(viewModel);
         }

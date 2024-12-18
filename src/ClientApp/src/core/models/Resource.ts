@@ -1,4 +1,4 @@
-import type { PropertyValueScope, ResourceCacheType, StandardValueType } from '@/sdk/constants';
+import type { PropertyValueScope, ResourceCacheType, ResourceTag, StandardValueType } from '@/sdk/constants';
 import type { PropertyPool } from '@/sdk/constants';
 
 type Value = {
@@ -37,6 +37,7 @@ export type Resource = {
   mediaLibraryName?: string;
   category?: {id: number; name: string};
   pinned: boolean;
+  tags: ResourceTag[];
   cache?: {
     playableFilePaths?: string[];
     hasMorePlayableFiles: boolean;

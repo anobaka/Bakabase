@@ -50,6 +50,8 @@ export enum ReservedProperty {Introduction = 12, Rating = 13}
 export const reservedProperties = Object.keys(ReservedProperty).filter(k => typeof ReservedProperty[k] === 'number').map(t => ({label: t, value: ReservedProperty[t]}));
 export enum ResourceCacheType {Covers = 1, PlayableFiles = 2}
 export const resourceCacheTypes = Object.keys(ResourceCacheType).filter(k => typeof ResourceCacheType[k] === 'number').map(t => ({label: t, value: ResourceCacheType[t]}));
+export enum ResourceTag {IsParent = 1, Pinned = 2, PathDoesNotExist = 4, UnknownMediaLibrary = 8}
+export const resourceTags = Object.keys(ResourceTag).filter(k => typeof ResourceTag[k] === 'number').map(t => ({label: t, value: ResourceTag[t]}));
 export enum SearchCombinator {And = 1, Or = 2}
 export const searchCombinators = Object.keys(SearchCombinator).filter(k => typeof SearchCombinator[k] === 'number').map(t => ({label: t, value: SearchCombinator[t]}));
 export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}

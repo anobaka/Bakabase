@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QuestionCircleOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, QuestionCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
 import {
   Checkbox,
@@ -23,6 +23,7 @@ import ToResourceSelector from '@/components/ResourceTransferModal/ToResourceSel
 import BApi from '@/sdk/BApi';
 import { buildLogger, standardizePath } from '@/components/utils';
 import { ResourceAdditionalItem } from '@/sdk/constants';
+import AnimatedArrow from '@/components/AnimatedArrow';
 
 type Props = {
   fromResources: ResourceModel[];
@@ -118,6 +119,10 @@ export default ({
       size={'full'}
       onDestroyed={onDestroyed}
       className={'max-h-[90%]'}
+      onOk={async () => {
+        log('Transfering resources', inputModel);
+        throw new Error('Not implemented');
+      }}
     >
       <div className={'flex flex-col gap-1 max-h-full overflow-hidden'}>
         <div className={'flex items-center justify-between'}>
@@ -204,6 +209,7 @@ export default ({
                 <TableHeader>
                   <TableColumn width={100}>{t('#')}</TableColumn>
                   <TableColumn width={200}>{t('Source resource')}</TableColumn>
+                  <TableColumn width={60}>-</TableColumn>
                   <TableColumn width={200}>{t('Resource will be overwritten')}</TableColumn>
                   <TableColumn>{t('Operations')}</TableColumn>
                 </TableHeader>
@@ -225,7 +231,17 @@ export default ({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Resource resource={x} />
+                          <div className={'relative'}>
+                            <Resource resource={x} />
+                            {(inputModel.deleteAllSourceResources || item.deleteSourceResource) && (
+                              <div className={'absolute top-0 right-0'}>
+                                <DeleteOutlined className={'text-3xl text-danger'} />
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <AnimatedArrow />
                         </TableCell>
                         <TableCell>
                           {item.toId

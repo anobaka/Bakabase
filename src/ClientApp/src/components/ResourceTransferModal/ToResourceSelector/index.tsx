@@ -65,7 +65,7 @@ export default ({ onSelect }: Props) => {
       }}
       onSelectionChange={key => {
         log(key);
-        const id = key as number;
+        const id = parseInt(key as string, 10);
         if (id) {
           onSelect(id);
         }

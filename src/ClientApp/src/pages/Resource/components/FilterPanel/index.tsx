@@ -2,7 +2,13 @@ import { Overlay } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { useUpdateEffect } from 'react-use';
-import { OrderedListOutlined, SaveOutlined, SearchOutlined, SnippetsOutlined } from '@ant-design/icons';
+import {
+  OrderedListOutlined,
+  QuestionCircleOutlined,
+  SaveOutlined,
+  SearchOutlined,
+  SnippetsOutlined,
+} from '@ant-design/icons';
 import toast from 'react-hot-toast';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './FilterGroupsPanel';
@@ -11,13 +17,13 @@ import BApi from '@/sdk/BApi';
 import store from '@/store';
 import { PlaylistCollection } from '@/components/Playlist';
 import type { SearchForm } from '@/pages/Resource/models';
-import { Button, Chip, Input, Kbd, Modal, Popover, Tooltip } from '@/components/bakaui';
+import { Button, Chip, Input, Modal, Popover, Tooltip } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
-import HandleUnknownResources from '@/components/HandleUnknownResources';
 import type { SavedSearchRef } from '@/pages/Resource/components/FilterPanel/SavedSearches';
 import SavedSearches from '@/pages/Resource/components/FilterPanel/SavedSearches';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import MiscellaneousOptions from '@/pages/Resource/components/FilterPanel/MiscellaneousOptions';
+import { ResourceTag } from '@/sdk/constants';
 
 const { Popup } = Overlay;
 
@@ -142,7 +148,35 @@ export default ({
               group: v,
             });
           }}
+          tags={searchForm.tags}
+          onTagsChange={tags => {
+            setSearchForm({
+              ...searchForm,
+              tags,
+            });
+          }}
         />
+      )}
+      {searchForm.tags && searchForm.tags.length > 0 && (
+        <div className={'flex flex-wrap gap-1 mb-2'}>
+          {searchForm.tags.map((tag, i) => {
+            return (
+              <Chip
+                key={i}
+                size={'sm'}
+                isCloseable
+                onClose={() => {
+                  setSearchForm({
+                    ...searchForm,
+                    tags: searchForm.tags?.filter(t => t != tag),
+                  });
+                }}
+              >
+                {t(`ResourceTag.${ResourceTag[tag]}`)}
+              </Chip>
+            );
+          })}
+        </div>
       )}
       <div className={'flex items-center justify-between'}>
         <div className={'flex items-center gap-4'}>
@@ -206,7 +240,16 @@ export default ({
               <SnippetsOutlined className={'text-base'} />
             </Chip>
           )}
-          <HandleUnknownResources onHandled={() => search({})} />
+          <Popover
+            trigger={<QuestionCircleOutlined className={'text-lg'} />}
+            color={'success'}
+          >
+            <div className={'flex flex-col gap-1'}>
+              <div>{t('Hold down Ctrl to select multiple resources.')}</div>
+              <div>{t('You can perform more actions by right-clicking on the resource.')}</div>
+            </div>
+          </Popover>
+          {/* <HandleUnknownResources onHandled={() => search({})} /> */}
           <OrderSelector
             className={'mr-2'}
             value={searchForm.orders}

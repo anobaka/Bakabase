@@ -1,5 +1,5 @@
 import type { ResourceSearchFilterGroup } from './components/FilterPanel/FilterGroupsPanel/models';
-import type { ResourceSearchSortableProperty } from '@/sdk/constants';
+import type { ResourceSearchSortableProperty, ResourceTag } from '@/sdk/constants';
 
 export type SearchForm = {
   group?: ResourceSearchFilterGroup;
@@ -7,6 +7,7 @@ export type SearchForm = {
   keyword?: string;
   page: number;
   pageSize: number;
+  tags?: ResourceTag[];
 };
 
 export type SearchFormOrderModel = {

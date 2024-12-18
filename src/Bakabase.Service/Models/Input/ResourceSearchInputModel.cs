@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bootstrap.Models.RequestModels;
 
@@ -11,6 +12,7 @@ public record ResourceSearchInputModel
     public string? Keyword { get; set; }
     public int PageSize { get; set; }
     public int Page { get; set; }
+    public ResourceTag[]? Tags { get; set; }
 
     public void StandardPageable()
     {

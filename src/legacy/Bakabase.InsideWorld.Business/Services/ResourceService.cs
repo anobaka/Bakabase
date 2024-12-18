@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
@@ -44,6 +45,7 @@ using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bootstrap.Components.Orm.Extensions;
+using Bootstrap.Components.Storage;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -103,8 +105,24 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public InsideWorldDbContext DbContext => _orm.DbContext;
 
-        public async Task DeleteByKeys(int[] ids)
+        public async Task DeleteByKeys(int[] ids, bool deleteFiles)
         {
+            if (deleteFiles)
+            {
+                var resources = await GetAllDbModels(d => ids.Contains(d.Id), false);
+                foreach (var r in resources)
+                {
+                    if (r.IsFile)
+                    {
+                        FileUtils.Delete(r.Path, true, true);
+                    }
+                    else
+                    {
+                        DirectoryUtils.Delete(r.Path, true, true);
+                    }
+                }
+            }
+
             await DeleteRelatedData(ids.ToList());
             await _orm.RemoveByKeys(ids);
         }
@@ -121,17 +139,34 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<SearchResponse<Resource>> Search(ResourceSearch model)
         {
             var allResources = await GetAll();
+            var resourceMap = allResources.ToDictionary(d => d.Id, d => d);
+
             var context = new ResourceSearchContext(allResources);
 
             await PreparePropertyDbValues(context, model.Group);
             var resourceIds = SearchResourceIds(model.Group, context);
             var ordersForSearch = model.Orders.BuildForSearch();
 
-            Func<Abstractions.Models.Db.ResourceDbModel, bool>? exp = resourceIds == null
+            if (model.Tags?.Any() == true)
+            {
+                resourceIds ??= allResources.Select(r => r.Id).ToHashSet();
+                resourceIds.RemoveWhere(r =>
+                    model.Tags.Any(t => resourceMap.GetValueOrDefault(r)?.Tags?.Contains(t) != true));
+            }
+
+            Expression<Func<Abstractions.Models.Db.ResourceDbModel, bool>>? exp = resourceIds == null
                 ? null
                 : r => resourceIds.Contains(r.Id);
 
-            var resources = await _orm.Search(exp, model.PageIndex, model.PageSize,
+            ResourceTag? tagsValue = model.Tags?.Any() == true ? (ResourceTag)model.Tags.Sum(x => (int)x) : null;
+            if (tagsValue.HasValue)
+            {
+                exp = exp == null
+                    ? r => (r.Tags & tagsValue.Value) == tagsValue.Value
+                    : exp.And(r => (r.Tags & tagsValue.Value) == tagsValue.Value);
+            }
+
+            var resources = await _orm.Search(exp?.Compile(), model.PageIndex, model.PageSize,
                 ordersForSearch,
                 false);
             var dtoList = await ToDomainModel(resources.Data!.ToArray(), ResourceAdditionalItem.All);
@@ -986,7 +1021,7 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             await AddOrPutRange(changedResources);
-            await DeleteByKeys(discardResourceIds.ToArray());
+            await DeleteByKeys(discardResourceIds.ToArray(), false);
         }
 
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)
@@ -1264,18 +1299,6 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await playerRsp.Data.Play(file);
             return BaseResponseBuilder.Ok;
-        }
-
-        public async Task DeleteUnknown()
-        {
-            var unknownResources = await GetUnknownResourceDbModels();
-
-            if (unknownResources.Any())
-            {
-                var unknownResourceIds = unknownResources.Select(r => r.Id).ToList();
-                await DeleteRelatedData(unknownResourceIds);
-                await _orm.RemoveRange(unknownResources);
-            }
         }
 
         public async Task<List<Resource>> GetUnknownResources()

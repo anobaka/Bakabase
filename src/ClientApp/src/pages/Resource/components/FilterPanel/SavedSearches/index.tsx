@@ -2,7 +2,7 @@ import { CheckOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
-import { ResourceSearchSortableProperty, SearchCombinator, SearchOperation } from '@/sdk/constants';
+import { ResourceSearchSortableProperty, ResourceTag, SearchCombinator, SearchOperation } from '@/sdk/constants';
 import { Button, Chip, Divider, Input, Popover, Tooltip } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { SearchForm } from '@/pages/Resource/models';
@@ -59,7 +59,12 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
         size={'sm'}
       >
         {filter.dbValue == undefined ? t('Not set') : (
-          <PropertyValueRenderer variant={'light'} property={filter.valueProperty} dbValue={filter.dbValue} bizValue={filter.bizValue} />
+          <PropertyValueRenderer
+            variant={'light'}
+            property={filter.valueProperty}
+            dbValue={filter.dbValue}
+            bizValue={filter.bizValue}
+          />
         )}
       </Chip>
     );
@@ -130,7 +135,10 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
   return (
     <div className={'flex items-center flex-wrap gap-1'}>
       {savedSearches.map((savedSearch, idx) => {
-        const { search, name } = savedSearch;
+        const {
+          search,
+          name,
+        } = savedSearch;
         return (
           <Tooltip
             classNames={{
@@ -237,6 +245,26 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                     >{t('Page')}</Chip>
                   </div>
                   <div>{search.page}</div>
+                  <div className={'text-right'}>
+                    <Chip
+                      size={'sm'}
+                      radius={'sm'}
+                      variant={'bordered'}
+                    >{t('Special filters')}</Chip>
+                  </div>
+                  <div className={'flex flex-wrap gap-1'}>
+                    {search.tags?.map(x => {
+                      return (
+                        <Chip
+                          size={'sm'}
+                          radius={'sm'}
+                          // variant={'bordered'}
+                        >
+                          {t(`ResourceTag.${ResourceTag[x]}`)}
+                        </Chip>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}

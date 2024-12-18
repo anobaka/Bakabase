@@ -133,6 +133,12 @@ export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13;
 export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2;
 
 /**
+ * [1: IsParent, 2: Pinned, 4: PathDoesNotExist, 8: UnknownMediaLibrary]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsResourceTag = 1 | 2 | 4 | 8;
+
+/**
  * [1: And, 2: Or]
  * @format int32
  */
@@ -307,6 +313,8 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** @format date-time */
   fileModifiedAt: string;
   coverPaths?: string[];
+  /** @uniqueItems true */
+  tags: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
   pinned: boolean;
@@ -1410,6 +1418,7 @@ export interface BakabaseModulesSearchModelsDbResourceSearchDbModel {
   page: number;
   /** @format int32 */
   pageSize: number;
+  tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
 }
 
 export interface BakabaseModulesSearchModelsDbResourceSearchFilterDbModel {
@@ -1535,6 +1544,7 @@ export interface BakabaseServiceModelsInputResourceSearchInputModel {
   pageSize: number;
   /** @format int32 */
   page: number;
+  tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
 }
 
 export interface BakabaseServiceModelsInputSavedSearchAddInputModel {
@@ -1760,6 +1770,7 @@ export interface BakabaseServiceModelsViewResourceSearchViewModel {
   page: number;
   /** @format int32 */
   pageSize: number;
+  tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
 }
 
 export interface BakabaseServiceModelsViewSavedSearchViewModel {
@@ -5261,13 +5272,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name DeleteUnknownResources
-     * @request DELETE:/resource/unknown
+     * @name DeleteResourcesByKeys
+     * @request DELETE:/resource/ids
      */
-    deleteUnknownResources: (params: RequestParams = {}) =>
+    deleteResourcesByKeys: (
+      query?: {
+        ids?: number[];
+        deleteFiles?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/unknown`,
+        path: `/resource/ids`,
         method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),

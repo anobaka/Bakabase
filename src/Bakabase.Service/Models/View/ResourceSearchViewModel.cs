@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Models.Input;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Input;
 using Bootstrap.Models.RequestModels;
 
 namespace Bakabase.Service.Models.View
@@ -10,5 +11,6 @@ namespace Bakabase.Service.Models.View
         public string? Keyword { get; set; }
         public int Page { get; set; }
         public int PageSize { get; set; }
+        public ResourceTag[]? Tags { get; set; }
     }
 }

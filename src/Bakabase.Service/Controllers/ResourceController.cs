@@ -455,11 +455,11 @@ namespace Bakabase.Service.Controllers
             return await service.Play(resourceId, file);
         }
 
-        [HttpDelete("unknown")]
-        [SwaggerOperation(OperationId = "DeleteUnknownResources")]
-        public async Task<BaseResponse> DeleteUnknown()
+        [HttpDelete("ids")]
+        [SwaggerOperation(OperationId = "DeleteResourcesByKeys")]
+        public async Task<BaseResponse> DeleteByKeys(int[] ids, bool deleteFiles)
         {
-            await service.DeleteUnknown();
+            await service.DeleteByKeys(ids, deleteFiles);
             return BaseResponseBuilder.Ok;
         }
 

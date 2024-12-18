@@ -165,6 +165,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
             {
                 current.Parent = patches.Parent;
                 changed = true;
+                current.Tags.Add(ResourceTag.IsParent);
             }
             else
             {
@@ -174,6 +175,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                     if (current.ParentId.HasValue)
                     {
                         current.ParentId = null;
+                        current.Tags.RemoveWhere(x => x == ResourceTag.IsParent);
                         changed = true;
                     }
                 }

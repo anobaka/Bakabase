@@ -609,7 +609,7 @@ namespace Bakabase.InsideWorld.Business.Services
             var patchingResources = new Dictionary<string, Resource>(StringComparer.OrdinalIgnoreCase);
             var parentResources = new Dictionary<string, Resource>();
             var prevPathResourceMap = new Dictionary<string, Resource>();
-            var invalidResources = new List<Resource>();
+            var unknownResources = new List<Resource>();
 
             var changedResources = new ConcurrentDictionary<string, Resource>();
 
@@ -735,11 +735,11 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
 
                         // Delete resources with unknown paths
-                        invalidResources.AddRange(prevResources.Where(x => !patchingResources.Keys.Contains(x.Path)));
+                        unknownResources.AddRange(prevResources.Where(x => !patchingResources.Keys.Contains(x.Path)));
 
                         // var invalidIds = invalidResources.Select(r => r.Id).ToArray();
                         // await ResourceService.DeleteByKeys(invalidIds);
-                        prevResources.RemoveAll(x => invalidResources.Contains(x));
+                        prevResources.RemoveAll(x => unknownResources.Contains(x));
 
                         prevPathResourceMap = prevResources.ToDictionary(t => t.Path);
 
@@ -774,7 +774,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     case MediaLibrarySyncStep.SaveResources:
                     {
                         var resourcesToBeSaved = changedResources.Values.ToList();
-                        resourcesToBeSaved.AddRange(invalidResources.Where(ir =>
+                        resourcesToBeSaved.AddRange(unknownResources.Where(ir =>
                             ir.Tags.Add(ResourceTag.PathDoesNotExist)));
 
                         var newResources = resourcesToBeSaved.Where(a => a.Id == 0).ToArray();
@@ -787,7 +787,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                         result.ResourceCount = patchingResources.Count;
                         result.AddedResourceCount = newResources.Length;
-                        result.DeletedResourceCount = invalidResources.Count;
+                        result.DeletedResourceCount = unknownResources.Count;
                         result.UpdatedResourceCount = resourcesToBeSaved.Count - newResources.Length;
                         result.DirectoryResourceCount = patchingResources.Count(a => !a.Value.IsFile);
                         result.FileResourceCount = patchingResources.Count(a => a.Value.IsFile);
