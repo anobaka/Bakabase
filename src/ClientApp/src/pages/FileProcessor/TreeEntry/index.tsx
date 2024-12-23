@@ -266,7 +266,7 @@ const TreeEntry = (props: TreeEntryProps) => {
         switchSelective={switchSelective}
         style={s}
         onLoadFail={onLoadFail}
-        expandable={expandable}
+        expandable={e.expandable}
       />
     );
   }, [entryRef.current.children, entryRef.current.expanded, onDoubleClick]);

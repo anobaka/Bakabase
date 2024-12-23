@@ -196,7 +196,7 @@ export default (props: Props) => {
     <div>
       {propertyInnerDirection == 'hoz' ? (
         <div
-          className={`grid gap-x-4 gap-y-1 ${className} items-center overflow-hidden`}
+          className={`grid gap-x-4 gap-y-1 ${className} items-center overflow-visible`}
           style={{ gridTemplateColumns: 'max(120px) minmax(0, 1fr)' }}
         >
           {renderContext.filter(x => showInvisibleProperties || x.visible).map(pCtx => {

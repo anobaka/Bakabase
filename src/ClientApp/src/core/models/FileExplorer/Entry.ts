@@ -205,6 +205,12 @@ export class Entry {
     if (this.initializationStatus != EntryAsyncOperationStatus.NotStarted) {
       return;
     }
+
+    if (this.type == IwFsType.Drive) {
+      this.initializationStatus = EntryAsyncOperationStatus.Completed;
+      return;
+    }
+
     this.ref?.setLoading(true);
     this.initializationStatus = EntryAsyncOperationStatus.Running;
     try {
@@ -310,7 +316,7 @@ export class Entry {
   }
 
   get expandable(): boolean {
-    return this.isDirectoryOrDrive && (this.childrenCount == undefined || this.childrenCount > 0);
+    return this.type == IwFsType.Drive || (this.type == IwFsType.Directory && (this.childrenCount == undefined || this.childrenCount > 0));
   }
 
   get isMedia(): boolean {

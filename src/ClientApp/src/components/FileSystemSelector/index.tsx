@@ -59,7 +59,7 @@ export default (props: IFileSystemSelectorProps) => {
             if (mode == 'select') {
               return false;
             } else {
-              if (e.type != IwFsType.Directory) {
+              if (e.type != IwFsType.Directory && e.type != IwFsType.Drive) {
                 return false;
               }
             }
@@ -142,6 +142,7 @@ export default (props: IFileSystemSelectorProps) => {
               radius={'sm'}
               variant={'light'}
               color={'success'}
+              className={'whitespace-break-spaces h-auto'}
             >
               {selected.path}
             </Chip>

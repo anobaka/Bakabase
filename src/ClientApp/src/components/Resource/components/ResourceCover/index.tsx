@@ -75,7 +75,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     h: 0,
   });
 
-  // log(coverFit);
+  log(resource);
 
   useUpdateEffect(() => {
     forceUpdate();
@@ -88,6 +88,42 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   useEffect(() => {
     disableCacheRef.current = useCache;
   }, [useCache]);
+
+  const loadCover = useCallback((disableBrowserCache: boolean) => {
+    const serverAddresses = appContext.serverAddresses ?? [serverConfig.apiEndpoint];
+    const serverAddress = serverAddresses[serverAddresses.length - 1];
+    const urls: string[] = [];
+
+    const cps = resource.coverPaths ?? [];
+
+    if (useCache) {
+      if (cps.length == 0) {
+        cps.push(...(resource.cache?.coverPaths ?? []));
+      }
+      if (cps.length == 0) {
+        cps.push(resource.path);
+      }
+      urls.push(...cps.map(coverPath => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`));
+    } else {
+      if (cps.length == 0) {
+        urls.push(`${serverAddress}/resource/${resource.id}/cover`);
+      } else {
+        urls.push(...cps.map(coverPath => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`));
+      }
+    }
+
+    if (disableBrowserCache) {
+      for (let i = 0; i < urls.length; i++) {
+        urls[i] += urls[i].includes('?') ? `&v=${uuidv4()}` : `?v=${uuidv4()}`;
+      }
+    }
+    log(urls, resource);
+    setUrls(urls);
+  }, [resource, useCache]);
+
+  useEffect(() => {
+    loadCover(false);
+  }, [resource, loadCover]);
 
   useEffect(() => {
     loadCover(false);
@@ -104,36 +140,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     return {
       load: loadCover,
     };
-  }, []);
+  }, [loadCover]);
 
   // useTraceUpdate(props, '[ResourceCover]');
-
-  const loadCover = useCallback((disableBrowserCache: boolean) => {
-    const serverAddresses = appContext.serverAddresses ?? [serverConfig.apiEndpoint];
-    const serverAddress = serverAddresses[serverAddresses.length - 1];
-    const urls: string[] = [];
-
-    if (useCache) {
-      const cps = resource.coverPaths ?? [];
-      if (cps.length == 0) {
-        cps.push(...(resource.cache?.coverPaths ?? []));
-      }
-      if (cps.length == 0) {
-        cps.push(resource.path);
-      }
-      urls.push(...cps.map(coverPath => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`));
-    } else {
-      urls.push(`${serverAddress}/resource/${resource.id}/cover`);
-    }
-
-    if (disableBrowserCache) {
-      for (let i = 0; i < urls.length; i++) {
-        urls[i] += urls[i].includes('?') ? `&v=${uuidv4()}` : `?v=${uuidv4()}`;
-      }
-    }
-    setUrls(urls);
-  }, []);
-
   const onClick = useCallback(() => {
     if (propsOnClick) {
       propsOnClick();

@@ -333,6 +333,9 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
           classNames={{
             inputWrapper: 'pl-0',
           }}
+          onKeyDown={evt => {
+            evt.stopPropagation();
+          }}
           onValueChange={v => {
             const path = standardizePath(v)!;
             setInputValue(path);

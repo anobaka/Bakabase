@@ -2,7 +2,7 @@ import { EyeInvisibleOutlined, SwapOutlined } from '@ant-design/icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
-import { Badge, Button, Chip, Listbox, ListboxItem, Popover } from '@/components/bakaui';
+import { Badge, Button, Chip, Listbox, ListboxItem, Popover, Tooltip } from '@/components/bakaui';
 import type { PropertyValueScope } from '@/sdk/constants';
 import { propertyValueScopes, ResourceProperty, PropertyPool } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
@@ -71,15 +71,19 @@ export default (props: PropertyContainerProps) => {
     <>
       {!hidePropertyName && (
         <div className={`flex ${classNames?.name}`}>
-          <Chip
-            className={'whitespace-break-spaces py-1 h-auto break-all'}
-            size={'sm'}
-            radius={'sm'}
-            color={'secondary'}
-            // variant={'light'}
+          <Tooltip
+            content={`${t(PropertyPool[property.pool])}${t('Property')}`}
           >
-            {property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id])}
-          </Chip>
+            <Chip
+              className={'whitespace-break-spaces py-1 h-auto break-all'}
+              size={'sm'}
+              radius={'sm'}
+              color={property.pool != PropertyPool.Custom ? 'default' : 'secondary'}
+              // variant={'light'}
+            >
+              {property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id])}
+            </Chip>
+          </Tooltip>
         </div>
       )}
       {/* <Card> */}

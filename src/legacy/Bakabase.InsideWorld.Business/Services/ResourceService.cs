@@ -1084,6 +1084,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     // case ResourceProperty.Resource:
                     //     break;
                     case ResourceProperty.Introduction:
+                    case ResourceProperty.Cover:
                     case ResourceProperty.Rating:
                     {
                         var scopeValue = await _reservedPropertyValueService.GetFirst(x =>
@@ -1095,15 +1096,23 @@ namespace Bakabase.InsideWorld.Business.Services
                             Scope = (int) PropertyValueScope.Manual
                         };
 
-                        if (property == ResourceProperty.Introduction)
+                        switch (property)
                         {
-                            scopeValue.Introduction =
-                                model.Value?.DeserializeAsStandardValue<string>(StandardValueType.String);
-                        }
-                        else
-                        {
-                            scopeValue.Rating =
-                                model.Value?.DeserializeAsStandardValue<decimal>(StandardValueType.Decimal);
+                            case ResourceProperty.Introduction:
+                                scopeValue.Introduction =
+                                    model.Value?.DeserializeAsStandardValue<string>(StandardValueType.String);
+                                    break;
+                            case ResourceProperty.Rating:
+                                scopeValue.Rating =
+                                    model.Value?.DeserializeAsStandardValue<decimal>(StandardValueType.Decimal);
+                                    break;
+                            case ResourceProperty.Cover:
+                                scopeValue.CoverPaths =
+                                    model.Value?.DeserializeDbValueAsStandardValue<List<string>>(
+                                        PropertyType.Attachment);
+                                    break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
                         }
 
                         return noValue

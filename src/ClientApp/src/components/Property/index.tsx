@@ -152,7 +152,13 @@ export default ({
       </Modal>
       <div className={`${styles.line1} flex item-center justify-between gap-1`}>
         <div className={`${styles.left}`}>
-          <div className={styles.name}>{property.name}</div>
+          <div className={'flex items-center gap-1'}>
+            <Chip
+              size={'sm'}
+              radius={'sm'}
+            >{t(`${PropertyPool[property.pool]}`)}</Chip>
+            {property.name}
+          </div>
           <Tooltip
             color={'foreground'}
             content={t(PropertyType[property.type!])}

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import './index.scss';
 import { useTranslation } from 'react-i18next';
 import { DisconnectOutlined, FolderOpenOutlined, PlayCircleOutlined, SettingOutlined } from '@ant-design/icons';
+import { history } from 'ice';
 import BasicInfo from './BasicInfo';
 import Properties from './Properties';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
@@ -71,9 +72,12 @@ export default ({
     >
       {resource && (
         <>
-          <div className="flex gap-4 max-h-[600px] relative">
+          <div className="flex gap-4 relative">
             <div className="min-w-[400px] w-[400px] max-w-[400px] flex flex-col gap-4">
-              <div className={'h-[400px] max-h-[400px] overflow-hidden rounded flex items-center justify-center'}>
+              <div
+                className={'h-[400px] max-h-[400px] overflow-hidden rounded flex items-center justify-center border-1'}
+                style={{ borderColor: 'var(--bakaui-overlap-background)' }}
+              >
                 <ResourceCover
                   resource={resource}
                   useCache={false}
@@ -140,16 +144,29 @@ export default ({
                     <div className={'w-4/5'}>
                       <DisconnectOutlined className={'text-base mr-1'} />
                       {t('No property available. Please bind properties to category if you need to show them.')}
-                      <Link
-                        href={'#/category'}
+                      <Button
+                        onClick={() => {
+                          history?.push('/category');
+                        }}
+                        variant={'light'}
                         size={'sm'}
-                        underline={'none'}
-                        isBlock
-                      >{t('Go to category page')}</Link>
+                        color={'primary'}
+                      >{t('Go to category page')}</Button>
                     </div>
                   </div>
                 )}
               />
+              <div>
+                <Properties
+                  resource={resource}
+                  reload={loadResource}
+                  restrictedPropertyPool={PropertyPool.Reserved}
+                  restrictedPropertyIds={[ReservedProperty.Cover]}
+                  propertyClassNames={{
+                    name: 'justify-end',
+                  }}
+                />
+              </div>
             </div>
             <Button
               size={'sm'}
