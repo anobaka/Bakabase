@@ -18,20 +18,22 @@
 		<Folder Include="Models\View\" />
 	</ItemGroup>
 
+
 	<ItemGroup>
-		<EmbeddedResource Update="Resources\BulkModificationResource.resx">
-			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>BulkModificationResource.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
-		<EmbeddedResource Update="Resources\BulkModificationResource.zh-hans.resx">
-		  <DependentUpon>BulkModificationResource.resx</DependentUpon>
-		</EmbeddedResource>
+		<Compile Update="Resources\BulkModificationResource.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>BulkModificationResource.resx</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="Resources\BulkModificationResource.zh-Hans.resx">
-	    <Generator>ResXFileCodeGenerator</Generator>
-	    <LastGenOutput>BulkModificationResource.Designer.cs</LastGenOutput>
-	  </None>
+		<EmbeddedResource Update="Resources\BulkModificationResource.resx">
+			<Generator>PublicResXFileCodeGenerator</Generator>
+			<LastGenOutput>BulkModificationResource.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Resources\BulkModificationResource.zh-Hans.resx">
+			<Generator>PublicResXFileCodeGenerator</Generator>
+		</EmbeddedResource>
 	</ItemGroup>
 </Project>
