@@ -394,43 +394,6 @@ namespace Bakabase.InsideWorld.Business.Services
                                 (await _reservedPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId)))
                                 .GroupBy(d => d.ResourceId).ToDictionary(d => d.Key, d => d.ToList());
 
-                            var resourceRatingPropertyMap = reservedPropertyValueMap.ToDictionary(d => d.Key,
-                                d =>
-                                {
-                                    var scopeRatings = d.Value.Where(x => x.Rating.HasValue)
-                                        .Select(x => (x.Scope, Rating: x.Rating!.Value)).ToArray();
-                                    if (scopeRatings.Any())
-                                    {
-                                        var p = new Resource.Property(null, StandardValueType.Decimal,
-                                            StandardValueType.Decimal,
-                                            scopeRatings.Select(s =>
-                                                new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating,
-                                                    s.Rating)).ToList(), true);
-                                        return p;
-                                    }
-
-                                    return null;
-                                });
-
-                            var resourceIntroductionPropertyMap = reservedPropertyValueMap.ToDictionary(d => d.Key,
-                                d =>
-                                {
-                                    var scopeIntroductions = d.Value.Where(x => !string.IsNullOrEmpty(x.Introduction))
-                                        .Select(x => (x.Scope, Introduction: x.Introduction!)).ToArray();
-                                    if (scopeIntroductions.Any())
-                                    {
-                                        var p = new Resource.Property(null, StandardValueType.String,
-                                            StandardValueType.String,
-                                            scopeIntroductions.Select(s =>
-                                                new Resource.Property.PropertyValue(s.Scope, s.Introduction,
-                                                    s.Introduction,
-                                                    s.Introduction)).ToList(), true);
-                                        return p;
-                                    }
-
-                                    return null;
-                                });
-
                             var reservedPropertyMap =
                                 (await _propertyService.GetProperties(PropertyPool.Reserved)).ToDictionary(d => d.Id,
                                     d => d);
@@ -443,6 +406,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 var dbReservedProperties = reservedPropertyValueMap.GetValueOrDefault(r.Id);
                                 reservedProperties[(int) ResourceProperty.Rating] = new Resource.Property(
                                     reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Rating)?.Name,
+                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Type ?? default,
                                     StandardValueType.Decimal,
                                     StandardValueType.Decimal,
                                     dbReservedProperties?.Select(s =>
@@ -450,11 +414,24 @@ namespace Bakabase.InsideWorld.Business.Services
                                             s.Rating)).ToList(), true);
                                 reservedProperties[(int) ResourceProperty.Introduction] = new Resource.Property(
                                     reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Introduction)?.Name,
+                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Type ?? default,
                                     StandardValueType.String,
                                     StandardValueType.String,
                                     dbReservedProperties?.Select(s =>
                                         new Resource.Property.PropertyValue(s.Scope, s.Introduction, s.Introduction,
                                             s.Introduction)).ToList(), true);
+
+                                reservedProperties[(int) ResourceProperty.Cover] = new Resource.Property(
+                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Cover)?.Name,
+                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Type ?? default,
+                                    StandardValueType.ListString,
+                                    StandardValueType.ListString,
+                                    dbReservedProperties?.Select(s =>
+                                    {
+                                        var coverPaths = s.CoverPaths;
+                                        return new Resource.Property.PropertyValue(s.Scope, coverPaths, coverPaths,
+                                            coverPaths);
+                                    }).ToList(), true);
                             }
 
                             SortPropertyValuesByScope(doList);
@@ -523,7 +500,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                     var visible = boundPropertyIds?.Contains(pId) == true;
 
                                     var p = customProperties.GetOrAdd(pId,
-                                        () => new Resource.Property(property.Name, property.Type.GetDbValueType(),
+                                        () => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
                                             property.Type.GetBizValueType(), [], visible));
                                     if (values != null)
                                     {
@@ -541,43 +518,6 @@ namespace Bakabase.InsideWorld.Business.Services
                             }
 
                             SortPropertyValuesByScope(doList);
-                            foreach (var @do in doList)
-                            {
-                                var customPropertyValues =
-                                    @do.Properties?.GetValueOrDefault((int) PropertyPool.Custom);
-                                var found = false;
-                                if (customPropertyValues != null)
-                                {
-                                    foreach (var (pId, pvs) in customPropertyValues)
-                                    {
-                                        if (found)
-                                        {
-                                            break;
-                                        }
-
-                                        if (propertyMap.GetValueOrDefault(pId)?.Type ==
-                                            PropertyType.Attachment)
-                                        {
-                                            if (pvs.Values?.Any() == true)
-                                            {
-                                                foreach (var listString in pvs.Values.Select(v =>
-                                                             v.Value as List<string>))
-                                                {
-                                                    var images = listString?.Where(x =>
-                                                        x.InferMediaType() == MediaType.Image).ToArray();
-                                                    if (images?.Any() == true)
-                                                    {
-                                                        @do.CoverPaths = images.ToList();
-                                                        found = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
                             break;
                         }
                         case ResourceAdditionalItem.Alias:
@@ -655,6 +595,44 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
                         default:
                             throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+
+            // Set cover
+            foreach (var @do in doList)
+            {
+                var candidatePropertyValues =
+                    (@do.Properties?.GetValueOrDefault((int) PropertyPool.Custom)?.ToList() ?? []);
+                var coverPropertyValues = @do.Properties?.GetValueOrDefault((int) PropertyPool.Reserved)
+                    ?.Where(x => x.Key == (int) ReservedProperty.Cover);
+                if (coverPropertyValues != null)
+                {
+                    candidatePropertyValues.InsertRange(0, coverPropertyValues);
+                }
+
+                var found = false;
+                foreach (var (pId, pvs) in candidatePropertyValues)
+                {
+                    if (found)
+                    {
+                        break;
+                    }
+
+                    if (pvs.Type == PropertyType.Attachment && pvs.Values?.Any() == true)
+                    {
+                        foreach (var listString in pvs.Values.Select(v =>
+                                     v.Value as List<string>))
+                        {
+                            var images = listString?.Where(x =>
+                                x.InferMediaType() == MediaType.Image).ToArray();
+                            if (images?.Any() == true)
+                            {
+                                @do.CoverPaths = images.ToList();
+                                found = true;
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -803,11 +781,18 @@ namespace Bakabase.InsideWorld.Business.Services
             string? path = null;
             if (coverDiscoverResult != null)
             {
-                var image = await coverDiscoverResult.LoadByImageSharp(ct);
-                var pathWithoutExt =
-                    Path.Combine(_fileManager.BuildAbsolutePath("cache", "cover"), resource.Id.ToString())
-                        .StandardizePath()!;
-                path = await image.SaveAsThumbnail(pathWithoutExt, ct);
+                try
+                {
+                    var image = await coverDiscoverResult.LoadByImageSharp(ct);
+                    var pathWithoutExt =
+                        Path.Combine(_fileManager.BuildAbsolutePath("cache", "cover"), resource.Id.ToString())
+                            .StandardizePath()!;
+                    path = await image.SaveAsThumbnail(pathWithoutExt, ct);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, $"An error occurred during saving image as cover");
+                }
             }
 
             var cache = await _resourceCacheOrm.GetByKey(id, true);
@@ -1026,6 +1011,41 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await AddOrPutRange(changedResources);
             await DeleteByKeys(discardResourceIds.ToArray(), false);
+        }
+
+        public async Task SaveCover(int id, byte[] imageBytes, CoverSaveMode mode)
+        {
+            var rpv = await _reservedPropertyValueService.GetFirst(x =>
+                x.Scope == (int) PropertyValueScope.Manual && x.ResourceId == id);
+            var currentCovers = rpv?.CoverPaths ?? [];
+            var index = currentCovers.Count;
+            var image = await Image.LoadAsync(new MemoryStream(imageBytes));
+            var outputFilePath = _fileManager.BuildAbsolutePath("user-saved", "cover", $"{id}-{index}.jpg");
+            Directory.CreateDirectory(Path.GetDirectoryName(outputFilePath)!);
+            await image.SaveAsJpegAsync(outputFilePath);
+
+            if (mode == CoverSaveMode.Replace)
+            {
+                currentCovers.Clear();
+            }
+
+            currentCovers.Insert(0, outputFilePath);
+
+            if (rpv == null)
+            {
+                rpv = new ReservedPropertyValue
+                {
+                    ResourceId = id,
+                    Scope = (int) PropertyValueScope.Manual,
+                    CoverPaths = currentCovers
+                };
+                await _reservedPropertyValueService.Add(rpv);
+            }
+            else
+            {
+                rpv.CoverPaths = currentCovers;
+                await _reservedPropertyValueService.Update(rpv);
+            }
         }
 
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)

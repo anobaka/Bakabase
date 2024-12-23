@@ -250,7 +250,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             </Tooltip>
           )}
           {resource.tags.includes(ResourceTag.UnknownMediaLibrary) && (
-            <Tooltip content={t('Not linked to media')}>
+            <Tooltip content={t('Unknown media library')}>
               <DisconnectOutlined className={'text-warning'} />
             </Tooltip>
           )}

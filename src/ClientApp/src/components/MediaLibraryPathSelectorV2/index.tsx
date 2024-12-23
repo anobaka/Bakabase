@@ -1,15 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppstoreOutlined, FileImageOutlined, HistoryOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+  AppstoreOutlined,
+  DoubleRightOutlined,
+  FileImageOutlined,
+  HistoryOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import { buildLogger, standardizePath } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
 import { MediaLibraryAdditionalItem } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import { Button, Divider, Input, Modal } from '@/components/bakaui';
+import { Button, Chip, Divider, Input, Modal } from '@/components/bakaui';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 type Props = {
   onSelect: (id: number, path: string) => (Promise<any> | any);
+  confirmation?: boolean;
 } & DestroyableProps;
 
 type Library = {
@@ -28,7 +36,8 @@ const log = buildLogger('MediaLibraryPathSelectorV2');
 
 export default (props: Props) => {
   const { t } = useTranslation();
-  const { onSelect } = props;
+  const { onSelect, confirmation } = props;
+  const { createPortal } = useBakabaseContext();
 
   const [visible, setVisible] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -156,8 +165,42 @@ export default (props: Props) => {
                                       variant={'light'}
                                       color={selectedRecently ? 'success' : 'primary'}
                                       onClick={() => {
-                                        onSelect?.(l.id, path);
-                                        setVisible(false);
+                                        if (confirmation) {
+                                          createPortal(Modal, {
+                                            defaultVisible: true,
+                                            title: t('Are you sure to select this path?'),
+                                            children: (
+                                              <div className={'flex items-center gap-2'}>
+                                                <Chip
+                                                  radius={'sm'}
+                                                  color={'primary'}
+                                                >
+                                                  {c.name}
+                                                </Chip>
+                                                <DoubleRightOutlined className={'text-base'} />
+                                                <Chip
+                                                  radius={'sm'}
+                                                  color={'secondary'}
+                                                >
+                                                  {l.name}
+                                                </Chip>
+                                                <DoubleRightOutlined className={'text-base'} />
+                                                <Chip
+                                                  radius={'sm'}
+                                                >
+                                                  {path}
+                                                </Chip>
+                                              </div>
+                                            ),
+                                            onOk: async () => {
+                                              onSelect?.(l.id, path);
+                                              setVisible(false);
+                                            },
+                                          });
+                                        } else {
+                                          onSelect?.(l.id, path);
+                                          setVisible(false);
+                                        }
                                       }}
                                     >
                                       {path}

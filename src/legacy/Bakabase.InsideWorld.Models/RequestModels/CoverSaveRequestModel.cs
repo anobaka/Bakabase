@@ -12,6 +12,6 @@ namespace Bakabase.InsideWorld.Models.RequestModels
     {
         [Required] public string Base64Image { get; set; } = null!;
         public bool Overwrite { get; set; }
-        public CoverSaveLocation? SaveLocation { get; set; }
+        public CoverSaveMode? SaveLocation { get; set; }
     }
 }

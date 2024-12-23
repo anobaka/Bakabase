@@ -7,4 +7,5 @@ public record ReservedPropertyValue
     public int Scope { get; set; }
     public decimal? Rating { get; set; }
     public string? Introduction { get; set; }
+    public List<string>? CoverPaths { get; set; }
 }

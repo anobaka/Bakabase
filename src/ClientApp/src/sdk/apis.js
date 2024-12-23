@@ -8319,6 +8319,55 @@ export const DiscoverResourceCoverURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: SaveCover
+ * url: SaveCoverURL
+ * method: SaveCover_TYPE
+ * raw_url: SaveCover_RAW_URL
+ * @param id - 
+ * @param model - 
+ */
+export const SaveCover = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/{id}/cover'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const SaveCover_RAW_URL = function() {
+  return '/resource/{id}/cover'
+}
+export const SaveCover_TYPE = function() {
+  return 'put'
+}
+export const SaveCoverURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/{id}/cover'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetResourcePlayableFiles
  * url: GetResourcePlayableFilesURL
  * method: GetResourcePlayableFiles_TYPE

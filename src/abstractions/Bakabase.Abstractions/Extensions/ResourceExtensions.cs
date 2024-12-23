@@ -75,6 +75,7 @@ namespace Bakabase.Abstractions.Extensions
                     y => y.Key,
                     y => new Resource.Property(
                         y.Value.Name,
+                        y.Value.Type,
                         y.Value.DbValueType,
                         y.Value.BizValueType,
                         y.Value.Values?.Select(z => new Resource.Property.PropertyValue(

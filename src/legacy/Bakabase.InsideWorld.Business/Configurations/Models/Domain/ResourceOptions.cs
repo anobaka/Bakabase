@@ -37,8 +37,7 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
 
         public record CoverOptionsModel
         {
-            public CoverSaveLocation? SaveLocation { get; set; }
-            public bool? Overwrite { get; set; }
+            public CoverSaveMode? SaveMode { get; set; }
         }
 
         public record SavedSearch

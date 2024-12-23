@@ -6,7 +6,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
 import {
   CopyOutlined,
+  DatabaseOutlined,
   EditOutlined,
+  PictureOutlined,
   QuestionCircleOutlined,
   SyncOutlined,
   UnorderedListOutlined,
@@ -29,14 +31,17 @@ import {
   DropdownItem,
   DropdownMenu,
   DropdownTrigger,
+  Icon,
   Input,
   Modal,
   Tooltip,
 } from '@/components/bakaui';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import SynchronizationModal from '@/pages/Category/components/SynchronizationModal';
+import SynchronizationConfirmModal from '@/pages/Category/components/SynchronizationConfirmModal';
 import DeleteEnhancementsModal from '@/pages/Category/components/DeleteEnhancementsModal';
+import { PropertyTypeIconMap } from '@/components/Property/models';
+import EnhancerIcon from '@/components/Enhancer/components/EnhancerIcon';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -391,10 +396,14 @@ export default (({
                 content={t('Count of resources')}
               >
                 <Chip
-                  size={'sm'}
+                  // size={'sm'}
                   color={'success'}
                   variant={'light'}
-                >{resourceCount}</Chip>
+                >
+                  <PictureOutlined className={'text-base'} />
+                  &nbsp;
+                  {resourceCount}
+                </Chip>
               </Tooltip>
             </>
           )}
@@ -414,7 +423,7 @@ export default (({
               variant={'bordered'}
               onClick={() => {
                 createPortal(
-                  SynchronizationModal, {
+                  SynchronizationConfirmModal, {
                     onOk: async () => await BApi.category.startSyncingCategoryResources(category.id),
                   },
                 );
@@ -564,6 +573,7 @@ export default (({
                             });
                           }}
                         >
+                          <EnhancerIcon id={e.id} />
                           {enhancer?.name}
                         </Button>
                       );
@@ -606,21 +616,25 @@ export default (({
                 <div
                   className="flex flex-wrap gap-1"
                 >
-                  {category.customProperties?.map((e, i) => (
-                    <Button
-                      size={'sm'}
-                      variant={'flat'}
-                      key={e.id}
-                      onClick={() => {
-                        CategoryCustomPropertyBinderDialog.show({
-                          category: category,
-                          onSaved: () => reloadCategory(category.id),
-                        });
-                      }}
-                    >
-                      {e.name}
-                    </Button>
-                  ))}
+                  {category.customProperties?.map((e, i) => {
+                    // console.log(e, PropertyTypeIconMap[e.type]);
+                    return (
+                      <Button
+                        size={'sm'}
+                        variant={'flat'}
+                        key={e.id}
+                        onClick={() => {
+                          CategoryCustomPropertyBinderDialog.show({
+                            category: category,
+                            onSaved: () => reloadCategory(category.id),
+                          });
+                        }}
+                      >
+                        <Icon type={PropertyTypeIconMap[e.type]} className={'text-base'} />
+                        {e.name}
+                      </Button>
+                    );
+                  })}
                 </div>
               ) : (
                 <Button

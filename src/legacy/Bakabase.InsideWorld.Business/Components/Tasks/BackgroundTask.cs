@@ -91,7 +91,7 @@ namespace Bakabase.InsideWorld.Business.Components.Tasks
             }
         }
 
-        public Exception Exception { get; set; }
+        public Exception? Exception { get; set; }
         public string Message { get; set; }
         public event Func<Task> OnChange;
         public event Func<Task> OnStatusChange;

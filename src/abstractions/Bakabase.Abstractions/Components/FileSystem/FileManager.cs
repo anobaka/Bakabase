@@ -7,9 +7,9 @@ public class FileManager : IFileManager
 {
     public string BaseDir { get; } = Path.Combine(AppService.DefaultAppDataDirectory, "data").StandardizePath()!;
 
-    public string BuildAbsolutePath(params object[] segments)
+    public string BuildAbsolutePath(params object[] segmentsAfterBaseDir)
     {
-        return Path.Combine([BaseDir, ..segments.Select(s => s.ToString()!)]).StandardizePath()!;
+        return Path.Combine([BaseDir, ..segmentsAfterBaseDir.Select(s => s.ToString()!)]).StandardizePath()!;
     }
 
     public async Task<string> Save(string relativePath, byte[] data, CancellationToken ct)

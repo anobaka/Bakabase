@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Constants
 {
-    public enum CoverSaveLocation
+    public enum CoverSaveMode
     {
-        ResourceDirectory = 1,
-        TempDirectory = 2
+        Replace = 1,
+        Prepend = 2
     }
 }

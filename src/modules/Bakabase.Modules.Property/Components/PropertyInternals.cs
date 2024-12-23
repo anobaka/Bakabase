@@ -89,6 +89,8 @@ public record PropertyInternals
                     (int) ResourceProperty.Rating, PropertyType.Rating),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Introduction, PropertyType.MultilineText),
+                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
+                    (int) ResourceProperty.Cover, PropertyType.Attachment),
             }.ToDictionary(d => (ResourceProperty) d.Id, d => d));
 
     public static readonly ConcurrentDictionary<ResourceProperty, Bakabase.Abstractions.Models.Domain.Property>
@@ -110,6 +112,7 @@ public record PropertyInternals
             {
                 ResourceProperty.Rating,
                 ResourceProperty.Introduction,
+                ResourceProperty.Cover
             }.ToDictionary(
                 d => (ReservedProperty) d, d => BuiltinPropertyMap[d]));
 

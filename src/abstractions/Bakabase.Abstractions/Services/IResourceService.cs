@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bootstrap.Models.ResponseModels;
 
@@ -99,4 +100,5 @@ public interface IResourceService
     Task Pin(int id, bool pin);
     Task PrepareCache(Action<int> onProgressChange, CancellationToken ct);
     Task Transfer(ResourceTransferInputModel model);
+    Task SaveCover(int id, byte[] imageBytes, CoverSaveMode mode);
 }

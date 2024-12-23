@@ -5,6 +5,7 @@ using System.Runtime.InteropServices.ComTypes;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Enhancer.Abstractions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
@@ -19,7 +20,7 @@ namespace Bakabase.InsideWorld.Business.Components
     /// todo: Redirect raw <see cref="IStringLocalizer"/> callings to here
     /// </summary>
     public class InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
-        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, IDependencyLocalizer
+        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, IDependencyLocalizer, IBackgroundTaskLocalizer
     {
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
             localizer.GetAllStrings(includeParentCultures);
@@ -121,6 +122,12 @@ namespace Bakabase.InsideWorld.Business.Components
         public string? Dependency_Component_Description(string key)
         {
             var d = this[$"Dependency_Component_{key}_Description"];
+            return d.ResourceNotFound ? null : (string?) d;
+        }
+
+        public string? Name(BackgroundTaskName name)
+        {
+            var d = this[$"BackgroundTask_{name}_Name"];
             return d.ResourceNotFound ? null : (string?) d;
         }
     }

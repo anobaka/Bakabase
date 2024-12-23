@@ -40,6 +40,41 @@ namespace Bakabase.Service
                 Assembly.GetAssembly(SpecificTypeUtils<UIOptions>.Type)!,
             ];
 
+        protected override string OverrideFeAddress(string feAddress)
+        {
+            try
+            {
+                var startupPage = this.Host.Services.GetRequiredService<IBOptions<UIOptions>>().Value?.StartupPage;
+                if (startupPage.HasValue)
+                {
+                    switch (startupPage.Value)
+                    {
+                        case StartupPage.Default:
+                            break;
+                        case StartupPage.Resource:
+                        {
+                            var hashIndex = feAddress.IndexOf('#');
+                            if (hashIndex > -1)
+                            {
+                                feAddress = feAddress.Substring(0, hashIndex);
+                            }
+
+                            feAddress = feAddress.TrimEnd('/') + "/#/resource";
+                            break;
+                        }
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            return feAddress;
+        }
+
         protected override void Initialize()
         {
             base.Initialize();

@@ -11,7 +11,7 @@ import { CategoryAdditionalItem, StandardValueType } from '@/sdk/constants';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import { EnhancerTargetNotSetupTip } from '@/components/Enhancer';
+import { EnhancerIcon, EnhancerTargetNotSetupTip } from '@/components/Enhancer';
 import DeleteEnhancementsModal from '@/pages/Category/components/DeleteEnhancementsModal';
 
 interface IProps extends DestroyableProps {
@@ -102,7 +102,8 @@ const EnhancerSelector = ({
               className={'max-w-[280px] border-1 rounded-lg pl-3 pr-3 pt-2 pb-2 flex flex-col'}
               style={{ borderColor: 'rgba(255, 255, 255, 0.3)' }}
             >
-              <div className={'text-medium font-bold'}>
+              <div className={'text-medium font-bold flex items-center gap-2'}>
+                <EnhancerIcon id={e.id} />
                 {e.name}
               </div>
               {e.description && (

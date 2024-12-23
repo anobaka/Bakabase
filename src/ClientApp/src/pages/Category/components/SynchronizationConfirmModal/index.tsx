@@ -23,7 +23,7 @@ export default ({
         {t('All eligible files or folders under the specified root directory will be saved to the media library.')}
       </div>
       <div className={'text-warning text-sm'}>
-        {t('Please note that if you modify the path of the resource, the new path will be considered as a new resource, at meantime the old resource data will be deleted.')}
+        {t('Please note, if you modify the resource path (generally the file name), a new resource associated with the new path will be created after synchronization. You can transfer historical resource data to the new resource or directly delete the historical resource through the resource page.')}
       </div>
     </Modal>
   );

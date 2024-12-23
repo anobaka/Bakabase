@@ -115,6 +115,7 @@ public record Resource
 
     public record Property(
         string? Name,
+        PropertyType Type,
         StandardValueType DbValueType,
         StandardValueType BizValueType,
         List<Property.PropertyValue>? Values,
@@ -124,6 +125,7 @@ public record Resource
         public List<PropertyValue>? Values { get; set; } = Values;
         public StandardValueType DbValueType { get; set; } = DbValueType;
         public StandardValueType BizValueType { get; set; } = BizValueType;
+        public PropertyType Type { get; set; } = Type;
         public bool Visible { get; set; } = Visible;
 
         public record PropertyValue(

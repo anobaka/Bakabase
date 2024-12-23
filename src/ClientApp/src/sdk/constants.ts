@@ -46,7 +46,7 @@ export enum PropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 
 export const propertyTypes = Object.keys(PropertyType).filter(k => typeof PropertyType[k] === 'number').map(t => ({label: t, value: PropertyType[t]}));
 export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000, ExHentaiEnhancer = 1001, BangumiEnhancer = 1002, DLsiteEnhancer = 1003, RegexEnhancer = 1004}
 export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
-export enum ReservedProperty {Introduction = 12, Rating = 13}
+export enum ReservedProperty {Introduction = 12, Rating = 13, Cover = 22}
 export const reservedProperties = Object.keys(ReservedProperty).filter(k => typeof ReservedProperty[k] === 'number').map(t => ({label: t, value: ReservedProperty[t]}));
 export enum ResourceCacheType {Covers = 1, PlayableFiles = 2}
 export const resourceCacheTypes = Object.keys(ResourceCacheType).filter(k => typeof ResourceCacheType[k] === 'number').map(t => ({label: t, value: ResourceCacheType[t]}));
@@ -84,8 +84,8 @@ export enum CookieValidatorTarget {BiliBili = 1, ExHentai = 2, Pixiv = 3}
 export const cookieValidatorTargets = Object.keys(CookieValidatorTarget).filter(k => typeof CookieValidatorTarget[k] === 'number').map(t => ({label: t, value: CookieValidatorTarget[t]}));
 export enum CoverFit {Contain = 1, Cover = 2}
 export const coverFits = Object.keys(CoverFit).filter(k => typeof CoverFit[k] === 'number').map(t => ({label: t, value: CoverFit[t]}));
-export enum CoverSaveLocation {ResourceDirectory = 1, TempDirectory = 2}
-export const coverSaveLocations = Object.keys(CoverSaveLocation).filter(k => typeof CoverSaveLocation[k] === 'number').map(t => ({label: t, value: CoverSaveLocation[t]}));
+export enum CoverSaveMode {Replace = 1, Prepend = 2}
+export const coverSaveModes = Object.keys(CoverSaveMode).filter(k => typeof CoverSaveMode[k] === 'number').map(t => ({label: t, value: CoverSaveMode[t]}));
 export enum CoverSelectOrder {FilenameAscending = 1, FileModifyDtDescending = 2}
 export const coverSelectOrders = Object.keys(CoverSelectOrder).filter(k => typeof CoverSelectOrder[k] === 'number').map(t => ({label: t, value: CoverSelectOrder[t]}));
 export enum CustomDataType {String = 1, DateTime = 2, Number = 3, Enum = 4}
@@ -128,11 +128,11 @@ export enum ResourceLanguage {NotSet = 0, Chinese = 1, English = 2, Japanese = 3
 export const resourceLanguages = Object.keys(ResourceLanguage).filter(k => typeof ResourceLanguage[k] === 'number').map(t => ({label: t, value: ResourceLanguage[t]}));
 export enum ResourceMatcherValueType {Layer = 1, Regex = 2, FixedText = 3}
 export const resourceMatcherValueTypes = Object.keys(ResourceMatcherValueType).filter(k => typeof ResourceMatcherValueType[k] === 'number').map(t => ({label: t, value: ResourceMatcherValueType[t]}));
-export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, Introduction = 12, Rating = 13, CustomProperty = 14, Filename = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21}
+export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, Introduction = 12, Rating = 13, CustomProperty = 14, Filename = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21, Cover = 22}
 export const resourceProperties = Object.keys(ResourceProperty).filter(k => typeof ResourceProperty[k] === 'number').map(t => ({label: t, value: ResourceProperty[t]}));
 export enum ResourceTaskType {Moving = 1}
 export const resourceTaskTypes = Object.keys(ResourceTaskType).filter(k => typeof ResourceTaskType[k] === 'number').map(t => ({label: t, value: ResourceTaskType[t]}));
-export enum SearchableReservedProperty {Introduction = 12, Rating = 13, FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21}
+export enum SearchableReservedProperty {Introduction = 12, Rating = 13, FileName = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21, Cover = 22}
 export const searchableReservedProperties = Object.keys(SearchableReservedProperty).filter(k => typeof SearchableReservedProperty[k] === 'number').map(t => ({label: t, value: SearchableReservedProperty[t]}));
 export enum StartupPage {Default = 0, Resource = 1}
 export const startupPages = Object.keys(StartupPage).filter(k => typeof StartupPage[k] === 'number').map(t => ({label: t, value: StartupPage[t]}));

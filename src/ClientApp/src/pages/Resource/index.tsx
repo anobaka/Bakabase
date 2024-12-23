@@ -257,6 +257,7 @@ export default () => {
       }}
     >
       <FilterPanel
+        selectedResourceIds={selectedIds}
         onSearch={f => search({
           ...f,
           page: 1,
@@ -275,6 +276,13 @@ export default () => {
           });
         }}
         rearrangeResources={() => resourcesComponentRef.current?.rearrange()}
+        onSelectAllChange={selected => {
+          if (selected) {
+            setSelectedIds(resources.map(r => r.id));
+          } else {
+            setSelectedIds([]);
+          }
+        }}
       />
       {columnCount > 0 && resources.length > 0 && (
         <>

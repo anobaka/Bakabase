@@ -60,7 +60,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 ParentId = domainModel.Parent?.Id ?? domainModel.ParentId,
                 IsFile = domainModel.IsFile,
                 Path = domainModel.Path,
-                Tags = domainModel.Tags.Aggregate((s, t) => s |= t)
+                Tags = domainModel.Tags.Aggregate(default(ResourceTag), (s, t) => (s | t))
             };
             return dbModel;
         }

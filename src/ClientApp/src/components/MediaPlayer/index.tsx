@@ -589,6 +589,7 @@ const MediaPlayer = (props: IProps) => {
                 visible
                 placement={'left'}
                 width={400}
+                style={{ zIndex: 1005 }}
                 onClose={() => setFileListVisible(false)}
               >
                 {fileTree && (

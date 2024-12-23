@@ -342,4 +342,10 @@ The version of lux is not limited.</value>
   <data name="Dependency_Component_Bakabase.Updater_Name" xml:space="preserve">
     <value>Bakabase Updater</value>
   </data>
+  <data name="BackgroundTask_PrepareCache_Name" xml:space="preserve">
+    <value>Prepare cache</value>
+  </data>
+  <data name="BackgroundTask_SyncMediaLibrary_Name" xml:space="preserve">
+    <value>Sync media library</value>
+  </data>
 </root>

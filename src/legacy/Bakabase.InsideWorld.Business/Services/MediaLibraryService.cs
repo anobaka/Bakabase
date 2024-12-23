@@ -413,7 +413,7 @@ namespace Bakabase.InsideWorld.Business.Services
         /// <returns></returns>
         public void StartSyncing(int[]? categoryIds, int[]? mediaLibraryIds)
         {
-            BackgroundTaskHelper.RunInNewScope<IMediaLibraryService>(SyncTaskBackgroundTaskName,
+            BackgroundTaskHelper.RunInNewScope<IMediaLibraryService>(BackgroundTaskName.SyncMediaLibrary.ToString(),
                 async (service, task) =>
                 {
                     var rsp = await service.Sync(categoryIds, mediaLibraryIds, process => task.CurrentProcess = process,
@@ -423,7 +423,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                     task.Message = string.Join(
                         Environment.NewLine,
-                        $"[Resource] Found: {result.ResourceCount}, Added: {result.AddedResourceCount}, Deleted: {result.DeletedResourceCount}, Updated: {result.UpdatedResourceCount}",
+                        $"[Resource] Found: {result.ResourceCount}, Added: {result.AddedResourceCount}, Updated: {result.UpdatedResourceCount}",
                         $"[Directory]: Found: {result.FileResourceCount}",
                         $"[File]: Found: {result.DirectoryResourceCount}");
 
@@ -505,7 +505,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 pr.Properties ??= [];
                                 var propertyValues = pr.Properties.GetOrAdd((int) PropertyPool.Reserved,
                                     () => new Dictionary<int, Resource.Property>()).GetOrAdd((int) propertyId,
-                                    () => new Resource.Property(property.Name, property.Type.GetDbValueType(),
+                                    () => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
                                         property.Type.GetBizValueType(), null));
                                 propertyValues.Values ??= [];
                                 var v = propertyValues.Values!.FirstOrDefault(x =>
@@ -540,7 +540,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         var propertyMap = (pr.Properties ??= []).GetOrAdd((int) PropertyPool.Custom, () => [])!;
                         var rp = propertyMap.GetOrAdd(property.Id,
-                            () => new Resource.Property(property.Name, property.Type.GetDbValueType(),
+                            () => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
                                 property.Type.GetBizValueType(), null));
                         rp.Values ??= [];
                         rp.Values.Add(new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization,
@@ -787,7 +787,6 @@ namespace Bakabase.InsideWorld.Business.Services
 
                         result.ResourceCount = patchingResources.Count;
                         result.AddedResourceCount = newResources.Length;
-                        result.DeletedResourceCount = unknownResources.Count;
                         result.UpdatedResourceCount = resourcesToBeSaved.Count - newResources.Length;
                         result.DirectoryResourceCount = patchingResources.Count(a => !a.Value.IsFile);
                         result.FileResourceCount = patchingResources.Count(a => a.Value.IsFile);

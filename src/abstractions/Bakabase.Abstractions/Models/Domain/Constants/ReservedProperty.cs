@@ -5,6 +5,7 @@ namespace Bakabase.Abstractions.Models.Domain.Constants
     public enum ReservedProperty
     {
         Introduction = ResourceProperty.Introduction,
-        Rating = ResourceProperty.Rating
+        Rating = ResourceProperty.Rating,
+        Cover = ResourceProperty.Cover
     }
 }

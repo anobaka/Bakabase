@@ -1,6 +1,6 @@
-import ExHentai from '@/assets/exhentai.png';
-import Pixiv from '@/assets/pixiv.png';
-import Bilibili from '@/assets/bilibili.png';
+import ExHentai from '@/assets/logo/exhentai.png';
+import Pixiv from '@/assets/logo/pixiv.png';
+import Bilibili from '@/assets/logo/bilibili.png';
 import { ThirdPartyId } from '@/sdk/constants';
 
 const NameIcon = {

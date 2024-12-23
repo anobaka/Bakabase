@@ -105,20 +105,19 @@ export default ({
   const [inputModel, setInputModel] = useState<RecursivePartial<InputModel>>({ ...defaultInputModel });
   const [resourcePool, setResourcePool] = useState<Record<number, ResourceModel>>({});
   const [filterForm, setFilterForm] = useState<FilterForm>({});
-  // const [loadingTargetResourceCandidates, setLoadingTargetResourceCandidates] = useState(false);
-  // const [targetResourceCandidates, setTargetResourceCandidates] = useState<ResourceModel[]>([]);
-  // const [targetResourceCandidatesOfFromId, setTargetResourceCandidatesOfFromId] = useState<number>();
+  const [deletedSourceResourceIds, setDeletedSourceResourceIds] = useState<number[]>([]);
 
 
   useEffect(() => {
     const resources = fromResources
       .filter(x =>
+        (!deletedSourceResourceIds.includes(x.id)) &&
         (!filterForm.showUnfinishedOnly || inputModel.items?.find(i => i!.fromId == x.id)?.toId == undefined) &&
         (filterForm.pathKeyword == undefined || filterForm.pathKeyword.length == 0 || x.path.toLowerCase().includes(filterForm.pathKeyword)),
       )
       .slice((page - 1) * PageSize, page * PageSize);
     setResources(resources);
-  }, [page, fromResources, filterForm, inputModel]);
+  }, [page, fromResources, filterForm, inputModel, deletedSourceResourceIds]);
 
   const TPagination = useCallback(({ page }: { page: number }) => {
     const total = Math.ceil(fromResources.length / PageSize);
@@ -139,7 +138,7 @@ export default ({
 
   return (
     <Modal
-      title={t('Transfer resources')}
+      title={t('Transfer data of resources')}
       defaultVisible
       size={'full'}
       onDestroyed={onDestroyed}
@@ -148,9 +147,21 @@ export default ({
         log('Transferring resources', inputModel);
         const dto = validateInputModel(inputModel);
         if (dto) {
-          await BApi.resource.transferResourceData(dto);
+          const rsp = await BApi.resource.transferResourceData(dto);
+          if (!rsp.code) {
+            for (const item of dto.items) {
+              if (dto.deleteAllSourceResources || item.deleteSourceResource) {
+                deletedSourceResourceIds.push(item.fromId);
+              }
+            }
+            setDeletedSourceResourceIds([...deletedSourceResourceIds]);
+          }
         } else {
           toast.error(t('Invalid data'));
+        }
+
+        if (deletedSourceResourceIds.length != fromResources.length) {
+          throw new Error('Prevent closing');
         }
       }}
       footer={{
@@ -191,8 +202,18 @@ export default ({
                   });
                 }}
               >
-                {t('Show unselected only')}
+                {t('Show unfinished only')}
               </Checkbox>
+            </div>
+            <div className={'flex items-center gap-1'}>
+              <Chip
+                color={'secondary'}
+                variant={'light'}
+                size={'sm'}
+              >
+                {t('Finished')}
+              </Chip>
+              {fromResources.filter(r => inputModel.items?.find(i => i!.fromId == r.id)?.toId != undefined).length}/{fromResources.length}
             </div>
             {/* <Tooltip content={( */}
             {/*   <div> */}
@@ -211,22 +232,22 @@ export default ({
             {/* </Tooltip> */}
           </div>
           <div className={'flex items-center gap-2'}>
-            <div className={'flex items-center gap-1'}>
-              <Chip
-                color={'secondary'}
-                variant={'light'}
-                size={'sm'}
-              >
-                {t('Selected')}
-              </Chip>
-              {fromResources.filter(r => inputModel.items?.find(i => i!.fromId == r.id)?.toId != undefined).length}/{fromResources.length}
-            </div>
             <div>
               <Tooltip
                 color={'secondary'}
                 content={(
                   <div>
-                    <div>{t('')}</div>
+                    <div className={'flex items-center gap-1'}>
+                      {t('Following properties will not be transferred')}
+                      {['Parent association', 'Path', 'FileCreatedAt', 'FileModifiedAt'].map(x => (
+                        <Chip
+                          size={'sm'}
+                          radius={'sm'}
+                        >
+                          {t(`Property.${x}`)}
+                        </Chip>
+                      ))}
+                    </div>
                   </div>
                 )}
               >
@@ -287,7 +308,7 @@ export default ({
                             : (<div
                                 className={'text-warning'}
                             >
-                              {t('Please select an target resource on the right side')}
+                              {t('Please select a target resource on the right side')}
                             </div>)}
                         </TableCell>
                         <TableCell className={'flex flex-col'}>
@@ -322,7 +343,7 @@ export default ({
                                 setInputModel({ ...inputModel });
                               }}
                               isSelected={inputModel.deleteAllSourceResources || item.deleteSourceResource}
-                            >{t('Delete source resource')}</Checkbox>
+                            >{t('Delete source resource (data only)')}</Checkbox>
                             <Checkbox
                               isDisabled={inputModel.keepMediaLibraryForAll}
                               isSelected={inputModel.keepMediaLibraryForAll || item.keepMediaLibrary}
@@ -331,7 +352,7 @@ export default ({
                                 addItem(inputModel, item);
                                 setInputModel({ ...inputModel });
                               }}
-                            >{t('Keep media library for target resource')}</Checkbox>
+                            >{t('Keep associated media library information for target resource')}</Checkbox>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -352,13 +373,15 @@ export default ({
                 });
               }}
               isSelected={inputModel.deleteAllSourceResources}
-            >{t('Delete all source resources (in all pages)')}</Checkbox>
+            >
+              {t('Delete source resource (data only)')}({t('For all {{count}} items', { count: fromResources.length })})
+            </Checkbox>
             <Tooltip
               color={'secondary'}
               content={(
                 <div>
-                  <div>{t('Category and media library of target resource will be replaced with data of source resource by default.')}</div>
-                  <div>{t('By enable this options, the category and media library of target resource will not be changed.')}</div>
+                  <div>{t('Category and media library of target resource will be remained by default.')}</div>
+                  <div>{t('By disable this options, the category and media library of target resource will be replaced with data from source resource.')}</div>
                 </div>
               )}
             >
@@ -371,7 +394,9 @@ export default ({
                     keepMediaLibraryForAll: v,
                   });
                 }}
-              >{t('Keep media libraries for all target sources (in all pages)')}</Checkbox>
+              >{t('Keep associated media library information for target resource')}
+                ({t('For all {{count}} items', { count: fromResources.length })})
+              </Checkbox>
             </Tooltip>
           </div>
           <TPagination page={page} />

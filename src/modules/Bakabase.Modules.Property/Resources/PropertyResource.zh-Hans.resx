@@ -219,4 +219,7 @@
   <data name="PropertyTypeName_Tags" xml:space="preserve">
     <value>标签</value>
   </data>
+  <data name="BuiltinPropertyName_Cover" xml:space="preserve">
+    <value>封面</value>
+  </data>
 </root>

@@ -70,6 +70,15 @@ namespace Bakabase.Modules.Property.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cover.
+        /// </summary>
+        internal static string BuiltinPropertyName_Cover {
+            get {
+                return ResourceManager.GetString("BuiltinPropertyName_Cover", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Created at.
         /// </summary>
         internal static string BuiltinPropertyName_CreatedAt {

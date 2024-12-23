@@ -121,10 +121,10 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyType =
 export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004;
 
 /**
- * [12: Introduction, 13: Rating]
+ * [12: Introduction, 13: Rating, 22: Cover]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13;
+export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 | 22;
 
 /**
  * [1: Covers, 2: PlayableFiles]
@@ -287,6 +287,7 @@ export interface BakabaseAbstractionsModelsDomainReservedPropertyValue {
   /** @format double */
   rating?: number;
   introduction?: string;
+  coverPaths?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResource {
@@ -675,9 +676,8 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
-  /** [1: ResourceDirectory, 2: TempDirectory] */
-  saveLocation?: BakabaseInsideWorldModelsConstantsCoverSaveLocation;
-  overwrite?: boolean;
+  /** [1: Replace, 2: Prepend] */
+  saveMode?: BakabaseInsideWorldModelsConstantsCoverSaveMode;
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSavedSearch {
@@ -901,10 +901,10 @@ export type BakabaseInsideWorldModelsConstantsCookieValidatorTarget = 1 | 2 | 3;
 export type BakabaseInsideWorldModelsConstantsCoverFit = 1 | 2;
 
 /**
- * [1: ResourceDirectory, 2: TempDirectory]
+ * [1: Replace, 2: Prepend]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsCoverSaveLocation = 1 | 2;
+export type BakabaseInsideWorldModelsConstantsCoverSaveMode = 1 | 2;
 
 /**
  * [1: FilenameAscending, 2: FileModifyDtDescending]
@@ -1329,7 +1329,7 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
   description?: string;
   optionsItems?: number[];
   enhancementConverter?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter;
-  /** [12: Introduction, 13: Rating] */
+  /** [12: Introduction, 13: Rating, 22: Cover] */
   reservedPropertyCandidate?: BakabaseAbstractionsModelsDomainConstantsReservedProperty;
 }
 
@@ -1508,6 +1508,12 @@ export interface BakabaseServiceModelsInputBulkModificationVariableInputModel {
 export interface BakabaseServiceModelsInputFileSystemEntryGroupInputModel {
   paths: string[];
   groupInternal: boolean;
+}
+
+export interface BakabaseServiceModelsInputResourceCoverSaveInputModel {
+  base64String: string;
+  /** [1: Replace, 2: Prepend] */
+  saveMode: BakabaseInsideWorldModelsConstantsCoverSaveMode;
 }
 
 export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
@@ -5160,6 +5166,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<void, any>({
         path: `/resource/${id}/cover`,
         method: "GET",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name SaveCover
+     * @request PUT:/resource/{id}/cover
+     */
+    saveCover: (id: number, data: BakabaseServiceModelsInputResourceCoverSaveInputModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/cover`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
         ...params,
       }),
 

@@ -9,6 +9,7 @@ import {
   CloseOutlined,
   StopOutlined, SyncOutlined,
 } from '@ant-design/icons';
+import moment from 'moment';
 import store from '@/store';
 import { BackgroundTaskStatus } from '@/sdk/constants';
 import { Button, Chip, Divider, Modal, Popover } from '@/components/bakaui';
@@ -239,6 +240,9 @@ export default () => {
               {renderTaskStatus(t)}
             </div>
             <div className="flex items-center gap-1">
+              {t.startDt && (
+                <div>{moment(t.startDt).format('HH:mm:ss')}</div>
+              )}
               {renderTaskOpts(t)}
             </div>
           </div>

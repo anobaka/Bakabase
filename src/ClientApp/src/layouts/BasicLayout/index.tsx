@@ -6,11 +6,12 @@ import { useTranslation } from 'react-i18next';
 import { Toaster } from 'react-hot-toast';
 import styles from './index.module.scss';
 import PageNav from './components/PageNav';
-import { InitializationContentType } from '@/sdk/constants';
+import { InitializationContentType, StartupPage } from '@/sdk/constants';
 import FloatingAssistant from '@/components/FloatingAssistant';
 import { ErrorBoundary } from '@/components/Error';
 import BApi from '@/sdk/BApi';
 import { buildLogger } from '@/components/utils';
+import store from '@/store';
 
 const log = buildLogger('BasicLayout');
 

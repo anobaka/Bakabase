@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System;
 using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions;
 
 namespace Bakabase.Service.Models.View;
@@ -26,5 +27,6 @@ public record CategoryViewModel
     {
         public int Id { get; set; }
         public string Name { get; set; } = null!;
+        public PropertyType Type { get; set; }
     }
 }

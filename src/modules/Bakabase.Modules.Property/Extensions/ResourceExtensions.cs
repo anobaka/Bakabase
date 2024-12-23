@@ -22,7 +22,7 @@ public static class ResourceExtensions
 
         if (!pvs.TryGetValue(property.Id, out var pv))
         {
-            pv = pvs[property.Id] = new Resource.Property(property.Name, property.Type.GetDbValueType(),
+            pv = pvs[property.Id] = new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
                 property.Type.GetBizValueType(), null);
         }
 

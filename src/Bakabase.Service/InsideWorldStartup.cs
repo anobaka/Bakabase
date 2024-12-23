@@ -113,6 +113,7 @@ namespace Bakabase.Service
             services.TryAddSingleton<CompressedFileService>();
 
             services.AddTransient<IBakabaseLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
+            services.AddTransient<IBackgroundTaskLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
             services.AddTransient<IDependencyLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
             services.AddTransient<InsideWorldLocalizer>();
 

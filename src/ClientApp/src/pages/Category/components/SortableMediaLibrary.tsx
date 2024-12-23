@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
 import {
   DeleteOutlined,
-  FolderOpenOutlined,
+  FolderOpenOutlined, PictureOutlined,
   PlusCircleOutlined,
   QuestionCircleOutlined,
   SyncOutlined,
@@ -23,7 +23,7 @@ import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsInBulkDialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Button, Chip, Input, Modal, Tooltip } from '@/components/bakaui';
-import SynchronizationModal from '@/pages/Category/components/SynchronizationModal';
+import SynchronizationConfirmModal from '@/pages/Category/components/SynchronizationConfirmModal';
 import DeleteEnhancementsModal from '@/pages/Category/components/DeleteEnhancementsModal';
 
 export default (({
@@ -200,11 +200,13 @@ export default (({
                 content={t('Count of resources')}
               >
                 <Chip
-                  color={'success'}
                   size={'sm'}
+                  color={'success'}
                   variant={'light'}
-                  className={'p-0 absolute right-[-14px] top-[-14px]'}
+                  className={'p-0'}
                 >
+                  <PictureOutlined className={'text-sm'} />
+                  &nbsp;
                   {library.resourceCount}
                 </Chip>
               </Tooltip>
@@ -229,7 +231,7 @@ export default (({
                 size={'sm'}
                 onClick={() => {
                   createPortal(
-                    SynchronizationModal, {
+                    SynchronizationConfirmModal, {
                       onOk: async () => await BApi.mediaLibrary.startSyncingMediaLibraryResources(library.id),
                     },
                   );

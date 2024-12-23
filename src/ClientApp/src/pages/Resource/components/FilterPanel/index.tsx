@@ -17,7 +17,7 @@ import BApi from '@/sdk/BApi';
 import store from '@/store';
 import { PlaylistCollection } from '@/components/Playlist';
 import type { SearchForm } from '@/pages/Resource/models';
-import { Button, Chip, Input, Modal, Popover, Tooltip } from '@/components/bakaui';
+import { Button, Checkbox, Chip, Input, Modal, Popover, Tooltip } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
 import type { SavedSearchRef } from '@/pages/Resource/components/FilterPanel/SavedSearches';
 import SavedSearches from '@/pages/Resource/components/FilterPanel/SavedSearches';
@@ -35,6 +35,7 @@ interface IProps {
   reloadResources: (ids: number[]) => any;
   multiSelection?: boolean;
   rearrangeResources?: () => any;
+  onSelectAllChange: (selected: boolean) => any;
 }
 
 const MinResourceColCount = 3;
@@ -48,10 +49,12 @@ const defaultSearchForm = (): SearchForm => ({
 
 export default ({
                   maxResourceColCount = DefaultMaxResourceColCount,
+                  selectedResourceIds,
                   onSearch,
                   searchForm: propsSearchForm,
                   multiSelection = false,
                   rearrangeResources,
+                  onSelectAllChange,
                 }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -60,6 +63,8 @@ export default ({
 
   const [colCountsDataSource, setColCountsDataSource] = useState<{ label: any; value: number }[]>([]);
   const colCount = uiOptions.resource?.colCount ?? DefaultResourceColCount;
+
+  const [selectedAll, setSelectedAll] = useState(false);
 
   const [searchForm, setSearchForm] = useState<SearchForm>(propsSearchForm || defaultSearchForm());
   const [searching, setSearching] = useState(false);
@@ -249,6 +254,17 @@ export default ({
               <div>{t('You can perform more actions by right-clicking on the resource.')}</div>
             </div>
           </Popover>
+          <Tooltip
+            content={t('Resources loaded in current page')}
+          >
+            <Checkbox
+              onValueChange={isSelected => {
+                onSelectAllChange(isSelected);
+                setSelectedAll(isSelected);
+              }}
+              size={'sm'}
+            >{selectedAll ? t('{{count}} items selected', { count: selectedResourceIds?.length }) : t('Select all')}</Checkbox>
+          </Tooltip>
           {/* <HandleUnknownResources onHandled={() => search({})} /> */}
           <OrderSelector
             className={'mr-2'}

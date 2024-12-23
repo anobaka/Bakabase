@@ -505,5 +505,14 @@ namespace Bakabase.Service.Controllers
 
             return new ListResponse<ResourcePathInfoViewModel>(viewModels);
         }
+
+        [HttpPut("{id:int}/cover")]
+        [SwaggerOperation(OperationId = "SaveCover")]
+        public async Task<BaseResponse> SaveCover(int id, [FromBody] ResourceCoverSaveInputModel model)
+        {
+            var data = Convert.FromBase64String(model.Base64String.Split(',')[1]);
+            await service.SaveCover(id, data, model.SaveMode);
+            return BaseResponseBuilder.Ok;
+        }
     }
 }

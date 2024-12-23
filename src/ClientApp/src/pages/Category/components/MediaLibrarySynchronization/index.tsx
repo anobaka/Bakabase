@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Progress } from '@alifd/next';
 import { usePrevious } from 'react-use';
 import { SyncOutlined } from '@ant-design/icons';
-import SynchronizationModal from '../SynchronizationModal';
+import SynchronizationConfirmModal from '../SynchronizationConfirmModal';
 import { BackgroundTaskStatus } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
@@ -68,7 +68,7 @@ export default ({
               size={'small'}
               onClick={() => {
                 createPortal(
-                  SynchronizationModal, {
+                  SynchronizationConfirmModal, {
                     onOk: async () => await BApi.mediaLibrary.startSyncMediaLibrary(),
                   },
                 );

@@ -21,7 +21,7 @@ public static class CategoryExtensions
             Order = model.Order,
             ResourceDisplayNameTemplate = model.ResourceDisplayNameTemplate,
             CustomProperties = model.CustomProperties?.Select(c => new CategoryViewModel.CustomPropertyViewModel
-                {Id = c.Id, Name = c.Name}).ToList()
+                {Id = c.Id, Name = c.Name, Type = c.Type}).ToList()
         };
     }
 }

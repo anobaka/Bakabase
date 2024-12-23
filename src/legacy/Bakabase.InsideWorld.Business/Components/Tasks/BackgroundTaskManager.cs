@@ -24,6 +24,7 @@ using Bootstrap.Components.Notification.Abstractions.Services;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.Tasks
@@ -70,8 +71,17 @@ namespace Bakabase.InsideWorld.Business.Components.Tasks
 #endif
         }
 
-        public List<BackgroundTaskDto> Tasks =>
-            _tasks.Values.Select(t => t.GetInformation()).OrderByDescending(a => a.StartDt).ToList();
+        protected IBackgroundTaskLocalizer Localizer => _sp.GetRequiredService<IBackgroundTaskLocalizer>();
+
+        public List<BackgroundTaskDto> Tasks
+        {
+            get
+            {
+                var localizer = Localizer;
+                return _tasks.Values.Select(t => t.GetInformation(localizer)).OrderByDescending(a => a.StartDt)
+                    .ToList();
+            }
+        }
 
         public List<BackgroundTaskDto> GetByName(string name) => Tasks.Where(a => a.Name == name).ToList();
 
@@ -91,6 +101,8 @@ namespace Bakabase.InsideWorld.Business.Components.Tasks
                 RefreshTrayOnProgressChange();
             };
             t.OnStatusChange += async () => { RefreshTrayOnStatusChange(); };
+
+            _clearCompletedTask(name);
             _tasks[t.Id] = t;
             RefreshTrayOnStatusChange();
             Task.Run(async () =>
@@ -154,7 +166,7 @@ namespace Bakabase.InsideWorld.Business.Components.Tasks
 
         private async Task OnTaskChange(BackgroundTask t)
         {
-            await _uiHub.Clients.All.GetIncrementalData(nameof(BackgroundTask), t.GetInformation());
+            await _uiHub.Clients.All.GetIncrementalData(nameof(BackgroundTask), t.GetInformation(Localizer));
         }
 
         public void Stop(string id)
@@ -163,6 +175,24 @@ namespace Bakabase.InsideWorld.Business.Components.Tasks
             {
                 r.Message += "Stopped by user";
                 r.Cts.Cancel();
+            }
+        }
+
+        private void _clearCompletedTask(string name)
+        {
+            var tasks = _tasks.Values.Where(x =>
+                x.Name == name &&
+                (x.Status == BackgroundTaskStatus.Complete || x.Status == BackgroundTaskStatus.Failed)).ToList();
+            var taskIds = tasks.Select(t => t.Id).ToList();
+            var changed = false;
+            foreach (var id in taskIds)
+            {
+                changed |= _tasks.TryRemove(id, out _);
+            }
+
+            if (changed)
+            {
+                _uiHub.Clients.All.GetData(nameof(BackgroundTask), Tasks);
             }
         }
 

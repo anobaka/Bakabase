@@ -336,4 +336,10 @@
   <data name="Dependency_Component_Bakabase.Updater_Name" xml:space="preserve">
     <value>Bakabase更新器</value>
   </data>
+  <data name="BackgroundTask_PrepareCache_Name" xml:space="preserve">
+    <value>准备缓存</value>
+  </data>
+  <data name="BackgroundTask_SyncMediaLibrary_Name" xml:space="preserve">
+    <value>同步媒体库</value>
+  </data>
 </root>

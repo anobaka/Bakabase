@@ -219,4 +219,7 @@
   <data name="PropertyTypeName_Tags" xml:space="preserve">
     <value>Tags</value>
   </data>
+  <data name="BuiltinPropertyName_Cover" xml:space="preserve">
+    <value>Cover</value>
+  </data>
 </root>

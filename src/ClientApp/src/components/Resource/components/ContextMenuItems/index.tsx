@@ -1,6 +1,9 @@
 import { MenuItem } from '@szhsin/react-menu';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { ApiOutlined, BuildOutlined, DeleteOutlined,
+  ExportOutlined, FileSyncOutlined, ProfileOutlined, SendOutlined, SnippetsOutlined } from '@ant-design/icons';
+import { history } from 'ice';
 import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
 import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';
 import { ResourceAdditionalItem } from '@/sdk/constants';
@@ -17,15 +20,20 @@ type Props = {
   onSelectedResourcesChanged?: (ids: number[]) => any;
 };
 
-export default ({ selectedResourceIds, onSelectedResourcesChanged }: Props) => {
+export default ({
+                  selectedResourceIds,
+                  onSelectedResourcesChanged,
+                }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+
   return (
     <>
       <MenuItem
         onClick={() => {
           log('inner', 'click');
           createPortal(MediaLibraryPathSelectorV2, {
+            confirmation: true,
             onSelect: (id, path) => {
               if (selectedResourceIds.length > 0) {
                 BApi.resource.moveResources({
@@ -43,11 +51,17 @@ export default ({ selectedResourceIds, onSelectedResourcesChanged }: Props) => {
         onClickCapture={() => {
           log('inner', 'click capture');
         }}
-      >{selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Including file system entries)', { count: selectedResourceIds.length }) : t('Move to media library (Including file system entries)')}</MenuItem>
+      >
+        <div className={'flex items-center gap-2'}>
+          <FileSyncOutlined className={'text-base'} />
+          {selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Including file system entries)', { count: selectedResourceIds.length }) : t('Move to media library (Including file system entries)')}
+        </div>
+      </MenuItem>
       <MenuItem
         onClick={() => {
           log('inner', 'click');
           createPortal(MediaLibrarySelectorV2, {
+            confirmation: true,
             onSelect: async (id) => {
               await BApi.resource.moveResources({
                 ids: selectedResourceIds,
@@ -61,7 +75,12 @@ export default ({ selectedResourceIds, onSelectedResourcesChanged }: Props) => {
         onClickCapture={() => {
           log('inner', 'click capture');
         }}
-      >{selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Data only)', { count: selectedResourceIds.length }) : t('Move to media library (Data only)')}</MenuItem>
+      >
+        <div className={'flex items-center gap-2'}>
+          <ApiOutlined className={'text-base'} />
+          {selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Data only)', { count: selectedResourceIds.length }) : t('Move to media library (Data only)')}
+        </div>
+      </MenuItem>
       <MenuItem
         onClick={() => {
           log('inner', 'click');
@@ -78,7 +97,34 @@ export default ({ selectedResourceIds, onSelectedResourcesChanged }: Props) => {
         onClickCapture={() => {
           log('inner', 'click capture');
         }}
-      >{selectedResourceIds.length > 1 ? t('Transfer {{count}} resources', { count: selectedResourceIds.length }) : t('Transfer resource')}</MenuItem>
+      >
+        <div className={'flex items-center gap-2'}>
+          <SendOutlined className={'text-base'} />
+          {selectedResourceIds.length > 1 ? t('Transfer data of {{count}} resources', { count: selectedResourceIds.length }) : t('Transfer resource data')}
+        </div>
+      </MenuItem>
+      {selectedResourceIds.length > 1 && (
+        <MenuItem
+          onClick={() => {
+            log('inner', 'click');
+            createPortal(Modal, {
+              defaultVisible: true,
+              title: t('We are leaving current page'),
+              onOk: async () => {
+                history?.push('/bulkmodification2');
+              },
+            });
+          }}
+          onClickCapture={() => {
+            log('inner', 'click capture');
+          }}
+        >
+          <div className={'flex items-center gap-2 text-secondary'}>
+            <ExportOutlined className={'text-base'} />
+            {t('Bulk modification')}
+          </div>
+        </MenuItem>
+      )}
       <MenuItem
         onClick={() => {
           log('inner', 'click');
@@ -105,7 +151,10 @@ export default ({ selectedResourceIds, onSelectedResourcesChanged }: Props) => {
                 </div>
               ),
               onOk: async () => {
-                await BApi.resource.deleteResourcesByKeys({ ids: selectedResourceIds, deleteFiles });
+                await BApi.resource.deleteResourcesByKeys({
+                  ids: selectedResourceIds,
+                  deleteFiles,
+                });
               },
             },
           );
@@ -113,7 +162,12 @@ export default ({ selectedResourceIds, onSelectedResourcesChanged }: Props) => {
         onClickCapture={() => {
           log('inner', 'click capture');
         }}
-      >{selectedResourceIds.length > 1 ? t('Delete {{count}} resources', { count: selectedResourceIds.length }) : t('Delete resource')}</MenuItem>
+      >
+        <div className={'flex items-center gap-2 text-danger'}>
+          <DeleteOutlined className={'text-base'} />
+          {selectedResourceIds.length > 1 ? t('Delete {{count}} resources', { count: selectedResourceIds.length }) : t('Delete resource')}
+        </div>
+      </MenuItem>
     </>
   );
 };
