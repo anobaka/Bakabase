@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.FileMover.Models;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Tasks;
@@ -172,7 +173,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
             var options = _options.Value.FileMover;
             if (options?.Enabled == true)
             {
-                const string taskName = "Moving Files";
+                var taskName = BackgroundTaskName.MoveFiles.ToString();
                 if (_backgroundTaskManager.IsRunningByName(taskName))
                 {
                     return;

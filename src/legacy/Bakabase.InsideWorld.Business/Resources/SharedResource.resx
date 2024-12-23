@@ -348,4 +348,7 @@ The version of lux is not limited.</value>
   <data name="BackgroundTask_SyncMediaLibrary_Name" xml:space="preserve">
     <value>Sync media library</value>
   </data>
+  <data name="BackgroundTask_MoveFiles_Name" xml:space="preserve">
+    <value>Move files</value>
+  </data>
 </root>

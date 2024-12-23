@@ -8,7 +8,7 @@ import { buildLogger, uuidv4 } from '@/components/utils';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import './index.scss';
 import store from '@/store';
-import { CoverFit } from '@/sdk/constants';
+import { CoverFit, ResourceCacheType } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import { Carousel, Tooltip } from '@/components/bakaui';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
@@ -75,7 +75,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     h: 0,
   });
 
-  log(resource);
+  // log(resource);
 
   useUpdateEffect(() => {
     forceUpdate();
@@ -95,21 +95,22 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     const urls: string[] = [];
 
     const cps = resource.coverPaths ?? [];
+    if (cps.length == 0) {
+      if (useCache) {
+        if (resource.cache && resource.cache.cachedTypes.includes(ResourceCacheType.Covers)) {
+          if (resource.cache.coverPaths && resource.cache.coverPaths.length > 0) {
+            cps.push(...(resource.cache.coverPaths));
+          } else {
+            cps.push(resource.path);
+          }
+        }
+      }
+    }
 
-    if (useCache) {
-      if (cps.length == 0) {
-        cps.push(...(resource.cache?.coverPaths ?? []));
-      }
-      if (cps.length == 0) {
-        cps.push(resource.path);
-      }
+    if (cps.length > 0) {
       urls.push(...cps.map(coverPath => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`));
     } else {
-      if (cps.length == 0) {
-        urls.push(`${serverAddress}/resource/${resource.id}/cover`);
-      } else {
-        urls.push(...cps.map(coverPath => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`));
-      }
+      urls.push(`${serverAddress}/resource/${resource.id}/cover`);
     }
 
     if (disableBrowserCache) {
@@ -121,7 +122,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     setUrls(urls);
   }, [resource, useCache]);
 
-  useEffect(() => {
+  useUpdateEffect(() => {
     loadCover(false);
   }, [resource, loadCover]);
 

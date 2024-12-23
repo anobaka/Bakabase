@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Models.Db;
@@ -12,7 +13,16 @@ public static class ResourceCacheExtensions
 {
     public static ResourceCache ToDomainModel(this ResourceCacheDbModel model)
     {
-        var rc = new ResourceCache();
+        var rc = new ResourceCache
+        {
+            CachedTypes = SpecificEnumUtils<ResourceCacheType>.Values.Where(x => model.CachedTypes.HasFlag(x))
+                .Aggregate(new List<ResourceCacheType>(),
+                    (s, t) =>
+                    {
+                        s.Add(t);
+                        return s;
+                    })
+        };
         foreach (var ct in SpecificEnumUtils<ResourceCacheType>.Values)
         {
             if (model.CachedTypes.HasFlag(ct))

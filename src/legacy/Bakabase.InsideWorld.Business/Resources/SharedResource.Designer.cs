@@ -61,6 +61,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Move files.
+        /// </summary>
+        internal static string BackgroundTask_MoveFiles_Name {
+            get {
+                return ResourceManager.GetString("BackgroundTask_MoveFiles_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Prepare cache.
         /// </summary>
         internal static string BackgroundTask_PrepareCache_Name {

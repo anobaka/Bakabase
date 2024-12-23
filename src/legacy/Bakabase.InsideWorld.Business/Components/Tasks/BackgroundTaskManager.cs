@@ -83,7 +83,11 @@ namespace Bakabase.InsideWorld.Business.Components.Tasks
             }
         }
 
-        public List<BackgroundTaskDto> GetByName(string name) => Tasks.Where(a => a.Name == name).ToList();
+        public List<BackgroundTaskDto> GetByName(string name)
+        {
+            var localizer = Localizer;
+            return _tasks.Values.Where(a => a.Name == name).Select(a => a.GetInformation(localizer)).ToList();
+        }
 
         public bool IsRunningByName(string name) => GetByName(name).Any(a => a.Status == BackgroundTaskStatus.Running);
 

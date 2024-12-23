@@ -342,4 +342,7 @@
   <data name="BackgroundTask_SyncMediaLibrary_Name" xml:space="preserve">
     <value>同步媒体库</value>
   </data>
+  <data name="BackgroundTask_MoveFiles_Name" xml:space="preserve">
+    <value>移动文件</value>
+  </data>
 </root>
