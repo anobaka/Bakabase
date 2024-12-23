@@ -1,3 +1,4 @@
+
 import { Message } from '@alifd/next';
 import type { CSSProperties } from 'react';
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -221,6 +222,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             biggerCoverPlacement={biggerCoverPlacement}
             useCache={!uiOptions?.resource?.disableCache}
             disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
+            disableCarousel={uiOptions?.resource?.disableCoverCarousel}
             onClick={() => {
               createPortal(ResourceDetailDialog, {
                 id: resource.id,

@@ -810,6 +810,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   coverFit: BakabaseInsideWorldModelsConstantsCoverFit;
   /** [1: MediaLibrary, 2: Category, 4: Tags, 7: All] */
   displayContents: BakabaseInsideWorldModelsConstantsResourceDisplayContent;
+  disableCoverCarousel: boolean;
 }
 
 /**

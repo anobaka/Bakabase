@@ -5,6 +5,7 @@ import {
   FullscreenOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
+  RightSquareOutlined,
   ZoomInOutlined,
 } from '@ant-design/icons';
 import React, { useEffect, useRef } from 'react';
@@ -73,6 +74,11 @@ export default ({ rearrangeResources }: Props) => {
         </div>
       ),
     },
+    {
+      key: 'CoverCarousel',
+      label: t('Cover carousel'),
+      Icon: RightSquareOutlined,
+    },
   ];
 
   const buildSelectedKeys = () => {
@@ -94,6 +100,11 @@ export default ({ rearrangeResources }: Props) => {
         keys.push(`DisplayContent-${d.value}` as ListBoxItemKey);
       }
     }
+
+    if (!options?.disableCoverCarousel) {
+      keys.push('CoverCarousel');
+    }
+
     return keys;
   };
 
@@ -137,6 +148,7 @@ export default ({ rearrangeResources }: Props) => {
               showBiggerCoverWhileHover: stringKeys.includes('ShowLargerCoverOnHover'),
               disableMediaPreviewer: !stringKeys.includes('PreviewOnHover'),
               displayContents: dc,
+              disableCoverCarousel: !stringKeys.includes('CoverCarousel'),
             };
 
             log(keys, newOptions);
