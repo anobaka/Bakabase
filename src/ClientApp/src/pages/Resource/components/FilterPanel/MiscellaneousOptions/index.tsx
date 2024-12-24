@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { history } from 'ice';
 import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Tooltip } from '@/components/bakaui';
 import { CoverFit, ResourceDisplayContent, resourceDisplayContents } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
@@ -30,7 +31,7 @@ type Item = {
   tip?: any;
 };
 
-type ListBoxItemKey = 'FillCover' | 'ShowLargerCoverOnHover' | 'PreviewOnHover' | 'UseCache' ;
+type ListBoxItemKey = 'FillCover' | 'ShowLargerCoverOnHover' | 'PreviewOnHover' | 'UseCache' | 'CoverCarousel';
 
 export default ({ rearrangeResources }: Props) => {
   const { t } = useTranslation();
@@ -71,6 +72,16 @@ export default ({ rearrangeResources }: Props) => {
       tip: (
         <div className={'max-w-[400px]'}>
           {t('Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.')}
+          <Button
+            size={'sm'}
+            variant={'flat'}
+            // color={'secondary'}
+            onClick={() => {
+              history?.push('/cache');
+            }}
+          >
+            {t('Manage cache')}
+          </Button>
         </div>
       ),
     },
@@ -177,7 +188,7 @@ export default ({ rearrangeResources }: Props) => {
                   <Tooltip
                     placement={'left'}
                     content={item.tip}
-                    color={'primary'}
+                    color={'secondary'}
                   >
                     <QuestionCircleOutlined className={'text-base'} />
                   </Tooltip>

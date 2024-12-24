@@ -1611,5 +1611,6 @@
   "Resource count": "资源数量",
   "Cached": "已缓存",
   "Covers": "封面",
-  "PlayableFiles": "可播放文件"
+  "PlayableFiles": "可播放文件",
+  "Manage cache": "管理缓存"
 }

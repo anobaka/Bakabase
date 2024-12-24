@@ -18,7 +18,6 @@ const IconStyle = { fontSize: 16 };
 const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   const { t } = useTranslation();
   const { pathname } = useLocation();
-
   // console.log(pathname);
 
   const onClick: MenuProps['onClick'] = (e) => {
@@ -74,6 +73,19 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
         border: 'none',
         width: '100%',
       }}
+      selectedKeys={[(() => {
+        for (const m of asideMenuConfig) {
+          if (m.path === pathname) {
+            return pathname;
+          }
+          for (const c of m.children || []) {
+            if (pathname.includes(c.path!)) {
+              return c.path!;
+            }
+          }
+        }
+        return '';
+      })()]}
       inlineCollapsed={collapsed}
       onClick={onClick}
       mode="inline"

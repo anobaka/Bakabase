@@ -38,6 +38,8 @@ const Navigation = () => {
     }
   }, [pathname]);
 
+  console.log(pathname);
+
   return (
     <div className={`${styles.nav} ${isCollapsed ? `${styles.collapsed}` : ''}`}>
       <Loading fullScreen visible={loading} />
