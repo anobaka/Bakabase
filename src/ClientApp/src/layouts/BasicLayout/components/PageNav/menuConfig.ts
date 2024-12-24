@@ -61,6 +61,11 @@ const asideMenuConfig: IMenuItem[] = [
       //   icon: 'TagsOutlined',
       // },
       {
+        name: 'Cache',
+        path: '/cache',
+        icon: 'DashboardOutlined',
+      },
+      {
         name: 'Alias',
         path: '/alias',
         icon: 'BranchesOutlined',

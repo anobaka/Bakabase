@@ -1605,5 +1605,11 @@
   "For each filtered item": "对每个筛选出的项目",
   "Filter by": "筛选方式",
   "Please input keyword": "请输入关键字",
-  "Please input a regular expression": "请输入一个正则表达式"
+  "Please input a regular expression": "请输入一个正则表达式",
+  "Cache": "缓存",
+  "Category caches": "分类缓存",
+  "Resource count": "资源数量",
+  "Cached": "已缓存",
+  "Covers": "封面",
+  "PlayableFiles": "可播放文件"
 }

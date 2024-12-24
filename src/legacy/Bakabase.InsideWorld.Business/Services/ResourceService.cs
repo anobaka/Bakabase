@@ -907,7 +907,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                                     .SelectMany(x =>
                                                         x.Take(InternalOptions.MaxPlayableFilesPerTypeAndSubDir))
                                                     .ToList();
-                                                cache.HasMorePlayableFiles = trimmedPlayableFiles.Any();
+                                                cache.PlayableFilePaths =
+                                                    trimmedPlayableFiles.SerializeAsStandardValue(StandardValueType
+                                                        .ListString);
                                                 cache.HasMorePlayableFiles =
                                                     trimmedPlayableFiles.Count < playableFiles.Count;
                                             }
@@ -1046,6 +1048,40 @@ namespace Bakabase.InsideWorld.Business.Services
                 rpv.CoverPaths = currentCovers;
                 await _reservedPropertyValueService.Update(rpv);
             }
+        }
+
+        public async Task<CacheOverviewViewModel> GetCacheOverview()
+        {
+            var cacheMap = (await _resourceCacheOrm.GetAll(null, false)).ToDictionary(d => d.ResourceId, d => d);
+            var categories = await _categoryService.GetAll(null, CategoryAdditionalItem.None);
+            var categoryIdResourcesMap = (await GetAllDbModels(null, false)).GroupBy(r => r.CategoryId)
+                .ToDictionary(d => d.Key, d => d.ToList());
+
+            var categoryIdCachesMap = categories.ToDictionary(d => d.Id,
+                d => categoryIdResourcesMap.GetValueOrDefault(d.Id)?.Select(r => cacheMap.GetValueOrDefault(r.Id))
+                    .OfType<ResourceCacheDbModel>().ToList() ?? []);
+
+            return new CacheOverviewViewModel
+            {
+                CategoryCaches = categories.Select(c => new CacheOverviewViewModel.CategoryCacheViewModel
+                {
+                    CategoryId = c.Id,
+                    CategoryName = c.Name,
+                    ResourceCacheCountMap = SpecificEnumUtils<ResourceCacheType>.Values.ToDictionary(d => (int)d,
+                        d => categoryIdCachesMap.GetValueOrDefault(c.Id)?.Count(x => x.CachedTypes.HasFlag(d)) ?? 0),
+                    ResourceCount = categoryIdResourcesMap.GetValueOrDefault(c.Id)?.Count ?? 0
+                }).ToList(),
+            };
+        }
+
+        public async Task DeleteResourceCacheByCategoryIdAndCacheType(int categoryId, ResourceCacheType type)
+        {
+            var resources = await GetAllDbModels(d => d.CategoryId == categoryId);
+            var resourceIds = resources.Select(r => r.Id).ToList();
+            await _resourceCacheOrm.UpdateAll(c => resourceIds.Contains(c.ResourceId), x =>
+            {
+                x.CachedTypes &= ~type;
+            });
         }
 
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)

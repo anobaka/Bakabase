@@ -1337,6 +1337,96 @@ export const RevertBulkModificationURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetCacheOverview
+ * url: GetCacheOverviewURL
+ * method: GetCacheOverview_TYPE
+ * raw_url: GetCacheOverview_RAW_URL
+ */
+export const GetCacheOverview = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/cache'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetCacheOverview_RAW_URL = function() {
+  return '/cache'
+}
+export const GetCacheOverview_TYPE = function() {
+  return 'get'
+}
+export const GetCacheOverviewURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/cache'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DeleteResourceCacheByCategoryIdAndCacheType
+ * url: DeleteResourceCacheByCategoryIdAndCacheTypeURL
+ * method: DeleteResourceCacheByCategoryIdAndCacheType_TYPE
+ * raw_url: DeleteResourceCacheByCategoryIdAndCacheType_RAW_URL
+ * @param categoryId - 
+ * @param type - 
+ */
+export const DeleteResourceCacheByCategoryIdAndCacheType = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/cache/category/{categoryId}/type/{type}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  if (parameters['categoryId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: categoryId'))
+  }
+  path = path.replace('{type}', `${parameters['type']}`)
+  if (parameters['type'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: type'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteResourceCacheByCategoryIdAndCacheType_RAW_URL = function() {
+  return '/cache/category/{categoryId}/type/{type}'
+}
+export const DeleteResourceCacheByCategoryIdAndCacheType_TYPE = function() {
+  return 'delete'
+}
+export const DeleteResourceCacheByCategoryIdAndCacheTypeURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/cache/category/{categoryId}/type/{type}'
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  path = path.replace('{type}', `${parameters['type']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetCategory
  * url: GetCategoryURL
  * method: GetCategory_TYPE

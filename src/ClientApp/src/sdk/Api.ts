@@ -464,6 +464,19 @@ export interface BakabaseAbstractionsModelsInputSpecialTextPatchInputModel {
   value2?: string;
 }
 
+export interface BakabaseAbstractionsModelsViewCacheOverviewViewModel {
+  categoryCaches: BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCacheViewModel[];
+}
+
+export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCacheViewModel {
+  /** @format int32 */
+  categoryId: number;
+  categoryName: string;
+  resourceCacheCountMap: Record<string, number>;
+  /** @format int32 */
+  resourceCount: number;
+}
+
 export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
   /** @format int32 */
   resourceId: number;
@@ -2082,6 +2095,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainSpecialText;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewCacheOverviewViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewCacheOverviewViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
@@ -3827,6 +3847,44 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     revertBulkModification: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/bulk-modification/${id}/apply`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
+  cache = {
+    /**
+     * No description
+     *
+     * @tags Cache
+     * @name GetCacheOverview
+     * @request GET:/cache
+     */
+    getCacheOverview: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewCacheOverviewViewModel,
+        any
+      >({
+        path: `/cache`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Cache
+     * @name DeleteResourceCacheByCategoryIdAndCacheType
+     * @request DELETE:/cache/category/{categoryId}/type/{type}
+     */
+    deleteResourceCacheByCategoryIdAndCacheType: (
+      categoryId: number,
+      type: BakabaseAbstractionsModelsDomainConstantsResourceCacheType,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/cache/category/${categoryId}/type/${type}`,
         method: "DELETE",
         format: "json",
         ...params,

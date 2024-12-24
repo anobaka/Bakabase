@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.Constants;
@@ -101,4 +102,12 @@ public interface IResourceService
     Task PrepareCache(Action<int> onProgressChange, CancellationToken ct);
     Task Transfer(ResourceTransferInputModel model);
     Task SaveCover(int id, byte[] imageBytes, CoverSaveMode mode);
+
+    /// <summary>
+    /// CacheType - Data
+    /// </summary>
+    /// <returns></returns>
+    Task<CacheOverviewViewModel> GetCacheOverview();
+
+    Task DeleteResourceCacheByCategoryIdAndCacheType(int categoryId, ResourceCacheType type);
 }
