@@ -1,9 +1,11 @@
 'use strict';
 import { useTranslation } from 'react-i18next';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useState } from 'react';
+import { useUpdate } from 'react-use';
+import toast from 'react-hot-toast';
 import BulkModification from './components/BulkModification';
-import { Accordion, AccordionItem, Button, Chip, Modal, Spinner, Tooltip } from '@/components/bakaui';
+import { Accordion, AccordionItem, Button, Chip, Input, Modal, Spinner, Tooltip } from '@/components/bakaui';
 import type { BulkModification as BulkModificationModel } from '@/pages/BulkModification2/components/BulkModification';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -13,8 +15,11 @@ import { StandardValueType } from '@/sdk/constants';
 export default () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const forceUpdate = useUpdate();
 
   const bmInternals = store.getModelState('bulkModificationInternals');
+
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
 
   const [bulkModifications, setBulkModifications] = useState<BulkModificationModel[]>();
 
@@ -59,9 +64,16 @@ export default () => {
           className={'p-0 pt-1'}
           selectionMode={'multiple'}
           variant={'splitted'}
-          defaultExpandedKeys={bulkModifications.map(x => x.id.toString())}
+          expandedKeys={expandedKeys}
+          onExpandedChange={keys => {
+            if (!keys) {
+              setExpandedKeys([]);
+            }
+            setExpandedKeys(Array.from(keys).map(x => x as string));
+          }}
         >
           {bulkModifications.map((bm, i) => {
+            const isExpanded = expandedKeys.includes(bm.id.toString());
             return (
               <AccordionItem
                 key={bm.id}
@@ -73,17 +85,56 @@ export default () => {
                 title={(
                   <div className={'flex items-center justify-between'}>
                     <div className={'flex items-center gap-1'}>
-                      <div>{bm.name}</div>
+                      <div className={'flex items-center gap-1'}>
+                        {bm.name}
+                        {isExpanded && (
+                          <Button
+                            size={'sm'}
+                            variant={'light'}
+                            isIconOnly
+                            onClick={e => {
+                              e.stopPropagation();
+                              let newName = bm.name;
+                              createPortal(Modal, {
+                                defaultVisible: true,
+                                size: 'lg',
+                                title: t('Edit name of bulk modification'),
+                                children: (
+                                  <Input
+                                    isRequired
+                                    defaultValue={bm.name}
+                                    onValueChange={v => newName = v.trim()}
+                                  />
+                                ),
+                                onOk: async () => {
+                                  if (newName.length == 0) {
+                                    toast.error(t('Name cannot be empty'));
+                                    throw new Error('Name cannot be empty');
+                                  }
+                                  BApi.bulkModification.patchBulkModification(bm.id, { name: newName }).then(r => {
+                                    if (!r.code) {
+                                      bm.name = newName;
+                                      forceUpdate();
+                                    }
+                                  });
+                                },
+                              });
+                            }}
+                          >
+                            <EditOutlined className={'text-base'} />
+                          </Button>
+                        )}
+                      </div>
                       <Chip size={'sm'}>
                         {t('{{count}} resources related', { count: bm.filteredResourceIds?.length || 0 })}
                       </Chip>
-                      <Button
-                        size={'sm'}
-                        variant={'light'}
-                        color={'primary'}
-                      >
-                        {t('How does this work?')}
-                      </Button>
+                      {/* <Button */}
+                      {/*   size={'sm'} */}
+                      {/*   variant={'light'} */}
+                      {/*   color={'primary'} */}
+                      {/* > */}
+                      {/*   {t('How does this work?')} */}
+                      {/* </Button> */}
                     </div>
                     <div className={'flex items-center gap-1'}>
                       <Chip

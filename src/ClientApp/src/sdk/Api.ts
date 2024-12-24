@@ -287,7 +287,7 @@ export interface BakabaseAbstractionsModelsDomainReservedPropertyValue {
   /** @format double */
   rating?: number;
   introduction?: string;
-  coverPaths?: string;
+  coverPaths?: string[];
 }
 
 export interface BakabaseAbstractionsModelsDomainResource {
@@ -331,6 +331,8 @@ export interface BakabaseAbstractionsModelsDomainResourceProperty {
   dbValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
   visible: boolean;
 }
 
@@ -1631,6 +1633,8 @@ export interface BakabaseServiceModelsViewCategoryViewModelCustomPropertyViewMod
   /** @format int32 */
   id: number;
   name: string;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
 }
 
 export interface BakabaseServiceModelsViewCustomPropertyViewModel {

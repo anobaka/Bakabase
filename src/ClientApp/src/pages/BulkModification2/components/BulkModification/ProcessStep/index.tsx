@@ -2,7 +2,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { DeleteOutlined } from '@ant-design/icons';
-import { TextProcessDemonstrator } from '../Processes/TextValueProcess';
+import { StringValueProcessDemonstrator } from '../Processes/StringValueProcess';
 import { Button, Chip, Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IProperty } from '@/components/Property/models';
@@ -46,7 +46,7 @@ export default ({
       case PropertyType.Formula:
       case PropertyType.SingleChoice:
         return (
-          <TextProcessDemonstrator
+          <StringValueProcessDemonstrator
             property={property}
             variables={variables}
             operation={step.operation}

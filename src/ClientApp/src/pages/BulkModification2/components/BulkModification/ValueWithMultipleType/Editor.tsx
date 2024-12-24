@@ -2,9 +2,10 @@
 
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
 import { BulkModificationProcessorValueType } from '@/sdk/constants';
-import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Select } from '@/components/bakaui';
+import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Select, Tooltip } from '@/components/bakaui';
 import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
 import type { IProperty } from '@/components/Property/models';
 import { buildLogger } from '@/components/utils';
@@ -18,6 +19,14 @@ type Props = {
 };
 
 const log = buildLogger('ValueWithMultipleTypeEditor');
+
+const ValueTypeTipsMap: {[key in BulkModificationProcessorValueType]?: string[]} = {
+  [BulkModificationProcessorValueType.Dynamic]: [
+    'Dynamic value, will change according to the changes in dynamic properties (single choice, multiple choice, multilevel data, etc.).',
+    'For example, if you use the \'actor\' from the multiple-choice data as the change result, then in the future, if you modify \'actor\' to \'actor1\', the current data will also be changed to \'actor1\' after processing. However, if you choose a static value, the current data will be changed to \'actor\' after processing.',
+    'For non-dynamic properties (such as text, numbers, dates, etc.), there is no difference between setting dynamic values and static values.',
+  ],
+};
 
 export default (props: Props) => {
   const {
@@ -40,7 +49,7 @@ export default (props: Props) => {
           <PropertyValueRenderer
             property={property}
             bizValue={value}
-            variant={'light'}
+            // variant={'light'}
             onValueChange={(dbValue, bizValue) => { onChange?.(valueType, bizValue); }}
           />
         );
@@ -49,7 +58,7 @@ export default (props: Props) => {
           <PropertyValueRenderer
             property={property}
             dbValue={value}
-            variant={'light'}
+            // variant={'light'}
             onValueChange={(dbValue, bizValue) => { onChange?.(valueType, dbValue); }}
           />
         );
@@ -85,7 +94,7 @@ export default (props: Props) => {
               size={'sm'}
               variant="bordered"
             >
-              {t(BulkModificationProcessorValueType[valueType])}
+              {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[valueType]}`)}
             </Button>
           </DropdownTrigger>
           <DropdownMenu
@@ -100,8 +109,32 @@ export default (props: Props) => {
             }}
           >
             {valueTypes.map(v => {
+              const tips = ValueTypeTipsMap[v];
               return (
-                <DropdownItem key={v.toString()}>{t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[v]}`)}</DropdownItem>
+                <DropdownItem key={v.toString()}>
+                  <div className={'flex items-center gap-2'}>
+                    {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[v]}`)}
+                    {tips && (
+                      <Tooltip
+                        color={'secondary'}
+                        content={(
+                          <div className={'flex flex-col gap-1'}>
+                            {tips.map(tip => {
+                              return (
+                                <div>
+                                  {t(tip)}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        className={'max-w-[400px]'}
+                      >
+                        <QuestionCircleOutlined className={'text-base'} />
+                      </Tooltip>
+                    )}
+                  </div>
+                </DropdownItem>
               );
             })}
           </DropdownMenu>

@@ -99,7 +99,7 @@ export default ({
               <Select
                 size="sm"
                 dataSource={propertyValueScopes.map(s => ({
-                  label: s.label,
+                  label: t(`PropertyValueScope.${s.label}`),
                   value: s.value,
                 }))}
                 selectedKeys={variable?.scope == undefined ? undefined : [variable.scope.toString()]}

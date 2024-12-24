@@ -9,7 +9,6 @@ import type {
   BulkModificationVariable,
 } from '@/pages/BulkModification2/components/BulkModification/models';
 import ProcessStep from '@/pages/BulkModification2/components/BulkModification/ProcessStep';
-import { PropertyPool } from '@/sdk/constants';
 
 type Props = {
   processes?: BulkModificationProcess[];

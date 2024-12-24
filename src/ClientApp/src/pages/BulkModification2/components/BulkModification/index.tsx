@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTour } from '@reactour/tour';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import Variables from './Variables';
 import Processes from './Processes';
-import { Button, Chip, Divider, Modal } from '@/components/bakaui';
+import { Button, Chip, Divider, Modal, Tooltip } from '@/components/bakaui';
 import FilterGroupsPanel from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel';
 import type { ResourceSearchFilterGroup } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
-import FilteredResourcesDialog from '@/pages/BulkModification/components/BulkModification/FilteredResourcesDialog';
 import type {
   BulkModificationProcess,
   BulkModificationVariable,
@@ -32,8 +33,8 @@ type Props = {
   onChange: (bm: BulkModification) => any;
 };
 
-type BlockKey = 'Filters' | 'Variables' | 'Processes' | 'Diffs' | 'Final';
-const Blocks: BlockKey[] = ['Filters', 'Variables', 'Processes', 'Diffs', 'Final'];
+type BlockKey = 'Filters' | 'Variables' | 'Processes' | 'Changes' | 'FinalStep';
+const Blocks: BlockKey[] = ['Filters', 'Variables', 'Processes', 'Changes', 'FinalStep'];
 
 export default ({
                   bm,
@@ -41,6 +42,15 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+
+  const {
+    isOpen,
+    currentStep,
+    steps,
+    setIsOpen,
+    setCurrentStep,
+    setSteps,
+  } = useTour();
 
   const [calculatingDiffs, setCalculatingDiffs] = useState(false);
 
@@ -54,8 +64,14 @@ export default ({
       <div className={'flex flex-col gap-2 grow'}>
         {Blocks.map((bk, i) => {
           let blockInner: any;
+          let blockTip: any;
           switch (bk) {
             case 'Filters':
+              blockTip = (
+                <div>
+                  {t('Select resources to be modified.')}
+                </div>
+              );
               blockInner = (
                 <div>
                   <div>
@@ -104,6 +120,11 @@ export default ({
               );
               break;
             case 'Variables':
+              blockTip = (
+                <div>
+                  {t('You can define and preprocess variables here, then use it in process steps.')}
+                </div>
+              );
               blockInner = (
                 <Variables
                   variables={bm.variables}
@@ -122,6 +143,11 @@ export default ({
               );
               break;
             case 'Processes':
+              blockTip = (
+                <div>
+                  {t('You can define process steps here, and use variables in steps, to modify all filtered resources.')}
+                </div>
+              );
               blockInner = (
                 <Processes
                   variables={bm.variables}
@@ -140,7 +166,12 @@ export default ({
                 />
               );
               break;
-            case 'Diffs':
+            case 'Changes':
+              blockTip = (
+                <div>
+                  {t('Before applying bulk modification, you must calculate and check the changes here.')}
+                </div>
+              );
               blockInner = (
                 <div className={'flex items-center gap-1'}>
                   <Button
@@ -157,7 +188,7 @@ export default ({
                       });
                     }}
                   >
-                    {t('Calculate diffs')}
+                    {t('Calculate changes')}
                   </Button>
                   {bm.resourceDiffCount > 0 && (
                     <Button
@@ -178,7 +209,7 @@ export default ({
                 </div>
               );
               break;
-            case 'Final':
+            case 'FinalStep':
               blockInner = (
                 <div className={'flex items-center gap-1'}>
                   <Button
@@ -197,7 +228,7 @@ export default ({
                       });
                     }}
                   >
-                    {t('Apply diffs')}
+                    {t('Apply changes')}
                   </Button>
                   {bm.appliedAt && (
                     <Button
@@ -216,7 +247,7 @@ export default ({
                         });
                       }}
                     >
-                      {t('Revert diffs')}
+                      {t('Revert changes')}
                     </Button>
                   )}
                 </div>
@@ -227,9 +258,23 @@ export default ({
             <>
               <div className={'flex gap-4 items-center'}>
                 <div className={'w-[80px] text-right'}>
-                  <Chip
-                    radius={'sm'}
-                  >{t(bk)}</Chip>
+                  {blockTip ? (
+                    <Tooltip content={blockTip}>
+                      <Chip
+                        radius={'sm'}
+                        classNames={{
+                          content: 'items-center flex gap-1',
+                        }}
+                      >
+                        {t(bk)}
+                        <QuestionCircleOutlined className={'text-base'} />
+                      </Chip>
+                    </Tooltip>
+                  ) : (
+                    <Chip
+                      radius={'sm'}
+                    >{t(bk)}</Chip>
+                  )}
                 </div>
                 {blockInner}
               </div>

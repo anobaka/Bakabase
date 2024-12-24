@@ -1,10 +1,12 @@
 import { Trans, useTranslation } from 'react-i18next';
-import React, { useState } from 'react';
-import type { TextProcessOptions } from './models';
+import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import type { StringProcessOptions } from './models';
+import { validate } from './helpers';
 import {
   type BulkModificationProcessorValueType,
-  TextProcessingOperation,
-  textProcessingOperations,
+  BulkModificationStringProcessOperation,
+  bulkModificationStringProcessOperations,
 } from '@/sdk/constants';
 import {
   ValueWithMultipleTypeEditor,
@@ -18,54 +20,15 @@ import { buildLogger } from '@/components/utils';
 
 type Props = {
   property: IProperty;
-  operation?: TextProcessingOperation;
-  options?: TextProcessOptions;
+  operation?: BulkModificationStringProcessOperation;
+  options?: StringProcessOptions;
   variables?: BulkModificationVariable[];
   availableValueTypes?: BulkModificationProcessorValueType[];
-  onChange?: (operation: TextProcessingOperation, options: TextProcessOptions) => any;
+  onChange?: (operation: BulkModificationStringProcessOperation, options?: StringProcessOptions, error?: string) => any;
 };
 
-const log = buildLogger('TextProcessorEditor');
+const log = buildLogger('StringProcessorEditor');
 
-const validate = (operation: TextProcessingOperation, options?: TextProcessOptions): boolean => {
-  if (operation == TextProcessingOperation.Delete) {
-    return true;
-  }
-
-  if (!options) {
-    return false;
-  }
-
-  const {
-    value,
-    count,
-    valueType,
-    index,
-    isPositioningDirectionReversed,
-    isOperationDirectionReversed,
-    replace,
-    find,
-  } = options;
-
-  switch (operation) {
-    case TextProcessingOperation.SetWithFixedValue:
-    case TextProcessingOperation.AddToStart:
-    case TextProcessingOperation.AddToEnd:
-      return value != undefined && value.length > 0;
-    case TextProcessingOperation.AddToAnyPosition:
-      return value != undefined && value.length > 0 && index != undefined && index > -1;
-    case TextProcessingOperation.RemoveFromStart:
-    case TextProcessingOperation.RemoveFromEnd:
-      return count != undefined && count > 0;
-    case TextProcessingOperation.RemoveFromAnyPosition:
-      return count != undefined && count > 0 && index != undefined && index > -1;
-    case TextProcessingOperation.ReplaceFromStart:
-    case TextProcessingOperation.ReplaceFromEnd:
-    case TextProcessingOperation.ReplaceFromAnyPosition:
-    case TextProcessingOperation.ReplaceWithRegex:
-      return find != undefined && find.length > 0;
-  }
-};
 
 export default ({
                   property,
@@ -76,31 +39,28 @@ export default ({
                   availableValueTypes,
                 }: Props) => {
   const { t } = useTranslation();
-  const [options, setOptions] = useState<TextProcessOptions>(propsOptions ?? {});
-  const [operation, setOperation] = useState<TextProcessingOperation>(propsOperation ?? TextProcessingOperation.SetWithFixedValue);
+  const [options, setOptions] = useState<StringProcessOptions>(propsOptions ?? {});
+  const [operation, setOperation] = useState<BulkModificationStringProcessOperation>(propsOperation ?? BulkModificationStringProcessOperation.SetWithFixedValue);
 
   log('operation', operation, 'options', options, typeof operation);
 
-  const changeOptions = (patches: Partial<TextProcessOptions>) => {
+  useEffect(() => {
+    const error = validate(operation, options);
+    onChange?.(operation, options, error);
+  }, [options, operation]);
+
+  const changeOptions = (patches: Partial<StringProcessOptions>) => {
     const newOptions = {
       ...options,
       ...patches,
     };
     setOptions(newOptions);
-
-    if (validate(operation, newOptions)) {
-      onChange?.(operation, newOptions);
-    }
   };
 
-  const changeOperation = (newOperation: TextProcessingOperation) => {
+  const changeOperation = (newOperation: BulkModificationStringProcessOperation) => {
     setOperation(newOperation);
     const newOptions = {};
     setOptions(newOptions);
-
-    if (validate(newOperation, newOptions)) {
-      onChange?.(newOperation, newOptions);
-    }
   };
 
   const renderValueCell = (field: string = 'value') => {
@@ -118,7 +78,7 @@ export default ({
     );
   };
 
-  const renderSubOptions = (options: TextProcessOptions) => {
+  const renderSubOptions = (options: StringProcessOptions) => {
     log('renderOptions', operation, options);
 
     if (!operation) {
@@ -126,22 +86,22 @@ export default ({
     }
     const components: { label: string; comp: any }[] = [];
     switch (operation) {
-      case TextProcessingOperation.SetWithFixedValue:
+      case BulkModificationStringProcessOperation.SetWithFixedValue:
         components.push({
           label: t('Value'),
           comp: renderValueCell(),
         });
         break;
-      case TextProcessingOperation.Delete:
+      case BulkModificationStringProcessOperation.Delete:
         break;
-      case TextProcessingOperation.AddToStart:
-      case TextProcessingOperation.AddToEnd:
+      case BulkModificationStringProcessOperation.AddToStart:
+      case BulkModificationStringProcessOperation.AddToEnd:
         components.push({
           label: t('Value'),
           comp: renderValueCell(),
         });
         break;
-      case TextProcessingOperation.AddToAnyPosition:
+      case BulkModificationStringProcessOperation.AddToAnyPosition:
         components.push({
           label: t('Value'),
           comp: (
@@ -179,8 +139,8 @@ export default ({
           ),
         });
         break;
-      case TextProcessingOperation.RemoveFromStart:
-      case TextProcessingOperation.RemoveFromEnd:
+      case BulkModificationStringProcessOperation.RemoveFromStart:
+      case BulkModificationStringProcessOperation.RemoveFromEnd:
         components.push({
           label: t('Count'),
           comp: (
@@ -193,7 +153,7 @@ export default ({
           ),
         });
         break;
-      case TextProcessingOperation.RemoveFromAnyPosition:
+      case BulkModificationStringProcessOperation.RemoveFromAnyPosition:
         // delete 6 characters forward from the fifth character from the end
         components.push({
           label: t('Value'),
@@ -245,10 +205,10 @@ export default ({
           ),
         });
         break;
-      case TextProcessingOperation.ReplaceFromStart:
-      case TextProcessingOperation.ReplaceFromEnd:
-      case TextProcessingOperation.ReplaceFromAnyPosition:
-      case TextProcessingOperation.ReplaceWithRegex:
+      case BulkModificationStringProcessOperation.ReplaceFromStart:
+      case BulkModificationStringProcessOperation.ReplaceFromEnd:
+      case BulkModificationStringProcessOperation.ReplaceFromAnyPosition:
+      case BulkModificationStringProcessOperation.ReplaceWithRegex:
         components.push({
           label: t('Value'),
           comp: (
@@ -289,14 +249,14 @@ export default ({
         {t('Operation')}
       </div>
       <Select
-        dataSource={textProcessingOperations.map(tpo => ({
-          label: tpo.label,
+        dataSource={bulkModificationStringProcessOperations.map(tpo => ({
+          label: t(tpo.label),
           value: tpo.value,
         }))}
         selectionMode={'single'}
         selectedKeys={operation == undefined ? undefined : [operation.toString()]}
         onSelectionChange={keys => {
-          changeOperation(parseInt(Array.from(keys || [])[0] as string, 10) as TextProcessingOperation);
+          changeOperation(parseInt(Array.from(keys || [])[0] as string, 10) as BulkModificationStringProcessOperation);
         }}
       />
       {renderSubOptions(options)}

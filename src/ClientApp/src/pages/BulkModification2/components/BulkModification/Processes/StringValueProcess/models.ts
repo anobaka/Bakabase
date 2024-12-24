@@ -1,6 +1,6 @@
 import type { BulkModificationProcessorValueType } from '@/sdk/constants';
 
-export type TextProcessOptions = {
+export type StringProcessOptions = {
   value?: string;
   index?: number;
   isOperationDirectionReversed?: boolean;

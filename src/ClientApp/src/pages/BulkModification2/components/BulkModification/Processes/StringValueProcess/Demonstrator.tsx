@@ -1,6 +1,6 @@
 import { Trans, useTranslation } from 'react-i18next';
 import React from 'react';
-import type { TextProcessOptions } from './models';
+import type { StringProcessOptions } from './models';
 import type { IProperty } from '@/components/Property/models';
 import type { BulkModificationProcessorValueType } from '@/sdk/constants';
 import { TextProcessingOperation } from '@/sdk/constants';
@@ -13,7 +13,7 @@ import { buildLogger } from '@/components/utils';
 type Props = {
   property: IProperty;
   operation?: TextProcessingOperation;
-  options?: TextProcessOptions;
+  options?: StringProcessOptions;
   variables?: BulkModificationVariable[];
 };
 

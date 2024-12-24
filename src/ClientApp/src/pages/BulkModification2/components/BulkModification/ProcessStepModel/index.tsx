@@ -1,8 +1,9 @@
 'use strict';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TextProcessEditor } from '../Processes/TextValueProcess';
-import { Modal } from '@/components/bakaui';
+import { StringValueProcessEditor } from '../Processes/StringValueProcess';
+import { ListStringValueProcessEditor } from '../Processes/ListStringValueProcess';
+import { Chip, Modal } from '@/components/bakaui';
 import type { IProperty } from '@/components/Property/models';
 import { BulkModificationProcessorValueType } from '@/sdk/constants';
 import { PropertyType } from '@/sdk/constants';
@@ -34,6 +35,7 @@ export default ({
 
   const [operation, setOperation] = useState<number | undefined>(propsOperation);
   const [options, setOptions] = useState<any>(propsOptions);
+  const [error, setError] = useState<string | undefined>();
 
   log('property', property, 'operation', operation, 'options', options);
 
@@ -44,13 +46,14 @@ export default ({
       case PropertyType.Formula:
       case PropertyType.SingleChoice:
         return (
-          <TextProcessEditor
+          <StringValueProcessEditor
             options={options}
             operation={operation}
             property={property}
-            onChange={(operation, options) => {
+            onChange={(operation, options, error) => {
               setOperation(operation);
               setOptions(options);
+              setError(error);
             }}
             variables={variables}
             availableValueTypes={availableValueTypes}
@@ -58,7 +61,20 @@ export default ({
         );
       case PropertyType.MultipleChoice:
       case PropertyType.Attachment:
-        break;
+        return (
+          <ListStringValueProcessEditor
+            options={options}
+            operation={operation}
+            property={property}
+            onChange={(operation, options, error) => {
+              setOperation(operation);
+              setOptions(options);
+              setError(error);
+            }}
+            variables={variables}
+            availableValueTypes={availableValueTypes}
+          />
+        );
       case PropertyType.Number:
       case PropertyType.Percentage:
       case PropertyType.Rating:
@@ -87,7 +103,7 @@ export default ({
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
-          isDisabled: operation == undefined,
+          isDisabled: !!error,
         },
       }}
       onOk={() => {
@@ -98,6 +114,11 @@ export default ({
       }}
     >
       {renderOptions()}
+      {error && (
+        <div className={'whitespace-break-spaces text-danger'} >
+          {t('ERROR')}: {error}
+        </div>
+      )}
     </Modal>
   );
 };

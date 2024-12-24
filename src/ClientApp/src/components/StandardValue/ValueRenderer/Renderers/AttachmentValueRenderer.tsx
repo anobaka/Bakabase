@@ -65,7 +65,10 @@ export default ({ value, variant, editor, ...props }: AttachmentValueRendererPro
             );
           })}
           {editable && (
-            <div className={'flex items-center justify-center w-[80px] h-[80px]'}>
+            <div
+              className={'flex items-center justify-center w-[80px] h-[80px] border-1 rounded'}
+              style={{ borderColor: 'var(--bakaui-overlap-background)' }}
+            >
               <Button
                 isIconOnly
                 color={'primary'}

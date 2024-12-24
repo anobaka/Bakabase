@@ -1,3 +1,5 @@
+export enum BackgroundTaskName {SyncMediaLibrary = 1, PrepareCache = 2, MoveFiles = 3}
+export const backgroundTaskNames = Object.keys(BackgroundTaskName).filter(k => typeof BackgroundTaskName[k] === 'number').map(t => ({label: t, value: BackgroundTaskName[t]}));
 export enum BuiltinPropertyForDisplayName {Filename = 15}
 export const builtinPropertyForDisplayNames = Object.keys(BuiltinPropertyForDisplayName).filter(k => typeof BuiltinPropertyForDisplayName[k] === 'number').map(t => ({label: t, value: BuiltinPropertyForDisplayName[t]}));
 export enum BackgroundTaskLevel {Default = 1, Critical = 2}
@@ -32,40 +34,6 @@ export enum MigrationTiming {BeforeDbMigration = 1, AfterDbMigration = 2}
 export const migrationTimings = Object.keys(MigrationTiming).filter(k => typeof MigrationTiming[k] === 'number').map(t => ({label: t, value: MigrationTiming[t]}));
 export enum OsPlatform {Unknown = 0, Windows = 1, Osx = 2, Linux = 3, FreeBsd = 4}
 export const osPlatforms = Object.keys(OsPlatform).filter(k => typeof OsPlatform[k] === 'number').map(t => ({label: t, value: OsPlatform[t]}));
-export enum CategoryResourceDisplayNameSegmentType {StaticText = 1, Property = 2, LeftWrapper = 3, RightWrapper = 4}
-export const categoryResourceDisplayNameSegmentTypes = Object.keys(CategoryResourceDisplayNameSegmentType).filter(k => typeof CategoryResourceDisplayNameSegmentType[k] === 'number').map(t => ({label: t, value: CategoryResourceDisplayNameSegmentType[t]}));
-export enum EnhancementRecordStatus {ContextCreated = 1, ContextApplied = 2}
-export const enhancementRecordStatuses = Object.keys(EnhancementRecordStatus).filter(k => typeof EnhancementRecordStatus[k] === 'number').map(t => ({label: t, value: EnhancementRecordStatus[t]}));
-export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
-export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
-export enum InternalProperty {RootPath = 1, ParentResource = 2, Resource = 3, Filename = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21}
-export const internalProperties = Object.keys(InternalProperty).filter(k => typeof InternalProperty[k] === 'number').map(t => ({label: t, value: InternalProperty[t]}));
-export enum PropertyPool {Internal = 1, Reserved = 2, Custom = 4, All = 7}
-export const propertyPools = Object.keys(PropertyPool).filter(k => typeof PropertyPool[k] === 'number').map(t => ({label: t, value: PropertyPool[t]}));
-export enum PropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15, Tags = 16}
-export const propertyTypes = Object.keys(PropertyType).filter(k => typeof PropertyType[k] === 'number').map(t => ({label: t, value: PropertyType[t]}));
-export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000, ExHentaiEnhancer = 1001, BangumiEnhancer = 1002, DLsiteEnhancer = 1003, RegexEnhancer = 1004}
-export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
-export enum ReservedProperty {Introduction = 12, Rating = 13, Cover = 22}
-export const reservedProperties = Object.keys(ReservedProperty).filter(k => typeof ReservedProperty[k] === 'number').map(t => ({label: t, value: ReservedProperty[t]}));
-export enum ResourceCacheType {Covers = 1, PlayableFiles = 2}
-export const resourceCacheTypes = Object.keys(ResourceCacheType).filter(k => typeof ResourceCacheType[k] === 'number').map(t => ({label: t, value: ResourceCacheType[t]}));
-export enum ResourceTag {IsParent = 1, Pinned = 2, PathDoesNotExist = 4, UnknownMediaLibrary = 8}
-export const resourceTags = Object.keys(ResourceTag).filter(k => typeof ResourceTag[k] === 'number').map(t => ({label: t, value: ResourceTag[t]}));
-export enum SearchCombinator {And = 1, Or = 2}
-export const searchCombinators = Object.keys(SearchCombinator).filter(k => typeof SearchCombinator[k] === 'number').map(t => ({label: t, value: SearchCombinator[t]}));
-export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
-export const searchOperations = Object.keys(SearchOperation).filter(k => typeof SearchOperation[k] === 'number').map(t => ({label: t, value: SearchOperation[t]}));
-export enum SpecialTextType {Useless = 1, Wrapper = 3, Standardization = 4, Volume = 6, Trim = 7, DateTime = 8, Language = 9}
-export const specialTextTypes = Object.keys(SpecialTextType).filter(k => typeof SpecialTextType[k] === 'number').map(t => ({label: t, value: SpecialTextType[t]}));
-export enum StandardValueType {String = 1, ListString = 2, Decimal = 3, Link = 4, Boolean = 5, DateTime = 6, Time = 7, ListListString = 8, ListTag = 9}
-export const standardValueTypes = Object.keys(StandardValueType).filter(k => typeof StandardValueType[k] === 'number').map(t => ({label: t, value: StandardValueType[t]}));
-export enum TextProcessingOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
-export const textProcessingOperations = Object.keys(TextProcessingOperation).filter(k => typeof TextProcessingOperation[k] === 'number').map(t => ({label: t, value: TextProcessingOperation[t]}));
-export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
-export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
-export enum BulkModificationProcessorValueType {Static = 1, Dynamic = 2, Variable = 3}
-export const bulkModificationProcessorValueTypes = Object.keys(BulkModificationProcessorValueType).filter(k => typeof BulkModificationProcessorValueType[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorValueType[t]}));
 export enum CoverDiscoverResultType {LocalFile = 1, FromAdditionalSource = 2, Icon = 3}
 export const coverDiscoverResultTypes = Object.keys(CoverDiscoverResultType).filter(k => typeof CoverDiscoverResultType[k] === 'number').map(t => ({label: t, value: CoverDiscoverResultType[t]}));
 export enum ResourceExistence {Exist = 1, Maybe = 2, New = 3}
@@ -162,6 +130,46 @@ export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));
 export enum TagGroupAdditionalItem {Tags = 1, PreferredAlias = 2, TagNamePreferredAlias = 4}
 export const tagGroupAdditionalItems = Object.keys(TagGroupAdditionalItem).filter(k => typeof TagGroupAdditionalItem[k] === 'number').map(t => ({label: t, value: TagGroupAdditionalItem[t]}));
+export enum CategoryResourceDisplayNameSegmentType {StaticText = 1, Property = 2, LeftWrapper = 3, RightWrapper = 4}
+export const categoryResourceDisplayNameSegmentTypes = Object.keys(CategoryResourceDisplayNameSegmentType).filter(k => typeof CategoryResourceDisplayNameSegmentType[k] === 'number').map(t => ({label: t, value: CategoryResourceDisplayNameSegmentType[t]}));
+export enum EnhancementRecordStatus {ContextCreated = 1, ContextApplied = 2}
+export const enhancementRecordStatuses = Object.keys(EnhancementRecordStatus).filter(k => typeof EnhancementRecordStatus[k] === 'number').map(t => ({label: t, value: EnhancementRecordStatus[t]}));
+export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
+export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
+export enum InternalProperty {RootPath = 1, ParentResource = 2, Resource = 3, Filename = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21}
+export const internalProperties = Object.keys(InternalProperty).filter(k => typeof InternalProperty[k] === 'number').map(t => ({label: t, value: InternalProperty[t]}));
+export enum PropertyPool {Internal = 1, Reserved = 2, Custom = 4, All = 7}
+export const propertyPools = Object.keys(PropertyPool).filter(k => typeof PropertyPool[k] === 'number').map(t => ({label: t, value: PropertyPool[t]}));
+export enum PropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15, Tags = 16}
+export const propertyTypes = Object.keys(PropertyType).filter(k => typeof PropertyType[k] === 'number').map(t => ({label: t, value: PropertyType[t]}));
+export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000, ExHentaiEnhancer = 1001, BangumiEnhancer = 1002, DLsiteEnhancer = 1003, RegexEnhancer = 1004}
+export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
+export enum ReservedProperty {Introduction = 12, Rating = 13, Cover = 22}
+export const reservedProperties = Object.keys(ReservedProperty).filter(k => typeof ReservedProperty[k] === 'number').map(t => ({label: t, value: ReservedProperty[t]}));
+export enum ResourceCacheType {Covers = 1, PlayableFiles = 2}
+export const resourceCacheTypes = Object.keys(ResourceCacheType).filter(k => typeof ResourceCacheType[k] === 'number').map(t => ({label: t, value: ResourceCacheType[t]}));
+export enum ResourceTag {IsParent = 1, Pinned = 2, PathDoesNotExist = 4, UnknownMediaLibrary = 8}
+export const resourceTags = Object.keys(ResourceTag).filter(k => typeof ResourceTag[k] === 'number').map(t => ({label: t, value: ResourceTag[t]}));
+export enum SearchCombinator {And = 1, Or = 2}
+export const searchCombinators = Object.keys(SearchCombinator).filter(k => typeof SearchCombinator[k] === 'number').map(t => ({label: t, value: SearchCombinator[t]}));
+export enum SearchOperation {Equals = 1, NotEquals = 2, Contains = 3, NotContains = 4, StartsWith = 5, NotStartsWith = 6, EndsWith = 7, NotEndsWith = 8, GreaterThan = 9, LessThan = 10, GreaterThanOrEquals = 11, LessThanOrEquals = 12, IsNull = 13, IsNotNull = 14, In = 15, NotIn = 16, Matches = 17, NotMatches = 18}
+export const searchOperations = Object.keys(SearchOperation).filter(k => typeof SearchOperation[k] === 'number').map(t => ({label: t, value: SearchOperation[t]}));
+export enum SpecialTextType {Useless = 1, Wrapper = 3, Standardization = 4, Volume = 6, Trim = 7, DateTime = 8, Language = 9}
+export const specialTextTypes = Object.keys(SpecialTextType).filter(k => typeof SpecialTextType[k] === 'number').map(t => ({label: t, value: SpecialTextType[t]}));
+export enum StandardValueType {String = 1, ListString = 2, Decimal = 3, Link = 4, Boolean = 5, DateTime = 6, Time = 7, ListListString = 8, ListTag = 9}
+export const standardValueTypes = Object.keys(StandardValueType).filter(k => typeof StandardValueType[k] === 'number').map(t => ({label: t, value: StandardValueType[t]}));
+export enum TextProcessingOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
+export const textProcessingOperations = Object.keys(TextProcessingOperation).filter(k => typeof TextProcessingOperation[k] === 'number').map(t => ({label: t, value: TextProcessingOperation[t]}));
+export enum BulkModificationProcessorOptionsItemsFilterBy {All = 1, Containing = 2, Matching = 3}
+export const bulkModificationProcessorOptionsItemsFilterBies = Object.keys(BulkModificationProcessorOptionsItemsFilterBy).filter(k => typeof BulkModificationProcessorOptionsItemsFilterBy[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorOptionsItemsFilterBy[t]}));
+export enum BulkModificationStringProcessOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
+export const bulkModificationStringProcessOperations = Object.keys(BulkModificationStringProcessOperation).filter(k => typeof BulkModificationStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationStringProcessOperation[t]}));
+export enum BulkModificationListStringProcessOperation {SetWithFixedValue = 1, Append = 2, Prepend = 3, Modify = 4, Delete = 5}
+export const bulkModificationListStringProcessOperations = Object.keys(BulkModificationListStringProcessOperation).filter(k => typeof BulkModificationListStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationListStringProcessOperation[t]}));
+export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
+export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
+export enum BulkModificationProcessorValueType {Static = 1, Dynamic = 2, Variable = 3}
+export const bulkModificationProcessorValueTypes = Object.keys(BulkModificationProcessorValueType).filter(k => typeof BulkModificationProcessorValueType[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorValueType[t]}));
 export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3, DLsite = 4, Regex = 5}
 export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
 export enum RegexEnhancerTarget {CaptureGroups = 0}

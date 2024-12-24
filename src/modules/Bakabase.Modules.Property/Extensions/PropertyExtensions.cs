@@ -156,9 +156,6 @@ public static class PropertyExtensions
         }
     }
 
-    public static PropertyType GetEnumCustomPropertyType(this Bakabase.Abstractions.Models.Domain.Property property) =>
-        (PropertyType) property.Type;
-
     public static CustomProperty ToCustomProperty(this Bakabase.Abstractions.Models.Domain.Property property)
     {
         if (property.Pool != PropertyPool.Custom)
@@ -193,4 +190,10 @@ public static class PropertyExtensions
             Value = dbValue.IsStandardValueType(type.GetDbValueType()) ? dbValue : null
         };
     }
+
+    public static object? GetBizValue(this Bakabase.Abstractions.Models.Domain.Property property, object? dbValue) =>
+        PropertyInternals.DescriptorMap[property.Type].GetBizValue(property, dbValue);
+
+    public static TBizValue? GetBizValue<TBizValue>(this Bakabase.Abstractions.Models.Domain.Property property,
+        object? dbValue) => GetBizValue(property, dbValue) is TBizValue bv ? bv : default;
 }

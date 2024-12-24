@@ -26,11 +26,11 @@ namespace Bakabase.Abstractions.Components.TextProcessing
                     return raw + tpo.Value;
                 case TextProcessingOperation.AddToAnyPosition:
                 {
-                    if (tpo is {Reverse: not null, Position: not null} && !string.IsNullOrEmpty(tpo.Value) &&
+                    if (tpo is {IsPositioningDirectionReversed: not null, Index: not null} && !string.IsNullOrEmpty(tpo.Value) &&
                         !string.IsNullOrEmpty(raw))
                     {
                         var length = raw.Length;
-                        var position = tpo.Reverse.Value ? length - tpo.Position.Value : tpo.Position.Value;
+                        var position = tpo.IsPositioningDirectionReversed.Value ? length - tpo.Index.Value : tpo.Index.Value;
                         return raw.Insert(position, tpo.Value);
                     }
 
@@ -57,11 +57,11 @@ namespace Bakabase.Abstractions.Components.TextProcessing
                 case TextProcessingOperation.RemoveFromAnyPosition:
                 {
                     if (!string.IsNullOrEmpty(raw) && tpo is
-                            {Count: not null, RemoveBefore: not null, Position: not null, Reverse: not null})
+                            {Count: not null, IsOperationDirectionReversed: not null, Index: not null, IsPositioningDirectionReversed: not null})
                     {
                         var length = raw.Length;
-                        var index = tpo.Reverse.Value ? length - tpo.Position.Value : tpo.Position.Value;
-                        if (tpo.RemoveBefore.Value)
+                        var index = tpo.IsPositioningDirectionReversed.Value ? length - tpo.Index.Value : tpo.Index.Value;
+                        if (tpo.IsOperationDirectionReversed.Value)
                         {
                             var nIndex = index - tpo.Count.Value + 1;
                             if (nIndex < 0)

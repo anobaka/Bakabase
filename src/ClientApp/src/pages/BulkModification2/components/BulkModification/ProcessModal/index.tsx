@@ -94,10 +94,9 @@ export default ({
       <Card>
         <CardHeader>
           <div className={'flex items-center gap-1'}>
-            <div>{t('Preprocessing')}</div>
+            <div>{t('Steps')}</div>
             <Tooltip content={(
               <div>
-                <div>{t('If a preprocessing procedure is set, the variables will be preprocessed first before being used.')}</div>
                 <div>{t('You can add multiple preprocessing steps.')}</div>
               </div>
             )}
