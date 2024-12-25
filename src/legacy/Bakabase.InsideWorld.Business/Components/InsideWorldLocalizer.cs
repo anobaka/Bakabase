@@ -108,6 +108,8 @@ namespace Bakabase.InsideWorld.Business.Components
             };
         }
 
+        public string Unknown() => this[nameof(Unknown)];
+
         public string Property_DescriptorIsNotFound(PropertyPool type, int propertyId)
         {
             return this[nameof(Property_DescriptorIsNotFound), type, propertyId];

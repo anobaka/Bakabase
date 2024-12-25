@@ -1,4 +1,4 @@
-import type { PropertyPool, PropertyValueScope } from '@/sdk/constants';
+import type { BulkModificationProcessorValueType, PropertyPool, PropertyValueScope } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
 
 export type BulkModificationProcessStep = {
@@ -24,4 +24,13 @@ export type BulkModificationProcess = {
 
   steps?: BulkModificationProcessStep[];
   property: IProperty;
+};
+
+export type BulkModificationProcessValue = {
+  type: BulkModificationProcessorValueType;
+  propertyPool?: PropertyPool;
+  propertyId?: number;
+  // serialized
+  value?: string;
+  isDbValue?: boolean;
 };

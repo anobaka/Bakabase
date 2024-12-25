@@ -2,18 +2,8 @@
 
 public enum BulkModificationProcessorValueType
 {
-    /// <summary>
-    /// Biz value
-    /// </summary>
-    Static = 1,
-
-    /// <summary>
-    /// Db value
-    /// </summary>
-    Dynamic = 2,
-
-    /// <summary>
-    /// Variable
-    /// </summary>
-    Variable = 3
+    ManuallyInput = 1,
+    Variable = 2,
+    DynamicPropertyDbValue = 3,
+    DynamicPropertyBizValue = 4
 }

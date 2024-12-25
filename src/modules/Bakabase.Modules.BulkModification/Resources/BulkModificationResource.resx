@@ -120,4 +120,10 @@
   <data name="DefaultName" xml:space="preserve">
     <value>New bulk modification</value>
   </data>
+  <data name="PropertyIsNotFound" xml:space="preserve">
+    <value>Property is not found by pool: {0}, id: {1}</value>
+  </data>
+  <data name="VariableIsNotFound" xml:space="preserve">
+    <value>Variable: {0} is not found</value>
+  </data>
 </root>

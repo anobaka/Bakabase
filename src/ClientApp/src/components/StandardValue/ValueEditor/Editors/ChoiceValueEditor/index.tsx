@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import { SearchOutlined } from '@ant-design/icons';
-import { data } from 'autoprefixer';
-import type { ValueEditorProps } from '../models';
+import { EditOutlined, SearchOutlined } from '@ant-design/icons';
+import type { ValueEditorProps } from '../../models';
 import { Button, Input, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { buildLogger } from '@/components/utils';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 type Data = { value: string; label: string };
 
@@ -18,7 +18,13 @@ const log = buildLogger('ChoiceValueEditor');
 
 export default (props: ChoiceValueEditorProps) => {
   const { t } = useTranslation();
-  const { multiple, getDataSource, value: propsValue, onValueChange } = props;
+  const { createPortal } = useBakabaseContext();
+  const {
+    multiple,
+    getDataSource,
+    value: propsValue,
+    onValueChange,
+  } = props;
 
   const [dataSource, setDataSource] = useState<Data[]>([]);
   const [keyword, setKeyword] = useState('');
@@ -52,7 +58,9 @@ export default (props: ChoiceValueEditorProps) => {
           size={'sm'}
           value={keyword}
           startContent={<SearchOutlined className={'text-small'} />}
-          onValueChange={v => { setKeyword(v); }}
+          onValueChange={v => {
+            setKeyword(v);
+          }}
         />
       </div>
       <div className={'flex flex-wrap gap-1'}>

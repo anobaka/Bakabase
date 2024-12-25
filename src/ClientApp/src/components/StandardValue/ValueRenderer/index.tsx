@@ -30,7 +30,7 @@ const StandardValueRenderer = (props: Props) => {
         <StringValueRenderer
           value={value as string}
           variant={variant}
-          multiline={propertyType == PropertyType.Multilevel}
+          multiline={propertyType == PropertyType.MultilineText}
         />
       );
     case StandardValueType.ListString: {

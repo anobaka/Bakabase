@@ -68,5 +68,23 @@ namespace Bakabase.Modules.BulkModification.Resources {
                 return ResourceManager.GetString("DefaultName", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Property is not found by pool: {0}, id: {1}.
+        /// </summary>
+        public static string PropertyIsNotFound {
+            get {
+                return ResourceManager.GetString("PropertyIsNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Variable: {0} is not found.
+        /// </summary>
+        public static string VariableIsNotFound {
+            get {
+                return ResourceManager.GetString("VariableIsNotFound", resourceCulture);
+            }
+        }
     }
 }

@@ -345,4 +345,7 @@
   <data name="BackgroundTask_MoveFiles_Name" xml:space="preserve">
     <value>移动文件</value>
   </data>
+  <data name="Unknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
 </root>

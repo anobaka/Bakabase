@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Linq.Expressions;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bootstrap.Extensions;
 using ResourceDiff = Bakabase.Abstractions.Models.Domain.ResourceDiff;
 
@@ -26,7 +27,10 @@ namespace Bakabase.Modules.BulkModification.Services
 {
     public class BulkModificationService<TDbContext>(
         IServiceProvider serviceProvider,
-        ResourceService<TDbContext, BulkModificationDiffDbModel, int> diffOrm)
+        ResourceService<TDbContext, BulkModificationDiffDbModel, int> diffOrm,
+        IBulkModificationLocalizer localizer,
+        IPropertyLocalizer propertyLocalizer
+        )
         : ResourceService<TDbContext, BulkModificationDbModel, int>(serviceProvider), IBulkModificationService
         where TDbContext : DbContext, IBulkModificationDbContext
     {
@@ -126,6 +130,8 @@ namespace Bakabase.Modules.BulkModification.Services
                     var resources =
                         await ResourceService.GetByKeys(bm.FilteredResourceIds.ToArray(), ResourceAdditionalItem.All);
 
+                    var propertyMap = (await PropertyService.GetProperties(PropertyPool.All)).ToMap();
+
                     foreach (var resource in resources)
                     {
                         var variableMap = new Dictionary<string, (StandardValueType Type, object? Value)>();
@@ -143,7 +149,8 @@ namespace Bakabase.Modules.BulkModification.Services
                                         var processor =
                                             BulkModificationInternals.ProcessorMap[v.Property.Type.GetBizValueType()];
                                         var options =
-                                            preprocess.Options?.ConvertToProcessorOptions(variableMap, v.Property);
+                                            preprocess.Options?.ConvertToProcessorOptions(variableMap, propertyMap,
+                                                localizer);
                                         variableValue = processor.Process(variableValue, preprocess.Operation, options);
                                     }
                                 }
@@ -168,7 +175,7 @@ namespace Bakabase.Modules.BulkModification.Services
                                 foreach (var step in process.Steps)
                                 {
                                     var options =
-                                        step.Options?.ConvertToProcessorOptions(variableMap, process.Property);
+                                        step.Options?.ConvertToProcessorOptions(variableMap, propertyMap, localizer);
                                     newValue = processor.Process(newValue, step.Operation, options);
                                 }
                             }
@@ -250,7 +257,9 @@ namespace Bakabase.Modules.BulkModification.Services
             var dbBmDiffs = await diffOrm.GetAll(x => x.BulkModificationId == id);
             var bmDiffs = await dbBmDiffs.ToDomainModels(PropertyService);
             var resourceIds = dbBmDiffs.Select(r => r.ResourceId).ToList();
-            var resourcesMap = (await ResourceService.GetByKeys(resourceIds.ToArray(), ResourceAdditionalItem.All)).ToDictionary(d => d.Id, d => d);
+            var resourcesMap =
+                (await ResourceService.GetByKeys(resourceIds.ToArray(), ResourceAdditionalItem.All)).ToDictionary(
+                    d => d.Id, d => d);
             var propertyMap = await bmDiffs.PreparePropertyMap(PropertyService, true);
 
             if (bmDiffs.Count != resourcesMap.Count)

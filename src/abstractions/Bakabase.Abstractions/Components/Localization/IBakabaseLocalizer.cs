@@ -24,4 +24,5 @@ public interface IBakabaseLocalizer
     string Downloader_FailedToStart(string taskName, string message);
     string SpecialText_HistoricalLanguageValue2ShouldBeModified();
     string Reserved_Resource_Property_Name(ReservedProperty property);
+    string Unknown();
 }

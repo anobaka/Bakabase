@@ -9,21 +9,21 @@ import { buildLogger } from '@/components/utils';
 
 type Data = {label: string; value: string};
 
-type ListStringValueRendererProps = ValueRendererProps<string[]> & {
+type ChoiceValueRendererProps = ValueRendererProps<string[]> & {
   multiple?: boolean;
   getDataSource?: () => Promise<Data[]>;
 };
 
 const log = buildLogger('ChoiceValueRenderer');
 
-export default (props: ListStringValueRendererProps) => {
+export default (props: ChoiceValueRendererProps) => {
   const { value, editor, variant, getDataSource, multiple } = props;
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   log(props);
 
-  const startEditing = editor ? async () => {
+  const onClickValues = (editor) ? async () => {
     console.log(editor, getDataSource);
     createPortal(ChoiceValueEditor, {
       value: editor?.value,
@@ -36,17 +36,17 @@ export default (props: ListStringValueRendererProps) => {
   const validValues = value?.map(v => v != undefined) || [];
   if (validValues.length == 0) {
     return (
-      <NotSet onClick={startEditing} />
+      <NotSet onClick={onClickValues} />
     );
   }
 
   if (variant == 'light') {
     return (
-      <span onClick={startEditing}>{value?.join(', ')}</span>
+      <span onClick={onClickValues}>{value?.join(', ')}</span>
     );
   } else {
     return (
-      <div onClick={startEditing} className={'flex flex-wrap gap-1'}>
+      <div onClick={onClickValues} className={'flex flex-wrap gap-1'}>
         {value?.map(d => {
             return (
               <Chip

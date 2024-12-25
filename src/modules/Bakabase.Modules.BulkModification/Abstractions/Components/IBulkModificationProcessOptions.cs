@@ -10,5 +10,5 @@ public interface IBulkModificationProcessOptions
 {
     IBulkModificationProcessorOptions? ConvertToProcessorOptions(
         Dictionary<string, (StandardValueType Type, object? Value)>? variableMap,
-        Bakabase.Abstractions.Models.Domain.Property? property);
+        Dictionary<PropertyPool, Dictionary<int, Bakabase.Abstractions.Models.Domain.Property>>? propertyMap, IBulkModificationLocalizer localizer);
 }

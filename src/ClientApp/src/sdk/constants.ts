@@ -168,7 +168,7 @@ export enum BulkModificationListStringProcessOperation {SetWithFixedValue = 1, A
 export const bulkModificationListStringProcessOperations = Object.keys(BulkModificationListStringProcessOperation).filter(k => typeof BulkModificationListStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationListStringProcessOperation[t]}));
 export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
 export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
-export enum BulkModificationProcessorValueType {Static = 1, Dynamic = 2, Variable = 3}
+export enum BulkModificationProcessorValueType {ManuallyInput = 1, Variable = 2, DynamicPropertyDbValue = 3, DynamicPropertyBizValue = 4}
 export const bulkModificationProcessorValueTypes = Object.keys(BulkModificationProcessorValueType).filter(k => typeof BulkModificationProcessorValueType[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorValueType[t]}));
 export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3, DLsite = 4, Regex = 5}
 export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));

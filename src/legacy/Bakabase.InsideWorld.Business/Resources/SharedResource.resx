@@ -351,4 +351,7 @@ The version of lux is not limited.</value>
   <data name="BackgroundTask_MoveFiles_Name" xml:space="preserve">
     <value>Move files</value>
   </data>
+  <data name="Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
 </root>

@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Extensions;
+﻿using System.Collections.Concurrent;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
@@ -16,7 +17,8 @@ public static class StandardValueExtensions
     private const char SerializationHighLevelSeparator = ';';
     private const char SerializationSeparatorEscapeChar = '\\';
 
-    public static IStandardValueHandler GetHandler(this StandardValueType type) => StandardValueInternals.HandlerMap[type];
+    public static IStandardValueHandler GetHandler(this StandardValueType type) =>
+        StandardValueInternals.HandlerMap[type];
 
     public static object? DeserializeAsStandardValue(this string serializedValue, StandardValueType valueType,
         bool throwOnError = false)
@@ -154,4 +156,27 @@ public static class StandardValueExtensions
         StandardValueType.ListTag => value is List<TagValue>,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
     };
+
+
+    private static readonly ConcurrentDictionary<Type, StandardValueType> TypeStdValueTypeMap =
+        new ConcurrentDictionary<Type, StandardValueType>(new Dictionary<Type, StandardValueType>
+        {
+            {SpecificTypeUtils<string>.Type, StandardValueType.String},
+            {SpecificTypeUtils<List<string>>.Type, StandardValueType.ListString},
+            {SpecificTypeUtils<decimal>.Type, StandardValueType.Decimal},
+            {SpecificTypeUtils<LinkValue>.Type, StandardValueType.Link},
+            {SpecificTypeUtils<bool>.Type, StandardValueType.Boolean},
+            {SpecificTypeUtils<DateTime>.Type, StandardValueType.DateTime},
+            {SpecificTypeUtils<TimeSpan>.Type, StandardValueType.Time},
+            {SpecificTypeUtils<List<List<string>>>.Type, StandardValueType.ListListString},
+            {SpecificTypeUtils<List<TagValue>>.Type, StandardValueType.ListTag},
+        });
+
+    public static StandardValueType? InferStandardValueType(this Type type) =>
+        TypeStdValueTypeMap.GetValueOrDefault(type);
+
+    public static StandardValueType? InferStandardValueType(this object? value)
+    {
+        return value?.GetType().InferStandardValueType();
+    }
 }
