@@ -222,4 +222,7 @@
   <data name="BuiltinPropertyName_Cover" xml:space="preserve">
     <value>封面</value>
   </data>
+  <data name="UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType" xml:space="preserve">
+    <value>这是一个引用值类型，如果需要使用该类型，您需要至少创建一个该类型的属性并设置它的选项，这样才能确保您在对应的编辑器中有数据可以选择。</value>
+  </data>
 </root>

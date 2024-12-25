@@ -13,9 +13,6 @@ import {
   PropertyType,
   StandardValueType,
 } from '@/sdk/constants';
-import {
-  ValueWithMultipleTypeEditor,
-} from '@/pages/BulkModification2/components/BulkModification/ValueWithMultipleType';
 import { Input, Select } from '@/components/bakaui';
 import type { IProperty } from '@/components/Property/models';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
@@ -70,7 +67,7 @@ export default ({
 
   const renderValueCell = (field: string = 'value') => {
     return (
-      <ValueWithMultipleTypeEditor
+      <ProcessValue
         valueTypes={availableValueTypes}
         value={options[field]}
         onChange={(valueType, value) => changeOptions({

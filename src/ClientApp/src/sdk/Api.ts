@@ -1707,6 +1707,13 @@ export interface BakabaseServiceModelsViewFileSystemEntryNameViewModel {
   isDirectory: boolean;
 }
 
+export interface BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel {
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+  isAvailable: boolean;
+  unavailableReason?: string;
+}
+
 export interface BakabaseServiceModelsViewPropertyViewModel {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -1938,6 +1945,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewFileSystemEntryNameViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewPropertyViewModel {
@@ -7085,6 +7099,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getPropertiesByPool: (pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewPropertyViewModel, any>({
         path: `/property/pool/${pool}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Property
+     * @name GetAvailablePropertyTypesForManuallySettingValue
+     * @request GET:/property/property-types-for-manually-setting-value
+     */
+    getAvailablePropertyTypesForManuallySettingValue: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel,
+        any
+      >({
+        path: `/property/property-types-for-manually-setting-value`,
         method: "GET",
         format: "json",
         ...params,

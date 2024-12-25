@@ -10,4 +10,5 @@ public interface IPropertyLocalizer
     string DescriptorIsNotFound(PropertyPool pool, int propertyId);
     string PropertyTypeName(PropertyType type);
     string PropertyPoolName(PropertyPool  pool);
+    string UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType();
 }

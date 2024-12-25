@@ -13,6 +13,7 @@ public record BulkModificationProcessValue
     public BulkModificationProcessorValueType Type { get; set; }
     public PropertyPool? PropertyPool { get; set; }
     public int? PropertyId { get; set; }
+    public PropertyType? PropertyType { get; set; }
 
     /// <summary>
     /// Static Text / Variable Key / Serialized BizValue / Serialized DbValue

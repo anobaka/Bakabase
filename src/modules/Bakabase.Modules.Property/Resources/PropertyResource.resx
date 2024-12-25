@@ -222,4 +222,7 @@
   <data name="BuiltinPropertyName_Cover" xml:space="preserve">
     <value>Cover</value>
   </data>
+  <data name="UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType" xml:space="preserve">
+    <value>This is a type with reference value, to use this type, you should create at least one property with this type and setup its options to make sure you can select something in editor.</value>
+  </data>
 </root>

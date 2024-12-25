@@ -31,4 +31,9 @@ internal class PropertyLocalizer(IStringLocalizer<PropertyResource> localizer) :
     {
         return localizer[$"{nameof(PropertyPoolName)}_{pool}"];
     }
+
+    public string UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType()
+    {
+        return localizer[nameof(UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType)];
+    }
 }

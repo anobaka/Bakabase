@@ -374,5 +374,15 @@ namespace Bakabase.Modules.Property.Resources {
                 return ResourceManager.GetString("PropertyTypeName_Time", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This is a type with reference value, to use this type, you should create at least one property with this type and setup its options to make sure you can select something in editor..
+        /// </summary>
+        internal static string UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType {
+            get {
+                return ResourceManager.GetString("UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValue" +
+                        "Type", resourceCulture);
+            }
+        }
     }
 }

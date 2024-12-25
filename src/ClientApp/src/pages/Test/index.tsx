@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect } from 'react';
 import './index.scss';
 import { useTranslation } from 'react-i18next';
 import { ListboxItem } from '@nextui-org/react';
@@ -9,19 +9,20 @@ import Sortable from './cases/Sortable';
 import MediaPreviewer from './cases/MediaPreviewer';
 import CategoryEnhancerOptionsDialog from './cases/CategoryEnhancerOptionsDialog';
 import ResourceFilter from './cases/ResourceFilter';
-import { Button, Divider, Listbox } from '@/components/bakaui';
+import { Button, Listbox } from '@/components/bakaui';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
-import PropertySelector from '@/components/PropertySelector';
 import AntdMenu from '@/layouts/BasicLayout/components/PageNav/components/AntdMenu';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import type { ResourceSearchFilter } from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/models';
 import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector';
 import VirtualList from '@/pages/Test/cases/VirtualList';
 import ResourceTransfer from '@/pages/Test/cases/ResourceTransfer';
+import { ValueWithMultipleTypeEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
+import { StandardValueType } from '@/sdk/constants';
 
 
 const components = {
+  BulkModification: <ValueWithMultipleTypeEditor valueType={StandardValueType.Boolean} />,
   ResourceTransfer: <ResourceTransfer />,
   Filter: <ResourceFilter />,
   VirtualList: <VirtualList />,

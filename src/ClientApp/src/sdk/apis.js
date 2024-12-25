@@ -7887,6 +7887,45 @@ export const GetPropertiesByPoolURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetAvailablePropertyTypesForManuallySettingValue
+ * url: GetAvailablePropertyTypesForManuallySettingValueURL
+ * method: GetAvailablePropertyTypesForManuallySettingValue_TYPE
+ * raw_url: GetAvailablePropertyTypesForManuallySettingValue_RAW_URL
+ */
+export const GetAvailablePropertyTypesForManuallySettingValue = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/property/property-types-for-manually-setting-value'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAvailablePropertyTypesForManuallySettingValue_RAW_URL = function() {
+  return '/property/property-types-for-manually-setting-value'
+}
+export const GetAvailablePropertyTypesForManuallySettingValue_TYPE = function() {
+  return 'get'
+}
+export const GetAvailablePropertyTypesForManuallySettingValueURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/property/property-types-for-manually-setting-value'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetSearchOperationsForProperty
  * url: GetSearchOperationsForPropertyURL
  * method: GetSearchOperationsForProperty_TYPE
