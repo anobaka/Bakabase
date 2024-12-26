@@ -38,8 +38,8 @@ type Props = {
   onChange?: (value: BulkModificationProcessValue) => any;
   variables?: BulkModificationVariable[];
   value?: BulkModificationProcessValue;
-  property?: IProperty;
   baseValueType: PropertyType;
+  preferredProperty?: IProperty;
 };
 
 const log = buildLogger('ValueWithMultipleTypeEditor');
@@ -74,11 +74,11 @@ export default (props: Props) => {
     onChange,
     variables,
     value: propsValue,
-    property,
     baseValueType,
+    preferredProperty,
   } = props;
   const { t } = useTranslation();
-  const [value, setValue] = useState<BulkModificationProcessValue>(propsValue ?? buildDefaultValue(property));
+  const [value, setValue] = useState<BulkModificationProcessValue>(propsValue ?? buildDefaultValue(preferredProperty));
 
   const [propertyTypesForManuallySettingValue, setPropertyTypesForManuallySettingValue] = useState<PropertyTypeForManuallySettingValue[]>([]);
 
@@ -93,18 +93,23 @@ export default (props: Props) => {
   log(props, value);
 
   const onFollowPropertyChanges = async (follow: boolean) => {
+    const { property } = value;
+    if (!property) {
+      return;
+    }
+
     if (value.value) {
       if (!value.followPropertyChanges && follow) {
-        value.value = deserializeStandardValue((await BApi.property.getPropertyDbValue(value.value))?.data, value);
+        value.value = deserializeStandardValue((await BApi.property.getPropertyDbValue(property.pool, property.id, { bizValue: value.value }))?.data ?? null, property.dbValueType);
+      } else {
+        if (value.followPropertyChanges && !follow) {
+          value.value = deserializeStandardValue((await BApi.property.getPropertyBizValue(property.pool, property.id, { dbValue: value.value }))?.data ?? null, property.bizValueType);
+        }
       }
     }
-    if (isSelected) {
-      BApi.property.getAvailablePropertyTypesForManuallySettingValue();
-    }
-    changeValue({
-      ...value,
-      followPropertyChanges: isSelected,
-    });
+
+    value.followPropertyChanges = follow;
+    changeValue({ ...value });
   };
 
   const changeValue = (patches: Partial<BulkModificationProcessValue>) => {
@@ -161,9 +166,7 @@ export default (props: Props) => {
           >
             <Checkbox
               checked={value.followPropertyChanges}
-              onValueChange={isSelected => {
-
-              }}
+              onValueChange={onFollowPropertyChanges}
             >
               {t('Follow property changes')}
             </Checkbox>
