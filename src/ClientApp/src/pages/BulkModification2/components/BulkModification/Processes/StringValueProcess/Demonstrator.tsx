@@ -2,16 +2,14 @@ import { Trans, useTranslation } from 'react-i18next';
 import React from 'react';
 import type { StringProcessOptions } from './models';
 import type { IProperty } from '@/components/Property/models';
-import type { BulkModificationProcessorValueType } from '@/sdk/constants';
 import { TextProcessingOperation } from '@/sdk/constants';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
 import {
-  ValueWithMultipleTypeDemonstrator,
-} from '@/pages/BulkModification2/components/BulkModification/ValueWithMultipleType';
+  ProcessValueDemonstrator,
+} from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
 import { buildLogger } from '@/components/utils';
 
 type Props = {
-  property: IProperty;
   operation?: TextProcessingOperation;
   options?: StringProcessOptions;
   variables?: BulkModificationVariable[];
@@ -24,7 +22,6 @@ export default (props: Props) => {
     operation,
     options,
     variables,
-    property,
   } = props;
   const { t } = useTranslation();
 
@@ -40,9 +37,7 @@ export default (props: Props) => {
             <div className="primary" />
             with fixed value
           </Trans>
-          <ValueWithMultipleTypeDemonstrator
-            property={property}
-            valueType={options?.valueType}
+          <ProcessValueDemonstrator
             value={options?.value}
             variables={variables}
           />
@@ -60,9 +55,7 @@ export default (props: Props) => {
           }}
         >
           Add
-          <ValueWithMultipleTypeDemonstrator
-            property={property}
-            valueType={options?.valueType}
+          <ProcessValueDemonstrator
             value={options?.value}
             variables={variables}
           />
@@ -81,9 +74,7 @@ export default (props: Props) => {
           }}
         >
           Add
-          <ValueWithMultipleTypeDemonstrator
-            property={property}
-            valueType={options?.valueType}
+          <ProcessValueDemonstrator
             value={options?.value}
             variables={variables}
           />
@@ -141,7 +132,6 @@ export default (props: Props) => {
     case TextProcessingOperation.ReplaceFromEnd: {
       const texts = {
         direction: operation == TextProcessingOperation.ReplaceFromEnd ? t('Position.End') : t('Position.Beginning'),
-        replace: options?.replace,
         find: options?.find,
       };
       return (
@@ -158,10 +148,8 @@ export default (props: Props) => {
             {/* 2 */}
             with
             {/* 3 */}
-            <ValueWithMultipleTypeDemonstrator
-              property={property}
-              valueType={options?.valueType}
-              value={options?.replace}
+            <ProcessValueDemonstrator
+              value={options?.value}
               variables={variables}
             />
             {/* 4 */}
@@ -175,7 +163,6 @@ export default (props: Props) => {
     case TextProcessingOperation.ReplaceFromAnyPosition: {
       const texts = {
         direction: options?.isPositioningDirectionReversed ? t('end') : t('start'),
-        replace: options?.replace,
         find: options?.find,
       };
       return (
@@ -191,24 +178,20 @@ export default (props: Props) => {
           {/* 2 */}
           with
           {/* 3 */}
-          <ValueWithMultipleTypeDemonstrator
-            property={property}
-            valueType={options?.valueType}
-            value={options?.replace}
+          <ProcessValueDemonstrator
+            value={options?.value}
             variables={variables}
           />
         </Trans>
       );
     }
     case TextProcessingOperation.ReplaceWithRegex: {
-      const texts = {
-        replace: options?.replace,
-        find: options?.find,
-      };
       return (
         <Trans
           i18nKey={'BulkModification.Processor.Demonstrator.Operation.ReplaceWithRegex'}
-          values={texts}
+          values={{
+            find: options?.find,
+          }}
         >
           {/* Use regex to replace xxx with yyy */}
           {/* 0 */}
@@ -220,14 +203,12 @@ export default (props: Props) => {
           {/* 3 */}
           <div className="primary">replace</div>
           {/* 4 */}
-          <div className="secondary">{texts.find}</div>
+          <div className="secondary">{options?.find}</div>
           {/* 5 */}
           with
           {/* 6 */}
-          <ValueWithMultipleTypeDemonstrator
-            property={property}
-            valueType={options?.valueType}
-            value={options?.replace}
+          <ProcessValueDemonstrator
+            value={options?.value}
             variables={variables}
           />
         </Trans>

@@ -70,6 +70,15 @@ namespace Bakabase.Modules.BulkModification.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Property type of editor is not set.
+        /// </summary>
+        public static string EditorPropertyTypeIsNotSet {
+            get {
+                return ResourceManager.GetString("EditorPropertyTypeIsNotSet", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Property is not found by pool: {0}, id: {1}.
         /// </summary>
         public static string PropertyIsNotFound {

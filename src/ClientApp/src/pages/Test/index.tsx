@@ -17,12 +17,12 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector';
 import VirtualList from '@/pages/Test/cases/VirtualList';
 import ResourceTransfer from '@/pages/Test/cases/ResourceTransfer';
-import { ValueWithMultipleTypeEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
+import { ProcessValueEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
 import { StandardValueType } from '@/sdk/constants';
 
 
 const components = {
-  BulkModification: <ValueWithMultipleTypeEditor valueType={StandardValueType.Boolean} />,
+  BulkModification: <ProcessValueEditor valueType={StandardValueType.Boolean} />,
   ResourceTransfer: <ResourceTransfer />,
   Filter: <ResourceFilter />,
   VirtualList: <VirtualList />,

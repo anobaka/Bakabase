@@ -28,4 +28,9 @@ internal class BulkModificationLocalizer(
             pool.HasValue ? propertyLocalizer.PropertyPoolName(pool.Value) : bakabaseLocalizer.Unknown(),
             idOrName ?? bakabaseLocalizer.Unknown()];
     }
+
+    public string EditorPropertyTypeIsNotSet()
+    {
+        return localizer[nameof(EditorPropertyTypeIsNotSet)];
+    }
 }

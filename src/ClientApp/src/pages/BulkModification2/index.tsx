@@ -19,18 +19,22 @@ export default () => {
 
   const bmInternals = store.getModelState('bulkModificationInternals');
 
-  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const [expandedKeys, setExpandedKeys] = useState<string[]>(['4']);
 
   const [bulkModifications, setBulkModifications] = useState<BulkModificationModel[]>();
 
   const loadAllBulkModifications = useCallback(async () => {
     const r = await BApi.bulkModification.getAllBulkModifications();
-    setBulkModifications(r.data || []);
+    const bms = r.data || [];
+    // setExpandedKeys(bms.map(b => b.id.toString()));
+    setBulkModifications(bms);
   }, []);
 
   useEffect(() => {
     loadAllBulkModifications();
   }, []);
+
+  console.log(expandedKeys);
 
   return (
     <div>
@@ -38,7 +42,7 @@ export default () => {
         <Button
           color={'primary'}
           size={'sm'}
-          onClick={() => {
+          onPress={() => {
             BApi.bulkModification.addBulkModification().then(r => {
               loadAllBulkModifications();
             });
@@ -64,8 +68,8 @@ export default () => {
           className={'p-0 pt-1'}
           selectionMode={'multiple'}
           variant={'splitted'}
-          expandedKeys={expandedKeys}
-          onExpandedChange={keys => {
+          selectedKeys={expandedKeys}
+          onSelectionChange={keys => {
             if (!keys) {
               setExpandedKeys([]);
             }
@@ -74,9 +78,10 @@ export default () => {
         >
           {bulkModifications.map((bm, i) => {
             const isExpanded = expandedKeys.includes(bm.id.toString());
+            console.log(expandedKeys, isExpanded, bm.id.toString());
             return (
               <AccordionItem
-                key={bm.id}
+                key={bm.id.toString()}
                 //   subtitle={(
                 //     <div>
                 //       123
@@ -92,8 +97,7 @@ export default () => {
                             size={'sm'}
                             variant={'light'}
                             isIconOnly
-                            onClick={e => {
-                              e.stopPropagation();
+                            onPress={e => {
                               let newName = bm.name;
                               createPortal(Modal, {
                                 defaultVisible: true,

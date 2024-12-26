@@ -128,6 +128,20 @@ public class ReservedPropertyValueService(
 
                             break;
                         }
+                        case Abstractions.Models.Domain.Constants.ReservedProperty.Cover:
+                        {
+                            var newCoverPaths = stdValue as List<string> ?? [];
+                            var coverPaths = data.CoverPaths ?? [];
+                            if (newCoverPaths.Count != coverPaths.Count || !newCoverPaths.SequenceEqual(coverPaths))
+                            {
+                                data.CoverPaths = newCoverPaths;
+                                dataIsChanged = true;
+                            }
+
+                            break;
+                        }
+                        default:
+                            throw new ArgumentOutOfRangeException();
                     }
 
                     if (dataIsChanged)

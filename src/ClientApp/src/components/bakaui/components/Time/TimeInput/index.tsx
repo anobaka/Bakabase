@@ -22,6 +22,7 @@ export default ({ value, onChange, defaultValue, ...props }: TimeInputProps) => 
       onChange={v => {
         onChange?.(dayjs.duration(v.toString()));
       }}
+      hourCycle={24}
       {...props}
     />
   );

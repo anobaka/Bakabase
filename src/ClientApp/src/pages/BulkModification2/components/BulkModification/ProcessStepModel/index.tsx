@@ -49,7 +49,7 @@ export default ({
           <StringValueProcessEditor
             options={options}
             operation={operation}
-            property={property}
+            propertyType={property.type}
             onChange={(operation, options, error) => {
               setOperation(operation);
               setOptions(options);

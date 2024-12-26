@@ -5,9 +5,10 @@ import type { IProperty } from '@/components/Property/models';
 import { BulkModificationListStringProcessOperation } from '@/sdk/constants';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
 import {
-  ValueWithMultipleTypeDemonstrator,
-} from '@/pages/BulkModification2/components/BulkModification/ValueWithMultipleType';
+  ProcessValueDemonstrator,
+} from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
 import { buildLogger } from '@/components/utils';
+import { ProcessValueEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
 
 type Props = {
   property: IProperty;
@@ -39,7 +40,7 @@ export default (props: Props) => {
             <div className="primary" />
             with fixed value
           </Trans>
-          <ValueWithMultipleTypeDemonstrator
+          <ProcessValueDemonstrator
             property={property}
             valueType={options?.valueType}
             value={options?.value}
@@ -59,7 +60,7 @@ export default (props: Props) => {
           }}
         >
           Add
-          <ValueWithMultipleTypeDemonstrator
+          <ProcessValueDemonstrator
             property={property}
             valueType={options?.valueType}
             value={options?.value}
@@ -80,7 +81,7 @@ export default (props: Props) => {
           }}
         >
           Add
-          <ValueWithMultipleTypeDemonstrator
+          <ProcessValueDemonstrator
             property={property}
             valueType={options?.valueType}
             value={options?.value}
@@ -157,7 +158,7 @@ export default (props: Props) => {
             {/* 2 */}
             with
             {/* 3 */}
-            <ValueWithMultipleTypeDemonstrator
+            <ProcessValueDemonstrator
               property={property}
               valueType={options?.valueType}
               value={options?.replace}
@@ -190,7 +191,7 @@ export default (props: Props) => {
           {/* 2 */}
           with
           {/* 3 */}
-          <ValueWithMultipleTypeDemonstrator
+          <ProcessValueDemonstrator
             property={property}
             valueType={options?.valueType}
             value={options?.replace}
@@ -223,7 +224,7 @@ export default (props: Props) => {
           {/* 5 */}
           with
           {/* 6 */}
-          <ValueWithMultipleTypeDemonstrator
+          <ProcessValueDemonstrator
             property={property}
             valueType={options?.valueType}
             value={options?.replace}

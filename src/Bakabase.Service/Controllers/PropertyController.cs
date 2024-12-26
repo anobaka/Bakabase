@@ -1,11 +1,14 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Property.Models.Input;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -35,17 +38,44 @@ namespace Bakabase.Service.Controllers
         public async Task<ListResponse<PropertyTypeForManuallySettingValueViewModel>>
             GetAvailablePropertyTypesForManuallySettingValue()
         {
-            var propertyTypes = (await service.GetProperties(PropertyPool.All)).Select(a => a.Type).ToHashSet();
+            var typePropertiesMap = (await service.GetProperties(PropertyPool.All)).GroupBy(d => d.Type)
+                .ToDictionary(d => d.Key, d => d.ToArray());
             var viewModels = SpecificEnumUtils<PropertyType>.Values.Select(a =>
             {
-                var isAvailable = !a.IsReferenceValueType() || propertyTypes.Contains(a);
-                return new PropertyTypeForManuallySettingValueViewModel(a, isAvailable,
-                    isAvailable
-                        ? null
-                        : localizer
-                            .UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType());
+                string? unavailableReason = null;
+                var properties = a.IsReferenceValueType()
+                    ? typePropertiesMap.GetValueOrDefault(a)?.Select(x => x.ToViewModel(localizer)).ToArray()
+                    : null;
+                if (a.IsReferenceValueType() && properties?.Any() != true)
+                {
+                    unavailableReason = localizer
+                        .UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType();
+                }
+
+                return new PropertyTypeForManuallySettingValueViewModel(a, a.GetDbValueType(), a.GetBizValueType(),
+                    a.IsReferenceValueType(), properties, unavailableReason);
             });
             return new ListResponse<PropertyTypeForManuallySettingValueViewModel>(viewModels);
+        }
+
+        [HttpGet("pool/{pool}/id/{id}/biz-value")]
+        [SwaggerOperation(OperationId = "GetPropertyBizValue")]
+        public async Task<SingletonResponse<string>> GetBizValue(PropertyPool pool, int id, string? dbValue)
+        {
+            var property = await service.GetProperty(pool, id);
+            var bizValue = property.GetBizValue(dbValue.DeserializeDbValueAsStandardValue(property.Type))
+                ?.SerializeBizValueAsStandardValue(property.Type);
+            return new SingletonResponse<string>(bizValue);
+        }
+
+        [HttpGet("pool/{pool}/id/{id}/db-value")]
+        [SwaggerOperation(OperationId = "GetPropertyDbValue")]
+        public async Task<SingletonResponse<string>> GetDbValue(PropertyPool pool, int id, string? bizValue)
+        {
+            var property = await service.GetProperty(pool, id);
+            var pd = PropertyInternals.DescriptorMap[property.Type];
+            var (dbValue, _) = pd.PrepareDbValue(property, bizValue.DeserializeBizValueAsStandardValue(property.Type));
+            return new SingletonResponse<string>(dbValue.SerializeDbValueAsStandardValue(property.Type));
         }
     }
 }

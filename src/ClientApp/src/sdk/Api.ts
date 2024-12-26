@@ -1710,8 +1710,14 @@ export interface BakabaseServiceModelsViewFileSystemEntryNameViewModel {
 export interface BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel {
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
-  isAvailable: boolean;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  dbValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  isReferenceValueType: boolean;
+  properties?: BakabaseServiceModelsViewPropertyViewModel[];
   unavailableReason?: string;
+  isAvailable: boolean;
 }
 
 export interface BakabaseServiceModelsViewPropertyViewModel {
@@ -7118,6 +7124,52 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/property/property-types-for-manually-setting-value`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Property
+     * @name GetPropertyBizValue
+     * @request GET:/property/pool/{pool}/id/{id}/biz-value
+     */
+    getPropertyBizValue: (
+      pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool,
+      id: number,
+      query?: {
+        dbValue?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/property/pool/${pool}/id/${id}/biz-value`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Property
+     * @name GetPropertyDbValue
+     * @request GET:/property/pool/{pool}/id/{id}/db-value
+     */
+    getPropertyDbValue: (
+      pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool,
+      id: number,
+      query?: {
+        bizValue?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/property/pool/${pool}/id/${id}/db-value`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),

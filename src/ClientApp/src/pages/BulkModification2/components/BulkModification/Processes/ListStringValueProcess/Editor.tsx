@@ -18,6 +18,7 @@ import type { IProperty } from '@/components/Property/models';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
 import { buildLogger } from '@/components/utils';
 import type { RecursivePartial } from '@/components/types';
+import { ProcessValueEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
 
 
 type Props = {
@@ -67,7 +68,7 @@ export default ({
 
   const renderValueCell = (field: string = 'value') => {
     return (
-      <ProcessValue
+      <ProcessValueEditor
         valueTypes={availableValueTypes}
         value={options[field]}
         onChange={(valueType, value) => changeOptions({

@@ -3,6 +3,6 @@ import Editor from './Editor';
 
 
 export {
-  Editor as ValueWithMultipleTypeEditor,
-  Demonstrator as ValueWithMultipleTypeDemonstrator,
+  Editor as ProcessValueEditor,
+  Demonstrator as ProcessValueDemonstrator,
 };

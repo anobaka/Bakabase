@@ -1,7 +1,6 @@
 import type { ButtonProps as NextUIButtonProps } from '@nextui-org/react';
 import { Button as NextUiButton, ButtonGroup } from '@nextui-org/react';
 import { forwardRef } from 'react';
-import type * as react from 'react';
 import type { ReactRef } from '@nextui-org/react-utils';
 
 interface ButtonProps extends Omit<NextUIButtonProps, 'size' | 'ref'>{

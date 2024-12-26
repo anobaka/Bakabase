@@ -64,7 +64,7 @@ export default (props: ChoiceValueEditorProps) => {
         />
       </div>
       <div className={'flex flex-wrap gap-1'}>
-        {dataSource.filter(d =>
+        {dataSource.length == 0 ? t('No choices available, please check your configurations') : dataSource.filter(d =>
           keyword.length == 0 || d.label.toLowerCase().includes(keyword.toLowerCase())).map(d => {
           return (
             <Button

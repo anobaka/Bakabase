@@ -7,4 +7,5 @@ public interface IBulkModificationLocalizer
     string DefaultName();
     string VariableIsNotFound(string variableName);
     string PropertyIsNotFound(PropertyPool? pool, int? id);
+    string EditorPropertyTypeIsNotSet();
 }

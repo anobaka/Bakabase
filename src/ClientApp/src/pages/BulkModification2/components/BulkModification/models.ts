@@ -28,9 +28,11 @@ export type BulkModificationProcess = {
 
 export type BulkModificationProcessValue = {
   type: BulkModificationProcessorValueType;
-  propertyType?: PropertyType;
+  editorPropertyType?: PropertyType;
   propertyPool?: PropertyPool;
   propertyId?: number;
   // serialized
   value?: string;
+  followPropertyChanges?: boolean;
+  property?: IProperty;
 };

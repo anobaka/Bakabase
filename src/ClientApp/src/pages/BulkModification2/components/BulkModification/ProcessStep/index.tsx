@@ -47,7 +47,6 @@ export default ({
       case PropertyType.SingleChoice:
         return (
           <StringValueProcessDemonstrator
-            property={property}
             variables={variables}
             operation={step.operation}
             options={step.options}

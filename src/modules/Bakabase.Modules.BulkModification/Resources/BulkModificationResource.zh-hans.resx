@@ -123,6 +123,9 @@
   <data name="PropertyIsNotFound" xml:space="preserve">
     <value>未找到属性，属性池：{0}，id：{1}</value>
   </data>
+  <data name="EditorPropertyTypeIsNotSet" xml:space="preserve">
+    <value>未设置编辑器属性类型</value>
+  </data>
   <data name="VariableIsNotFound" xml:space="preserve">
     <value>未找到变量：{0}</value>
   </data>

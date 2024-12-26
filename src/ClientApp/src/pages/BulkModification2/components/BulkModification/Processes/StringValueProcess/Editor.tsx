@@ -1,42 +1,40 @@
 import { Trans, useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
 import type { StringProcessOptions } from './models';
 import { validate } from './helpers';
+import type {
+  PropertyType } from '@/sdk/constants';
 import {
   type BulkModificationProcessorValueType,
   BulkModificationStringProcessOperation,
   bulkModificationStringProcessOperations,
 } from '@/sdk/constants';
-import {
-  ValueWithMultipleTypeEditor,
-} from '@/pages/BulkModification2/components/BulkModification/ValueWithMultipleType';
+import { ProcessValueEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
 import { Input, NumberInput, Select } from '@/components/bakaui';
 import DirectionSelector from '@/pages/BulkModification2/components/BulkModification/DirectionSelector';
-import type { IProperty } from '@/components/Property/models';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
 import { buildLogger } from '@/components/utils';
 
 
 type Props = {
-  property: IProperty;
   operation?: BulkModificationStringProcessOperation;
   options?: StringProcessOptions;
   variables?: BulkModificationVariable[];
   availableValueTypes?: BulkModificationProcessorValueType[];
   onChange?: (operation: BulkModificationStringProcessOperation, options?: StringProcessOptions, error?: string) => any;
+  propertyType: PropertyType;
 };
 
 const log = buildLogger('StringProcessorEditor');
 
 
 export default ({
-                  property,
                   operation: propsOperation,
                   options: propsOptions,
                   onChange,
                   variables,
                   availableValueTypes,
+                  propertyType,
                 }: Props) => {
   const { t } = useTranslation();
   const [options, setOptions] = useState<StringProcessOptions>(propsOptions ?? {});
@@ -63,17 +61,14 @@ export default ({
     setOptions(newOptions);
   };
 
-  const renderValueCell = (field: string = 'value') => {
+  const renderValueCell = () => {
     return (
-      <ValueWithMultipleTypeEditor
-        valueTypes={availableValueTypes}
-        value={options[field]}
-        onChange={(valueType, value) => changeOptions({
-          [field]: value,
-          valueType,
-        })}
-        variables={variables}
-        property={property}
+      <ProcessValueEditor
+        value={options.value}
+        onChange={value => {
+          changeOptions({ value });
+        }}
+        baseValueType={propertyType}
       />
     );
   };
@@ -226,7 +221,7 @@ export default ({
                 {/* 2 */}
                 &nbsp;with&nbsp;
                 {/* 3 */}
-                {renderValueCell('replace')}
+                {renderValueCell()}
               </Trans>
             </div>
           ),

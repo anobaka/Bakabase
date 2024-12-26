@@ -3,7 +3,5 @@
 public enum BulkModificationProcessorValueType
 {
     ManuallyInput = 1,
-    Variable = 2,
-    DynamicPropertyDbValue = 3,
-    DynamicPropertyBizValue = 4
+    Variable = 2
 }

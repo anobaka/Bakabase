@@ -5,9 +5,9 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
-import { Button, Card, CardBody, Input, Modal, Select, Tooltip } from '@/components/bakaui';
+import { Button, Card, CardBody, Chip, Input, Modal, Select, Tooltip } from '@/components/bakaui';
 import PropertySelector from '@/components/PropertySelector';
-import { PropertyPool, propertyValueScopes } from '@/sdk/constants';
+import { PropertyPool, PropertyType, propertyValueScopes } from '@/sdk/constants';
 import ProcessStep from '@/pages/BulkModification2/components/BulkModification/ProcessStep';
 import ProcessStepModel from '@/pages/BulkModification2/components/BulkModification/ProcessStepModel';
 import type { DestroyableProps } from '@/components/bakaui/types';
@@ -65,11 +65,11 @@ export default ({
         <CardBody>
           <div className={'grid items-center gap-2'} style={{ gridTemplateColumns: 'auto 1fr' }}>
             <div className={'text-right'}>{t('Property')}</div>
-            <div>
+            <div className={'flex items-center gap-2'}>
               <Button
                 size="sm"
                 color={'primary'}
-                variant={'light'}
+                variant={'flat'}
                 onClick={() => {
                   createPortal(
                     PropertySelector, {
@@ -91,6 +91,11 @@ export default ({
               >
                 {variable?.property ? variable.property.name : t('Select a property')}
               </Button>
+              {variable?.property && (
+                <Chip size={'sm'} radius={'sm'}>
+                  {t(`PropertyType.${PropertyType[variable.property.type]}`)}
+                </Chip>
+              )}
             </div>
             <div className={'text-right'}>
               {t('Scope')}
@@ -184,26 +189,26 @@ export default ({
               color={'secondary'}
               variant={'ghost'}
               onClick={() => {
-                  if (variable?.property) {
-                    createPortal(
-                      ProcessStepModel, {
-                        property: variable.property,
-                        onSubmit: (operation: number, options: any) => {
-                          if (!variable.preprocesses) {
-                            variable.preprocesses = [];
-                          }
-                          variable.preprocesses.push({
-                            operation,
-                            options,
-                          });
-                          setVariable({
-                            ...variable,
-                          });
-                        },
+                if (variable?.property) {
+                  createPortal(
+                    ProcessStepModel, {
+                      property: variable.property,
+                      onSubmit: (operation: number, options: any) => {
+                        if (!variable.preprocesses) {
+                          variable.preprocesses = [];
+                        }
+                        variable.preprocesses.push({
+                          operation,
+                          options,
+                        });
+                        setVariable({
+                          ...variable,
+                        });
                       },
-                    );
-                  }
-                }}
+                    },
+                  );
+                }
+              }}
             >
               {t('Add a preprocess')}
             </Button>

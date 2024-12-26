@@ -7926,6 +7926,122 @@ export const GetAvailablePropertyTypesForManuallySettingValueURL = function(para
 }
 /**
  * 
+ * request: GetPropertyBizValue
+ * url: GetPropertyBizValueURL
+ * method: GetPropertyBizValue_TYPE
+ * raw_url: GetPropertyBizValue_RAW_URL
+ * @param pool - 
+ * @param id - 
+ * @param dbValue - 
+ */
+export const GetPropertyBizValue = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/property/pool/{pool}/id/{id}/biz-value'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{pool}', `${parameters['pool']}`)
+  if (parameters['pool'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: pool'))
+  }
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['dbValue'] !== undefined) {
+    queryParameters['dbValue'] = parameters['dbValue']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetPropertyBizValue_RAW_URL = function() {
+  return '/property/pool/{pool}/id/{id}/biz-value'
+}
+export const GetPropertyBizValue_TYPE = function() {
+  return 'get'
+}
+export const GetPropertyBizValueURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/property/pool/{pool}/id/{id}/biz-value'
+  path = path.replace('{pool}', `${parameters['pool']}`)
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['dbValue'] !== undefined) {
+    queryParameters['dbValue'] = parameters['dbValue']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetPropertyDbValue
+ * url: GetPropertyDbValueURL
+ * method: GetPropertyDbValue_TYPE
+ * raw_url: GetPropertyDbValue_RAW_URL
+ * @param pool - 
+ * @param id - 
+ * @param bizValue - 
+ */
+export const GetPropertyDbValue = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/property/pool/{pool}/id/{id}/db-value'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{pool}', `${parameters['pool']}`)
+  if (parameters['pool'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: pool'))
+  }
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['bizValue'] !== undefined) {
+    queryParameters['bizValue'] = parameters['bizValue']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetPropertyDbValue_RAW_URL = function() {
+  return '/property/pool/{pool}/id/{id}/db-value'
+}
+export const GetPropertyDbValue_TYPE = function() {
+  return 'get'
+}
+export const GetPropertyDbValueURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/property/pool/{pool}/id/{id}/db-value'
+  path = path.replace('{pool}', `${parameters['pool']}`)
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['bizValue'] !== undefined) {
+    queryParameters['bizValue'] = parameters['bizValue']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetSearchOperationsForProperty
  * url: GetSearchOperationsForPropertyURL
  * method: GetSearchOperationsForProperty_TYPE

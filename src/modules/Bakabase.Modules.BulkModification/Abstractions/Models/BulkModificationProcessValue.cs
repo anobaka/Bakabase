@@ -13,12 +13,14 @@ public record BulkModificationProcessValue
     public BulkModificationProcessorValueType Type { get; set; }
     public PropertyPool? PropertyPool { get; set; }
     public int? PropertyId { get; set; }
-    public PropertyType? PropertyType { get; set; }
+    public PropertyType? EditorPropertyType { get; set; }
 
     /// <summary>
     /// Static Text / Variable Key / Serialized BizValue / Serialized DbValue
     /// </summary>
     public string? Value { get; set; }
+
+    public bool FollowPropertyChanges { get; set; } = true;
 
     public TValue? ConvertToStdValue<TValue>(StandardValueType toValueType,
         Dictionary<string, (StandardValueType Type, object? Value)>? variableMap,
@@ -33,8 +35,38 @@ public record BulkModificationProcessValue
             {
                 case BulkModificationProcessorValueType.ManuallyInput:
                 {
-                    value = Value.DeserializeAsStandardValue(toValueType);
-                    fromValueType = toValueType;
+                    if (!EditorPropertyType.HasValue)
+                    {
+                        throw new Exception(localizer.EditorPropertyTypeIsNotSet());
+                    }
+
+                    if (FollowPropertyChanges)
+                    {
+                        if (PropertyPool.HasValue && PropertyId.HasValue)
+                        {
+                            var property = propertyMap?.GetValueOrDefault(PropertyPool.Value)
+                                ?.GetValueOrDefault(PropertyId.Value);
+                            if (property != null)
+                            {
+                                value = Value.DeserializeAsStandardValue(EditorPropertyType.Value.GetDbValueType());
+                                value = property.GetBizValue(value);
+                            }
+                            else
+                            {
+                                throw new Exception(localizer.PropertyIsNotFound(PropertyPool, PropertyId));
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception(localizer.PropertyIsNotFound(PropertyPool, PropertyId));
+                        }
+                    }
+                    else
+                    {
+                        value = Value.DeserializeAsStandardValue(EditorPropertyType.Value.GetBizValueType());
+                    }
+
+                    fromValueType = EditorPropertyType.Value.GetBizValueType();
                     break;
                 }
                 case BulkModificationProcessorValueType.Variable:
@@ -50,30 +82,6 @@ public record BulkModificationProcessValue
                     }
 
                     break;
-                }
-                case BulkModificationProcessorValueType.DynamicPropertyDbValue:
-                case BulkModificationProcessorValueType.DynamicPropertyBizValue:
-                {
-                    if (PropertyPool.HasValue && PropertyId.HasValue)
-                    {
-                        var isDbValue = Type == BulkModificationProcessorValueType.DynamicPropertyDbValue;
-                        var property = propertyMap?.GetValueOrDefault(PropertyPool.Value)
-                            ?.GetValueOrDefault(PropertyId.Value);
-                        if (property != null)
-                        {
-                            value = Value.DeserializeAsStandardValue(isDbValue
-                                ? property.Type.GetDbValueType()
-                                : property.Type.GetBizValueType());
-                            if (isDbValue)
-                            {
-                                value = property.GetBizValue(value);
-                            }
-
-                            fromValueType = property.Type.GetBizValueType();
-                        }
-                    }
-
-                    throw new Exception(localizer.PropertyIsNotFound(PropertyPool, PropertyId));
                 }
                 default:
                     throw new ArgumentOutOfRangeException();

@@ -123,6 +123,9 @@
   <data name="PropertyIsNotFound" xml:space="preserve">
     <value>Property is not found by pool: {0}, id: {1}</value>
   </data>
+  <data name="EditorPropertyTypeIsNotSet" xml:space="preserve">
+    <value>Property type of editor is not set</value>
+  </data>
   <data name="VariableIsNotFound" xml:space="preserve">
     <value>Variable: {0} is not found</value>
   </data>
