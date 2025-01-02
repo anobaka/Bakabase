@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Modules.Property.Extensions;
 using Bakabase.Service.Models.View;
 
 namespace Bakabase.Service.Extensions;

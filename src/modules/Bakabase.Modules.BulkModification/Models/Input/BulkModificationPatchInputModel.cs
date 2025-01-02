@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Modules.BulkModification.Abstractions.Models;
 
-namespace Bakabase.Modules.BulkModification.Abstractions.Models;
+namespace Bakabase.Modules.BulkModification.Models.Input;
 
 public record PatchBulkModification
 {

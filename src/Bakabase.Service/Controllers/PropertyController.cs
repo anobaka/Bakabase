@@ -8,6 +8,7 @@ using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Property.Models.Input;
+using Bakabase.Modules.Property.Models.View;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.View;

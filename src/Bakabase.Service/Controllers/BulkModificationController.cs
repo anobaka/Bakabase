@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.BulkModification.Abstractions.Components;
 using Bakabase.Modules.BulkModification.Abstractions.Models;
@@ -10,7 +8,6 @@ using Bakabase.Modules.BulkModification.Abstractions.Services;
 using Bakabase.Modules.BulkModification.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Modules.Property.Extensions;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;

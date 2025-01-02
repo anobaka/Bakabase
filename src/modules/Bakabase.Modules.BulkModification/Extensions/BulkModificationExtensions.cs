@@ -7,6 +7,8 @@ using Bakabase.Modules.BulkModification.Abstractions.Components;
 using Bakabase.Modules.BulkModification.Abstractions.Models;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Models.Db;
+using Bakabase.Modules.BulkModification.Models.View;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Search.Extensions;
@@ -15,6 +17,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
 using Humanizer;
+using Microsoft.AspNetCore.Routing.Template;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using BulkModificationVariable = Bakabase.Modules.BulkModification.Abstractions.Models.BulkModificationVariable;
@@ -35,22 +38,10 @@ public static class BulkModificationExtensions
             dbModels.Select(d => d.Variables.JsonDeserializeOrDefault<List<BulkModificationVariableDbModel>>())
                 .ToList();
 
-        var propertyPools =
-            filterGroupDbModels.SelectMany(x => x?.ExtractFilters().Select(f => f.PropertyPool) ?? [])
-                .OfType<PropertyPool>()
-                .Concat(processesDbModels.SelectMany(x => x?.Select(p => p.PropertyPool) ?? []))
-                .Concat(variablesDbModels.SelectMany(x => x?.Select(v => v.PropertyPool) ?? []))
-                .Aggregate((PropertyPool) 0, (pool, propertyPool) => pool | propertyPool);
-
-        var propertyMap = (await propertyService.GetProperties(propertyPools)).GroupBy(d => d.Pool)
-            .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
+        var propertyMap = (await propertyService.GetProperties(PropertyPool.All)).ToMap();
 
         return dbModels.Select((dbModel, i) => new Abstractions.Models.BulkModification
         {
-            // AppliedAt = dbModel.AppliedAt,
-            // CalculatedAt = dbModel.CalculatedAt,
-            // RevertedAt = dbModel.RevertedAt,
-            // FilteredAt = dbModel.FilteredAt,
             CreatedAt = dbModel.CreatedAt,
             Id = dbModel.Id,
             Name = dbModel.Name,
@@ -70,7 +61,7 @@ public static class BulkModificationExtensions
             new Dictionary<int, int> {{dbModel.Id, resourceDiffCount}}))[0];
 
     private static BulkModificationVariable ToDomainModel(this BulkModificationVariableDbModel dbModel,
-        Dictionary<PropertyPool, Dictionary<int, Bakabase.Abstractions.Models.Domain.Property>> propertyMap)
+        PropertyMap propertyMap)
     {
         var property = propertyMap[dbModel.PropertyPool][dbModel.PropertyId];
         var domain = new BulkModificationVariable
@@ -84,44 +75,16 @@ public static class BulkModificationExtensions
             // ProcessOptions =
             // dbModel.ProcessOptions.JsonDeserializeOrDefault(BulkModificationInternals
             // .PropertyTypeProcessorDescriptorMap[property.Type].ProcessOptionsType) as IBulkModificationProcessorOptions
+            Preprocesses = dbModel.Preprocesses?.DeserializeAsBulkModificationProcessSteps(BulkModificationInternals
+                .PropertyTypeProcessorDescriptorMap[property.Type]
+                .ProcessOptionsType, propertyMap)
         };
-
-        if (dbModel.Preprocesses.IsNotEmpty())
-        {
-            try
-            {
-                var ja = JArray.Parse(dbModel.Preprocesses);
-
-                var optionsType = BulkModificationInternals.PropertyTypeProcessorDescriptorMap[property.Type]
-                    .ProcessOptionsType;
-
-                domain.Preprocesses = ja.Select(jo =>
-                {
-                    var operation = jo["operation"];
-                    var options = jo["options"];
-                    if (operation != null)
-                    {
-                        return new BulkModificationProcessStep()
-                        {
-                            Operation = operation.Value<int>(),
-                            Options = options?.ToObject(optionsType) as IBulkModificationProcessOptions
-                        };
-                    }
-
-                    return null;
-                }).OfType<BulkModificationProcessStep>().ToList();
-            }
-            catch
-            {
-                // ignored
-            }
-        }
 
         return domain;
     }
 
     public static List<BulkModificationProcessStep>? DeserializeAsBulkModificationProcessSteps(this string json,
-        Type optionsType)
+        Type optionsType, PropertyMap? propertyMap)
     {
         List<BulkModificationProcessStep>? steps = null;
         try
@@ -132,14 +95,19 @@ public static class BulkModificationExtensions
                 try
                 {
                     var operation = jo[nameof(BulkModificationProcessStep.Operation).Camelize()]?.Value<int>();
-                    var options = jo[nameof(BulkModificationProcessStep.Options).Camelize()]?.ToObject(optionsType);
+                    var options =
+                        jo[nameof(BulkModificationProcessStep.Options).Camelize()]?.ToObject(optionsType) as
+                            IBulkModificationProcessOptions;
                     if (operation.HasValue)
                     {
+                        options?.PopulateData(propertyMap);
+
                         var step = new BulkModificationProcessStep
                         {
                             Operation = operation.Value,
-                            Options = options as IBulkModificationProcessOptions
+                            Options = options
                         };
+
                         steps ??= [];
                         steps.Add(step);
                     }
@@ -159,10 +127,9 @@ public static class BulkModificationExtensions
         return steps;
     }
 
-    private static BulkModificationProcess ToDomainModel(this BulkModificationProcessDbModel dbModel,
-        Dictionary<PropertyPool, Dictionary<int, Bakabase.Abstractions.Models.Domain.Property>> propertyMap)
+    private static BulkModificationProcess ToDomainModel(this BulkModificationProcessDbModel dbModel, PropertyMap propertyMap)
     {
-        var property = propertyMap[dbModel.PropertyPool][dbModel.PropertyId];
+        var property = propertyMap.GetProperty(dbModel.PropertyPool, dbModel.PropertyId);
         var optionsType = BulkModificationInternals.PropertyTypeProcessorDescriptorMap[property.Type]
             .ProcessOptionsType;
         var domain = new BulkModificationProcess
@@ -170,7 +137,7 @@ public static class BulkModificationExtensions
             PropertyId = dbModel.PropertyId,
             PropertyPool = dbModel.PropertyPool,
             Property = property,
-            Steps = dbModel.Steps?.DeserializeAsBulkModificationProcessSteps(optionsType)
+            Steps = dbModel.Steps?.DeserializeAsBulkModificationProcessSteps(optionsType, propertyMap)
         };
 
         return domain;
@@ -297,16 +264,17 @@ public static class BulkModificationExtensions
         return propertyMap;
     }
 
-    // public static BulkModificationDiff ToDomainModel(this BulkModificationDiffDbModel dbModel)
-    // {
-    //     return new BulkModificationDiff
-    //     {
-    //         Id = dbModel.Id,
-    //         BulkModificationId = dbModel.BulkModificationId,
-    //         ResourceId = dbModel.ResourceId,
-    //         ResourcePath = dbModel.ResourcePath,
-    //         Diffs = dbModel.Diffs.JsonDeserializeOrDefault<List<ResourceDiffDbModel>>()?.Select(d => d.ToDomainModel())
-    //             .ToList()
-    //     };
-    // }
+    public static BulkModificationProcessValueViewModel ToViewModel(this BulkModificationProcessValue domainModel, IPropertyLocalizer? propertyLocalizer)
+    {
+        return new BulkModificationProcessValueViewModel
+        {
+            EditorPropertyType = domainModel.EditorPropertyType,
+            FollowPropertyChanges = domainModel.FollowPropertyChanges,
+            Property = domainModel.Property?.ToViewModel(propertyLocalizer),
+            PropertyId = domainModel.PropertyId,
+            PropertyPool = domainModel.PropertyPool,
+            Type = domainModel.Type,
+            Value = domainModel.Value
+        };
+    }
 }

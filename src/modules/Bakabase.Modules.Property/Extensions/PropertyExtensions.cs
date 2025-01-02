@@ -5,6 +5,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Models.View;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
@@ -196,4 +197,19 @@ public static class PropertyExtensions
 
     public static TBizValue? GetBizValue<TBizValue>(this Bakabase.Abstractions.Models.Domain.Property property,
         object? dbValue) => GetBizValue(property, dbValue) is TBizValue bv ? bv : default;
+
+    public static PropertyViewModel ToViewModel(this Bakabase.Abstractions.Models.Domain.Property property,
+        IPropertyLocalizer? propertyLocalizer = null)
+    {
+        return new PropertyViewModel
+        {
+            Id = property.Id,
+            Name = property.Name,
+            Options = property.Options,
+            Pool = property.Pool,
+            PoolName = propertyLocalizer?.PropertyPoolName(property.Pool) ?? property.Pool.ToString(),
+            Type = property.Type,
+            TypeName = propertyLocalizer?.PropertyTypeName(property.Type) ?? property.Type.ToString()
+        };
+    }
 }

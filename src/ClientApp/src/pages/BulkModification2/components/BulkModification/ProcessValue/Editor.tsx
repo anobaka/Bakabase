@@ -15,7 +15,7 @@ import {
 } from '@/sdk/constants';
 import {
   Button,
-  Checkbox,
+  Checkbox, Divider,
   Dropdown,
   DropdownItem,
   DropdownMenu,
@@ -28,7 +28,6 @@ import PropertyValueRenderer from '@/components/Property/components/PropertyValu
 import type { IProperty } from '@/components/Property/models';
 import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
-import type { RecursivePartial } from '@/components/types';
 import TypeMismatchTip
   from '@/pages/BulkModification2/components/BulkModification/ProcessValue/components/TypeMismatchTip';
 import { buildFakeProperty } from '@/pages/BulkModification2/components/BulkModification/ProcessValue/helpers';
@@ -40,9 +39,10 @@ type Props = {
   value?: BulkModificationProcessValue;
   baseValueType: PropertyType;
   preferredProperty?: IProperty;
+  availableValueTypes?: BulkModificationProcessorValueType[];
 };
 
-const log = buildLogger('ValueWithMultipleTypeEditor');
+const log = buildLogger('BulkModificationProcessValueEditor');
 
 type PropertyTypeForManuallySettingValue = {
   type: PropertyType;
@@ -76,6 +76,7 @@ export default (props: Props) => {
     value: propsValue,
     baseValueType,
     preferredProperty,
+    availableValueTypes,
   } = props;
   const { t } = useTranslation();
   const [value, setValue] = useState<BulkModificationProcessValue>(propsValue ?? buildDefaultValue(preferredProperty));
@@ -90,7 +91,7 @@ export default (props: Props) => {
     }
   }, [value.type, propertyTypesForManuallySettingValue]);
 
-  log(props, value);
+  log(props, value, propertyTypesForManuallySettingValue);
 
   const onFollowPropertyChanges = async (follow: boolean) => {
     const { property } = value;
@@ -131,14 +132,13 @@ export default (props: Props) => {
       return null;
     }
 
-    let property = propertyTypesForManuallySettingValue.find(pt => pt.type == value.editorPropertyType)?.properties?.find(p => p.id == value.propertyId && p.pool == value.propertyPool);
     return (
       <>
-        {(!pv.isReferenceValueType || property) && (
+        {(value.property) && (
           <>
             <Spacer x={2} />
             <PropertyValueRenderer
-              property={property ?? buildFakeProperty(pv.type, pv.dbValueType, pv.bizValueType)}
+              property={value.property}
               onValueChange={(dv, bv) => {
                 changeValue({
                   value: value.followPropertyChanges ? dv : bv,
@@ -149,7 +149,7 @@ export default (props: Props) => {
             />
           </>
         )}
-        {pv.isReferenceValueType && property && (
+        {pv.isReferenceValueType && value.property && (
           <Tooltip
             content={(
               <div className={'flex flex-col gap-1 max-w-[400px]'}>
@@ -165,8 +165,10 @@ export default (props: Props) => {
             color={'secondary'}
           >
             <Checkbox
-              checked={value.followPropertyChanges}
+              defaultSelected
+              isSelected={value.followPropertyChanges}
               onValueChange={onFollowPropertyChanges}
+              className={'ml-2'}
             >
               {t('Follow property changes')}
             </Checkbox>
@@ -202,6 +204,7 @@ export default (props: Props) => {
                 changeValue({
                   propertyPool: pool,
                   propertyId: id,
+                  property,
                 });
               }}
             >
@@ -247,7 +250,35 @@ export default (props: Props) => {
                 aria-label="Static Actions"
                 onSelectionChange={keys => {
                   const editorPropertyType = parseInt(Array.from(keys)[0] as string, 10) as PropertyType;
-                  changeValue({ editorPropertyType });
+
+                  const patches: Partial<BulkModificationProcessValue> = {
+                    editorPropertyType,
+                    value: undefined,
+                  };
+
+                  const pt = propertyTypesForManuallySettingValue.find(pt => pt.type == editorPropertyType);
+                  if (pt) {
+                    if (pt.isReferenceValueType) {
+                      if (pt.properties && pt.properties.length == 1) {
+                        patches.property = pt.properties[0];
+                      }
+                      patches.followPropertyChanges = true;
+                    } else {
+                      patches.property = buildFakeProperty(editorPropertyType, pt.dbValueType, pt.bizValueType);
+                    }
+                  }
+
+                  if (patches.property && patches.property.id > 0) {
+                    patches.propertyId = patches.property.id;
+                    patches.propertyPool = patches.property.pool;
+                  } else {
+                    patches.propertyId = undefined;
+                    patches.propertyPool = undefined;
+                  }
+
+                  log('patches', patches, pt);
+
+                  changeValue(patches);
                 }}
               >
                 {propertyTypesForManuallySettingValue.map(pt => {
@@ -322,9 +353,11 @@ export default (props: Props) => {
     );
   };
 
+  const valueTypes: BulkModificationProcessorValueType[] = availableValueTypes ?? bulkModificationProcessorValueTypes.map(x => x.value);
+
   return (
     <div className={'flex items-center gap-1'}>
-      <Dropdown>
+      <Dropdown isDisabled={valueTypes.length == 1}>
         <DropdownTrigger>
           <Button
             // size={'sm'}
@@ -342,11 +375,11 @@ export default (props: Props) => {
             changeValue({ type });
           }}
         >
-          {bulkModificationProcessorValueTypes.map(s => {
+          {valueTypes.map(s => {
             return (
-              <DropdownItem key={s.value}>
+              <DropdownItem key={s}>
                 <div className={'flex items-center gap-2'}>
-                  {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[s.value]}`)}
+                  {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[s]}`)}
                 </div>
               </DropdownItem>
             );

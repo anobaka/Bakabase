@@ -152,4 +152,11 @@ public record PropertyInternals
 
     public static readonly ConcurrentDictionary<PropertyType, IPropertyDescriptor> DescriptorMap =
         new ConcurrentDictionary<PropertyType, IPropertyDescriptor>(Descriptors.ToDictionary(d => d.Type, d => d));
+
+    public static readonly ConcurrentDictionary<PropertyType, Bakabase.Abstractions.Models.Domain.Property>
+        VirtualPropertyMap = new ConcurrentDictionary<PropertyType, Bakabase.Abstractions.Models.Domain.Property>(
+            Descriptors.Select(d =>
+                    new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Custom, 0, d.Type,
+                        "Virtual property"))
+                .ToDictionary(d => d.Type, d => d));
 }

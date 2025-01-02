@@ -81,8 +81,8 @@ export default ({
                         createPortal(
                           Modal, {
                             defaultVisible: true,
-                            title: t('Delete a process'),
-                            children: t('Are you sure you want to delete this process?'),
+                            title: t('Delete current process'),
+                            children: t('Are you sure you want to delete this process and all its process steps?'),
                             onOk: async () => {
                               const nps = processes.filter((_, j) => j !== i);
                               setProcesses(nps);

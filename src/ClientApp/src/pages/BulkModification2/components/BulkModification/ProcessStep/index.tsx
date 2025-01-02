@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import { DeleteOutlined } from '@ant-design/icons';
 import { StringValueProcessDemonstrator } from '../Processes/StringValueProcess';
+import { ListStringValueProcessDemonstrator } from '../Processes/ListStringValueProcess';
 import { Button, Chip, Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IProperty } from '@/components/Property/models';
@@ -10,7 +11,7 @@ import type {
   BulkModificationProcessStep,
   BulkModificationVariable,
 } from '@/pages/BulkModification2/components/BulkModification/models';
-import ProcessStepModel from '@/pages/BulkModification2/components/BulkModification/ProcessStepModel';
+import ProcessStepModal from '@/pages/BulkModification2/components/BulkModification/ProcessStepModal';
 import { type BulkModificationProcessorValueType, PropertyType } from '@/sdk/constants';
 
 type Props = {
@@ -54,7 +55,14 @@ export default ({
         );
       case PropertyType.MultipleChoice:
       case PropertyType.Attachment:
-        break;
+        return (
+          <ListStringValueProcessDemonstrator
+            property={property}
+            variables={variables}
+            operation={step.operation}
+            options={step.options}
+          />
+        );
       case PropertyType.Number:
       case PropertyType.Percentage:
       case PropertyType.Rating:
@@ -80,7 +88,7 @@ export default ({
       className={`flex items-center flex-wrap gap-1 ${editable ? 'cursor-pointer hover:bg-[var(--bakaui-overlap-background)] rounded' : ''}`}
       onClick={editable ? () => {
         createPortal(
-          ProcessStepModel, {
+          ProcessStepModal, {
             property: property,
             availableValueTypes,
             onSubmit: (operation, options) => {
@@ -113,8 +121,8 @@ export default ({
           createPortal(
             Modal, {
               defaultVisible: true,
-              title: t('Delete a process'),
-              children: t('Are you sure you want to delete this process?'),
+              title: t('Delete a process step'),
+              children: t('Are you sure you want to delete this process step?'),
               onOk: async () => {
                 onDelete();
               },

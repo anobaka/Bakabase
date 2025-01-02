@@ -11,16 +11,24 @@ namespace Bakabase.Modules.BulkModification.Components;
 
 public class BulkModificationInternals
 {
-    private static readonly BulkModificationProcessDescriptor TextValueProcessDescriptor =
-        new BulkModificationProcessDescriptor(typeof(TextProcessingOperation),
+    private static readonly BulkModificationProcessDescriptor StringValueProcessDescriptor =
+        new BulkModificationProcessDescriptor(typeof(BulkModificationStringProcessOperation),
             typeof(BulkModificationStringProcessOptions), typeof(BulkModificationStringProcessorOptions));
+
+    private static readonly BulkModificationProcessDescriptor ListStringValueProcessDescriptor =
+        new BulkModificationProcessDescriptor(typeof(BulkModificationListStringProcessOperation),
+            typeof(BulkModificationListStringProcessOptions), typeof(BulkModificationListStringProcessorOptions));
 
     public static ConcurrentDictionary<PropertyType, BulkModificationProcessDescriptor>
         PropertyTypeProcessorDescriptorMap = new ConcurrentDictionary<PropertyType, BulkModificationProcessDescriptor>(
             new Dictionary<PropertyType, BulkModificationProcessDescriptor>()
             {
-                {PropertyType.SingleLineText, TextValueProcessDescriptor},
-                {PropertyType.MultilineText, TextValueProcessDescriptor}
+                {PropertyType.SingleLineText, StringValueProcessDescriptor},
+                {PropertyType.MultilineText, StringValueProcessDescriptor},
+                {PropertyType.Formula, StringValueProcessDescriptor},
+                {PropertyType.SingleChoice, StringValueProcessDescriptor},
+                {PropertyType.Attachment, ListStringValueProcessDescriptor},
+                {PropertyType.MultipleChoice, ListStringValueProcessDescriptor},
             });
 
     public static BulkModificationStringProcessor StringProcessor = new BulkModificationStringProcessor();

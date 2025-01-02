@@ -20,7 +20,7 @@ type Props = {
   availableValueTypes?: BulkModificationProcessorValueType[];
 } & DestroyableProps;
 
-const log = buildLogger('ProcessStepModel');
+const log = buildLogger('ProcessStepModal');
 
 export default ({
                   property,
@@ -29,7 +29,7 @@ export default ({
                   onDestroyed,
                   onSubmit,
                   variables,
-                  availableValueTypes = [BulkModificationProcessorValueType.Static],
+                  availableValueTypes = [BulkModificationProcessorValueType.ManuallyInput],
                 }: Props) => {
   const { t } = useTranslation();
 

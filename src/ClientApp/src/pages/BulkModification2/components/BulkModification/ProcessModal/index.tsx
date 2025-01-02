@@ -12,7 +12,7 @@ import type {
   BulkModificationVariable,
 } from '@/pages/BulkModification2/components/BulkModification/models';
 import ProcessStep from '@/pages/BulkModification2/components/BulkModification/ProcessStep';
-import ProcessStepModel from '@/pages/BulkModification2/components/BulkModification/ProcessStepModel';
+import ProcessStepModal from '@/pages/BulkModification2/components/BulkModification/ProcessStepModal';
 import store from '@/store';
 
 type Props = {
@@ -21,9 +21,9 @@ type Props = {
   onSubmit?: (process: BulkModificationProcess) => void;
 } & DestroyableProps;
 
-const validate = (p?: Partial<BulkModificationProcess>) => !(!p || !p.propertyId || !p.propertyPool || !p.steps || p.steps.length === 0);
+const validate = (p?: Partial<BulkModificationProcess>) => !(!p || !p.propertyId || !p.propertyPool);
 
-const AllBulkModificationValueTypes = [BulkModificationProcessorValueType.Static, BulkModificationProcessorValueType.Dynamic, BulkModificationProcessorValueType.Variable];
+const AllBulkModificationValueTypes = [BulkModificationProcessorValueType.ManuallyInput, BulkModificationProcessorValueType.Variable];
 
 export default ({
                   onDestroyed,
@@ -143,7 +143,7 @@ export default ({
               onClick={() => {
                 if (process?.property) {
                   createPortal(
-                    ProcessStepModel, {
+                    ProcessStepModal, {
                       property: process.property,
                       variables,
                       availableValueTypes: AllBulkModificationValueTypes,

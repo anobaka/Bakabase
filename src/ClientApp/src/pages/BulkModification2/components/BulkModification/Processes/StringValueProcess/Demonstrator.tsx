@@ -1,7 +1,6 @@
 import { Trans, useTranslation } from 'react-i18next';
 import React from 'react';
 import type { StringProcessOptions } from './models';
-import type { IProperty } from '@/components/Property/models';
 import { TextProcessingOperation } from '@/sdk/constants';
 import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
 import {
@@ -15,7 +14,7 @@ type Props = {
   variables?: BulkModificationVariable[];
 };
 
-const log = buildLogger('TextProcessDemonstrator');
+const log = buildLogger('StringValueProcessDemonstrator');
 
 export default (props: Props) => {
   const {

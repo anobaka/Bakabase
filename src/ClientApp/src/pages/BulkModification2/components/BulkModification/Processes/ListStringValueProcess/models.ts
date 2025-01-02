@@ -6,9 +6,10 @@ import type {
   BulkModificationProcessorValueType,
   BulkModificationStringProcessOperation,
 } from '@/sdk/constants';
+import type { BulkModificationProcessValue } from '@/pages/BulkModification2/components/BulkModification/models';
 
 export type ListStringValueProcessOptions = {
-  value?: string;
+  value?: BulkModificationProcessValue;
   valueType?: BulkModificationProcessorValueType;
   isOperationDirectionReversed?: boolean;
   modifyOptions?: {

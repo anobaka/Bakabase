@@ -15,10 +15,16 @@ import {
 } from '@/sdk/constants';
 import { Input, Select } from '@/components/bakaui';
 import type { IProperty } from '@/components/Property/models';
-import type { BulkModificationVariable } from '@/pages/BulkModification2/components/BulkModification/models';
+import type {
+  BulkModificationProcessValue,
+  BulkModificationVariable,
+} from '@/pages/BulkModification2/components/BulkModification/models';
 import { buildLogger } from '@/components/utils';
 import type { RecursivePartial } from '@/components/types';
 import { ProcessValueEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
+import type {
+  StringProcessOptions,
+} from '@/pages/BulkModification2/components/BulkModification/Processes/StringValueProcess/models';
 
 
 type Props = {
@@ -28,6 +34,10 @@ type Props = {
   variables?: BulkModificationVariable[];
   availableValueTypes?: BulkModificationProcessorValueType[];
   onChange?: (operation: BulkModificationListStringProcessOperation, options: ListStringValueProcessOptions, error?: string) => any;
+};
+
+type EditingOptions = Omit<Partial<ListStringValueProcessOptions>, 'modifyOptions'> & {
+  modifyOptions?: Partial<ListStringValueProcessOptions['modifyOptions']>;
 };
 
 const log = buildLogger('ListProcessorEditor');
@@ -42,7 +52,7 @@ export default ({
                   availableValueTypes,
                 }: Props) => {
   const { t } = useTranslation();
-  const [options, setOptions] = useState<RecursivePartial<ListStringValueProcessOptions>>(propsOptions ?? {});
+  const [options, setOptions] = useState<EditingOptions>(propsOptions ?? {});
   const [operation, setOperation] = useState<BulkModificationListStringProcessOperation>(propsOperation ?? BulkModificationListStringProcessOperation.SetWithFixedValue);
 
   log('operation', operation, 'options', options, typeof operation);
@@ -52,7 +62,7 @@ export default ({
     onChange?.(operation, options as ListStringValueProcessOptions, error);
   }, [options, operation]);
 
-  const changeOptions = (patches: RecursivePartial<ListStringValueProcessOptions>) => {
+  const changeOptions = (patches: EditingOptions) => {
     const newOptions = {
       ...options,
       ...patches,
@@ -69,19 +79,18 @@ export default ({
   const renderValueCell = (field: string = 'value') => {
     return (
       <ProcessValueEditor
-        valueTypes={availableValueTypes}
         value={options[field]}
-        onChange={(valueType, value) => changeOptions({
-          [field]: value,
-          valueType,
+        onChange={(value: BulkModificationProcessValue) => changeOptions({
+          value,
         })}
         variables={variables}
-        property={property}
+        baseValueType={property.type}
+        preferredProperty={property}
       />
     );
   };
 
-  const renderSubOptions = (options: RecursivePartial<ListStringValueProcessOptions>) => {
+  const renderSubOptions = (options: EditingOptions) => {
     log('renderOptions', operation, options);
 
     if (!operation) {
@@ -144,22 +153,24 @@ export default ({
             </div>
           ),
         });
+
         components.push({
           label: t('For each filtered item'),
           comp: (
             <StringValueProcessEditor
               options={options?.modifyOptions?.options}
               operation={options?.modifyOptions?.operation}
-              property={{
-                type: PropertyType.SingleLineText,
-                bizValueType: StandardValueType.String,
-                dbValueType: StandardValueType.String,
-                id: 0,
-                name: 'Fake text',
-                pool: PropertyPool.Custom,
-                poolName: 'Custom',
-                typeName: 'SingleLineText',
-              }}
+              propertyType={PropertyType.SingleLineText}
+              // property={{
+              //   type: PropertyType.SingleLineText,
+              //   bizValueType: StandardValueType.String,
+              //   dbValueType: StandardValueType.String,
+              //   id: 0,
+              //   name: 'Fake text',
+              //   pool: PropertyPool.Custom,
+              //   poolName: 'Custom',
+              //   typeName: 'SingleLineText',
+              // }}
               onChange={(sOperation, sOptions, error) => {
                 changeOptions({
                   modifyOptions: {

@@ -1,7 +1,9 @@
 ﻿using Bakabase.Abstractions.Components.Property;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.BulkModification.Abstractions.Components;
 using Bakabase.Modules.BulkModification.Abstractions.Models.Constants;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
@@ -21,6 +23,26 @@ public record BulkModificationProcessValue
     public string? Value { get; set; }
 
     public bool FollowPropertyChanges { get; set; } = true;
+
+    public Bakabase.Abstractions.Models.Domain.Property? Property { get; set; }
+
+    public void PopulateData(PropertyMap? propertyMap)
+    {
+        if (EditorPropertyType.HasValue)
+        {
+            if (EditorPropertyType.Value.IsReferenceValueType())
+            {
+                if (PropertyPool.HasValue && PropertyId.HasValue)
+                {
+                    Property = propertyMap?.GetProperty(PropertyPool.Value, PropertyId.Value);
+                }
+            }
+            else
+            {
+                Property = PropertyInternals.VirtualPropertyMap.GetValueOrDefault(EditorPropertyType.Value);
+            }
+        }
+    }
 
     public TValue? ConvertToStdValue<TValue>(StandardValueType toValueType,
         Dictionary<string, (StandardValueType Type, object? Value)>? variableMap,

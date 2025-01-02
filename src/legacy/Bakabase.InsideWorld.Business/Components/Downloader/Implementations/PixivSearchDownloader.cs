@@ -23,6 +23,7 @@ using static Bakabase.Modules.ThirdParty.ThirdParties.Pixiv.Models.PixivSearchRe
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
+using System.Web;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
 {
@@ -59,7 +60,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
                         var encodedKeyword = WebUtility.UrlDecode(keyword) == keyword
                             ? WebUtility.UrlEncode(keyword)
                             : keyword;
-                        var qsTemplate = inputUri.ParseQueryString();
+
+                        var qsTemplate = HttpUtility.ParseQueryString(inputUri.Query);
                         qsTemplate["word"] = encodedKeyword;
                         var page = int.TryParse(qsTemplate["p"], out var p) ? p : 1;
 

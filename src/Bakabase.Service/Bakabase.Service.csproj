@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <LangVersion>latest</LangVersion>
         <Configurations>Debug;Release;Company</Configurations>
         <Nullable>enable</Nullable>
@@ -26,15 +26,16 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Google.Apis.Analytics.v3" Version="1.68.0.1679" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.7.1" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.8">
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="7.2.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\legacy\Bakabase.InsideWorld.Business\Bakabase.InsideWorld.Business.csproj" />

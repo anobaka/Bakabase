@@ -5,8 +5,6 @@ namespace Bakabase.Abstractions.Extensions;
 
 public static class PropertyExtensions
 {
-    public static Dictionary<PropertyPool, Dictionary<int, Property>> ToMap(this IEnumerable<Property> properties) =>
-        properties
-            .GroupBy(x => x.Pool)
-            .ToDictionary(x => x.Key, x => x.ToDictionary(y => y.Id, y => y));
+    public static PropertyMap ToMap(this IEnumerable<Property> properties) => new PropertyMap(properties
+        .GroupBy(x => x.Pool).ToDictionary(x => x.Key, x => x.ToDictionary(y => y.Id, y => y)));
 }

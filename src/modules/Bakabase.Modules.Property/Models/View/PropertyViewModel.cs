@@ -1,9 +1,7 @@
-﻿using System.Collections.Generic;
-using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Domain.Constants;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Extensions;
 
-namespace Bakabase.Service.Models.View;
+namespace Bakabase.Modules.Property.Models.View;
 
 public record PropertyViewModel
 {

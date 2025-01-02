@@ -1620,5 +1620,17 @@
   "No choices available, please check your configurations": "没有可用选项，请检查您的配置",
   "We will automatically convert the value from {{fromType}} to {{toType}}.": "我们将自动将数据从 {{fromType}} 转换为 {{toType}} 。",
   "You can check type conversion rules here": "您可以在这里查看类型转换规则",
-  "Type transformation": "类型转换"
+  "Type transformation": "类型转换",
+  "A property may have multiple dimensional values, and you can choose one of the dimensions as the base data.": "一个属性可能会有多个维度的属性值，您可以选择其中一个维度作为基础数据。",
+  "Set rating": "设置评分",
+  "ERROR": "错误",
+  "Value is required": "值是必填的",
+  "Count and index are required": "数量和索引是必填的",
+  "Value and index are required": "值和索引是必填的",
+  "Find is required": "查找是必填的",
+  "Please select a variable": "请选择一个变量",
+  "Delete current process": "删除当前处理流程",
+  "Are you sure you want to delete this process and all its process steps?": "确定要删除此处理流程及其所有处理步骤吗？",
+  "Are you sure you want to delete this process step?": "确定要删除此处理步骤吗？",
+  "Delete a process step": "删除处理步骤"
 }

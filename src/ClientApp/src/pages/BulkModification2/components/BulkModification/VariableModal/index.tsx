@@ -9,11 +9,12 @@ import { Button, Card, CardBody, Chip, Input, Modal, Select, Tooltip } from '@/c
 import PropertySelector from '@/components/PropertySelector';
 import { PropertyPool, PropertyType, propertyValueScopes } from '@/sdk/constants';
 import ProcessStep from '@/pages/BulkModification2/components/BulkModification/ProcessStep';
-import ProcessStepModel from '@/pages/BulkModification2/components/BulkModification/ProcessStepModel';
+import ProcessStepModal from '@/pages/BulkModification2/components/BulkModification/ProcessStepModal';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { buildLogger } from '@/components/utils';
 import store from '@/store';
+import { PropertyValueScopeSelectorLabel } from '@/components/Labels';
 
 type Props = {
   variable?: Partial<BulkModificationVariable>;
@@ -92,13 +93,17 @@ export default ({
                 {variable?.property ? variable.property.name : t('Select a property')}
               </Button>
               {variable?.property && (
-                <Chip size={'sm'} radius={'sm'}>
+                <Chip
+                  size={'sm'}
+                  radius={'sm'}
+                  isDisabled
+                >
                   {t(`PropertyType.${PropertyType[variable.property.type]}`)}
                 </Chip>
               )}
             </div>
             <div className={'text-right'}>
-              {t('Scope')}
+              <PropertyValueScopeSelectorLabel />
             </div>
             <div>
               <Select
@@ -168,6 +173,7 @@ export default ({
                         ...variable,
                       });
                     }}
+                    editable
                     no={i + 1}
                     step={step}
                     property={variable.property!}
@@ -191,7 +197,7 @@ export default ({
               onClick={() => {
                 if (variable?.property) {
                   createPortal(
-                    ProcessStepModel, {
+                    ProcessStepModal, {
                       property: variable.property,
                       onSubmit: (operation: number, options: any) => {
                         if (!variable.preprocesses) {

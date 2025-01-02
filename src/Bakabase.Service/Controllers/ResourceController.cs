@@ -26,6 +26,8 @@ using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.Property.Models.View;
 using Bakabase.Modules.Search.Models.Db;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;

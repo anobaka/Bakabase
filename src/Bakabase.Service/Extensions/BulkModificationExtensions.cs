@@ -14,14 +14,13 @@ using Bakabase.Modules.BulkModification.Abstractions.Models;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Extensions;
 using Bakabase.Modules.BulkModification.Models.Db;
+using Bakabase.Modules.BulkModification.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Extensions;
-using Newtonsoft.Json;
-using static Aliyun.OSS.Model.LiveChannelStat;
 
 namespace Bakabase.Service.Extensions;
 
@@ -54,6 +53,9 @@ public static class BulkModificationExtensions
             PropertyId = domainModel.PropertyId,
             PropertyPool = domainModel.PropertyPool,
             Steps = domainModel.Steps
+                ?.Select(s =>
+                    new BulkModificationProcessStepViewModel(s.Operation, s.Options?.ToViewModel(propertyLocalizer)))
+                .ToList()
         };
     }
 
@@ -64,7 +66,10 @@ public static class BulkModificationExtensions
         {
             Key = domainModel.Key,
             Name = domainModel.Name,
-            Preprocesses = domainModel.Preprocesses,
+            Preprocesses = domainModel.Preprocesses
+                ?.Select(s =>
+                    new BulkModificationProcessStepViewModel(s.Operation, s.Options?.ToViewModel(propertyLocalizer)))
+                .ToList(),
             Scope = domainModel.Scope,
             Property = domainModel.Property.ToViewModel(propertyLocalizer),
             PropertyId = domainModel.PropertyId,
@@ -81,37 +86,28 @@ public static class BulkModificationExtensions
         {
             IsActive = inputModel.IsActive,
             Name = inputModel.Name,
-            Processes = inputModel.Processes?.Select(p =>
-            {
-                var property = propertyMap.GetValueOrDefault(p.PropertyPool)?.GetValueOrDefault(p.PropertyId);
-                if (property == null)
-                {
-                    return null;
-                }
-
-                return p.ToDomainModel(property);
-            }).OfType<BulkModificationProcess>().ToList(),
-            Variables = inputModel.Variables?.Select(p =>
-            {
-                var property = propertyMap.GetValueOrDefault(p.PropertyPool)?.GetValueOrDefault(p.PropertyId);
-                if (property == null)
-                {
-                    return null;
-                }
-
-                return p.ToDomainModel(property);
-            }).OfType<BulkModificationVariable>().ToList(),
+            Processes = inputModel.Processes?.Select(p => p.ToDomainModel(propertyMap))
+                .OfType<BulkModificationProcess>().ToList(),
+            Variables = inputModel.Variables?.Select(p => p.ToDomainModel(propertyMap))
+                .OfType<BulkModificationVariable>().ToList(),
             Filter = inputModel.Filter?.ToDomainModel(propertyMap)
         };
     }
 
-    public static BulkModificationProcess ToDomainModel(this BulkModificationProcessInputModel inputModel,
-        Property property)
+    public static BulkModificationProcess? ToDomainModel(this BulkModificationProcessInputModel inputModel,
+        PropertyMap propertyMap)
     {
+        var property = propertyMap.GetProperty(inputModel.PropertyPool, inputModel.PropertyId);
+
+        if (property == null)
+        {
+            return null;
+        }
+
         var steps = inputModel.Steps.IsNullOrEmpty()
             ? null
             : inputModel.Steps.DeserializeAsBulkModificationProcessSteps(BulkModificationInternals
-                .PropertyTypeProcessorDescriptorMap[property.Type].ProcessOptionsType);
+                .PropertyTypeProcessorDescriptorMap[property.Type].ProcessOptionsType, propertyMap);
 
         return new BulkModificationProcess
         {
@@ -122,13 +118,20 @@ public static class BulkModificationExtensions
         };
     }
 
-    public static BulkModificationVariable ToDomainModel(this BulkModificationVariableInputModel inputModel,
-        Property property)
+    public static BulkModificationVariable? ToDomainModel(this BulkModificationVariableInputModel inputModel,
+        PropertyMap propertyMap)
     {
+        var property = propertyMap.GetProperty(inputModel.PropertyPool, inputModel.PropertyId);
+
+        if (property == null)
+        {
+            return null;
+        }
+
         var preprocesses = inputModel.Preprocesses.IsNullOrEmpty()
             ? null
             : inputModel.Preprocesses.DeserializeAsBulkModificationProcessSteps(BulkModificationInternals
-                .PropertyTypeProcessorDescriptorMap[property.Type].ProcessOptionsType);
+                .PropertyTypeProcessorDescriptorMap[property.Type].ProcessOptionsType, propertyMap);
 
         return new BulkModificationVariable
         {

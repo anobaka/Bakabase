@@ -77,7 +77,7 @@ export default (props: StringValueRendererProps) => {
     if (multiline) {
       return (
         <pre
-          className={'whitespace-normal'}
+          // className={'whitespace-normal'}
           dangerouslySetInnerHTML={{ __html: value! }}
           onClick={startEditing}
         />

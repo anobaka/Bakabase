@@ -52,6 +52,7 @@ export default (props: Props) => {
         size={'sm'}
         variant={'light'}
         radius={'sm'}
+        className={'ml-2'}
         classNames={{
           content: 'flex items-center gap-1',
         }}

@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
@@ -39,7 +40,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
             if (UrlKeywords.Any(a => task.Key.Contains(a) && !task.Key.Contains($"novel/{a}")))
             {
                 var inputUri = new Uri(task.Key);
-                var qs = inputUri.ParseQueryString();
+                var qs = HttpUtility.ParseQueryString(inputUri.Query);
                 var page = int.TryParse(qs["p"], out var p) ? p : 1;
                 var doneCount = 0;
                 var doneIds = new List<string>();

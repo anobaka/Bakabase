@@ -1,10 +1,11 @@
 import type { StringProcessOptions } from './models';
 import { BulkModificationStringProcessOperation } from '@/sdk/constants';
 import type { RecursivePartial } from '@/components/types';
+import { validate as validateValue } from '@/pages/BulkModification2/components/BulkModification/ProcessValue/helpers';
 
 export const validate = (
   operation: BulkModificationStringProcessOperation,
-  options?: RecursivePartial<StringProcessOptions>,
+  options?: StringProcessOptions,
 ): string | undefined => {
   if (operation == BulkModificationStringProcessOperation.Delete) {
     return;
@@ -27,15 +28,12 @@ export const validate = (
     case BulkModificationStringProcessOperation.SetWithFixedValue:
     case BulkModificationStringProcessOperation.AddToStart:
     case BulkModificationStringProcessOperation.AddToEnd:
-      if (value == undefined || value.type == undefined || value.editorPropertyType == undefined || value.value == undefined) {
-        return 'Value is required';
-      }
-      break;
+      return validateValue(value);
     case BulkModificationStringProcessOperation.AddToAnyPosition:
-      if (value == undefined || value.value == undefined || value.value.length > 0 || index == undefined || index < 0) {
-        return 'Value and index are required';
+      if (index == undefined || index < 0) {
+        return 'Index is required';
       }
-      break;
+      return validateValue(value);
     case BulkModificationStringProcessOperation.RemoveFromStart:
     case BulkModificationStringProcessOperation.RemoveFromEnd:
       if (count == undefined || count < 0) {

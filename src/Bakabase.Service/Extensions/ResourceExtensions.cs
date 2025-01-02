@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Property.Extensions;
 using Bakabase.Service.Models.View;
 
 namespace Bakabase.Service.Extensions;

@@ -58,7 +58,10 @@ export default (props: RatingValueRendererProps) => {
         <div className={'flex gap-1'}>
           <Rating
             value={value}
-            onChange={() => {
+            onChange={r => {
+              if (value == undefined) {
+                setValue(r);
+              }
               setEditing(true);
             }}
             allowHalf={allowHalf}

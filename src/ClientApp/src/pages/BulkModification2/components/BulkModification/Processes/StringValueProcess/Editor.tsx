@@ -44,7 +44,7 @@ export default ({
 
   useEffect(() => {
     const error = validate(operation, options);
-    onChange?.(operation, options, error);
+    onChange?.(operation, options, error == undefined ? undefined : t(error));
   }, [options, operation]);
 
   const changeOptions = (patches: Partial<StringProcessOptions>) => {
@@ -69,6 +69,8 @@ export default ({
           changeOptions({ value });
         }}
         baseValueType={propertyType}
+        availableValueTypes={availableValueTypes}
+        variables={variables}
       />
     );
   };

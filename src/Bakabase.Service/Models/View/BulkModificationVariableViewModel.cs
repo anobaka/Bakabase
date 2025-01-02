@@ -2,6 +2,7 @@
 using Bakabase.Modules.BulkModification.Abstractions.Components;
 using System.Collections.Generic;
 using Bakabase.Modules.BulkModification.Abstractions.Models;
+using Bakabase.Modules.Property.Models.View;
 
 namespace Bakabase.Service.Models.View;
 
@@ -13,5 +14,5 @@ public record BulkModificationVariableViewModel
     public PropertyViewModel Property { get; set; } = null!;
     public string Key { get; set; } = null!;
     public string Name { get; set; } = null!;
-    public List<BulkModificationProcessStep>? Preprocesses { get; set; }
+    public List<BulkModificationProcessStepViewModel>? Preprocesses { get; set; }
 }
