@@ -28,12 +28,15 @@ export const validate = (
     case BulkModificationStringProcessOperation.SetWithFixedValue:
     case BulkModificationStringProcessOperation.AddToStart:
     case BulkModificationStringProcessOperation.AddToEnd:
-      return validateValue(value);
-    case BulkModificationStringProcessOperation.AddToAnyPosition:
-      if (index == undefined || index < 0) {
-        return 'Index is required';
+      if (!value) {
+        return 'Value is required';
       }
-      return validateValue(value);
+      break;
+    case BulkModificationStringProcessOperation.AddToAnyPosition:
+      if (index == undefined || index < 0 || !value) {
+        return 'Value and index are required';
+      }
+      break;
     case BulkModificationStringProcessOperation.RemoveFromStart:
     case BulkModificationStringProcessOperation.RemoveFromEnd:
       if (count == undefined || count < 0) {
@@ -49,8 +52,8 @@ export const validate = (
     case BulkModificationStringProcessOperation.ReplaceFromEnd:
     case BulkModificationStringProcessOperation.ReplaceFromAnyPosition:
     case BulkModificationStringProcessOperation.ReplaceWithRegex:
-      if (!(find != undefined && find.length > 0)) {
-        return 'Find is required';
+      if (!(find != undefined && find.length > 0) || !value) {
+        return 'Find and replace are required';
       }
       break;
   }

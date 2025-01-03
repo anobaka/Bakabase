@@ -9,12 +9,15 @@ import type {
   BulkModificationVariable,
 } from '@/pages/BulkModification2/components/BulkModification/models';
 import ProcessStep from '@/pages/BulkModification2/components/BulkModification/ProcessStep';
+import { buildLogger } from '@/components/utils';
 
 type Props = {
   processes?: BulkModificationProcess[];
   variables?: BulkModificationVariable[];
   onChange?: (processes: BulkModificationProcess[]) => void;
 };
+
+const log = buildLogger('Processes');
 
 export default ({
                   processes: propsProcesses,
@@ -28,6 +31,8 @@ export default ({
 
   useEffect(() => {
   }, []);
+
+  log(processes, variables);
 
   return (
     <div className={'grow'}>
@@ -97,6 +102,7 @@ export default ({
                   </div>
                   <div className={'pl-2 flex flex-col gap-1'}>
                     {process.steps?.map((step, j) => {
+                      log(step, variables);
                       return (
                         <ProcessStep
                           step={step}

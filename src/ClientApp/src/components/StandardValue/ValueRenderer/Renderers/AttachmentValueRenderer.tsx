@@ -96,7 +96,7 @@ export default ({ value, variant, editor, ...props }: AttachmentValueRendererPro
         );
       } else {
         return (
-          <span>
+          <span className={'break-all'}>
             {(value.join(','))}
           </span>
         );

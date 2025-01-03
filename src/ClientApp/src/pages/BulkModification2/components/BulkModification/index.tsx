@@ -14,6 +14,7 @@ import type {
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import DiffsModal from '@/pages/BulkModification2/components/BulkModification/DiffsModal';
+import { buildLogger } from '@/components/utils';
 
 export type BulkModification = {
   id: number;
@@ -35,6 +36,8 @@ type Props = {
 
 type BlockKey = 'Filters' | 'Variables' | 'Processes' | 'Changes' | 'FinalStep';
 const Blocks: BlockKey[] = ['Filters', 'Variables', 'Processes', 'Changes', 'FinalStep'];
+
+const log = buildLogger('BulkModification');
 
 export default ({
                   bm,
@@ -58,6 +61,8 @@ export default ({
     const r = await BApi.bulkModification.getBulkModification(bm.id);
     onChange(r.data!);
   }, [onChange]);
+
+  log(bm);
 
   return (
     <div className={'flex items-start gap-2'}>

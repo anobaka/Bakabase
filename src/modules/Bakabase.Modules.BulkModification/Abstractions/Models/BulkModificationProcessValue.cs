@@ -46,7 +46,6 @@ public record BulkModificationProcessValue
 
     public TValue? ConvertToStdValue<TValue>(StandardValueType toValueType,
         Dictionary<string, (StandardValueType Type, object? Value)>? variableMap,
-        Dictionary<PropertyPool, Dictionary<int, Bakabase.Abstractions.Models.Domain.Property>>? propertyMap,
         IBulkModificationLocalizer localizer)
     {
         if (Value.IsNotEmpty())
@@ -64,19 +63,10 @@ public record BulkModificationProcessValue
 
                     if (FollowPropertyChanges)
                     {
-                        if (PropertyPool.HasValue && PropertyId.HasValue)
+                        if (Property != null)
                         {
-                            var property = propertyMap?.GetValueOrDefault(PropertyPool.Value)
-                                ?.GetValueOrDefault(PropertyId.Value);
-                            if (property != null)
-                            {
-                                value = Value.DeserializeAsStandardValue(EditorPropertyType.Value.GetDbValueType());
-                                value = property.GetBizValue(value);
-                            }
-                            else
-                            {
-                                throw new Exception(localizer.PropertyIsNotFound(PropertyPool, PropertyId));
-                            }
+                            value = Value.DeserializeAsStandardValue(EditorPropertyType.Value.GetDbValueType());
+                            value = Property.GetBizValue(value);
                         }
                         else
                         {

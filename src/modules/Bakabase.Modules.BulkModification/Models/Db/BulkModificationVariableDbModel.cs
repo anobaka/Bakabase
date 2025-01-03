@@ -15,5 +15,6 @@ namespace Bakabase.Modules.BulkModification.Models.Db
         public string Key { get; set; } = null!;
         public string Name { get; set; } = null!;
         public string? Preprocesses { get; set; }
+        public PropertyValueScope Scope { get; set; }
     }
 }

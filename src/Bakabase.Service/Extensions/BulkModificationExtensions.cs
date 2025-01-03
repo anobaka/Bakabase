@@ -138,7 +138,7 @@ public static class BulkModificationExtensions
             Property = property,
             PropertyId = inputModel.PropertyId,
             PropertyPool = inputModel.PropertyPool,
-            Key = Guid.NewGuid().ToString("N"),
+            Key = inputModel.Key ?? Guid.NewGuid().ToString("N"),
             Name = inputModel.Name,
             Scope = inputModel.Scope,
             Preprocesses = preprocesses

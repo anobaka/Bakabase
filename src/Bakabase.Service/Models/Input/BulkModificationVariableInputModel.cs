@@ -5,6 +5,7 @@ namespace Bakabase.Service.Models.Input;
 
 public record BulkModificationVariableInputModel
 {
+    public string? Key { get; set; }
     public PropertyValueScope Scope { get; set; }
     public PropertyPool PropertyPool { get; set; }
     public int PropertyId { get; set; }

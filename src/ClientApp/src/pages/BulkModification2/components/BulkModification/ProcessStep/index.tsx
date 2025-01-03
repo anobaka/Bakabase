@@ -1,7 +1,8 @@
 'use strict';
 import { useTranslation } from 'react-i18next';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DeleteOutlined } from '@ant-design/icons';
+import { useUpdateEffect } from 'react-use';
 import { StringValueProcessDemonstrator } from '../Processes/StringValueProcess';
 import { ListStringValueProcessDemonstrator } from '../Processes/ListStringValueProcess';
 import { Button, Chip, Modal } from '@/components/bakaui';
@@ -39,6 +40,10 @@ export default ({
   const { createPortal } = useBakabaseContext();
 
   const [step, setStep] = useState<BulkModificationProcessStep>(propsStep);
+
+  useUpdateEffect(() => {
+    setStep(propsStep);
+  }, [propsStep]);
 
   const renderDemonstrator = () => {
     switch (property.type) {

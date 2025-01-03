@@ -1,7 +1,7 @@
 'use strict';
 
-import { useTranslation } from 'react-i18next';
-import React, { useEffect, useState } from 'react';
+import { setDefaults, useTranslation } from 'react-i18next';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type {
   BulkModificationProcessValue,
@@ -15,7 +15,7 @@ import {
 } from '@/sdk/constants';
 import {
   Button,
-  Checkbox, Divider,
+  Checkbox,
   Dropdown,
   DropdownItem,
   DropdownMenu,
@@ -30,7 +30,6 @@ import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import TypeMismatchTip
   from '@/pages/BulkModification2/components/BulkModification/ProcessValue/components/TypeMismatchTip';
-import { buildFakeProperty } from '@/pages/BulkModification2/components/BulkModification/ProcessValue/helpers';
 import { deserializeStandardValue } from '@/components/StandardValue/helpers';
 
 type Props = {
@@ -42,8 +41,6 @@ type Props = {
   availableValueTypes?: BulkModificationProcessorValueType[];
 };
 
-const log = buildLogger('BulkModificationProcessValueEditor');
-
 type PropertyTypeForManuallySettingValue = {
   type: PropertyType;
   isAvailable: boolean;
@@ -54,20 +51,7 @@ type PropertyTypeForManuallySettingValue = {
   isReferenceValueType: boolean;
 };
 
-const buildDefaultValue = (property?: IProperty): BulkModificationProcessValue => {
-  if (property) {
-    return {
-      type: BulkModificationProcessorValueType.ManuallyInput,
-      editorPropertyType: property.type,
-      propertyPool: property.pool,
-      propertyId: property.id,
-    };
-  }
-
-  return {
-    type: BulkModificationProcessorValueType.ManuallyInput,
-  };
-};
+const log = buildLogger('BulkModificationProcessValueEditor');
 
 export default (props: Props) => {
   const {
@@ -79,19 +63,64 @@ export default (props: Props) => {
     availableValueTypes,
   } = props;
   const { t } = useTranslation();
-  const [value, setValue] = useState<BulkModificationProcessValue>(propsValue ?? buildDefaultValue(preferredProperty));
 
   const [propertyTypesForManuallySettingValue, setPropertyTypesForManuallySettingValue] = useState<PropertyTypeForManuallySettingValue[]>([]);
+  const [value, setValue] = useState<BulkModificationProcessValue>(propsValue ?? { type: availableValueTypes?.[0] ?? BulkModificationProcessorValueType.ManuallyInput });
+  const valueRef = useRef(value);
+  const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (value.type == BulkModificationProcessorValueType.ManuallyInput && propertyTypesForManuallySettingValue.length == 0) {
-      BApi.property.getAvailablePropertyTypesForManuallySettingValue().then(r => {
-        setPropertyTypesForManuallySettingValue(r.data || []);
-      });
-    }
-  }, [value.type, propertyTypesForManuallySettingValue]);
+    valueRef.current = value;
+  }, [value]);
 
-  log(props, value, propertyTypesForManuallySettingValue);
+  log(value, preferredProperty, propertyTypesForManuallySettingValue);
+
+  useEffect(() => {
+    BApi.property.getAvailablePropertyTypesForManuallySettingValue().then(r => {
+      const pvs = r.data || [];
+      setPropertyTypesForManuallySettingValue(pvs);
+    });
+  }, []);
+
+  const changeValue = useCallback((patches: Partial<BulkModificationProcessValue>, triggerOnChange: boolean = true) => {
+    const nv = {
+      ...valueRef.current,
+      ...patches,
+    };
+
+    switch (nv.type) {
+      case BulkModificationProcessorValueType.ManuallyInput: {
+        nv.editorPropertyType ??= preferredProperty?.type ?? propertyTypesForManuallySettingValue?.[0]?.type ?? baseValueType;
+
+        if (!nv.property) {
+          const pv = propertyTypesForManuallySettingValue.find(pt => pt.type == nv.editorPropertyType);
+          const property = pv?.properties?.find(p => p.id == nv.propertyId && p.pool == nv.propertyPool) ?? preferredProperty?.type == nv.editorPropertyType ? preferredProperty : pv?.properties?.[0];
+          if (property) {
+            nv.property = property;
+            nv.propertyId = property.id;
+            nv.propertyPool = property.pool;
+          }
+        }
+        break;
+      }
+      case BulkModificationProcessorValueType.Variable: {
+        // if (!nv.value && variables && variables.length > 0) {
+        //   nv.value = variables[0].key;
+        // }
+        break;
+      }
+    }
+
+    setValue(nv);
+
+    if (triggerOnChange) {
+      onChange?.(nv);
+    }
+  }, [preferredProperty, propertyTypesForManuallySettingValue, baseValueType, onChange]);
+
+  useEffect(() => {
+    changeValue(valueRef.current, false);
+  }, [changeValue, propertyTypesForManuallySettingValue]);
 
   const onFollowPropertyChanges = async (follow: boolean) => {
     const { property } = value;
@@ -113,14 +142,6 @@ export default (props: Props) => {
     changeValue({ ...value });
   };
 
-  const changeValue = (patches: Partial<BulkModificationProcessValue>) => {
-    const nv = {
-      ...value,
-      ...patches,
-    };
-    setValue(nv);
-    onChange?.(nv);
-  };
 
   const renderEditor = () => {
     if (!value.editorPropertyType) {
@@ -181,7 +202,7 @@ export default (props: Props) => {
   const renderPropertyCandidates = () => {
     if (value.editorPropertyType) {
       const pts = propertyTypesForManuallySettingValue.find(pt => pt.type == value.editorPropertyType);
-      if (pts?.properties && pts.properties.length > 0) {
+      if (pts?.properties && pts.isReferenceValueType) {
         const property = pts.properties.find(p => p.id == value.propertyId && p.pool == value.propertyPool);
         return (
           <Dropdown>
@@ -205,6 +226,8 @@ export default (props: Props) => {
                   propertyPool: pool,
                   propertyId: id,
                   property,
+                  value: undefined,
+                  followPropertyChanges: pts?.isReferenceValueType,
                 });
               }}
             >
@@ -251,34 +274,14 @@ export default (props: Props) => {
                 onSelectionChange={keys => {
                   const editorPropertyType = parseInt(Array.from(keys)[0] as string, 10) as PropertyType;
 
-                  const patches: Partial<BulkModificationProcessValue> = {
+                  changeValue({
                     editorPropertyType,
+                    property: undefined,
+                    propertyId: undefined,
+                    propertyPool: undefined,
                     value: undefined,
-                  };
-
-                  const pt = propertyTypesForManuallySettingValue.find(pt => pt.type == editorPropertyType);
-                  if (pt) {
-                    if (pt.isReferenceValueType) {
-                      if (pt.properties && pt.properties.length == 1) {
-                        patches.property = pt.properties[0];
-                      }
-                      patches.followPropertyChanges = true;
-                    } else {
-                      patches.property = buildFakeProperty(editorPropertyType, pt.dbValueType, pt.bizValueType);
-                    }
-                  }
-
-                  if (patches.property && patches.property.id > 0) {
-                    patches.propertyId = patches.property.id;
-                    patches.propertyPool = patches.property.pool;
-                  } else {
-                    patches.propertyId = undefined;
-                    patches.propertyPool = undefined;
-                  }
-
-                  log('patches', patches, pt);
-
-                  changeValue(patches);
+                    followPropertyChanges: undefined,
+                  });
                 }}
               >
                 {propertyTypesForManuallySettingValue.map(pt => {
@@ -322,10 +325,16 @@ export default (props: Props) => {
             }))}
             selectionMode={'single'}
             isRequired
+            selectedKeys={value.value ? [value.value] : undefined}
             onSelectionChange={keys => {
               const key = Array.from(keys)[0] as string;
               changeValue({
                 value: key,
+                editorPropertyType: undefined,
+                property: undefined,
+                propertyId: undefined,
+                propertyPool: undefined,
+                followPropertyChanges: undefined,
               });
             }}
           />
@@ -356,38 +365,45 @@ export default (props: Props) => {
   const valueTypes: BulkModificationProcessorValueType[] = availableValueTypes ?? bulkModificationProcessorValueTypes.map(x => x.value);
 
   return (
-    <div className={'flex items-center gap-1'}>
-      <Dropdown isDisabled={valueTypes.length == 1}>
-        <DropdownTrigger>
-          <Button
-            // size={'sm'}
-            variant="bordered"
+    <div>
+      <div className={'flex items-center gap-1'}>
+        <Dropdown isDisabled={valueTypes.length == 1}>
+          <DropdownTrigger>
+            <Button
+              // size={'sm'}
+              variant="bordered"
+            >
+              {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[value.type]}`)}
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            variant={'flat'}
+            selectionMode={'single'}
+            aria-label="Static Actions"
+            onSelectionChange={keys => {
+              const type = parseInt(Array.from(keys)[0] as string, 10) as BulkModificationProcessorValueType;
+              changeValue({ type });
+            }}
           >
-            {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[value.type]}`)}
-          </Button>
-        </DropdownTrigger>
-        <DropdownMenu
-          variant={'flat'}
-          selectionMode={'single'}
-          aria-label="Static Actions"
-          onSelectionChange={keys => {
-            const type = parseInt(Array.from(keys)[0] as string, 10) as BulkModificationProcessorValueType;
-            changeValue({ type });
-          }}
-        >
-          {valueTypes.map(s => {
-            return (
-              <DropdownItem key={s}>
-                <div className={'flex items-center gap-2'}>
-                  {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[s]}`)}
-                </div>
-              </DropdownItem>
-            );
-          })}
-        </DropdownMenu>
-      </Dropdown>
-      {renderByValueType(value.type)}
-      {renderTypeMismatchTip()}
+            {valueTypes.map(s => {
+              return (
+                <DropdownItem key={s}>
+                  <div className={'flex items-center gap-2'}>
+                    {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[s]}`)}
+                  </div>
+                </DropdownItem>
+              );
+            })}
+          </DropdownMenu>
+        </Dropdown>
+        {renderByValueType(value.type)}
+        {renderTypeMismatchTip()}
+      </div>
+      {error && (
+        <div className={'text-danger'}>
+          {t(error)}
+        </div>
+      )}
     </div>
   );
 };

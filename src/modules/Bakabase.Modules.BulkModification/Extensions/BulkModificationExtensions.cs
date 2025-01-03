@@ -20,6 +20,7 @@ using Humanizer;
 using Microsoft.AspNetCore.Routing.Template;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NPOI.Util;
 using BulkModificationVariable = Bakabase.Modules.BulkModification.Abstractions.Models.BulkModificationVariable;
 
 namespace Bakabase.Modules.BulkModification.Extensions;
@@ -71,6 +72,7 @@ public static class BulkModificationExtensions
             Property = property,
             Key = dbModel.Key,
             Name = dbModel.Name,
+            Scope = dbModel.Scope,
             // ProcessOperation = dbModel.ProcessOperation,
             // ProcessOptions =
             // dbModel.ProcessOptions.JsonDeserializeOrDefault(BulkModificationInternals
@@ -169,7 +171,8 @@ public static class BulkModificationExtensions
             Name = domainModel.Name,
             PropertyId = domainModel.PropertyId,
             PropertyPool = domainModel.PropertyPool,
-            Preprocesses = domainModel.Preprocesses.ToJson()
+            Preprocesses = domainModel.Preprocesses.ToJson(),
+            Scope = domainModel.Scope
         };
 
         return dbModel;
@@ -229,7 +232,7 @@ public static class BulkModificationExtensions
                     return null;
                 }
 
-                var domainDiff = d.ToDomainModel(s => s?.SerializeAsStandardValue(property.Type.GetBizValueType()));
+                var domainDiff = d.ToDomainModel(s => s?.DeserializeBizValueAsStandardValue(property.Type));
                 return domainDiff;
             }).OfType<ResourceDiff>().ToList();
 

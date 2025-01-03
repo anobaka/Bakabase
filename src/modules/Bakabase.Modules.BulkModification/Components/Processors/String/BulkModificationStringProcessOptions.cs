@@ -55,7 +55,7 @@ public record
             IsPositioningDirectionReversed = IsPositioningDirectionReversed,
             IsOperationDirectionReversed = IsOperationDirectionReversed,
             Count = Count,
-            Value = Value?.ConvertToStdValue<string>(StandardValueType.String, variableMap, propertyMap, localizer)
+            Value = Value?.ConvertToStdValue<string>(StandardValueType.String, variableMap, localizer)
         };
         return options;
     }

@@ -75,8 +75,7 @@ public record
                             BulkModificationStringProcessorOptions,
                     Operation = ModifyOptions.Operation
                 },
-            Value = Value?.ConvertToStdValue<List<string>>(StandardValueType.ListString, variableMap, propertyMap,
-                localizer)
+            Value = Value?.ConvertToStdValue<List<string>>(StandardValueType.ListString, variableMap, localizer)
         };
 
         return options;

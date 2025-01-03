@@ -15,6 +15,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import { buildLogger } from '@/components/utils';
 import store from '@/store';
 import { PropertyValueScopeSelectorLabel } from '@/components/Labels';
+import { PropertyLabel } from '@/components/Property';
 
 type Props = {
   variable?: Partial<BulkModificationVariable>;
@@ -76,6 +77,7 @@ export default ({
                     PropertySelector, {
                       pool: PropertyPool.All,
                       multiple: false,
+                      selection: variable?.property ? [{ pool: variable.property.pool, id: variable.property.id }] : undefined,
                       isDisabled: p => !bmInternals.supportedStandardValueTypes?.includes(p.bizValueType),
                       onSubmit: async (ps) => {
                         const p = ps[0];
@@ -90,17 +92,22 @@ export default ({
                   );
                 }}
               >
-                {variable?.property ? variable.property.name : t('Select a property')}
+                {variable?.property ? (
+                  <PropertyLabel
+                    property={variable.property}
+                    showPool
+                  />
+                ) : t('Select a property')}
               </Button>
-              {variable?.property && (
-                <Chip
-                  size={'sm'}
-                  radius={'sm'}
-                  isDisabled
-                >
-                  {t(`PropertyType.${PropertyType[variable.property.type]}`)}
-                </Chip>
-              )}
+              {/* {variable?.property && ( */}
+              {/*   <Chip */}
+              {/*     size={'sm'} */}
+              {/*     radius={'sm'} */}
+              {/*     isDisabled */}
+              {/*   > */}
+              {/*     {t(`PropertyType.${PropertyType[variable.property.type]}`)} */}
+              {/*   </Chip> */}
+              {/* )} */}
             </div>
             <div className={'text-right'}>
               <PropertyValueScopeSelectorLabel />

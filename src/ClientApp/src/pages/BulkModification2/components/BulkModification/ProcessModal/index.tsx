@@ -14,6 +14,7 @@ import type {
 import ProcessStep from '@/pages/BulkModification2/components/BulkModification/ProcessStep';
 import ProcessStepModal from '@/pages/BulkModification2/components/BulkModification/ProcessStepModal';
 import store from '@/store';
+import { PropertyLabel } from '@/components/Property';
 
 type Props = {
   process?: Partial<BulkModificationProcess>;
@@ -85,7 +86,12 @@ export default ({
                   );
                 }}
               >
-                {process?.property ? process.property.name : t('Select a property')}
+                {process?.property ? (
+                  <PropertyLabel
+                    property={process.property}
+                    showPool
+                  />
+                ) : t('Select a property')}
               </Button>
             </div>
           </div>

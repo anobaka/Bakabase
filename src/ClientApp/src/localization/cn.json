@@ -1632,5 +1632,17 @@
   "Delete current process": "删除当前处理流程",
   "Are you sure you want to delete this process and all its process steps?": "确定要删除此处理流程及其所有处理步骤吗？",
   "Are you sure you want to delete this process step?": "确定要删除此处理步骤吗？",
-  "Delete a process step": "删除处理步骤"
+  "Delete a process step": "删除处理步骤",
+  "PropertyPool.Internal": "内置",
+  "PropertyPool.Reserved": "预置",
+  "PropertyPool.Custom": "自定义",
+  "Modify options are required": "修改选项是必填的",
+  "Filter value is required": "筛选值是必填的",
+  "Operation is required": "操作是必填的",
+  "Please provide valid options": "请提供有效的选项",
+  "Please provide a valid value": "请提供有效的值",
+  "Please provide a valid value type": "请提供有效的值类型",
+  "Please provide a valid property type": "请提供有效的属性类型",
+  "Please provide a valid variable": "请提供有效的变量",
+  "Find and replace are required": "查找和替换是必填的"
 }

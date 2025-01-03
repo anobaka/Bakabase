@@ -43,14 +43,25 @@ namespace Bakabase.Service.Controllers
                 .ToDictionary(d => d.Key, d => d.ToArray());
             var viewModels = SpecificEnumUtils<PropertyType>.Values.Select(a =>
             {
+                PropertyViewModel[]? properties = null;
                 string? unavailableReason = null;
-                var properties = a.IsReferenceValueType()
-                    ? typePropertiesMap.GetValueOrDefault(a)?.Select(x => x.ToViewModel(localizer)).ToArray()
-                    : null;
-                if (a.IsReferenceValueType() && properties?.Any() != true)
+                if (a.IsReferenceValueType())
                 {
-                    unavailableReason = localizer
-                        .UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType();
+                    properties = typePropertiesMap.GetValueOrDefault(a)?.Select(x => x.ToViewModel(localizer))
+                        .ToArray();
+                    if (properties?.Any() != true)
+                    {
+                        unavailableReason = localizer
+                            .UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType();
+                    }
+                }
+                else
+                {
+                    var virtualProperty = PropertyInternals.VirtualPropertyMap.GetValueOrDefault(a);
+                    if (virtualProperty != null)
+                    {
+                        properties = [virtualProperty.ToViewModel(localizer)];
+                    }
                 }
 
                 return new PropertyTypeForManuallySettingValueViewModel(a, a.GetDbValueType(), a.GetBizValueType(),

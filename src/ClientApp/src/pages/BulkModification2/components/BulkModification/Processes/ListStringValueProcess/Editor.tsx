@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import { StringValueProcessEditor } from '../StringValueProcess';
-import type { ListStringValueProcessOptions } from './models';
+import type { EditingListStringValueProcessOptions, ListStringValueProcessOptions } from './models';
 import { validate } from './helpers';
 import {
   BulkModificationListStringProcessOperation,
@@ -36,9 +36,6 @@ type Props = {
   onChange?: (operation: BulkModificationListStringProcessOperation, options: ListStringValueProcessOptions, error?: string) => any;
 };
 
-type EditingOptions = Omit<Partial<ListStringValueProcessOptions>, 'modifyOptions'> & {
-  modifyOptions?: Partial<ListStringValueProcessOptions['modifyOptions']>;
-};
 
 const log = buildLogger('ListProcessorEditor');
 
@@ -52,17 +49,17 @@ export default ({
                   availableValueTypes,
                 }: Props) => {
   const { t } = useTranslation();
-  const [options, setOptions] = useState<EditingOptions>(propsOptions ?? {});
+  const [options, setOptions] = useState<EditingListStringValueProcessOptions>(propsOptions ?? {});
   const [operation, setOperation] = useState<BulkModificationListStringProcessOperation>(propsOperation ?? BulkModificationListStringProcessOperation.SetWithFixedValue);
 
   log('operation', operation, 'options', options, typeof operation);
 
   useEffect(() => {
     const error = validate(operation, options);
-    onChange?.(operation, options as ListStringValueProcessOptions, error);
+    onChange?.(operation, options as ListStringValueProcessOptions, error == undefined ? undefined : t(error));
   }, [options, operation]);
 
-  const changeOptions = (patches: EditingOptions) => {
+  const changeOptions = (patches: EditingListStringValueProcessOptions) => {
     const newOptions = {
       ...options,
       ...patches,
@@ -90,7 +87,7 @@ export default ({
     );
   };
 
-  const renderSubOptions = (options: EditingOptions) => {
+  const renderSubOptions = (options: EditingListStringValueProcessOptions) => {
     log('renderOptions', operation, options);
 
     if (!operation) {

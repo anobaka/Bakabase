@@ -8,17 +8,22 @@ import type {
 } from '@/pages/BulkModification2/components/BulkModification/models';
 import { Chip } from '@/components/bakaui';
 import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
+import { buildLogger } from '@/components/utils';
 
 type Props = {
   variables?: BulkModificationVariable[];
   value?: BulkModificationProcessValue;
 };
 
+const log = buildLogger('BulkModificationProcessValueDemonstrator');
+
 export default ({
                   variables,
                   value,
                 }: Props) => {
   const { t } = useTranslation();
+
+  log(value, variables);
 
   if (!value) {
     return (

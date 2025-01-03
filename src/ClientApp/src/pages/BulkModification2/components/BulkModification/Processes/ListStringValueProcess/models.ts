@@ -19,3 +19,8 @@ export type ListStringValueProcessOptions = {
     options?: StringProcessOptions;
   };
 };
+
+
+export type EditingListStringValueProcessOptions = Omit<Partial<ListStringValueProcessOptions>, 'modifyOptions'> & {
+  modifyOptions?: Partial<ListStringValueProcessOptions['modifyOptions']>;
+};
