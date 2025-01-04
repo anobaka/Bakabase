@@ -1,3 +1,18 @@
+## [1.9.1-beta2](https://cdn-public.anobaka.com/app/bakabase/inside-world/1.9.1-beta2/installer/Bakabase.zip) (2025-01-04)
+
+### Features
+
+* 在未设置评分的情况下点击评分组件时，会将点击的星星数量作为默认值 ([#673](https://github.com/anobaka/InsideWorld/issues/673))
+* 在批量修改功能中可以使用任意属性值编辑器来设置数据 ([#674](https://github.com/anobaka/InsideWorld/issues/674))
+* 批量修改功能增加多选和附件数据的支持 ([#675](https://github.com/anobaka/InsideWorld/issues/675))
+* 更新.net版本至9.0 ([#676](https://github.com/anobaka/InsideWorld/issues/676))
+* 增加缓存管理页面 ([#677](https://github.com/anobaka/InsideWorld/issues/677))
+
+### Bugs
+
+* 当浏览选项修改时可能会错误的导致资源列数显示设置为0 ([#672](https://github.com/anobaka/InsideWorld/issues/672))
+* 未能正确缓存可播放文件信息 ([#678](https://github.com/anobaka/InsideWorld/issues/678))
+
 ## [1.9.1-beta](https://cdn-public.anobaka.com/app/bakabase/inside-world/1.9.1-beta/installer/Bakabase.zip) (2024-12-23)
 
 ### Features

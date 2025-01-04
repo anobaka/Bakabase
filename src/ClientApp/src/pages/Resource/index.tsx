@@ -105,7 +105,15 @@ export default () => {
 
   useEffect(() => {
     if (uiOptions.initialized) {
-      const c = uiOptions.resource?.colCount ?? BusinessConstants.DefaultResourceColumnCount;
+      const c = uiOptions?.resource?.colCount ? uiOptions.resource.colCount : BusinessConstants.DefaultResourceColumnCount;
+      if (!uiOptions.resource || uiOptions.resource.colCount == 0) {
+        BApi.options.patchUiOptions({
+          resource: {
+            ...(uiOptions.resource || {}),
+            colCount: c,
+          },
+        });
+      }
       if ((columnCount == 0 || columnCount != c)) {
         setColumnCount(c);
       }
