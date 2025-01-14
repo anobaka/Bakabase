@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Helpers;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite.Models;
@@ -48,7 +49,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
 
         if (detail.Introduction.IsNotEmpty())
         {
-            detail.Introduction = WebUtility.HtmlDecode(detail.Introduction);
+            detail.Introduction = StringHelpers.MinifyHtml(WebUtility.HtmlDecode(detail.Introduction));
         }
 
         var coverUrls = cq[".product-slider-data"].Children().Select(x => x.Cq().Data<string>("src"))

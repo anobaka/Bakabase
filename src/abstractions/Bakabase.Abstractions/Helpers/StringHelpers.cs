@@ -1,4 +1,8 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
+using Bootstrap.Extensions;
+using CsQuery;
+using WebMarkupMin.Core;
 
 namespace Bakabase.Abstractions.Helpers;
 
@@ -34,6 +38,45 @@ public class StringHelpers
         var rPadding = rightPadding ? padding : string.Empty;
         left = Regex.Escape(left);
         right = Regex.Escape(right);
+
         return new Regex($"{left}{lPadding}{word}{rPadding}{right}");
+    }
+
+    public static string? MinifyHtml(string? html)
+    {
+        if (html.IsNullOrEmpty())
+        {
+            return null;
+        }
+
+        try
+        {
+            var htmlMinifier = new HtmlMinifier();
+            var result = htmlMinifier.Minify(html);
+            return result.MinifiedContent;
+        }
+        catch (Exception e)
+        {
+            return html;
+        }
+    }
+
+    public static string? FormatHtml(string? html)
+    {
+        if (html.IsNullOrEmpty())
+        {
+            return null;
+        }
+
+        try
+        {
+            html = MinifyHtml(html);
+            var cq = new CQ(html);
+            return cq.Html();
+        }
+        catch (Exception e)
+        {
+            return html;
+        }
     }
 }
