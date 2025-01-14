@@ -31,6 +31,7 @@ using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.Property.Components.Properties.Multilevel;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Extensions;
 using Humanizer.Localisation;
@@ -429,11 +430,20 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                         .Value)
                             {
                                 case Abstractions.Models.Domain.Constants.ReservedProperty.Introduction:
+                                {
                                     rpv.Introduction = nv as string;
                                     break;
+                                }
                                 case Abstractions.Models.Domain.Constants.ReservedProperty.Rating:
+                                {
                                     rpv.Rating = nv is decimal nv1 ? nv1 : null;
                                     break;
+                                }
+                                case Abstractions.Models.Domain.Constants.ReservedProperty.Cover:
+                                {
+                                    rpv.CoverPaths = nv as List<string>;
+                                    break;
+                                }
                                 default:
                                     throw new ArgumentOutOfRangeException();
                             }
