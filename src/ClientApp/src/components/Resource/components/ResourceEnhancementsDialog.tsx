@@ -123,6 +123,10 @@ function ResourceEnhancementsDialog({
             bizRv = rv.rating;
             dbRv = rv.rating;
             break;
+          case ReservedProperty.Cover:
+            bizRv = rv.coverPaths;
+            dbRv = rv.coverPaths;
+            break;
           default:
             return t('Unsupported reserved property type: {{type}}', { type: e.propertyId });
         }

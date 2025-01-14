@@ -23,5 +23,6 @@ export type Enhancement = {
   reservedPropertyValue?: {
     rating?: number;
     introduction?: string;
+    coverPaths?: string[];
   };
 };
