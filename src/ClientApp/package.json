@@ -56,6 +56,7 @@
     "md5": "^2.3.0",
     "mime-types": "^2.1.35",
     "moment": "^2.29.1",
+    "openapi-fetch": "^0.13.4",
     "patch-package": "^6.5.1",
     "postinstall-postinstall": "^2.1.0",
     "prop-types": "^15.7.2",
@@ -103,6 +104,7 @@
     "@types/react-dom": "^18.0.0",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.35.0",
+    "openapi-typescript": "^7.5.2",
     "postcss": "^8.4.38",
     "stylelint": "^15.2.0",
     "swagger-typescript-api": "^12.0.2",
@@ -115,6 +117,7 @@
     "build": "ice build",
     "lint": "eslint . --ext '.js,.jsx' --fix",
     "gen-sdk": "swagger-typescript-api --union-enums -p http://localhost:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk --unwrap-response-data && node ./src/sdk/api-generator.js",
+    "gen-sdk2": "npx openapi-typescript http://localhost:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk/BApi2.d.ts",
     "postinstall": "patch-package"
   },
   "title": "bxb"

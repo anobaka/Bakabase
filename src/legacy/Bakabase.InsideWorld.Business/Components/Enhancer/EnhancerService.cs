@@ -209,106 +209,106 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 }
                 else
                 {
-                    if (targetOptions.PropertyId.HasValue || targetOptions.PropertyPool.HasValue)
+                    // if (targetOptions.PropertyId.HasValue || targetOptions.PropertyPool.HasValue)
+                    // {
+                    //     var name = targetDescriptor.IsDynamic
+                    //         ? enhancement.DynamicTarget ?? string.Empty
+                    //         : targetDescriptor.Name;
+                    //
+                    //     if (!targetOptions.PropertyId.HasValue)
+                    //     {
+                    //         throw new Exception(
+                    //             _enhancerLocalizer.Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(
+                    //                 targetOptions.PropertyPool!.Value, name));
+                    //     }
+                    //
+                    //     throw new Exception(
+                    //         _enhancerLocalizer.Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot(
+                    //             targetOptions.PropertyId.Value, name));
+                    // }
+                    // else
+                    // {
+                    if (targetOptions.AutoBindProperty == true)
                     {
-                        var name = targetDescriptor.IsDynamic
-                            ? enhancement.DynamicTarget ?? string.Empty
-                            : targetDescriptor.Name;
-
-                        if (!targetOptions.PropertyId.HasValue)
+                        if (targetDescriptor.ReservedPropertyCandidate.HasValue)
                         {
-                            throw new Exception(
-                                _enhancerLocalizer.Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot(
-                                    targetOptions.PropertyPool!.Value, name));
-                        }
-
-                        throw new Exception(
-                            _enhancerLocalizer.Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot(
-                                targetOptions.PropertyId.Value, name));
-                    }
-                    else
-                    {
-                        if (targetOptions.AutoBindProperty == true)
-                        {
-                            if (targetDescriptor.ReservedPropertyCandidate.HasValue)
-                            {
-                                targetOptions.PropertyId =
-                                    (int) targetDescriptor.ReservedPropertyCandidate.Value;
-                                targetOptions.PropertyPool = PropertyPool.Reserved;
-                            }
-                            else
-                            {
-                                var name = targetDescriptor.IsDynamic
-                                    ? enhancement.DynamicTarget
-                                    : targetDescriptor.Name;
-                                if (!string.IsNullOrEmpty(name))
-                                {
-                                    var propertyCandidate = propertyMap.Values.FirstOrDefault(p =>
-                                        p.Type == targetDescriptor.PropertyType && p.Name == name);
-                                    if (propertyCandidate == null)
-                                    {
-                                        var kv = newPropertyAddModels.FirstOrDefault(x =>
-                                            x.PropertyAddModel.Name == name && x.PropertyAddModel.Type ==
-                                            targetDescriptor.PropertyType);
-                                        if (kv == default)
-                                        {
-                                            kv = (new CustomPropertyAddOrPutDto
-                                            {
-                                                Name = name,
-                                                Type = targetDescriptor.PropertyType
-                                            }, []);
-
-                                            object? options = null;
-                                            // todo: Standardize serialization of options
-                                            switch (targetDescriptor.PropertyType)
-                                            {
-                                                case PropertyType.SingleChoice:
-                                                {
-                                                    options = new SingleChoicePropertyOptions()
-                                                        {AllowAddingNewDataDynamically = true};
-                                                    kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
-                                                    break;
-                                                }
-                                                case PropertyType.MultipleChoice:
-                                                {
-                                                    options = new MultipleChoicePropertyOptions()
-                                                        {AllowAddingNewDataDynamically = true};
-                                                    break;
-                                                }
-                                                case PropertyType.Multilevel:
-                                                {
-                                                    options = new MultilevelPropertyOptions
-                                                        {AllowAddingNewDataDynamically = true};
-                                                    break;
-                                                }
-                                            }
-
-                                            if (options != null)
-                                            {
-                                                kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
-                                            }
-
-                                            newPropertyAddModels.Add(kv);
-                                        }
-
-                                        kv.Enhancements.Add(enhancement);
-                                    }
-                                    else
-                                    {
-                                        targetOptions.PropertyId = propertyCandidate.Id;
-                                        targetOptions.PropertyPool = PropertyPool.Custom;
-                                    }
-
-                                    changedCategoryEnhancerOptions.Add(categoryOptions!);
-                                }
-                            }
+                            targetOptions.PropertyId =
+                                (int) targetDescriptor.ReservedPropertyCandidate.Value;
+                            targetOptions.PropertyPool = PropertyPool.Reserved;
                         }
                         else
                         {
-                            // no property bound, ignore
-                            continue;
+                            var name = targetDescriptor.IsDynamic
+                                ? enhancement.DynamicTarget
+                                : targetDescriptor.Name;
+                            if (!string.IsNullOrEmpty(name))
+                            {
+                                var propertyCandidate = propertyMap.Values.FirstOrDefault(p =>
+                                    p.Type == targetDescriptor.PropertyType && p.Name == name);
+                                if (propertyCandidate == null)
+                                {
+                                    var kv = newPropertyAddModels.FirstOrDefault(x =>
+                                        x.PropertyAddModel.Name == name && x.PropertyAddModel.Type ==
+                                        targetDescriptor.PropertyType);
+                                    if (kv == default)
+                                    {
+                                        kv = (new CustomPropertyAddOrPutDto
+                                        {
+                                            Name = name,
+                                            Type = targetDescriptor.PropertyType
+                                        }, []);
+
+                                        object? options = null;
+                                        // todo: Standardize serialization of options
+                                        switch (targetDescriptor.PropertyType)
+                                        {
+                                            case PropertyType.SingleChoice:
+                                            {
+                                                options = new SingleChoicePropertyOptions()
+                                                    {AllowAddingNewDataDynamically = true};
+                                                kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
+                                                break;
+                                            }
+                                            case PropertyType.MultipleChoice:
+                                            {
+                                                options = new MultipleChoicePropertyOptions()
+                                                    {AllowAddingNewDataDynamically = true};
+                                                break;
+                                            }
+                                            case PropertyType.Multilevel:
+                                            {
+                                                options = new MultilevelPropertyOptions
+                                                    {AllowAddingNewDataDynamically = true};
+                                                break;
+                                            }
+                                        }
+
+                                        if (options != null)
+                                        {
+                                            kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
+                                        }
+
+                                        newPropertyAddModels.Add(kv);
+                                    }
+
+                                    kv.Enhancements.Add(enhancement);
+                                }
+                                else
+                                {
+                                    targetOptions.PropertyId = propertyCandidate.Id;
+                                    targetOptions.PropertyPool = PropertyPool.Custom;
+                                }
+
+                                changedCategoryEnhancerOptions.Add(categoryOptions!);
+                            }
                         }
                     }
+                    else
+                    {
+                        // no property bound, ignore
+                        continue;
+                    }
+                    // }
                 }
 
                 enhancementTargetOptionsMap[enhancement] = targetOptions;
@@ -553,7 +553,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
         }
 
         protected async Task CreateEnhancementContext(List<Abstractions.Models.Domain.Resource> targetResources,
-            HashSet<int>? restrictedEnhancerIds, bool apply, CancellationToken ct)
+            HashSet<int>? restrictedEnhancerIds, bool apply, Func<int, Task>? onProgress, CancellationToken ct)
         {
             var categoryIds = targetResources.Select(c => c.CategoryId).ToHashSet();
             var categoryIdEnhancerOptionsMap =
@@ -601,12 +601,17 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                     d => d.Key,
                     d => d.GroupBy(c => c.EnhancerId).ToDictionary(e => e.Key, e => e.FirstOrDefault()));
 
+            var taskCount = tasks.Sum(x => x.Value.Sum(y => y.Value.Count));
+            var doneCount = 0;
+            var currentPercentage = 0;
             foreach (var (enhancer, optionsAndResources) in tasks)
             {
                 foreach (var (options, resources) in optionsAndResources)
                 {
                     foreach (var resource in resources)
                     {
+                        ct.ThrowIfCancellationRequested();
+
                         var record = resourceEnhancementRecordMap.GetValueOrDefault(resource.Id)
                             ?.GetValueOrDefault(enhancer.Id);
 
@@ -653,21 +658,37 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                 x.ResourceId == resource.Id && x.EnhancerId == enhancer.Id);
                             await ApplyEnhancementsToResources(enhancements, ct);
                         }
+
+                        doneCount++;
+                        var newPercentage = (int) Math.Floor(doneCount * 100.0 / taskCount);
+                        if (newPercentage != currentPercentage)
+                        {
+                            currentPercentage = newPercentage;
+                            if (onProgress != null)
+                            {
+                                await onProgress(currentPercentage);
+                            }
+                        }
                     }
                 }
+            }
+
+            if (onProgress != null)
+            {
+                await onProgress(100);
             }
         }
 
         public async Task EnhanceResource(int resourceId, HashSet<int>? enhancerIds, CancellationToken ct)
         {
             var resource = (await _resourceService.Get(resourceId, ResourceAdditionalItem.None))!;
-            await CreateEnhancementContext([resource], enhancerIds, true, ct);
+            await CreateEnhancementContext([resource], enhancerIds, true, null, ct);
         }
 
-        public async Task EnhanceAll(CancellationToken ct)
+        public async Task EnhanceAll(Func<int, Task>? onProgress, CancellationToken ct)
         {
             var resources = await _resourceService.GetAll(null, ResourceAdditionalItem.None);
-            await CreateEnhancementContext(resources, null, true, ct);
+            await CreateEnhancementContext(resources, null, true, onProgress, ct);
         }
 
         public async Task ReapplyEnhancementsByCategory(int categoryId, int enhancerId, CancellationToken ct)

@@ -354,4 +354,7 @@ The version of lux is not limited.</value>
   <data name="Unknown" xml:space="preserve">
     <value>Unknown</value>
   </data>
+  <data name="BackgroundTask_Enhance_Name" xml:space="preserve">
+    <value>Enhance</value>
+  </data>
 </root>

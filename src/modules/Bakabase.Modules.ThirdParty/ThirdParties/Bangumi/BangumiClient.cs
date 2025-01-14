@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using Bootstrap.Extensions;
 using System.Net;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi.Models;
+using Bakabase.Abstractions.Helpers;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 
@@ -40,7 +41,7 @@ public class BangumiClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
         var intro = detailCq["#subject_summary"]?[0]?.InnerHTML;
         if (!string.IsNullOrEmpty(intro))
         {
-            ctx.Introduction = WebUtility.HtmlDecode(intro);
+            ctx.Introduction = StringHelpers.MinifyHtml(WebUtility.HtmlDecode(intro));
         }
 
         // Cover

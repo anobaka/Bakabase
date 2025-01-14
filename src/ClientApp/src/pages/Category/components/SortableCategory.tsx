@@ -573,7 +573,7 @@ export default (({
                             });
                           }}
                         >
-                          <EnhancerIcon id={e.id} />
+                          <EnhancerIcon id={e.enhancerId} />
                           {enhancer?.name}
                         </Button>
                       );

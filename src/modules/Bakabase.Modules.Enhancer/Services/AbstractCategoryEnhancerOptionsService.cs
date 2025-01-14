@@ -190,7 +190,17 @@ namespace Bakabase.Modules.Enhancer.Services
             targetOptions.PropertyPool = patches.PropertyPool ?? targetOptions.PropertyPool;
             targetOptions.AutoMatchMultilevelString =
                 patches.AutoMatchMultilevelString ?? targetOptions.AutoMatchMultilevelString;
-            targetOptions.AutoBindProperty = patches.AutoBindProperty ?? targetOptions.AutoBindProperty;
+
+            if (patches.AutoBindProperty.HasValue)
+            {
+                if (patches.AutoBindProperty.Value != targetOptions.AutoBindProperty)
+                {
+                    targetOptions.AutoBindProperty = patches.AutoBindProperty.Value;
+                    targetOptions.PropertyPool = null;
+                    targetOptions.PropertyId = null;
+                }
+            }
+
             targetOptions.CoverSelectOrder = patches.CoverSelectOrder ?? targetOptions.CoverSelectOrder;
             // patch or create
             targetOptions.DynamicTarget = patches.DynamicTarget ?? dynamicTarget;
