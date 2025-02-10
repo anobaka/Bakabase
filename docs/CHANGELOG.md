@@ -1,3 +1,15 @@
+## [1.9.1-beta3](https://cdn-public.anobaka.com/app/bakabase/inside-world/1.9.1-beta3/installer/Bakabase.zip)(2025-02-10)
+
+### Features
+
+* 移除bangumi、dlsite简介中的空行 ([#679](https://github.com/Anobaka/Bakabase/issues/679))
+* 当未找到正确的增强属性时不再报错 ([#681](https://github.com/Anobaka/Bakabase/issues/681))
+* 将自动增强接入后台任务管理器，增加日志和管理能力 ([#682](https://github.com/Anobaka/Bakabase/issues/682))
+
+### Bugs
+
+* 分类列表中显示的增强器图标不一致 ([#680](https://github.com/Anobaka/Bakabase/issues/680))
+
 ## [1.9.1-beta2](https://cdn-public.anobaka.com/app/bakabase/inside-world/1.9.1-beta2/installer/Bakabase.zip) (2025-01-04)
 
 ### Features
