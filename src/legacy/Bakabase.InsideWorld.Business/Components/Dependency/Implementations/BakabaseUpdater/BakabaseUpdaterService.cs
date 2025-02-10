@@ -67,7 +67,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
                     var versionString = Path.GetFileName(a.TrimEnd('/').TrimStart('v'));
                     return (Prefix: a,
                         Version: SemVersion.TryParse(versionString, SemVersionStyles.Any, out var v) ? v : null);
-                }).Where(a => a.Version != null).OrderByDescending(a => a.Version).ToList();
+                }).Where(a => a.Version != null).OrderByDescending(a => a.Version!, SemVersion.SortOrderComparer).ToList();
 
             var semVer = prefixAndVersions.Any() ? prefixAndVersions.FirstOrDefault().Version : null;
             if (semVer == null)
