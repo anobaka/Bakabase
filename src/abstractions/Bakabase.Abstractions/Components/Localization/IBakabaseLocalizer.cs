@@ -25,4 +25,7 @@ public interface IBakabaseLocalizer
     string SpecialText_HistoricalLanguageValue2ShouldBeModified();
     string Reserved_Resource_Property_Name(ReservedProperty property);
     string Unknown();
+    string BTask_Name(string key);
+    string BTask_Description(string key);
+    string BTask_RiskOnInterruption(string key);
 }
