@@ -1,145 +1,257 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Concurrent;
-using System.Reflection;
+using System.Diagnostics;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
-using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bootstrap.Components.Configuration.Abstractions;
-using Bootstrap.Extensions;
-using Quartz;
-using Quartz.Impl;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Abstractions.Components.Tasks;
 
 public class BTaskManager : IAsyncDisposable
 {
     private readonly IBakabaseLocalizer _localizer;
-    private readonly ConcurrentDictionary<string, IBTaskHandler> _taskHandlers;
-    private IScheduler _scheduler = null!;
-    private readonly ConcurrentDictionary<string, BTaskAttribute> _attributeMap;
     private readonly IBOptions<TaskOptions> _options;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ConcurrentDictionary<string, BTaskRunner> _runners = [];
+    private readonly ConcurrentDictionary<string, BTaskDescriptor> _taskMap = [];
+    private readonly IBTaskEventHandler _eventHandler;
 
-    public BTaskManager(IBakabaseLocalizer localizer, IEnumerable<IBTaskHandler> taskHandlers,
-        IBOptions<TaskOptions> options, IServiceProvider serviceProvider)
+    public BTaskManager(IBakabaseLocalizer localizer, IBOptions<TaskOptions> options, IServiceProvider serviceProvider,
+        IBTaskEventHandler eventHandler)
     {
         _localizer = localizer;
-
-        var uniqueHandlers = taskHandlers.GroupBy(x => x.Key).Select(x => x.First()).ToArray();
-        _taskHandlers =
-            new ConcurrentDictionary<string, IBTaskHandler>(uniqueHandlers.ToDictionary(x => x.Key, x => x));
-        _attributeMap = new ConcurrentDictionary<string, BTaskAttribute>(
-            uniqueHandlers.ToDictionary(d => d.Key, d => d.GetType().GetCustomAttribute<BTaskAttribute>())!);
-
         _options = options;
         _serviceProvider = serviceProvider;
+        _eventHandler = eventHandler;
     }
 
-    protected async Task Schedule(BTaskViewModel task, bool stopImmediately)
+    public async Task Initialize()
     {
-        var jobKey = new JobKey(task.Key);
-        await _scheduler.DeleteJob(jobKey);
-
-        if (stopImmediately)
+        var predefinedTasks = _serviceProvider.GetRequiredService<IEnumerable<IPredefinedBTask>>();
+        foreach (var pt in predefinedTasks)
         {
-            await _taskHandlers[task.Key].Stop();
+            Enqueue(pt.DescriptorBuilder);
         }
 
-        var job = JobBuilder.Create(_taskHandlers[task.Key].GetType())
-            .WithIdentity(jobKey)
-            .SetJobData(new JobDataMap(
-                new Dictionary<string, object> {{nameof(IServiceProvider), _serviceProvider}} as IDictionary))
-            .Build();
-
-        var tb = TriggerBuilder.Create()
-            .WithSchedule(SimpleScheduleBuilder.Create().WithInterval(task.Interval).RepeatForever());
-        if (task.EnableAfter.HasValue)
-        {
-            tb.StartAt(task.EnableAfter.Value);
-        }
-
-        var trigger = tb.Build();
-
-        await _scheduler.ScheduleJob(job, trigger);
+        await Daemon();
     }
 
-    public async Task Start()
+    public void Enqueue(BTaskDescriptorBuilder descriptorBuilder)
     {
-        var factory = new StdSchedulerFactory();
-        _scheduler = await factory.GetScheduler();
+        var descriptor = _buildDescriptor(descriptorBuilder);
 
-        var tasks = Tasks;
-        foreach (var task in tasks)
+        if (!_taskMap.TryAdd(descriptor.Id, descriptor))
         {
-            await Schedule(task, true);
+            throw new Exception(_localizer.BTask_FailedToRunTaskDueToIdExisting(descriptor.Name));
         }
     }
 
-    public async Task StartTask<TTask>(params object[] args) where TTask : IBTaskHandler
+    private BTaskDescriptor _buildDescriptor(BTaskDescriptorBuilder builder)
     {
-        var task = _taskHandlers.Values.FirstOrDefault(x => x.GetType() == typeof(TTask));
-        if (task == null)
+        var getName = builder.GetName ?? (Func<string>) (() => builder.Key);
+
+        async Task OnTaskStatusChange(BTaskStatus status)
         {
-            return;
-        }
-
-        await task.Start();
-    }
-
-    public async Task Run(BTaskRunInputModel model)
-    {
-        var runner =new BTaskRunner(model);
-
-        if (model.StopPrevious)
-        {
-            if (_runners.TryGetValue(model.Key, out var r))
+            await OnTaskChange(builder.Id);
+            if (builder.OnStatusChange != null)
             {
-                await r.Stop();
+                await builder.OnStatusChange(status);
             }
         }
 
-        if (!model.IgnoreConflicts && model.ConflictWithTaskKeys?.Any() == true)
+        async Task OnTaskPercentageChange(int percentage)
         {
-            var conflictTasks = _runners.Where(x =>
-                model.ConflictWithTaskKeys.Contains(x.Key) && x.Value.Status == BTaskStatus.Running).ToList();
+            await OnTaskChange(builder.Id);
+            if (builder.OnPercentageChange != null)
+            {
+                await builder.OnPercentageChange(percentage);
+            }
+        }
+
+        async Task OnTaskProcessChange(string process)
+        {
+            await OnTaskChange(builder.Id);
+            if (builder.OnProcessChange != null)
+            {
+                await builder.OnProcessChange(process);
+            }
+        }
+
+        var dbModel = _options.Value.Tasks?.FirstOrDefault(x => x.Id == builder.Id);
+
+        return new BTaskDescriptor(builder.Key,
+            builder.Run,
+            builder.Args,
+            builder.Id,
+            getName,
+            builder.GetDescription,
+            builder.GetMessageOnInterruption,
+            builder.CancellationToken,
+            builder.Level,
+            OnTaskStatusChange,
+            OnTaskProcessChange,
+            OnTaskPercentageChange,
+            builder.ConflictKeys,
+            dbModel?.Interval,
+            builder.IsPersistent
+        );
+    }
+
+    private async Task OnTaskChange(string id)
+    {
+        var task = GetTaskViewModel(id);
+        if (task != null)
+        {
+            await _eventHandler.OnTaskChange(task);
+        }
+    }
+
+    /// <summary>
+    /// Start or resume a task
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public async Task Start(string id)
+    {
+        if (!_taskMap.TryGetValue(id, out var d))
+        {
+            throw new Exception(_localizer.BTask_FailedToRunTaskDueToUnknownTaskKey(id));
+        }
+
+        switch (d.Status)
+        {
+            case BTaskStatus.Running:
+            {
+                break;
+            }
+            case BTaskStatus.Paused:
+            {
+                await d.Resume();
+                break;
+            }
+            case BTaskStatus.NotStarted:
+            case BTaskStatus.Error:
+            case BTaskStatus.Completed:
+            case BTaskStatus.Stopped:
+            {
+                if (!_getConflictTasks(d).Any())
+                {
+                    await d.Start();
+                }
+
+                break;
+            }
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    public async Task Stop(string id)
+    {
+        if (_taskMap.TryGetValue(id, out var task))
+        {
+            await task.Stop();
+        }
+    }
+
+    private BTaskDescriptor[] _getConflictTasks(BTaskDescriptor d)
+    {
+        return _taskMap.Values
+            .Where(x =>
+                x != d && (d.ConflictKeys?.Contains(x.Key) == true || x.ConflictKeys?.Contains(d.Key) == true) &&
+                x.Status is BTaskStatus.Running or BTaskStatus.Paused)
+            .ToArray();
+    }
+
+
+    private Task Daemon()
+    {
+        Task.Run(async () =>
+        {
+            while (true)
+            {
+                var activeTasks = _taskMap.Values.Where(x => x.Interval.HasValue || x.Status is BTaskStatus.NotStarted)
+                    .OrderBy(x => x.LastFinishedAt)
+                    .ThenBy(x => x.CreatedAt).ToArray();
+                foreach (var at in activeTasks)
+                {
+                    if (!_getConflictTasks(at).Any())
+                    {
+                        await at.TryStartAutomatically();
+                    }
+                }
+
+                await Task.Delay(1000);
+            }
+        });
+        return Task.CompletedTask;
+    }
+
+    public async Task Pause(string id)
+    {
+        if (_taskMap.TryGetValue(id, out var t))
+        {
+            await t.Pause();
+        }
+    }
+
+    public async Task PauseAll()
+    {
+        await Task.WhenAll(_taskMap.Values.Select(async t => await t.Pause()));
+    }
+
+    public async Task Remove(string id)
+    {
+        _taskMap.TryRemove(id, out _);
+        await _eventHandler.OnAllTasksChange(GetTasksViewModel());
+    }
+
+    public async Task RemoveInactive()
+    {
+        var tasks = _taskMap.Values.ToList();
+        foreach (var t in tasks.Where(x =>
+                     x.Status is BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Stopped))
+        {
+            _taskMap.TryRemove(t.Id, out _);
+        }
+
+        await _eventHandler.OnAllTasksChange(GetTasksViewModel());
+    }
+
+    public List<BTaskEvent<int>> GetPercentageEvents(string id) =>
+        _taskMap.GetValueOrDefault(id)?.PercentageEvents.ToList() ?? [];
+
+    public List<BTaskEvent<string>> GetProcessEvents(string id) =>
+        _taskMap.GetValueOrDefault(id)?.ProcessEvents.ToList() ?? [];
+
+    private BTaskViewModel BuildTaskViewModel(BTaskDescriptor d)
+    {
+        string? reasonForUnableToStart = null;
+        if (d.Status is BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.NotStarted)
+        {
+            var conflictTasks = _getConflictTasks(d);
             if (conflictTasks.Any())
             {
-                throw new Exception(
-                    $"Can not initialize task [{runner.GetName}] due to conflict tasks are still running: {string.Join(',', conflictTasks.Select(c => c.Value.GetName))}");
+                reasonForUnableToStart =
+                    _localizer.BTask_FailedToRunTaskDueToConflict(d.Name,
+                        conflictTasks.Select(c => c.Name).ToArray());
             }
         }
 
-        _runners[model.Key] = runner;
-        await runner.Run();
+        return new BTaskViewModel(d, _options.Value.Tasks?.FirstOrDefault(x => x.Id == d.Id), reasonForUnableToStart);
     }
 
-    public List<BTaskViewModel> Tasks
-    {
-        get
-        {
-            var dbModels = (_options.Value.Tasks ?? []).GroupBy(d => d.Key).ToDictionary(d => d.Key, d => d.First());
-            var tasks = _taskHandlers.Values.Select(x => new BTaskViewModel
-            {
-                Description = _localizer.BTask_Description(x.Key),
-                Name = _localizer.BTask_Name(x.Key),
-                RiskOnInterruption = _localizer.BTask_RiskOnInterruption(x.Key),
-                EnableAfter = dbModels.GetValueOrDefault(x.Key)?.EnableAfter,
-                Error = x.Error,
-                Interval = dbModels.GetValueOrDefault(x.Key)?.Interval ?? _attributeMap[x.Key].DefaultInterval,
-                Key = x.Key,
-                Percentage = x.Percentage,
-                Status = x.Status
-            }).ToList();
-            return tasks;
-        }
-    }
+    public List<BTaskViewModel> GetTasksViewModel() => _taskMap.Values.Select(BuildTaskViewModel).ToList();
 
-    public async ValueTask DisposeAsync()
+    public BTaskViewModel? GetTaskViewModel(string id) =>
+        _taskMap.TryGetValue(id, out var bt) ? BuildTaskViewModel(bt) : null;
+
+    public ValueTask DisposeAsync()
     {
-        await _scheduler.Shutdown();
+        return ValueTask.CompletedTask;
     }
 }

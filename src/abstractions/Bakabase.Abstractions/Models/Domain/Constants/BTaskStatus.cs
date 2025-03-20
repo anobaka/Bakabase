@@ -2,7 +2,10 @@
 
 public enum BTaskStatus
 {
-    NotStart = 1,
+    NotStarted = 1,
     Running = 2,
     Paused = 3,
+    Error = 4,
+    Completed = 5,
+    Stopped = 6
 }
