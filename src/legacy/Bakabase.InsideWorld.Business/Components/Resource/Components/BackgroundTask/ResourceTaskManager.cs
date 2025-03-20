@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask
 {
+    [Obsolete]
     public class ResourceTaskManager
     {
         private readonly IHubContext<WebGuiHub, IWebGuiClient> _uiHub;

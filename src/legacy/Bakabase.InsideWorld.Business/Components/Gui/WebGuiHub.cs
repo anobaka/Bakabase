@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Configurations;
@@ -58,13 +59,14 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly IFileMover _fileMover;
         private readonly AppUpdater _appUpdater;
         private readonly AppContext _appContext;
+        private readonly BTaskManager _bTaskManager;
 
         public WebGuiHub(
             BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
             ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
             IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover,
-            AppUpdater appUpdater, AppContext appContext)
+            AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager)
         {
             _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
@@ -76,6 +78,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             _fileMover = fileMover;
             _appUpdater = appUpdater;
             _appContext = appContext;
+            _bTaskManager = bTaskManager;
         }
 
         public async Task GetInitialData()
@@ -105,6 +108,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             await Clients.Caller.GetData(nameof(AppContext), _appContext);
 
             await Clients.Caller.GetData(nameof(BulkModificationInternals), new BulkModificationInternalsViewModel());
+
+            await Clients.Caller.GetData("BTask", _bTaskManager.GetTasksViewModel());
         }
     }
 }

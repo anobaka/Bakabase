@@ -1,24 +1,37 @@
 ﻿namespace Bakabase.Abstractions.Components.Tasks;
 
-public struct BTaskPauseToken
+public class BTaskPauseToken(CancellationToken ct)
 {
     private bool _isPauseRequested;
+    private bool _isPaused;
+    private const int WaitInterval = 100;
 
-    public void Pause()
+    public async Task Pause()
     {
         _isPauseRequested = true;
+        while (!_isPaused)
+        {
+            await Task.Delay(WaitInterval, ct);
+        }
     }
 
-    public void Resume()
+    public Task Resume()
     {
         _isPauseRequested = false;
+        _isPaused = false;
+        return Task.CompletedTask;
     }
 
     public async Task PauseIfRequested()
     {
+        if (_isPauseRequested)
+        {
+            _isPaused = true;
+        }
+
         while (_isPauseRequested)
         {
-            await Task.Delay(100);
+            await Task.Delay(WaitInterval, ct);
         }
     }
 }

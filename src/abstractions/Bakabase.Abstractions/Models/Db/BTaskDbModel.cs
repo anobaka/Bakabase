@@ -8,7 +8,7 @@ namespace Bakabase.Abstractions.Models.Db
 {
     public record BTaskDbModel
     {
-        public string Key { get; set; } = null!;
+        public string Id { get; set; } = null!;
         public TimeSpan Interval { get; set; } = TimeSpan.FromMinutes(1);
         public DateTime? EnableAfter { get; set; }
     }

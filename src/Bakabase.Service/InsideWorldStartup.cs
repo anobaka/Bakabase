@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
@@ -31,6 +32,7 @@ using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.Migrations;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Service.Components;
+using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
@@ -120,6 +122,8 @@ namespace Bakabase.Service
             services.TryAddSingleton<IFileMover, FileMover>();
 
             services.TryAddSingleton<BakabaseWebProxy>();
+
+            services.AddBTask<BTaskEventHandler>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)
