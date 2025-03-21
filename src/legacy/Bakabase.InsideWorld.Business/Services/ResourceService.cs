@@ -21,6 +21,7 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Property;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Domain;
@@ -46,6 +47,7 @@ using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage;
+using Bootstrap.Components.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -848,7 +850,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return (await _orm.AddRange(resources.ToList())).Data;
         }
 
-        public async Task PrepareCache(Action<int> onProgressChange, CancellationToken ct)
+        public async Task PrepareCache(Func<int, Task>? onProgressChange, PauseToken pt, CancellationToken ct)
         {
             var caches = await _resourceCacheOrm.GetAll();
             var cachedResourceIds = caches.Select(c => c.ResourceId).ToList();
@@ -880,6 +882,8 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 if (!cache.CachedTypes.HasFlag(cacheType))
                                 {
+                                    await pt.WaitWhilePausedAsync();
+                                    ct.ThrowIfCancellationRequested();
                                     switch (cacheType)
                                     {
                                         case ResourceCacheType.Covers:

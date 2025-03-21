@@ -15,6 +15,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.Models;
 using Bakabase.InsideWorld.Business.Resources;
 using Bootstrap.Components.Storage;
+using Bootstrap.Components.Tasks;
 using CliWrap;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -60,7 +61,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
                 FileUtils.Delete(fullFilename, true, true);
             }
 
-            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, ct);
+            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, PauseToken.None, ct);
         }
 
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)

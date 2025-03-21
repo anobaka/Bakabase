@@ -18,6 +18,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux.Models;
 using Bootstrap.Components.Storage;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Components.Terminal.Cmd;
 using CliWrap;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,7 +122,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
                 FileUtils.Delete(fullFilename, true, true);
             }
 
-            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, ct);
+            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, PauseToken.None, ct);
         }
 
         /// <summary>

@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
+using Bootstrap.Components.Tasks;
 
 namespace Bakabase.Abstractions.Components.Tasks;
 
@@ -14,11 +15,10 @@ public class BTaskDescriptor
     private readonly Func<int, Task>? _onPercentageChange;
     private readonly Func<BTaskStatus, Task>? _onStatusChange;
     private readonly CancellationToken? _externalCt;
-    private BTaskPauseToken? _pt;
     private CancellationTokenSource? _cts;
+    private PauseTokenSource? _pts;
 
     public string Id { get; init; }
-    public string Key { get; }
     private readonly Func<BTaskArgs, Task> _run;
     public DateTime CreatedAt { get; } = DateTime.Now;
     public object?[]? Args { get; }
@@ -68,8 +68,7 @@ public class BTaskDescriptor
         get => _status;
     }
 
-    public BTaskDescriptor(string key,
-        Func<BTaskArgs, Task> run,
+    public BTaskDescriptor(Func<BTaskArgs, Task> run,
         object?[]? args,
         string id,
         Func<string> getName,
@@ -81,10 +80,8 @@ public class BTaskDescriptor
         Func<string, Task>? onProcessChange = null,
         Func<int, Task>? onPercentageChange = null,
         HashSet<string>? conflictKeys = null,
-        TimeSpan? interval = null,
-        bool isPersistent = false)
+        TimeSpan? interval = null)
     {
-        Key = key;
         _run = run;
         Args = args;
         Id = id;
@@ -100,22 +97,17 @@ public class BTaskDescriptor
         Interval = interval;
     }
 
-    public async Task Pause()
+    public void Pause()
     {
-        if (_pt != null && Status == BTaskStatus.Running)
+        if (_pts != null && Status == BTaskStatus.Running)
         {
-            await _pt.Pause();
+            _pts.Pause();
         }
     }
 
-    public Task Resume()
+    public void Resume()
     {
-        if (_pt != null)
-        {
-            _pt.Resume();
-        }
-
-        return Task.CompletedTask;
+        _pts?.Resume();
     }
 
     public async Task TryStartAutomatically()
@@ -143,7 +135,17 @@ public class BTaskDescriptor
             ct = _cts.Token;
         }
 
-        _pt = new BTaskPauseToken(ct);
+        _pts = new PauseTokenSource(ct);
+        _pts.OnWaitPauseStart += () =>
+        {
+            Status = BTaskStatus.Paused;
+            return Task.CompletedTask;
+        };
+        _pts.OnWaitPauseEnd += () =>
+        {
+            Status = BTaskStatus.Running;
+            return Task.CompletedTask;
+        };
 
         await Task.Run(async () =>
         {
@@ -155,7 +157,7 @@ public class BTaskDescriptor
             StartedAt = DateTime.Now;
             try
             {
-                await _run(new BTaskArgs(Args, _pt, ct, _onProcessChange, _onPercentageChange));
+                await _run(new BTaskArgs(Args, _pts.Token, ct, _onProcessChange, _onPercentageChange));
                 Status = BTaskStatus.Completed;
             }
             catch (Exception e)

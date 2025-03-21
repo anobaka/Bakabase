@@ -27,8 +27,8 @@ public interface IBakabaseLocalizer
     string Unknown();
     string BTask_Name(string key);
     string BTask_Description(string key);
-    string BTask_RiskOnInterruption(string key);
+    string BTask_MessageOnInterruption(string key);
     string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames);
-    string BTask_FailedToRunTaskDueToUnknownTaskKey(string taskName);
-    string BTask_FailedToRunTaskDueToIdExisting(string taskName);
+    string BTask_FailedToRunTaskDueToUnknownTaskId(string id);
+    string BTask_FailedToRunTaskDueToIdExisting(string id);
 }

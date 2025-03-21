@@ -17,6 +17,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Storage;
+using Bootstrap.Components.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Semver;
@@ -136,7 +137,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
 
         protected override async Task PostDownloading(List<string> files, CancellationToken ct)
         {
-            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, ct);
+            await DirectoryUtils.MoveAsync(TempDirectory, DefaultLocation, true, null, PauseToken.None, ct);
         }
 
         protected override IDiscoverer Discoverer { get; } = new BakabaseUpdaterDiscover();

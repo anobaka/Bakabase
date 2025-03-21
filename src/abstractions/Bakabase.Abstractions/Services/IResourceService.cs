@@ -1,10 +1,12 @@
 ﻿using System.Linq.Expressions;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Abstractions.Services;
@@ -99,7 +101,7 @@ public interface IResourceService
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null);
 
     Task Pin(int id, bool pin);
-    Task PrepareCache(Action<int> onProgressChange, CancellationToken ct);
+    Task PrepareCache(Func<int, Task>? onProgressChange, PauseToken pt, CancellationToken ct);
     Task Transfer(ResourceTransferInputModel model);
     Task SaveCover(int id, byte[] imageBytes, CoverSaveMode mode);
 

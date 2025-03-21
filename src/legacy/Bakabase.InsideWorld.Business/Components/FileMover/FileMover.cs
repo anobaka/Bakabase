@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.FileMover.Models;
@@ -15,6 +16,7 @@ using Bootstrap.Components.Configuration;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -56,7 +58,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
             return s;
         }
 
-        protected async Task MoveInternal(FileMoverOptions options, Func<int, Task>? onGlobalProgressChange, CancellationToken ct)
+        protected async Task MoveInternal(FileMoverOptions options, Func<int, Task>? onGlobalProgressChange, PauseToken pt, CancellationToken ct)
         {
             _logger.LogInformation($"Discovering files to move...");
 
@@ -108,6 +110,8 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
                         {
                             foreach (var (source, dest) in tasks)
                             {
+                                await pt.WaitWhilePausedAsync();
+                                ct.ThrowIfCancellationRequested();
                                 var count = doneItemCount;
                                 try
                                 {
@@ -137,12 +141,12 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
                                     if (fileSet.Contains(source))
                                     {
                                         await FileUtils.MoveAsync(source, dest, false, (Func<int, Task>) ProgressChange,
-                                            ct);
+                                            pt, ct);
                                     }
                                     else
                                     {
                                         await DirectoryUtils.MoveAsync(source, dest, false,
-                                            (Func<int, Task>) ProgressChange, ct);
+                                            (Func<int, Task>) ProgressChange, pt, ct);
                                     }
 
                                     doneItemCount++;
@@ -168,17 +172,11 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
             }
         }
 
-        public void TryStartMovingFiles()
+        public async Task MovingFiles(Func<int, Task>? onProgressChange, PauseToken pt, CancellationToken ct)
         {
             var options = _options.Value.FileMover;
             if (options?.Enabled == true)
             {
-                var taskName = BackgroundTaskName.MoveFiles.ToString();
-                if (_backgroundTaskManager.IsRunningByName(taskName))
-                {
-                    return;
-                }
-
                 var dtExpired = DateTime.Now - options.Delay;
                 var hasSomethingToMove = options.Targets?.Any(a =>
                     a.Sources?.Where(b => b.IsNotEmpty()).Any(b =>
@@ -186,20 +184,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
 
                 if (hasSomethingToMove)
                 {
-                    if (_backgroundTaskManager.IsRunningByName(taskName))
-                    {
-                        return;
-                    }
-
-                    _backgroundTaskManager.RunInBackground(taskName, new CancellationTokenSource(), async (task, sp) =>
-                    {
-                        await MoveInternal(options, async p =>
-                        {
-                            task.Percentage = p;
-                        }, task.Cts.Token);
-
-                        return BaseResponseBuilder.Ok;
-                    });
+                    await MoveInternal(options, onProgressChange, pt, ct);
                 }
             }
         }

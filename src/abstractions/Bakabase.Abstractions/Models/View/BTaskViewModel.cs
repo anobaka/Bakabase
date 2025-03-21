@@ -8,7 +8,6 @@ namespace Bakabase.Abstractions.Models.View;
 
 public record BTaskViewModel
 {
-    public string Key { get; set; } = null!;
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public int? Percentage { get; set; }
@@ -24,7 +23,6 @@ public record BTaskViewModel
 
     public BTaskViewModel(BTaskDescriptor btWrapper, BTaskDbModel? dbModel, string? reasonForUnableToStart)
     {
-        Key = btWrapper.Key;
         Name = btWrapper.Name;
         Description = btWrapper.Description;
         Percentage = btWrapper.Percentage;
@@ -35,8 +33,8 @@ public record BTaskViewModel
         EstimateRemainingTime = btWrapper.EstimateRemainingTime;
         StartedAt = btWrapper.StartedAt;
 
-        Interval = dbModel;
-        EnableAfter = enableAfter;
+        Interval = dbModel?.Interval;
+        EnableAfter = dbModel?.EnableAfter;
         ReasonForUnableToStart = reasonForUnableToStart;
     }
 }

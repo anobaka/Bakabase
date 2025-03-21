@@ -35,6 +35,7 @@ using Bakabase.Service.Models.View;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -319,6 +320,7 @@ namespace Bakabase.Service.Controllers
                                 {
                                     await resourceTaskManager.Update(id, t => t.Percentage = Math.Min(99, p));
                                 },
+                                PauseToken.None,
                                 bt.Cts.Token);
                         }
                         else
@@ -328,6 +330,7 @@ namespace Bakabase.Service.Controllers
                                 {
                                     await resourceTaskManager.Update(id, t => t.Percentage = Math.Min(99, p));
                                 },
+                                PauseToken.None,
                                 bt.Cts.Token);
                         }
 

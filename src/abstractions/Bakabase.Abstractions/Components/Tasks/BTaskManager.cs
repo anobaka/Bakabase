@@ -29,12 +29,6 @@ public class BTaskManager : IAsyncDisposable
 
     public async Task Initialize()
     {
-        var predefinedTasks = _serviceProvider.GetRequiredService<IEnumerable<IPredefinedBTask>>();
-        foreach (var pt in predefinedTasks)
-        {
-            Enqueue(pt.DescriptorBuilder);
-        }
-
         await Daemon();
     }
 
@@ -50,8 +44,6 @@ public class BTaskManager : IAsyncDisposable
 
     private BTaskDescriptor _buildDescriptor(BTaskDescriptorBuilder builder)
     {
-        var getName = builder.GetName ?? (Func<string>) (() => builder.Key);
-
         async Task OnTaskStatusChange(BTaskStatus status)
         {
             await OnTaskChange(builder.Id);
@@ -81,11 +73,10 @@ public class BTaskManager : IAsyncDisposable
 
         var dbModel = _options.Value.Tasks?.FirstOrDefault(x => x.Id == builder.Id);
 
-        return new BTaskDescriptor(builder.Key,
-            builder.Run,
+        return new BTaskDescriptor(builder.Run,
             builder.Args,
             builder.Id,
-            getName,
+            builder.GetName,
             builder.GetDescription,
             builder.GetMessageOnInterruption,
             builder.CancellationToken,
@@ -94,8 +85,7 @@ public class BTaskManager : IAsyncDisposable
             OnTaskProcessChange,
             OnTaskPercentageChange,
             builder.ConflictKeys,
-            dbModel?.Interval,
-            builder.IsPersistent
+            dbModel?.Interval
         );
     }
 
@@ -119,7 +109,7 @@ public class BTaskManager : IAsyncDisposable
     {
         if (!_taskMap.TryGetValue(id, out var d))
         {
-            throw new Exception(_localizer.BTask_FailedToRunTaskDueToUnknownTaskKey(id));
+            throw new Exception(_localizer.BTask_FailedToRunTaskDueToUnknownTaskId(id));
         }
 
         switch (d.Status)
@@ -130,7 +120,7 @@ public class BTaskManager : IAsyncDisposable
             }
             case BTaskStatus.Paused:
             {
-                await d.Resume();
+                d.Resume();
                 break;
             }
             case BTaskStatus.NotStarted:
@@ -162,7 +152,8 @@ public class BTaskManager : IAsyncDisposable
     {
         return _taskMap.Values
             .Where(x =>
-                x != d && (d.ConflictKeys?.Contains(x.Key) == true || x.ConflictKeys?.Contains(d.Key) == true) &&
+                x != d &&
+                d.ConflictKeys != null && x.ConflictKeys != null && d.ConflictKeys.Intersect(x.ConflictKeys).Any() &&
                 x.Status is BTaskStatus.Running or BTaskStatus.Paused)
             .ToArray();
     }
@@ -191,17 +182,20 @@ public class BTaskManager : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    public async Task Pause(string id)
+    public void Pause(string id)
     {
         if (_taskMap.TryGetValue(id, out var t))
         {
-            await t.Pause();
+            t.Pause();
         }
     }
 
-    public async Task PauseAll()
+    public void PauseAll()
     {
-        await Task.WhenAll(_taskMap.Values.Select(async t => await t.Pause()));
+        foreach (var t in _taskMap.Values)
+        {
+            t.Pause();
+        }
     }
 
     public async Task Remove(string id)
