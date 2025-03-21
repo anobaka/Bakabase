@@ -12,6 +12,7 @@ using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Models.ResponseModels;
 using Humanizer.Localisation;
 using Microsoft.AspNetCore.Mvc;
@@ -107,7 +108,7 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> EnhanceResourceByEnhancer(int resourceId, int enhancerId)
         {
             await DeleteResourceEnhancementRecords(resourceId, enhancerId);
-            await enhancerService.EnhanceResource(resourceId, [enhancerId], CancellationToken.None);
+            await enhancerService.EnhanceResource(resourceId, [enhancerId], PauseToken.None, CancellationToken.None);
             return BaseResponseBuilder.Ok;
         }
 

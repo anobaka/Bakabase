@@ -32,6 +32,7 @@ using Bakabase.Service.Models.View;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
@@ -435,12 +436,12 @@ namespace Bakabase.Service.Controllers
 
                                 if (isDirectory)
                                 {
-                                    await DirectoryUtils.MoveAsync(path, targetPath, false, ProgressChange,
+                                    await DirectoryUtils.MoveAsync(path, targetPath, false, ProgressChange, PauseToken.None,
                                         bt.Cts.Token);
                                 }
                                 else
                                 {
-                                    await FileUtils.MoveAsync(path, targetPath, false, ProgressChange, bt.Cts.Token);
+                                    await FileUtils.MoveAsync(path, targetPath, false, ProgressChange, PauseToken.None, bt.Cts.Token);
                                 }
 
                                 await _iwFsEntryTaskManager.Clear(path);

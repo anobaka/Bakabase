@@ -24,7 +24,6 @@ using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
-using Bakabase.InsideWorld.Business.Components.Jobs;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
@@ -57,8 +56,6 @@ namespace Bakabase.Service
         protected override void ConfigureServicesBeforeOthers(IServiceCollection services)
         {
             services.AddInsideWorldBusinesses();
-
-            services.AddSingleton<SimpleJobManager, InsideWorldJobManager>();
 
             services.AddSingleton<IwFsEntryTaskManager>();
             services.AddSingleton<BackgroundTaskManager>();
@@ -114,9 +111,12 @@ namespace Bakabase.Service
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();
             services.TryAddSingleton<CompressedFileService>();
 
-            services.AddTransient<IBakabaseLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
-            services.AddTransient<IBackgroundTaskLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
-            services.AddTransient<IDependencyLocalizer, InsideWorldLocalizer>(x => x.GetRequiredService<InsideWorldLocalizer>());
+            services.AddTransient<IBakabaseLocalizer, InsideWorldLocalizer>(x =>
+                x.GetRequiredService<InsideWorldLocalizer>());
+            services.AddTransient<IBackgroundTaskLocalizer, InsideWorldLocalizer>(x =>
+                x.GetRequiredService<InsideWorldLocalizer>());
+            services.AddTransient<IDependencyLocalizer, InsideWorldLocalizer>(x =>
+                x.GetRequiredService<InsideWorldLocalizer>());
             services.AddTransient<InsideWorldLocalizer>();
 
             services.TryAddSingleton<IFileMover, FileMover>();
@@ -124,6 +124,7 @@ namespace Bakabase.Service
             services.TryAddSingleton<BakabaseWebProxy>();
 
             services.AddBTask<BTaskEventHandler>();
+            services.AddSingleton<PredefinedTasksProvider>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)
@@ -136,6 +137,9 @@ namespace Bakabase.Service
             // todo: merge gui configuration
             app.ApplicationServices.GetRequiredService<WebGuiHubConfigurationAdapter>().Initialize();
             app.ConfigureGui();
+
+            var predefinedTasksProvider = app.ApplicationServices.GetRequiredService<PredefinedTasksProvider>();
+            _ = app.InitializeBTasks(predefinedTasksProvider.DescriptorBuilders);
 
             base.Configure(app, lifetime);
         }

@@ -109,6 +109,20 @@ namespace Bakabase.InsideWorld.Business.Components
         }
 
         public string Unknown() => this[nameof(Unknown)];
+        public string BTask_Name(string key) => this[$"{nameof(BTask_Name)}_{key}"];
+
+        public string BTask_Description(string key) => this[$"{nameof(BTask_Description)}_{key}"];
+
+        public string BTask_MessageOnInterruption(string key) => this[$"{nameof(BTask_MessageOnInterruption)}_{key}"];
+
+        public string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames) =>
+            this[nameof(BTask_FailedToRunTaskDueToConflict), incomingTaskName, string.Join(',', conflictTaskNames)];
+
+        public string BTask_FailedToRunTaskDueToUnknownTaskId(string id) =>
+            this[nameof(BTask_FailedToRunTaskDueToUnknownTaskId), id];
+
+        public string BTask_FailedToRunTaskDueToIdExisting(string id) =>
+            this[nameof(BTask_FailedToRunTaskDueToIdExisting), id];
 
         public string Property_DescriptorIsNotFound(PropertyPool type, int propertyId)
         {
