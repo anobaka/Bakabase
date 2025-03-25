@@ -5,26 +5,39 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.View;
+using Bootstrap.Components.Configuration;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.Abstractions.Components.Tasks;
 
 public class BTaskManager : IAsyncDisposable
 {
     private readonly IBakabaseLocalizer _localizer;
-    private readonly IBOptions<TaskOptions> _options;
+    private readonly AspNetCoreOptionsManager<TaskOptions> _options;
     private readonly IServiceProvider _serviceProvider;
     private readonly ConcurrentDictionary<string, BTaskDescriptor> _taskMap = [];
     private readonly IBTaskEventHandler _eventHandler;
+    private readonly IDisposable _optionsChangeHandler;
 
-    public BTaskManager(IBakabaseLocalizer localizer, IBOptions<TaskOptions> options, IServiceProvider serviceProvider,
+    public BTaskManager(IBakabaseLocalizer localizer, AspNetCoreOptionsManager<TaskOptions> options, IServiceProvider serviceProvider,
         IBTaskEventHandler eventHandler)
     {
         _localizer = localizer;
         _options = options;
         _serviceProvider = serviceProvider;
         _eventHandler = eventHandler;
+
+        _optionsChangeHandler = _options.OnChange(o =>
+        {
+            var dmMap = o.Tasks?.ToDictionary(x => x.Id, x => x);
+            foreach (var t in _taskMap.Values)
+            {
+                t.Interval = dmMap?.GetValueOrDefault(t.Id)?.Interval ?? t.Interval;
+                t.EnableAfter = dmMap?.GetValueOrDefault(t.Id)?.EnableAfter ?? t.EnableAfter;
+            }
+        });
     }
 
     public async Task Initialize()
@@ -85,7 +98,9 @@ public class BTaskManager : IAsyncDisposable
             OnTaskProcessChange,
             OnTaskPercentageChange,
             builder.ConflictKeys,
-            dbModel?.Interval
+            dbModel?.Interval ?? builder.Interval,
+            dbModel?.EnableAfter,
+            builder.IsPersistent
         );
     }
 
@@ -165,7 +180,9 @@ public class BTaskManager : IAsyncDisposable
         {
             while (true)
             {
-                var activeTasks = _taskMap.Values.Where(x => x.Interval.HasValue || x.Status is BTaskStatus.NotStarted)
+                var activeTasks = _taskMap.Values.Where(x =>
+                        (x.Interval.HasValue && DateTime.Now - x.LastFinishedAt > x.Interval.Value) ||
+                        x.Status is BTaskStatus.NotStarted)
                     .OrderBy(x => x.LastFinishedAt)
                     .ThenBy(x => x.CreatedAt).ToArray();
                 foreach (var at in activeTasks)
@@ -246,6 +263,7 @@ public class BTaskManager : IAsyncDisposable
 
     public ValueTask DisposeAsync()
     {
+        _optionsChangeHandler.Dispose();
         return ValueTask.CompletedTask;
     }
 }

@@ -1,4 +1,5 @@
 import type {
+  BakabaseAbstractionsComponentsConfigurationTaskOptions,
   BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel,
   BakabaseInfrastructuresComponentsConfigurationsAppAppOptions,
   BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions,
@@ -76,4 +77,5 @@ export default {
   thirdPartyOptions: buildModel<BakabaseInsideWorldModelsConfigsThirdPartyOptions, BakabaseInsideWorldModelsConfigsThirdPartyOptions>(BApi.options.patchThirdPartyOptions),
   networkOptions: buildModel<BakabaseInsideWorldModelsConfigsNetworkOptions, BakabaseInsideWorldModelsConfigsNetworkOptions>(BApi.options.patchNetworkOptions),
   enhancerOptions: buildModel<BakabaseInsideWorldModelsConfigsEnhancerOptions, BakabaseInsideWorldModelsConfigsEnhancerOptions>(BApi.options.patchEnhancerOptions),
+  taskOptions: buildModel<BakabaseAbstractionsComponentsConfigurationTaskOptions, BakabaseAbstractionsComponentsConfigurationTaskOptions>(BApi.options.patchTaskOptions),
 };

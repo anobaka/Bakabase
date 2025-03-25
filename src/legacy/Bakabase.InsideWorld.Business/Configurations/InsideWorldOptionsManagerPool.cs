@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Models.Configs;
@@ -26,13 +27,14 @@ namespace Bakabase.InsideWorld.Business.Configurations
         public readonly IBOptionsManager<NetworkOptions> Network;
         public readonly IBOptionsManager<MigrationOptions> Migration;
         public readonly IBOptionsManager<EnhancerOptions> Enhancer;
+        public readonly IBOptionsManager<TaskOptions> Task;
 
         public InsideWorldOptionsManagerPool(IBOptionsManager<UIOptions> ui, IBOptionsManager<BilibiliOptions> bilibili,
             IBOptionsManager<ExHentaiOptions> exHentai, IBOptionsManager<FileSystemOptions> fileSystem,
             IBOptionsManager<JavLibraryOptions> javLibrary, IBOptionsManager<PixivOptions> pixiv,
             IBOptionsManager<ThirdPartyOptions> thirdParty, IBOptionsManager<ResourceOptions> resource,
             IBOptionsManager<AppOptions> app, IBOptionsManager<NetworkOptions> network,
-            IBOptionsManager<MigrationOptions> migration, IBOptionsManager<EnhancerOptions> enhancer)
+            IBOptionsManager<MigrationOptions> migration, IBOptionsManager<EnhancerOptions> enhancer, IBOptionsManager<TaskOptions> task)
         {
             UI = ui;
             Bilibili = bilibili;
@@ -46,6 +48,7 @@ namespace Bakabase.InsideWorld.Business.Configurations
             Network = network;
             Migration = migration;
             Enhancer = enhancer;
+            Task = task;
 
             AllOptionsManagers = SpecificTypeUtils<InsideWorldOptionsManagerPool>.Type.GetFields()
                 .Where(a =>

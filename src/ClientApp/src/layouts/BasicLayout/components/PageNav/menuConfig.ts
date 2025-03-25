@@ -124,7 +124,6 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/configuration',
         icon: 'AppstoreOutlined',
       },
-
       {
         name: 'Background Task',
         path: '/backgroundtask',

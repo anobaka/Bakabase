@@ -1,4 +1,4 @@
-export enum BackgroundTaskName {SyncMediaLibrary = 1, PrepareCache = 2, MoveFiles = 3}
+export enum BackgroundTaskName {SyncMediaLibrary = 1, PrepareCache = 2, MoveFiles = 3, Enhance = 4}
 export const backgroundTaskNames = Object.keys(BackgroundTaskName).filter(k => typeof BackgroundTaskName[k] === 'number').map(t => ({label: t, value: BackgroundTaskName[t]}));
 export enum BuiltinPropertyForDisplayName {Filename = 15}
 export const builtinPropertyForDisplayNames = Object.keys(BuiltinPropertyForDisplayName).filter(k => typeof BuiltinPropertyForDisplayName[k] === 'number').map(t => ({label: t, value: BuiltinPropertyForDisplayName[t]}));
@@ -132,6 +132,10 @@ export enum TagGroupAdditionalItem {Tags = 1, PreferredAlias = 2, TagNamePreferr
 export const tagGroupAdditionalItems = Object.keys(TagGroupAdditionalItem).filter(k => typeof TagGroupAdditionalItem[k] === 'number').map(t => ({label: t, value: TagGroupAdditionalItem[t]}));
 export enum CategoryResourceDisplayNameSegmentType {StaticText = 1, Property = 2, LeftWrapper = 3, RightWrapper = 4}
 export const categoryResourceDisplayNameSegmentTypes = Object.keys(CategoryResourceDisplayNameSegmentType).filter(k => typeof CategoryResourceDisplayNameSegmentType[k] === 'number').map(t => ({label: t, value: CategoryResourceDisplayNameSegmentType[t]}));
+export enum BTaskLevel {Default = 1, Critical = 2}
+export const bTaskLevels = Object.keys(BTaskLevel).filter(k => typeof BTaskLevel[k] === 'number').map(t => ({label: t, value: BTaskLevel[t]}));
+export enum BTaskStatus {NotStarted = 1, Running = 2, Paused = 3, Error = 4, Completed = 5, Stopped = 6}
+export const bTaskStatuses = Object.keys(BTaskStatus).filter(k => typeof BTaskStatus[k] === 'number').map(t => ({label: t, value: BTaskStatus[t]}));
 export enum EnhancementRecordStatus {ContextCreated = 1, ContextApplied = 2}
 export const enhancementRecordStatuses = Object.keys(EnhancementRecordStatus).filter(k => typeof EnhancementRecordStatus[k] === 'number').map(t => ({label: t, value: EnhancementRecordStatus[t]}));
 export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
@@ -160,16 +164,6 @@ export enum StandardValueType {String = 1, ListString = 2, Decimal = 3, Link = 4
 export const standardValueTypes = Object.keys(StandardValueType).filter(k => typeof StandardValueType[k] === 'number').map(t => ({label: t, value: StandardValueType[t]}));
 export enum TextProcessingOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
 export const textProcessingOperations = Object.keys(TextProcessingOperation).filter(k => typeof TextProcessingOperation[k] === 'number').map(t => ({label: t, value: TextProcessingOperation[t]}));
-export enum BulkModificationProcessorOptionsItemsFilterBy {All = 1, Containing = 2, Matching = 3}
-export const bulkModificationProcessorOptionsItemsFilterBies = Object.keys(BulkModificationProcessorOptionsItemsFilterBy).filter(k => typeof BulkModificationProcessorOptionsItemsFilterBy[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorOptionsItemsFilterBy[t]}));
-export enum BulkModificationStringProcessOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
-export const bulkModificationStringProcessOperations = Object.keys(BulkModificationStringProcessOperation).filter(k => typeof BulkModificationStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationStringProcessOperation[t]}));
-export enum BulkModificationListStringProcessOperation {SetWithFixedValue = 1, Append = 2, Prepend = 3, Modify = 4, Delete = 5}
-export const bulkModificationListStringProcessOperations = Object.keys(BulkModificationListStringProcessOperation).filter(k => typeof BulkModificationListStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationListStringProcessOperation[t]}));
-export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
-export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
-export enum BulkModificationProcessorValueType {ManuallyInput = 1, Variable = 2}
-export const bulkModificationProcessorValueTypes = Object.keys(BulkModificationProcessorValueType).filter(k => typeof BulkModificationProcessorValueType[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorValueType[t]}));
 export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3, DLsite = 4, Regex = 5}
 export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
 export enum RegexEnhancerTarget {CaptureGroups = 0}
@@ -186,6 +180,16 @@ export enum EnhancementAdditionalItem {None = 0, GeneratedPropertyValue = 1}
 export const enhancementAdditionalItems = Object.keys(EnhancementAdditionalItem).filter(k => typeof EnhancementAdditionalItem[k] === 'number').map(t => ({label: t, value: EnhancementAdditionalItem[t]}));
 export enum EnhancerTargetOptionsItem {AutoBindProperty = 1, AutoMatchMultilevelString = 2, CoverSelectOrder = 3}
 export const enhancerTargetOptionsItems = Object.keys(EnhancerTargetOptionsItem).filter(k => typeof EnhancerTargetOptionsItem[k] === 'number').map(t => ({label: t, value: EnhancerTargetOptionsItem[t]}));
+export enum BulkModificationProcessorOptionsItemsFilterBy {All = 1, Containing = 2, Matching = 3}
+export const bulkModificationProcessorOptionsItemsFilterBies = Object.keys(BulkModificationProcessorOptionsItemsFilterBy).filter(k => typeof BulkModificationProcessorOptionsItemsFilterBy[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorOptionsItemsFilterBy[t]}));
+export enum BulkModificationStringProcessOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
+export const bulkModificationStringProcessOperations = Object.keys(BulkModificationStringProcessOperation).filter(k => typeof BulkModificationStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationStringProcessOperation[t]}));
+export enum BulkModificationListStringProcessOperation {SetWithFixedValue = 1, Append = 2, Prepend = 3, Modify = 4, Delete = 5}
+export const bulkModificationListStringProcessOperations = Object.keys(BulkModificationListStringProcessOperation).filter(k => typeof BulkModificationListStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationListStringProcessOperation[t]}));
+export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
+export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
+export enum BulkModificationProcessorValueType {ManuallyInput = 1, Variable = 2}
+export const bulkModificationProcessorValueTypes = Object.keys(BulkModificationProcessorValueType).filter(k => typeof BulkModificationProcessorValueType[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorValueType[t]}));
 export enum AliasExceptionType {ConflictAliasGroup = 1}
 export const aliasExceptionTypes = Object.keys(AliasExceptionType).filter(k => typeof AliasExceptionType[k] === 'number').map(t => ({label: t, value: AliasExceptionType[t]}));
 export enum CaptchaType {Image = 1, SmsMessage = 2}

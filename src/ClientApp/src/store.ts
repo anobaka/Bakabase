@@ -13,6 +13,7 @@ import fileMovingProgresses from '@/models/fileMovingProgresses';
 import appUpdaterState from '@/models/appUpdaterState';
 import appContext from '@/models/appContext';
 import bulkModificationInternals from '@/models/bulkModificationInternals';
+import bTasks from '@/models/bTasks';
 
 const {
   appOptions,
@@ -26,6 +27,7 @@ const {
   thirdPartyOptions,
   networkOptions,
   enhancerOptions,
+  taskOptions,
 } = Optionses;
 
 export default createStore({
@@ -41,6 +43,7 @@ export default createStore({
   appUpdaterState,
   appContext,
   bulkModificationInternals,
+  bTasks,
 
   appOptions,
   uiOptions,
@@ -53,4 +56,5 @@ export default createStore({
   thirdPartyOptions,
   networkOptions,
   enhancerOptions,
+  taskOptions,
 });

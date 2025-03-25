@@ -19,4 +19,5 @@ public class BTaskDescriptorBuilder
     public HashSet<string>? ConflictKeys { get; init; }
     public required BTaskLevel Level { get; init; }
     public TimeSpan? Interval { get; init; }
+    public bool IsPersistent { get; init; }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.RequestModels;
 using Bakabase.Infrastructures.Components.Configurations.App;
@@ -490,13 +491,34 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("enhancer")]
         [SwaggerOperation(OperationId = "PatchEnhancerOptions")]
-        public async Task<BaseResponse> PatchNetworkOptions([FromBody] EnhancerOptions model)
+        public async Task<BaseResponse> PatchEnhancerOptions([FromBody] EnhancerOptions model)
         {
             await _insideWorldOptionsManager.Enhancer.SaveAsync(options =>
             {
                 if (model.RegexEnhancer != null)
                 {
                     options.RegexEnhancer = model.RegexEnhancer;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("task")]
+        [SwaggerOperation(OperationId = "GetTaskOptions")]
+        public async Task<SingletonResponse<TaskOptions>> GetTaskOptions()
+        {
+            return new SingletonResponse<TaskOptions>((_insideWorldOptionsManager.Task).Value);
+        }
+
+        [HttpPatch("task")]
+        [SwaggerOperation(OperationId = "PatchTaskOptions")]
+        public async Task<BaseResponse> PatchTaskOptions([FromBody] TaskOptions model)
+        {
+            await _insideWorldOptionsManager.Task.SaveAsync(options =>
+            {
+                if (model.Tasks != null)
+                {
+                    options.Tasks = model.Tasks.OrderBy(x => x.Id).ToList();
                 }
             });
             return BaseResponseBuilder.Ok;
