@@ -32,10 +32,12 @@ public class BTaskDescriptor
     public string? Error { get; private set; }
     public string? StackTrace { get; private set; }
     public TimeSpan? Interval { get; set; }
+    public DateTime? EnableAfter { get; set; }
     private BTaskStatus _status = BTaskStatus.NotStarted;
     public DateTime? StartedAt { get; private set; }
     public int Percentage { get; private set; }
     public DateTime? LastFinishedAt { get; private set; }
+    public bool IsPersistent { get; set; }
 
     public TimeSpan? EstimateRemainingTime
     {
@@ -80,7 +82,9 @@ public class BTaskDescriptor
         Func<string, Task>? onProcessChange = null,
         Func<int, Task>? onPercentageChange = null,
         HashSet<string>? conflictKeys = null,
-        TimeSpan? interval = null)
+        TimeSpan? interval = null,
+        DateTime? enableAfter = null,
+        bool isPersistent = false)
     {
         _run = run;
         Args = args;
@@ -95,6 +99,8 @@ public class BTaskDescriptor
         _onPercentageChange = onPercentageChange;
         _onProcessChange = onProcessChange;
         Interval = interval;
+        EnableAfter = enableAfter;
+        IsPersistent = isPersistent;
     }
 
     public void Pause()

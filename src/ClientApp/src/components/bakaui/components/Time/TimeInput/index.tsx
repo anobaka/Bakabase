@@ -1,9 +1,9 @@
 import type { TimeInputProps as NextUITimeInputProps } from '@nextui-org/react';
 import { TimeInput } from '@nextui-org/react';
-import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { parseTime } from '@internationalized/date';
+import { Time } from '@internationalized/date';
 import type { Duration } from 'dayjs/plugin/duration';
+import { convertDurationToTime } from '@/components/utils';
 
 interface TimeInputProps extends Omit<NextUITimeInputProps, 'value' | 'onChange' | 'defaultValue'> {
   value?: Duration;
@@ -11,9 +11,16 @@ interface TimeInputProps extends Omit<NextUITimeInputProps, 'value' | 'onChange'
   onChange?: (value: Duration) => void;
 }
 
-export default ({ value, onChange, defaultValue, ...props }: TimeInputProps) => {
-  const dv = defaultValue ? parseTime(defaultValue.toISOString()) : undefined;
-  const v = value ? parseTime(value.toISOString()) : undefined;
+export default ({
+                  value,
+                  onChange,
+                  defaultValue,
+                  ...props
+                }: TimeInputProps) => {
+  const dv = defaultValue ? convertDurationToTime(defaultValue) : undefined;
+  const v = value ? convertDurationToTime(value) : undefined;
+
+  new Time();
 
   return (
     <TimeInput

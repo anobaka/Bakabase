@@ -47,6 +47,9 @@ export default class UIHubConnection {
         case 'BulkModificationInternals':
           store.dispatch.bulkModificationInternals.update(data);
           break;
+        case 'BTask':
+          store.dispatch.bTasks.setState(data);
+          break;
       }
     });
 
@@ -65,6 +68,9 @@ export default class UIHubConnection {
           break;
         case 'FileMovingProgress':
           store.dispatch.fileMovingProgresses.update(data);
+          break;
+        case 'BTask':
+          store.dispatch.bTasks.update(data);
           break;
       }
     });

@@ -61,7 +61,8 @@ public class PredefinedTasksProvider
             Args = null,
             ConflictKeys = [x.Key],
             Level = BTaskLevel.Default,
-            Interval = TimeSpan.FromMinutes(1)
+            Interval = TimeSpan.FromMinutes(1),
+            IsPersistent = true
         }).ToArray();
     }
 

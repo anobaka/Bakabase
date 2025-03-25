@@ -9,6 +9,18 @@
  * ---------------------------------------------------------------
  */
 
+export interface BakabaseAbstractionsComponentsConfigurationTaskOptions {
+  tasks?: BakabaseAbstractionsModelsDbBTaskDbModel[];
+}
+
+export interface BakabaseAbstractionsModelsDbBTaskDbModel {
+  id: string;
+  /** @format date-span */
+  interval: string;
+  /** @format date-time */
+  enableAfter?: string;
+}
+
 export interface BakabaseAbstractionsModelsDbCategoryComponent {
   /** @format int32 */
   id: number;
@@ -245,14 +257,14 @@ export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultReso
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceGlobalMatchedValue {
-  propertyKey?: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey;
+  propertyKey: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey;
   /** @uniqueItems true */
-  textValues?: string[];
+  textValues: string[];
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentMatchResult {
-  segmentText?: string;
-  propertyKeys?: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey[];
+  segmentText: string;
+  propertyKeys: BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey[];
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultResourceSegmentPropertyKey {
@@ -529,7 +541,7 @@ export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersi
 
 export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller {
   osPlatform?: SystemRuntimeInteropServicesOSPlatform;
-  /** [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x, 6: LoongArch64, 7: Armv6, 8: Ppc64le] */
+  /** [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x, 6: LoongArch64, 7: Armv6, 8: Ppc64le, 9: RiscV64] */
   osArchitecture: SystemRuntimeInteropServicesArchitecture;
   name?: string;
   url?: string;
@@ -732,7 +744,8 @@ export interface BakabaseInsideWorldModelsConfigsFileSystemOptions {
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions {
   targets?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptionsTarget[];
   enabled: boolean;
-  delay: SystemTimeSpan;
+  /** @format date-span */
+  delay: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptionsTarget {
@@ -1142,8 +1155,10 @@ export interface BakabaseInsideWorldModelsModelsDtosPlaylistItemDto {
   /** @format int32 */
   resourceId?: number;
   file?: string;
-  startTime?: SystemTimeSpan;
-  endTime?: SystemTimeSpan;
+  /** @format date-span */
+  startTime?: string;
+  /** @format date-span */
+  endTime?: string;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions {
@@ -1312,14 +1327,6 @@ export interface BakabaseModulesAliasModelsInputAliasPatchInputModel {
   isPreferred: boolean;
 }
 
-export type BakabaseModulesBulkModificationAbstractionsComponentsIBulkModificationProcessOptions = object;
-
-export interface BakabaseModulesBulkModificationAbstractionsModelsBulkModificationProcessStep {
-  /** @format int32 */
-  operation: number;
-  options?: BakabaseModulesBulkModificationAbstractionsComponentsIBulkModificationProcessOptions;
-}
-
 export type BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter = object;
 
 export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
@@ -1426,6 +1433,23 @@ export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionPr
   serializedToValue?: string;
 }
 
+export interface BakabaseModulesPropertyModelsViewPropertyViewModel {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  id: number;
+  name: string;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+  options?: any;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  dbValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  poolName: string;
+  typeName: string;
+}
+
 export interface BakabaseModulesSearchModelsDbResourceSearchDbModel {
   group?: BakabaseModulesSearchModelsDbResourceSearchFilterGroupDbModel;
   orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
@@ -1511,6 +1535,7 @@ export interface BakabaseServiceModelsInputBulkModificationProcessInputModel {
 }
 
 export interface BakabaseServiceModelsInputBulkModificationVariableInputModel {
+  key?: string;
   /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
@@ -1585,13 +1610,19 @@ export interface BakabaseServiceModelsViewBulkModificationDiffViewModel {
   diffs: BakabaseServiceModelsViewResourceDiffViewModel[];
 }
 
+export interface BakabaseServiceModelsViewBulkModificationProcessStepViewModel {
+  /** @format int32 */
+  operation: number;
+  options?: any;
+}
+
 export interface BakabaseServiceModelsViewBulkModificationProcessViewModel {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  property: BakabaseServiceModelsViewPropertyViewModel;
-  steps?: BakabaseModulesBulkModificationAbstractionsModelsBulkModificationProcessStep[];
+  property: BakabaseModulesPropertyModelsViewPropertyViewModel;
+  steps?: BakabaseServiceModelsViewBulkModificationProcessStepViewModel[];
 }
 
 export interface BakabaseServiceModelsViewBulkModificationVariableViewModel {
@@ -1601,10 +1632,10 @@ export interface BakabaseServiceModelsViewBulkModificationVariableViewModel {
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  property: BakabaseServiceModelsViewPropertyViewModel;
+  property: BakabaseModulesPropertyModelsViewPropertyViewModel;
   key: string;
   name: string;
-  preprocesses?: BakabaseModulesBulkModificationAbstractionsModelsBulkModificationProcessStep[];
+  preprocesses?: BakabaseServiceModelsViewBulkModificationProcessStepViewModel[];
 }
 
 export interface BakabaseServiceModelsViewBulkModificationViewModel {
@@ -1689,7 +1720,7 @@ export interface BakabaseServiceModelsViewEnhancementViewModel {
   propertyId?: number;
   customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
   reservedPropertyValue?: BakabaseAbstractionsModelsDomainReservedPropertyValue;
-  property?: BakabaseServiceModelsViewPropertyViewModel;
+  property?: BakabaseModulesPropertyModelsViewPropertyViewModel;
 }
 
 export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
@@ -1715,30 +1746,13 @@ export interface BakabaseServiceModelsViewPropertyTypeForManuallySettingValueVie
   /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
   bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   isReferenceValueType: boolean;
-  properties?: BakabaseServiceModelsViewPropertyViewModel[];
+  properties?: BakabaseModulesPropertyModelsViewPropertyViewModel[];
   unavailableReason?: string;
   isAvailable: boolean;
 }
 
-export interface BakabaseServiceModelsViewPropertyViewModel {
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  id: number;
-  name: string;
-  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
-  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
-  options?: any;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
-  dbValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
-  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
-  bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
-  poolName: string;
-  typeName: string;
-}
-
 export interface BakabaseServiceModelsViewResourceDiffViewModel {
-  property: BakabaseServiceModelsViewPropertyViewModel;
+  property: BakabaseModulesPropertyModelsViewPropertyViewModel;
   value1?: string;
   value2?: string;
 }
@@ -1795,8 +1809,8 @@ export interface BakabaseServiceModelsViewResourceSearchFilterViewModel {
   bizValue?: string;
   disabled: boolean;
   availableOperations?: BakabaseAbstractionsModelsDomainConstantsSearchOperation[];
-  property?: BakabaseServiceModelsViewPropertyViewModel;
-  valueProperty?: BakabaseServiceModelsViewPropertyViewModel;
+  property?: BakabaseModulesPropertyModelsViewPropertyViewModel;
+  valueProperty?: BakabaseModulesPropertyModelsViewPropertyViewModel;
 }
 
 export interface BakabaseServiceModelsViewResourceSearchViewModel {
@@ -1918,6 +1932,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhanc
   data?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesPropertyModelsViewPropertyViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   /** @format int32 */
   code: number;
@@ -1958,13 +1979,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewPropertyTypeForManuallySettingValueViewModel[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewPropertyViewModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseServiceModelsViewPropertyViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceEnhancements {
@@ -2072,6 +2086,13 @@ export interface BootstrapModelsResponseModelsSearchResponse1BootstrapComponents
   pageIndex: number;
   /** @format int32 */
   pageSize: number;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsConfigurationTaskOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsComponentsConfigurationTaskOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategoryEnhancerOptions {
@@ -2306,6 +2327,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   data?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionPreviewViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesPropertyModelsViewPropertyViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewBulkModificationViewModel {
   /** @format int32 */
   code: number;
@@ -2332,13 +2360,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewPropertyViewModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseServiceModelsViewPropertyViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel {
@@ -2394,7 +2415,7 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   /** @format int32 */
   code: number;
   message?: string;
-  data?: Record<string, number | null>;
+  data?: Record<string, number>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemInt32 {
@@ -2604,10 +2625,10 @@ export interface SystemReflectionFieldInfo {
 }
 
 /**
- * [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask]
+ * [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask, 32: AllowByRefLike]
  * @format int32
  */
-export type SystemReflectionGenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 | 16 | 28;
+export type SystemReflectionGenericParameterAttributes = 0 | 1 | 2 | 3 | 4 | 8 | 16 | 28 | 32;
 
 export type SystemReflectionICustomAttributeProvider = object;
 
@@ -2868,7 +2889,6 @@ export interface SystemReflectionTypeInfo {
   isCollectible: boolean;
   /** @format int32 */
   metadataToken: number;
-  isInterface: boolean;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType: SystemReflectionMemberTypes;
   namespace?: string;
@@ -2876,6 +2896,7 @@ export interface SystemReflectionTypeInfo {
   fullName?: string;
   assembly: SystemReflectionAssembly;
   module: SystemReflectionModule;
+  isInterface: boolean;
   isNested: boolean;
   declaringType?: SystemType;
   declaringMethod?: SystemReflectionMethodBase;
@@ -2900,7 +2921,7 @@ export interface SystemReflectionTypeInfo {
   genericTypeArguments: SystemType[];
   /** @format int32 */
   genericParameterPosition: number;
-  /** [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask] */
+  /** [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask, 32: AllowByRefLike] */
   genericParameterAttributes: SystemReflectionGenericParameterAttributes;
   /** [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: NestedFamORAssem, 7: NestedFamORAssem, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: CustomFormatClass, 196608: CustomFormatClass, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask] */
   attributes: SystemReflectionTypeAttributes;
@@ -2955,10 +2976,10 @@ export interface SystemReflectionTypeInfo {
 }
 
 /**
- * [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x, 6: LoongArch64, 7: Armv6, 8: Ppc64le]
+ * [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x, 6: LoongArch64, 7: Armv6, 8: Ppc64le, 9: RiscV64]
  * @format int32
  */
-export type SystemRuntimeInteropServicesArchitecture = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type SystemRuntimeInteropServicesArchitecture = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 /**
  * [0: Sequential, 2: Explicit, 3: Auto]
@@ -2992,46 +3013,12 @@ export interface SystemRuntimeTypeHandle {
  */
 export type SystemSecuritySecurityRuleSet = 0 | 1 | 2;
 
-export interface SystemTimeSpan {
-  /** @format int64 */
-  ticks: number;
-  /** @format int32 */
-  days: number;
-  /** @format int32 */
-  hours: number;
-  /** @format int32 */
-  milliseconds: number;
-  /** @format int32 */
-  microseconds: number;
-  /** @format int32 */
-  nanoseconds: number;
-  /** @format int32 */
-  minutes: number;
-  /** @format int32 */
-  seconds: number;
-  /** @format double */
-  totalDays: number;
-  /** @format double */
-  totalHours: number;
-  /** @format double */
-  totalMilliseconds: number;
-  /** @format double */
-  totalMicroseconds: number;
-  /** @format double */
-  totalNanoseconds: number;
-  /** @format double */
-  totalMinutes: number;
-  /** @format double */
-  totalSeconds: number;
-}
-
 export interface SystemType {
   name: string;
   customAttributes: SystemReflectionCustomAttributeData[];
   isCollectible: boolean;
   /** @format int32 */
   metadataToken: number;
-  isInterface: boolean;
   /** [1: Constructor, 2: Event, 4: Field, 8: Method, 16: Property, 32: TypeInfo, 64: Custom, 128: NestedType, 191: All] */
   memberType: SystemReflectionMemberTypes;
   namespace?: string;
@@ -3039,6 +3026,7 @@ export interface SystemType {
   fullName?: string;
   assembly: SystemReflectionAssembly;
   module: SystemReflectionModule;
+  isInterface: boolean;
   isNested: boolean;
   declaringType?: SystemType;
   declaringMethod?: SystemReflectionMethodBase;
@@ -3063,7 +3051,7 @@ export interface SystemType {
   genericTypeArguments: SystemType[];
   /** @format int32 */
   genericParameterPosition: number;
-  /** [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask] */
+  /** [0: None, 1: Covariant, 2: Contravariant, 3: VarianceMask, 4: ReferenceTypeConstraint, 8: NotNullableValueTypeConstraint, 16: DefaultConstructorConstraint, 28: SpecialConstraintMask, 32: AllowByRefLike] */
   genericParameterAttributes: SystemReflectionGenericParameterAttributes;
   /** [0: NotPublic, 0: NotPublic, 0: NotPublic, 0: NotPublic, 1: Public, 2: NestedPublic, 3: NestedPrivate, 4: NestedFamily, 5: NestedAssembly, 6: NestedFamANDAssem, 7: NestedFamORAssem, 7: NestedFamORAssem, 8: SequentialLayout, 16: ExplicitLayout, 24: LayoutMask, 32: ClassSemanticsMask, 32: ClassSemanticsMask, 128: Abstract, 256: Sealed, 1024: SpecialName, 2048: RTSpecialName, 4096: Import, 8192: Serializable, 16384: WindowsRuntime, 65536: UnicodeClass, 131072: AutoClass, 196608: CustomFormatClass, 196608: CustomFormatClass, 262144: HasSecurity, 264192: ReservedMask, 1048576: BeforeFieldInit, 12582912: CustomFormatMask] */
   attributes: SystemReflectionTypeAttributes;
@@ -5079,7 +5067,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewPropertyViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
         path: `/resource/filter-value-property`,
         method: "GET",
         query: query,
@@ -6935,6 +6926,41 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetTaskOptions
+     * @request GET:/options/task
+     */
+    getTaskOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsComponentsConfigurationTaskOptions,
+        any
+      >({
+        path: `/options/task`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchTaskOptions
+     * @request PATCH:/options/task
+     */
+    patchTaskOptions: (data: BakabaseAbstractionsComponentsConfigurationTaskOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/task`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   password = {
     /**
@@ -7103,7 +7129,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/property/pool/{pool}
      */
     getPropertiesByPool: (pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewPropertyViewModel, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel, any>({
         path: `/property/pool/${pool}`,
         method: "GET",
         format: "json",

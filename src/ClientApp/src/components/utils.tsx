@@ -8,10 +8,15 @@ import ReactDOM from 'react-dom/client';
 import isUncPath from 'is-unc-path';
 import hoistNonReactStatic from 'hoist-non-react-statics';
 import chalk from 'chalk';
+import { Time } from '@internationalized/date';
+import type { Duration } from 'dayjs/plugin/duration';
 import { reservedResourceFileTypes, reservedResourceProperties } from '@/sdk/constants';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
 
+export const convertDurationToTime = (duration: Duration): Time => {
+  return new Time(duration.hours(), duration.minutes(), duration.seconds(), duration.milliseconds());
+};
 
 export default { // 工具集
   formatDate(date) { // 标准化时间格式

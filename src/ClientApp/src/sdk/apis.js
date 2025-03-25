@@ -1381,7 +1381,7 @@ export const GetCacheOverviewURL = function(parameters = {}) {
  * method: DeleteResourceCacheByCategoryIdAndCacheType_TYPE
  * raw_url: DeleteResourceCacheByCategoryIdAndCacheType_RAW_URL
  * @param categoryId - 
- * @param type - 
+ * @param type - [1: Covers, 2: PlayableFiles]
  */
 export const DeleteResourceCacheByCategoryIdAndCacheType = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -1432,7 +1432,7 @@ export const DeleteResourceCacheByCategoryIdAndCacheTypeURL = function(parameter
  * method: GetCategory_TYPE
  * raw_url: GetCategory_RAW_URL
  * @param id - 
- * @param additionalItems - 
+ * @param additionalItems - [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions]
  */
 export const GetCategory = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -1577,7 +1577,7 @@ export const DeleteCategoryURL = function(parameters = {}) {
  * url: GetAllCategoriesURL
  * method: GetAllCategories_TYPE
  * raw_url: GetAllCategories_RAW_URL
- * @param additionalItems - 
+ * @param additionalItems - [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions]
  */
 export const GetAllCategories = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -2371,8 +2371,8 @@ export const StartSyncingCategoryResourcesURL = function(parameters = {}) {
  * url: GetComponentDescriptorsURL
  * method: GetComponentDescriptors_TYPE
  * raw_url: GetComponentDescriptors_RAW_URL
- * @param type - 
- * @param additionalItems - 
+ * @param type - [1: Enhancer, 2: PlayableFileSelector, 3: Player]
+ * @param additionalItems - [0: None, 1: AssociatedCategories]
  */
 export const GetComponentDescriptors = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -2425,7 +2425,7 @@ export const GetComponentDescriptorsURL = function(parameters = {}) {
  * method: GetComponentDescriptorByKey_TYPE
  * raw_url: GetComponentDescriptorByKey_RAW_URL
  * @param key - 
- * @param additionalItems - 
+ * @param additionalItems - [0: None, 1: AssociatedCategories]
  */
 export const GetComponentDescriptorByKey = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -2837,7 +2837,7 @@ export const getApiConstantURL = function(parameters = {}) {
  * url: GetAllCustomPropertiesURL
  * method: GetAllCustomProperties_TYPE
  * raw_url: GetAllCustomProperties_RAW_URL
- * @param additionalItems - 
+ * @param additionalItems - [0: None, 1: Category, 2: ValueCount]
  */
 export const GetAllCustomProperties = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -2884,7 +2884,7 @@ export const GetAllCustomPropertiesURL = function(parameters = {}) {
  * method: GetCustomPropertyByKeys_TYPE
  * raw_url: GetCustomPropertyByKeys_RAW_URL
  * @param ids - 
- * @param additionalItems - 
+ * @param additionalItems - [0: None, 1: Category, 2: ValueCount]
  */
 export const GetCustomPropertyByKeys = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -3074,7 +3074,7 @@ export const RemoveCustomPropertyURL = function(parameters = {}) {
  * method: PreviewCustomPropertyTypeConversion_TYPE
  * raw_url: PreviewCustomPropertyTypeConversion_RAW_URL
  * @param sourceCustomPropertyId - 
- * @param targetType - 
+ * @param targetType - [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags]
  */
 export const PreviewCustomPropertyTypeConversion = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -3164,7 +3164,7 @@ export const GetCustomPropertyConversionRulesURL = function(parameters = {}) {
  * method: ChangeCustomPropertyType_TYPE
  * raw_url: ChangeCustomPropertyType_RAW_URL
  * @param id - 
- * @param type - 
+ * @param type - [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags]
  */
 export const ChangeCustomPropertyType = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -3779,7 +3779,7 @@ export const StopDownloadTasksURL = function(parameters = {}) {
  * method: GetResourceEnhancements_TYPE
  * raw_url: GetResourceEnhancements_RAW_URL
  * @param resourceId - 
- * @param additionalItem - 
+ * @param additionalItem - [0: None, 1: GeneratedPropertyValue]
  */
 export const GetResourceEnhancements = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -5668,7 +5668,7 @@ export const ClearAllLogURL = function(parameters = {}) {
  * url: SearchLogsURL
  * method: SearchLogs_TYPE
  * raw_url: SearchLogs_RAW_URL
- * @param level - 
+ * @param level - [0: Trace, 1: Debug, 2: Information, 3: Warning, 4: Error, 5: Critical, 6: None]
  * @param startDt - 
  * @param endDt - 
  * @param logger - 
@@ -5893,7 +5893,7 @@ export const ReadAllLogURL = function(parameters = {}) {
  * url: GetAllMediaLibrariesURL
  * method: GetAllMediaLibraries_TYPE
  * raw_url: GetAllMediaLibraries_RAW_URL
- * @param additionalItems - 
+ * @param additionalItems - [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationBoundProperties]
  */
 export const GetAllMediaLibraries = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -5983,7 +5983,7 @@ export const AddMediaLibraryURL = function(parameters = {}) {
  * method: GetMediaLibrary_TYPE
  * raw_url: GetMediaLibrary_RAW_URL
  * @param id - 
- * @param additionalItems - 
+ * @param additionalItems - [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationBoundProperties]
  */
 export const GetMediaLibrary = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -7431,11 +7431,93 @@ export const PatchEnhancerOptionsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetTaskOptions
+ * url: GetTaskOptionsURL
+ * method: GetTaskOptions_TYPE
+ * raw_url: GetTaskOptions_RAW_URL
+ */
+export const GetTaskOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/task'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetTaskOptions_RAW_URL = function() {
+  return '/options/task'
+}
+export const GetTaskOptions_TYPE = function() {
+  return 'get'
+}
+export const GetTaskOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/task'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PatchTaskOptions
+ * url: PatchTaskOptionsURL
+ * method: PatchTaskOptions_TYPE
+ * raw_url: PatchTaskOptions_RAW_URL
+ * @param model - 
+ */
+export const PatchTaskOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/task'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('patch', domain + path, body, queryParameters, form, config)
+}
+export const PatchTaskOptions_RAW_URL = function() {
+  return '/options/task'
+}
+export const PatchTaskOptions_TYPE = function() {
+  return 'patch'
+}
+export const PatchTaskOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/task'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: SearchPasswords
  * url: SearchPasswordsURL
  * method: SearchPasswords_TYPE
  * raw_url: SearchPasswords_RAW_URL
- * @param order - 
+ * @param order - [1: Latest, 2: Frequency]
  * @param pageIndex - 
  * @param pageSize - 
  * @param skipCount - 
@@ -7846,7 +7928,7 @@ export const GetPlaylistFilesURL = function(parameters = {}) {
  * url: GetPropertiesByPoolURL
  * method: GetPropertiesByPool_TYPE
  * raw_url: GetPropertiesByPool_RAW_URL
- * @param pool - 
+ * @param pool - [1: Internal, 2: Reserved, 4: Custom, 7: All]
  */
 export const GetPropertiesByPool = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -7930,7 +8012,7 @@ export const GetAvailablePropertyTypesForManuallySettingValueURL = function(para
  * url: GetPropertyBizValueURL
  * method: GetPropertyBizValue_TYPE
  * raw_url: GetPropertyBizValue_RAW_URL
- * @param pool - 
+ * @param pool - [1: Internal, 2: Reserved, 4: Custom, 7: All]
  * @param id - 
  * @param dbValue - 
  */
@@ -7988,7 +8070,7 @@ export const GetPropertyBizValueURL = function(parameters = {}) {
  * url: GetPropertyDbValueURL
  * method: GetPropertyDbValue_TYPE
  * raw_url: GetPropertyDbValue_RAW_URL
- * @param pool - 
+ * @param pool - [1: Internal, 2: Reserved, 4: Custom, 7: All]
  * @param id - 
  * @param bizValue - 
  */
@@ -8046,7 +8128,7 @@ export const GetPropertyDbValueURL = function(parameters = {}) {
  * url: GetSearchOperationsForPropertyURL
  * method: GetSearchOperationsForProperty_TYPE
  * raw_url: GetSearchOperationsForProperty_RAW_URL
- * @param propertyPool - 
+ * @param propertyPool - [1: Internal, 2: Reserved, 4: Custom, 7: All]
  * @param propertyId - 
  */
 export const GetSearchOperationsForProperty = function(parameters = {}) {
@@ -8099,9 +8181,9 @@ export const GetSearchOperationsForPropertyURL = function(parameters = {}) {
  * url: GetFilterValuePropertyURL
  * method: GetFilterValueProperty_TYPE
  * raw_url: GetFilterValueProperty_RAW_URL
- * @param propertyPool - 
+ * @param propertyPool - [1: Internal, 2: Reserved, 4: Custom, 7: All]
  * @param propertyId - 
- * @param operation - 
+ * @param operation - [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches]
  */
 export const GetFilterValueProperty = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -8425,7 +8507,7 @@ export const SearchResourcesURL = function(parameters = {}) {
  * method: GetResourcesByKeys_TYPE
  * raw_url: GetResourcesByKeys_RAW_URL
  * @param ids - 
- * @param additionalItems - 
+ * @param additionalItems - [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4096: Cache, 8160: All]
  */
 export const GetResourcesByKeys = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -9560,7 +9642,7 @@ export const getToolTestURL = function(parameters = {}) {
  * url: ValidateCookieURL
  * method: ValidateCookie_TYPE
  * raw_url: ValidateCookie_RAW_URL
- * @param target - 
+ * @param target - [1: BiliBili, 2: ExHentai, 3: Pixiv]
  * @param cookie - 
  */
 export const ValidateCookie = function(parameters = {}) {
