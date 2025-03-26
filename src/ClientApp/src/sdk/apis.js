@@ -569,120 +569,41 @@ export const MoveCoreDataURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetAllBackgroundTasks
- * url: GetAllBackgroundTasksURL
- * method: GetAllBackgroundTasks_TYPE
- * raw_url: GetAllBackgroundTasks_RAW_URL
+ * request: StartBackgroundTask
+ * url: StartBackgroundTaskURL
+ * method: StartBackgroundTask_TYPE
+ * raw_url: StartBackgroundTask_RAW_URL
+ * @param id - 
  */
-export const GetAllBackgroundTasks = function(parameters = {}) {
+export const StartBackgroundTask = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/background-task'
+  let path = '/background-task/{id}/run'
   let body
   let queryParameters = {}
   let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllBackgroundTasks_RAW_URL = function() {
-  return '/background-task'
-}
-export const GetAllBackgroundTasks_TYPE = function() {
-  return 'get'
-}
-export const GetAllBackgroundTasksURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/background-task'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: ClearInactiveBackgroundTasks
- * url: ClearInactiveBackgroundTasksURL
- * method: ClearInactiveBackgroundTasks_TYPE
- * raw_url: ClearInactiveBackgroundTasks_RAW_URL
- */
-export const ClearInactiveBackgroundTasks = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/background-task'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const ClearInactiveBackgroundTasks_RAW_URL = function() {
-  return '/background-task'
-}
-export const ClearInactiveBackgroundTasks_TYPE = function() {
-  return 'delete'
-}
-export const ClearInactiveBackgroundTasksURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/background-task'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: GetBackgroundTaskByName
- * url: GetBackgroundTaskByNameURL
- * method: GetBackgroundTaskByName_TYPE
- * raw_url: GetBackgroundTaskByName_RAW_URL
- * @param name - 
- */
-export const GetBackgroundTaskByName = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/background-task/by-name'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['name'] !== undefined) {
-    queryParameters['name'] = parameters['name']
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
     });
   }
-  return request('get', domain + path, body, queryParameters, form, config)
+  return request('post', domain + path, body, queryParameters, form, config)
 }
-export const GetBackgroundTaskByName_RAW_URL = function() {
-  return '/background-task/by-name'
+export const StartBackgroundTask_RAW_URL = function() {
+  return '/background-task/{id}/run'
 }
-export const GetBackgroundTaskByName_TYPE = function() {
-  return 'get'
+export const StartBackgroundTask_TYPE = function() {
+  return 'post'
 }
-export const GetBackgroundTaskByNameURL = function(parameters = {}) {
+export const StartBackgroundTaskURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/background-task/by-name'
-  if (parameters['name'] !== undefined) {
-    queryParameters['name'] = parameters['name']
-  }
+  let path = '/background-task/{id}/run'
+  path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -702,7 +623,7 @@ export const GetBackgroundTaskByNameURL = function(parameters = {}) {
 export const StopBackgroundTask = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/background-task/{id}/stop'
+  let path = '/background-task/{id}/run'
   let body
   let queryParameters = {}
   let form = {}
@@ -718,7 +639,7 @@ export const StopBackgroundTask = function(parameters = {}) {
   return request('delete', domain + path, body, queryParameters, form, config)
 }
 export const StopBackgroundTask_RAW_URL = function() {
-  return '/background-task/{id}/stop'
+  return '/background-task/{id}/run'
 }
 export const StopBackgroundTask_TYPE = function() {
   return 'delete'
@@ -726,7 +647,7 @@ export const StopBackgroundTask_TYPE = function() {
 export const StopBackgroundTaskURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/background-task/{id}/stop'
+  let path = '/background-task/{id}/run'
   path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -738,13 +659,142 @@ export const StopBackgroundTaskURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveBackgroundTask
- * url: RemoveBackgroundTaskURL
- * method: RemoveBackgroundTask_TYPE
- * raw_url: RemoveBackgroundTask_RAW_URL
+ * request: PauseBackgroundTask
+ * url: PauseBackgroundTaskURL
+ * method: PauseBackgroundTask_TYPE
+ * raw_url: PauseBackgroundTask_RAW_URL
  * @param id - 
  */
-export const RemoveBackgroundTask = function(parameters = {}) {
+export const PauseBackgroundTask = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/background-task/{id}/pause'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const PauseBackgroundTask_RAW_URL = function() {
+  return '/background-task/{id}/pause'
+}
+export const PauseBackgroundTask_TYPE = function() {
+  return 'post'
+}
+export const PauseBackgroundTaskURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/background-task/{id}/pause'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: ResumeBackgroundTask
+ * url: ResumeBackgroundTaskURL
+ * method: ResumeBackgroundTask_TYPE
+ * raw_url: ResumeBackgroundTask_RAW_URL
+ * @param id - 
+ */
+export const ResumeBackgroundTask = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/background-task/{id}/pause'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const ResumeBackgroundTask_RAW_URL = function() {
+  return '/background-task/{id}/pause'
+}
+export const ResumeBackgroundTask_TYPE = function() {
+  return 'delete'
+}
+export const ResumeBackgroundTaskURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/background-task/{id}/pause'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: CleanInactiveBackgroundTasks
+ * url: CleanInactiveBackgroundTasksURL
+ * method: CleanInactiveBackgroundTasks_TYPE
+ * raw_url: CleanInactiveBackgroundTasks_RAW_URL
+ */
+export const CleanInactiveBackgroundTasks = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/background-task'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const CleanInactiveBackgroundTasks_RAW_URL = function() {
+  return '/background-task'
+}
+export const CleanInactiveBackgroundTasks_TYPE = function() {
+  return 'delete'
+}
+export const CleanInactiveBackgroundTasksURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/background-task'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: CleanBackgroundTask
+ * url: CleanBackgroundTaskURL
+ * method: CleanBackgroundTask_TYPE
+ * raw_url: CleanBackgroundTask_RAW_URL
+ * @param id - 
+ */
+export const CleanBackgroundTask = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/background-task/{id}'
@@ -762,13 +812,13 @@ export const RemoveBackgroundTask = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const RemoveBackgroundTask_RAW_URL = function() {
+export const CleanBackgroundTask_RAW_URL = function() {
   return '/background-task/{id}'
 }
-export const RemoveBackgroundTask_TYPE = function() {
+export const CleanBackgroundTask_TYPE = function() {
   return 'delete'
 }
-export const RemoveBackgroundTaskURL = function(parameters = {}) {
+export const CleanBackgroundTaskURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/background-task/{id}'

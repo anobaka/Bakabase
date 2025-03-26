@@ -1,21 +1,156 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
-import { usePrevious, useUpdateEffect } from 'react-use';
+import { history } from 'ice';
+
+import { useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
 import {
+  CaretRightOutlined,
   CheckCircleOutlined,
-  CheckOutlined, ClearOutlined,
+  ClearOutlined,
+  ClockCircleOutlined,
   CloseCircleOutlined,
   CloseOutlined,
-  StopOutlined, SyncOutlined,
+  ExclamationCircleOutlined,
+  FieldTimeOutlined,
+  PauseCircleOutlined,
+  PauseOutlined,
+  PushpinOutlined,
+  SettingOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import moment from 'moment';
+import dayjs from 'dayjs';
 import store from '@/store';
-import { BackgroundTaskStatus } from '@/sdk/constants';
-import { Button, Chip, Divider, Modal, Popover } from '@/components/bakaui';
+import { BTaskStatus } from '@/sdk/constants';
+import { Button, Chip, Divider, Modal, Popover, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { buildLogger } from '@/components/utils';
+import type { BTask } from '@/core/models/BTask';
+
+const testTasks: BTask[] = [
+  {
+    id: 'Enhancement1',
+    name: 'BTask_Name_Enhancement',
+    description: 'BTask_Description_Enhancement',
+    percentage: 0,
+    process: 'process1',
+    interval: '00:02:00',
+    enableAfter: '2025-03-26T11:13:24',
+    status: 1,
+    error: 'error1',
+    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
+    conflictWithTaskKeys: [
+      'Enhancement',
+    ],
+    estimateRemainingTime: '01:02:03',
+    startedAt: '2025-03-26T15:19:27.697964+08:00',
+    reasonForUnableToStart: 'conflict with aaa',
+    isPersistent: true,
+    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
+  },
+  {
+    id: 'Enhancement2',
+    name: 'BTask_Name_Enhancement',
+    description: 'BTask_Description_Enhancement',
+    percentage: 0,
+    process: 'process1',
+    interval: '00:02:00',
+    enableAfter: '2025-03-26T11:13:24',
+    status: 2,
+    error: 'error1',
+    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
+    conflictWithTaskKeys: [
+      'Enhancement',
+    ],
+    estimateRemainingTime: '01:02:03',
+    startedAt: '2025-03-26T15:19:27.697964+08:00',
+    reasonForUnableToStart: 'conflict with aaa',
+    isPersistent: true,
+    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
+  },
+  {
+    id: 'Enhancement3',
+    name: 'BTask_Name_Enhancement',
+    description: 'BTask_Description_Enhancement',
+    percentage: 0,
+    process: 'process1',
+    interval: '00:02:00',
+    enableAfter: '2025-03-26T11:13:24',
+    status: 3,
+    error: 'error1',
+    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
+    conflictWithTaskKeys: [
+      'Enhancement',
+    ],
+    estimateRemainingTime: '01:02:03',
+    startedAt: '2025-03-26T15:19:27.697964+08:00',
+    reasonForUnableToStart: 'conflict with aaa',
+    isPersistent: true,
+    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
+  },
+  {
+    id: 'Enhancement4',
+    name: 'BTask_Name_Enhancement',
+    description: 'BTask_Description_Enhancement',
+    percentage: 0,
+    process: 'process1',
+    interval: '00:02:00',
+    enableAfter: '2025-03-26T11:13:24',
+    status: 4,
+    error: 'error1',
+    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
+    conflictWithTaskKeys: [
+      'Enhancement',
+    ],
+    estimateRemainingTime: '01:02:03',
+    startedAt: '2025-03-26T15:19:27.697964+08:00',
+    reasonForUnableToStart: 'conflict with aaa',
+    isPersistent: true,
+    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
+  },
+  {
+    id: 'Enhancement5',
+    name: 'BTask_Name_Enhancement',
+    description: 'BTask_Description_Enhancement',
+    percentage: 0,
+    process: 'process1',
+    interval: '00:02:00',
+    enableAfter: '2025-03-26T11:13:24',
+    status: 5,
+    error: 'error1',
+    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
+    conflictWithTaskKeys: [
+      'Enhancement',
+    ],
+    estimateRemainingTime: '01:02:03',
+    startedAt: '2025-03-26T15:19:27.697964+08:00',
+    reasonForUnableToStart: 'conflict with aaa',
+    isPersistent: true,
+    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
+  },
+  {
+    id: 'Enhancement6',
+    name: 'BTask_Name_Enhancement',
+    description: 'BTask_Description_Enhancement',
+    percentage: 0,
+    process: 'process1',
+    interval: '00:02:00',
+    enableAfter: '2025-03-26T11:13:24',
+    status: 6,
+    error: 'error1',
+    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
+    conflictWithTaskKeys: [
+      'Enhancement',
+    ],
+    estimateRemainingTime: '01:02:03',
+    startedAt: '2025-03-26T15:19:27.697964+08:00',
+    reasonForUnableToStart: 'conflict with aaa',
+    isPersistent: true,
+    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
+  },
+];
 
 const AssistantStatus = {
   Idle: 0,
@@ -24,17 +159,23 @@ const AssistantStatus = {
   Failed: 3,
 };
 
-type Task = {
-  id: string;
-  name: string;
-  currentProgress?: string;
-  percentage: number;
-  status: BackgroundTaskStatus;
-  message?: string;
-};
+enum TaskAction {
+  Start = 1,
+  Pause = 2,
+  Resume = 3,
+  Stop = 4,
+  Clean = 5,
+  Config = 6,
+}
 
-const SyncTaskName = 'MediaLibraryService:Sync';
-const NfoGenerationTaskName = 'ResourceService:NfoGeneration';
+const ActionsFilter: Record<TaskAction, (task: BTask) => boolean> = {
+  [TaskAction.Start]: task => task.isPersistent && (task.status == BTaskStatus.Stopped || task.status == BTaskStatus.Error || task.status == BTaskStatus.Completed),
+  [TaskAction.Pause]: task => task.status == BTaskStatus.Running,
+  [TaskAction.Resume]: task => task.status == BTaskStatus.Paused,
+  [TaskAction.Stop]: task => task.status == BTaskStatus.Running,
+  [TaskAction.Clean]: task => !task.isPersistent && (task.status == BTaskStatus.Completed || task.status == BTaskStatus.Error || task.status == BTaskStatus.Stopped),
+  [TaskAction.Config]: task => task.isPersistent,
+};
 
 const log = buildLogger('FloatingAssistant');
 
@@ -42,7 +183,7 @@ export default () => {
   const [allDoneCircleDrawn, setAllDoneCircleDrawn] = useState('');
   const [status, setStatus] = useState(AssistantStatus.Working);
   const statusRef = useRef(status);
-  const [removingTaskId, setRemovingTaskId] = useState<string | undefined>();
+  const [cleaningTaskId, setCleaningTaskId] = useState<string | undefined>();
   const [tasksVisible, setTasksVisible] = useState(false);
   const { createPortal } = useBakabaseContext();
 
@@ -50,30 +191,8 @@ export default () => {
 
   const portalRef = useRef<HTMLDivElement | null>(null);
 
-  const tasks = store.useModelState('backgroundTasks');
-  // const tasks: Task[] = [
-  //   {
-  //     id: 'asdsasdas1',
-  //     name: 'name',
-  //     currentProgress: 'cpcpcpcp',
-  //     percentage: 20,
-  //     status: BackgroundTaskStatus.Running,
-  //   },
-  //   {
-  //     id: 'asdsasdas2',
-  //     name: 'name123',
-  //     percentage: 80,
-  //     status: BackgroundTaskStatus.Failed,
-  //     message: 'asdssa8912n3ejsnadas98dsasb9123njksafdsd98fsjd9fdsfdsfsdfdfasdssa8912n3ejsnadas98dsasb9123njksafdsd98fsjd9fdsfdsfsdfdfasdssa8912n3ejsnadas98dsasb9123njksafdsd98fsjd9fdsfdsfsdfdfasdssa8912n3ejsnadas98dsasb9123njksafdsd98fsjd9fdsfdsfsdfdf',
-  //   },
-  //   {
-  //     id: 'asdsasdas3',
-  //     name: 'name21412412412',
-  //     currentProgress: 'cpcpcpcp',
-  //     percentage: 100,
-  //     status: BackgroundTaskStatus.Complete,
-  //   },
-  // ];
+  const bTasks = store.useModelState('bTasks');
+  // const bTasks = testTasks;
 
   // console.log(status);
 
@@ -85,18 +204,18 @@ export default () => {
     log('Initializing...');
 
     const queryTask = setInterval(() => {
-      const tempTasks = store.getState().backgroundTasks;
+      const tempTasks = store.getState().bTasks;
       let newStatus = AssistantStatus.AllDone;
       if (tempTasks.length > 0) {
-        const ongoingTasks = tempTasks.filter((a) => a.status == BackgroundTaskStatus.Running);
+        const ongoingTasks = tempTasks.filter((a) => a.status == BTaskStatus.Running);
         if (ongoingTasks.length > 0) {
           newStatus = AssistantStatus.Working;
         } else {
-          const failedTasks = tempTasks.filter((a) => a.status == BackgroundTaskStatus.Failed);
+          const failedTasks = tempTasks.filter((a) => a.status == BTaskStatus.Error);
           if (failedTasks.length > 0) {
             newStatus = AssistantStatus.Failed;
           } else {
-            const doneTasks = tempTasks.filter((a) => a.status == BackgroundTaskStatus.Complete);
+            const doneTasks = tempTasks.filter((a) => a.status == BTaskStatus.Completed);
             if (doneTasks.length > 0) {
               newStatus = AssistantStatus.AllDone;
             }
@@ -120,34 +239,50 @@ export default () => {
     };
   }, []);
 
-  const renderTaskStatus = (task: Task) => {
+  const renderTaskStatus = (task: BTask) => {
     switch (task.status) {
-      case BackgroundTaskStatus.Running:
-        return (
-          <Chip
-            size={'sm'}
-            variant={'light'}
-          >{Math.floor(task.percentage)}%</Chip>
-        );
-      case BackgroundTaskStatus.Complete:
+      case BTaskStatus.NotStarted:
         return (
           <Chip
             variant={'light'}
-            color={'success'}
+            color={'warning'}
             size={'sm'}
           >
-            <CheckCircleOutlined className={'text-base'} />
+            <ClockCircleOutlined className={'text-base'} />
           </Chip>
         );
-      case BackgroundTaskStatus.Failed:
+      case BTaskStatus.Stopped:
+        return (
+          <Chip
+            variant={'light'}
+            color={'warning'}
+            size={'sm'}
+          >
+            <CloseOutlined className={'text-base'} />
+          </Chip>
+        );
+      case BTaskStatus.Paused:
+        return (
+          <Chip
+            variant={'light'}
+            color={'warning'}
+            size={'sm'}
+          >
+            <div className={'flex items-center gap-1'}>
+              <PauseOutlined className={'text-base'} />
+              {Math.floor(task.percentage ?? 0)}%
+            </div>
+          </Chip>
+        );
+      case BTaskStatus.Error:
         return (
           <Button
             size={'sm'}
             color={'danger'}
             variant={'light'}
             isIconOnly
-            onClick={() => {
-              if (task.message) {
+            onPress={() => {
+              if (task.error) {
                 createPortal(Modal, {
                   defaultVisible: true,
                   size: 'xl',
@@ -157,7 +292,7 @@ export default () => {
                   title: t('Error'),
                   children: (
                     <pre>
-                      {task.message}
+                      {task.error}
                     </pre>
                   ),
                   footer: {
@@ -167,83 +302,216 @@ export default () => {
               }
             }}
           >
-            <CloseCircleOutlined className={'text-base'} />
+            <ExclamationCircleOutlined className={'text-base'} />
           </Button>
+        );
+      case BTaskStatus.Running:
+        return (
+          <Chip
+            size={'sm'}
+            variant={'light'}
+          >{Math.floor(task.percentage ?? 0)}%</Chip>
+        );
+      case BTaskStatus.Completed:
+        return (
+          <Chip
+            variant={'light'}
+            color={'success'}
+            size={'sm'}
+          >
+            <CheckCircleOutlined className={'text-base'} />
+          </Chip>
         );
     }
   };
 
-  const renderTaskOpts = (task: Task) => {
-    switch (task.status) {
-      case BackgroundTaskStatus.Running:
-        return (
-          <Button
-            color={'danger'}
-            variant={'light'}
-            size={'sm'}
-            isIconOnly
-            onClick={() => {
-              createPortal(Modal, {
-                defaultVisible: true,
-                title: t('Stopping task: {{taskName}}', { taskName: task.name }),
-                children: t('Are you sure to stop this task?'),
-                onOk: async () => await BApi.backgroundTask.stopBackgroundTask(task.id),
-              });
-            }}
-          >
-            <StopOutlined className={'text-base'} />
-          </Button>
-        );
-      case BackgroundTaskStatus.Complete:
-      case BackgroundTaskStatus.Failed:
-        return (
-          <Button
-            // color={'success'}
-            variant={'light'}
-            size={'sm'}
-            isIconOnly
-            onClick={() => {
-              setRemovingTaskId(task.id);
-            }}
-          >
-            <ClearOutlined className={'text-base'} />
-          </Button>
-        );
-    }
+  const renderTaskOpts = (task: BTask) => {
+    const opts: any[] = [];
+    Object.keys(ActionsFilter).forEach((key) => {
+      const filter = ActionsFilter[key];
+      if (filter(task)) {
+        const action: TaskAction = parseInt(key, 10) as TaskAction;
+        switch (action) {
+          case TaskAction.Start:
+            opts.push(
+              <Button
+                color={'secondary'}
+                variant={'light'}
+                size={'sm'}
+                isIconOnly
+                onPress={() => {
+                  BApi.backgroundTask.startBackgroundTask(task.id);
+                }}
+              >
+                <CaretRightOutlined className={'text-base'} />
+              </Button>,
+            );
+            break;
+          case TaskAction.Pause:
+            opts.push(
+              <Button
+                color={'warning'}
+                variant={'light'}
+                size={'sm'}
+                isIconOnly
+                onPress={() => {
+                  BApi.backgroundTask.pauseBackgroundTask(task.id);
+                }}
+              >
+                <PauseCircleOutlined className={'text-base'} />
+              </Button>,
+            );
+            break;
+          case TaskAction.Resume:
+            opts.push(
+              <Button
+                color={'secondary'}
+                variant={'light'}
+                size={'sm'}
+                isIconOnly
+                onPress={() => {
+                  BApi.backgroundTask.resumeBackgroundTask(task.id);
+                }}
+              >
+                <CaretRightOutlined className={'text-base'} />
+              </Button>,
+            );
+            break;
+          case TaskAction.Stop:
+            opts.push(
+              <Button
+                color={'danger'}
+                variant={'light'}
+                size={'sm'}
+                isIconOnly
+                onPress={() => {
+                  createPortal(Modal, {
+                    defaultVisible: true,
+                    title: t('Stopping task: {{taskName}}', { taskName: task.name }),
+                    children: t('Are you sure to stop this task?'),
+                    onOk: async () => await BApi.backgroundTask.stopBackgroundTask(task.id),
+                  });
+                }}
+              >
+                <StopOutlined className={'text-base'} />
+              </Button>,
+            );
+            break;
+          case TaskAction.Clean:
+            opts.push(
+              <Button
+                // color={'success'}
+                variant={'light'}
+                size={'sm'}
+                isIconOnly
+                onPress={() => {
+                  setCleaningTaskId(task.id);
+                }}
+              >
+                <ClearOutlined className={'text-base'} />
+              </Button>,
+            );
+            break;
+          case TaskAction.Config:
+            opts.push(
+              <Button
+                size={'sm'}
+                isIconOnly
+                variant={'light'}
+                onPress={() => {
+                  createPortal(
+                    Modal, {
+                      defaultVisible: true,
+                      title: t('About to leave current page'),
+                      children: t('Sure?'),
+                      onOk: async () => {
+                        history!.push('/backgroundtask');
+                      },
+                    },
+                  );
+                }}
+              >
+                <SettingOutlined className={'text-base'} />
+              </Button>,
+            );
+            break;
+        }
+      }
+    });
+    return opts;
   };
 
   const renderTasks = () => {
-    if (tasks?.length > 0) {
-      return tasks?.map((t) => {
+    if (bTasks?.length > 0) {
+      return bTasks?.map((task) => {
         return (
           <div
-            key={t.id}
-            className={`flex items-center justify-between gap-16 transition-opacity ${t.id == removingTaskId ? 'opacity-0' : ''}`}
+            key={task.id}
+            className={`flex items-center justify-between gap-16 transition-opacity ${task.id == cleaningTaskId ? 'opacity-0' : ''}`}
             onTransitionEnd={(evt) => {
-              if (evt.propertyName == 'opacity' && t.id == removingTaskId) {
-                BApi.backgroundTask.removeBackgroundTask(t.id);
+              if (evt.propertyName == 'opacity' && task.id == cleaningTaskId) {
+                BApi.backgroundTask.cleanBackgroundTask(task.id);
               }
             }}
           >
             <div className="flex items-center">
-              <Chip variant={'light'}>
-                {t.name}
-              </Chip>
-              {t.currentProgress && (
+              <Tooltip
+                content={task.description}
+              >
+                <div>
+                  {task.isPersistent && (
+                    <>
+                      <PushpinOutlined className={'text-sm opacity-60'} />
+                      &nbsp;
+                    </>
+                  )}
+                  {task.name}
+                </div>
+              </Tooltip>
+              {task.process && (
                 <Chip
                   variant={'light'}
                   color={'success'}
                 >
-                  {t.currentProgress}
+                  {task.process}
                 </Chip>
               )}
-              {renderTaskStatus(t)}
+              {renderTaskStatus(task)}
             </div>
             <div className="flex items-center gap-1">
-              {t.startDt && (
-                <div>{moment(t.startDt).format('HH:mm:ss')}</div>
+              {task.elapsed && (
+                <Tooltip
+                  content={t('Elapsed')}
+                >
+                  <div className={'flex items-center gap-1'}>
+                    {/* <ClockCircleOutlined className={'text-sm'} /> */}
+                    {dayjs.duration(moment.duration(task.elapsed).asMilliseconds()).format('HH:mm:ss')}
+                  </div>
+                </Tooltip>
               )}
-              {renderTaskOpts(t)}
+            </div>
+            <div className="flex items-center gap-1">
+              {task.estimateRemainingTime && (
+                <Tooltip
+                  content={t('Estimate remaining time')}
+                >
+                  <div className={'flex items-center gap-1'}>
+                    <FieldTimeOutlined className={'text-base'} />
+                    {dayjs.duration(moment.duration(task.estimateRemainingTime).asMilliseconds()).format('HH:mm:ss')}
+                  </div>
+                </Tooltip>
+              )}
+              {task.nextTimeStartAt && (
+                <Tooltip
+                  content={t('Next start time')}
+                >
+                  <div className={'flex items-center gap-1'}>
+                    <FieldTimeOutlined className={'text-base'} />
+                    {dayjs(task.nextTimeStartAt).format('HH:mm:ss')}
+                  </div>
+                </Tooltip>
+              )}
+              {renderTaskOpts(task)}
             </div>
           </div>
         );
@@ -256,9 +524,7 @@ export default () => {
     );
   };
 
-  const syncDisabled = tasks.some((a) => a.name == SyncTaskName && a.status == BackgroundTaskStatus.Running);
-  // const nfoGenerationDisabled = tasks.some((a) => a.name == NfoGenerationTaskName && a.status == BackgroundTaskStatus.Running);
-  const activeTasks = tasks.filter((t) => t.status != BackgroundTaskStatus.Running);
+  const clearableTasks = bTasks.filter((t) => !t.isPersistent && (t.status == BTaskStatus.Completed || t.status == BTaskStatus.Error || t.status == BTaskStatus.Stopped));
 
   // log(tasks);
 
@@ -323,41 +589,11 @@ export default () => {
           </div>
           <Divider orientation={'horizontal'} />
           <div className="flex items-center gap-2">
-            <Button
-              size={'sm'}
-              variant={'ghost'}
-              disabled={syncDisabled}
-              onClick={() => {
-                BApi.mediaLibrary.startSyncMediaLibrary();
-              }}
-            >
-              <SyncOutlined className={'text-base'} />
-              {t('Sync media libraries')}
-            </Button>
-            {/* <Balloon.Tooltip */}
-            {/*   trigger={( */}
-            {/*     <Button */}
-            {/*       size={'small'} */}
-            {/*       className="opt" */}
-            {/*       type={'normal'} */}
-            {/*       disabled={nfoGenerationDisabled} */}
-            {/*       onClick={() => { */}
-            {/*             StartResourceNfoGenerationTask().invoke(); */}
-            {/*           }} */}
-            {/*     > */}
-            {/*       {t('Generate nfo files')} */}
-            {/*     </Button> */}
-            {/*       )} */}
-            {/*   triggerType={'hover'} */}
-            {/*   align={'t'} */}
-            {/* > */}
-            {/*   {t('{{job}} will be started once an hour automatically, but you can trigger it manually by clicking there.', { job: t('Nfo files generation') })} */}
-            {/* </Balloon.Tooltip> */}
-            {activeTasks.length > 0 && (
+            {clearableTasks.length > 0 && (
               <Button
                 size={'sm'}
                 variant={'ghost'}
-                onClick={() => BApi.backgroundTask.clearInactiveBackgroundTasks()}
+                onPress={() => BApi.backgroundTask.cleanInactiveBackgroundTasks()}
               >
                 <ClearOutlined className={'text-base'} />
                 {t('Clear inactive tasks')}

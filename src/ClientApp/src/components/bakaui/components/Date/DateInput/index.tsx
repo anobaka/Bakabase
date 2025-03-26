@@ -26,6 +26,7 @@ const convertToCalendarDateTime = (value: Dayjs | undefined): CalendarDateTime |
 export default ({ value: propsValue, onChange, defaultValue, ...props }: DateInputProps) => {
   const [value, setValue] = useState<CalendarDateTime>();
 
+  log(propsValue);
   log(propsValue, propsValue?.toISOString(), value, propsValue?.toDate());
 
   useEffect(() => {
