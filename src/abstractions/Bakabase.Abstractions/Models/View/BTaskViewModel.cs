@@ -12,6 +12,7 @@ public record BTaskViewModel
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public int? Percentage { get; set; }
+    public string? Process { get; set; }
     public TimeSpan? Interval { get; set; }
     public DateTime? EnableAfter { get; set; }
     public BTaskStatus Status { get; set; }
@@ -22,24 +23,28 @@ public record BTaskViewModel
     public DateTime? StartedAt { get; set; }
     public string? ReasonForUnableToStart { get; set; }
     public bool IsPersistent { get; set; }
+    public DateTime? NextTimeStartAt { get; set; }
+    public TimeSpan? Elapsed { get; set; }
 
-
-    public BTaskViewModel(BTaskDescriptor btWrapper, BTaskDbModel? dbModel, string? reasonForUnableToStart)
+    public BTaskViewModel(BTaskDescriptor descriptor, string? reasonForUnableToStart)
     {
-        Id = btWrapper.Id;
-        Name = btWrapper.Name;
-        Description = btWrapper.Description;
-        Percentage = btWrapper.Percentage;
-        Status = btWrapper.Status;
-        Error = btWrapper.Error;
-        MessageOnInterruption = btWrapper.MessageOnInterruption;
-        ConflictWithTaskKeys = btWrapper.ConflictKeys;
-        EstimateRemainingTime = btWrapper.EstimateRemainingTime;
-        StartedAt = btWrapper.StartedAt;
-        IsPersistent = btWrapper.IsPersistent;
+        Id = descriptor.Id;
+        Name = descriptor.Name;
+        Description = descriptor.Description;
+        Percentage = descriptor.Percentage;
+        Process = descriptor.Process;
+        Status = descriptor.Status;
+        Error = descriptor.Error;
+        MessageOnInterruption = descriptor.MessageOnInterruption;
+        ConflictWithTaskKeys = descriptor.ConflictKeys;
+        EstimateRemainingTime = descriptor.EstimateRemainingTime;
+        StartedAt = descriptor.StartedAt;
+        IsPersistent = descriptor.IsPersistent;
+        NextTimeStartAt = descriptor.NextTimeStartAt;
+        Interval = descriptor.Interval;
+        EnableAfter = descriptor.EnableAfter > DateTime.Now ? descriptor.EnableAfter : null;
+        Elapsed = descriptor.Sw.Elapsed == TimeSpan.Zero ? null : descriptor.Sw.Elapsed;
 
-        Interval = dbModel?.Interval ?? btWrapper.Interval;
-        EnableAfter = dbModel?.EnableAfter ?? btWrapper.EnableAfter;
         ReasonForUnableToStart = reasonForUnableToStart;
     }
 }

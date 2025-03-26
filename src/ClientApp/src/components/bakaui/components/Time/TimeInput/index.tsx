@@ -3,7 +3,7 @@ import { TimeInput } from '@nextui-org/react';
 import dayjs from 'dayjs';
 import { Time } from '@internationalized/date';
 import type { Duration } from 'dayjs/plugin/duration';
-import { convertDurationToTime } from '@/components/utils';
+import { convertDurationToTime, convertTimeToDuration } from '@/components/utils';
 
 interface TimeInputProps extends Omit<NextUITimeInputProps, 'value' | 'onChange' | 'defaultValue'> {
   value?: Duration;
@@ -27,7 +27,7 @@ export default ({
       defaultValue={dv}
       value={v}
       onChange={v => {
-        onChange?.(dayjs.duration(v.toString()));
+        onChange?.(convertTimeToDuration(v as Time));
       }}
       hourCycle={24}
       {...props}

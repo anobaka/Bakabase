@@ -8,6 +8,7 @@ using Bakabase.Abstractions.Models.View;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.Abstractions.Components.Tasks;
@@ -20,14 +21,16 @@ public class BTaskManager : IAsyncDisposable
     private readonly ConcurrentDictionary<string, BTaskDescriptor> _taskMap = [];
     private readonly IBTaskEventHandler _eventHandler;
     private readonly IDisposable _optionsChangeHandler;
+    private readonly ILogger<BTaskManager> _logger;
 
     public BTaskManager(IBakabaseLocalizer localizer, AspNetCoreOptionsManager<TaskOptions> options, IServiceProvider serviceProvider,
-        IBTaskEventHandler eventHandler)
+        IBTaskEventHandler eventHandler, ILogger<BTaskManager> logger)
     {
         _localizer = localizer;
         _options = options;
         _serviceProvider = serviceProvider;
         _eventHandler = eventHandler;
+        _logger = logger;
 
         _optionsChangeHandler = _options.OnChange(o =>
         {
@@ -37,6 +40,8 @@ public class BTaskManager : IAsyncDisposable
                 t.Interval = dmMap?.GetValueOrDefault(t.Id)?.Interval ?? t.Interval;
                 t.EnableAfter = dmMap?.GetValueOrDefault(t.Id)?.EnableAfter ?? t.EnableAfter;
             }
+
+            _ = OnAllTasksChange();
         });
     }
 
@@ -75,7 +80,7 @@ public class BTaskManager : IAsyncDisposable
             }
         }
 
-        async Task OnTaskProcessChange(string process)
+        async Task OnTaskProcessChange(string? process)
         {
             await OnTaskChange(builder.Id);
             if (builder.OnProcessChange != null)
@@ -111,6 +116,11 @@ public class BTaskManager : IAsyncDisposable
         {
             await _eventHandler.OnTaskChange(task);
         }
+    }
+    private async Task OnAllTasksChange()
+    {
+        var tasks = GetTasksViewModel();
+        await _eventHandler.OnAllTasksChange(tasks);
     }
 
     /// <summary>
@@ -180,17 +190,23 @@ public class BTaskManager : IAsyncDisposable
         {
             while (true)
             {
-                var activeTasks = _taskMap.Values.Where(x =>
-                        (x.Interval.HasValue && DateTime.Now - x.LastFinishedAt > x.Interval.Value) ||
-                        x.Status is BTaskStatus.NotStarted)
-                    .OrderBy(x => x.LastFinishedAt)
-                    .ThenBy(x => x.CreatedAt).ToArray();
-                foreach (var at in activeTasks)
+                try
                 {
-                    if (!_getConflictTasks(at).Any())
+                    var now = DateTime.Now;
+                    var activeTasks = _taskMap.Values
+                        .Where(x => x.NextTimeStartAt < now || x.Status is BTaskStatus.NotStarted)
+                        .OrderBy(x => x.LastFinishedAt).ThenBy(x => x.CreatedAt).ToArray();
+                    foreach (var at in activeTasks)
                     {
-                        await at.TryStartAutomatically();
+                        if (!_getConflictTasks(at).Any())
+                        {
+                            await at.TryStartAutomatically();
+                        }
                     }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "An error occurred during daemon");
                 }
 
                 await Task.Delay(1000);
@@ -215,17 +231,25 @@ public class BTaskManager : IAsyncDisposable
         }
     }
 
-    public async Task Remove(string id)
+    public void Resume(string id)
     {
-        _taskMap.TryRemove(id, out _);
-        await _eventHandler.OnAllTasksChange(GetTasksViewModel());
+        if (_taskMap.TryGetValue(id, out var t))
+        {
+            t.Resume();
+        }
     }
 
-    public async Task RemoveInactive()
+    public async Task Clean(string id)
+    {
+        _taskMap.TryRemove(id, out _);
+        await OnAllTasksChange();
+    }
+
+    public async Task CleanInactive()
     {
         var tasks = _taskMap.Values.ToList();
-        foreach (var t in tasks.Where(x =>
-                     x.Status is BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Stopped))
+        foreach (var t in tasks.Where(x => x is
+                     {IsPersistent: false, Status: BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Stopped}))
         {
             _taskMap.TryRemove(t.Id, out _);
         }
@@ -236,7 +260,7 @@ public class BTaskManager : IAsyncDisposable
     public List<BTaskEvent<int>> GetPercentageEvents(string id) =>
         _taskMap.GetValueOrDefault(id)?.PercentageEvents.ToList() ?? [];
 
-    public List<BTaskEvent<string>> GetProcessEvents(string id) =>
+    public List<BTaskEvent<string?>> GetProcessEvents(string id) =>
         _taskMap.GetValueOrDefault(id)?.ProcessEvents.ToList() ?? [];
 
     private BTaskViewModel BuildTaskViewModel(BTaskDescriptor d)
@@ -253,7 +277,7 @@ public class BTaskManager : IAsyncDisposable
             }
         }
 
-        return new BTaskViewModel(d, _options.Value.Tasks?.FirstOrDefault(x => x.Id == d.Id), reasonForUnableToStart);
+        return new BTaskViewModel(d, reasonForUnableToStart);
     }
 
     public List<BTaskViewModel> GetTasksViewModel() => _taskMap.Values.Select(BuildTaskViewModel).ToList();

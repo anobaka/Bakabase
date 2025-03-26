@@ -9,7 +9,7 @@ public class BTaskDescriptorBuilder
     public Func<string> GetName { get; set; } = null!;
     public Func<string?>? GetDescription { get; set; }
     public Func<string?>? GetMessageOnInterruption { get; set; }
-    public Func<string, Task>? OnProcessChange { get; init; }
+    public Func<string?, Task>? OnProcessChange { get; init; }
     public Func<int, Task>? OnPercentageChange { get; init; }
     public Func<BTaskStatus, Task>? OnStatusChange { get; init; }
     public CancellationToken? CancellationToken { get; init; }

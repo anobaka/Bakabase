@@ -667,27 +667,6 @@ export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
   | 1000
   | 10000;
 
-export interface BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
-  id: string;
-  name: string;
-  /** @format date-time */
-  startDt: string;
-  /** [1: Running, 2: Complete, 3: Failed] */
-  status: BakabaseInsideWorldModelsConstantsBackgroundTaskStatus;
-  message: string;
-  /** @format int32 */
-  percentage: number;
-  currentProcess: string;
-  /** [1: Default, 2: Critical] */
-  level: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskLevel;
-}
-
-/**
- * [1: Default, 2: Critical]
- * @format int32
- */
-export type BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskLevel = 1 | 2;
-
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions {
   /** @format date-time */
   lastSyncDt: string;
@@ -898,12 +877,6 @@ export type BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder = 1 | 2;
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty = 1 | 2 | 3 | 6;
-
-/**
- * [1: Running, 2: Complete, 3: Failed]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsBackgroundTaskStatus = 1 | 2 | 3;
 
 /**
  * [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
@@ -1890,13 +1863,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[];
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto[];
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
   /** @format int32 */
   code: number;
@@ -2199,13 +2165,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions {
@@ -3563,55 +3522,13 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags BackgroundTask
-     * @name GetAllBackgroundTasks
-     * @request GET:/background-task
+     * @name StartBackgroundTask
+     * @request POST:/background-task/{id}/run
      */
-    getAllBackgroundTasks: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto,
-        any
-      >({
-        path: `/background-task`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags BackgroundTask
-     * @name ClearInactiveBackgroundTasks
-     * @request DELETE:/background-task
-     */
-    clearInactiveBackgroundTasks: (params: RequestParams = {}) =>
+    startBackgroundTask: (id: string, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/background-task`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags BackgroundTask
-     * @name GetBackgroundTaskByName
-     * @request GET:/background-task/by-name
-     */
-    getBackgroundTaskByName: (
-      query?: {
-        name?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsTasksBackgroundTaskDto,
-        any
-      >({
-        path: `/background-task/by-name`,
-        method: "GET",
-        query: query,
+        path: `/background-task/${id}/run`,
+        method: "POST",
         format: "json",
         ...params,
       }),
@@ -3621,11 +3538,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      *
      * @tags BackgroundTask
      * @name StopBackgroundTask
-     * @request DELETE:/background-task/{id}/stop
+     * @request DELETE:/background-task/{id}/run
      */
     stopBackgroundTask: (id: string, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/background-task/${id}/stop`,
+        path: `/background-task/${id}/run`,
         method: "DELETE",
         format: "json",
         ...params,
@@ -3635,10 +3552,55 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags BackgroundTask
-     * @name RemoveBackgroundTask
+     * @name PauseBackgroundTask
+     * @request POST:/background-task/{id}/pause
+     */
+    pauseBackgroundTask: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/background-task/${id}/pause`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BackgroundTask
+     * @name ResumeBackgroundTask
+     * @request DELETE:/background-task/{id}/pause
+     */
+    resumeBackgroundTask: (id: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/background-task/${id}/pause`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BackgroundTask
+     * @name CleanInactiveBackgroundTasks
+     * @request DELETE:/background-task
+     */
+    cleanInactiveBackgroundTasks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/background-task`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags BackgroundTask
+     * @name CleanBackgroundTask
      * @request DELETE:/background-task/{id}
      */
-    removeBackgroundTask: (id: string, params: RequestParams = {}) =>
+    cleanBackgroundTask: (id: string, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/background-task/${id}`,
         method: "DELETE",

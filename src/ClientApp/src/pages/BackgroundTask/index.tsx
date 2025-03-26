@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 // import './index.scss';
 import { useTranslation } from 'react-i18next';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import moment from 'moment';
 import toast from 'react-hot-toast';
 import {
-  Button,
+  Button, Chip,
   DateInput,
   Progress,
   Table,
@@ -52,6 +52,14 @@ export default () => {
       label: 'Interval',
     },
     {
+      key: 'nextTimeStartAt',
+      label: 'Next time start at',
+    },
+    {
+      key: 'elapsed',
+      label: 'Elapsed',
+    },
+    {
       key: 'enableAfter',
       label: 'Enable after',
     },
@@ -62,10 +70,10 @@ export default () => {
 
   const patchOptions = async () => {
     await BApi.options.patchTaskOptions({
-      tasks: (taskOptions.tasks || []).map(t => {
+      tasks: bTasks.filter(t => t.isPersistent).map(t => {
         return {
-          ...t,
-          interval: editingOptions[t.id]?.interval ?? t.interval,
+          id: t.id,
+          interval: editingOptions[t.id]?.interval ?? t.interval!,
           enableAfter: editingOptions[t.id]?.enableAfter ?? t.enableAfter,
         };
       }),
@@ -83,6 +91,7 @@ export default () => {
     if (editingInterval) {
       return (
         <TimeInput
+          autoFocus
           onBlur={() => {
             patchOptions();
           }}
@@ -101,21 +110,37 @@ export default () => {
       );
     } else {
       return (
-        <Button
-          variant={'light'}
-          // color={'primary'}
-          size={'sm'}
-          onPress={() => {
-            setEditingOptions({
-              ...editingOptions,
-              [task.id]: {
-                interval: '00:05:00',
-              },
-            });
-          }}
-        >
-          {task.interval ? dayjs.duration(moment.duration(task.interval).asMilliseconds()).format('HH:mm:ss') : t('Not set')}
-        </Button>
+        <div className={'flex items-center gap-1'}>
+          <div>
+            <Button
+              variant={'light'}
+              // color={'primary'}
+              size={'sm'}
+              onPress={() => {
+                setEditingOptions({
+                  ...editingOptions,
+                  [task.id]: {
+                    interval: task.interval ?? '00:05:00',
+                  },
+                });
+              }}
+            >
+              {task.interval ? dayjs.duration(moment.duration(task.interval).asMilliseconds()).format('HH:mm:ss') : t('Not set')}
+            </Button>
+          </div>
+          {task.interval && (
+            <Tooltip content={(
+              <div>
+                {t('Will start at')}
+                &nbsp;
+                {dayjs(task.nextTimeStartAt).format('YYYY-MM-DD HH:mm:ss')}
+              </div>
+            )}
+            >
+              <ClockCircleOutlined className={'text-base'} />
+            </Tooltip>
+          )}
+        </div>
       );
     }
   };
@@ -125,10 +150,13 @@ export default () => {
       return t('Not supported');
     }
 
+    const format = 'YYYY-MM-DD HH:mm:ss';
+
     const editingEnableAfter = editingOptions[task.id]?.enableAfter;
     if (editingEnableAfter) {
       return (
         <DateInput
+          autoFocus
           onBlur={() => {
             patchOptions();
           }}
@@ -139,7 +167,7 @@ export default () => {
             setEditingOptions({
               ...editingOptions,
               [task.id]: {
-                enableAfter: v?.format('YYYY-MM-dd HH:mm:ss'),
+                enableAfter: v?.format(format),
               },
             });
           }}
@@ -148,19 +176,20 @@ export default () => {
     } else {
       return (
         <Button
-          variant={'light'}
+          variant={task.enableAfter ? 'light' : 'flat'}
           // color={'primary'}
           size={'sm'}
           onPress={() => {
+            const initValue = task.enableAfter ? dayjs(task.enableAfter) : dayjs().add(1, 'h');
             setEditingOptions({
               ...editingOptions,
               [task.id]: {
-                enableAfter: dayjs().add(1, 'h').format('YYYY-MM-dd HH:mm:ss'),
+                enableAfter: initValue.format(format),
               },
             });
           }}
         >
-          {task.enableAfter ? dayjs(task.enableAfter).format('YYYY-MM-dd HH:mm:ss') : t('Not set')}
+          {task.enableAfter ? dayjs(task.enableAfter).format(format) : t('Not set')}
         </Button>
       );
     }
@@ -180,7 +209,7 @@ export default () => {
                   {task.name}
                   {task.description && (
                     <Tooltip content={task.description} color={'secondary'}>
-                      <QuestionCircleOutlined />
+                      <QuestionCircleOutlined className={'text-base'} />
                     </Tooltip>
                   )}
                 </div>
@@ -194,7 +223,7 @@ export default () => {
                 )}
                 {task.reasonForUnableToStart && (
                   <Tooltip content={task.reasonForUnableToStart} color={'warning'}>
-                    <QuestionCircleOutlined />
+                    <QuestionCircleOutlined className={'text-base'} />
                   </Tooltip>
                 )}
               </TableCell>
@@ -218,109 +247,18 @@ export default () => {
                 {renderInterval(task)}
               </TableCell>
               <TableCell>
+                {task.nextTimeStartAt && dayjs(task.nextTimeStartAt).format('YYYY-MM-DD HH:mm:ss')}
+              </TableCell>
+              <TableCell>
+                {task.elapsed && dayjs.duration(moment.duration(task.elapsed).asMilliseconds()).format('HH:mm:ss')}
+              </TableCell>
+              <TableCell>
                 {renderEnableAfter(task)}
               </TableCell>
             </TableRow>
           );
         })}
-        {/* {(task) => ( */}
-        {/*    */}
-        {/* )} */}
       </TableBody>
     </Table>
   );
-
-  // const renderOperations = (id, i, r) => {
-  //   const elements = [];
-  //   if (r.status == BackgroundTaskStatus.Running) {
-  //     elements.push(<Button
-  //       text
-  //       type="primary"
-  //       onClick={() => {
-  //         StopBackgroundTask({
-  //           id,
-  //         }).invoke((a) => {
-  //         });
-  //       }}
-  //     >
-  //       Stop
-  //     </Button>);
-  //   }
-  //   const opts = elements.reduce((s, t, i) => {
-  //     if (i > 0) {
-  //       s.push(<Divider direction="ver" />);
-  //     }
-  //     s.push(t);
-  //     return s;
-  //   }, []);
-  //   return (
-  //     <Box
-  //       direction="row"
-  //     >
-  //       {opts}
-  //     </Box>
-  //   );
-  // };
-
-  // console.log(tasks);
-
-  // const activeTasks = tasks.filter((t) => t.status != BackgroundTaskStatus.Running).length;
-  //
-  // return (
-  //   <div className="background-task-page">
-  //     <div className={'opt'}>
-  //       <Button
-  //         disabled={activeTasks.length == 0}
-  //         type="normal"
-  //         size={'small'}
-  //         onClick={() => ClearInactiveBackgroundTasks().invoke()}
-  //       >{i18n.t('Clear inactive tasks')}
-  //       </Button>
-  //     </div>
-  //     <Table
-  //       className={'tasks'}
-  //       dataSource={tasks}
-  //       hasBorder={false}
-  //       useVirtual
-  //       size={'small'}
-  //       maxBodyHeight={750}
-  //     >
-  //       <Table.Column dataIndex={'name'} title={'Name'} width="20%" />
-  //       <Table.Column dataIndex={'startDt'} title={'Start Time'} cell={(c) => moment(c).format('HH:mm:ss')} width="10%" />
-  //       <Table.Column
-  //         dataIndex={'startDt'}
-  //         title={'Duration'}
-  //         cell={(c) => {
-  //           const start = moment(c);
-  //           const end = moment();
-  //           const diff = end.diff(start);
-  //           return moment.utc(diff).format('H[h]m[m]');
-  //         }}
-  //         width="10%"
-  //       />
-  //       <Table.Column
-  //         dataIndex={'status'}
-  //         title={'Status'}
-  //         cell={(c, i, r) => {
-  //           switch (c) {
-  //             case BackgroundTaskStatus.Failed:
-  //             case BackgroundTaskStatus.Complete:
-  //               return statusIcons[c];
-  //             case BackgroundTaskStatus.Running:
-  //               // return <Progress shape={'circle'} size="small" percent={r.percentage} />;
-  //               return r.percentage > 0 ? <>{r.percentage}%&nbsp;{statusIcons[c]}</> : statusIcons[c];
-  //           }
-  //         }}
-  //         width="8%"
-  //       />
-  //       <Table.Column dataIndex={'message'} title={'Message'} width="42%" cell={(c) => <pre>{c}</pre>} />
-  //       <Table.Column
-  //         width="10%"
-  //         dataIndex={'id'}
-  //         title={'Opt'}
-  //         cell={renderOperations}
-  //       />
-  //     </Table>
-  //   </div>
-  // );
 };

@@ -1,8 +1,10 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bootstrap.Components.Tasks;
+using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.Abstractions.Components.Tasks;
 
@@ -11,7 +13,7 @@ public class BTaskDescriptor
     private readonly Func<string> _getName;
     private readonly Func<string?>? _getDescription;
     private readonly Func<string?>? _getMessageOnInterruption;
-    private readonly Func<string, Task>? _onProcessChange;
+    private readonly Func<string?, Task>? _onProcessChange;
     private readonly Func<int, Task>? _onPercentageChange;
     private readonly Func<BTaskStatus, Task>? _onStatusChange;
     private readonly CancellationToken? _externalCt;
@@ -28,7 +30,7 @@ public class BTaskDescriptor
     public HashSet<string>? ConflictKeys { get; init; }
     public BTaskLevel Level { get; }
     public readonly ConcurrentQueue<BTaskEvent<int>> PercentageEvents = [];
-    public readonly ConcurrentQueue<BTaskEvent<string>> ProcessEvents = [];
+    public readonly ConcurrentQueue<BTaskEvent<string?>> ProcessEvents = [];
     public string? Error { get; private set; }
     public string? StackTrace { get; private set; }
     public TimeSpan? Interval { get; set; }
@@ -36,27 +38,35 @@ public class BTaskDescriptor
     private BTaskStatus _status = BTaskStatus.NotStarted;
     public DateTime? StartedAt { get; private set; }
     public int Percentage { get; private set; }
+    /// <summary>
+    /// Current process
+    /// </summary>
+    public string? Process { get; private set; }
     public DateTime? LastFinishedAt { get; private set; }
-    public bool IsPersistent { get; set; }
+    public bool IsPersistent { get; init; }
+    public Stopwatch Sw { get; } = new();
 
     public TimeSpan? EstimateRemainingTime
     {
         get
         {
-            if (PercentageEvents.IsEmpty || !StartedAt.HasValue)
+            if (PercentageEvents.IsEmpty || Sw.Elapsed == TimeSpan.Zero)
+            {
+                return null;
+            }
+
+            if (Status != BTaskStatus.Paused && Status != BTaskStatus.Running)
             {
                 return null;
             }
 
             var lastEvent = PercentageEvents.Last();
-            if (lastEvent.Event == 0)
+            if (lastEvent.Event is 0 or 100)
             {
                 return null;
             }
 
-            var elapsed = StartedAt.Value - lastEvent.DateTime;
-
-            return elapsed / lastEvent.Event * (100 - lastEvent.Event);
+            return Sw.Elapsed / lastEvent.Event * (100 - lastEvent.Event);
         }
     }
 
@@ -79,7 +89,7 @@ public class BTaskDescriptor
         CancellationToken? ct = null,
         BTaskLevel level = BTaskLevel.Default,
         Func<BTaskStatus, Task>? onStatusChange = null,
-        Func<string, Task>? onProcessChange = null,
+        Func<string?, Task>? onProcessChange = null,
         Func<int, Task>? onPercentageChange = null,
         HashSet<string>? conflictKeys = null,
         TimeSpan? interval = null,
@@ -125,11 +135,60 @@ public class BTaskDescriptor
         }
     }
 
+    public DateTime? NextTimeStartAt
+    {
+        get
+        {
+            if (!Interval.HasValue)
+            {
+                return null;
+            }
+
+            if ((Status != BTaskStatus.Completed && Status != BTaskStatus.Error && Status != BTaskStatus.Stopped) ||
+                !IsPersistent)
+            {
+                return null;
+            }
+
+            if (LastFinishedAt.HasValue)
+            {
+                return LastFinishedAt.Value + Interval.Value;
+            }
+
+            return DateTime.Now;
+        }
+    }
+
+    protected async Task OnProcessChange(string? process)
+    {
+        Process = process;
+        ProcessEvents.Enqueue(new BTaskEvent<string?>(process));
+        if (_onProcessChange != null)
+        {
+            await _onProcessChange(process);
+        }
+    }
+
+    protected async Task OnPercentageChange(int percentage)
+    {
+        Percentage = percentage;
+        PercentageEvents.Enqueue(new BTaskEvent<int>(percentage));
+        if (_onPercentageChange != null)
+        {
+            await _onPercentageChange(percentage);
+        }
+    }
+
     public async Task Start()
     {
         await Stop();
 
+        Sw.Restart();
         _cts = new CancellationTokenSource();
+        _cts.Token.Register(() =>
+        {
+            Sw.Stop();
+        });
         CancellationToken ct;
         if (_externalCt.HasValue)
         {
@@ -145,15 +204,17 @@ public class BTaskDescriptor
         _pts.OnWaitPauseStart += () =>
         {
             Status = BTaskStatus.Paused;
+            Sw.Stop();
             return Task.CompletedTask;
         };
         _pts.OnWaitPauseEnd += () =>
         {
             Status = BTaskStatus.Running;
+            Sw.Start();
             return Task.CompletedTask;
         };
 
-        await Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             _cts = new CancellationTokenSource();
             Status = BTaskStatus.Running;
@@ -163,8 +224,9 @@ public class BTaskDescriptor
             StartedAt = DateTime.Now;
             try
             {
-                await _run(new BTaskArgs(Args, _pts.Token, ct, _onProcessChange, _onPercentageChange));
+                await _run(new BTaskArgs(Args, _pts.Token, ct, OnProcessChange, OnPercentageChange));
                 Status = BTaskStatus.Completed;
+                await OnPercentageChange(100);
             }
             catch (Exception e)
             {
@@ -181,6 +243,7 @@ public class BTaskDescriptor
             }
             finally
             {
+                Sw.Stop();
                 LastFinishedAt = DateTime.Now;
             }
         }, ct);

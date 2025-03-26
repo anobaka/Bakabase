@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -9,50 +10,53 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Bakabase.Service.Controllers
 {
     [Route("~/background-task")]
-    public class BackgroundTaskController : Controller
+    public class BackgroundTaskController(BTaskManager btm) : Controller
     {
-        private readonly BackgroundTaskManager _btm;
-
-        public BackgroundTaskController(BackgroundTaskManager btm)
+        [HttpPost("{id}/run")]
+        [SwaggerOperation(OperationId = "StartBackgroundTask")]
+        public async Task<BaseResponse> Start(string id)
         {
-            _btm = btm;
-        }
-
-        [HttpGet]
-        [SwaggerOperation(OperationId = "GetAllBackgroundTasks")]
-        public async Task<ListResponse<BackgroundTaskDto>> GetAll()
-        {
-            return new(_btm.Tasks);
-        }
-
-        [HttpGet("by-name")]
-        [SwaggerOperation(OperationId = "GetBackgroundTaskByName")]
-        public async Task<SingletonResponse<BackgroundTaskDto>> GetByName(string name)
-        {
-            return new SingletonResponse<BackgroundTaskDto>(_btm.GetByName(name).FirstOrDefault());
-        }
-
-        [HttpDelete]
-        [SwaggerOperation(OperationId = "ClearInactiveBackgroundTasks")]
-        public BaseResponse ClearInactive()
-        {
-            _btm.ClearInactive();
+            await btm.Start(id);
             return BaseResponseBuilder.Ok;
         }
 
-        [HttpDelete("{id}/stop")]
-        [SwaggerOperation(OperationId = "StopBackgroundTask")]
-        public BaseResponse Stop(string id)
+        [HttpPost("{id}/pause")]
+        [SwaggerOperation(OperationId = "PauseBackgroundTask")]
+        public async Task<BaseResponse> Pause(string id)
         {
-            _btm.Stop(id);
+            btm.Pause(id);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpDelete("{id}/pause")]
+        [SwaggerOperation(OperationId = "ResumeBackgroundTask")]
+        public Task<BaseResponse> Resume(string id)
+        {
+            btm.Resume(id);
+            return Task.FromResult(BaseResponseBuilder.Ok);
+        }
+
+        [HttpDelete("{id}/run")]
+        [SwaggerOperation(OperationId = "StopBackgroundTask")]
+        public async Task<BaseResponse> Stop(string id)
+        {
+            await btm.Stop(id);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpDelete]
+        [SwaggerOperation(OperationId = "CleanInactiveBackgroundTasks")]
+        public async Task<BaseResponse> CleanInactive()
+        {
+            await btm.CleanInactive();
             return BaseResponseBuilder.Ok;
         }
 
         [HttpDelete("{id}")]
-        [SwaggerOperation(OperationId = "RemoveBackgroundTask")]
-        public async Task<BaseResponse> Delete(string id)
+        [SwaggerOperation(OperationId = "CleanBackgroundTask")]
+        public async Task<BaseResponse> Clean(string id)
         {
-            _btm.Remove(id);
+            await btm.Clean(id);
             return BaseResponseBuilder.Ok;
         }
     }

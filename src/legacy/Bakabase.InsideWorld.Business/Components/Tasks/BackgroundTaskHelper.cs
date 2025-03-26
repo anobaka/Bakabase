@@ -21,6 +21,7 @@ using IEnhancer = Bakabase.InsideWorld.Business.Components.Resource.Components.E
 
 namespace Bakabase.InsideWorld.Business.Components.Tasks
 {
+    [Obsolete]
     public class BackgroundTaskHelper
     {
         private readonly BackgroundTaskManager _btm;

@@ -10,12 +10,22 @@ import hoistNonReactStatic from 'hoist-non-react-statics';
 import chalk from 'chalk';
 import { Time } from '@internationalized/date';
 import type { Duration } from 'dayjs/plugin/duration';
+import dayjs from 'dayjs';
 import { reservedResourceFileTypes, reservedResourceProperties } from '@/sdk/constants';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
 
 export const convertDurationToTime = (duration: Duration): Time => {
   return new Time(duration.hours(), duration.minutes(), duration.seconds(), duration.milliseconds());
+};
+
+export const convertTimeToDuration = (time: Time): Duration => {
+  return dayjs.duration({
+    hours: time.hour,
+    minutes: time.minute,
+    seconds: time.second,
+    milliseconds: time.millisecond,
+  });
 };
 
 export default { // 工具集
