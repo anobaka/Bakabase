@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
-using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Enhancer;
 using Bakabase.InsideWorld.Business.Components.FileMover;
@@ -23,33 +23,33 @@ public class PredefinedTasksProvider
                 "Enhancement", async (args, sp) =>
                 {
                     var service = sp.GetRequiredService<IEnhancerService>();
-                    await service.EnhanceAll(args.OnPercentageChange, args.PauseToken, args.CancellationToken);
+                    await service.EnhanceAll(async p => await args.UpdateTask(t => t.Percentage = p), args.PauseToken,
+                        args.CancellationToken);
                 }
             },
             {
                 "PrepareCache", async (args, sp) =>
                 {
                     var service = sp.GetRequiredService<IResourceService>();
-                    await service.PrepareCache(args.OnPercentageChange, args.PauseToken, args.CancellationToken);
+                    await service.PrepareCache(async p => await args.UpdateTask(t => t.Percentage = p), args.PauseToken,
+                        args.CancellationToken);
                 }
             },
             {
                 "MoveFiles", async (args, sp) =>
                 {
                     var service = sp.GetRequiredService<IFileMover>();
-                    await service.MovingFiles(args.OnPercentageChange, args.PauseToken, args.CancellationToken);
+                    await service.MovingFiles(async p => await args.UpdateTask(t => t.Percentage = p), args.PauseToken,
+                        args.CancellationToken);
                 }
             }
         };
 
-        DescriptorBuilders = simpleTaskBuilders.Select(x => new BTaskDescriptorBuilder
+        DescriptorBuilders = simpleTaskBuilders.Select(x => new BTaskHandlerBuilder
         {
             GetName = () => localizer.BTask_Name(x.Key),
             GetDescription = () => localizer.BTask_Description(x.Key),
             GetMessageOnInterruption = () => localizer.BTask_MessageOnInterruption(x.Key),
-            OnProcessChange = null,
-            OnPercentageChange = null,
-            OnStatusChange = null,
             CancellationToken = null,
             Id = x.Key,
             Run = async args =>
@@ -58,7 +58,6 @@ public class PredefinedTasksProvider
                 var sp = scope.ServiceProvider;
                 await x.Value(args, sp);
             },
-            Args = null,
             ConflictKeys = [x.Key],
             Level = BTaskLevel.Default,
             Interval = TimeSpan.FromMinutes(1),
@@ -66,5 +65,5 @@ public class PredefinedTasksProvider
         }).ToArray();
     }
 
-    public BTaskDescriptorBuilder[] DescriptorBuilders { get; }
+    public BTaskHandlerBuilder[] DescriptorBuilders { get; }
 }

@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
@@ -51,8 +52,7 @@ namespace Bakabase.Service.Controllers
     {
         private readonly ISpecialTextService _specialTextService;
         private readonly IWebHostEnvironment _env;
-        private readonly BackgroundTaskManager _backgroundTaskManager;
-        private readonly BackgroundTaskHelper _backgroundTaskHelper;
+        private readonly BTaskManager _taskManager;
         private readonly IwFsEntryTaskManager _iwFsEntryTaskManager;
         private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
         private readonly string _sevenZExecutable;
@@ -64,17 +64,14 @@ namespace Bakabase.Service.Controllers
         private readonly ILogger<FileController> _logger;
 
         public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
-            BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
-            BackgroundTaskHelper backgroundTaskHelper, InsideWorldOptionsManagerPool insideWorldOptionsManager,
+            IwFsEntryTaskManager iwFsEntryTaskManager, InsideWorldOptionsManagerPool insideWorldOptionsManager,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
             IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
-            InsideWorldLocalizer localizer)
+            InsideWorldLocalizer localizer, BTaskManager taskManager)
         {
             _specialTextService = specialTextService;
             _env = env;
-            _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
-            _backgroundTaskHelper = backgroundTaskHelper;
             _insideWorldOptionsManager = insideWorldOptionsManager;
             _compressedFileService = compressedFileService;
             _fsOptionsManager = fsOptionsManager;
@@ -82,6 +79,7 @@ namespace Bakabase.Service.Controllers
             _passwordService = passwordService;
             _logger = logger;
             _localizer = localizer;
+            _taskManager = taskManager;
 
             _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
         }
@@ -409,8 +407,10 @@ namespace Bakabase.Service.Controllers
                     .Concat(options.RecentMovingDestinations ?? Array.Empty<string>()).Distinct().Take(5).ToArray();
             });
 
-            var taskName = $"FileSystem:BatchMove:{DateTime.Now:HH:mm:ss}";
-            _backgroundTaskManager.RunInBackground(taskName, new CancellationTokenSource(), async (bt, sp) =>
+            var taskId = $"FileSystem:BatchMove:{DateTime.Now:HH:mm:ss}";
+            _taskManager.Enqueue(new BTaskHandlerBuilder
+            {
+                Run = async args =>
                 {
                     var unitEntryPercentage = (decimal) 1 / paths.Length;
                     for (var i = 0; i < paths.Length; i++)
@@ -421,7 +421,8 @@ namespace Bakabase.Service.Controllers
                         if (isDirectory || isFile)
                         {
                             var targetPath = Path.Combine(model.DestDir, Path.GetFileName(path));
-                            await _iwFsEntryTaskManager.Add(new IwFsTaskInfo(path, IwFsEntryTaskType.Moving, bt.Id,
+                            await _iwFsEntryTaskManager.Add(new IwFsTaskInfo(path, IwFsEntryTaskType.Moving,
+                                args.Task.Id,
                                 $"{IwFsEntryTaskType.Moving} to {targetPath}"));
 
                             var i1 = i;
@@ -431,17 +432,19 @@ namespace Bakabase.Service.Controllers
                                 {
                                     await _iwFsEntryTaskManager.Update(path, t => t.Percentage = p);
                                     var totalPercentage = (int) (unitEntryPercentage * (i1 + (decimal) p / 100));
-                                    bt.Percentage = totalPercentage;
+                                    await args.UpdateTask(task => task.Percentage = totalPercentage);
                                 }
 
                                 if (isDirectory)
                                 {
-                                    await DirectoryUtils.MoveAsync(path, targetPath, false, ProgressChange, PauseToken.None,
-                                        bt.Cts.Token);
+                                    await DirectoryUtils.MoveAsync(path, targetPath, false, ProgressChange,
+                                        PauseToken.None,
+                                        args.CancellationToken);
                                 }
                                 else
                                 {
-                                    await FileUtils.MoveAsync(path, targetPath, false, ProgressChange, PauseToken.None, bt.Cts.Token);
+                                    await FileUtils.MoveAsync(path, targetPath, false, ProgressChange, PauseToken.None,
+                                        args.CancellationToken);
                                 }
 
                                 await _iwFsEntryTaskManager.Clear(path);
@@ -452,10 +455,10 @@ namespace Bakabase.Service.Controllers
                             }
                         }
                     }
-
-                    return BaseResponseBuilder.Ok;
-                }, BackgroundTaskLevel.Default, null, null,
-                async task => { await _iwFsEntryTaskManager.Update(paths, t => t.Error = task.Message); });
+                },
+                Id = taskId,
+                OnFailed = async task => { await _iwFsEntryTaskManager.Update(paths, t => t.Error = task.Error); }
+            });
 
             return BaseResponseBuilder.Ok;
         }
@@ -621,7 +624,14 @@ namespace Bakabase.Service.Controllers
             return StatusCode((int) HttpStatusCode.UnsupportedMediaType);
         }
 
-        private async Task _decompressFiles(BackgroundTask mainTask, FileDecompressRequestModel model)
+        private async Task _decompressFiles(BTaskArgs bTaskArgs, FileDecompressRequestModel model)
+        {
+           
+        }
+
+        [HttpPost("decompression")]
+        [SwaggerOperation(OperationId = "DecompressFiles")]
+        public async Task<BaseResponse> DecompressFiles([FromBody] FileDecompressRequestModel model)
         {
             var allPaths = model.Paths.ToHashSet();
             var parentsMappings = allPaths.GroupBy(Path.GetDirectoryName).ToDictionary(t => t.Key!, t => t.ToList())
@@ -657,7 +667,7 @@ namespace Bakabase.Service.Controllers
                     for (var j = 0; j < allGroups.Count; j++)
                     {
                         var group = allGroups[j];
-                        var entry = group.Files.FirstOrDefault();
+                        var entry = group.Files.First();
                         if (group.Files.Count == 1 && Path.GetExtension(entry).IsNullOrEmpty())
                         {
                             const string ext = ".iw-decompressing";
@@ -667,24 +677,26 @@ namespace Bakabase.Service.Controllers
                             entry = newFile;
                         }
 
-                        var taskName = IwFsCompressedFile.BuildDecompressionTaskName(entry);
-                        if (_backgroundTaskManager.IsRunningByName(taskName))
+                        var taskId = IwFsCompressedFile.BuildDecompressionTaskName(entry);
+                        if (_taskManager.IsPending(taskId))
                         {
-                            return;
+                            continue;
                         }
 
                         var files = group.Files.ToArray();
 
-                        var t = _backgroundTaskManager.RunInBackground(taskName, new CancellationTokenSource(),
-                            async (task, sp) =>
+                        _taskManager.Enqueue(new BTaskHandlerBuilder
+                        {
+                            Id = taskId,
+                            Run = async args =>
                             {
                                 foreach (var f in files)
                                 {
                                     await _iwFsEntryTaskManager.Add(new IwFsTaskInfo(f, IwFsEntryTaskType.Decompressing,
-                                        task.Id));
+                                        taskId));
                                 }
 
-                                await using var scope = sp.CreateAsyncScope();
+                                await using var scope = args.RootServiceProvider.CreateAsyncScope();
 
                                 if (group.Password.IsNotEmpty())
                                 {
@@ -731,9 +743,9 @@ namespace Bakabase.Service.Controllers
                                         if (match.Success)
                                         {
                                             var np = int.Parse(match.Value.TrimEnd('%'));
-                                            if (np != task.Percentage)
+                                            if (np != args.Task.Percentage)
                                             {
-                                                task.Percentage = np;
+                                                await args.UpdateTask(x => x.Percentage = np);
                                             }
                                         }
                                     }, Encoding.UTF8), PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
@@ -748,7 +760,7 @@ namespace Bakabase.Service.Controllers
                                 var result = await command.ExecuteAsync();
                                 if (result.ExitCode == 0)
                                 {
-                                    return BaseResponseBuilder.Ok;
+                                    return;
                                 }
 
                                 messageSb.AppendLine($"Decompression exit with code: {result.ExitCode}");
@@ -788,8 +800,8 @@ namespace Bakabase.Service.Controllers
                                     }
 
                                     // Since we've got directories from paths of files, so we must populate the paths of directories between the files and the targetDir
-                                    var directories = badFiles.Select(Path.GetDirectoryName).Distinct().SelectMany(
-                                        dir =>
+                                    var directories = badFiles.Select(Path.GetDirectoryName).Distinct()
+                                        .SelectMany(dir =>
                                         {
                                             var chain = dir.Replace(targetDir, null)
                                                 .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
@@ -822,37 +834,12 @@ namespace Bakabase.Service.Controllers
                                         goto BuildCommand;
                                     }
                                 }
-
-                                return BaseResponseBuilder.Build(ResponseCode.SystemError, messageSb.ToString());
-                            }, BackgroundTaskLevel.Default,
-                            async np => await _iwFsEntryTaskManager.Update(files, t => t.Percentage = np),
-                            async () => await _iwFsEntryTaskManager.Clear(files),
-                            async bt => { await _iwFsEntryTaskManager.Update(files, t => t.Error = bt.Message); }
-                        );
-                        await t.WaitAsync();
-                        mainTask.Percentage =
-                            (int) ((i + (decimal) (j + 1) / allGroups.Count) * 100 / parentsMappings.Count);
+                            },
+                            OnFailed = async bt => await _iwFsEntryTaskManager.Update(files, t => t.Error = bt.Message),
+                            OnSucceed = async bt => await _iwFsEntryTaskManager.Clear(files)
+                        });
                     }
                 }
-
-                mainTask.Percentage = (i + 1) * 100 / parentsMappings.Count;
-            }
-        }
-
-        [HttpPost("decompression")]
-        [SwaggerOperation(OperationId = "DecompressFiles")]
-        public async Task<BaseResponse> DecompressFiles([FromBody] FileDecompressRequestModel model)
-        {
-            var taskName = $"BatchDecompression:{DateTime.Now:HHmmss}";
-            if (!_backgroundTaskManager.IsRunningByName(taskName))
-            {
-                _backgroundTaskManager.RunInBackground(taskName, new CancellationTokenSource(), async (task, sp) =>
-                    {
-                        await _decompressFiles(task, model);
-                        return BaseResponseBuilder.Ok;
-                    }, BackgroundTaskLevel.Default, null, null
-                    // , async task => { await _iwFsEntryTaskManager.Update(model.Paths, t => t.Error = task.Message); }
-                );
             }
 
             return BaseResponseBuilder.Ok;

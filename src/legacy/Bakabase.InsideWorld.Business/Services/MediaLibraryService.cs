@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -39,6 +40,7 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CsQuery.ExtensionMethods.Internal;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using static Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult.Resource;
 using MediaLibrary = Bakabase.Abstractions.Models.Domain.MediaLibrary;
@@ -53,14 +55,13 @@ namespace Bakabase.InsideWorld.Business.Services
             Abstractions.Models.Db.MediaLibrary, int> _orm;
 
         private readonly IPropertyService _propertyService;
-        private const decimal MinimalFreeSpace = 1_000_000_000;
-        protected BackgroundTaskManager BackgroundTaskManager => GetRequiredService<BackgroundTaskManager>();
+        private const decimal MinimalFreeSpace = 1_000_000_000; 
         protected ICategoryService ResourceCategoryService => GetRequiredService<ICategoryService>();
         protected IResourceService ResourceService => GetRequiredService<IResourceService>();
-        protected BackgroundTaskHelper BackgroundTaskHelper => GetRequiredService<BackgroundTaskHelper>();
-        private InsideWorldLocalizer _localizer;
+        private readonly InsideWorldLocalizer _localizer;
         protected LogService LogService => GetRequiredService<LogService>();
         protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
+        protected BTaskManager TaskManager => GetRequiredService<BTaskManager>();
 
         protected InsideWorldOptionsManagerPool InsideWorldAppService =>
             GetRequiredService<InsideWorldOptionsManagerPool>();
@@ -298,16 +299,6 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task StopSyncing()
-        {
-            BackgroundTaskManager.StopByName(SyncTaskBackgroundTaskName);
-        }
-
-        public BackgroundTaskDto? SyncTaskInformation =>
-            BackgroundTaskManager.GetByName(SyncTaskBackgroundTaskName).FirstOrDefault();
-
-        public const string SyncTaskBackgroundTaskName = $"MediaLibraryService:Sync";
-
         private static string[] DiscoverAllResourceFullnameList(string rootPath,
             PropertyPathSegmentMatcherValue resourceMatcherValue,
             int maxCount = int.MaxValue)
@@ -413,22 +404,32 @@ namespace Bakabase.InsideWorld.Business.Services
         /// <returns></returns>
         public void StartSyncing(int[]? categoryIds, int[]? mediaLibraryIds)
         {
-            BackgroundTaskHelper.RunInNewScope<IMediaLibraryService>(BackgroundTaskName.SyncMediaLibrary.ToString(),
-                async (service, task) =>
+            TaskManager.Enqueue(new BTaskHandlerBuilder
+            {
+                Run = async args =>
                 {
-                    var rsp = await service.Sync(categoryIds, mediaLibraryIds, process => task.CurrentProcess = process,
-                        progress => task.Percentage = progress);
+                    await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                    var service = scope.ServiceProvider.GetRequiredService<IMediaLibraryService>();
+
+                    var rsp = await service.Sync(categoryIds,
+                        mediaLibraryIds,
+                        process => args.UpdateTask(task => task.Process = process),
+                        progress => args.UpdateTask(task => task.Percentage = progress));
 
                     var result = rsp.Data;
 
-                    task.Message = string.Join(
+                    var message = string.Join(
                         Environment.NewLine,
                         $"[Resource] Found: {result.ResourceCount}, Added: {result.AddedResourceCount}, Updated: {result.UpdatedResourceCount}",
                         $"[Directory]: Found: {result.FileResourceCount}",
                         $"[File]: Found: {result.DirectoryResourceCount}");
-
-                    return rsp;
-                });
+                    await args.UpdateTask(task => task.Message = message);
+                },
+                ConflictKeys =
+                [
+                    "SyncMediaLibrary"
+                ]
+            });
         }
 
         private async Task SetPropertiesByMatchers(string rootPath, PathConfigurationTestResult.Resource e, Resource pr,
@@ -589,7 +590,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     if (!categoryMap.TryGetValue(library.CategoryId, out var c))
                     {
-                        await LogService.Log(SyncTaskBackgroundTaskName, LogLevel.Error, "CategoryValidationFailed",
+                        await LogService.Log("SyncMediaLibrary", LogLevel.Error, "CategoryValidationFailed",
                             $"Media library [{library.Id}:{library.Name}] will not be synchronized because its category [id:{library.CategoryId}] is not found");
                         ignoredLibraries.Add(library);
                     }

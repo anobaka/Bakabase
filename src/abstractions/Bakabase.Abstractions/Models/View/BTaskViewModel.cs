@@ -25,26 +25,28 @@ public record BTaskViewModel
     public bool IsPersistent { get; set; }
     public DateTime? NextTimeStartAt { get; set; }
     public TimeSpan? Elapsed { get; set; }
+    public BTaskLevel Level { get; set; }
 
-    public BTaskViewModel(BTaskDescriptor descriptor, string? reasonForUnableToStart)
+    public BTaskViewModel(BTaskHandler handler, string? reasonForUnableToStart)
     {
-        Id = descriptor.Id;
-        Name = descriptor.Name;
-        Description = descriptor.Description;
-        Percentage = descriptor.Percentage;
-        Process = descriptor.Process;
-        Status = descriptor.Status;
-        Error = descriptor.Error;
-        MessageOnInterruption = descriptor.MessageOnInterruption;
-        ConflictWithTaskKeys = descriptor.ConflictKeys;
-        EstimateRemainingTime = descriptor.EstimateRemainingTime;
-        StartedAt = descriptor.StartedAt;
-        IsPersistent = descriptor.IsPersistent;
-        NextTimeStartAt = descriptor.NextTimeStartAt;
-        Interval = descriptor.Interval;
-        EnableAfter = descriptor.EnableAfter > DateTime.Now ? descriptor.EnableAfter : null;
-        Elapsed = descriptor.Sw.Elapsed == TimeSpan.Zero ? null : descriptor.Sw.Elapsed;
+        Id = handler.Task.Id;
+        Name = handler.Task.Name;
+        Description = handler.Task.Description;
+        Percentage = handler.Task.Percentage;
+        Process = handler.Task.Process;
+        Level = handler.Task.Level;
+        Status = handler.Task.Status;
+        Error = handler.Task.Error;
+        MessageOnInterruption = handler.Task.MessageOnInterruption;
+        ConflictWithTaskKeys = handler.Task.ConflictKeys;
+        EstimateRemainingTime = handler.EstimateRemainingTime;
+        StartedAt = handler.Task.StartedAt;
+        IsPersistent = handler.Task.IsPersistent;
+        NextTimeStartAt = handler.NextTimeStartAt;
+        Interval = handler.Task.Interval;
+        EnableAfter = handler.Task.EnableAfter > DateTime.Now ? handler.Task.EnableAfter : null;
 
+        Elapsed = handler.Sw.Elapsed == TimeSpan.Zero ? null : handler.Sw.Elapsed;
         ReasonForUnableToStart = reasonForUnableToStart;
     }
 }

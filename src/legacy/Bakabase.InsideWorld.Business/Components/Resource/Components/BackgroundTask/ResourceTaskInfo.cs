@@ -14,7 +14,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Backgroun
         public string Summary { get; set; }
         public ResourceTaskType Type { get; set; }
         public int Percentage { get; set; }
-        public string Error { get; set; }
+        public string? Error { get; set; }
         public string BackgroundTaskId { get; set; }
         public ResourceTaskOperationOnComplete OperationOnComplete { get; set; }
     }

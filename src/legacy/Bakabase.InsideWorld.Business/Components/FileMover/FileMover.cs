@@ -5,16 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.FileMover.Models;
 using Bakabase.InsideWorld.Business.Components.Gui;
-using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Models.Configs;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.Configuration.Abstractions;
-using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
@@ -28,19 +24,17 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
     {
         private readonly IBOptions<FileSystemOptions> _options;
         private readonly ConcurrentDictionary<string, FileSystemWatcher> _watchers = new();
-        private readonly object _lock = new object();
+        private readonly Lock _lock = new Lock();
         protected readonly ConcurrentDictionary<string, DateTime> CreationTimeCache = new();
-        private readonly BackgroundTaskManager _backgroundTaskManager;
         private readonly ILogger<FileMover> _logger;
         public ConcurrentDictionary<string, FileMovingProgress> Progresses { get; } = new();
         private readonly IHubContext<WebGuiHub, IWebGuiClient> _uiHub;
 
         public FileMover(AspNetCoreOptionsManager<FileSystemOptions> optionsManager,
-            BackgroundTaskManager backgroundTaskManager, ILogger<FileMover> logger,
+            ILogger<FileMover> logger,
             IHubContext<WebGuiHub, IWebGuiClient> uiHub)
         {
             _options = optionsManager;
-            _backgroundTaskManager = backgroundTaskManager;
             _logger = logger;
             _uiHub = uiHub;
             optionsManager.OnChange(fsOptions =>

@@ -58,7 +58,6 @@ namespace Bakabase.Service
             services.AddInsideWorldBusinesses();
 
             services.AddSingleton<IwFsEntryTaskManager>();
-            services.AddSingleton<BackgroundTaskManager>();
 
             //services.TryAddSingleton<SimpleBiliBiliFavoritesCollector>();
             services.AddSingleton<OneDriveService>();
