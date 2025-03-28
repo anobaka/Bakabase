@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using Bakabase.Abstractions.Extensions;
+﻿using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
@@ -20,8 +16,6 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileS
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
-using Bakabase.InsideWorld.Business.Components.Search;
-using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Services;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Services;
@@ -37,7 +31,6 @@ using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using InternalOptions = Bakabase.Abstractions.Components.Configuration.InternalOptions;
 
 namespace Bakabase.Service.Extensions
 {
@@ -95,7 +88,6 @@ namespace Bakabase.Service.Extensions
 
             services.RegisterAllRegisteredTypeAs<IDownloader>();
 
-            services.AddSingleton<BackgroundTaskHelper>();
             services.AddSingleton<ResourceTaskManager>();
 
             services.TryAddSingleton<IwFsWatcher>();

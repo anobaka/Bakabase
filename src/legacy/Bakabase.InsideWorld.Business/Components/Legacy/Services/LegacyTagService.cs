@@ -1,22 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Tasks;
-using Bakabase.InsideWorld.Business.Services;
-using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.InsideWorld.Models.Extensions;
-using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
-using Bakabase.InsideWorld.Models.RequestModels;
-using Bakabase.InsideWorld.Models.ResponseModels;
-using Bootstrap.Components.DependencyInjection;
-using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
-using Bootstrap.Extensions;
-using Bootstrap.Models.ResponseModels;
-using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
