@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.View;
 using Bootstrap.Components.Configuration;
@@ -18,12 +19,13 @@ public class BTaskManager : IAsyncDisposable
     private readonly IBakabaseLocalizer _localizer;
     private readonly AspNetCoreOptionsManager<TaskOptions> _options;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ConcurrentDictionary<string, BTaskDescriptor> _taskMap = [];
+    private readonly ConcurrentDictionary<string, BTaskHandler> _taskMap = [];
     private readonly IBTaskEventHandler _eventHandler;
     private readonly IDisposable _optionsChangeHandler;
     private readonly ILogger<BTaskManager> _logger;
 
-    public BTaskManager(IBakabaseLocalizer localizer, AspNetCoreOptionsManager<TaskOptions> options, IServiceProvider serviceProvider,
+    public BTaskManager(IBakabaseLocalizer localizer, AspNetCoreOptionsManager<TaskOptions> options,
+        IServiceProvider serviceProvider,
         IBTaskEventHandler eventHandler, ILogger<BTaskManager> logger)
     {
         _localizer = localizer;
@@ -37,8 +39,8 @@ public class BTaskManager : IAsyncDisposable
             var dmMap = o.Tasks?.ToDictionary(x => x.Id, x => x);
             foreach (var t in _taskMap.Values)
             {
-                t.Interval = dmMap?.GetValueOrDefault(t.Id)?.Interval ?? t.Interval;
-                t.EnableAfter = dmMap?.GetValueOrDefault(t.Id)?.EnableAfter ?? t.EnableAfter;
+                t.Task.Interval = dmMap?.GetValueOrDefault(t.Id)?.Interval ?? t.Task.Interval;
+                t.Task.EnableAfter = dmMap?.GetValueOrDefault(t.Id)?.EnableAfter ?? t.Task.EnableAfter;
             }
 
             _ = OnAllTasksChange();
@@ -50,63 +52,55 @@ public class BTaskManager : IAsyncDisposable
         await Daemon();
     }
 
-    public void Enqueue(BTaskDescriptorBuilder descriptorBuilder)
-    {
-        var descriptor = _buildDescriptor(descriptorBuilder);
+    private bool _isRunning;
 
-        if (!_taskMap.TryAdd(descriptor.Id, descriptor))
+    public bool IsRunning
+    {
+        get => _isRunning;
+        private set
         {
-            throw new Exception(_localizer.BTask_FailedToRunTaskDueToIdExisting(descriptor.Name));
+            if (_isRunning != value)
+            {
+                _isRunning = value;
+                _ = _eventHandler.OnTaskManagerStatusChange(_isRunning);
+            }
         }
     }
 
-    private BTaskDescriptor _buildDescriptor(BTaskDescriptorBuilder builder)
+    private void UpdateManagerStatus()
     {
-        async Task OnTaskStatusChange(BTaskStatus status)
-        {
-            await OnTaskChange(builder.Id);
-            if (builder.OnStatusChange != null)
-            {
-                await builder.OnStatusChange(status);
-            }
-        }
+        IsRunning = _taskMap.Values.Any(x => x.Task.Status is BTaskStatus.Paused or BTaskStatus.Running);
+    }
 
-        async Task OnTaskPercentageChange(int percentage)
-        {
-            await OnTaskChange(builder.Id);
-            if (builder.OnPercentageChange != null)
-            {
-                await builder.OnPercentageChange(percentage);
-            }
-        }
+    /// <summary>
+    /// You don't need to start task manually, the daemon will do it for you automatically.
+    /// </summary>
+    /// <param name="taskBuilder"></param>
+    /// <exception cref="Exception"></exception>
+    public void Enqueue(BTaskHandlerBuilder taskBuilder)
+    {
+        var handler = _buildHandler(taskBuilder);
 
-        async Task OnTaskProcessChange(string? process)
+        if (!_taskMap.TryAdd(handler.Id, handler))
         {
-            await OnTaskChange(builder.Id);
-            if (builder.OnProcessChange != null)
-            {
-                await builder.OnProcessChange(process);
-            }
+            throw new Exception(_localizer.BTask_FailedToRunTaskDueToIdExisting(handler.Task.Name));
         }
+    }
 
+    private BTaskHandler _buildHandler(BTaskHandlerBuilder builder)
+    {
         var dbModel = _options.Value.Tasks?.FirstOrDefault(x => x.Id == builder.Id);
 
-        return new BTaskDescriptor(builder.Run,
-            builder.Args,
-            builder.Id,
-            builder.GetName,
-            builder.GetDescription,
-            builder.GetMessageOnInterruption,
-            builder.CancellationToken,
-            builder.Level,
-            OnTaskStatusChange,
-            OnTaskProcessChange,
-            OnTaskPercentageChange,
-            builder.ConflictKeys,
-            dbModel?.Interval ?? builder.Interval,
-            dbModel?.EnableAfter,
-            builder.IsPersistent
-        );
+        var task = new BTask(builder.Id, builder.GetName, builder.GetDescription, builder.GetMessageOnInterruption,
+            builder.ConflictKeys, builder.Level, builder.IsPersistent)
+        {
+            EnableAfter = dbModel?.EnableAfter,
+            Interval = dbModel?.Interval ?? builder.Interval
+        };
+
+        return new BTaskHandler(builder.Run, task, _serviceProvider,
+            async () => await OnTaskChange(builder.Id),
+            builder.CancellationToken);
     }
 
     private async Task OnTaskChange(string id)
@@ -115,12 +109,15 @@ public class BTaskManager : IAsyncDisposable
         if (task != null)
         {
             await _eventHandler.OnTaskChange(task);
+            UpdateManagerStatus();
         }
     }
+
     private async Task OnAllTasksChange()
     {
         var tasks = GetTasksViewModel();
         await _eventHandler.OnAllTasksChange(tasks);
+        UpdateManagerStatus();
     }
 
     /// <summary>
@@ -137,7 +134,7 @@ public class BTaskManager : IAsyncDisposable
             throw new Exception(_localizer.BTask_FailedToRunTaskDueToUnknownTaskId(id));
         }
 
-        switch (d.Status)
+        switch (d.Task.Status)
         {
             case BTaskStatus.Running:
             {
@@ -173,13 +170,14 @@ public class BTaskManager : IAsyncDisposable
         }
     }
 
-    private BTaskDescriptor[] _getConflictTasks(BTaskDescriptor d)
+    private BTaskHandler[] _getConflictTasks(BTaskHandler d)
     {
         return _taskMap.Values
             .Where(x =>
                 x != d &&
-                d.ConflictKeys != null && x.ConflictKeys != null && d.ConflictKeys.Intersect(x.ConflictKeys).Any() &&
-                x.Status is BTaskStatus.Running or BTaskStatus.Paused)
+                d.Task.ConflictKeys != null && x.Task.ConflictKeys != null &&
+                d.Task.ConflictKeys.Intersect(x.Task.ConflictKeys).Any() &&
+                x.Task.Status is BTaskStatus.Running or BTaskStatus.Paused)
             .ToArray();
     }
 
@@ -194,8 +192,8 @@ public class BTaskManager : IAsyncDisposable
                 {
                     var now = DateTime.Now;
                     var activeTasks = _taskMap.Values
-                        .Where(x => x.NextTimeStartAt < now || x.Status is BTaskStatus.NotStarted)
-                        .OrderBy(x => x.LastFinishedAt).ThenBy(x => x.CreatedAt).ToArray();
+                        .Where(x => x.NextTimeStartAt < now || x.Task.Status is BTaskStatus.NotStarted)
+                        .OrderBy(x => x.Task.LastFinishedAt).ThenBy(x => x.Task.CreatedAt).ToArray();
                     foreach (var at in activeTasks)
                     {
                         if (!_getConflictTasks(at).Any())
@@ -249,7 +247,12 @@ public class BTaskManager : IAsyncDisposable
     {
         var tasks = _taskMap.Values.ToList();
         foreach (var t in tasks.Where(x => x is
-                     {IsPersistent: false, Status: BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Stopped}))
+                 {
+                     Task:
+                     {
+                         IsPersistent: false, Status: BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Stopped
+                     }
+                 }))
         {
             _taskMap.TryRemove(t.Id, out _);
         }
@@ -263,23 +266,28 @@ public class BTaskManager : IAsyncDisposable
     public List<BTaskEvent<string?>> GetProcessEvents(string id) =>
         _taskMap.GetValueOrDefault(id)?.ProcessEvents.ToList() ?? [];
 
-    private BTaskViewModel BuildTaskViewModel(BTaskDescriptor d)
+    public bool IsPending(string id) => _taskMap.TryGetValue(id, out var bth) &&
+                                        bth.Task.Status is BTaskStatus.Running or BTaskStatus.Paused
+                                            or BTaskStatus.NotStarted;
+
+    private BTaskViewModel BuildTaskViewModel(BTaskHandler handler)
     {
         string? reasonForUnableToStart = null;
-        if (d.Status is BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.NotStarted)
+        if (handler.Task.Status is BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.NotStarted)
         {
-            var conflictTasks = _getConflictTasks(d);
+            var conflictTasks = _getConflictTasks(handler);
             if (conflictTasks.Any())
             {
                 reasonForUnableToStart =
-                    _localizer.BTask_FailedToRunTaskDueToConflict(d.Name,
-                        conflictTasks.Select(c => c.Name).ToArray());
+                    _localizer.BTask_FailedToRunTaskDueToConflict(handler.Task.Name,
+                        conflictTasks.Select(c => c.Task.Name).ToArray());
             }
         }
 
-        return new BTaskViewModel(d, reasonForUnableToStart);
+        return new BTaskViewModel(handler, reasonForUnableToStart);
     }
 
+    public List<BTaskHandler> Tasks => _taskMap.Values.ToList();
     public List<BTaskViewModel> GetTasksViewModel() => _taskMap.Values.Select(BuildTaskViewModel).ToList();
 
     public BTaskViewModel? GetTaskViewModel(string id) =>

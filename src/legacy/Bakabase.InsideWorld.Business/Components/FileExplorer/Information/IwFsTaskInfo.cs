@@ -11,7 +11,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer.Information
         public string Path { get; set; }
         public IwFsEntryTaskType Type { get; set; }
         public int Percentage { get; set; }
-        public string Error { get; set; }
+        public string? Error { get; set; }
         public string BackgroundTaskId { get; set; }
         public string Name { get; set; }
 

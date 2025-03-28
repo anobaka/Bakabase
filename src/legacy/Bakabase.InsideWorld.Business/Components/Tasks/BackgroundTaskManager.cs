@@ -29,7 +29,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.Tasks
 {
-    [Obsolete]
+    [Obsolete("", error: true)]
     public class BackgroundTaskManager
     {
         private readonly ConcurrentDictionary<string, BackgroundTask> _tasks = new();

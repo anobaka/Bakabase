@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -59,8 +60,8 @@ namespace Bakabase.Service.Controllers
         ICustomPropertyService customPropertyService,
         IPropertyLocalizer propertyLocalizer,
         IMediaLibraryService mediaLibraryService,
-        BackgroundTaskManager backgroundTaskManager,
         IBakabaseLocalizer localizer,
+        BTaskManager taskManager,
         IBOptionsManager<FileSystemOptions> fsOptionsManager)
         : Controller
     {
@@ -292,17 +293,26 @@ namespace Bakabase.Service.Controllers
             await fsOptionsManager.SaveAsync(x => x.AddRecentMovingDestination(model.Path.StandardizePath()!));
 
             var taskName = $"Resource:BulkMove:{DateTime.Now:HH:mm:ss}";
-            backgroundTaskManager.RunInBackground(taskName, new CancellationTokenSource(), async (bt, sp) =>
+            taskManager.Enqueue(new BTaskHandlerBuilder
+            {
+                GetName = () => taskName,
+                Run = async args =>
                 {
-                    var resourceService = sp.GetRequiredService<IResourceService>();
+                    await using var scope = args.RootServiceProvider.CreateAsyncScope();
 
-                    bt.Message = localizer.Resource_MovingTaskSummary(
-                        resources.Select(r => r.Value.FileName).ToArray(), mediaLibrary.Name, model.Path);
+                    var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
+
+                    await args.UpdateTask(bt =>
+                    {
+                        bt.Message = localizer.Resource_MovingTaskSummary(
+                            resources.Select(r => r.Value.FileName).ToArray(), mediaLibrary.Name, model.Path);
+                    });
+
                     foreach (var id in model.Ids)
                     {
                         await resourceTaskManager.Add(new ResourceTaskInfo
                         {
-                            BackgroundTaskId = bt.Id,
+                            BackgroundTaskId = args.Task.Id,
                             Id = id,
                             Type = ResourceTaskType.Moving,
                             Summary = localizer.Resource_MovingTaskSummary(null, mediaLibrary.Name, model.Path),
@@ -321,7 +331,7 @@ namespace Bakabase.Service.Controllers
                                     await resourceTaskManager.Update(id, t => t.Percentage = Math.Min(99, p));
                                 },
                                 PauseToken.None,
-                                bt.Cts.Token);
+                                args.CancellationToken);
                         }
                         else
                         {
@@ -331,7 +341,7 @@ namespace Bakabase.Service.Controllers
                                     await resourceTaskManager.Update(id, t => t.Percentage = Math.Min(99, p));
                                 },
                                 PauseToken.None,
-                                bt.Cts.Token);
+                                args.CancellationToken);
                         }
 
                         if (resource.MediaLibraryId != mediaLibrary.Id)
@@ -352,10 +362,10 @@ namespace Bakabase.Service.Controllers
 
                         await resourceTaskManager.Clear(id);
                     }
-
-                    return BaseResponseBuilder.Ok;
-                }, BackgroundTaskLevel.Default, null, null,
-                async task => await resourceTaskManager.Update(resources.Keys.ToArray(), t => t.Error = task.Message));
+                },
+                OnFailed = async task =>
+                    await resourceTaskManager.Update(resources.Keys.ToArray(), t => t.Error = task.Error)
+            });
 
             return BaseResponseBuilder.Ok;
         }

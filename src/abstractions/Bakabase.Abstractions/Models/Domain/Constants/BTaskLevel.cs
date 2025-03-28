@@ -1,4 +1,4 @@
-﻿namespace Bakabase.Abstractions.Models.Domain;
+﻿namespace Bakabase.Abstractions.Models.Domain.Constants;
 
 public enum BTaskLevel
 {

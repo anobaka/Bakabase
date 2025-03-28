@@ -7,4 +7,5 @@ public interface IBTaskEventHandler
 {
     Task OnTaskChange(BTaskViewModel task);
     Task OnAllTasksChange(IEnumerable<BTaskViewModel> tasks);
+    Task OnTaskManagerStatusChange(bool isRunning);
 }

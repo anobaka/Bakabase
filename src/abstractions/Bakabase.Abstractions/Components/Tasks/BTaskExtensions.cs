@@ -14,7 +14,7 @@ public static class BTaskExtensions
         return services;
     }
 
-    public static async Task InitializeBTasks(this IApplicationBuilder app, IEnumerable<BTaskDescriptorBuilder> predefinedTasks)
+    public static async Task InitializeBTasks(this IApplicationBuilder app, IEnumerable<BTaskHandlerBuilder> predefinedTasks)
     {
         var manager = app.ApplicationServices.GetRequiredService<BTaskManager>();
         await manager.Initialize();

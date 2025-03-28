@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Gui;
@@ -121,12 +123,11 @@ namespace Bakabase.Service
 
         protected override Task<string?> CheckIfAppCanExitSafely()
         {
-            var taskManager = Host.Services.GetRequiredService<BackgroundTaskManager>();
+            var taskManager = Host.Services.GetRequiredService<BTaskManager>();
             var localizer = Host.Services.GetRequiredService<AppLocalizer>();
-            var tasks = taskManager?.Tasks;
+            var tasks = taskManager?.GetTasksViewModel();
             return Task.FromResult(tasks?.Any(t =>
-                t.Status == BackgroundTaskStatus.Running &&
-                t.Level == BackgroundTaskLevel.Critical) == true
+                t is {Status: BTaskStatus.Running, Level: BTaskLevel.Critical}) == true
                 ? localizer.App_CriticalTasksRunningOnExit()
                 : null);
         }

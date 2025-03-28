@@ -49,7 +49,6 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
     public class WebGuiHub : Hub<IWebGuiClient>
     {
-        private readonly BackgroundTaskManager _backgroundTaskManager;
         private readonly IwFsEntryTaskManager _iwFsEntryTaskManager;
         private readonly ResourceTaskManager _resourceTaskManager;
         private readonly DownloadTaskService _downloadTaskService;
@@ -62,13 +61,12 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly BTaskManager _bTaskManager;
 
         public WebGuiHub(
-            BackgroundTaskManager backgroundTaskManager, IwFsEntryTaskManager iwFsEntryTaskManager,
+            IwFsEntryTaskManager iwFsEntryTaskManager,
             ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
             IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover,
             AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager)
         {
-            _backgroundTaskManager = backgroundTaskManager;
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
             _resourceTaskManager = resourceTaskManager;
             _downloadTaskService = downloadTaskService;
@@ -83,7 +81,6 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
         public async Task GetInitialData()
         {
-            await Clients.Caller.GetData(nameof(BackgroundTask), _backgroundTaskManager.Tasks);
             await Clients.Caller.GetData(nameof(DownloadTask), await _downloadTaskService.GetAllDto());
 
             foreach (var (optionsType, optionsManagerObj) in _optionsManagerPool.AllOptionsManagers)
