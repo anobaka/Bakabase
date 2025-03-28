@@ -24,7 +24,6 @@ using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
-using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
 using Bakabase.InsideWorld.Business.Configurations;
@@ -111,8 +110,6 @@ namespace Bakabase.Service
             services.TryAddSingleton<CompressedFileService>();
 
             services.AddTransient<IBakabaseLocalizer, InsideWorldLocalizer>(x =>
-                x.GetRequiredService<InsideWorldLocalizer>());
-            services.AddTransient<IBackgroundTaskLocalizer, InsideWorldLocalizer>(x =>
                 x.GetRequiredService<InsideWorldLocalizer>());
             services.AddTransient<IDependencyLocalizer, InsideWorldLocalizer>(x =>
                 x.GetRequiredService<InsideWorldLocalizer>());
