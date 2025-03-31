@@ -23,7 +23,8 @@ public class PredefinedTasksProvider
                 "Enhancement", async (args, sp) =>
                 {
                     var service = sp.GetRequiredService<IEnhancerService>();
-                    await service.EnhanceAll(async p => await args.UpdateTask(t => t.Percentage = p), args.PauseToken,
+                    await service.EnhanceAll(async p => await args.UpdateTask(t => t.Percentage = p),
+                        async p => await args.UpdateTask(t => t.Process = p), args.PauseToken,
                         args.CancellationToken);
                 }
             },
@@ -31,7 +32,8 @@ public class PredefinedTasksProvider
                 "PrepareCache", async (args, sp) =>
                 {
                     var service = sp.GetRequiredService<IResourceService>();
-                    await service.PrepareCache(async p => await args.UpdateTask(t => t.Percentage = p), args.PauseToken,
+                    await service.PrepareCache(async p => await args.UpdateTask(t => t.Percentage = p),
+                        async p => await args.UpdateTask(t => t.Process = p), args.PauseToken,
                         args.CancellationToken);
                 }
             },

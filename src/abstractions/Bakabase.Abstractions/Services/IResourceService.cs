@@ -101,7 +101,9 @@ public interface IResourceService
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null);
 
     Task Pin(int id, bool pin);
-    Task PrepareCache(Func<int, Task>? onProgressChange, PauseToken pt, CancellationToken ct);
+
+    Task PrepareCache(Func<int, Task>? onProgressChange, Func<string, Task>? onProcessChange, PauseToken pt,
+        CancellationToken ct);
     Task Transfer(ResourceTransferInputModel model);
     Task SaveCover(int id, byte[] imageBytes, CoverSaveMode mode);
 

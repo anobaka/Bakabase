@@ -22,6 +22,7 @@ public class BTaskHandler
     private readonly Func<BTaskArgs, Task> _run;
     public readonly ConcurrentQueue<BTaskEvent<int>> PercentageEvents = [];
     public readonly ConcurrentQueue<BTaskEvent<string?>> ProcessEvents = [];
+    private TimeSpan ElapsedOnLastPercentageChange = TimeSpan.Zero;
     public Stopwatch Sw { get; } = new();
 
     public DateTime? NextTimeStartAt
@@ -53,7 +54,7 @@ public class BTaskHandler
     {
         get
         {
-            if (PercentageEvents.IsEmpty || Sw.Elapsed == TimeSpan.Zero)
+            if (PercentageEvents.IsEmpty || ElapsedOnLastPercentageChange == TimeSpan.Zero)
             {
                 return null;
             }
@@ -69,7 +70,7 @@ public class BTaskHandler
                 return null;
             }
 
-            return Sw.Elapsed / lastEvent.Event * (100 - lastEvent.Event);
+            return ElapsedOnLastPercentageChange / lastEvent.Event * (100 - lastEvent.Event);
         }
     }
 
@@ -87,7 +88,21 @@ public class BTaskHandler
 
     public async Task UpdateTask(Action<BTask> update)
     {
+        var prevProcess = Task.Process;
+        var prevPercentage = Task.Percentage;
         update(Task);
+
+        if (prevProcess != Task.Process)
+        {
+            ProcessEvents.Enqueue(new BTaskEvent<string?>(Task.Process));
+        }
+
+        if (prevPercentage != Task.Percentage)
+        {
+            ElapsedOnLastPercentageChange = Sw.Elapsed;
+            PercentageEvents.Enqueue(new BTaskEvent<int>(Task.Percentage));
+        }
+
         if (_onChange != null)
         {
             await _onChange();
@@ -136,22 +151,25 @@ public class BTaskHandler
         }
 
         _pts = new PauseTokenSource(ct);
-        _pts.OnWaitPauseStart += () =>
+        _pts.OnWaitPauseStart += async () =>
         {
-            Task.Status = BTaskStatus.Paused;
+            await UpdateTask(t =>
+            {
+                Task.Status = BTaskStatus.Paused;
+            });
             Sw.Stop();
-            return System.Threading.Tasks.Task.CompletedTask;
         };
-        _pts.OnWaitPauseEnd += () =>
+        _pts.OnWaitPauseEnd += async () =>
         {
-            Task.Status = BTaskStatus.Running;
+            await UpdateTask(t =>
+            {
+                Task.Status = BTaskStatus.Running;
+            });
             Sw.Start();
-            return System.Threading.Tasks.Task.CompletedTask;
         };
 
         _ = System.Threading.Tasks.Task.Run(async () =>
         {
-            _cts = new CancellationTokenSource();
             await UpdateTask(t =>
             {
                 t.Status = BTaskStatus.Running;

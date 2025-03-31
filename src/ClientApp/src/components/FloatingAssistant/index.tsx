@@ -12,10 +12,10 @@ import {
   CloseCircleOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
-  FieldTimeOutlined,
+  FieldTimeOutlined, LoadingOutlined,
   PauseCircleOutlined,
   PauseOutlined,
-  PushpinOutlined,
+  PushpinOutlined, QuestionCircleOutlined,
   SettingOutlined,
   StopOutlined,
 } from '@ant-design/icons';
@@ -23,7 +23,17 @@ import moment from 'moment';
 import dayjs from 'dayjs';
 import store from '@/store';
 import { BTaskStatus } from '@/sdk/constants';
-import { Button, Chip, Divider, Modal, Popover, Tooltip } from '@/components/bakaui';
+import {
+  Button,
+  Chip,
+  Divider,
+  Modal,
+  Popover, Progress, Table,
+  TableBody, TableCell,
+  TableColumn,
+  TableHeader, TableRow,
+  Tooltip,
+} from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { buildLogger } from '@/components/utils';
@@ -192,6 +202,42 @@ export default () => {
   const portalRef = useRef<HTMLDivElement | null>(null);
 
   const bTasks = store.useModelState('bTasks');
+
+  const columns = [
+    {
+      key: 'name',
+      label: 'Name',
+    },
+    {
+      key: 'status',
+      label: 'Status',
+    },
+    {
+      key: 'process',
+      label: 'Process',
+    },
+    {
+      key: 'progress',
+      label: 'Progress',
+    },
+    {
+      key: 'elapsed',
+      label: 'Elapsed',
+    },
+    {
+      key: 'estimateRemainingTime',
+      label: 'Estimate remaining time',
+    },
+    {
+      key: 'nextTimeStartAt',
+      label: 'Next time start at',
+    },
+    {
+      key: 'operations',
+      label: 'Operations',
+    },
+  ];
+
   // const bTasks = testTasks;
 
   // console.log(status);
@@ -268,10 +314,7 @@ export default () => {
             color={'warning'}
             size={'sm'}
           >
-            <div className={'flex items-center gap-1'}>
-              <PauseOutlined className={'text-base'} />
-              {Math.floor(task.percentage ?? 0)}%
-            </div>
+            <PauseCircleOutlined className={'text-base'} />
           </Chip>
         );
       case BTaskStatus.Error:
@@ -310,7 +353,9 @@ export default () => {
           <Chip
             size={'sm'}
             variant={'light'}
-          >{Math.floor(task.percentage ?? 0)}%</Chip>
+          >
+            <LoadingOutlined className={'text-base'} />
+          </Chip>
         );
       case BTaskStatus.Completed:
         return (
@@ -358,7 +403,7 @@ export default () => {
                   BApi.backgroundTask.pauseBackgroundTask(task.id);
                 }}
               >
-                <PauseCircleOutlined className={'text-base'} />
+                <PauseOutlined className={'text-base'} />
               </Button>,
             );
             break;
@@ -390,6 +435,9 @@ export default () => {
                     title: t('Stopping task: {{taskName}}', { taskName: task.name }),
                     children: t('Are you sure to stop this task?'),
                     onOk: async () => await BApi.backgroundTask.stopBackgroundTask(task.id),
+                    classNames: {
+                      wrapper: 'floating-assistant-modal',
+                    },
                   });
                 }}
               >
@@ -427,6 +475,9 @@ export default () => {
                       onOk: async () => {
                         history!.push('/backgroundtask');
                       },
+                      classNames: {
+                        wrapper: 'floating-assistant-modal',
+                      },
                     },
                   );
                 }}
@@ -443,79 +494,92 @@ export default () => {
 
   const renderTasks = () => {
     if (bTasks?.length > 0) {
-      return bTasks?.map((task) => {
-        return (
-          <div
-            key={task.id}
-            className={`flex items-center justify-between gap-16 transition-opacity ${task.id == cleaningTaskId ? 'opacity-0' : ''}`}
-            onTransitionEnd={(evt) => {
-              if (evt.propertyName == 'opacity' && task.id == cleaningTaskId) {
-                BApi.backgroundTask.cleanBackgroundTask(task.id);
-              }
-            }}
-          >
-            <div className="flex items-center">
-              <Tooltip
-                content={task.description}
-              >
-                <div>
-                  {task.isPersistent && (
-                    <>
-                      <PushpinOutlined className={'text-sm opacity-60'} />
-                      &nbsp;
-                    </>
-                  )}
-                  {task.name}
-                </div>
-              </Tooltip>
-              {task.process && (
-                <Chip
-                  variant={'light'}
-                  color={'success'}
+      return (
+        <Table aria-label="Example table with dynamic content" removeWrapper isStriped>
+          <TableHeader columns={columns}>
+            {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
+          </TableHeader>
+          <TableBody>
+            {bTasks.map(task => {
+              return (
+                <TableRow
+                  key={task.id}
+                  className={`transition-opacity ${task.id == cleaningTaskId ? 'opacity-0' : ''}`}
+                  onTransitionEnd={(evt) => {
+                    if (evt.propertyName == 'opacity' && task.id == cleaningTaskId) {
+                      BApi.backgroundTask.cleanBackgroundTask(task.id);
+                    }
+                  }}
                 >
-                  {task.process}
-                </Chip>
-              )}
-              {renderTaskStatus(task)}
-            </div>
-            <div className="flex items-center gap-1">
-              {task.elapsed && (
-                <Tooltip
-                  content={t('Elapsed')}
-                >
-                  <div className={'flex items-center gap-1'}>
-                    {/* <ClockCircleOutlined className={'text-sm'} /> */}
-                    {dayjs.duration(moment.duration(task.elapsed).asMilliseconds()).format('HH:mm:ss')}
-                  </div>
-                </Tooltip>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              {task.estimateRemainingTime && (
-                <Tooltip
-                  content={t('Estimate remaining time')}
-                >
-                  <div className={'flex items-center gap-1'}>
-                    <FieldTimeOutlined className={'text-base'} />
-                    {dayjs.duration(moment.duration(task.estimateRemainingTime).asMilliseconds()).format('HH:mm:ss')}
-                  </div>
-                </Tooltip>
-              )}
-              {task.nextTimeStartAt && (
-                <Tooltip
-                  content={t('Next start time')}
-                >
-                  <div className={'flex items-center gap-1'}>
-                    <FieldTimeOutlined className={'text-base'} />
-                    {dayjs(task.nextTimeStartAt).format('HH:mm:ss')}
-                  </div>
-                </Tooltip>
-              )}
-              {renderTaskOpts(task)}
-            </div>
-          </div>
-        );
-      });
+                  <TableCell>
+                    <Tooltip
+                      content={task.description}
+                    >
+                      <div>
+                        {task.isPersistent && (
+                          <>
+                            <PushpinOutlined className={'text-sm opacity-60'} />
+                            &nbsp;
+                          </>
+                        )}
+                        {task.name}
+                      </div>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>
+                    {renderTaskStatus(task)}
+                  </TableCell>
+                  <TableCell>
+                    {task.process && (
+                      <Chip
+                        variant={'light'}
+                        color={'success'}
+                      >
+                        {task.process}
+                      </Chip>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className={'relative'}>
+                      <Progress
+                        color="primary"
+                        size="sm"
+                        value={task.percentage}
+                      />
+                      <div
+                        className={'absolute top-0 left-0 flex items-center justify-center w-full h-full'}
+                      >{task.percentage}%
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {task.elapsed && (
+                        dayjs.duration(moment.duration(task.elapsed).asMilliseconds()).format('HH:mm:ss')
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {task.estimateRemainingTime && (
+                      dayjs.duration(moment.duration(task.estimateRemainingTime).asMilliseconds()).format('HH:mm:ss')
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {task.nextTimeStartAt && (
+                      dayjs(task.nextTimeStartAt).format('HH:mm:ss')
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {renderTaskOpts(task)}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      );
     }
     return (
       <div className="h-[80px] flex items-center justify-center">
