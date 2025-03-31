@@ -14,6 +14,6 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer.Entries
         }
 
         public int Part { get; set; }
-        public static string BuildDecompressionTaskName(string path) => $"Decompress:{path}";
+        public static string BuildDecompressionTaskName(string path) => $"Decompress: {path}";
     }
 }
