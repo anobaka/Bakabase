@@ -405,6 +405,7 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             TaskManager.Enqueue(new BTaskHandlerBuilder
             {
+                GetName = () => "SyncMediaLibrary",
                 Run = async args =>
                 {
                     await using var scope = args.RootServiceProvider.CreateAsyncScope();

@@ -6,7 +6,7 @@ namespace Bakabase.Abstractions.Components.Tasks;
 
 public class BTaskHandlerBuilder
 {
-    public Func<string> GetName { get; set; } = null!;
+    public required Func<string> GetName { get; init; }
     public Func<string?>? GetDescription { get; set; }
     public Func<string?>? GetMessageOnInterruption { get; set; }
     public CancellationToken? CancellationToken { get; init; }

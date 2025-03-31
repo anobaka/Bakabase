@@ -124,9 +124,10 @@ public class BTaskHandler
 
     public async Task TryStartAutomatically()
     {
-        if (Task.Interval.HasValue && (!Task.LastFinishedAt.HasValue ||
-                                       DateTime.Now - Task.Interval.Value > Task.LastFinishedAt.Value) &&
-            Task.Status is BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.NotStarted)
+        if (Task.Status == BTaskStatus.NotStarted || (Task.Interval.HasValue && (!Task.LastFinishedAt.HasValue ||
+                                                          DateTime.Now - Task.Interval.Value >
+                                                          Task.LastFinishedAt.Value) &&
+                                                      Task.Status is BTaskStatus.Completed or BTaskStatus.Error))
         {
             await Start();
         }

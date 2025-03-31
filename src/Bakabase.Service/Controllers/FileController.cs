@@ -409,6 +409,7 @@ namespace Bakabase.Service.Controllers
             var taskId = $"FileSystem:BatchMove:{DateTime.Now:HH:mm:ss}";
             _taskManager.Enqueue(new BTaskHandlerBuilder
             {
+                GetName = () => "Moving files",
                 Run = async args =>
                 {
                     var unitEntryPercentage = (decimal) 1 / paths.Length;
@@ -687,11 +688,14 @@ namespace Bakabase.Service.Controllers
                         _taskManager.Enqueue(new BTaskHandlerBuilder
                         {
                             Id = taskId,
+                            GetDescription = () => taskId,
+                            GetName = () => taskId,
                             Run = async args =>
                             {
                                 foreach (var f in files)
                                 {
-                                    await _iwFsEntryTaskManager.Add(new IwFsTaskInfo(f, IwFsEntryTaskType.Decompressing,
+                                    await _iwFsEntryTaskManager.Add(new IwFsTaskInfo(f,
+                                        IwFsEntryTaskType.Decompressing,
                                         taskId));
                                 }
 
@@ -714,7 +718,8 @@ namespace Bakabase.Service.Controllers
                                 var osb = new StringBuilder();
                                 var esb = new StringBuilder();
                                 var workingDir = Path.GetDirectoryName(entry);
-                                var targetDir = Path.Combine(workingDir, group.KeyName);
+                                var targetDir = Path.Combine(workingDir,
+                                    group.KeyName);
                                 var processRegex = new Regex(@$"\d+\%");
                                 var tryPSwitch = false;
 
@@ -725,35 +730,45 @@ namespace Bakabase.Service.Controllers
                                     .WithWorkingDirectory(workingDir)
                                     .WithValidation(CommandResultValidation.None)
                                     .WithArguments(new[]
-                                    {
-                                        "x",
-                                        entry,
-                                        tryPSwitch ? $"-p{group.Password}" : null,
-                                        tryPSwitch ? $"-aos" : null,
-                                        $"-o{targetDir}",
-                                        // redirect process to stderr stream
-                                        "-sccUTF-8",
-                                        "-scsUTF-16LE",
-                                        "-bsp2"
-                                    }.Where(t => t.IsNotEmpty())!, true)
-                                    .WithStandardErrorPipe(PipeTarget.Merge(PipeTarget.ToDelegate(async line =>
-                                    {
-                                        var match = processRegex.Match(line);
-                                        if (match.Success)
                                         {
-                                            var np = int.Parse(match.Value.TrimEnd('%'));
-                                            if (np != args.Task.Percentage)
+                                            "x",
+                                            entry,
+                                            tryPSwitch
+                                                ? $"-p{group.Password}"
+                                                : null,
+                                            tryPSwitch
+                                                ? $"-aos"
+                                                : null,
+                                            $"-o{targetDir}",
+                                            // redirect process to stderr stream
+                                            "-sccUTF-8",
+                                            "-scsUTF-16LE",
+                                            "-bsp2"
+                                        }.Where(t => t.IsNotEmpty())!,
+                                        true)
+                                    .WithStandardErrorPipe(PipeTarget.Merge(PipeTarget.ToDelegate(async line =>
                                             {
-                                                await args.UpdateTask(x => x.Percentage = np);
-                                            }
-                                        }
-                                    }, Encoding.UTF8), PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
-                                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb, Encoding.UTF8));
+                                                var match = processRegex.Match(line);
+                                                if (match.Success)
+                                                {
+                                                    var np = int.Parse(match.Value.TrimEnd('%'));
+                                                    if (np != args.Task.Percentage)
+                                                    {
+                                                        await args.UpdateTask(x => x.Percentage = np);
+                                                    }
+                                                }
+                                            },
+                                            Encoding.UTF8),
+                                        PipeTarget.ToStringBuilder(esb,
+                                            Encoding.UTF8)))
+                                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb,
+                                        Encoding.UTF8));
                                 // Input password via stdin
                                 if (group.Password.IsNotEmpty() && !tryPSwitch)
                                 {
                                     command = command.WithStandardInputPipe(
-                                        PipeSource.FromString(group.Password!, Encoding.UTF8));
+                                        PipeSource.FromString(group.Password!,
+                                            Encoding.UTF8));
                                 }
 
                                 var result = await command.ExecuteAsync();
@@ -785,8 +800,13 @@ namespace Bakabase.Service.Controllers
                                     // Clean empty files
                                     // ERROR: Wrong password : 实际异常-原结果[未检测]-正常-fa1abb4093754661b3931c03d3f1a72a-vibration-2.wav
                                     const string prefix = "ERROR: Wrong password : ";
-                                    var badFiles = message.Split('\n', '\r').Where(a => a.StartsWith(prefix))
-                                        .Select(t => Path.Combine(targetDir, t.Replace(prefix, null).Trim()))
+                                    var badFiles = message.Split('\n',
+                                            '\r')
+                                        .Where(a => a.StartsWith(prefix))
+                                        .Select(t => Path.Combine(targetDir,
+                                            t.Replace(prefix,
+                                                    null)
+                                                .Trim()))
                                         .ToArray();
                                     foreach (var f in badFiles)
                                     {
@@ -799,24 +819,37 @@ namespace Bakabase.Service.Controllers
                                     }
 
                                     // Since we've got directories from paths of files, so we must populate the paths of directories between the files and the targetDir
-                                    var directories = badFiles.Select(Path.GetDirectoryName).Distinct()
+                                    var directories = badFiles.Select(Path.GetDirectoryName)
+                                        .Distinct()
                                         .SelectMany(dir =>
                                         {
-                                            var chain = dir.Replace(targetDir, null)
-                                                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                                                .Where(a => a.IsNotEmpty()).ToArray();
-                                            return chain.Select((t1, i) =>
-                                                    Path.Combine(new[] {targetDir}.Concat(chain.Take(i + 1))
+                                            var chain = dir.Replace(targetDir,
+                                                    null)
+                                                .Split(Path.DirectorySeparatorChar,
+                                                    Path.AltDirectorySeparatorChar)
+                                                .Where(a => a.IsNotEmpty())
+                                                .ToArray();
+                                            return chain.Select((t1,
+                                                        i) =>
+                                                    Path.Combine(new[]
+                                                        {
+                                                            targetDir
+                                                        }.Concat(chain.Take(i + 1))
                                                         .ToArray()))
                                                 .ToList();
-                                        }).ToList();
+                                        })
+                                        .ToList();
                                     directories.Add(targetDir);
                                     directories = directories.OrderByDescending(t => t.Length)
-                                        .Distinct().ToList();
+                                        .Distinct()
+                                        .ToList();
                                     foreach (var d in directories)
                                     {
                                         var di = new DirectoryInfo(d);
-                                        if (di.Exists && di.GetFileSystemInfos().Length == 0)
+                                        if (di.Exists &&
+                                            di.GetFileSystemInfos()
+                                                .Length ==
+                                            0)
                                         {
                                             di.Delete();
                                             messageSb.AppendLine($"Deleting {di.FullName}");
@@ -834,8 +867,9 @@ namespace Bakabase.Service.Controllers
                                     }
                                 }
                             },
-                            OnFailed = async bt => await _iwFsEntryTaskManager.Update(files, t => t.Error = bt.Message),
-                            OnSucceed = async bt => await _iwFsEntryTaskManager.Clear(files)
+                            OnFailed = async bt => await _iwFsEntryTaskManager.Update(files,
+                                t => t.Error = bt.Message),
+                            OnSucceed = async bt => await _iwFsEntryTaskManager.Clear(files),
                         });
                     }
                 }
