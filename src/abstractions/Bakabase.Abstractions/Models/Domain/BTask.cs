@@ -21,7 +21,7 @@ public record BTask
     public string? Error { get; set; }
     public TimeSpan? Interval { get; set; }
     public DateTime? EnableAfter { get; set; }
-    public BTaskStatus Status { get; set; }
+    public BTaskStatus Status { get; set; } = BTaskStatus.NotStarted;
     public DateTime? StartedAt { get; set; }
     public int Percentage { get; set; }
     public string? Message { get; set; }

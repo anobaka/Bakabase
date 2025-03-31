@@ -849,7 +849,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return (await _orm.AddRange(resources.ToList())).Data;
         }
 
-        public async Task PrepareCache(Func<int, Task>? onProgressChange, PauseToken pt, CancellationToken ct)
+        public async Task PrepareCache(Func<int, Task>? onProgressChange, Func<string, Task>? onProcessChange, PauseToken pt, CancellationToken ct)
         {
             var caches = await _resourceCacheOrm.GetAll();
             var cachedResourceIds = caches.Select(c => c.ResourceId).ToList();
@@ -866,7 +866,10 @@ namespace Bakabase.InsideWorld.Business.Services
 
             var fullCacheType = (ResourceCacheType) SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int) x);
             var percentage = 0m;
-            var itemPercentage = resourceIds.Count == 0 ? 0 : (100m / resourceIds.Count);
+
+            var estimateCount = await _resourceCacheOrm.Count(x => x.CachedTypes != fullCacheType);
+            var itemPercentage = estimateCount == 0 ? 0 : 100m / estimateCount;
+            var doneCount = 0;
             while (true)
             {
                 var cache = await _resourceCacheOrm.GetFirstOrDefault(x => x.CachedTypes != fullCacheType);
@@ -939,9 +942,9 @@ namespace Bakabase.InsideWorld.Business.Services
                     _logger.LogInformation($"Cache for {cache.ResourceId} has been prepared.");
 
                     var newPercentage = percentage + itemPercentage;
-                    if ((int) newPercentage != (int) percentage)
+                    if ((int) newPercentage != (int) percentage && onProgressChange != null)
                     {
-                        onProgressChange((int) newPercentage);
+                        await onProgressChange((int) newPercentage);
                     }
 
                     percentage = newPercentage;
@@ -950,9 +953,17 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     break;
                 }
+
+                if (onProcessChange != null)
+                {
+                    await onProcessChange($"{++doneCount}/{estimateCount}");
+                }
             }
 
-            onProgressChange(100);
+            if (onProgressChange != null)
+            {
+                await onProgressChange(100);
+            }
         }
 
         public async Task Transfer(ResourceTransferInputModel model)
