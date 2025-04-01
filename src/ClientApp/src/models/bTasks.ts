@@ -7,18 +7,17 @@ export default {
   reducers: {
     setState: (prevState, tasks) => tasks.slice(),
     remove: (prevState, id) => {
-      console.log('remove');
       return prevState.filter((t) => t.id != id);
     },
     update: (prevState, task) => {
-      console.log('update');
       const idx = prevState.findIndex((t) => t.id == task.id);
+      const newState = prevState.slice();
       if (idx > -1) {
-        prevState[idx] = task;
+        newState[idx] = task;
       } else {
-        prevState.push(task);
+        newState.push(task);
       }
-      return prevState;
+      return newState;
     },
   },
 
