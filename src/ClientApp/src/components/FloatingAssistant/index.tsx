@@ -243,8 +243,6 @@ export default () => {
 
   // const bTasks = testTasks;
 
-  // console.log(status);
-
   useUpdateEffect(() => {
     statusRef.current = status;
   }, [status]);
@@ -499,7 +497,7 @@ export default () => {
     if (bTasks?.length > 0) {
       return (
         <Table aria-label="Example table with dynamic content" removeWrapper isStriped>
-          <TableHeader columns={columns}>
+          <TableHeader columns={columns.current}>
             {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
           </TableHeader>
           <TableBody>
