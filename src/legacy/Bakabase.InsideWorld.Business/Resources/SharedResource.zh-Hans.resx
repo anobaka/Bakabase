@@ -300,6 +300,12 @@
   <data name="Migration_V190_DefaultPropertyName_Cover" xml:space="preserve">
     <value>封面</value>
   </data>
+  <data name="Reserved_Resource_Property_Name_Introduction" xml:space="preserve">
+    <value>介绍</value>
+  </data>
+  <data name="Reserved_Resource_Property_Name_Rating" xml:space="preserve">
+    <value>评分</value>
+  </data>
   <data name="Resource_Property_Reserved_Introduction_Name" xml:space="preserve">
     <value>介绍</value>
   </data>
@@ -350,5 +356,38 @@
   </data>
   <data name="BackgroundTask_Enhance_Name" xml:space="preserve">
     <value>增强</value>
+  </data>
+  <data name="Decompress" xml:space="preserve">
+    <value>解压缩</value>
+  </data>
+  <data name="MoveFiles" xml:space="preserve">
+    <value>移动文件</value>
+  </data>
+  <data name="BTask_Name_Enhancement" xml:space="preserve">
+    <value>增强</value>
+  </data>
+  <data name="BTask_Description_Enhancement" xml:space="preserve">
+    <value>检查并增强所有未增强的资源</value>
+  </data>
+  <data name="BTask_Name_PrepareCache" xml:space="preserve">
+    <value>准备缓存</value>
+  </data>
+  <data name="BTask_Name_MoveFiles" xml:space="preserve">
+    <value>移动文件</value>
+  </data>
+  <data name="BTask_Description_PrepareCache" xml:space="preserve">
+    <value>为资源准备缓存，缓存可以提升资源加载速度</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_MoveFiles" xml:space="preserve">
+    <value>部分文件还在移动中，强制中断可能会导致目标文件或文件夹不完整</value>
+  </data>
+  <data name="BTask_FailedToRunTaskDueToConflict" xml:space="preserve">
+    <value>发现任务冲突，任务[{0}]不能和任务[{1}]同时运行</value>
+  </data>
+  <data name="BTask_FailedToRunTaskDueToUnknownTaskId" xml:space="preserve">
+    <value>无法运行任务：任务id [{0}]不存在</value>
+  </data>
+  <data name="BTask_FailedToRunTaskDueToIdExisting" xml:space="preserve">
+    <value>无法运行任务：任务id [{0}]已存在</value>
   </data>
 </root>

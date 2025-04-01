@@ -26,6 +26,8 @@ public record BTaskViewModel
     public DateTime? NextTimeStartAt { get; set; }
     public TimeSpan? Elapsed { get; set; }
     public BTaskLevel Level { get; set; }
+    public BTaskType Type { get; set; }
+    public object[]? ResourceKeys { get; set; }
 
     public BTaskViewModel(BTaskHandler handler, string? reasonForUnableToStart)
     {
@@ -45,6 +47,8 @@ public record BTaskViewModel
         NextTimeStartAt = handler.NextTimeStartAt;
         Interval = handler.Task.Interval;
         EnableAfter = handler.Task.EnableAfter > DateTime.Now ? handler.Task.EnableAfter : null;
+        Type = handler.Task.Type;
+        ResourceKeys = handler.Task.ResourceKeys;
 
         Elapsed = handler.Sw.Elapsed == TimeSpan.Zero ? null : handler.Sw.Elapsed;
         ReasonForUnableToStart = reasonForUnableToStart;

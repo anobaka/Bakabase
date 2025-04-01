@@ -90,13 +90,6 @@ export default class UIHubConnection {
         store.dispatch.iwFsEntryTasks.remove(path);
       }
     });
-    conn.on('GetResourceTask', (id, task) => {
-      if (task) {
-        store.dispatch.resourceTasks.update(task);
-      } else {
-        store.dispatch.resourceTasks.remove(id);
-      }
-    });
 
     conn.on('IwFsEntriesChange', events => {
       // this.log(events);

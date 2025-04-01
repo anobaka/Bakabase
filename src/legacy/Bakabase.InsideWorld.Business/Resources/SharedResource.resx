@@ -307,10 +307,10 @@
     <value>Rating</value>
   </data>
   <data name="Resource_Property_Reserved_Introduction_Name" xml:space="preserve">
-    <value />
+    <value>Introduction</value>
   </data>
   <data name="Resource_Property_Reserved_Rating_Name" xml:space="preserve">
-    <value />
+    <value>Rating</value>
   </data>
   <data name="Property_DescriptorIsNotFound" xml:space="preserve">
     <value>Property descriptor is not found for type: {0}, id: {1}</value>
@@ -356,5 +356,38 @@ The version of lux is not limited.</value>
   </data>
   <data name="BackgroundTask_Enhance_Name" xml:space="preserve">
     <value>Enhance</value>
+  </data>
+  <data name="Decompress" xml:space="preserve">
+    <value>Decompress</value>
+  </data>
+  <data name="MoveFiles" xml:space="preserve">
+    <value>Move files</value>
+  </data>
+  <data name="BTask_Name_Enhancement" xml:space="preserve">
+    <value>Enhancement</value>
+  </data>
+  <data name="BTask_Description_Enhancement" xml:space="preserve">
+    <value>Check and enhance all unenhanced resources</value>
+  </data>
+  <data name="BTask_Name_PrepareCache" xml:space="preserve">
+    <value>Prepare cache</value>
+  </data>
+  <data name="BTask_Name_MoveFiles" xml:space="preserve">
+    <value>Move files</value>
+  </data>
+  <data name="BTask_Description_PrepareCache" xml:space="preserve">
+    <value>Prepare cache for resources; caching can improve resource loading speed</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_MoveFiles" xml:space="preserve">
+    <value>Some files are still in the process of being moved; forcibly interrupting may result in incomplete target files or folders.</value>
+  </data>
+  <data name="BTask_FailedToRunTaskDueToConflict" xml:space="preserve">
+    <value>Task conflict detected: Task [{0}] cannot run simultaneously with tasks [{1}]</value>
+  </data>
+  <data name="BTask_FailedToRunTaskDueToUnknownTaskId" xml:space="preserve">
+    <value>Failed to run task: task id [{0}] is not found</value>
+  </data>
+  <data name="BTask_FailedToRunTaskDueToIdExisting" xml:space="preserve">
+    <value>Failed to run task: task id [{0}] exists</value>
   </data>
 </root>

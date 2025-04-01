@@ -92,13 +92,15 @@ public class BTaskManager : IAsyncDisposable
         var dbModel = _options.Value.Tasks?.FirstOrDefault(x => x.Id == builder.Id);
 
         var task = new BTask(builder.Id, builder.GetName, builder.GetDescription, builder.GetMessageOnInterruption,
-            builder.ConflictKeys, builder.Level, builder.IsPersistent)
+            builder.ConflictKeys, builder.Level, builder.IsPersistent, builder.Type, builder.ResourceType, builder.ResourceKeys)
         {
             EnableAfter = dbModel?.EnableAfter,
             Interval = dbModel?.Interval ?? builder.Interval
         };
 
         return new BTaskHandler(builder.Run, task, _serviceProvider,
+            builder.OnStatusChange,
+            builder.OnPercentageChanged,
             async () => await OnTaskChange(builder.Id),
             builder.CancellationToken);
     }

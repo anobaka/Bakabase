@@ -407,7 +407,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           {(displayContents & ResourceDisplayContent.Tags) ? (firstTagsValue && firstTagsValue.length > 0 && (
             <div className={styles.info}>
               <div
-                className={`select-text ${styles.limitedContent} flex gap-1 flex-wrap opacity-70 leading-3 gap-px`}
+                className={`select-text ${styles.limitedContent} flex flex-wrap opacity-70 leading-3 gap-px`}
               >
                 {firstTagsValue.map(v => {
                   return (

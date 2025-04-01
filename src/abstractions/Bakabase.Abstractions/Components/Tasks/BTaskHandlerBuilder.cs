@@ -17,6 +17,9 @@ public class BTaskHandlerBuilder
     public TimeSpan? Interval { get; init; }
     public bool IsPersistent { get; init; }
     public IServiceProvider? RootServiceProvider { get; init; }
-    public Func<BTask, Task>? OnFailed { get; set; }
-    public Func<BTask, Task>? OnSucceed { get; set; }
+    public Func<BTaskStatus, BTask, Task>? OnStatusChange { get; set; }
+    public Func<BTask, Task>? OnPercentageChanged { get; set; }
+    public required BTaskType Type { get; init; }
+    public required BTaskResourceType ResourceType { get; init; }
+    public object[]? ResourceKeys { get; set; }
 }

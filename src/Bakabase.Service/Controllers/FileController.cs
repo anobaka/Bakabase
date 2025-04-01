@@ -7,6 +7,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.AccessControl;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -15,6 +16,7 @@ using Bakabase.Abstractions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
@@ -403,13 +405,17 @@ namespace Bakabase.Service.Controllers
             await _insideWorldOptionsManager.FileSystem.SaveAsync(options =>
             {
                 options.RecentMovingDestinations = new[] {model.DestDir}
-                    .Concat(options.RecentMovingDestinations ?? Array.Empty<string>()).Distinct().Take(5).ToArray();
+                    .Concat(options.RecentMovingDestinations ?? []).Distinct().Take(5).ToArray();
             });
 
             var taskId = $"FileSystem:BatchMove:{DateTime.Now:HH:mm:ss}";
             _taskManager.Enqueue(new BTaskHandlerBuilder
             {
-                GetName = () => "Moving files",
+                GetName = () => _localizer.MoveFiles(),
+                GetMessageOnInterruption = () => _localizer.MessageOnInterruption_MoveFiles(),
+                ResourceType = BTaskResourceType.FileSystemEntry,
+                Type = BTaskType.MoveFiles,
+                ResourceKeys = paths.Cast<object>().ToArray(),
                 Run = async args =>
                 {
                     var unitEntryPercentage = (decimal) 1 / paths.Length;
@@ -456,8 +462,28 @@ namespace Bakabase.Service.Controllers
                         }
                     }
                 },
-                Id = taskId,
-                OnFailed = async task => { await _iwFsEntryTaskManager.Update(paths, t => t.Error = task.Error); }
+                ConflictKeys = [taskId],
+                OnStatusChange = async (prev, bt) =>
+                {
+                    switch (bt.Status)
+                    {
+                        case BTaskStatus.NotStarted:
+                            break;
+                        case BTaskStatus.Running:
+                            break;
+                        case BTaskStatus.Paused:
+                            break;
+                        case BTaskStatus.Error:
+                            await _iwFsEntryTaskManager.Update(paths, t => t.Error = bt.Error);
+                            break;
+                        case BTaskStatus.Completed:
+                        case BTaskStatus.Stopped:
+                            await _iwFsEntryTaskManager.Clear(paths);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
             });
 
             return BaseResponseBuilder.Ok;
@@ -624,11 +650,6 @@ namespace Bakabase.Service.Controllers
             return StatusCode((int) HttpStatusCode.UnsupportedMediaType);
         }
 
-        private async Task _decompressFiles(BTaskArgs bTaskArgs, FileDecompressRequestModel model)
-        {
-           
-        }
-
         [HttpPost("decompression")]
         [SwaggerOperation(OperationId = "DecompressFiles")]
         public async Task<BaseResponse> DecompressFiles([FromBody] FileDecompressRequestModel model)
@@ -687,16 +708,19 @@ namespace Bakabase.Service.Controllers
 
                         _taskManager.Enqueue(new BTaskHandlerBuilder
                         {
-                            Id = taskId,
+                            ResourceType = BTaskResourceType.FileSystemEntry,
+                            ConflictKeys = [taskId],
                             GetDescription = () => taskId,
-                            GetName = () => taskId,
+                            GetName = () => _localizer.Decompress(),
+                            Type = BTaskType.Decompress,
+                            ResourceKeys = files.Cast<object>().ToArray(),
                             Run = async args =>
                             {
                                 foreach (var f in files)
                                 {
                                     await _iwFsEntryTaskManager.Add(new IwFsTaskInfo(f,
                                         IwFsEntryTaskType.Decompressing,
-                                        taskId));
+                                        args.Task.Id));
                                 }
 
                                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
@@ -707,13 +731,13 @@ namespace Bakabase.Service.Controllers
                                     await passwordService.AddUsedTimes(group.Password!);
                                 }
 
-                                // for (var i = 0; i < 100; i++)
-                                // {
-                                //     task.Percentage = i + 1;
-                                //     await Task.Delay(5_0, task.Cts.Token);
-                                // }
-                                //
-                                // return BaseResponseBuilder.Ok;
+                                for (var i = 0; i < 100; i++)
+                                {
+                                    await args.UpdateTask(t => t.Percentage = i + 1);
+                                    await Task.Delay(5_0, args.CancellationToken);
+                                }
+
+                                return;
 
                                 var osb = new StringBuilder();
                                 var esb = new StringBuilder();
@@ -867,9 +891,31 @@ namespace Bakabase.Service.Controllers
                                     }
                                 }
                             },
-                            OnFailed = async bt => await _iwFsEntryTaskManager.Update(files,
-                                t => t.Error = bt.Message),
-                            OnSucceed = async bt => await _iwFsEntryTaskManager.Clear(files),
+                            OnStatusChange = async (prev, bt) =>
+                            {
+                                switch (bt.Status)
+                                {
+                                    case BTaskStatus.NotStarted:
+                                    case BTaskStatus.Running:
+                                    case BTaskStatus.Paused:
+                                        break;
+                                    case BTaskStatus.Error:
+                                    {
+                                        await _iwFsEntryTaskManager.Update(files, t => t.Error = bt.Error);
+                                        break;
+                                    }
+                                    case BTaskStatus.Completed:
+                                    case BTaskStatus.Stopped:
+                                    {
+                                        await _iwFsEntryTaskManager.Clear(files);
+                                        break;
+                                    }
+                                    default:
+                                        throw new ArgumentOutOfRangeException(nameof(bt), bt, null);
+                                }
+                            },
+                            OnPercentageChanged = async bt =>
+                                await _iwFsEntryTaskManager.Update(files, x => x.Percentage = bt.Percentage)
                         });
                     }
                 }

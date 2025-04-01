@@ -8,6 +8,7 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask
 {
+    [Obsolete("", error: true)]
     public class ResourceTaskInfo
     {
         public int Id { get; set; }
@@ -16,6 +17,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Backgroun
         public int Percentage { get; set; }
         public string? Error { get; set; }
         public string BackgroundTaskId { get; set; }
+        public string? MessageOnInterruption { get; set; }
         public ResourceTaskOperationOnComplete OperationOnComplete { get; set; }
     }
 }

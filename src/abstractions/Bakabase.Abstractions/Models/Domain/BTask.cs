@@ -29,14 +29,19 @@ public record BTask
     public DateTime? LastFinishedAt { get; set; }
     public bool IsPersistent { get; }
     public TimeSpan? Elapsed { get; set; }
+    public BTaskType Type { get; set; }
+    public BTaskResourceType ResourceType { get; set; }
+    public object[]? ResourceKeys { get; set; }
 
     public BTask(string id,
-        Func<string> getName,
-        Func<string?>? getDescription = null,
+        Func<string> getName, Func<string?>? getDescription = null,
         Func<string?>? getMessageOnInterruption = null,
         HashSet<string>? conflictKeys = null,
         BTaskLevel level = BTaskLevel.Default,
-        bool isPersistent = false)
+        bool isPersistent = false,
+        BTaskType type = BTaskType.Any,
+        BTaskResourceType resourceType = BTaskResourceType.Any,
+        object[]? resourceKeys = null)
     {
         Id = id;
         _getName = getName;
@@ -46,5 +51,9 @@ public record BTask
         ConflictKeys = conflictKeys;
         Level = level;
         IsPersistent = isPersistent;
+
+        Type = type;
+        ResourceType = resourceType;
+        ResourceKeys = resourceKeys;
     }
 }

@@ -25,9 +25,12 @@ public interface IBakabaseLocalizer
     string SpecialText_HistoricalLanguageValue2ShouldBeModified();
     string Reserved_Resource_Property_Name(ReservedProperty property);
     string Unknown();
+    string Decompress();
+    string MoveFiles();
     string BTask_Name(string key);
-    string BTask_Description(string key);
-    string BTask_MessageOnInterruption(string key);
+    string? BTask_Description(string key);
+    string? BTask_MessageOnInterruption(string key);
+    string? MessageOnInterruption_MoveFiles();
     string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames);
     string BTask_FailedToRunTaskDueToUnknownTaskId(string id);
     string BTask_FailedToRunTaskDueToIdExisting(string id);

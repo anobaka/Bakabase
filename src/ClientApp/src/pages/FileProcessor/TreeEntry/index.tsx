@@ -424,6 +424,7 @@ const TreeEntry = (props: TreeEntryProps) => {
   }, []);
 
   // log('Rendering', 'children width', entryRef.current.childrenWidth, domRef.current?.clientWidth, domRef.current, entryRef.current);
+  log(132132321, entryRef.current!.task);
 
   return (
     <div
@@ -461,22 +462,16 @@ const TreeEntry = (props: TreeEntryProps) => {
                 <Button
                   color={'warning'}
                   size={'small'}
-                  onClick={() => {
+                  onPress={() => {
                     createPortal(Modal, {
                       title: t('Sure to stop?'),
-                      onOk: () => new Promise((resolve, reject) => {
-                        BApi.backgroundTask.stopBackgroundTask(entryRef.current!.task!.backgroundTaskId)
-                          .then((t) => {
-                            if (!t.code) {
-                              resolve(t);
-                            } else {
-                              reject();
-                            }
-                          })
-                          .catch((e) => {
-                            reject();
-                          });
-                      }),
+                      onOk: async () => {
+                        const rsp = await BApi.backgroundTask.stopBackgroundTask(entryRef.current!.task!.backgroundTaskId);
+                        if (rsp.code) {
+                          throw Error(rsp.message);
+                        }
+                      },
+                      defaultVisible: true,
                     });
                   }}
                 >{t('Stop')}

@@ -203,7 +203,7 @@ export default () => {
 
   const bTasks = store.useModelState('bTasks');
 
-  const columns = [
+  const columns = useRef<{key: string; label: string}[]>([
     {
       key: 'name',
       label: 'Name',
@@ -236,7 +236,10 @@ export default () => {
       key: 'operations',
       label: 'Operations',
     },
-  ];
+  ].map(x => ({
+    ...x,
+    label: t(x.label),
+  })));
 
   // const bTasks = testTasks;
 
@@ -433,7 +436,7 @@ export default () => {
                   createPortal(Modal, {
                     defaultVisible: true,
                     title: t('Stopping task: {{taskName}}', { taskName: task.name }),
-                    children: t('Are you sure to stop this task?'),
+                    children: task.messageOnInterruption ?? t('Are you sure to stop this task?'),
                     onOk: async () => await BApi.backgroundTask.stopBackgroundTask(task.id),
                     classNames: {
                       wrapper: 'floating-assistant-modal',

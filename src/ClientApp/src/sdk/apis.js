@@ -619,6 +619,7 @@ export const StartBackgroundTaskURL = function(parameters = {}) {
  * method: StopBackgroundTask_TYPE
  * raw_url: StopBackgroundTask_RAW_URL
  * @param id - 
+ * @param confirm - 
  */
 export const StopBackgroundTask = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -630,6 +631,9 @@ export const StopBackgroundTask = function(parameters = {}) {
   path = path.replace('{id}', `${parameters['id']}`)
   if (parameters['id'] === undefined) {
     return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['confirm'] !== undefined) {
+    queryParameters['confirm'] = parameters['confirm']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -649,6 +653,9 @@ export const StopBackgroundTaskURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/background-task/{id}/run'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['confirm'] !== undefined) {
+    queryParameters['confirm'] = parameters['confirm']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -6174,84 +6181,6 @@ export const PatchMediaLibraryURL = function(parameters = {}) {
 }
 /**
  * 
- * request: StartSyncMediaLibrary
- * url: StartSyncMediaLibraryURL
- * method: StartSyncMediaLibrary_TYPE
- * raw_url: StartSyncMediaLibrary_RAW_URL
- */
-export const StartSyncMediaLibrary = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/media-library/sync'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const StartSyncMediaLibrary_RAW_URL = function() {
-  return '/media-library/sync'
-}
-export const StartSyncMediaLibrary_TYPE = function() {
-  return 'put'
-}
-export const StartSyncMediaLibraryURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/media-library/sync'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: StopSyncMediaLibrary
- * url: StopSyncMediaLibraryURL
- * method: StopSyncMediaLibrary_TYPE
- * raw_url: StopSyncMediaLibrary_RAW_URL
- */
-export const StopSyncMediaLibrary = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/media-library/sync'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const StopSyncMediaLibrary_RAW_URL = function() {
-  return '/media-library/sync'
-}
-export const StopSyncMediaLibrary_TYPE = function() {
-  return 'delete'
-}
-export const StopSyncMediaLibraryURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/media-library/sync'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: ValidatePathConfiguration
  * url: ValidatePathConfigurationURL
  * method: ValidatePathConfiguration_TYPE
@@ -8823,51 +8752,6 @@ export const MoveResourcesURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/resource/move'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: ClearResourceTask
- * url: ClearResourceTaskURL
- * method: ClearResourceTask_TYPE
- * raw_url: ClearResourceTask_RAW_URL
- * @param id - 
- */
-export const ClearResourceTask = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/resource/{id}/task'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const ClearResourceTask_RAW_URL = function() {
-  return '/resource/{id}/task'
-}
-export const ClearResourceTask_TYPE = function() {
-  return 'delete'
-}
-export const ClearResourceTaskURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/resource/{id}/task'
-  path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

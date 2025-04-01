@@ -6,6 +6,8 @@ import RootTreeEntry from './RootTreeEntry';
 import type { Entry } from '@/core/models/FileExplorer/Entry';
 import type RootEntry from '@/core/models/FileExplorer/RootEntry';
 import { buildLogger } from '@/components/utils';
+import store from '@/store';
+import BApi from '@/sdk/BApi';
 
 const log = buildLogger('FileProcessor');
 
@@ -20,7 +22,9 @@ export default () => {
   const selectedEntriesRef = useRef<Entry[]>([]);
   const [allSelected, setAllSelected] = useState(false);
 
-  const [cookieRootPath, setCookieRootPath] = useCookie('fileProcessorRootPath');
+  const options = store.useModelState('fileSystemOptions');
+  const [rootPath, setRootPath] = useState<string>();
+  const [rootPathInitialized, setRootPathInitialized] = useState(false);
 
   useUpdateEffect(() => {
     if (rootRef.current) {
@@ -29,6 +33,16 @@ export default () => {
     rootRef.current = root;
     console.log('Root change to', root);
   }, [root]);
+
+  useEffect(() => {
+    if (!rootPathInitialized && options.initialized) {
+      const p = options.fileProcessor?.workingDirectory;
+      if (p) {
+        setRootPath(p);
+      }
+    }
+    setRootPathInitialized(true);
+  }, [options.initialized, rootPathInitialized]);
 
   useEffect(() => {
     return () => {
@@ -79,18 +93,25 @@ export default () => {
           tabIndex={0}
         >
           <div className={'absolute top-0 left-0 w-full h-full flex flex-col'} >
-            <RootTreeEntry
-              selectable={'multiple'}
-              expandable
-              capabilities={['decompress', 'wrap', 'move', 'extract', 'delete', 'rename', 'delete-all-by-name', 'group']}
-              rootPath={cookieRootPath ?? undefined}
-              onRootPathChange={v => {
-                if (v != undefined) {
-                  log('setting cookie');
-                  setCookieRootPath(v);
-                }
-              }}
-            />
+            {rootPathInitialized && (
+              <RootTreeEntry
+                selectable={'multiple'}
+                expandable
+                capabilities={['decompress', 'wrap', 'move', 'extract', 'delete', 'rename', 'delete-all-by-name', 'group']}
+                rootPath={rootPath}
+                onInitialized={v => {
+                  if (v != undefined) {
+                    BApi.options.patchFileSystemOptions({
+                      ...options,
+                      fileProcessor: {
+                        ...(options.fileProcessor || {}),
+                        workingDirectory: v,
+                      },
+                    });
+                  }
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
