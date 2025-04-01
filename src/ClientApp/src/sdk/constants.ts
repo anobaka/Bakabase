@@ -2,8 +2,6 @@ export enum BackgroundTaskName {SyncMediaLibrary = 1, PrepareCache = 2, MoveFile
 export const backgroundTaskNames = Object.keys(BackgroundTaskName).filter(k => typeof BackgroundTaskName[k] === 'number').map(t => ({label: t, value: BackgroundTaskName[t]}));
 export enum BuiltinPropertyForDisplayName {Filename = 15}
 export const builtinPropertyForDisplayNames = Object.keys(BuiltinPropertyForDisplayName).filter(k => typeof BuiltinPropertyForDisplayName[k] === 'number').map(t => ({label: t, value: BuiltinPropertyForDisplayName[t]}));
-export enum BackgroundTaskLevel {Default = 1, Critical = 2}
-export const backgroundTaskLevels = Object.keys(BackgroundTaskLevel).filter(k => typeof BackgroundTaskLevel[k] === 'number').map(t => ({label: t, value: BackgroundTaskLevel[t]}));
 export enum EnhancementType {Property = 1, File = 2}
 export const enhancementTypes = Object.keys(EnhancementType).filter(k => typeof EnhancementType[k] === 'number').map(t => ({label: t, value: EnhancementType[t]}));
 export enum ResourceTaskOperationOnComplete {RemoveOnResourceView = 1}
@@ -164,6 +162,10 @@ export enum StandardValueType {String = 1, ListString = 2, Decimal = 3, Link = 4
 export const standardValueTypes = Object.keys(StandardValueType).filter(k => typeof StandardValueType[k] === 'number').map(t => ({label: t, value: StandardValueType[t]}));
 export enum TextProcessingOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
 export const textProcessingOperations = Object.keys(TextProcessingOperation).filter(k => typeof TextProcessingOperation[k] === 'number').map(t => ({label: t, value: TextProcessingOperation[t]}));
+export enum BTaskResourceType {FileSystemEntry = 1, Resource = 2, Any = 1000}
+export const bTaskResourceTypes = Object.keys(BTaskResourceType).filter(k => typeof BTaskResourceType[k] === 'number').map(t => ({label: t, value: BTaskResourceType[t]}));
+export enum BTaskType {Decompress = 1, MoveFiles = 2, MoveResources = 3, Any = 1000}
+export const bTaskTypes = Object.keys(BTaskType).filter(k => typeof BTaskType[k] === 'number').map(t => ({label: t, value: BTaskType[t]}));
 export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3, DLsite = 4, Regex = 5}
 export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
 export enum RegexEnhancerTarget {CaptureGroups = 0}

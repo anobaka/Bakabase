@@ -49,6 +49,8 @@ public class PredefinedTasksProvider
 
         DescriptorBuilders = simpleTaskBuilders.Select(x => new BTaskHandlerBuilder
         {
+            Type = BTaskType.Any,
+            ResourceType = BTaskResourceType.Any,
             GetName = () => localizer.BTask_Name(x.Key),
             GetDescription = () => localizer.BTask_Description(x.Key),
             GetMessageOnInterruption = () => localizer.BTask_MessageOnInterruption(x.Key),

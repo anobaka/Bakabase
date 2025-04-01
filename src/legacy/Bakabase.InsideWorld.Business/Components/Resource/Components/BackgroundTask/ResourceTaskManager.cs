@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask
 {
-    [Obsolete]
+    [Obsolete("", error: true)]
     public class ResourceTaskManager
     {
         private readonly IHubContext<WebGuiHub, IWebGuiClient> _uiHub;
@@ -43,7 +43,6 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Backgroun
             foreach (var id in ids)
             {
                 // _logger.LogInformation(JsonConvert.SerializeObject(Get(id)));
-                await _uiHub.Clients.All.GetResourceTask(id, Get(id));
             }
         }
 

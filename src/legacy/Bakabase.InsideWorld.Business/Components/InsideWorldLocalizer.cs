@@ -108,11 +108,24 @@ namespace Bakabase.InsideWorld.Business.Components
         }
 
         public string Unknown() => this[nameof(Unknown)];
+        public string Decompress() => this[nameof(Decompress)];
+        public string MoveFiles() => this[nameof(MoveFiles)];
+
         public string BTask_Name(string key) => this[$"{nameof(BTask_Name)}_{key}"];
 
-        public string BTask_Description(string key) => this[$"{nameof(BTask_Description)}_{key}"];
+        public string? BTask_Description(string key)
+        {
+            var r = this[$"{nameof(BTask_Description)}_{key}"];
+            return r.ResourceNotFound ? null : (string?) r;
+        }
 
-        public string BTask_MessageOnInterruption(string key) => this[$"{nameof(BTask_MessageOnInterruption)}_{key}"];
+        public string? BTask_MessageOnInterruption(string key)
+        {
+            var r = this[$"{nameof(BTask_MessageOnInterruption)}_{key}"];
+            return r.ResourceNotFound ? null : (string?)r;
+        }
+
+        public string? MessageOnInterruption_MoveFiles() => BTask_MessageOnInterruption("MoveFiles");
 
         public string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames) =>
             this[nameof(BTask_FailedToRunTaskDueToConflict), incomingTaskName, string.Join(',', conflictTaskNames)];

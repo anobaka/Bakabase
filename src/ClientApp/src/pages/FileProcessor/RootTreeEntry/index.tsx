@@ -33,7 +33,7 @@ type Props = {
   onSelected?: (entries: Entry[]) => any;
   selectable: 'disabled' | 'single' | 'multiple';
   defaultSelectedPath?: string;
-  onInitialized?: () => any;
+  onInitialized?: (path?: string) => any;
 } & Pick<TreeEntryProps, 'capabilities' | 'expandable' | 'filter' | 'onDoubleClick'>;
 
 const log = buildLogger('RootTreeEntry');
@@ -463,7 +463,8 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
                 }
               }
             }
-            onInitialized?.();
+            log('12312321321321321', e);
+            onInitialized?.(e?.path);
             forceUpdate();
           }}
           expandable={expandable}

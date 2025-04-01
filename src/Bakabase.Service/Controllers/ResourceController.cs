@@ -48,7 +48,6 @@ namespace Bakabase.Service.Controllers
     [Route("~/resource")]
     public class ResourceController(
         IResourceService service,
-        ResourceTaskManager resourceTaskManager,
         FfMpegService ffMpegService,
         IBOptionsManager<ResourceOptions> resourceOptionsManager,
         FfMpegService ffMpegInstaller,
@@ -294,7 +293,11 @@ namespace Bakabase.Service.Controllers
             var taskName = $"Resource:BulkMove:{DateTime.Now:HH:mm:ss}";
             taskManager.Enqueue(new BTaskHandlerBuilder
             {
+                ResourceType = BTaskResourceType.Resource,
                 GetName = () => taskName,
+                GetMessageOnInterruption = localizer.MessageOnInterruption_MoveFiles,
+                Type = BTaskType.MoveResources,
+                ResourceKeys = model.Ids.Cast<object>().ToArray(),
                 Run = async args =>
                 {
                     await using var scope = args.RootServiceProvider.CreateAsyncScope();
@@ -307,27 +310,22 @@ namespace Bakabase.Service.Controllers
                             resources.Select(r => r.Value.FileName).ToArray(), mediaLibrary.Name, model.Path);
                     });
 
-                    foreach (var id in model.Ids)
+                    var resourcePercentage = resources.Any() ? 100m / resources.Count : 0;
+                    var percentage = 0;
+                    for (var index = 0; index < resources.Count; index++)
                     {
-                        await resourceTaskManager.Add(new ResourceTaskInfo
-                        {
-                            BackgroundTaskId = args.Task.Id,
-                            Id = id,
-                            Type = ResourceTaskType.Moving,
-                            Summary = localizer.Resource_MovingTaskSummary(null, mediaLibrary.Name, model.Path),
-                            OperationOnComplete = ResourceTaskOperationOnComplete.RemoveOnResourceView
-                        });
-                    }
-
-                    foreach (var (id, resource) in resources)
-                    {
+                        var resource = resources[index];
                         var targetPath = Path.Combine(model.Path, resource.FileName).StandardizePath()!;
                         if (resource.IsFile)
                         {
                             await FileUtils.MoveAsync(resource.Path, targetPath, false,
                                 async p =>
                                 {
-                                    await resourceTaskManager.Update(id, t => t.Percentage = Math.Min(99, p));
+                                    var np = (int) ((index + p / 100m) * resourcePercentage);
+                                    if (np != percentage)
+                                    {
+                                        await args.UpdateTask(t => t.Percentage = np);
+                                    }
                                 },
                                 PauseToken.None,
                                 args.CancellationToken);
@@ -337,7 +335,11 @@ namespace Bakabase.Service.Controllers
                             await DirectoryUtils.MoveAsync(resource.Path, targetPath, false,
                                 async p =>
                                 {
-                                    await resourceTaskManager.Update(id, t => t.Percentage = Math.Min(99, p));
+                                    var np = (int)((index + p / 100m) * resourcePercentage);
+                                    if (np != percentage)
+                                    {
+                                        await args.UpdateTask(t => t.Percentage = np);
+                                    }
                                 },
                                 PauseToken.None,
                                 args.CancellationToken);
@@ -356,24 +358,10 @@ namespace Bakabase.Service.Controllers
                         //     await Task.Delay(100, bt.Cts.Token);
                         //     await resourceTaskManager.Update(id, t => t.Percentage = p);
                         // }
-
-                        await resourceTaskManager.Update(id, t => t.Percentage = 100);
-
-                        await resourceTaskManager.Clear(id);
                     }
-                },
-                OnFailed = async task =>
-                    await resourceTaskManager.Update(resources.Keys.ToArray(), t => t.Error = task.Error)
+                }
             });
 
-            return BaseResponseBuilder.Ok;
-        }
-
-        [HttpDelete("{id}/task")]
-        [SwaggerOperation(OperationId = "ClearResourceTask")]
-        public async Task<BaseResponse> ClearTask(int id)
-        {
-            await resourceTaskManager.Clear(id);
             return BaseResponseBuilder.Ok;
         }
 

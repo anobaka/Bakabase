@@ -97,6 +97,87 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Check and enhance all unenhanced resources.
+        /// </summary>
+        internal static string BTask_Description_Enhancement {
+            get {
+                return ResourceManager.GetString("BTask_Description_Enhancement", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Prepare cache for resources; caching can improve resource loading speed.
+        /// </summary>
+        internal static string BTask_Description_PrepareCache {
+            get {
+                return ResourceManager.GetString("BTask_Description_PrepareCache", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Task conflict detected: Task [{0}] cannot run simultaneously with tasks [{1}].
+        /// </summary>
+        internal static string BTask_FailedToRunTaskDueToConflict {
+            get {
+                return ResourceManager.GetString("BTask_FailedToRunTaskDueToConflict", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to run task: task id [{0}] exists.
+        /// </summary>
+        internal static string BTask_FailedToRunTaskDueToIdExisting {
+            get {
+                return ResourceManager.GetString("BTask_FailedToRunTaskDueToIdExisting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to run task: task id [{0}] is not found.
+        /// </summary>
+        internal static string BTask_FailedToRunTaskDueToUnknownTaskId {
+            get {
+                return ResourceManager.GetString("BTask_FailedToRunTaskDueToUnknownTaskId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Some files are still in the process of being moved; forcibly interrupting may result in incomplete target files or folders..
+        /// </summary>
+        internal static string BTask_MessageOnInterruption_MoveFiles {
+            get {
+                return ResourceManager.GetString("BTask_MessageOnInterruption_MoveFiles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Enhancement.
+        /// </summary>
+        internal static string BTask_Name_Enhancement {
+            get {
+                return ResourceManager.GetString("BTask_Name_Enhancement", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Move files.
+        /// </summary>
+        internal static string BTask_Name_MoveFiles {
+            get {
+                return ResourceManager.GetString("BTask_Name_MoveFiles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Prepare cache.
+        /// </summary>
+        internal static string BTask_Name_PrepareCache {
+            get {
+                return ResourceManager.GetString("BTask_Name_PrepareCache", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Filename.
         /// </summary>
         internal static string BuiltinPropertyForDisplayName_Filename {
@@ -228,6 +309,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string CustomProperty_DescriptorNotFound {
             get {
                 return ResourceManager.GetString("CustomProperty_DescriptorNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Decompress.
+        /// </summary>
+        internal static string Decompress {
+            get {
+                return ResourceManager.GetString("Decompress", resourceCulture);
             }
         }
         
@@ -589,6 +679,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Move files.
+        /// </summary>
+        internal static string MoveFiles {
+            get {
+                return ResourceManager.GetString("MoveFiles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to New Folder.
         /// </summary>
         internal static string NewFolderName {
@@ -706,7 +805,7 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to .
+        ///   Looks up a localized string similar to Introduction.
         /// </summary>
         internal static string Resource_Property_Reserved_Introduction_Name {
             get {
@@ -715,7 +814,7 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to .
+        ///   Looks up a localized string similar to Rating.
         /// </summary>
         internal static string Resource_Property_Reserved_Rating_Name {
             get {

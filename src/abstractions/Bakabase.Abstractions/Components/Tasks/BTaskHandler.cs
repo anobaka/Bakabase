@@ -14,6 +14,8 @@ public class BTaskHandler
     public readonly BTask Task;
 
     private readonly Func<Task>? _onChange;
+    private readonly Func<BTaskStatus, BTask, Task>? _onStatusChange;
+    private readonly Func<BTask, Task>? _onPercentageChanged;
     private readonly CancellationToken? _externalCt;
     private readonly IServiceProvider _rootServiceProvider;
     private CancellationTokenSource? _cts;
@@ -22,7 +24,7 @@ public class BTaskHandler
     private readonly Func<BTaskArgs, Task> _run;
     public readonly ConcurrentQueue<BTaskEvent<int>> PercentageEvents = [];
     public readonly ConcurrentQueue<BTaskEvent<string?>> ProcessEvents = [];
-    private TimeSpan ElapsedOnLastPercentageChange = TimeSpan.Zero;
+    private TimeSpan _elapsedOnLastPercentageChange = TimeSpan.Zero;
     public Stopwatch Sw { get; } = new();
 
     public DateTime? NextTimeStartAt
@@ -54,7 +56,7 @@ public class BTaskHandler
     {
         get
         {
-            if (PercentageEvents.IsEmpty || ElapsedOnLastPercentageChange == TimeSpan.Zero)
+            if (PercentageEvents.IsEmpty || _elapsedOnLastPercentageChange == TimeSpan.Zero)
             {
                 return null;
             }
@@ -70,12 +72,14 @@ public class BTaskHandler
                 return null;
             }
 
-            return ElapsedOnLastPercentageChange / lastEvent.Event * (100 - lastEvent.Event);
+            return _elapsedOnLastPercentageChange / lastEvent.Event * (100 - lastEvent.Event);
         }
     }
 
     public BTaskHandler(Func<BTaskArgs, Task> run, BTask task,
-        IServiceProvider rootServiceProvider,
+        IServiceProvider rootServiceProvider, 
+        Func<BTaskStatus, BTask, Task>? onStatusChange = null,
+        Func<BTask, Task>? onPercentageChanged = null, 
         Func<Task>? onChange = null,
         CancellationToken? ct = null)
     {
@@ -84,12 +88,15 @@ public class BTaskHandler
         _externalCt = ct;
         _onChange = onChange;
         _rootServiceProvider = rootServiceProvider;
+        _onStatusChange = onStatusChange;
+        _onPercentageChanged = onPercentageChanged;
     }
 
     public async Task UpdateTask(Action<BTask> update)
     {
         var prevProcess = Task.Process;
         var prevPercentage = Task.Percentage;
+        var prevStatus = Task.Status;
         update(Task);
 
         if (prevProcess != Task.Process)
@@ -99,8 +106,20 @@ public class BTaskHandler
 
         if (prevPercentage != Task.Percentage)
         {
-            ElapsedOnLastPercentageChange = Sw.Elapsed;
+            _elapsedOnLastPercentageChange = Sw.Elapsed;
             PercentageEvents.Enqueue(new BTaskEvent<int>(Task.Percentage));
+            if (_onPercentageChanged != null)
+            {
+                await _onPercentageChanged(Task);
+            }
+        }
+
+        if (prevStatus != Task.Status)
+        {
+            if (_onStatusChange != null)
+            {
+                await _onStatusChange(prevStatus, Task);
+            }
         }
 
         if (_onChange != null)

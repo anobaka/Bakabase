@@ -1,4 +1,4 @@
-import type { BTaskStatus } from '@/sdk/constants';
+import type { BTaskResourceType, BTaskStatus, BTaskType } from '@/sdk/constants';
 
 export type BTask = {
   id: string;
@@ -18,4 +18,7 @@ export type BTask = {
   nextTimeStartAt?: string;
   isPersistent: boolean;
   elapsed?: string;
+  type: BTaskType;
+  resourceType: BTaskResourceType;
+  resourceKeys?: any[];
 };

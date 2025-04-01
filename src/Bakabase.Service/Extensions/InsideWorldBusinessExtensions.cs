@@ -88,8 +88,6 @@ namespace Bakabase.Service.Extensions
 
             services.RegisterAllRegisteredTypeAs<IDownloader>();
 
-            services.AddSingleton<ResourceTaskManager>();
-
             services.TryAddSingleton<IwFsWatcher>();
 
             // services.AddScoped<BmCategoryProcessor>();

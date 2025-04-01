@@ -609,7 +609,7 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwF
   type: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntryTaskType;
   /** @format int32 */
   percentage: number;
-  error: string;
+  error?: string;
   backgroundTaskId: string;
   name: string;
 }
@@ -3540,10 +3540,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name StopBackgroundTask
      * @request DELETE:/background-task/{id}/run
      */
-    stopBackgroundTask: (id: string, params: RequestParams = {}) =>
+    stopBackgroundTask: (
+      id: string,
+      query?: {
+        /** @default false */
+        confirm?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/background-task/${id}/run`,
         method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -5258,21 +5266,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name ClearResourceTask
-     * @request DELETE:/resource/{id}/task
-     */
-    clearResourceTask: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/${id}/task`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
      * @name GetResourceDataForPreviewer
      * @request GET:/resource/{id}/previewer
      */
@@ -5559,36 +5552,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibrary
-     * @name StartSyncMediaLibrary
-     * @request PUT:/media-library/sync
-     */
-    startSyncMediaLibrary: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library/sync`,
-        method: "PUT",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibrary
-     * @name StopSyncMediaLibrary
-     * @request DELETE:/media-library/sync
-     */
-    stopSyncMediaLibrary: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library/sync`,
-        method: "DELETE",
         format: "json",
         ...params,
       }),

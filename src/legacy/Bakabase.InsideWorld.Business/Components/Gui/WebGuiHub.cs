@@ -41,7 +41,6 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         Task OptionsChanged(string optionsName, object options);
         Task GetResponse(BaseResponse rsp);
         Task GetIwFsEntryTask(string path, IwFsTaskInfo task);
-        Task GetResourceTask(int id, ResourceTaskInfo? task);
         Task IwFsEntriesChange(List<IwFsEntryChangeEvent> events, CancellationToken ct);
         Task GetAppUpdaterState(UpdaterState state);
     }
@@ -49,7 +48,6 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
     public class WebGuiHub : Hub<IWebGuiClient>
     {
         private readonly IwFsEntryTaskManager _iwFsEntryTaskManager;
-        private readonly ResourceTaskManager _resourceTaskManager;
         private readonly DownloadTaskService _downloadTaskService;
         private readonly InsideWorldOptionsManagerPool _optionsManagerPool;
         private readonly ILogger<WebGuiHub> _logger;
@@ -61,13 +59,12 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
         public WebGuiHub(
             IwFsEntryTaskManager iwFsEntryTaskManager,
-            ResourceTaskManager resourceTaskManager, DownloadTaskService downloadTaskService,
+            DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
             IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover,
             AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager)
         {
             _iwFsEntryTaskManager = iwFsEntryTaskManager;
-            _resourceTaskManager = resourceTaskManager;
             _downloadTaskService = downloadTaskService;
             _optionsManagerPool = optionsManagerPool;
             _logger = logger;
