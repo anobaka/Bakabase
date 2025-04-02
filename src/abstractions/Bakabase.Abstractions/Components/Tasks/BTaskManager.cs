@@ -85,6 +85,8 @@ public class BTaskManager : IAsyncDisposable
         {
             throw new Exception(_localizer.BTask_FailedToRunTaskDueToIdExisting(handler.Task.Name));
         }
+
+        _ = OnAllTasksChange();
     }
 
     private BTaskHandler _buildHandler(BTaskHandlerBuilder builder)

@@ -47,7 +47,6 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
     public class WebGuiHub : Hub<IWebGuiClient>
     {
-        private readonly IwFsEntryTaskManager _iwFsEntryTaskManager;
         private readonly DownloadTaskService _downloadTaskService;
         private readonly InsideWorldOptionsManagerPool _optionsManagerPool;
         private readonly ILogger<WebGuiHub> _logger;
@@ -58,13 +57,11 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly BTaskManager _bTaskManager;
 
         public WebGuiHub(
-            IwFsEntryTaskManager iwFsEntryTaskManager,
             DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
             IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover,
             AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager)
         {
-            _iwFsEntryTaskManager = iwFsEntryTaskManager;
             _downloadTaskService = downloadTaskService;
             _optionsManagerPool = optionsManagerPool;
             _logger = logger;

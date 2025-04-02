@@ -6,5 +6,4 @@ export default class {
   path: string;
   prevPath?: string;
   changedAt: string;
-  task?: IwFsEntryTask;
 }

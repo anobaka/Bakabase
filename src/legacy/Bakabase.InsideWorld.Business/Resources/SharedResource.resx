@@ -390,4 +390,13 @@ The version of lux is not limited.</value>
   <data name="BTask_FailedToRunTaskDueToIdExisting" xml:space="preserve">
     <value>Failed to run task: task id [{0}] exists</value>
   </data>
+  <data name="MoveFile" xml:space="preserve">
+    <value>Move [{0}] to [{1}]</value>
+  </data>
+  <data name="MoveResource" xml:space="preserve">
+    <value>Move resource</value>
+  </data>
+  <data name="MoveResourceDetail" xml:space="preserve">
+    <value>Move resource [{0}] to media library [{1}] and with new path [{2}]</value>
+  </data>
 </root>

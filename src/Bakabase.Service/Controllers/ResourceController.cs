@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.Localization;
@@ -15,7 +14,6 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
@@ -33,6 +31,7 @@ using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Components.Configuration.Abstractions;
+using Bootstrap.Components.Cryptography;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
@@ -274,7 +273,7 @@ namespace Bakabase.Service.Controllers
                 return BaseResponseBuilder.BuildBadRequest($"Resources [{string.Join(',', model.Ids)}] are not found");
             }
 
-            var mediaLibrary = await mediaLibraryService.Get(model.MediaLibraryId);
+            var mediaLibrary = await mediaLibraryService.Get(model.MediaLibraryId, MediaLibraryAdditionalItem.Category);
 
             if (mediaLibrary == null)
             {
@@ -290,77 +289,63 @@ namespace Bakabase.Service.Controllers
 
             await fsOptionsManager.SaveAsync(x => x.AddRecentMovingDestination(model.Path.StandardizePath()!));
 
-            var taskName = $"Resource:BulkMove:{DateTime.Now:HH:mm:ss}";
-            taskManager.Enqueue(new BTaskHandlerBuilder
+            var taskName = $"Resource:BulkMove:{CryptographyUtils.Md5(string.Join(',', resources.Keys))}";
+            var mediaLibraryName = mediaLibrary.Name;
+            if (mediaLibrary.Category != null)
             {
-                ResourceType = BTaskResourceType.Resource,
-                GetName = () => taskName,
-                GetMessageOnInterruption = localizer.MessageOnInterruption_MoveFiles,
-                Type = BTaskType.MoveResources,
-                ResourceKeys = model.Ids.Cast<object>().ToArray(),
-                Run = async args =>
+                mediaLibraryName = $"[{mediaLibrary.Category.Name}]{mediaLibrary.Name}";
+            }
+
+            var rand = new Random();
+            foreach (var (id, resource) in resources)
+            {
+                var targetPath = Path.Combine(model.Path, resource.FileName).StandardizePath()!;
+
+                taskManager.Enqueue(new BTaskHandlerBuilder
                 {
-                    await using var scope = args.RootServiceProvider.CreateAsyncScope();
-
-                    var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
-
-                    await args.UpdateTask(bt =>
+                    ConflictKeys = [taskName],
+                    ResourceType = BTaskResourceType.Resource,
+                    GetName = localizer.MoveResource,
+                    GetDescription = () => localizer.MoveResourceDetail(resource.Path, mediaLibraryName, targetPath),
+                    GetMessageOnInterruption = localizer.MessageOnInterruption_MoveFiles,
+                    Type = BTaskType.MoveResources,
+                    ResourceKeys = [id],
+                    Run = async args =>
                     {
-                        bt.Message = localizer.Resource_MovingTaskSummary(
-                            resources.Select(r => r.Value.FileName).ToArray(), mediaLibrary.Name, model.Path);
-                    });
+                        var fakeDelay = rand.Next(50, 300);
+                        for (var i = 0; i < 100; i++)
+                        {
+                            await args.UpdateTask(t => t.Percentage = i + 1);
+                            await Task.Delay(fakeDelay, args.CancellationToken);
+                        }
 
-                    var resourcePercentage = resources.Any() ? 100m / resources.Count : 0;
-                    var percentage = 0;
-                    for (var index = 0; index < resources.Count; index++)
-                    {
-                        var resource = resources[index];
-                        var targetPath = Path.Combine(model.Path, resource.FileName).StandardizePath()!;
-                        if (resource.IsFile)
-                        {
-                            await FileUtils.MoveAsync(resource.Path, targetPath, false,
-                                async p =>
-                                {
-                                    var np = (int) ((index + p / 100m) * resourcePercentage);
-                                    if (np != percentage)
-                                    {
-                                        await args.UpdateTask(t => t.Percentage = np);
-                                    }
-                                },
-                                PauseToken.None,
-                                args.CancellationToken);
-                        }
-                        else
-                        {
-                            await DirectoryUtils.MoveAsync(resource.Path, targetPath, false,
-                                async p =>
-                                {
-                                    var np = (int)((index + p / 100m) * resourcePercentage);
-                                    if (np != percentage)
-                                    {
-                                        await args.UpdateTask(t => t.Percentage = np);
-                                    }
-                                },
-                                PauseToken.None,
-                                args.CancellationToken);
-                        }
+                        // if (resource.IsFile)
+                        // {
+                        //     await FileUtils.MoveAsync(resource.Path, targetPath, false,
+                        //         async p => await args.UpdateTask(t => t.Percentage = p),
+                        //         PauseToken.None,
+                        //         args.CancellationToken);
+                        // }
+                        // else
+                        // {
+                        //     await DirectoryUtils.MoveAsync(resource.Path, targetPath, false,
+                        //         async p => await args.UpdateTask(t => t.Percentage = p),
+                        //         PauseToken.None,
+                        //         args.CancellationToken);
+                        // }
 
                         if (resource.MediaLibraryId != mediaLibrary.Id)
                         {
+                            await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                            var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
                             await resourceService.ChangeMediaLibrary([resource.Id], mediaLibrary.Id,
-                                new Dictionary<int, string> {{resource.Id, targetPath}});
+                                new Dictionary<int, string> { { resource.Id, targetPath } });
                         }
-
-                        // var p = 0;
-                        // while (p < 100)
-                        // {
-                        //     p++;
-                        //     await Task.Delay(100, bt.Cts.Token);
-                        //     await resourceTaskManager.Update(id, t => t.Percentage = p);
-                        // }
                     }
-                }
-            });
+                });
+            }
+
+            
 
             return BaseResponseBuilder.Ok;
         }

@@ -12,10 +12,11 @@ import {
   CloseCircleOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
-  FieldTimeOutlined, LoadingOutlined,
+  LoadingOutlined,
   PauseCircleOutlined,
   PauseOutlined,
-  PushpinOutlined, QuestionCircleOutlined,
+  PushpinOutlined,
+  QuestionCircleOutlined,
   SettingOutlined,
   StopOutlined,
 } from '@ant-design/icons';
@@ -24,14 +25,19 @@ import dayjs from 'dayjs';
 import store from '@/store';
 import { BTaskStatus } from '@/sdk/constants';
 import {
+  Badge,
   Button,
   Chip,
   Divider,
   Modal,
-  Popover, Progress, Table,
-  TableBody, TableCell,
+  Popover,
+  Progress,
+  Table,
+  TableBody,
+  TableCell,
   TableColumn,
-  TableHeader, TableRow,
+  TableHeader,
+  TableRow,
   Tooltip,
 } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
@@ -203,10 +209,10 @@ export default () => {
 
   const bTasks = store.useModelState('bTasks');
 
-  const columns = useRef<{key: string; label: string}[]>([
+  const columns = useRef<{ key: string; label: string }[]>([
     {
       key: 'name',
-      label: 'Name',
+      label: 'Task list',
     },
     {
       key: 'status',
@@ -219,6 +225,10 @@ export default () => {
     {
       key: 'progress',
       label: 'Progress',
+    },
+    {
+      key: 'startedAt',
+      label: 'Started at',
     },
     {
       key: 'elapsed',
@@ -496,7 +506,7 @@ export default () => {
   const renderTasks = () => {
     if (bTasks?.length > 0) {
       return (
-        <Table aria-label="Example table with dynamic content" removeWrapper isStriped>
+        <Table aria-label="Example table with dynamic content" removeWrapper isStriped isCompact>
           <TableHeader columns={columns.current}>
             {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
           </TableHeader>
@@ -513,19 +523,28 @@ export default () => {
                   }}
                 >
                   <TableCell>
-                    <Tooltip
-                      content={task.description}
-                    >
-                      <div>
-                        {task.isPersistent && (
-                          <>
-                            <PushpinOutlined className={'text-sm opacity-60'} />
-                            &nbsp;
-                          </>
-                        )}
-                        {task.name}
-                      </div>
-                    </Tooltip>
+                    <div className={'flex items-center gap-1'}>
+                      {task.isPersistent ? (
+                        <Badge
+                          isOneChar
+                          variant={'faded'}
+                          color="default"
+                          size={'sm'}
+                          content={<PushpinOutlined className={'text-xs opacity-60'} />}
+                          placement="top-left"
+                        >
+                          &nbsp;{task.name}
+                        </Badge>
+                      ) : task.name}
+                      {task.description && (
+                        <Tooltip
+                          color={'secondary'}
+                          content={task.description}
+                        >
+                          <QuestionCircleOutlined className={'text-base opacity-60'} />
+                        </Tooltip>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {renderTaskStatus(task)}
@@ -552,6 +571,11 @@ export default () => {
                       >{task.percentage}%
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {task.startedAt && (
+                      dayjs(task.startedAt).format('HH:mm:ss')
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
@@ -647,9 +671,9 @@ export default () => {
         )}
       >
         <div className={'flex flex-col gap-2 p-2 min-w-[300px]'}>
-          <div className={'font-bold'}>{t('Task list')}</div>
-          <Divider orientation={'horizontal'} />
-          <div className="flex flex-col gap-1 max-h-[600px] overflow-auto">
+          {/* <div className={'font-bold'}>{t('Task list')}</div> */}
+          {/* <Divider orientation={'horizontal'} /> */}
+          <div className="flex flex-col gap-1 max-h-[600px] mt-2 overflow-auto">
             {renderTasks()}
           </div>
           <Divider orientation={'horizontal'} />

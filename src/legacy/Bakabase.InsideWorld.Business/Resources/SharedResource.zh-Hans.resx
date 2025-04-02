@@ -390,4 +390,13 @@
   <data name="BTask_FailedToRunTaskDueToIdExisting" xml:space="preserve">
     <value>无法运行任务：任务id [{0}]已存在</value>
   </data>
+  <data name="MoveFile" xml:space="preserve">
+    <value>移动 [{0}] 至 [{1}] </value>
+  </data>
+  <data name="MoveResource" xml:space="preserve">
+    <value>移动资源</value>
+  </data>
+  <data name="MoveResourceDetail" xml:space="preserve">
+    <value>将资源 [{0}] 移动至媒体库 [{1}] 下，新路径为 [{2}]</value>
+  </data>
 </root>

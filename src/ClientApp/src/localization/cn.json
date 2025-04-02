@@ -1644,5 +1644,12 @@
   "Please provide a valid value type": "请提供有效的值类型",
   "Please provide a valid property type": "请提供有效的属性类型",
   "Please provide a valid variable": "请提供有效的变量",
-  "Find and replace are required": "查找和替换是必填的"
+  "Find and replace are required": "查找和替换是必填的",
+  "Process": "过程",
+  "Progress": "进度",
+  "Started at": "开始时间",
+  "Elapsed": "已用时间",
+  "Estimate remaining time": "预计剩余时间",
+  "Next time start at": "下次开始时间",
+  "Waiting": "等待中"
 }

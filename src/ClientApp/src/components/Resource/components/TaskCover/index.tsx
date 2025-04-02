@@ -37,8 +37,11 @@ export default ({
   useEffect(() => {
     const unsubscribe = store.subscribe(() => {
       const tasks = store.getState()
-        .backgroundTasks
-        ?.filter((t) => t.resourceType == BTaskResourceType.Resource && t.resourceKeys?.some(x => x == resource.id)) ?? [];
+        .bTasks
+        ?.filter((t) =>
+          t.resourceType == BTaskResourceType.Resource && t.resourceKeys?.some(x => x == resource.id) &&
+          (t.status == BTaskStatus.Running || t.status == BTaskStatus.Paused || t.status == BTaskStatus.Error || t.status == BTaskStatus.NotStarted || t.status == BTaskStatus.Completed),
+        ) ?? [];
       if (tasks.length > 0 || tasksRef.current.length > 0) {
         const taskIds = _.uniq(tasks.concat(tasksRef.current).map(t => t.id));
         const actions: Set<Action> = new Set();
@@ -50,7 +53,8 @@ export default ({
             log('TaskChanged', differences, 'current: ', task, 'previous: ', prevTask);
             actions.add(Action.Update);
 
-            if (prevTask?.percentage != task?.percentage && task?.percentage == 100) {
+            if (prevTask?.status != task?.status && task?.status == BTaskStatus.Completed) {
+              log('need reload');
               actions.add(Action.Reload);
             }
           }
@@ -70,24 +74,25 @@ export default ({
     };
   }, []);
 
-  if (tasksRef.current.length == 0) {
-    return null;
-  }
-
   const displayingTask = _.sortBy(tasksRef.current, x => {
     switch (x.status) {
+      case BTaskStatus.Error:
+        return -1;
       case BTaskStatus.Running:
         return 0;
       case BTaskStatus.Paused:
         return 1;
-      case BTaskStatus.Error:
-        return -1;
-      case BTaskStatus.Completed:
-      case BTaskStatus.Stopped:
       case BTaskStatus.NotStarted:
         return 2;
+      case BTaskStatus.Completed:
+      case BTaskStatus.Stopped:
+        return 999;
     }
-  })[0]!;
+  }).filter(t => t.status == BTaskStatus.Running || t.status == BTaskStatus.Paused || t.status == BTaskStatus.Error || t.status == BTaskStatus.NotStarted)[0];
+
+  if (!displayingTask) {
+    return null;
+  }
 
   return (
     <div className={'absolute top-0 left-0 z-20 w-full h-full flex flex-col items-center justify-center gap-3'}>
@@ -124,7 +129,7 @@ export default ({
         </div>
       ) : (
         <div className={'font-bold z-20'}>
-          {`${displayingTask.percentage}%`}
+          {displayingTask.status == BTaskStatus.NotStarted ? t('Waiting') : `${displayingTask.percentage}%`}
         </div>
       )}
       {displayingTask.error ? null : (

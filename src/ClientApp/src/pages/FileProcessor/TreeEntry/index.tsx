@@ -5,11 +5,10 @@ import { diff } from 'deep-diff';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
 import { CloseCircleOutlined, EyeOutlined, FileOutlined, InfoCircleOutlined } from '@ant-design/icons';
-import _ from 'lodash';
 import EditableFileName from './components/EditableFileName';
 import OperationButton from './components/OperationButton';
 import RightOperations from './components/RightOperations';
-import { BTaskStatus, BTaskType, IwFsEntryTaskType, IwFsType } from '@/sdk/constants';
+import { BTaskStatus, IwFsType } from '@/sdk/constants';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
 import type { IEntryFilter } from '@/core/models/FileExplorer/Entry';
@@ -23,7 +22,6 @@ import { Button, Chip, Modal, Spinner } from '@/components/bakaui';
 import TailingOperations from './components/TailingOperations';
 import LeftIcon from './components/LeftIcon';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import store from '@/store';
 import { BTaskStopButton } from '@/components/BTask';
 
 export type Capability =
@@ -85,26 +83,6 @@ const TreeEntry = (props: TreeEntryProps) => {
   const hashRef = useRef(uuidv4());
   const [loading, setLoading] = useState(false);
   const pendingRenderingRef = useRef(false);
-
-  const bTasks = store.useModelState('bTasks');
-  const tasks = bTasks
-    .filter(x => (x.type == BTaskType.Decompress || x.type == BTaskType.MoveFiles) && x.resourceKeys?.some(y => y == entryRef.current.path) && (
-      x.status == BTaskStatus.Running || x.status == BTaskStatus.Paused || x.status == BTaskStatus.Error
-    )) ?? [];
-  const displayingTask = _.sortBy(tasks, x => {
-    switch (x.status) {
-      case BTaskStatus.Running:
-        return 0;
-      case BTaskStatus.Paused:
-        return 1;
-      case BTaskStatus.Error:
-        return -1;
-      case BTaskStatus.Completed:
-      case BTaskStatus.Stopped:
-      case BTaskStatus.NotStarted:
-        return 2;
-    }
-  })[0]!;
 
   useUpdateEffect(() => {
     setEntry(propsEntry);
@@ -393,8 +371,8 @@ const TreeEntry = (props: TreeEntryProps) => {
   const { actions } = entryRef.current;
 
   const renderTaskError = () => {
-    if (displayingTask && displayingTask.error) {
-      const text = `${displayingTask.name}:${displayingTask.error}`;
+    if (entryRef.current.task && entryRef.current.task.error) {
+      const text = `${entryRef.current.task.name}:${entryRef.current.task.error}`;
       return (
         <Button
           size={'sm'}
@@ -446,7 +424,7 @@ const TreeEntry = (props: TreeEntryProps) => {
   }, []);
 
   // log('Rendering', 'children width', entryRef.current.childrenWidth, domRef.current?.clientWidth, domRef.current, entryRef.current);
-  // log(132132321, displayingTask, tasks, bTasks);
+  // log(132132321, entryRef.current.task);
 
   return (
     <div
@@ -470,21 +448,25 @@ const TreeEntry = (props: TreeEntryProps) => {
           {entryRef.current.type == IwFsType.Invalid && (
             <div className="invalid-cover" />
           )}
-          {displayingTask && !displayingTask.error && (
+          {entryRef.current.task && !entryRef.current.task.error && (
             <div className="running-task-cover">
               <div
                 className="progress"
               >
-                <div className={'bar'} style={{ width: `${displayingTask.percentage}%` }} />
+                <div className={'bar'} style={{ width: `${entryRef.current.task.percentage}%` }} />
                 <Spinner size="sm" />
                 &nbsp;
-                <div className="percentage">{displayingTask.name}&nbsp;{displayingTask.percentage}%</div>
+                <div className="percentage">
+                  {entryRef.current.task.name}
+                  &nbsp;
+                  {entryRef.current.task.status == BTaskStatus.NotStarted ? t('Waiting') : `${entryRef.current.task.percentage}%`}
+                </div>
               </div>
               <div className="stop">
                 <BTaskStopButton
                   color={'warning'}
                   size={'small'}
-                  taskId={displayingTask.id}
+                  taskId={entryRef.current.task.id}
                 />
               </div>
             </div>

@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 {
+    [Obsolete("", error: true)]
     public class IwFsEntryTaskManager
     {
         private readonly ConcurrentDictionary<string, IwFsTaskInfo> _tasks = new();

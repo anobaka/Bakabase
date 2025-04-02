@@ -5,6 +5,7 @@ import { uuidv4 } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import type RootEntry from '@/core/models/FileExplorer/RootEntry';
 import BusinessConstants from '@/components/BusinessConstants';
+import type { BTask } from '@/core/models/BTask';
 
 const DefaultMaxChildrenHeight = 600;
 const MainLineHeight = 35;
@@ -22,7 +23,7 @@ export enum EntryError {
 
 export enum EntryProperty {
   ChildrenCount = 1,
-  TaskInfo = 2,
+  // TaskInfo = 2,
   Size = 3,
 }
 
@@ -229,17 +230,17 @@ export class Entry {
             }
             break;
           }
-          case EntryProperty.TaskInfo: {
-            // @ts-ignore
-            const taskInfo = await BApi.file.getEntryTaskInfo({ path: this.path }, { ignoreError: () => true });
-            if (taskInfo.code) {
-              this.errors[EntryError.InitializationFailed] = taskInfo.message!;
-            } else {
-              // @ts-ignore
-              this.task = taskInfo.data;
-            }
-            break;
-          }
+          // case EntryProperty.TaskInfo: {
+          //   // @ts-ignore
+          //   const taskInfo = await BApi.file.getEntryTaskInfo({ path: this.path }, { ignoreError: () => true });
+          //   if (taskInfo.code) {
+          //     this.errors[EntryError.InitializationFailed] = taskInfo.message!;
+          //   } else {
+          //     // @ts-ignore
+          //     this.task = taskInfo.data;
+          //   }
+          //   break;
+          // }
         }
       }
     } catch (e) {
@@ -302,7 +303,7 @@ export class Entry {
 
   // duration?: number = undefined;
 
-  task?: IwFsEntryTask;
+  task?: BTask;
 
   _ref?: IEntryRef;
 
