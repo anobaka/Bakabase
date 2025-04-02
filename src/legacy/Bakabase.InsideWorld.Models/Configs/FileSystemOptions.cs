@@ -41,6 +41,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             public record Target
             {
                 public string Path { get; set; } = string.Empty;
+                public bool Overwrite { get; set; } = false;
                 public List<string> Sources { get; set; } = new();
             }
         }

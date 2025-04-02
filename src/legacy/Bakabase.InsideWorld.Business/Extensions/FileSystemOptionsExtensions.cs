@@ -42,7 +42,8 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 options.Targets = targetDirectories.Select(a => new FileSystemOptions.FileMoverOptions.Target
                 {
                     Path = a.Value,
-                    Sources = options.Targets.FirstOrDefault(b => b.Path == a.Key)!.Sources
+                    Sources = options.Targets.FirstOrDefault(b => b.Path == a.Key)!.Sources,
+                    Overwrite = options.Targets.FirstOrDefault(b => b.Path == a.Key)!.Overwrite
                 }).ToList();
 
                 foreach (var target in options.Targets)

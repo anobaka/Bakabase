@@ -134,13 +134,13 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
 
                                     if (fileSet.Contains(source))
                                     {
-                                        await FileUtils.MoveAsync(source, dest, false, (Func<int, Task>) ProgressChange,
-                                            pt, ct);
+                                        await FileUtils.MoveAsync(source, dest, target.Overwrite, ProgressChange, pt,
+                                            ct);
                                     }
                                     else
                                     {
-                                        await DirectoryUtils.MoveAsync(source, dest, false,
-                                            (Func<int, Task>) ProgressChange, pt, ct);
+                                        await DirectoryUtils.MoveAsync(source, dest, target.Overwrite, ProgressChange,
+                                            pt, ct);
                                     }
 
                                     doneItemCount++;
