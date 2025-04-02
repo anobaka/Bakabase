@@ -679,11 +679,38 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Move [{0}] to [{1}].
+        /// </summary>
+        internal static string MoveFile {
+            get {
+                return ResourceManager.GetString("MoveFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Move files.
         /// </summary>
         internal static string MoveFiles {
             get {
                 return ResourceManager.GetString("MoveFiles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Move resource.
+        /// </summary>
+        internal static string MoveResource {
+            get {
+                return ResourceManager.GetString("MoveResource", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Move resource [{0}] to media library [{1}] and with new path [{2}].
+        /// </summary>
+        internal static string MoveResourceDetail {
+            get {
+                return ResourceManager.GetString("MoveResourceDetail", resourceCulture);
             }
         }
         

@@ -177,6 +177,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           });
         coverRef.current?.load(true);
         playableFilesRef.current?.initialize();
+        forceUpdate();
       }
     } else {
       throw new Error(newResourceRsp.message!);
@@ -338,6 +339,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   }
 
   log('selectedResourceIds', selectedResourceIds);
+  log(resource);
 
   return (
     <div

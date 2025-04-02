@@ -188,15 +188,16 @@ public class BTaskHandler
             Sw.Start();
         };
 
+        await UpdateTask(t =>
+        {
+            t.Status = BTaskStatus.Running;
+            t.Percentage = 0;
+            t.Error = null;
+            t.StartedAt = DateTime.Now;
+        });
+
         _ = System.Threading.Tasks.Task.Run(async () =>
         {
-            await UpdateTask(t =>
-            {
-                t.Status = BTaskStatus.Running;
-                t.Percentage = 0;
-                t.Error = null;
-                t.StartedAt = DateTime.Now;
-            });
             try
             {
                 await _run(new BTaskArgs(_pts.Token, ct, Task, UpdateTask, _rootServiceProvider));

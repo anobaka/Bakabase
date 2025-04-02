@@ -2,7 +2,9 @@
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.VisualBasic;
+using System.Security.AccessControl;
 
 namespace Bakabase.Abstractions.Models.View;
 
@@ -28,6 +30,8 @@ public record BTaskViewModel
     public BTaskLevel Level { get; set; }
     public BTaskType Type { get; set; }
     public object[]? ResourceKeys { get; set; }
+    public BTaskResourceType ResourceType { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     public BTaskViewModel(BTaskHandler handler, string? reasonForUnableToStart)
     {
@@ -49,6 +53,8 @@ public record BTaskViewModel
         EnableAfter = handler.Task.EnableAfter > DateTime.Now ? handler.Task.EnableAfter : null;
         Type = handler.Task.Type;
         ResourceKeys = handler.Task.ResourceKeys;
+        ResourceType = handler.Task.ResourceType;
+        CreatedAt = handler.Task.CreatedAt;
 
         Elapsed = handler.Sw.Elapsed == TimeSpan.Zero ? null : handler.Sw.Elapsed;
         ReasonForUnableToStart = reasonForUnableToStart;

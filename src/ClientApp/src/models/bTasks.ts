@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import type { BTask } from '@/core/models/BTask';
 
 export default {
@@ -5,17 +6,20 @@ export default {
 
   // 定义改变该模型状态的纯函数
   reducers: {
-    setState: (prevState, tasks) => tasks.slice(),
+    setState: (prevState, tasks: BTask[]) => {
+      return _.sortBy(tasks, x => x.createdAt);
+    },
     remove: (prevState, id) => {
       return prevState.filter((t) => t.id != id);
     },
-    update: (prevState, task) => {
+    update: (prevState: BTask[], task: BTask) => {
       const idx = prevState.findIndex((t) => t.id == task.id);
-      const newState = prevState.slice();
+      let newState = prevState.slice();
       if (idx > -1) {
         newState[idx] = task;
       } else {
         newState.push(task);
+        newState = _.sortBy(newState, x => x.createdAt);
       }
       return newState;
     },

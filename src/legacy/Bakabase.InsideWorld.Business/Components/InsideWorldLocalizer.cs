@@ -110,6 +110,12 @@ namespace Bakabase.InsideWorld.Business.Components
         public string Unknown() => this[nameof(Unknown)];
         public string Decompress() => this[nameof(Decompress)];
         public string MoveFiles() => this[nameof(MoveFiles)];
+        public string MoveFile(string src, string dest) => this[nameof(MoveFile), src, dest];
+
+        public string MoveResourceDetail(string srcPath, string mediaLibraryName, string destPath) =>
+            this[nameof(MoveResourceDetail), srcPath, mediaLibraryName, destPath];
+
+        public string MoveResource() => this[nameof(MoveResource)];
 
         public string BTask_Name(string key) => this[$"{nameof(BTask_Name)}_{key}"];
 
