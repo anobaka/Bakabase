@@ -9,7 +9,7 @@ import AnimatedArrow from '@/components/AnimatedArrow';
 import BApi from '@/sdk/BApi';
 import store from '@/store';
 import ClickableIcon from '@/components/ClickableIcon';
-import { Button, Switch, Tooltip } from '@/components/bakaui';
+import { Button, Checkbox, Switch, Tooltip } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
 
@@ -17,6 +17,7 @@ interface IValue {
   targets: {
     path: string;
     sources: string[];
+    overwrite: boolean;
   }[];
   enabled: boolean;
   delay?: string;
@@ -25,7 +26,9 @@ interface IValue {
 class Value implements IValue {
   delay?: string;
   enabled: boolean = false;
-  targets: { path: string; sources: string[] }[] = [];
+  targets: {
+    path: string; sources: string[]; overwrite: boolean;
+  }[] = [];
 }
 
 export default () => {
@@ -94,6 +97,7 @@ export default () => {
       targets.push({
         path: targetPath,
         sources: [],
+        overwrite: false,
       });
       save({
         targets,
@@ -107,7 +111,7 @@ export default () => {
   const updateTarget = (targetPath, newTargetPath, cb = () => {
   }) => {
     const targetIndex = targets.findIndex((a) => a.path == targetPath);
-    const target = targets[targetIndex];
+    const target = targets[targetIndex]!;
     target.path = newTargetPath;
     targets.splice(targetIndex, 1, target);
     save({
@@ -203,6 +207,16 @@ export default () => {
     );
   };
 
+  const setOverwrite = (targetPath: string, overwrite: boolean) => {
+    const targetIndex = targets.findIndex((a) => a.path == targetPath);
+    const target = targets[targetIndex]!;
+    target.overwrite = overwrite;
+    targets.splice(targetIndex, 1, target);
+    save({
+      targets,
+    });
+  };
+
   const renderQuickEditMode = () => {
     return (
       <Table
@@ -226,6 +240,7 @@ export default () => {
                 >{t('Add')}</Button>
               );
             }
+            const target = targets[path];
             return (
               <div className={'target'}>
                 <Input
@@ -310,7 +325,7 @@ export default () => {
         <Table.Column
           title={t('Target')}
           dataIndex={'target'}
-          cell={(target, i) => {
+          cell={(target, i, r) => {
             // console.log(`rendering table col ${i}-1`, target, i);
             return (
               <div className={'target'}>
@@ -356,7 +371,14 @@ export default () => {
                 </div>
                 {target && (
                   <div className={'flex items-center gap-1'}>
-                    <Tooltip content={t('Add source path')} >
+                    <Tooltip content={t('Overwrite files in target path')}>
+                      <Checkbox
+                        checked={r.overwrite}
+                        onValueChange={v => setOverwrite(target, v)}
+                        size={'sm'}
+                      >{t('Overwrite')}</Checkbox>
+                    </Tooltip>
+                    <Tooltip content={t('Add source path')}>
                       <Button
                         size={'sm'}
                         variant={'light'}
