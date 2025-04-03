@@ -10,7 +10,6 @@ using Bakabase.InsideWorld.Business.Components.Legacy;
 using Bakabase.InsideWorld.Business.Components.Modules.Alias;
 using Bakabase.InsideWorld.Business.Components.Modules.CustomProperty;
 using Bakabase.InsideWorld.Business.Components.ReservedProperty;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.BackgroundTask;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Enhancer.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
