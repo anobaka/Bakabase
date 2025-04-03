@@ -1,5 +1,5 @@
 import { immerable } from 'immer';
-import type { IwFsEntryTaskOperationOnComplete, IwFsEntryTaskType, ResourceExistence } from '@/sdk/constants';
+import type { ResourceExistence } from '@/sdk/constants';
 import { IwFsType } from '@/sdk/constants';
 import { uuidv4 } from '@/components/utils';
 import BApi from '@/sdk/BApi';
@@ -37,16 +37,6 @@ export enum EntryAsyncOperationStatus {
   NotStarted = 0,
   Running = 1,
   Completed = 2,
-}
-
-export class IwFsEntryTask {
-  path: string;
-  type: IwFsEntryTaskType;
-  percentage: number;
-  error: string;
-  operationOnComplete?: IwFsEntryTaskOperationOnComplete;
-  backgroundTaskId: string;
-  name: string;
 }
 
 export class ResourceExistenceResult {

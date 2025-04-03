@@ -83,14 +83,6 @@ export default class UIHubConnection {
       }
     });
 
-    conn.on('GetIwFsEntryTask', (path, task) => {
-      if (task) {
-        store.dispatch.iwFsEntryTasks.update(task);
-      } else {
-        store.dispatch.iwFsEntryTasks.remove(path);
-      }
-    });
-
     conn.on('IwFsEntriesChange', events => {
       // this.log(events);
       store.dispatch.iwFsEntryChangeEvents.addRange(events);

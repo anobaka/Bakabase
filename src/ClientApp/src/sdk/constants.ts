@@ -8,12 +8,8 @@ export enum ResourceTaskOperationOnComplete {RemoveOnResourceView = 1}
 export const resourceTaskOperationOnCompletes = Object.keys(ResourceTaskOperationOnComplete).filter(k => typeof ResourceTaskOperationOnComplete[k] === 'number').map(t => ({label: t, value: ResourceTaskOperationOnComplete[t]}));
 export enum IwFsAttribute {Hidden = 1}
 export const iwFsAttributes = Object.keys(IwFsAttribute).filter(k => typeof IwFsAttribute[k] === 'number').map(t => ({label: t, value: IwFsAttribute[t]}));
-export enum IwFsEntryChangeType {Created = 1, Renamed = 2, Changed = 3, Deleted = 4, TaskChanged = 5}
+export enum IwFsEntryChangeType {Created = 1, Renamed = 2, Changed = 3, Deleted = 4}
 export const iwFsEntryChangeTypes = Object.keys(IwFsEntryChangeType).filter(k => typeof IwFsEntryChangeType[k] === 'number').map(t => ({label: t, value: IwFsEntryChangeType[t]}));
-export enum IwFsEntryTaskOperationOnComplete {None = 0}
-export const iwFsEntryTaskOperationOnCompletes = Object.keys(IwFsEntryTaskOperationOnComplete).filter(k => typeof IwFsEntryTaskOperationOnComplete[k] === 'number').map(t => ({label: t, value: IwFsEntryTaskOperationOnComplete[t]}));
-export enum IwFsEntryTaskType {Decompressing = 1, Moving = 2}
-export const iwFsEntryTaskTypes = Object.keys(IwFsEntryTaskType).filter(k => typeof IwFsEntryTaskType[k] === 'number').map(t => ({label: t, value: IwFsEntryTaskType[t]}));
 export enum IwFsType {Unknown = 0, Directory = 100, Image = 200, CompressedFileEntry = 300, CompressedFilePart = 400, Symlink = 500, Video = 600, Audio = 700, Drive = 1000, Invalid = 10000}
 export const iwFsTypes = Object.keys(IwFsType).filter(k => typeof IwFsType[k] === 'number').map(t => ({label: t, value: IwFsType[t]}));
 export enum DownloaderStatus {JustCreated = 0, Starting = 100, Downloading = 200, Complete = 300, Failed = 400, Stopping = 500, Stopped = 600}

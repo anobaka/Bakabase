@@ -3,7 +3,6 @@ import { createStore } from 'ice';
 import clientApp from './models/clientApp';
 import Optionses from './models/options';
 import backgroundTasks from '@/models/backgroundTasks';
-import iwFsEntryTasks from '@/models/iwFsEntryTasks';
 import icons from '@/models/icons';
 import downloadTasks from '@/models/downloadTasks';
 import iwFsEntryChangeEvents from '@/models/iwFsEntryChangeEvents';
@@ -31,7 +30,6 @@ const {
 
 export default createStore({
   backgroundTasks,
-  iwFsEntryTasks,
   icons,
   downloadTasks,
   clientApp,

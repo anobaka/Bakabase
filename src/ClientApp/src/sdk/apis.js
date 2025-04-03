@@ -4386,52 +4386,6 @@ export const GetTopLevelFileSystemEntryNamesURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetEntryTaskInfo
- * url: GetEntryTaskInfoURL
- * method: GetEntryTaskInfo_TYPE
- * raw_url: GetEntryTaskInfo_RAW_URL
- * @param path - 
- */
-export const GetEntryTaskInfo = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/file/task-info'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['path'] !== undefined) {
-    queryParameters['path'] = parameters['path']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetEntryTaskInfo_RAW_URL = function() {
-  return '/file/task-info'
-}
-export const GetEntryTaskInfo_TYPE = function() {
-  return 'get'
-}
-export const GetEntryTaskInfoURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/file/task-info'
-  if (parameters['path'] !== undefined) {
-    queryParameters['path'] = parameters['path']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: GetIwFsInfo
  * url: GetIwFsInfoURL
  * method: GetIwFsInfo_TYPE

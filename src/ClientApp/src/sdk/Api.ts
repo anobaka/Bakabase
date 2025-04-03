@@ -603,17 +603,6 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwF
   childrenCount: number;
 }
 
-export interface BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo {
-  path: string;
-  /** [1: Decompressing, 2: Moving] */
-  type: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntryTaskType;
-  /** @format int32 */
-  percentage: number;
-  error?: string;
-  backgroundTaskId: string;
-  name: string;
-}
-
 /**
  * [1: Hidden]
  * @format int32
@@ -638,12 +627,6 @@ export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
   lastWriteTime?: string;
   passwordsForDecompressing: string[];
 }
-
-/**
- * [1: Decompressing, 2: Moving]
- * @format int32
- */
-export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntryTaskType = 1 | 2;
 
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview {
   entries: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[];
@@ -729,6 +712,7 @@ export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptio
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptionsTarget {
   path: string;
+  overwrite: boolean;
   sources: string[];
 }
 
@@ -2144,13 +2128,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry {
@@ -5755,30 +5732,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/file/top-level-file-system-entries`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags File
-     * @name GetEntryTaskInfo
-     * @request GET:/file/task-info
-     */
-    getEntryTaskInfo: (
-      query?: {
-        path?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsTaskInfo,
-        any
-      >({
-        path: `/file/task-info`,
         method: "GET",
         query: query,
         format: "json",
