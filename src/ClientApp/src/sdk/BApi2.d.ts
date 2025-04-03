@@ -148,39 +148,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/background-task/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartBackgroundTask"];
+        delete: operations["StopBackgroundTask"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/background-task/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PauseBackgroundTask"];
+        delete: operations["ResumeBackgroundTask"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/background-task": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetAllBackgroundTasks"];
-        put?: never;
-        post?: never;
-        delete: operations["ClearInactiveBackgroundTasks"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/background-task/by-name": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetBackgroundTaskByName"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/background-task/{id}/stop": {
         parameters: {
             query?: never;
             header?: never;
@@ -190,7 +190,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["StopBackgroundTask"];
+        delete: operations["CleanInactiveBackgroundTasks"];
         options?: never;
         head?: never;
         patch?: never;
@@ -206,7 +206,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["RemoveBackgroundTask"];
+        delete: operations["CleanBackgroundTask"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1161,22 +1161,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/file/task-info": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetEntryTaskInfo"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/file/iwfs-info": {
         parameters: {
             query?: never;
@@ -1705,22 +1689,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/media-library/sync": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["StartSyncMediaLibrary"];
-        post?: never;
-        delete: operations["StopSyncMediaLibrary"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/media-library/path-configuration-validation": {
         parameters: {
             query?: never;
@@ -1991,6 +1959,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["PatchEnhancerOptions"];
+        trace?: never;
+    };
+    "/options/task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTaskOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PatchTaskOptions"];
         trace?: never;
     };
     "/password": {
@@ -2340,22 +2324,6 @@ export interface paths {
         put: operations["MoveResources"];
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/resource/{id}/task": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["ClearResourceTask"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2735,6 +2703,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        "Bakabase.Abstractions.Components.Configuration.TaskOptions": {
+            tasks?: components["schemas"]["Bakabase.Abstractions.Models.Db.BTaskDbModel"][];
+        };
+        "Bakabase.Abstractions.Models.Db.BTaskDbModel": {
+            id: string;
+            /** Format: date-span */
+            interval: string;
+            /** Format: date-time */
+            enableAfter?: string;
+        };
         "Bakabase.Abstractions.Models.Db.CategoryComponent": {
             /** Format: int32 */
             id: number;
@@ -3218,15 +3196,6 @@ export interface components {
             /** Format: int32 */
             childrenCount: number;
         };
-        "Bakabase.InsideWorld.Business.Components.FileExplorer.Information.IwFsTaskInfo": {
-            path: string;
-            type: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsEntryTaskType"];
-            /** Format: int32 */
-            percentage: number;
-            error: string;
-            backgroundTaskId: string;
-            name: string;
-        };
         /**
          * Format: int32
          * @description [1: Hidden]
@@ -3250,12 +3219,6 @@ export interface components {
             lastWriteTime?: string;
             passwordsForDecompressing: string[];
         };
-        /**
-         * Format: int32
-         * @description [1: Decompressing, 2: Moving]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsEntryTaskType": 1 | 2;
         "Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsPreview": {
             entries: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsEntry"][];
             directoryChain: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsEntry"][];
@@ -3267,24 +3230,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsType": 0 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 1000 | 10000;
-        "Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto": {
-            id: string;
-            name: string;
-            /** Format: date-time */
-            startDt: string;
-            status: components["schemas"]["Bakabase.InsideWorld.Models.Constants.BackgroundTaskStatus"];
-            message: string;
-            /** Format: int32 */
-            percentage: number;
-            currentProcess: string;
-            level: components["schemas"]["Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskLevel"];
-        };
-        /**
-         * Format: int32
-         * @description [1: Default, 2: Critical]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskLevel": 1 | 2;
         "Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions": {
             /** Format: date-time */
             lastSyncDt: string;
@@ -3336,6 +3281,7 @@ export interface components {
         };
         "Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileMoverOptions+Target": {
             path: string;
+            overwrite: boolean;
             sources: string[];
         };
         "Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileProcessorOptions": {
@@ -3455,12 +3401,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty": 1 | 2 | 3 | 6;
-        /**
-         * Format: int32
-         * @description [1: Running, 2: Complete, 3: Failed]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.BackgroundTaskStatus": 1 | 2 | 3;
         /**
          * Format: int32
          * @description [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
@@ -4269,12 +4209,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Compression.CompressedFileEntry"][];
         };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto"][];
-        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Aos.PreviewerItem]": {
             /** Format: int32 */
             code: number;
@@ -4443,6 +4377,12 @@ export interface components {
             /** Format: int32 */
             pageSize: number;
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.TaskOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Components.Configuration.TaskOptions"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions]": {
             /** Format: int32 */
             code: number;
@@ -4515,12 +4455,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileExplorer.Information.IwFsEntryLazyInfo"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.FileExplorer.Information.IwFsTaskInfo]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileExplorer.Information.IwFsTaskInfo"];
-        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsEntry]": {
             /** Format: int32 */
             code: number;
@@ -4532,12 +4466,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsPreview"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions]": {
             /** Format: int32 */
@@ -5621,75 +5549,7 @@ export interface operations {
             };
         };
     };
-    GetAllBackgroundTasks: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto]"];
-                };
-            };
-        };
-    };
-    ClearInactiveBackgroundTasks: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    GetBackgroundTaskByName: {
-        parameters: {
-            query?: {
-                name?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Tasks.BackgroundTaskDto]"];
-                };
-            };
-        };
-    };
-    StopBackgroundTask: {
+    StartBackgroundTask: {
         parameters: {
             query?: never;
             header?: never;
@@ -5713,7 +5573,103 @@ export interface operations {
             };
         };
     };
-    RemoveBackgroundTask: {
+    StopBackgroundTask: {
+        parameters: {
+            query?: {
+                confirm?: boolean;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    PauseBackgroundTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ResumeBackgroundTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CleanInactiveBackgroundTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CleanBackgroundTask: {
         parameters: {
             query?: never;
             header?: never;
@@ -7644,30 +7600,6 @@ export interface operations {
             };
         };
     };
-    GetEntryTaskInfo: {
-        parameters: {
-            query?: {
-                path?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.FileExplorer.Information.IwFsTaskInfo]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.FileExplorer.Information.IwFsTaskInfo]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.FileExplorer.Information.IwFsTaskInfo]"];
-                };
-            };
-        };
-    };
     GetIwFsInfo: {
         parameters: {
             query?: {
@@ -8630,50 +8562,6 @@ export interface operations {
             };
         };
     };
-    StartSyncMediaLibrary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    StopSyncMediaLibrary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
     ValidatePathConfiguration: {
         parameters: {
             query?: never;
@@ -9441,6 +9329,57 @@ export interface operations {
             };
         };
     };
+    GetTaskOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.TaskOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.TaskOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Components.Configuration.TaskOptions]"];
+                };
+            };
+        };
+    };
+    PatchTaskOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Components.Configuration.TaskOptions"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Components.Configuration.TaskOptions"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Components.Configuration.TaskOptions"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Components.Configuration.TaskOptions"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     SearchPasswords: {
         parameters: {
             query?: {
@@ -10123,30 +10062,6 @@ export interface operations {
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ResourceMoveRequestModel"];
             };
         };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    ClearResourceTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

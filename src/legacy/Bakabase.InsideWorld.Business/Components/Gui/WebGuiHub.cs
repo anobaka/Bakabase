@@ -40,7 +40,6 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         Task GetIncrementalData(string key, object data);
         Task OptionsChanged(string optionsName, object options);
         Task GetResponse(BaseResponse rsp);
-        Task GetIwFsEntryTask(string path, IwFsTaskInfo task);
         Task IwFsEntriesChange(List<IwFsEntryChangeEvent> events, CancellationToken ct);
         Task GetAppUpdaterState(UpdaterState state);
     }

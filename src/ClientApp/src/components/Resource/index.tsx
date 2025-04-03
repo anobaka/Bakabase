@@ -1,11 +1,16 @@
-
 import { Message } from '@alifd/next';
 import type { CSSProperties } from 'react';
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type Queue from 'queue';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
-import { ApartmentOutlined, DisconnectOutlined, FileUnknownOutlined, PlayCircleOutlined, PushpinOutlined } from '@ant-design/icons';
+import {
+  ApartmentOutlined,
+  DisconnectOutlined,
+  FileUnknownOutlined,
+  PlayCircleOutlined,
+  PushpinOutlined,
+} from '@ant-design/icons';
 import { ControlledMenu } from '@szhsin/react-menu';
 import styles from './index.module.scss';
 import { OpenResourceDirectory } from '@/sdk/apis';
@@ -21,7 +26,7 @@ import type { Property, Resource as ResourceModel } from '@/core/models/Resource
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Button, Chip, Link, Tooltip } from '@/components/bakaui';
 import {
-  IwFsEntryTaskType,
+  BTaskStatus,
   PropertyPool,
   ResourceAdditionalItem,
   ResourceDisplayContent,
@@ -33,6 +38,7 @@ import store from '@/store';
 import type { PlayableFilesRef } from '@/components/Resource/components/PlayableFiles';
 import PlayableFiles from '@/components/Resource/components/PlayableFiles';
 import ContextMenuItems from '@/components/Resource/components/ContextMenuItems';
+import type { BTask } from '@/core/models/BTask';
 
 export interface IResourceHandler {
   id: number;
@@ -101,7 +107,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const { t } = useTranslation();
   const log = buildLogger(`Resource:${resource.id}|${resource.path}`);
   const appContext = store.useModelState('appContext');
-
+  const tasksRef = useRef<BTask[] | undefined>();
 
   const uiOptions = store.useModelState('uiOptions');
 
@@ -115,8 +121,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     y: 0,
   });
 
-  const iwFsEntryChangeEvents = store.useModelState('iwFsEntryChangeEvents');
-  const activeMovingTask = iwFsEntryChangeEvents.events.find(x => x.path == resource.path && x.task?.type == IwFsEntryTaskType.Moving && !x.task.error);
+  const hasActiveTask = tasksRef.current?.some(x => x.status == BTaskStatus.Paused || x.status == BTaskStatus.Running) == true;
 
   const disableCacheRef = useRef(disableCache);
 
@@ -357,6 +362,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
       <TaskCover
         resource={resource}
         reload={reload}
+        onTasksChange={tasks => tasksRef.current = tasks}
       />
       <div
         onContextMenu={(e) => {
@@ -391,7 +397,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
         </ControlledMenu>
         <div onClickCapture={e => {
           log('outer', 'click capture');
-          if (mode == 'select' && !activeMovingTask) {
+          if (mode == 'select' && !hasActiveTask) {
             onSelected();
             e.preventDefault();
             e.stopPropagation();

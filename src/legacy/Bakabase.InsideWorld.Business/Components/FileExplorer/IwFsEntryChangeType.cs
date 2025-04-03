@@ -11,7 +11,6 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
         Created = 1,
         Renamed = 2,
         Changed = 3,
-        Deleted = 4,
-        TaskChanged = 5
+        Deleted = 4
     }
 }

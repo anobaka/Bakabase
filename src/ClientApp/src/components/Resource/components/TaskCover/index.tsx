@@ -16,6 +16,7 @@ import { BTaskStopButton } from '@/components/BTask';
 interface IProps {
   resource: any;
   reload?: () => any;
+  onTasksChange?: (tasks?: BTask[]) => any;
 }
 
 const log = buildLogger('TaskCover');
@@ -28,6 +29,7 @@ enum Action {
 export default ({
                   resource,
                   reload,
+                  onTasksChange,
                 }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -65,6 +67,11 @@ export default ({
         if (actions.has(Action.Reload)) {
           reload?.();
         }
+
+        if (actions.size > 0) {
+          onTasksChange?.(tasks);
+        }
+
         tasksRef.current = tasks;
       }
     });

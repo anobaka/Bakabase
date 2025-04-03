@@ -133,7 +133,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
             {
                 foreach (var e in events)
                 {
-                    var key = $"{e.Type}-{e.PrevPath ?? e.Path}-{e.Task?.BackgroundTaskId}-{e.Task?.Percentage / 5}-{e.Task?.Error}";
+                    var key = $"{e.Type}-{e.PrevPath ?? e.Path}";
                     if (!_memCache.Contains(key))
                     {
                         _memCache.Add(key, e, new CacheItemPolicy
