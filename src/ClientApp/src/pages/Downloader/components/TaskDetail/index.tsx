@@ -245,6 +245,10 @@ export default ({
         break;
     }
 
+    if (types.length == 0) {
+      return t('Not supported');
+    }
+
     return types.map((type) => {
       console.log(type, type);
       return (

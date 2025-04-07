@@ -4,8 +4,6 @@ export enum BuiltinPropertyForDisplayName {Filename = 15}
 export const builtinPropertyForDisplayNames = Object.keys(BuiltinPropertyForDisplayName).filter(k => typeof BuiltinPropertyForDisplayName[k] === 'number').map(t => ({label: t, value: BuiltinPropertyForDisplayName[t]}));
 export enum EnhancementType {Property = 1, File = 2}
 export const enhancementTypes = Object.keys(EnhancementType).filter(k => typeof EnhancementType[k] === 'number').map(t => ({label: t, value: EnhancementType[t]}));
-export enum ResourceTaskOperationOnComplete {RemoveOnResourceView = 1}
-export const resourceTaskOperationOnCompletes = Object.keys(ResourceTaskOperationOnComplete).filter(k => typeof ResourceTaskOperationOnComplete[k] === 'number').map(t => ({label: t, value: ResourceTaskOperationOnComplete[t]}));
 export enum IwFsAttribute {Hidden = 1}
 export const iwFsAttributes = Object.keys(IwFsAttribute).filter(k => typeof IwFsAttribute[k] === 'number').map(t => ({label: t, value: IwFsAttribute[t]}));
 export enum IwFsEntryChangeType {Created = 1, Renamed = 2, Changed = 3, Deleted = 4}

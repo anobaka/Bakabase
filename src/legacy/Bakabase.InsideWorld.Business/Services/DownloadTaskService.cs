@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Input;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Resources;
 using Bakabase.InsideWorld.Models.Constants;
@@ -20,6 +21,7 @@ using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
+using FluentAssertions.Common;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -79,17 +81,20 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<BaseResponse> Start(Expression<Func<DownloadTask, bool>>? exp = null, DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.Ignore)
+        public async Task<BaseResponse> Start(Expression<Func<DownloadTask, bool>>? exp = null,
+            DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.Ignore)
         {
             var tasks = await GetAll(exp);
-            var badStatusTasks = tasks.Where(a => a.Status is DownloadTaskStatus.Disabled or DownloadTaskStatus.Failed).ToArray();
+            var badStatusTasks = tasks.Where(a => a.Status is DownloadTaskStatus.Disabled or DownloadTaskStatus.Failed)
+                .ToArray();
             foreach (var badStatusTask in badStatusTasks)
             {
                 badStatusTask.Status = DownloadTaskStatus.InProgress;
             }
 
             await UpdateRange(badStatusTasks);
-            var rsp = await TryStartAllTasks(DownloadTaskStartMode.ManualStart, tasks.Select(a => a.Id).ToArray(), actionOnConflict);
+            var rsp = await TryStartAllTasks(DownloadTaskStartMode.ManualStart, tasks.Select(a => a.Id).ToArray(),
+                actionOnConflict);
 
             PushAllDataToUi();
 
@@ -148,6 +153,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
+
                     break;
                 }
                 case DownloaderStatus.Complete:
@@ -187,7 +193,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 ToDto(new[] {task}).FirstOrDefault()!);
         }
 
-        public async Task<BaseResponse> TryStartAllTasks(DownloadTaskStartMode mode, int[]? ids, DownloadTaskActionOnConflict actionOnConflict)
+        public async Task<BaseResponse> TryStartAllTasks(DownloadTaskStartMode mode, int[]? ids,
+            DownloadTaskActionOnConflict actionOnConflict)
         {
             var tasks = (await (ids == null ? GetAll() : GetByKeys(ids))).ToDictionary(a => a.ToDto(DownloaderManager),
                 a => a);
@@ -213,7 +220,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 if (rsp.Code != (int) ResponseCode.Success)
                 {
-                    if (rsp.Code == (int)ResponseCode.Conflict)
+                    if (rsp.Code == (int) ResponseCode.Conflict)
                     {
                         if (actionOnConflict == DownloadTaskActionOnConflict.Ignore)
                         {
@@ -321,11 +328,21 @@ namespace Bakabase.InsideWorld.Business.Services
             return rsp;
         }
 
-        public override Task<BaseResponse> RemoveByKey(int key)
+        public async Task<BaseResponse> Delete(DownloadTaskDeleteInputModel model)
         {
-            var rsp = base.RemoveByKey(key);
+            var ids = new List<int>(model.Ids ?? []);
+            if (model.ThirdPartyId.HasValue)
+            {
+                var allIdsInThirdParty =
+                    (await GetAll(x => x.ThirdPartyId == model.ThirdPartyId.Value)).Select(x => x.Id);
+                ids = ids.Intersect(allIdsInThirdParty).ToList();
+            }
+
+            await Stop(t => ids.Contains(t.Id));
+            await RemoveByKeys(ids);
+
             PushAllDataToUi();
-            return rsp;
+            return BaseResponseBuilder.Ok;
         }
     }
 }

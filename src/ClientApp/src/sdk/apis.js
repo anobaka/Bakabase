@@ -3563,6 +3563,49 @@ export const CreateDownloadTaskURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: DeleteDownloadTasks
+ * url: DeleteDownloadTasksURL
+ * method: DeleteDownloadTasks_TYPE
+ * raw_url: DeleteDownloadTasks_RAW_URL
+ * @param model - 
+ */
+export const DeleteDownloadTasks = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/download-task'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteDownloadTasks_RAW_URL = function() {
+  return '/download-task'
+}
+export const DeleteDownloadTasks_TYPE = function() {
+  return 'delete'
+}
+export const DeleteDownloadTasksURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/download-task'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetDownloadTask
  * url: GetDownloadTaskURL
  * method: GetDownloadTask_TYPE
@@ -3608,13 +3651,13 @@ export const GetDownloadTaskURL = function(parameters = {}) {
 }
 /**
  * 
- * request: RemoveDownloadTask
- * url: RemoveDownloadTaskURL
- * method: RemoveDownloadTask_TYPE
- * raw_url: RemoveDownloadTask_RAW_URL
+ * request: DeleteDownloadTask
+ * url: DeleteDownloadTaskURL
+ * method: DeleteDownloadTask_TYPE
+ * raw_url: DeleteDownloadTask_RAW_URL
  * @param id - 
  */
-export const RemoveDownloadTask = function(parameters = {}) {
+export const DeleteDownloadTask = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/download-task/{id}'
@@ -3632,13 +3675,13 @@ export const RemoveDownloadTask = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const RemoveDownloadTask_RAW_URL = function() {
+export const DeleteDownloadTask_RAW_URL = function() {
   return '/download-task/{id}'
 }
-export const RemoveDownloadTask_TYPE = function() {
+export const DeleteDownloadTask_TYPE = function() {
   return 'delete'
 }
-export const RemoveDownloadTaskURL = function(parameters = {}) {
+export const DeleteDownloadTaskURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/download-task/{id}'
@@ -3692,49 +3735,6 @@ export const PutDownloadTaskURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/download-task/{id}'
   path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: RemoveDownloadTasksByIds
- * url: RemoveDownloadTasksByIdsURL
- * method: RemoveDownloadTasksByIds_TYPE
- * raw_url: RemoveDownloadTasksByIds_RAW_URL
- * @param model - 
- */
-export const RemoveDownloadTasksByIds = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/download-task/ids'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters['model'] !== undefined) {
-    body = parameters['model']
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const RemoveDownloadTasksByIds_RAW_URL = function() {
-  return '/download-task/ids'
-}
-export const RemoveDownloadTasksByIds_TYPE = function() {
-  return 'delete'
-}
-export const RemoveDownloadTasksByIdsURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/download-task/ids'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
