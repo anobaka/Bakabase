@@ -200,10 +200,14 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
 
                     esb.Append(str);
                 }, Encoding.UTF8));
+
+            var cmdStr = cmd.ToString();
+            Logger.LogInformation(cmdStr);
+
             // It will take several seconds to cancel the CancellationToken if ct was passed here.
             var r = await cmd.ExecuteAsync();
 
-            return new CmdResult(r.ExitCode, osb.ToString(), esb.ToString());
+            return new CmdResult(cmdStr, r.ExitCode, osb.ToString(), esb.ToString());
         }
     }
 }

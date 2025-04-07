@@ -4,7 +4,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models
 {
     public class FavoriteItem
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         [JsonProperty("bvid")]
         public string BvId { get; set; }
         public string Title { get; set; }
