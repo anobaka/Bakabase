@@ -198,7 +198,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
 
                                         var keyFilenameWithoutExt = Path.GetFileNameWithoutExtension(keyFilename);
                                         var keyFileFullname = Path.Combine(task.DownloadPath, keyFilename);
-                                        var keyFileDirectory = Path.GetDirectoryName(keyFileFullname)!;
+                                        var keyFileDirectory = Path.GetDirectoryName(keyFileFullname)!.Trim();
 
                                         if (File.Exists(keyFileFullname))
                                         {
@@ -288,6 +288,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
                                                 var message =
                                                     new StringBuilder(
                                                             $"An error occurred during using lux: {luxRet.ExitCode}")
+                                                        .AppendLine($"[Command]{luxRet.Command}")
                                                         .AppendLine($"[Output]{luxRet.Output}")
                                                         .AppendLine($"[Error]{luxRet.Error}");
                                                 throw new Exception(message.ToString());
