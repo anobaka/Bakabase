@@ -19,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
             downloader.Status is DownloaderStatus.Downloading or DownloaderStatus.Starting
                 or DownloaderStatus.Stopping;
 
-        public static DownloadTaskDto ToDto(this DownloadTask task, DownloaderManager downloaderManager)
+        public static DownloadTaskDto? ToDto(this DownloadTask? task, DownloaderManager downloaderManager)
         {
             if (task == null)
             {

@@ -589,6 +589,12 @@ export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDepe
   canUpdate: boolean;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskDeleteInputModel {
+  ids?: number[];
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
+  thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup {
   keyName: string;
   files: string[];
@@ -4792,6 +4798,26 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DownloadTask
+     * @name DeleteDownloadTasks
+     * @request DELETE:/download-task
+     */
+    deleteDownloadTasks: (
+      data: BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskDeleteInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task`,
+        method: "DELETE",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
      * @name GetDownloadTask
      * @request GET:/download-task/{id}
      */
@@ -4810,10 +4836,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DownloadTask
-     * @name RemoveDownloadTask
+     * @name DeleteDownloadTask
      * @request DELETE:/download-task/{id}
      */
-    removeDownloadTask: (id: number, params: RequestParams = {}) =>
+    deleteDownloadTask: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/${id}`,
         method: "DELETE",
@@ -4836,23 +4862,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/${id}`,
         method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DownloadTask
-     * @name RemoveDownloadTasksByIds
-     * @request DELETE:/download-task/ids
-     */
-    removeDownloadTasksByIds: (data: number[], params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/download-task/ids`,
-        method: "DELETE",
         body: data,
         type: ContentType.Json,
         format: "json",

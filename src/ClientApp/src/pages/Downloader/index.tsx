@@ -21,6 +21,7 @@ import {
   DownloadTaskActionOnConflict,
   DownloadTaskDtoStatus,
   downloadTaskDtoStatuses,
+  downloadTaskStatuses,
   ExHentaiDownloadTaskType,
   exHentaiDownloadTaskTypes,
   pixivDownloadTaskTypes,
@@ -32,8 +33,10 @@ import {
 import Configurations from '@/pages/Downloader/components/Configurations';
 import store from '@/store';
 import BApi from '@/sdk/BApi';
-import { buildLogger, equalsOrIsChildOf, useTraceUpdate } from '@/components/utils';
+import { buildLogger, useTraceUpdate } from '@/components/utils';
 import SimpleLabel from '@/components/SimpleLabel';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { Modal } from '@/components/bakaui';
 
 const testTasks = [
   {
@@ -119,6 +122,7 @@ export default () => {
   const [menuProps, toggleMenu] = useMenuState();
 
   const tasksDomRef = useRef<HTMLUListElement>(null);
+  const { createPortal } = useBakabaseContext();
 
   const tasksElementRef = useRef<any>();
 
@@ -136,7 +140,10 @@ export default () => {
   log('Rendering');
 
   const startTasksManually = async (ids?: number[], actionOnConflict = DownloadTaskActionOnConflict.NotSet) => {
-    const rsp = await BApi.downloadTask.startDownloadTasks({ ids, actionOnConflict }, {
+    const rsp = await BApi.downloadTask.startDownloadTasks({
+      ids,
+      actionOnConflict,
+    }, {
       ignoreError: rsp => rsp.code == ResponseCode.Conflict,
     });
     if (rsp.code == ResponseCode.Conflict) {
@@ -153,9 +160,15 @@ export default () => {
           children: t('Add selected tasks to the queue'),
         },
         onOk: async () => {
-          return await BApi.downloadTask.startDownloadTasks({ ids, actionOnConflict: DownloadTaskActionOnConflict.StopOthers });
+          return await BApi.downloadTask.startDownloadTasks({
+            ids,
+            actionOnConflict: DownloadTaskActionOnConflict.StopOthers,
+          });
         },
-        onCancel: async () => await BApi.downloadTask.startDownloadTasks({ ids, actionOnConflict: DownloadTaskActionOnConflict.Ignore }),
+        onCancel: async () => await BApi.downloadTask.startDownloadTasks({
+          ids,
+          actionOnConflict: DownloadTaskActionOnConflict.Ignore,
+        }),
       });
     }
   };
@@ -220,7 +233,13 @@ export default () => {
           </div>
         </MenuItem>
         <MenuItem onClick={() => {
-          BApi.downloadTask.removeDownloadTasksByIds(selectedTaskIdsRef.current);
+          createPortal(Modal, {
+            defaultVisible: true,
+            title: t('Deleting {{count}} download tasks', { count: selectedTaskIdsRef.current.length }),
+            onOk: async () => {
+              await BApi.downloadTask.deleteDownloadTasks({ ids: selectedTaskIdsRef.current });
+            },
+          });
         }}
         >
           <div className={'danger'}>
@@ -275,28 +294,26 @@ export default () => {
     };
 
     const onKeydown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      console.log(e.target, target, tasksDomRef.current);
-      if (equalsOrIsChildOf(e.target as HTMLElement, tasksDomRef.current)) {
-        switch (e.key) {
-          case 'Control':
-            selectionModeRef.current = SelectionMode.Ctrl;
-            break;
-          case 'Shift':
-            selectionModeRef.current = SelectionMode.Shift;
-            break;
-          case 'Escape':
-            setSelectedTaskIds([]);
-            break;
-          case 'a':
-            if (e.ctrlKey) {
-              e.stopPropagation();
-              e.preventDefault();
-              setSelectedTaskIds(tasksRef.current?.map((t) => t.id) || []);
-            }
-            break;
-        }
+      // if (equalsOrIsChildOf(e.target as HTMLElement, tasksDomRef.current)) {
+      switch (e.key) {
+        case 'Control':
+          selectionModeRef.current = SelectionMode.Ctrl;
+          break;
+        case 'Shift':
+          selectionModeRef.current = SelectionMode.Shift;
+          break;
+        case 'Escape':
+          setSelectedTaskIds([]);
+          break;
+        case 'a':
+          if (e.ctrlKey) {
+            e.stopPropagation();
+            e.preventDefault();
+            setSelectedTaskIds(tasksRef.current?.map((t) => t.id) || []);
+          }
+          break;
       }
+      // }
     };
 
     const onKeyUp = (e) => {
@@ -322,27 +339,30 @@ export default () => {
     };
   }, []);
 
+  console.log(selectedTaskIdsRef.current, SelectionMode[selectionModeRef.current]);
+
   const onTaskClick = taskId => {
+    console.log(SelectionMode[selectionModeRef.current]);
     switch (selectionModeRef.current) {
       case SelectionMode.Default:
-        if (selectedTaskIds.includes(taskId) && selectedTaskIds.length == 1) {
+        if (selectedTaskIdsRef.current.includes(taskId) && selectedTaskIdsRef.current.length == 1) {
           setSelectedTaskIds([]);
         } else {
           setSelectedTaskIds([taskId]);
         }
         break;
       case SelectionMode.Ctrl:
-        if (selectedTaskIds.includes(taskId)) {
-          setSelectedTaskIds(selectedTaskIds.filter((id) => id != taskId));
+        if (selectedTaskIdsRef.current.includes(taskId)) {
+          setSelectedTaskIds(selectedTaskIdsRef.current.filter((id) => id != taskId));
         } else {
-          setSelectedTaskIds([...selectedTaskIds, taskId]);
+          setSelectedTaskIds([...selectedTaskIdsRef.current, taskId]);
         }
         break;
       case SelectionMode.Shift:
-        if (selectedTaskIds.length == 0) {
+        if (selectedTaskIdsRef.current.length == 0) {
           setSelectedTaskIds([taskId]);
         } else {
-          const lastSelectedTaskId = selectedTaskIds[selectedTaskIds.length - 1];
+          const lastSelectedTaskId = selectedTaskIdsRef.current[selectedTaskIds.length - 1];
           const lastSelectedTaskIndex = tasks.findIndex((t) => t.id == lastSelectedTaskId);
           const currentTaskIndex = tasks.findIndex((t) => t.id == taskId);
           const start = Math.min(lastSelectedTaskIndex, currentTaskIndex);
@@ -548,6 +568,18 @@ export default () => {
               {t('Source')}
             </div>
             <div className="sources value">
+              <Tag.Selectable
+                className={'source'}
+                onChange={(checked) => {
+                  setForm({
+                    ...form,
+                    thirdPartyIds: checked ? thirdPartyIds.map((s) => s.value) : [],
+                  });
+                }}
+                size={'small'}
+              >
+                {t('All')}
+              </Tag.Selectable>
               {thirdPartyIds.map((s) => {
                 const count = tasks.filter((t) => t.thirdPartyId == s.value && (!(form.statuses?.length > 0) || form.statuses.includes(t.status))).length;
                 return (
@@ -582,6 +614,18 @@ export default () => {
               {t('Status')}
             </div>
             <div className="value statuses">
+              <Tag.Selectable
+                className={'status'}
+                onChange={(checked) => {
+                  setForm({
+                    ...form,
+                    statuses: checked ? downloadTaskStatuses.map((s) => s.value) : [],
+                  });
+                }}
+                size={'small'}
+              >
+                {t('All')}
+              </Tag.Selectable>
               {downloadTaskDtoStatuses.map(((s) => {
                 const count = tasks.filter((t) => t.status == s.value && (!(form.thirdPartyIds?.length > 0) || form.thirdPartyIds.includes(t.thirdPartyId))).length;
                 return (
@@ -740,19 +784,22 @@ export default () => {
           className={'tasks'}
         >
           <AutoSizer>
-            {({ width, height }) => (
-              <List
+            {({
+                width,
+                height,
+              }) => (
+                <List
                 // onScroll={onChildScroll}
                 // isScrolling={isScrolling}
                 // scrollTop={scrollTop}
-                overscanRowCount={2}
+                  overscanRowCount={2}
                 // scrollToIndex={scrollToIndex}
-                width={width}
-                height={height}
+                  width={width}
+                  height={height}
                 // autoHeight
-                rowCount={filteredTasks.length}
-                rowHeight={75}
-                rowRenderer={({
+                  rowCount={filteredTasks.length}
+                  rowHeight={75}
+                  rowRenderer={({
                                 index,
                                 style,
                                 isVisible,
@@ -782,7 +829,7 @@ export default () => {
                       onClick={() => onTaskClick(task.id)}
                     >
                       <div className="icon">
-                        <img src={NameIcon[task.thirdPartyId]} />
+                        <img className={'max-w-[32px] max-h-[32px]'} src={NameIcon[task.thirdPartyId]} />
                       </div>
                       <div className="content">
                         <div className="name">
@@ -932,7 +979,7 @@ export default () => {
                                 onClick={() => {
                                   Dialog.confirm({
                                     title: t('Are you sure to delete it?'),
-                                    onOk: () => BApi.downloadTask.removeDownloadTasksByIds([task.id]),
+                                    onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [task.id] }),
                                   });
                                 }}
                               >
@@ -946,7 +993,7 @@ export default () => {
                     </div>
                   );
                 }}
-              />
+                />
             )}
           </AutoSizer>
           {/* )} */}

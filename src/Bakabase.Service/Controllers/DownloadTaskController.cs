@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Input;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Services;
@@ -121,19 +122,17 @@ namespace Bakabase.Service.Controllers
         }
 
         [HttpDelete("{id}")]
-        [SwaggerOperation(OperationId = "RemoveDownloadTask")]
-        public async Task<BaseResponse> Remove(int id)
+        [SwaggerOperation(OperationId = "DeleteDownloadTask")]
+        public async Task<BaseResponse> Delete(int id)
         {
-            await _service.Stop(t => t.Id == id);
-            return await _service.RemoveByKey(id);
+            return await Delete(new DownloadTaskDeleteInputModel([id]));
         }
 
-        [HttpDelete("ids")]
-        [SwaggerOperation(OperationId = "RemoveDownloadTasksByIds")]
-        public async Task<BaseResponse> Remove([FromBody] int[] ids)
+        [HttpDelete]
+        [SwaggerOperation(OperationId = "DeleteDownloadTasks")]
+        public async Task<BaseResponse> Delete([FromBody] DownloadTaskDeleteInputModel model)
         {
-            await _service.Stop(t => ids.Contains(t.Id));
-            return await _service.RemoveByKeys(ids);
+            return await _service.Delete(model);
         }
 
         [HttpPut("{id}")]
