@@ -4,6 +4,7 @@ using Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 using Bakabase.Modules.Enhancer.Components.Enhancers.DLsite;
 using Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;
+using Bakabase.Modules.Enhancer.Components.Enhancers.Kodi;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Regex;
 
 namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
@@ -23,6 +24,9 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
         DLsite = 4,
 
         [Enhancer(typeof(RegexEnhancer), PropertyValueScope.RegexEnhancer, typeof(RegexEnhancerTarget))]
-        Regex = 5
+        Regex = 5,
+
+        // [Enhancer(typeof(KodiEnhancer), PropertyValueScope.KodiEnhancer, typeof(KodiEnhancerTarget))]
+        // Kodi = 6
     }
 }

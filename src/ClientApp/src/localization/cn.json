@@ -1654,5 +1654,9 @@
   "Waiting": "等待中",
   "Overwrite files in target path": "覆盖目标路径中的文件",
   "Overwrite": "覆盖",
-  "Deleting {{count}} download tasks": "删除{{count}}个下载任务"
+  "Deleting {{count}} download tasks": "删除{{count}}个下载任务",
+  "Overall": "总览",
+  "Property value coverage": "属性值覆盖度",
+  "Details": "明细",
+  "The more property value coverage, the more data is filled": "属性值覆盖度越高，已填充的数据越多"
 }
