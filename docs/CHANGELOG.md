@@ -1,3 +1,15 @@
+## [1.9.1-beta4](https://cdn-public.anobaka.com/app/bakabase/inside-world/1.9.1-beta4/installer/Bakabase.zip)(2025-04-08)
+
+### Features
+
+* 重构后台任务 ([#683](https://github.com/Anobaka/Bakabase/issues/683))
+* 为下载任务的筛选条件增加【全部】 ([#686](https://github.com/Anobaka/Bakabase/issues/686))
+
+### Bugs
+
+* 当下载器目标文件名路径片段中收尾出现空格时会导致下载失败 ([#684](https://github.com/Anobaka/Bakabase/issues/684))
+* 下载器任务多选功能失效 ([#685](https://github.com/Anobaka/Bakabase/issues/685))
+
 ## [1.9.1-beta3](https://cdn-public.anobaka.com/app/bakabase/inside-world/1.9.1-beta3/installer/Bakabase.zip)(2025-02-10)
 
 ### Features
