@@ -9,6 +9,7 @@
         ExHentaiEnhancer = 1001,
         BangumiEnhancer = 1002,
         DLsiteEnhancer = 1003,
-        RegexEnhancer = 1004
+        RegexEnhancer = 1004,
+        // KodiEnhancer = 1005,
     }
 }

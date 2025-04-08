@@ -8,7 +8,7 @@ import type {
   BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
   BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount,
 } from '@/sdk/Api';
-import { downloadTaskStatuses, ThirdPartyId } from '@/sdk/constants';
+import { downloadTaskStatuses, PropertyPool, ThirdPartyId } from '@/sdk/constants';
 import { Chip } from '@/components/bakaui';
 
 const textColor = getComputedStyle(document.body).getPropertyValue('--bakaui-color');
@@ -171,23 +171,52 @@ export default () => {
         </section>
         <section style={{ maxHeight: '40%' }}>
           <div className="block" style={{ flex: 2.5 }}>
-            <div className={'title'}>{t('Resource properties')}</div>
-            <div className={'content'}>
-              {data.propertyValueCounts && data.propertyValueCounts.length > 0 && data.propertyValueCounts.map((c, i) => {
-                return (
-                  <div className="flex items-center gap-1" key={i}>
-                    <Chip
-                      size={'sm'}
-                      radius={'sm'}
-                    >
-                      {c.name}
-                    </Chip>
-                    {c.valueCount}
-                  </div>
-                );
-              }) || (
-                t('No content')
-              )}
+            <div className={'title flex items-center gap-2'}>
+              {t('Property value coverage')}
+              <div className={'text-sm opacity-60'}>
+                {t('The more property value coverage, the more data is filled')}
+              </div>
+            </div>
+            <div className={'flex items-start gap-8'}>
+              <div className={'w-[200px]'}>
+                <div className={'text-lg'}>
+                  {t('Overall')}
+                </div>
+                <div className={'text-3xl'}>
+                  {(data.totalFilledPropertyValueCount / data.totalExpectedPropertyValueCount * 100).toFixed(2)}%
+                </div>
+                <div className={'opacity-60 text-xs'}>
+                  {data.totalFilledPropertyValueCount} / {data.totalExpectedPropertyValueCount}
+                </div>
+              </div>
+              <div>
+                <div className={'text-lg'}>
+                  {t('Details')}
+                </div>
+                <div className={'flex flex-wrap gap-2'}>
+                  {data.propertyValueCoverages?.map(x => {
+                    return (
+                      <div>
+                        <div className={'flex items-center gap-1'}>
+                          <Chip
+                            variant={'flat'}
+                            size={'sm'}
+                            color={x.pool == PropertyPool.Reserved ? 'secondary' : 'success'}
+                          >
+                            {x.name}
+                          </Chip>
+                          <div>
+                            {(x.filledCount / x.expectedCount * 100).toFixed(2)}%
+                          </div>
+                        </div>
+                        <div className={'opacity-60 text-xs text-center'}>
+                          {x.filledCount} / {x.expectedCount}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </section>

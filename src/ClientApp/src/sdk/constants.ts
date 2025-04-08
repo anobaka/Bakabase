@@ -2,8 +2,6 @@ export enum BackgroundTaskName {SyncMediaLibrary = 1, PrepareCache = 2, MoveFile
 export const backgroundTaskNames = Object.keys(BackgroundTaskName).filter(k => typeof BackgroundTaskName[k] === 'number').map(t => ({label: t, value: BackgroundTaskName[t]}));
 export enum BuiltinPropertyForDisplayName {Filename = 15}
 export const builtinPropertyForDisplayNames = Object.keys(BuiltinPropertyForDisplayName).filter(k => typeof BuiltinPropertyForDisplayName[k] === 'number').map(t => ({label: t, value: BuiltinPropertyForDisplayName[t]}));
-export enum EnhancementType {Property = 1, File = 2}
-export const enhancementTypes = Object.keys(EnhancementType).filter(k => typeof EnhancementType[k] === 'number').map(t => ({label: t, value: EnhancementType[t]}));
 export enum IwFsAttribute {Hidden = 1}
 export const iwFsAttributes = Object.keys(IwFsAttribute).filter(k => typeof IwFsAttribute[k] === 'number').map(t => ({label: t, value: IwFsAttribute[t]}));
 export enum IwFsEntryChangeType {Created = 1, Renamed = 2, Changed = 3, Deleted = 4}
@@ -164,6 +162,8 @@ export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3, DLsite = 4, Reg
 export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
 export enum RegexEnhancerTarget {CaptureGroups = 0}
 export const regexEnhancerTargets = Object.keys(RegexEnhancerTarget).filter(k => typeof RegexEnhancerTarget[k] === 'number').map(t => ({label: t, value: RegexEnhancerTarget[t]}));
+export enum KodiEnhancerTarget {}
+export const kodiEnhancerTargets = Object.keys(KodiEnhancerTarget).filter(k => typeof KodiEnhancerTarget[k] === 'number').map(t => ({label: t, value: KodiEnhancerTarget[t]}));
 export enum ExHentaiEnhancerTarget {Name = 1, Introduction = 2, Rating = 3, Tags = 4, Cover = 5}
 export const exHentaiEnhancerTargets = Object.keys(ExHentaiEnhancerTarget).filter(k => typeof ExHentaiEnhancerTarget[k] === 'number').map(t => ({label: t, value: ExHentaiEnhancerTarget[t]}));
 export enum DLsiteEnhancerTarget {Name = 0, Cover = 1, PropertiesOnTheRightSideOfCover = 2, Introduction = 3, Rating = 4}

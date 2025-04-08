@@ -1360,11 +1360,6 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             const int maxPropertyCount = 30;
-
-            // Properties
-            {
-                var propertyCountList = new List<DashboardStatistics.PropertyAndCount>();
-            }
         }
 
         // public async Task<BaseResponse> Patch(int id, ResourceUpdateRequestModel model)

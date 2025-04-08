@@ -10,6 +10,40 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Kodi\Xml\album.nfo" />
+    <None Remove="Kodi\Xml\artist.nfo" />
+    <None Remove="Kodi\Xml\episode.nfo" />
+    <None Remove="Kodi\Xml\movie.nfo" />
+    <None Remove="Kodi\Xml\multi-episode.nfo" />
+    <None Remove="Kodi\Xml\musicvideo.nfo" />
+    <None Remove="Kodi\Xml\tvshow.nfo" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Kodi\Xml\album.nfo">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Kodi\Xml\artist.nfo">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Kodi\Xml\episode.nfo">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Kodi\Xml\movie.nfo">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Kodi\Xml\multi-episode.nfo">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Kodi\Xml\musicvideo.nfo">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Kodi\Xml\tvshow.nfo">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

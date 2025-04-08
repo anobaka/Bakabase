@@ -1016,12 +1016,16 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
   thisWeekAddedCategoryResourceCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
   thisMonthAddedCategoryResourceCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
   resourceTrending: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount[];
-  propertyValueCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount[];
   tagResourceCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
   downloaderDataCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount[];
   thirdPartyRequestCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount[];
   fileMover: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMoverInfo;
   otherCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[][];
+  /** @format int32 */
+  totalExpectedPropertyValueCount: number;
+  /** @format int32 */
+  totalFilledPropertyValueCount: number;
+  propertyValueCoverages: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyValueCoverage[];
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
@@ -1037,10 +1041,16 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMover
   targetCount: number;
 }
 
-export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyAndCount {
+export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyValueCoverage {
+  /** @format int32 */
+  pool: number;
+  /** @format int32 */
+  id: number;
   name: string;
   /** @format int32 */
-  valueCount: number;
+  filledCount: number;
+  /** @format int32 */
+  expectedCount: number;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount {
