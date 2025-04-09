@@ -7333,6 +7333,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Tool
+     * @name OpenFile
+     * @request GET:/tool/open-file
+     */
+    openFile: (
+      query?: {
+        path?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/tool/open-file`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
   };
   updater = {
     /**

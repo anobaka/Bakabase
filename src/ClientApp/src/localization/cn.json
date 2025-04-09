@@ -1658,5 +1658,5 @@
   "Overall": "总览",
   "Property value coverage": "属性值覆盖度",
   "Details": "明细",
-  "The more property value coverage, the more data is filled": "属性值覆盖度越高，已填充的数据越多"
+  "As more data is filled in, property value coverage increases": "已填充的数据越多，属性值覆盖度越高"
 }

@@ -174,7 +174,7 @@ export default () => {
             <div className={'title flex items-center gap-2'}>
               {t('Property value coverage')}
               <div className={'text-sm opacity-60'}>
-                {t('The more property value coverage, the more data is filled')}
+                {t('As more data is filled in, property value coverage increases')}
               </div>
             </div>
             <div className={'flex items-start gap-8'}>

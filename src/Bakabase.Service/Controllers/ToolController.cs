@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -138,6 +139,22 @@ namespace Bakabase.Service.Controllers
             var r = new Regex(regex);
             var groupValues = r.MatchAllAndMergeByNamedGroups(text);
             return new SingletonResponse<Dictionary<string, List<string>>>(groupValues);
+        }
+
+        [HttpGet("open-file")]
+        [SwaggerOperation(OperationId = "OpenFile")]
+        public async Task<BaseResponse> OpenFile(string path)
+        {
+            var p = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                }
+            };
+            p.Start();
+            return BaseResponseBuilder.Ok;
         }
     }
 }

@@ -9692,6 +9692,52 @@ export const TestMatchAllURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: OpenFile
+ * url: OpenFileURL
+ * method: OpenFile_TYPE
+ * raw_url: OpenFile_RAW_URL
+ * @param path - 
+ */
+export const OpenFile = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/tool/open-file'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const OpenFile_RAW_URL = function() {
+  return '/tool/open-file'
+}
+export const OpenFile_TYPE = function() {
+  return 'get'
+}
+export const OpenFileURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/tool/open-file'
+  if (parameters['path'] !== undefined) {
+    queryParameters['path'] = parameters['path']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetNewAppVersion
  * url: GetNewAppVersionURL
  * method: GetNewAppVersion_TYPE

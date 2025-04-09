@@ -95,6 +95,13 @@ export default () => {
           <div className={'absolute top-0 left-0 w-full h-full flex flex-col'} >
             {rootPathInitialized && (
               <RootTreeEntry
+                onDoubleClick={(evt, en) => {
+                  if (!en.isDirectoryOrDrive) {
+                    BApi.tool.openFile({ path: en.path });
+                    return false;
+                  }
+                  return true;
+                }}
                 selectable={'multiple'}
                 expandable
                 capabilities={['decompress', 'wrap', 'move', 'extract', 'delete', 'rename', 'delete-all-by-name', 'group']}

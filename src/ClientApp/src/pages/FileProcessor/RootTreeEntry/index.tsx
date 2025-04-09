@@ -34,7 +34,8 @@ type Props = {
   selectable: 'disabled' | 'single' | 'multiple';
   defaultSelectedPath?: string;
   onInitialized?: (path?: string) => any;
-} & Pick<TreeEntryProps, 'capabilities' | 'expandable' | 'filter' | 'onDoubleClick'>;
+  onDoubleClick?: (event, entry: Entry) => boolean;
+} & Pick<TreeEntryProps, 'capabilities' | 'expandable' | 'filter'>;
 
 const log = buildLogger('RootTreeEntry');
 
@@ -469,9 +470,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
           }}
           expandable={expandable}
           onDoubleClick={(evt, en) => {
-            if (onDoubleClick) {
-              onDoubleClick(evt, en);
-            } else {
+            if (!onDoubleClick || onDoubleClick(evt, en)) {
               if (en.isDirectoryOrDrive) {
                 initialize(en.path);
               }
