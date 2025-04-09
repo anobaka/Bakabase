@@ -417,14 +417,14 @@ namespace Bakabase.Service.Controllers
                     ResourceKeys = [path],
                     Run = async args =>
                     {
-                        var fakeDelay = rand.Next(50, 300);
-                        for (var i = 0; i < 100; i++)
-                        {
-                            await args.UpdateTask(t => t.Percentage = i + 1);
-                            await Task.Delay(fakeDelay, args.CancellationToken);
-                        }
-                        
-                        return;
+                        // var fakeDelay = rand.Next(50, 300);
+                        // for (var i = 0; i < 100; i++)
+                        // {
+                        //     await args.UpdateTask(t => t.Percentage = i + 1);
+                        //     await Task.Delay(fakeDelay, args.CancellationToken);
+                        // }
+                        //
+                        // return;
 
                         var isDirectory = Directory.Exists(path1);
                         var isFile = System.IO.File.Exists(path1);
@@ -692,14 +692,14 @@ namespace Bakabase.Service.Controllers
                                 }
 
 
-                                var fakeDelay = rand.Next(50, 250);
-                                for (var i = 0; i < 100; i++)
-                                {
-                                    await args.UpdateTask(t => t.Percentage = i + 1);
-                                    await Task.Delay(fakeDelay, args.CancellationToken);
-                                }
-                                
-                                return;
+                                // var fakeDelay = rand.Next(50, 250);
+                                // for (var i = 0; i < 100; i++)
+                                // {
+                                //     await args.UpdateTask(t => t.Percentage = i + 1);
+                                //     await Task.Delay(fakeDelay, args.CancellationToken);
+                                // }
+                                //
+                                // return;
 
                                 var osb = new StringBuilder();
                                 var esb = new StringBuilder();
