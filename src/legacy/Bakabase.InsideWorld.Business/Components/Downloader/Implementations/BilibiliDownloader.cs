@@ -135,6 +135,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
                     var postIndex = doneCount;
 
                     var action = checkpointContext.Analyze(post.Id.ToString());
+                    NextCheckpoint = checkpointContext.BuildCheckpoint(post.Id.ToString());
                     switch (action)
                     {
                         case RangeCheckpointContext.AnalyzeResult.AllTaskIsDone:
@@ -286,8 +287,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
                                             if (luxRet.ExitCode != 0)
                                             {
                                                 var message =
-                                                    new StringBuilder(
-                                                            $"An error occurred during using lux: {luxRet.ExitCode}")
+                                                    new StringBuilder($"An error occurred during using lux")
+                                                        .AppendLine()
+                                                        .AppendLine($"[ExitCode]{luxRet.ExitCode}")
                                                         .AppendLine($"[Command]{luxRet.Command}")
                                                         .AppendLine($"[Output]{luxRet.Output}")
                                                         .AppendLine($"[Error]{luxRet.Error}");

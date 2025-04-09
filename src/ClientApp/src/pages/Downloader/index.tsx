@@ -531,7 +531,7 @@ export default () => {
     }
   };
 
-  // console.log(selectedTaskIds);
+  console.log(form);
 
   return (
     <div className={'downloader-page'} ref={r => tasksElementRef.current = r}>
@@ -619,7 +619,7 @@ export default () => {
                 onChange={(checked) => {
                   setForm({
                     ...form,
-                    statuses: checked ? downloadTaskStatuses.map((s) => s.value) : [],
+                    statuses: checked ? downloadTaskDtoStatuses.map((s) => s.value) : [],
                   });
                 }}
                 size={'small'}
@@ -862,7 +862,7 @@ export default () => {
                                       width: 1000,
                                       title: t('Error'),
                                       content: (
-                                        <pre>{task.message}</pre>
+                                        <pre className={'select-text'}>{task.message}</pre>
                                       ),
                                     });
                                   }

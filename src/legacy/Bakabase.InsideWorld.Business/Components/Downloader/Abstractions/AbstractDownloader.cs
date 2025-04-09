@@ -35,6 +35,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions
 
         protected IServiceProvider ServiceProvider;
         public string Checkpoint { get; protected set; }
+        public string NextCheckpoint { get; protected set; }
 
         protected T GetRequiredService<T>() => ServiceProvider.GetRequiredService<T>();
         protected DownloaderManager DownloaderManager => GetRequiredService<DownloaderManager>();
@@ -139,7 +140,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions
                     catch (Exception e)
                     {
                         FailureTimes++;
-                        Message = e.BuildFullInformationText();
+                        Message =
+                            $"An error occurred during downloading files. You can use expected checkpoint to skip current file: {NextCheckpoint}\n{e.BuildFullInformationText()}";
                         Status = DownloaderStatus.Failed;
                     }
                     finally
