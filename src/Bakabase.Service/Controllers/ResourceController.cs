@@ -312,27 +312,27 @@ namespace Bakabase.Service.Controllers
                     ResourceKeys = [id],
                     Run = async args =>
                     {
-                        var fakeDelay = rand.Next(50, 300);
-                        for (var i = 0; i < 100; i++)
-                        {
-                            await args.UpdateTask(t => t.Percentage = i + 1);
-                            await Task.Delay(fakeDelay, args.CancellationToken);
-                        }
+                        // var fakeDelay = rand.Next(50, 300);
+                        // for (var i = 0; i < 100; i++)
+                        // {
+                        //     await args.UpdateTask(t => t.Percentage = i + 1);
+                        //     await Task.Delay(fakeDelay, args.CancellationToken);
+                        // }
 
-                        // if (resource.IsFile)
-                        // {
-                        //     await FileUtils.MoveAsync(resource.Path, targetPath, false,
-                        //         async p => await args.UpdateTask(t => t.Percentage = p),
-                        //         PauseToken.None,
-                        //         args.CancellationToken);
-                        // }
-                        // else
-                        // {
-                        //     await DirectoryUtils.MoveAsync(resource.Path, targetPath, false,
-                        //         async p => await args.UpdateTask(t => t.Percentage = p),
-                        //         PauseToken.None,
-                        //         args.CancellationToken);
-                        // }
+                        if (resource.IsFile)
+                        {
+                            await FileUtils.MoveAsync(resource.Path, targetPath, false,
+                                async p => await args.UpdateTask(t => t.Percentage = p),
+                                PauseToken.None,
+                                args.CancellationToken);
+                        }
+                        else
+                        {
+                            await DirectoryUtils.MoveAsync(resource.Path, targetPath, false,
+                                async p => await args.UpdateTask(t => t.Percentage = p),
+                                PauseToken.None,
+                                args.CancellationToken);
+                        }
 
                         if (resource.MediaLibraryId != mediaLibrary.Id)
                         {
