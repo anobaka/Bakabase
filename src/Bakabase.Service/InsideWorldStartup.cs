@@ -43,6 +43,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service
 {
@@ -64,9 +65,9 @@ namespace Bakabase.Service
 
             services.AddBakabaseHttpClient<BakabaseHttpClientHandler>(InternalOptions.HttpClientNames.Default);
 
-            services.AddBakabaseHttpClient<JavLibraryThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
-                .JavLibrary);
-            services.AddSimpleProgressor<JavLibraryDownloader>();
+            // services.AddBakabaseHttpClient<JavLibraryThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
+            //     .JavLibrary);
+            // services.AddSimpleProgressor<JavLibraryDownloader>();
 
             services.AddSingleton<DownloaderManager>();
 
@@ -128,6 +129,9 @@ namespace Bakabase.Service
 
         public override void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime)
         {
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<InsideWorldStartup>>();
+            logger.LogInformation($"Using app data directory: {AppService.DefaultAppDataDirectory}");
+
             // todo: merge gui configuration
             app.ApplicationServices.GetRequiredService<WebGuiHubConfigurationAdapter>().Initialize();
             app.ConfigureGui();

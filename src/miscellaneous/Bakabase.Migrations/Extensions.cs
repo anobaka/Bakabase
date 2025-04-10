@@ -14,7 +14,7 @@ namespace Bakabase.Migrations
                 a is {IsClass: true, IsAbstract: false} && a.IsAssignableTo(SpecificTypeUtils<IMigrator>.Type));
             foreach (var m in migrators)
             {
-                services.AddTransient(SpecificTypeUtils<IMigrator>.Type, m);
+                services.AddScoped(SpecificTypeUtils<IMigrator>.Type, m);
             }
 
             services.AddTransient<V190MigrationLocalizer>();
