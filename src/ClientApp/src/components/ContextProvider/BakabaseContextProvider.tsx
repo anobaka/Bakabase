@@ -6,7 +6,7 @@ import { useLocation, useNavigation } from 'ice';
 import { createPortal } from './helpers';
 import store from '@/store';
 import { UiTheme } from '@/sdk/constants';
-import { uuidv4 } from '@/components/utils';
+import { getUiTheme, uuidv4 } from '@/components/utils';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
 type CreatePortal = <P extends DestroyableProps>(C: ComponentType<P>, props: P) => {destroy: () => void; key: string} ;
@@ -23,7 +23,8 @@ export const BakabaseContext = createContext<IContext>({
 
 export default ({ children }) => {
   const appOptions = store.useModelState('appOptions');
-  const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
+  // console.log(appOptions);
+  const isDarkMode = getUiTheme(appOptions) == UiTheme.Dark;
   // const [componentMap, setComponentMap] = useState<Record<string, { Component: any; props: any}>>({});
 
   // function removePortal(key: string) {

@@ -18,8 +18,10 @@ using Bakabase.InsideWorld.Business.Components.Gui;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
+using Bootstrap.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Semver;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater
@@ -31,7 +33,8 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
         private readonly IBOptions<UpdaterOptions> _options;
         private const string OssPrefix = "app/bakabase/updater/";
         public override bool IsRequired => true;
-        private readonly OssClient _ossClient = null!;
+        private OssClient? _ossClient;
+        private static readonly object OssClientInitializationLock = new object();
         private readonly IHubContext<WebGuiHub, IWebGuiClient> _uiHub;
 
         protected string Executable => GetExecutableWithValidation("Bakabase.Updater");
@@ -44,20 +47,42 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
         {
             _options = options;
             _uiHub = uiHub;
-            try
+        }
+
+        protected OssClient OssClient
+        {
+            get
             {
-                _ossClient = new OssClient(_options.Value.OssEndpoint,
-                    _options.Value.OssAccessKeyId, _options.Value.OssAccessKeySecret);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, $"Can not initialize oss client: {e.Message}");
+                if (_ossClient == null)
+                {
+                    lock (OssClientInitializationLock)
+                    {
+                        if (_ossClient == null)
+                        {
+                            if (_options.Value.OssEndpoint.IsNotEmpty() &&
+                                _options.Value.OssAccessKeyId.IsNotEmpty() &&
+                                _options.Value.OssAccessKeySecret.IsNotEmpty())
+                            {
+                                _ossClient = new OssClient(_options.Value.OssEndpoint,
+                                    _options.Value.OssAccessKeyId, _options.Value.OssAccessKeySecret);
+                            }
+                        }
+                    }
+                }
+
+                if (_ossClient == null)
+                {
+                    throw new Exception(
+                        $"Failed to initialize oss client by options: {JsonConvert.SerializeObject(_options.Value)}");
+                }
+
+                return _ossClient;
             }
         }
 
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)
         {
-            var versionPaths = _ossClient.ListObjects(new ListObjectsRequest(_options.Value.OssBucket)
+            var versionPaths = OssClient.ListObjects(new ListObjectsRequest(_options.Value.OssBucket)
             {
                 Prefix = OssPrefix,
                 Delimiter = "/"
@@ -79,7 +104,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
             var version = semVer.ToString();
 
             var installersPrefix = $"{OssPrefix.TrimEnd('/')}/{version}/installer/";
-            var installers = _ossClient
+            var installers = OssClient
                 .ListObjects(new ListObjectsRequest(_options.Value.OssBucket)
                     {Prefix = installersPrefix}).ObjectSummaries.Where(a => a.Size > 0).Select(a =>
                     new AppVersionInfo.Installer
@@ -128,7 +153,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
                     Marker = result?.NextMarker,
                     MaxKeys = pageSize
                 };
-                result = _ossClient.ListObjects(listObjectsRequest);
+                result = OssClient.ListObjects(listObjectsRequest);
                 remoteFiles.AddRange(result.ObjectSummaries.Where(a => a.Size > 0));
             } while (result.IsTruncated);
 

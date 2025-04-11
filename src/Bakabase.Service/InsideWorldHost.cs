@@ -19,6 +19,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Co
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Service.Components.Tasks;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -118,6 +119,9 @@ namespace Bakabase.Service
                     }
                 });
             }
+
+            var predefinedTasksProvider = serviceProvider.GetRequiredService<PredefinedTasksProvider>();
+            _ = serviceProvider.InitializeBTasks(predefinedTasksProvider.DescriptorBuilders);
         }
 
         protected override Task<string?> CheckIfAppCanExitSafely()

@@ -19,6 +19,7 @@ public record BTaskViewModel
     public DateTime? EnableAfter { get; set; }
     public BTaskStatus Status { get; set; }
     public string? Error { get; set; }
+    public string? BriefError { get; set; }
     public string? MessageOnInterruption { get; set; }
     public HashSet<string>? ConflictWithTaskKeys { get; set; }
     public TimeSpan? EstimateRemainingTime { get; set; }
@@ -43,6 +44,7 @@ public record BTaskViewModel
         Level = handler.Task.Level;
         Status = handler.Task.Status;
         Error = handler.Task.Error;
+        BriefError = handler.Task.BriefError;
         MessageOnInterruption = handler.Task.MessageOnInterruption;
         ConflictWithTaskKeys = handler.Task.ConflictKeys;
         EstimateRemainingTime = handler.EstimateRemainingTime;

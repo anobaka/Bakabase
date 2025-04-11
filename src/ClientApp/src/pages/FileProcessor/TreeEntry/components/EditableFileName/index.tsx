@@ -154,6 +154,7 @@ const EditableText = memo((props: Props) => {
           }}
           // autoFocus
           size={'sm'}
+          radius={'none'}
           data-focus={false}
           onKeyDown={inputKeyDownHandler}
           onValueChange={v => {

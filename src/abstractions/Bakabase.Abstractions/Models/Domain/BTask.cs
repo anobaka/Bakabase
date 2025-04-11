@@ -19,6 +19,7 @@ public record BTask
     public HashSet<string>? ConflictKeys { get; }
     public BTaskLevel Level { get; }
     public string? Error { get; set; }
+    public string? BriefError { get; set; }
     public TimeSpan? Interval { get; set; }
     public DateTime? EnableAfter { get; set; }
     public BTaskStatus Status { get; set; } = BTaskStatus.NotStarted;
@@ -32,6 +33,18 @@ public record BTask
     public BTaskType Type { get; set; }
     public BTaskResourceType ResourceType { get; set; }
     public object[]? ResourceKeys { get; set; }
+
+    public void ClearError()
+    {
+        BriefError = null;
+        Error = null;
+    }
+
+    public void SetError(string? briefError, string? error)
+    {
+        BriefError = briefError;
+        Error = error;
+    }
 
     public BTask(string id,
         Func<string> getName, Func<string?>? getDescription = null,

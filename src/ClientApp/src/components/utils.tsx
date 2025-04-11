@@ -11,9 +11,10 @@ import chalk from 'chalk';
 import { Time } from '@internationalized/date';
 import type { Duration } from 'dayjs/plugin/duration';
 import dayjs from 'dayjs';
-import { reservedResourceFileTypes, reservedResourceProperties } from '@/sdk/constants';
+import { reservedResourceFileTypes, reservedResourceProperties, UiTheme } from '@/sdk/constants';
 import store from '@/store';
 import BusinessConstants from '@/components/BusinessConstants';
+import type { BakabaseInfrastructuresComponentsConfigurationsAppAppOptions } from '@/sdk/Api';
 
 export const convertDurationToTime = (duration: Duration): Time => {
   return new Time(duration.hours(), duration.minutes(), duration.seconds(), duration.milliseconds());
@@ -677,3 +678,15 @@ export function joinWithEscapeChar(data: (string | null | undefined)[], separato
     // .filter(x => (ignoreNullOrEmpty ? true : (x != undefined && x.length > 0)))
     .join(separator);
 }
+
+export const getUiTheme = (appOptions?: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions) => {
+  let uiTheme: UiTheme = appOptions?.uiTheme as number;
+  if (uiTheme == UiTheme.FollowSystem) {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      uiTheme = UiTheme.Dark;
+    } else {
+      uiTheme = UiTheme.Light;
+    }
+  }
+  return uiTheme;
+};

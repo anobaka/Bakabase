@@ -377,9 +377,9 @@ const TreeEntry = (props: TreeEntryProps) => {
         <Button
           size={'sm'}
           variant={'light'}
-          isIconOnly
+          isIconOnly={!entryRef.current.task.briefError}
           color={'danger'}
-          onClick={() => {
+          onPress={() => {
             createPortal(Modal, {
               defaultVisible: true,
               size: 'xl',
@@ -391,6 +391,7 @@ const TreeEntry = (props: TreeEntryProps) => {
           }}
         >
           <CloseCircleOutlined className={'text-base'} />
+          {entryRef.current.task.briefError}
         </Button>
       );
     }

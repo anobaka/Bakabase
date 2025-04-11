@@ -851,7 +851,11 @@ namespace Bakabase.Service.Controllers
                                         osb.Clear();
                                         goto BuildCommand;
                                     }
+
+                                    throw new BTaskException(_localizer.WrongPassword(), messageSb.ToString());
                                 }
+
+                                throw new BTaskException(null, messageSb.ToString());
                             }
                         });
                     }

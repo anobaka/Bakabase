@@ -154,6 +154,9 @@ const Resources = forwardRef<ResourcesRef, Props>(({
                 width,
               }) => (
                 <Grid
+                  containerStyle={{
+                    overflow: 'visible',
+                  }}
                   ref={gridRef}
                 // height={containerHeight}
                 // width={containerWidth}

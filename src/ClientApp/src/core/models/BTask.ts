@@ -10,6 +10,7 @@ export type BTask = {
   enableAfter?: string; // ISO 8601 datetime string for DateTime equivalent
   status: BTaskStatus; // Assume BTaskStatus is defined elsewhere as an enum or type
   error?: string;
+  briefError?: string;
   messageOnInterruption?: string;
   conflictWithTaskKeys?: string[];
   estimateRemainingTime?: string; // ISO 8601 duration string

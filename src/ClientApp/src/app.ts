@@ -8,6 +8,7 @@ import '@/i18n';
 import { defineStoreConfig } from '@ice/plugin-store/esm/types';
 import BApi from '@/sdk/BApi';
 import { UiTheme } from '@/sdk/constants';
+import { getUiTheme } from '@/components/utils';
 
 const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
@@ -39,14 +40,7 @@ export const storeConfig = defineStoreConfig(async () => {
     if (data) {
       window.enableAnonymousDataTracking = data.enableAnonymousDataTracking;
       window.appVersion = data.version;
-      let uiTheme: UiTheme = data.uiTheme! as number;
-      if (uiTheme == UiTheme.FollowSystem) {
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          uiTheme = UiTheme.Dark;
-        } else {
-          uiTheme = UiTheme.Light;
-        }
-      }
+      const uiTheme = getUiTheme(data);
       window.uiTheme = uiTheme;
 
       // if (uiTheme == UiTheme.Dark) {

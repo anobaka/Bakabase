@@ -136,9 +136,6 @@ namespace Bakabase.Service
             app.ApplicationServices.GetRequiredService<WebGuiHubConfigurationAdapter>().Initialize();
             app.ConfigureGui();
 
-            var predefinedTasksProvider = app.ApplicationServices.GetRequiredService<PredefinedTasksProvider>();
-            _ = app.InitializeBTasks(predefinedTasksProvider.DescriptorBuilders);
-
             base.Configure(app, lifetime);
         }
     }

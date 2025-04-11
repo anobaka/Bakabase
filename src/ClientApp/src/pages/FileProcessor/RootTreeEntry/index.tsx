@@ -183,6 +183,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
           contextMenuEntry={contextMenuEntryRef.current}
           selectedEntries={selectedEntries}
           capabilities={capabilities}
+          root={root}
         />
       </ControlledMenu>
       <EventListener

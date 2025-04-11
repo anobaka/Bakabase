@@ -77,9 +77,9 @@ public class BTaskHandler
     }
 
     public BTaskHandler(Func<BTaskArgs, Task> run, BTask task,
-        IServiceProvider rootServiceProvider, 
+        IServiceProvider rootServiceProvider,
         Func<BTaskStatus, BTask, Task>? onStatusChange = null,
-        Func<BTask, Task>? onPercentageChanged = null, 
+        Func<BTask, Task>? onPercentageChanged = null,
         Func<Task>? onChange = null,
         CancellationToken? ct = null)
     {
@@ -173,26 +173,20 @@ public class BTaskHandler
         _pts = new PauseTokenSource(ct);
         _pts.OnWaitPauseStart += async () =>
         {
-            await UpdateTask(t =>
-            {
-                Task.Status = BTaskStatus.Paused;
-            });
+            await UpdateTask(t => { t.Status = BTaskStatus.Paused; });
             Sw.Stop();
         };
         _pts.OnWaitPauseEnd += async () =>
         {
-            await UpdateTask(t =>
-            {
-                Task.Status = BTaskStatus.Running;
-            });
+            await UpdateTask(t => { t.Status = BTaskStatus.Running; });
             Sw.Start();
         };
 
         await UpdateTask(t =>
         {
+            t.ClearError();
             t.Status = BTaskStatus.Running;
             t.Percentage = 0;
-            t.Error = null;
             t.StartedAt = DateTime.Now;
         });
 
@@ -203,6 +197,7 @@ public class BTaskHandler
                 await _run(new BTaskArgs(_pts.Token, ct, Task, UpdateTask, _rootServiceProvider));
                 await UpdateTask(t =>
                 {
+                    t.ClearError();
                     t.Percentage = 100;
                     t.Status = BTaskStatus.Completed;
                 });
@@ -217,7 +212,7 @@ public class BTaskHandler
                 {
                     await UpdateTask(t =>
                     {
-                        Task.Error = string.Join('\n', e.Message, e.StackTrace);
+                        t.SetError((e as BTaskException)?.BriefMessage, string.Join('\n', e.Message, e.StackTrace));
                         Task.Status = BTaskStatus.Error;
                     });
                 }

@@ -37,4 +37,5 @@ public interface IBakabaseLocalizer
     string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames);
     string BTask_FailedToRunTaskDueToUnknownTaskId(string id);
     string BTask_FailedToRunTaskDueToIdExisting(string id);
+    string? WrongPassword();
 }

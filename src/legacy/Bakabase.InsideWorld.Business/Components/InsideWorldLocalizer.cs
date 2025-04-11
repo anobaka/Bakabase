@@ -164,5 +164,10 @@ namespace Bakabase.InsideWorld.Business.Components
             var d = this[$"BackgroundTask_{name}_Name"];
             return d.ResourceNotFound ? null : (string?) d;
         }
+
+        public string? WrongPassword()
+        {
+            return this[nameof(WrongPassword)];
+        }
     }
 }

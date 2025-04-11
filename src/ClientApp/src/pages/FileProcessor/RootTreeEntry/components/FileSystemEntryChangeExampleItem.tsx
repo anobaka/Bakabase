@@ -9,6 +9,7 @@ type Props = {
   editable?: boolean;
   onChange?: (v: string) => any;
   isDirectory?: boolean;
+  hideIcon?: boolean;
 };
 
 export default (props: Props) => {
@@ -19,6 +20,7 @@ export default (props: Props) => {
     text = '',
     onChange,
     isDirectory = false,
+    hideIcon,
   } = props;
 
   let indentClassName = '';
@@ -78,10 +80,12 @@ export default (props: Props) => {
               classNames={{ content: 'px-0' }}
             >
               <div className={'flex items-center gap-2'}>
-                {isDirectory ? (
-                  <FolderOutlined className={'text-xl'} />
-                ) : (
-                  <FileOutlined className={'text-xl'} />
+                {!hideIcon && (
+                  isDirectory ? (
+                    <FolderOutlined className={'text-xl'} />
+                  ) : (
+                    <FileOutlined className={'text-xl'} />
+                  )
                 )}
                 {text}
               </div>
@@ -101,10 +105,12 @@ export default (props: Props) => {
             classNames={{ content: 'px-0' }}
           >
             <div className={'flex items-center gap-2'}>
-              {isDirectory ? (
-                <FolderOutlined className={'text-xl'} />
-              ) : (
-                <FileOutlined className={'text-xl'} />
+              {!hideIcon && (
+                isDirectory ? (
+                  <FolderOutlined className={'text-xl'} />
+                ) : (
+                  <FileOutlined className={'text-xl'} />
+                )
               )}
               {text}
             </div>

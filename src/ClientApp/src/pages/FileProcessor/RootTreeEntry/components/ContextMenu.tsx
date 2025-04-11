@@ -28,6 +28,7 @@ import GroupModal from '@/pages/FileProcessor/RootTreeEntry/components/GroupModa
 type Props = {
   selectedEntries: Entry[];
   contextMenuEntry?: Entry;
+  root?: Entry;
 } & Pick<TreeEntryProps, 'capabilities'>;
 
 type Item = {
@@ -39,6 +40,7 @@ type Item = {
 export default ({
                   selectedEntries,
                   capabilities,
+                  root,
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -84,7 +86,7 @@ export default ({
         icon: <DeleteOutlined className={'text-base'} />,
         label: t('Delete {{count}} items', { count: selectedEntries.length }),
         onClick: () => {
-          createPortal(DeleteConfirmationModal, { paths: selectedEntries.map(e => e.path) });
+          createPortal(DeleteConfirmationModal, { paths: selectedEntries.map(e => e.path), rootPath: root?.path });
         },
       });
     }

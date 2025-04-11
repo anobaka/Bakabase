@@ -399,4 +399,7 @@ The version of lux is not limited.</value>
   <data name="MoveResourceDetail" xml:space="preserve">
     <value>Move resource [{0}] to media library [{1}] and with new path [{2}]</value>
   </data>
+  <data name="WrongPassword" xml:space="preserve">
+    <value>Wrong password</value>
+  </data>
 </root>

@@ -399,4 +399,7 @@
   <data name="MoveResourceDetail" xml:space="preserve">
     <value>将资源 [{0}] 移动至媒体库 [{1}] 下，新路径为 [{2}]</value>
   </data>
+  <data name="WrongPassword" xml:space="preserve">
+    <value>密码错误</value>
+  </data>
 </root>

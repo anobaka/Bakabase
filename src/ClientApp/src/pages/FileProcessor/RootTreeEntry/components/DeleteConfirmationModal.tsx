@@ -1,11 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { Modal } from '@/components/bakaui';
 import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
+import FileSystemEntryChangeItem from '@/pages/FileProcessor/RootTreeEntry/components/FileSystemEntryChangeExampleItem';
 
 type Props = {
+  rootPath?: string;
   paths: string[];
 } & DestroyableProps;
 
@@ -14,6 +16,7 @@ const log = buildLogger('DeleteConfirmationModal');
 export default ({
                   paths = [],
                   onDestroyed,
+                  rootPath,
                 }: Props) => {
   const { t } = useTranslation();
 
@@ -33,10 +36,15 @@ export default ({
       }}
       onOk={async () => await BApi.file.removeFiles({ paths })}
     >
-      <div>
-        {paths.map((e) => (
-          <div key={e}>{e}</div>
-        ))}
+      <div className={'flex flex-col gap-1'}>
+        {rootPath && (
+          <FileSystemEntryChangeItem type={'root'} text={rootPath} isDirectory />
+        )}
+        {paths.map(e => {
+          return (
+            <FileSystemEntryChangeItem hideIcon type={'deleted'} text={rootPath ? e.replace(rootPath, '') : e} indent={rootPath ? 1 : 0} />
+          );
+        })}
       </div>
     </Modal>
   );
