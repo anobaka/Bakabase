@@ -101,7 +101,7 @@ export default (props: Props) => {
             size={'sm'}
             variant={'light'}
             color={'danger'}
-            className={'line-through px-0'}
+            className={'line-through px-0 whitespace-normal h-auto'}
             classNames={{ content: 'px-0' }}
           >
             <div className={'flex items-center gap-2'}>

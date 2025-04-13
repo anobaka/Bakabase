@@ -49,7 +49,33 @@ export default ({
 
   if (selectedEntries.length > 0) {
     const decompressableEntries = selectedEntries.filter(x => x.actions.includes(IwFsEntryAction.Decompress));
+    const expandableEntries = selectedEntries.filter(x => x.expandable && !x.expanded);
+    const collapsableEntries = selectedEntries.filter(x => x.expandable && x.expanded);
     const directoryEntries = selectedEntries.filter(e => e.type == IwFsType.Directory);
+
+    if (expandableEntries.length > 0) {
+      items.push({
+        icon: <CopyOutlined className={'text-base'} />,
+        label: t(selectedEntries.length == 1 ? 'Expand' : 'Expand all'),
+        onClick: () => {
+          for (const entry of expandableEntries) {
+            entry.expand(false);
+          }
+        },
+      });
+    }
+
+    if (collapsableEntries.length > 0) {
+      items.push({
+        icon: <CopyOutlined className={'text-base'} />,
+        label: t(selectedEntries.length == 1 ? 'Collapse' : 'Collapse all'),
+        onClick: () => {
+          for (const entry of collapsableEntries) {
+            entry.collapse();
+          }
+        },
+      });
+    }
 
     if (capabilities?.includes('decompress') && decompressableEntries.length > 0) {
       items.push({

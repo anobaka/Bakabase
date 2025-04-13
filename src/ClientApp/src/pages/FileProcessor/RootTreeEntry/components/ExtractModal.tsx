@@ -25,12 +25,12 @@ export default ({
   const [sampleItems, setSampleItems] = useState<Item[]>([]);
 
   useEffect(() => {
-    BApi.file.getTopLevelFileSystemEntryNames({ root: entries[0].path }).then(x => {
+    BApi.file.getTopLevelFileSystemEntryNames({ root: entries[0]!.path }).then(x => {
       setSampleItems(x.data ?? []);
     });
   }, []);
 
-  const { parent } = entries[0];
+  const { parent } = entries[0]!;
 
   return (
     <Modal

@@ -319,6 +319,9 @@ const TreeEntry = (props: TreeEntryProps) => {
    * @return rendered
    */
   const expand = async (refresh: boolean = false): Promise<boolean> => {
+    if (!entryRef.current.expandable) {
+      return false;
+    }
     if (refresh) {
       entryRef.current.clearChildren();
       log('Clear children');

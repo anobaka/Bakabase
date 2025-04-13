@@ -201,6 +201,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
           if (selectedEntriesRef.current.length > 0) {
             createPortal(DeleteConfirmationModal, {
               paths: selectedEntriesRef.current.map(e => e.path),
+              rootPath: rootRef.current?.path,
             });
           }
         }}
