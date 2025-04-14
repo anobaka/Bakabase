@@ -7,10 +7,16 @@ import ReactPlayer from 'react-player/lazy';
 import moment from 'moment';
 import Queue from 'queue';
 import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
-import { IwFsType, MediaType } from '@/sdk/constants';
+import { IconType, IwFsType, MediaType } from '@/sdk/constants';
 import { GetAllExtensionMediaTypes, PlayFileURL } from '@/sdk/apis';
 import CustomIcon from '@/components/CustomIcon';
-import { buildLogger, createPortalOfComponent, forceFocus, splitPathIntoSegments, useTraceUpdate } from '@/components/utils';
+import {
+  buildLogger,
+  createPortalOfComponent,
+  forceFocus,
+  splitPathIntoSegments,
+  useTraceUpdate,
+} from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import BusinessConstants from '@/components/BusinessConstants';
 import serverConfig from '@/serverConfig';
@@ -464,7 +470,7 @@ const MediaPlayer = (props: IProps) => {
     return (
       <div className={'file'}>
         <div className="icon">
-          <FileSystemEntryIcon path={path} showAsDirectory={false} />
+          <FileSystemEntryIcon path={path} type={IconType.Dynamic} />
         </div>
         <div className="path">
           {mainPath}
@@ -632,7 +638,11 @@ const MediaPlayer = (props: IProps) => {
                             gap: 5,
                           }}
                         >
-                          <FileSystemEntryIcon showAsDirectory={data.type == 'directory'} size={20} path={data.key} />
+                          <FileSystemEntryIcon
+                            type={data.type == 'directory' ? IconType.Directory : IconType.Dynamic}
+                            size={20}
+                            path={data.key}
+                          />
                           <span
                             style={{
                               whiteSpace: 'nowrap',

@@ -14,6 +14,8 @@ export enum DependentComponentStatus {NotInstalled = 1, Installed = 2, Installin
 export const dependentComponentStatuses = Object.keys(DependentComponentStatus).filter(k => typeof DependentComponentStatus[k] === 'number').map(t => ({label: t, value: DependentComponentStatus[t]}));
 export enum CloseBehavior {Prompt = 0, Exit = 1, Minimize = 2, Cancel = 1000}
 export const closeBehaviors = Object.keys(CloseBehavior).filter(k => typeof CloseBehavior[k] === 'number').map(t => ({label: t, value: CloseBehavior[t]}));
+export enum IconType {UnknownFile = 1, Directory = 2, Dynamic = 3}
+export const iconTypes = Object.keys(IconType).filter(k => typeof IconType[k] === 'number').map(t => ({label: t, value: IconType[t]}));
 export enum UiTheme {FollowSystem = 0, Light = 1, Dark = 2}
 export const uiThemes = Object.keys(UiTheme).filter(k => typeof UiTheme[k] === 'number').map(t => ({label: t, value: UiTheme[t]}));
 export enum UpdaterStatus {Idle = 1, Running = 2, PendingRestart = 3, UpToDate = 4, Failed = 5}

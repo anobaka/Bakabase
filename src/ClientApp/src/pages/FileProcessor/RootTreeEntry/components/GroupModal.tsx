@@ -46,37 +46,38 @@ export default ({
         okProps: {
           children: `${t('Extract')}(Enter)`,
           autoFocus: true,
+          disabled: !(result?.groups && result.groups.length > 0),
         },
       }}
     >
       {result ? (
-        <div className={'flex flex-col gap-1'}>
-          <FileSystemEntryChangeExampleItem type={'root'} text={result.rootPath} isDirectory />
-          <FileSystemEntryChangeExampleItem type={'others'} indent={1} />
-          {result.groups.map(g => {
-            return (
-              <>
-                <FileSystemEntryChangeExampleItem type={'added'} indent={1} text={g.directoryName} isDirectory />
-                {g.filenames.map(f => {
-                  return (
-                    <FileSystemEntryChangeExampleItem type={'added'} indent={2} text={f} />
-                  );
-                })}
-                {g.filenames.map(f => {
-                  return (
-                    <FileSystemEntryChangeExampleItem type={'deleted'} indent={1} text={f} />
-                  );
-                })}
-              </>
-            );
-          })}
-          <FileSystemEntryChangeExampleItem type={'others'} indent={1} />
-        </div>
-      ) : (
-        <div className={'flex items-center gap-2'}>
-          <Spinner />
-          {t('Calculating changes...')}
-        </div>
+        (result.groups && result.groups.length > 0) ? (
+          <div className={'flex flex-col gap-1'}>
+            <FileSystemEntryChangeExampleItem type={'root'} text={result.rootPath} isDirectory />
+            {result.groups.map(g => {
+              return (
+                <>
+                  <FileSystemEntryChangeExampleItem type={'added'} indent={1} text={g.directoryName} isDirectory />
+                  {g.filenames.map(f => {
+                    return (
+                      <FileSystemEntryChangeExampleItem type={'added'} indent={2} text={f} />
+                    );
+                  })}
+                  {g.filenames.map(f => {
+                    return (
+                      <FileSystemEntryChangeExampleItem type={'deleted'} indent={1} text={f} />
+                    );
+                  })}
+                </>
+              );
+            })}
+            <FileSystemEntryChangeExampleItem type={'others'} text={`${t('Other files in {{parent}}', { parent: result.rootPath })}...`} indent={1} />
+          </div>
+        ) : t('Nothing to group. Please check if the folder contains any files; subfolders cannot be grouped')) : (
+          <div className={'flex items-center gap-2'}>
+            <Spinner />
+            {t('Calculating changes...')}
+          </div>
       )}
     </Modal>
   );

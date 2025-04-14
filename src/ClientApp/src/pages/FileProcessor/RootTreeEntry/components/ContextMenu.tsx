@@ -112,7 +112,7 @@ export default ({
         icon: <DeleteOutlined className={'text-base'} />,
         label: t('Delete {{count}} items', { count: selectedEntries.length }),
         onClick: () => {
-          createPortal(DeleteConfirmationModal, { paths: selectedEntries.map(e => e.path), rootPath: root?.path });
+          createPortal(DeleteConfirmationModal, { entries: selectedEntries, rootPath: root?.path });
         },
       });
     }
@@ -162,7 +162,7 @@ export default ({
         });
       }
 
-      if (selectedEntries.length == 1 && selectedEntries[0].isDirectory) {
+      if (selectedEntries.length == 1 && selectedEntries[0]!.isDirectory) {
         items.push({
           icon: <GroupOutlined className={'text-base'} />,
           label: t('Group internal items'),

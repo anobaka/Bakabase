@@ -570,6 +570,12 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
 export type BakabaseInfrastructuresComponentsGuiCloseBehavior = 0 | 1 | 2 | 1000;
 
 /**
+ * [1: UnknownFile, 2: Directory, 3: Dynamic]
+ * @format int32
+ */
+export type BakabaseInfrastructuresComponentsGuiIconType = 1 | 2 | 3;
+
+/**
  * [0: FollowSystem, 1: Light, 2: Dark]
  * @format int32
  */
@@ -1707,6 +1713,7 @@ export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelGro
 }
 
 export interface BakabaseServiceModelsViewFileSystemEntryNameViewModel {
+  path: string;
   name: string;
   isDirectory: boolean;
 }
@@ -6050,6 +6057,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getIconData: (
       query?: {
+        /** [1: UnknownFile, 2: Directory, 3: Dynamic] */
+        type?: BakabaseInfrastructuresComponentsGuiIconType;
         path?: string;
       },
       params: RequestParams = {},

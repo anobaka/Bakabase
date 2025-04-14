@@ -9,7 +9,7 @@ import PscProperty from '../models/PscProperty';
 import { PscMatcherValue } from '../models/PscMatcherValue';
 import type { SegmentMatcherConfigurationProps } from '../SegmentMatcherConfiguration';
 import SegmentMatcherConfiguration from '../SegmentMatcherConfiguration';
-import { ResourceMatcherValueType, ResourceProperty, PropertyPool } from '@/sdk/constants';
+import { ResourceMatcherValueType, ResourceProperty, PropertyPool, IconType } from '@/sdk/constants';
 import type { ChipProps } from '@/components/bakaui';
 import { Chip, Listbox, ListboxItem, Popover, Tooltip } from '@/components/bakaui';
 import BusinessConstants from '@/components/BusinessConstants';
@@ -353,7 +353,7 @@ export default ({
         <FileSystemEntryIcon
           size={24}
           path={segments.map(s => s.text).join('/')}
-          showAsDirectory={isDirectory}
+          type={isDirectory ? IconType.Directory : IconType.Dynamic}
         />
       </div>
       {renderSegments()}

@@ -1,11 +1,13 @@
-import { EllipsisOutlined, FileOutlined, FolderAddOutlined, FolderOutlined } from '@ant-design/icons';
 import React from 'react';
 import { Chip, Input } from '@/components/bakaui';
+import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
+import { IconType } from '@/sdk/constants';
 
 type Props = {
   type: 'others' | 'added' | 'deleted' | 'root';
   indent?: 0 | 1 | 2;
   text?: string;
+  path?: string;
   editable?: boolean;
   onChange?: (v: string) => any;
   isDirectory?: boolean;
@@ -18,6 +20,7 @@ export default (props: Props) => {
     editable = false,
     indent = 0,
     text = '',
+    path,
     onChange,
     isDirectory = false,
     hideIcon,
@@ -38,8 +41,19 @@ export default (props: Props) => {
   switch (type) {
     case 'others':
       return (
-        <div className={`${indentClassName}`}>
-          <EllipsisOutlined className={'text-xl'} />
+        <div className={`${indentClassName} flex items-center gap-2`}>
+          <FileSystemEntryIcon
+            type={IconType.UnknownFile}
+            size={20}
+          />
+          <Chip
+            size={'sm'}
+            variant={'light'}
+            className={'px-0'}
+            classNames={{ content: 'px-0' }}
+          >
+            {text}
+          </Chip>
         </div>
       );
     case 'added': {
@@ -53,7 +67,10 @@ export default (props: Props) => {
               className={'px-0'}
               classNames={{ content: 'px-0' }}
             >
-              <FolderAddOutlined className={'text-xl'} />
+              <FileSystemEntryIcon
+                type={IconType.Directory}
+                size={20}
+              />
             </Chip>
             <Input
               radius={'none'}
@@ -81,11 +98,11 @@ export default (props: Props) => {
             >
               <div className={'flex items-center gap-2'}>
                 {!hideIcon && (
-                  isDirectory ? (
-                    <FolderOutlined className={'text-xl'} />
-                  ) : (
-                    <FileOutlined className={'text-xl'} />
-                  )
+                  <FileSystemEntryIcon
+                    path={path}
+                    type={isDirectory ? IconType.Directory : path ? IconType.Dynamic : IconType.UnknownFile}
+                    size={20}
+                  />
                 )}
                 {text}
               </div>
@@ -106,11 +123,11 @@ export default (props: Props) => {
           >
             <div className={'flex items-center gap-2'}>
               {!hideIcon && (
-                isDirectory ? (
-                  <FolderOutlined className={'text-xl'} />
-                ) : (
-                  <FileOutlined className={'text-xl'} />
-                )
+                <FileSystemEntryIcon
+                  path={path}
+                  type={isDirectory ? IconType.Directory : path ? IconType.Dynamic : IconType.UnknownFile}
+                  size={20}
+                />
               )}
               {text}
             </div>
@@ -120,7 +137,10 @@ export default (props: Props) => {
     case 'root':
       return (
         <div className={'flex items-center gap-2'}>
-          <FolderOutlined className={'text-xl'} />
+          <FileSystemEntryIcon
+            type={IconType.Directory}
+            size={20}
+          />
           {text}
         </div>
       );

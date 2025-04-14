@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System.Collections.Concurrent;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -308,6 +310,102 @@ namespace Bakabase.Components
             foreach (var window in windows)
             {
                 ApplyUiTheme(window);
+            }
+        }
+
+        [DllImport("shell32.dll")]
+        public static extern int SHGetStockIconInfo(
+            uint siid,
+            uint uFlags,
+            ref SHSTOCKICONINFO psii);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct SHSTOCKICONINFO
+        {
+            public uint cbSize;
+            public IntPtr hIcon;
+            public int iSysIconIndex;
+            public int iIcon;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szPath;
+        }
+
+        const uint SIID_DOCNOASSOC = 0; // Default file icon
+        const uint SHSIID_FOLDER = 0x3; // Folder icon
+        const uint SHGSI_ICON = 0x100; // Retrieve icon
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool DestroyIcon(IntPtr hIcon);
+
+        private static readonly ConcurrentDictionary<IconType, byte[]> SystemIconCache = [];
+        private static readonly Lock SystemIconAcquireLock = new Lock();
+
+        public override byte[]? GetIcon(IconType type, string? path)
+        {
+            Start:
+            switch (type)
+            {
+                case IconType.UnknownFile:
+                case IconType.Directory:
+                {
+                    if (!SystemIconCache.TryGetValue(type, out var d))
+                    {
+                        lock (SystemIconAcquireLock)
+                        {
+                            if (!SystemIconCache.TryGetValue(type, out d))
+                            {
+                                var stockIconInfo = new SHSTOCKICONINFO();
+                                stockIconInfo.cbSize = (uint) Marshal.SizeOf(stockIconInfo);
+
+                                var result = SHGetStockIconInfo(
+                                    type == IconType.UnknownFile ? SIID_DOCNOASSOC : SHSIID_FOLDER, SHGSI_ICON,
+                                    ref stockIconInfo);
+
+                                using var icon = Icon.FromHandle(stockIconInfo.hIcon);
+
+                                using var ms = new MemoryStream();
+                                icon.ToBitmap().Save(ms, ImageFormat.Png);
+
+                                DestroyIcon(stockIconInfo.hIcon);
+
+                                SystemIconCache[type] = d = ms.ToArray();
+                            }
+                        }
+                    }
+
+                    return d;
+                }
+                case IconType.Dynamic:
+                {
+                    if (path.IsNullOrEmpty())
+                    {
+                        return null;
+                    }
+
+                    if (File.Exists(path))
+                    {
+                        using var icon = Icon.ExtractAssociatedIcon(path);
+                        if (icon == null)
+                        {
+                            return null;
+                        }
+
+                        using var ms = new MemoryStream();
+                        icon.ToBitmap().Save(ms, ImageFormat.Png);
+                        return ms.ToArray();
+                    }
+
+                    if (Directory.Exists(path))
+                    {
+                        type = IconType.Directory;
+                        goto Start;
+                    }
+
+                    return null;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
         }
 

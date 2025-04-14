@@ -8,7 +8,7 @@ import { CloseCircleOutlined, EyeOutlined, FileOutlined, InfoCircleOutlined } fr
 import EditableFileName from './components/EditableFileName';
 import OperationButton from './components/OperationButton';
 import RightOperations from './components/RightOperations';
-import { BTaskStatus, IwFsType } from '@/sdk/constants';
+import { BTaskStatus, IconType, IwFsType } from '@/sdk/constants';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
 import type { IEntryFilter } from '@/core/models/FileExplorer/Entry';
@@ -512,7 +512,7 @@ const TreeEntry = (props: TreeEntryProps) => {
                     <FileSystemEntryIcon
                       size={18}
                       path={entryRef.current.path}
-                      showAsDirectory={entry.isDirectoryOrDrive}
+                      type={entry.isDirectoryOrDrive ? IconType.Directory : IconType.Dynamic}
                     />
                   </div>
                 )}

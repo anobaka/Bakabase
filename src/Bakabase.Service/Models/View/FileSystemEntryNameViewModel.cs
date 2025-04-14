@@ -2,4 +2,4 @@
 
 namespace Bakabase.Service.Models.View;
 
-public record FileSystemEntryNameViewModel(string Name, bool IsDirectory);
+public record FileSystemEntryNameViewModel(string Path, string Name, bool IsDirectory);

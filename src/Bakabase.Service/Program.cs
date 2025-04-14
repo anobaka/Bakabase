@@ -106,6 +106,11 @@ public class Program
         {
             
         }
+
+        public byte[]? GetIcon(IconType type, string? path)
+        {
+            return null;
+        }
     }
 
     public class NullSystemService : ISystemService

@@ -14,7 +14,7 @@ type Props = {
   onDeleted?: (paths: string[]) => void;
 } & DestroyableProps;
 
-type Item = { name: string; isDirectory: boolean };
+type Item = { name: string; isDirectory: boolean; path: string };
 
 export default ({
                   entries,
@@ -84,6 +84,7 @@ export default ({
                 <FileSystemEntryChangeExampleItem
                   type={'deleted'}
                   text={d.name}
+                  path={d.path}
                   isDirectory={d.isDirectory}
                   indent={1}
                 />

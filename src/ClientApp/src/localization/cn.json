@@ -1658,5 +1658,6 @@
   "Overall": "总览",
   "Property value coverage": "属性值覆盖度",
   "Details": "明细",
-  "As more data is filled in, property value coverage increases": "已填充的数据越多，属性值覆盖度越高"
+  "As more data is filled in, property value coverage increases": "已填充的数据越多，属性值覆盖度越高",
+  "Nothing to group. Please check if the folder contains any files; subfolders cannot be grouped": "未找到可以被组合的内容。请检查文件夹中是否包含文件；子文件夹无法被组合"
 }

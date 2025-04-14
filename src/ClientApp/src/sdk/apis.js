@@ -5009,6 +5009,7 @@ export const DecompressFilesURL = function(parameters = {}) {
  * url: GetIconDataURL
  * method: GetIconData_TYPE
  * raw_url: GetIconData_RAW_URL
+ * @param type - [1: UnknownFile, 2: Directory, 3: Dynamic]
  * @param path - 
  */
 export const GetIconData = function(parameters = {}) {
@@ -5018,6 +5019,9 @@ export const GetIconData = function(parameters = {}) {
   let body
   let queryParameters = {}
   let form = {}
+  if (parameters['type'] !== undefined) {
+    queryParameters['type'] = parameters['type']
+  }
   if (parameters['path'] !== undefined) {
     queryParameters['path'] = parameters['path']
   }
@@ -5038,6 +5042,9 @@ export const GetIconDataURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/file/icon'
+  if (parameters['type'] !== undefined) {
+    queryParameters['type'] = parameters['type']
+  }
   if (parameters['path'] !== undefined) {
     queryParameters['path'] = parameters['path']
   }

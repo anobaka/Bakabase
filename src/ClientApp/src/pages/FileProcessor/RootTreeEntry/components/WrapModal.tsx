@@ -21,7 +21,7 @@ export default ({
 
   }, []);
 
-  const { parent } = entries[0];
+  const { parent } = entries[0]!;
 
   return (
     <Modal
@@ -53,7 +53,6 @@ export default ({
     >
       <div className={'flex flex-col gap-1'}>
         <FileSystemEntryChangeItem type={'root'} text={parent?.path ?? '.'} isDirectory />
-        <FileSystemEntryChangeItem type={'others'} indent={1} />
         <FileSystemEntryChangeItem
           type={'added'}
           editable
@@ -64,15 +63,31 @@ export default ({
         />
         {entries.map(e => {
           return (
-            <FileSystemEntryChangeItem type={'added'} text={e.name} indent={2} isDirectory={e.isDirectory} />
+            <FileSystemEntryChangeItem
+              type={'added'}
+              text={e.name}
+              indent={2}
+              isDirectory={e.isDirectory}
+              path={e.path}
+            />
           );
         })}
         {entries.map(e => {
           return (
-            <FileSystemEntryChangeItem type={'deleted'} text={e.name} indent={1} isDirectory={e.isDirectory} />
+            <FileSystemEntryChangeItem
+              type={'deleted'}
+              text={e.name}
+              indent={1}
+              isDirectory={e.isDirectory}
+              path={e.path}
+            />
           );
         })}
-        <FileSystemEntryChangeItem type={'others'} indent={1} />
+        <FileSystemEntryChangeItem
+          type={'others'}
+          text={`${t('Other files in {{parent}}', { parent: parent?.path })}...`}
+          indent={1}
+        />
       </div>
     </Modal>
   );

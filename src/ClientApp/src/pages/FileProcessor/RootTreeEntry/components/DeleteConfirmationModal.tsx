@@ -8,17 +8,19 @@ import FileSystemEntryChangeItem from '@/pages/FileProcessor/RootTreeEntry/compo
 
 type Props = {
   rootPath?: string;
-  paths: string[];
+  entries: { path: string; isDirectory: boolean }[];
 } & DestroyableProps;
 
 const log = buildLogger('DeleteConfirmationModal');
 
 export default ({
-                  paths = [],
+                  entries = [],
                   onDestroyed,
                   rootPath,
                 }: Props) => {
   const { t } = useTranslation();
+
+  console.log(entries);
 
   return (
     <Modal
@@ -34,15 +36,21 @@ export default ({
           autoFocus: true,
         },
       }}
-      onOk={async () => await BApi.file.removeFiles({ paths })}
+      onOk={async () => await BApi.file.removeFiles({ paths: entries.map(p => p.path) })}
     >
       <div className={'flex flex-col gap-1'}>
         {rootPath && (
           <FileSystemEntryChangeItem type={'root'} text={rootPath} isDirectory />
         )}
-        {paths.map(e => {
+        {entries.map(e => {
           return (
-            <FileSystemEntryChangeItem hideIcon type={'deleted'} text={rootPath ? e.replace(rootPath, '') : e} indent={rootPath ? 1 : 0} />
+            <FileSystemEntryChangeItem
+              type={'deleted'}
+              path={e.path}
+              isDirectory={e.isDirectory}
+              text={rootPath ? e.path.replace(rootPath, '') : e.path}
+              indent={rootPath ? 1 : 0}
+            />
           );
         })}
       </div>

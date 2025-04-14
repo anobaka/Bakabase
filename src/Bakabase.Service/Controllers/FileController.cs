@@ -18,6 +18,7 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
@@ -31,6 +32,7 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
+using Bakabase.Service.Models.View.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Cryptography;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -44,9 +46,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NPOI.SS.UserModel;
 using Swashbuckle.AspNetCore.Annotations;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Bakabase.Service.Controllers
 {
@@ -64,12 +64,13 @@ namespace Bakabase.Service.Controllers
         private readonly IwFsWatcher _fileProcessorWatcher;
         private readonly PasswordService _passwordService;
         private readonly ILogger<FileController> _logger;
+        private readonly IGuiAdapter _guiAdapter;
 
         public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
             IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
-            InsideWorldLocalizer localizer, BTaskManager taskManager)
+            InsideWorldLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter)
         {
             _specialTextService = specialTextService;
             _env = env;
@@ -81,6 +82,7 @@ namespace Bakabase.Service.Controllers
             _logger = logger;
             _localizer = localizer;
             _taskManager = taskManager;
+            _guiAdapter = guiAdapter;
 
             _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
         }
@@ -91,9 +93,9 @@ namespace Bakabase.Service.Controllers
             string root)
         {
             var files = Directory.GetFiles(root)
-                .Select(x => new FileSystemEntryNameViewModel(Path.GetFileName(x)!, false)).ToArray();
+                .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x), false)).ToArray();
             var directories = Directory.GetDirectories(root)
-                .Select(x => new FileSystemEntryNameViewModel(Path.GetFileName(x)!, true)).ToArray();
+                .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x)!, true)).ToArray();
 
             return new ListResponse<FileSystemEntryNameViewModel>(files.Concat(directories)
                 .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase));
@@ -373,18 +375,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "ExtractAndRemoveDirectory")]
         public async Task<BaseResponse> ExtractAndRemoveDirectory(string directory)
         {
-            // var parent = Path.GetDirectoryName(directory);
-            // var files = Directory.GetFiles(directory, "*.*", SearchOption.AllDirectories);
-            // var newFiles = files.Select(t => t.Replace(directory, parent)).ToArray();
-            // var existedFiles = newFiles.Where(System.IO.File.Exists).ToArray();
-            // if (existedFiles.Any())
-            // {
-            //     return BaseResponseBuilder.BuildBadRequest(
-            //         $"File exists: {Environment.NewLine}{string.Join(Environment.NewLine, existedFiles)}");
-            // }
-
             DirectoryUtils.Merge(directory, Path.GetDirectoryName(directory), false);
-
             return BaseResponseBuilder.Ok;
         }
 
@@ -503,9 +494,9 @@ namespace Bakabase.Service.Controllers
 
             var viewModels = files
                 .Select(f =>
-                    new FileSystemEntryNameViewModel(f.StandardizePath()!.Replace(model.WorkingDir, null), false))
+                    new FileSystemEntryNameViewModel(f.StandardizePath()!, f.StandardizePath()!.Replace(model.WorkingDir, null), false))
                 .Concat(directories.Select(d =>
-                    new FileSystemEntryNameViewModel(d.StandardizePath()!.Replace(model.WorkingDir, null), true)))
+                    new FileSystemEntryNameViewModel(d.StandardizePath()!, d.StandardizePath()!.Replace(model.WorkingDir, null), true)))
                 .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase);
 
             return new ListResponse<FileSystemEntryNameViewModel>(viewModels);
@@ -865,43 +856,20 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        private static readonly ConcurrentDictionary<string, string> IconVault = new();
         private static readonly string PngContentType = MimeTypes.GetMimeType(".png");
-        private static readonly object IconVaultLock = new object();
 
         [HttpGet("icon")]
         [SwaggerOperation(OperationId = "GetIconData")]
-        public async Task<SingletonResponse<string>> GetIcon(string path)
+        public Task<SingletonResponse<string>> GetIcon(IconType type, string? path)
         {
             string? iconBase64 = null;
-            if (System.IO.File.Exists(path))
+            var icon = _guiAdapter.GetIcon(type, path);
+            if (icon != null)
             {
-                var ext = Path.GetExtension(path).ToLower();
-                var cacheKey = ext == InternalOptions.ExeExtension ? path : ext;
-                if (!IconVault.TryGetValue(cacheKey, out iconBase64))
-                {
-                    lock (IconVaultLock)
-                    {
-                        if (!IconVault.TryGetValue(cacheKey, out iconBase64))
-                        {
-                            using var im = Icon.ExtractAssociatedIcon(path);
-                            if (im != null)
-                            {
-                                using var ms = new MemoryStream();
-                                // Ico encoder is not found.
-                                im.ToBitmap().Save(ms, ImageFormat.Png);
-                                im.Dispose();
-                                ms.Seek(0, SeekOrigin.Begin);
-                                iconBase64 = $@"data:{PngContentType};base64," + Convert.ToBase64String(ms.ToArray());
-                            }
-
-                            IconVault[ext] = iconBase64;
-                        }
-                    }
-                }
+                iconBase64 = $@"data:{PngContentType};base64," + Convert.ToBase64String(icon);
             }
 
-            return new SingletonResponse<string>(iconBase64);
+            return Task.FromResult(new SingletonResponse<string>(iconBase64));
         }
 
         [HttpGet("all-files")]
