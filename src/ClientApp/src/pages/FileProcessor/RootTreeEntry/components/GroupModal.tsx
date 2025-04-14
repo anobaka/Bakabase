@@ -9,13 +9,16 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 import BusinessConstants from '@/components/BusinessConstants';
 import FileSystemEntryChangeExampleItem
   from '@/pages/FileProcessor/RootTreeEntry/components/FileSystemEntryChangeExampleItem';
+import type { BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel } from '@/sdk/Api';
+import FileSystemEntryChangeExampleMiscellaneousItem
+  from '@/pages/FileProcessor/RootTreeEntry/components/FileSystemEntryChangeExampleMiscellaneousItem';
 
 type Props = {
   entries: Entry[];
   groupInternal: boolean;
 } & DestroyableProps;
 
-type Group = {directoryName: string; filenames: string[]};
+type Group = { directoryName: string; filenames: string[] };
 
 export default ({
                   entries = [],
@@ -24,11 +27,14 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
 
-  const [result, setResult] = useState<{groups: Group[]; rootPath: string}>();
+  const [preview, setPreview] = useState<BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel[]>();
 
   useEffect(() => {
-    BApi.file.previewFileSystemEntriesGroupResult({ paths: entries.map(e => e.path), groupInternal }).then(x => {
-      setResult(x.data);
+    BApi.file.previewFileSystemEntriesGroupResult({
+      paths: entries.map(e => e.path),
+      groupInternal,
+    }).then(x => {
+      setPreview(x.data);
     });
   }, []);
 
@@ -39,45 +45,55 @@ export default ({
       onDestroyed={onDestroyed}
       title={t(groupInternal ? 'Group internal items' : 'Group {{count}} items', { count: entries.length })}
       onOk={async () => {
-        await BApi.file.mergeFileSystemEntries({ paths: entries.map(e => e.path), groupInternal });
+        await BApi.file.mergeFileSystemEntries({
+          paths: entries.map(e => e.path),
+          groupInternal,
+        });
       }}
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
           children: `${t('Extract')}(Enter)`,
           autoFocus: true,
-          disabled: !(result?.groups && result.groups.length > 0),
+          disabled: !preview || preview.length == 0,
         },
       }}
     >
-      {result ? (
-        (result.groups && result.groups.length > 0) ? (
+      {preview ? preview.map(p => {
+        return (
           <div className={'flex flex-col gap-1'}>
-            <FileSystemEntryChangeExampleItem type={'root'} text={result.rootPath} isDirectory />
-            {result.groups.map(g => {
-              return (
-                <>
-                  <FileSystemEntryChangeExampleItem type={'added'} indent={1} text={g.directoryName} isDirectory />
-                  {g.filenames.map(f => {
-                    return (
-                      <FileSystemEntryChangeExampleItem type={'added'} indent={2} text={f} />
-                    );
-                  })}
-                  {g.filenames.map(f => {
-                    return (
-                      <FileSystemEntryChangeExampleItem type={'deleted'} indent={1} text={f} />
-                    );
-                  })}
-                </>
-              );
-            })}
-            <FileSystemEntryChangeExampleItem type={'others'} text={`${t('Other files in {{parent}}', { parent: result.rootPath })}...`} indent={1} />
+            <FileSystemEntryChangeExampleItem type={'root'} text={p.rootPath} isDirectory />
+            {p.groups && p.groups.length > 0 ? (
+              p.groups.map(g => {
+                return (
+                  <>
+                    <FileSystemEntryChangeExampleItem type={'added'} indent={1} text={g.directoryName} isDirectory />
+                    {g.filenames.map(f => {
+                      return (
+                        <FileSystemEntryChangeExampleItem type={'added'} indent={2} text={f} />
+                      );
+                    })}
+                    {g.filenames.map(f => {
+                      return (
+                        <FileSystemEntryChangeExampleItem type={'deleted'} indent={1} text={f} />
+                      );
+                    })}
+                  </>
+                );
+              })
+            ) : <FileSystemEntryChangeExampleItem
+              type={'error'}
+              indent={1}
+              text={t('Nothing to group. Please check if the folder contains any files; subfolders cannot be grouped')}
+            />}
+            <FileSystemEntryChangeExampleMiscellaneousItem parent={p.rootPath} indent={1} />
           </div>
-        ) : t('Nothing to group. Please check if the folder contains any files; subfolders cannot be grouped')) : (
-          <div className={'flex items-center gap-2'}>
-            <Spinner />
-            {t('Calculating changes...')}
-          </div>
+        );
+      }) : (
+        <div className={'flex items-center gap-2'}>
+          <Spinner />
+          {t('Calculating changes...')}
+        </div>
       )}
     </Modal>
   );

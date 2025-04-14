@@ -947,7 +947,7 @@ export interface paths {
         get: operations["GetAllDownloadTasks"];
         put?: never;
         post: operations["CreateDownloadTask"];
-        delete?: never;
+        delete: operations["DeleteDownloadTasks"];
         options?: never;
         head?: never;
         patch?: never;
@@ -963,23 +963,7 @@ export interface paths {
         get: operations["GetDownloadTask"];
         put: operations["PutDownloadTask"];
         post?: never;
-        delete: operations["RemoveDownloadTask"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/download-task/ids": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["RemoveDownloadTasksByIds"];
+        delete: operations["DeleteDownloadTask"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2651,6 +2635,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tool/open-file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/updater/app/new-version": {
         parameters: {
             query?: never;
@@ -3168,6 +3168,12 @@ export interface components {
         "Bakabase.Infrastructures.Components.Gui.CloseBehavior": 0 | 1 | 2 | 1000;
         /**
          * Format: int32
+         * @description [1: UnknownFile, 2: Directory, 3: Dynamic]
+         * @enum {integer}
+         */
+        "Bakabase.Infrastructures.Components.Gui.IconType": 1 | 2 | 3;
+        /**
+         * Format: int32
          * @description [0: FollowSystem, 1: Light, 2: Dark]
          * @enum {integer}
          */
@@ -3183,6 +3189,10 @@ export interface components {
             version: string;
             description?: string;
             canUpdate: boolean;
+        };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskDeleteInputModel": {
+            ids?: number[];
+            thirdPartyId?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
         };
         "Bakabase.InsideWorld.Business.Components.FileExplorer.Entries.IwFsCompressedFileGroup": {
             keyName: string;
@@ -3543,12 +3553,16 @@ export interface components {
             thisWeekAddedCategoryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
             thisMonthAddedCategoryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
             resourceTrending: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+WeekCount"][];
-            propertyValueCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+PropertyAndCount"][];
             tagResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
             downloaderDataCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+DownloaderTaskCount"][];
             thirdPartyRequestCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+ThirdPartyRequestCount"][];
             fileMover: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+FileMoverInfo"];
             otherCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][][];
+            /** Format: int32 */
+            totalExpectedPropertyValueCount: number;
+            /** Format: int32 */
+            totalFilledPropertyValueCount: number;
+            propertyValueCoverages: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+PropertyValueCoverage"][];
         };
         "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+DownloaderTaskCount": {
             id: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
@@ -3562,10 +3576,16 @@ export interface components {
             /** Format: int32 */
             targetCount: number;
         };
-        "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+PropertyAndCount": {
+        "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+PropertyValueCoverage": {
+            /** Format: int32 */
+            pool: number;
+            /** Format: int32 */
+            id: number;
             name: string;
             /** Format: int32 */
-            valueCount: number;
+            filledCount: number;
+            /** Format: int32 */
+            expectedCount: number;
         };
         "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount": {
             label?: string;
@@ -4080,6 +4100,7 @@ export interface components {
             filenames: string[];
         };
         "Bakabase.Service.Models.View.FileSystemEntryNameViewModel": {
+            path: string;
             name: string;
             isDirectory: boolean;
         };
@@ -4268,6 +4289,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileSystemEntryNameViewModel]": {
             /** Format: int32 */
@@ -4592,12 +4619,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]": {
             /** Format: int32 */
@@ -7156,6 +7177,35 @@ export interface operations {
             };
         };
     };
+    DeleteDownloadTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskDeleteInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskDeleteInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskDeleteInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskDeleteInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetDownloadTask: {
         parameters: {
             query?: never;
@@ -7211,7 +7261,7 @@ export interface operations {
             };
         };
     };
-    RemoveDownloadTask: {
+    DeleteDownloadTask: {
         parameters: {
             query?: never;
             header?: never;
@@ -7221,35 +7271,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    RemoveDownloadTasksByIds: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": number[];
-                "application/json": number[];
-                "text/json": number[];
-                "application/*+json": number[];
-            };
-        };
         responses: {
             /** @description OK */
             200: {
@@ -7963,6 +7984,8 @@ export interface operations {
     GetIconData: {
         parameters: {
             query?: {
+                /** @description [1: UnknownFile, 2: Directory, 3: Dynamic] */
+                type?: components["schemas"]["Bakabase.Infrastructures.Components.Gui.IconType"];
                 path?: string;
             };
             header?: never;
@@ -8079,9 +8102,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel]"];
                 };
             };
         };
@@ -10573,6 +10596,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,System.Collections.Generic.List`1[System.String]]]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,System.Collections.Generic.List`1[System.String]]]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,System.Collections.Generic.List`1[System.String]]]"];
+                };
+            };
+        };
+    };
+    OpenFile: {
+        parameters: {
+            query?: {
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

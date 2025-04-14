@@ -42,7 +42,6 @@ export default ({
       }}
     >
       <div className={'flex flex-col gap-1'}>
-
         {Object.keys(groups).map((parent) => {
           const innerEntries = groups[parent] ?? [];
           return (

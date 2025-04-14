@@ -1,13 +1,17 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { EllipsisOutlined, FileOutlined, FolderAddOutlined, FolderOutlined } from '@ant-design/icons';
+import _ from 'lodash';
+import FileSystemEntryChangeExampleMiscellaneousItem from './FileSystemEntryChangeExampleMiscellaneousItem';
 import type { Entry } from '@/core/models/FileExplorer/Entry';
 import BApi from '@/sdk/BApi';
 import { Chip, Input, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import BusinessConstants from '@/components/BusinessConstants';
 import FileSystemEntryChangeItem from '@/pages/FileProcessor/RootTreeEntry/components/FileSystemEntryChangeExampleItem';
+import FileSystemEntryChangeExampleItem
+  from '@/pages/FileProcessor/RootTreeEntry/components/FileSystemEntryChangeExampleItem';
 
 type Props = { entries: Entry[] } & DestroyableProps;
 
@@ -16,12 +20,13 @@ export default ({
                   onDestroyed,
                 }: Props) => {
   const { t } = useTranslation();
-  const [newParentName, setNewParentName] = useState(entries[0]?.meaningfulName);
+  const groupsRef = useRef(_.groupBy(entries, e => e.parent?.path));
+  const [newParentNames, setNewParentNames] = useState(_.mapValues(groupsRef.current, g => g[0]!.meaningfulName));
   useEffect(() => {
 
   }, []);
 
-  const { parent } = entries[0]!;
+  console.log(newParentNames);
 
   return (
     <Modal
@@ -30,64 +35,68 @@ export default ({
       onDestroyed={onDestroyed}
       title={t('Wrapping {{count}} file entries', { count: entries.length })}
       onOk={async () => {
-        // console.log(newParentName);
-        if (newParentName && newParentName?.length > 0) {
-          const d = [parent!.path, newParentName].join(BusinessConstants.pathSeparator);
-          const rsp = await BApi.file.moveEntries({
+        await Promise.all(_.keys(groupsRef.current).map(async p => {
+          const innerEntries = groupsRef.current[p]!;
+          const parentEntry = innerEntries[0]!.parent!;
+          const d = [parentEntry.path, newParentNames[p]].join(BusinessConstants.pathSeparator);
+          await BApi.file.moveEntries({
             destDir: d,
-            entryPaths: entries.map((e) => e.path),
+            entryPaths: innerEntries.map((e) => e.path),
           });
-          return rsp;
-        } else {
-          Message.error(t('Bad name'));
-          throw new Error(t('Bad name'));
-        }
+        }));
       }}
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
           children: `${t('Wrap')}(Enter)`,
           autoFocus: true,
+          disabled: _.values(newParentNames).some(x => !x || x.length == 0),
         },
       }}
     >
       <div className={'flex flex-col gap-1'}>
-        <FileSystemEntryChangeItem type={'root'} text={parent?.path ?? '.'} isDirectory />
-        <FileSystemEntryChangeItem
-          type={'added'}
-          editable
-          text={newParentName}
-          onChange={setNewParentName}
-          indent={1}
-          isDirectory
-        />
-        {entries.map(e => {
+        {Object.keys(groupsRef.current).map((parent) => {
+          const innerEntries = groupsRef.current[parent] ?? [];
+          const newParentName = newParentNames[parent] ?? '';
           return (
-            <FileSystemEntryChangeItem
-              type={'added'}
-              text={e.name}
-              indent={2}
-              isDirectory={e.isDirectory}
-              path={e.path}
-            />
+            <>
+              <FileSystemEntryChangeExampleItem type={'root'} text={parent ?? '.'} isDirectory />
+              <FileSystemEntryChangeItem
+                type={'added'}
+                editable
+                text={newParentName}
+                onChange={v => {
+                  setNewParentNames((old) => ({ ...old, [parent]: v }));
+                }}
+                indent={1}
+                isDirectory
+              />
+              {innerEntries.map((e, i) => {
+                return (
+                  <FileSystemEntryChangeExampleItem
+                    type={'added'}
+                    text={e.name}
+                    indent={2}
+                    isDirectory={e.isDirectory}
+                    path={e.path}
+                  />
+                );
+              })}
+              {innerEntries.map((e, i) => {
+                return (
+                  <FileSystemEntryChangeExampleItem
+                    type={'deleted'}
+                    text={e.name}
+                    indent={1}
+                    isDirectory={e.isDirectory}
+                    path={e.path}
+                  />
+                );
+              })}
+              <FileSystemEntryChangeExampleMiscellaneousItem parent={parent} indent={1} />
+            </>
           );
         })}
-        {entries.map(e => {
-          return (
-            <FileSystemEntryChangeItem
-              type={'deleted'}
-              text={e.name}
-              indent={1}
-              isDirectory={e.isDirectory}
-              path={e.path}
-            />
-          );
-        })}
-        <FileSystemEntryChangeItem
-          type={'others'}
-          text={`${t('Other files in {{parent}}', { parent: parent?.path })}...`}
-          indent={1}
-        />
       </div>
     </Modal>
   );

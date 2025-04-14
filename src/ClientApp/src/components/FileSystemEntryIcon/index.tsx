@@ -56,7 +56,7 @@ export default ({
   const [icons, iconsDispatchers] = store.useModel('icons');
   const [iconImgData, setIconImgData] = useState(disableCache ? undefined : icons[cacheKey]);
 
-  console.log(path, type, size, iconImgData);
+  // console.log(path, type, size, iconImgData);
 
   useEffect(() => {
     if (!iconImgData) {

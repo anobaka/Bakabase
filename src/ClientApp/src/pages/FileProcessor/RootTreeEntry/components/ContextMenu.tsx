@@ -47,6 +47,8 @@ export default ({
 
   const items: Item[] = [];
 
+  console.log(selectedEntries);
+
   if (selectedEntries.length > 0) {
     const decompressableEntries = selectedEntries.filter(x => x.actions.includes(IwFsEntryAction.Decompress));
     const expandableEntries = selectedEntries.filter(x => x.expandable && !x.expanded);
@@ -148,7 +150,7 @@ export default ({
     }
 
     if (capabilities?.includes('group')) {
-      const targetEntries = selectedEntries.filter(x => !x.isDirectory);
+      const targetEntries = selectedEntries;
       if (targetEntries.length > 1) {
         items.push({
           icon: <GroupOutlined className={'text-base'} />,
@@ -162,7 +164,7 @@ export default ({
         });
       }
 
-      if (selectedEntries.length == 1 && selectedEntries[0]!.isDirectory) {
+      if (selectedEntries.some(e => e.isDirectory)) {
         items.push({
           icon: <GroupOutlined className={'text-base'} />,
           label: t('Group internal items'),

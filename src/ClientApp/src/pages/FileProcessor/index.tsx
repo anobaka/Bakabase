@@ -104,7 +104,7 @@ export default () => {
                 }}
                 selectable={'multiple'}
                 expandable
-                capabilities={['decompress', 'wrap', 'move', 'extract', 'delete', 'rename', 'delete-all-by-name', 'group', 'expand']}
+                capabilities={['decompress', 'wrap', 'move', 'extract', 'delete', 'rename', 'delete-all-by-name', 'group']}
                 rootPath={rootPath}
                 onInitialized={v => {
                   if (v != undefined) {

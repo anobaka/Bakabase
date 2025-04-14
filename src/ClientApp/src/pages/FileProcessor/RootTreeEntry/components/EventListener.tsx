@@ -9,7 +9,7 @@ export enum SelectionMode{
 
 type Props = {
   onSelectionModeChange: (mode: SelectionMode) => void;
-  onClick?: () => void;
+  onClick?: (evt: MouseEvent) => void;
   onDelete?: () => any;
   onKeyDown?: (key: string, evt: KeyboardEvent) => any;
 };
@@ -38,8 +38,9 @@ export default (props: Props) => {
     }
   };
 
-  const onClick = useCallback(() => {
-    propsRef.current.onClick?.();
+  const onClick = useCallback((evt: MouseEvent) => {
+    console.log(1);
+    propsRef.current.onClick?.(evt);
   }, []);
 
   const onKeyDown = useCallback((e: KeyboardEvent) => {

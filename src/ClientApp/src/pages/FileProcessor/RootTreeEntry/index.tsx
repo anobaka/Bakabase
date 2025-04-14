@@ -149,6 +149,20 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
     };
   }, [root]);
 
+  const ignoreClickEvent = useCallback((target: HTMLElement | null) => {
+    let e = target;
+    while (e) {
+      // console.log(e);
+      if (e.role == 'dialog' || e.role == 'menuitem') {
+        console.log('return');
+        return true;
+      }
+      e = e.parentElement;
+    }
+
+    return false;
+  }, []);
+
   if (!root) {
     return null;
   }
@@ -159,7 +173,10 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
   return (
     <div
       className={'flex flex-col gap-1 max-h-full min-h-0 grow'}
-      onClick={() => {
+      onClick={(evt) => {
+        if (ignoreClickEvent(evt.target as HTMLElement)) {
+          return;
+        }
         for (const se of selectedEntriesRef.current) {
           se.select(false);
         }
@@ -191,7 +208,10 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
           selectionModeRef.current = m;
           forceUpdate();
         }}
-        onClick={() => {
+        onClick={(evt) => {
+          if (ignoreClickEvent(evt.target as HTMLElement)) {
+            return;
+          }
           for (const se of selectedEntriesRef.current) {
             se.select(false);
           }

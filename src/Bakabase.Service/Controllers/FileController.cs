@@ -32,7 +32,6 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
-using Bakabase.Service.Models.View.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Cryptography;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -42,6 +41,7 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CliWrap;
+using CsQuery.ExtensionMethods.Internal;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -922,69 +922,62 @@ namespace Bakabase.Service.Controllers
 
         [HttpPut("group-preview")]
         [SwaggerOperation(OperationId = "PreviewFileSystemEntriesGroupResult")]
-        public async Task<SingletonResponse<FileSystemEntryGroupResultViewModel>> GroupPreview(
+        public async Task<ListResponse<FileSystemEntryGroupResultViewModel>> GroupPreview(
             [FromBody] FileSystemEntryGroupInputModel model)
         {
             if (model.Paths.Length == 0)
             {
-                return SingletonResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
+                return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
             }
 
-            var files = new List<string>();
-
-            string rootPath;
+            var batches = new Dictionary<string, List<string>>();
 
             if (model.GroupInternal)
             {
-                if (model.Paths.Length > 1)
+                foreach (var rootPath in model.Paths)
                 {
-                    return SingletonResponseBuilder<FileSystemEntryGroupResultViewModel>.BuildBadRequest(
-                        _localizer.PathsShouldBeInSameDirectory());
+                    if (!Directory.Exists(rootPath))
+                    {
+                        return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
+                    }
+
+                    batches[rootPath] = Directory.GetFiles(rootPath).ToList();
                 }
-
-                rootPath = model.Paths[0];
-
-                if (!Directory.Exists(rootPath))
-                {
-                    return SingletonResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
-                }
-
-                files.AddRange(Directory.GetFiles(rootPath));
             }
             else
             {
-                if (model.Paths.GroupBy(Path.GetDirectoryName, StringComparer.OrdinalIgnoreCase).Count() > 1)
+                foreach (var pg in model.Paths.GroupBy(Path.GetDirectoryName))
                 {
-                    return SingletonResponseBuilder<FileSystemEntryGroupResultViewModel>.BuildBadRequest(
-                        _localizer.PathsShouldBeInSameDirectory());
-                }
-
-                rootPath = Path.GetDirectoryName(model.Paths[0])!;
-
-                foreach (var path in model.Paths)
-                {
-                    if (System.IO.File.Exists(path))
+                    if (pg.Key.IsNotEmpty())
                     {
-                        files.Add(path);
+                        foreach (var path in pg)
+                        {
+                            if (System.IO.File.Exists(path))
+                            {
+                                batches.GetOrAdd(pg.Key, () => []).Add(path);
+                            }
+                        }
                     }
                 }
             }
 
-            rootPath = rootPath.StandardizePath()!;
-
-            var vm = new FileSystemEntryGroupResultViewModel
+            var vms = batches.Select(g =>
             {
-                RootPath = rootPath,
-                Groups = files.GroupBy(d => Path.GetFileNameWithoutExtension(d) ?? string.Empty,
-                        StringComparer.OrdinalIgnoreCase)
-                    .Where(x => x.Key.IsNotEmpty()).Select(x => new FileSystemEntryGroupResultViewModel.GroupViewModel
-                    {
-                        DirectoryName = x.Key,
-                        Filenames = x.Select(y => Path.GetFileName(y)!).ToArray()
-                    }).ToArray()
-            };
+                var rootPath = g.Key.StandardizePath()!;
+                return new FileSystemEntryGroupResultViewModel
+                {
+                    RootPath = rootPath,
+                    Groups = g.Value.GroupBy(Path.GetFileNameWithoutExtension)
+                        .Where(x => x.Key.IsNotEmpty()).Select(x =>
+                            new FileSystemEntryGroupResultViewModel.GroupViewModel
+                            {
+                                DirectoryName = x.Key.StandardizePath()!,
+                                Filenames = x.Select(y => Path.GetFileName(y)).ToArray()
+                            }).ToArray()
+                };
+            });
 
-            return new SingletonResponse<FileSystemEntryGroupResultViewModel>(vm);
+            return new ListResponse<FileSystemEntryGroupResultViewModel>(vms);
         }
 
         [HttpPut("group")]
@@ -997,18 +990,21 @@ namespace Bakabase.Service.Controllers
                 return r;
             }
 
-            var result = r.Data!;
+            var batches = r.Data!;
 
-            foreach (var group in result.Groups)
+            foreach (var batch in batches)
             {
-                var dirFullname = Path.Combine(result.RootPath, group.DirectoryName);
-                Directory.CreateDirectory(dirFullname);
-                foreach (var f in group.Filenames)
+                foreach (var group in batch.Groups)
                 {
-                    var sourceFile = Path.Combine(result.RootPath, f);
-                    var fileFullname = Path.Combine(dirFullname, f);
-                    // Use quickly way in same drive
-                    System.IO.File.Move(sourceFile, fileFullname, false);
+                    var dirFullname = Path.Combine(batch.RootPath, group.DirectoryName);
+                    Directory.CreateDirectory(dirFullname);
+                    foreach (var f in group.Filenames)
+                    {
+                        var sourceFile = Path.Combine(batch.RootPath, f);
+                        var fileFullname = Path.Combine(dirFullname, f);
+                        // Use quickly way in same drive
+                        System.IO.File.Move(sourceFile, fileFullname, false);
+                    }
                 }
             }
 

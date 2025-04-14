@@ -1940,6 +1940,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   data?: BakabaseServiceModelsViewCustomPropertyViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileSystemEntryNameViewModel {
   /** @format int32 */
   code: number;
@@ -2312,13 +2319,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel {
@@ -6153,7 +6153,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel,
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel,
         any
       >({
         path: `/file/group-preview`,
