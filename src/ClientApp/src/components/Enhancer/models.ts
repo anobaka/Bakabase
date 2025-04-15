@@ -24,5 +24,6 @@ export type Enhancement = {
     rating?: number;
     introduction?: string;
     coverPaths?: string[];
+    playedAt?: string;
   };
 };

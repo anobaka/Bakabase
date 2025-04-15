@@ -15,5 +15,6 @@
         // Original = 8,
         // Serial = 9,
         // Volume = 10
+        PlayedAt = 11,
     }
 }

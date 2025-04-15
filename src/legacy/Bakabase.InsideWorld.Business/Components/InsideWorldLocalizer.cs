@@ -96,16 +96,8 @@ namespace Bakabase.InsideWorld.Business.Components
         public string SpecialText_HistoricalLanguageValue2ShouldBeModified() =>
             this[nameof(SpecialText_HistoricalLanguageValue2ShouldBeModified)];
 
-        public string Reserved_Resource_Property_Name(Abstractions.Models.Domain.Constants.ReservedProperty property)
-        {
-            return property switch
-            {
-                Abstractions.Models.Domain.Constants.ReservedProperty.Introduction
-                    or Abstractions.Models.Domain.Constants.ReservedProperty.Rating => this[
-                        $"{nameof(Reserved_Resource_Property_Name)}_{property}"],
-                _ => throw new ArgumentOutOfRangeException(nameof(property), property, null)
-            };
-        }
+        public string Reserved_Resource_Property_Name(Abstractions.Models.Domain.Constants.ReservedProperty property) =>
+            this[$"{nameof(Reserved_Resource_Property_Name)}_{property}"];
 
         public string Unknown() => this[nameof(Unknown)];
         public string Decompress() => this[nameof(Decompress)];

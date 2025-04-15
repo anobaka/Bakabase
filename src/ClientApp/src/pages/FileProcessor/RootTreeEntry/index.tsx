@@ -488,29 +488,6 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
                 }
                 setSelectedEntries(newSelectedEntries);
                 return false;
-
-
-                // if (shiftSelectionStartRef.current.parent != e.parent) {
-                //   shiftSelectionStartRef.current = e.parent!.filteredChildren![0];
-                // }
-                //
-                // const newSelectedEntries: Entry[] = [];
-                // const currentIdx = e.parent!.filteredChildren!.indexOf(e);
-                // const shiftStartIdx = e.parent!.filteredChildren!.indexOf(shiftSelectionStartRef.current);
-                // const startIdx = Math.min(currentIdx, shiftStartIdx);
-                // const endIdx = Math.max(currentIdx, shiftStartIdx);
-                // for (let i = startIdx; i <= endIdx; i++) {
-                //   const en = e.parent!.filteredChildren![i];
-                //   newSelectedEntries.push(en);
-                //   en.select(true);
-                // }
-                // for (const se of selectedEntriesRef.current) {
-                //   if (!newSelectedEntries.includes(se)) {
-                //     se.select(false);
-                //   }
-                // }
-                // setSelectedEntries(newSelectedEntries);
-                // return false;
               }
             }
 

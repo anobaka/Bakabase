@@ -116,6 +116,8 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<ResourceService<InsideWorldDbContext, Category, int>>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>>();
+            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, PlayHistoryDbModel, int>>();
+            services.AddScoped<IPlayHistoryService, PlayHistoryService>();
 
             services.AddScoped<IThirdPartyService, ThirdPartyService>();
 

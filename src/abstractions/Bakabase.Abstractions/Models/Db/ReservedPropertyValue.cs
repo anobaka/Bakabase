@@ -7,7 +7,7 @@ public record ReservedPropertyValue
     public int Scope { get; set; }
     public decimal? Rating { get; set; }
     public string? Introduction { get; set; }
-
+    public DateTime? PlayedAt { get; set; }
     /// <summary>
     /// Standard value (attachment) serialized
     /// </summary>

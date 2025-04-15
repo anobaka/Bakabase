@@ -3,6 +3,7 @@ using System;
 using Bakabase.InsideWorld.Business;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bakabase.InsideWorld.Business.Migrations
 {
     [DbContext(typeof(InsideWorldDbContext))]
-    partial class InsideWorldDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250415100225_V191Beta5AddPlayedReservedProperty")]
+    partial class V191Beta5AddPlayedReservedProperty
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -200,30 +203,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("Name");
 
                     b.ToTable("MediaLibraries");
-                });
-
-            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PlayHistoryDbModel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Item")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("PlayedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ResourceId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PlayedAt");
-
-                    b.HasIndex("ResourceId");
-
-                    b.ToTable("PlayHistories");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ReservedPropertyValue", b =>

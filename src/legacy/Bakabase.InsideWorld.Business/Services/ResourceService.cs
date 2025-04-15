@@ -23,6 +23,7 @@ using Bakabase.Abstractions.Components.Property;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Helpers;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
@@ -39,6 +40,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants.Aos;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
@@ -50,6 +52,7 @@ using Bootstrap.Components.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedPropertyValue;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -75,6 +78,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly ICoverDiscoverer _coverDiscoverer;
         private readonly IPropertyService _propertyService;
         private readonly IFileManager _fileManager;
+        private readonly IPlayHistoryService _playHistoryService;
 
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
@@ -84,7 +88,7 @@ namespace Bakabase.InsideWorld.Business.Services
             ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager,
             IPropertyService propertyService,
             FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
-            IFileManager fileManager)
+            IFileManager fileManager, IPlayHistoryService playHistoryService)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -99,6 +103,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _propertyService = propertyService;
             _resourceCacheOrm = resourceCacheOrm;
             _fileManager = fileManager;
+            _playHistoryService = playHistoryService;
             _orm =
                 new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int>(
                     serviceProvider);
@@ -146,7 +151,6 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await PreparePropertyDbValues(context, model.Group);
             var resourceIds = SearchResourceIds(model.Group, context);
-            var ordersForSearch = model.Orders.BuildForSearch();
 
             if (model.Tags?.Any() == true)
             {
@@ -167,6 +171,16 @@ namespace Bakabase.InsideWorld.Business.Services
                     : exp.And(r => (r.Tags & tagsValue.Value) == tagsValue.Value);
             }
 
+            Dictionary<int, DateTime>? lastPlayedAt = null;
+            if (model.Orders?.Any(o => o.Property == ResourceSearchSortableProperty.PlayedAt) == true)
+            {
+                lastPlayedAt =
+                    (await _playHistoryService.GetAll(r => resourceIds == null || resourceIds.Contains(r.Id)))
+                    .GroupBy(d => d.ResourceId)
+                    .ToDictionary(d => d.Key, d => d.OrderByDescending(x => x.PlayedAt).First().PlayedAt);
+            }
+
+            var ordersForSearch = model.Orders.BuildForSearch(lastPlayedAt);
             var resources = await _orm.Search(exp?.Compile(), model.PageIndex, model.PageSize,
                 ordersForSearch,
                 false);
@@ -216,6 +230,8 @@ namespace Bakabase.InsideWorld.Business.Services
                         {
                             ReservedProperty.Rating => (Func<ReservedPropertyValue, object?>) (r => r.Rating),
                             ReservedProperty.Introduction => r => r.Introduction,
+                            ReservedProperty.PlayedAt => r => r.PlayedAt,
+                            ReservedProperty.Cover => r => r.CoverPaths,
                             _ => null
                         });
                         context.PropertyValueMap[PropertyPool.Reserved] = getValue.Where(x => x.Value != null)
@@ -407,7 +423,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                 var dbReservedProperties = reservedPropertyValueMap.GetValueOrDefault(r.Id);
                                 reservedProperties[(int) ResourceProperty.Rating] = new Resource.Property(
                                     reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Rating)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Type ?? default,
+                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Rating)?.Type ??
+                                    default,
                                     StandardValueType.Decimal,
                                     StandardValueType.Decimal,
                                     dbReservedProperties?.Select(s =>
@@ -415,7 +432,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                             s.Rating)).ToList(), true);
                                 reservedProperties[(int) ResourceProperty.Introduction] = new Resource.Property(
                                     reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Introduction)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Type ?? default,
+                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Introduction)?.Type ??
+                                    default,
                                     StandardValueType.String,
                                     StandardValueType.String,
                                     dbReservedProperties?.Select(s =>
@@ -424,7 +442,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                 reservedProperties[(int) ResourceProperty.Cover] = new Resource.Property(
                                     reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Cover)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Type ?? default,
+                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Cover)?.Type ??
+                                    default,
                                     StandardValueType.ListString,
                                     StandardValueType.ListString,
                                     dbReservedProperties?.Select(s =>
@@ -433,6 +452,16 @@ namespace Bakabase.InsideWorld.Business.Services
                                         return new Resource.Property.PropertyValue(s.Scope, coverPaths, coverPaths,
                                             coverPaths);
                                     }).ToList(), true);
+
+                                reservedProperties[(int) ResourceProperty.PlayedAt] = new Resource.Property(
+                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.PlayedAt)?.Name,
+                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.PlayedAt)?.Type ??
+                                    default,
+                                    StandardValueType.DateTime,
+                                    StandardValueType.DateTime,
+                                    dbReservedProperties?.Select(s =>
+                                        new Resource.Property.PropertyValue(s.Scope, s.PlayedAt, s.PlayedAt,
+                                            s.PlayedAt)).ToList(), true);
                             }
 
                             SortPropertyValuesByScope(doList);
@@ -1376,6 +1405,10 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             await playerRsp.Data.Play(file);
+
+            await _playHistoryService.Add(new PlayHistoryDbModel
+                {ResourceId = resourceId, Item = file, PlayedAt = DateTime.Now});
+
             return BaseResponseBuilder.Ok;
         }
 

@@ -3,6 +3,7 @@ using System;
 using Bakabase.InsideWorld.Business;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bakabase.InsideWorld.Business.Migrations
 {
     [DbContext(typeof(InsideWorldDbContext))]
-    partial class InsideWorldDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250415101839_V191Beta5AddResourcePlayHistory")]
+    partial class V191Beta5AddResourcePlayHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -207,9 +210,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("Item")
-                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("PlayedAt")
                         .HasColumnType("TEXT");

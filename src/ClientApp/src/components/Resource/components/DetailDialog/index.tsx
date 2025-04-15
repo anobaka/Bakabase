@@ -166,6 +166,15 @@ export default ({
                     name: 'justify-end',
                   }}
                 />
+                <Properties
+                  resource={resource}
+                  reload={loadResource}
+                  restrictedPropertyPool={PropertyPool.Reserved}
+                  restrictedPropertyIds={[ReservedProperty.PlayedAt]}
+                  propertyClassNames={{
+                    name: 'justify-end',
+                  }}
+                />
               </div>
             </div>
             <Button

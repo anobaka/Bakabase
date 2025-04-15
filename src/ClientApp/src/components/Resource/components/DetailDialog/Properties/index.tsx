@@ -157,6 +157,7 @@ export default (props: Props) => {
       propertyValues,
       propertyPool,
     } = pCtx;
+    // log(pCtx);
     return (
       <PropertyContainer
         classNames={propertyClassNames}
@@ -191,6 +192,8 @@ export default (props: Props) => {
   };
 
   const renderContext = buildRenderContext();
+
+  // log(renderContext);
 
   return (
     <div>

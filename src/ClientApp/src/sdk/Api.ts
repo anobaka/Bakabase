@@ -133,10 +133,10 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyType =
 export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004;
 
 /**
- * [12: Introduction, 13: Rating, 22: Cover]
+ * [12: Introduction, 13: Rating, 22: Cover, 23: PlayedAt]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 | 22;
+export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 | 22 | 23;
 
 /**
  * [1: Covers, 2: PlayableFiles]
@@ -300,6 +300,8 @@ export interface BakabaseAbstractionsModelsDomainReservedPropertyValue {
   rating?: number;
   introduction?: string;
   coverPaths?: string[];
+  /** @format date-time */
+  playedAt?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResource {
@@ -444,7 +446,7 @@ export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputMod
 }
 
 export interface BakabaseAbstractionsModelsInputResourceSearchOrderInputModel {
-  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt] */
+  /** [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt] */
   property: BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty;
   asc: boolean;
 }
@@ -869,10 +871,10 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalI
 export type BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder = 1 | 2;
 
 /**
- * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt]
+ * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty = 1 | 2 | 3 | 6;
+export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty = 1 | 2 | 3 | 6 | 11;
 
 /**
  * [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
@@ -1331,7 +1333,7 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
   description?: string;
   optionsItems?: number[];
   enhancementConverter?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter;
-  /** [12: Introduction, 13: Rating, 22: Cover] */
+  /** [12: Introduction, 13: Rating, 22: Cover, 23: PlayedAt] */
   reservedPropertyCandidate?: BakabaseAbstractionsModelsDomainConstantsReservedProperty;
 }
 
@@ -5555,6 +5557,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibrary
+     * @name StartSyncMediaLibrary
+     * @request PUT:/media-library/sync
+     */
+    startSyncMediaLibrary: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library/sync`,
+        method: "PUT",
         format: "json",
         ...params,
       }),

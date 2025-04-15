@@ -65,6 +65,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<Modules.Alias.Abstractions.Models.Db.Alias> AliasesV2 { get; set; }
         public DbSet<ResourceCacheDbModel> ResourceCaches { get; set; }
 
+        public DbSet<PlayHistoryDbModel> PlayHistories { get; set; }
+
         public InsideWorldDbContext()
         {
         }
@@ -197,6 +199,12 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<BulkModificationDiffDbModel>(bmd =>
             {
                 bmd.HasIndex(x => new {x.BulkModificationId, x.ResourceId}).IsUnique();
+            });
+
+            modelBuilder.Entity<PlayHistoryDbModel>(a =>
+            {
+                a.HasIndex(x => x.ResourceId);
+                a.HasIndex(x => x.PlayedAt);
             });
         }
     }

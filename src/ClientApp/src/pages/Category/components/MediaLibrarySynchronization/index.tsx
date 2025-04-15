@@ -3,7 +3,7 @@ import { Progress } from '@alifd/next';
 import { usePrevious } from 'react-use';
 import { SyncOutlined } from '@ant-design/icons';
 import SynchronizationConfirmModal from '../SynchronizationConfirmModal';
-import { BackgroundTaskStatus } from '@/sdk/constants';
+import { BackgroundTaskStatus, BTaskStatus } from '@/sdk/constants';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import store from '@/store';
@@ -35,14 +35,14 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const backgroundTasks = store.useModelState('backgroundTasks');
-  const sortedTasks = backgroundTasks.slice().sort((a, b) => b.startDt.localeCompare(a.startDt));
+  const backgroundTasks = store.useModelState('bTasks');
+  const sortedTasks = backgroundTasks.slice().sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   const taskInfo = sortedTasks.find((t) => t.name == 'MediaLibraryService:Sync');
 
   const prevTaskInfo = usePrevious(taskInfo);
 
   useEffect(() => {
-    if (taskInfo?.status == BackgroundTaskStatus.Complete && prevTaskInfo?.status != BackgroundTaskStatus.Complete) {
+    if (taskInfo?.status == BTaskStatus.Completed && prevTaskInfo?.status != BTaskStatus.Completed) {
       onComplete && onComplete();
     }
   }, [taskInfo]);
@@ -50,9 +50,9 @@ export default ({
   useEffect(() => {
   }, []);
 
-  const isSyncing = taskInfo?.status == BackgroundTaskStatus.Running;
-  const failed = taskInfo?.status == BackgroundTaskStatus.Failed;
-  const isComplete = taskInfo?.status == BackgroundTaskStatus.Complete;
+  const isSyncing = taskInfo?.status == BTaskStatus.Running;
+  const failed = taskInfo?.status == BTaskStatus.Error;
+  const isComplete = taskInfo?.status == BTaskStatus.Completed;
 
   return (
     <div className={'media-library-synchronization'}>
@@ -60,7 +60,7 @@ export default ({
         <div className="top">
           {isSyncing ? (
             <div className="process">
-              {t(taskInfo?.currentProcess)}({taskInfo?.percentage}%)
+              {t(taskInfo?.process)}({taskInfo?.percentage}%)
             </div>
           ) : (
             <Button
@@ -83,7 +83,7 @@ export default ({
               {failed && (
                 <Tooltip
                   content={(
-                    <pre>{taskInfo?.message}</pre>
+                    <pre>{taskInfo?.error}</pre>
                   )}
                 >
                   <div className={'failed'}>

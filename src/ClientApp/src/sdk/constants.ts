@@ -88,7 +88,7 @@ export enum ResourceLanguage {NotSet = 0, Chinese = 1, English = 2, Japanese = 3
 export const resourceLanguages = Object.keys(ResourceLanguage).filter(k => typeof ResourceLanguage[k] === 'number').map(t => ({label: t, value: ResourceLanguage[t]}));
 export enum ResourceMatcherValueType {Layer = 1, Regex = 2, FixedText = 3}
 export const resourceMatcherValueTypes = Object.keys(ResourceMatcherValueType).filter(k => typeof ResourceMatcherValueType[k] === 'number').map(t => ({label: t, value: ResourceMatcherValueType[t]}));
-export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, Introduction = 12, Rating = 13, CustomProperty = 14, Filename = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21, Cover = 22}
+export enum ResourceProperty {RootPath = 1, ParentResource = 2, Resource = 3, Introduction = 12, Rating = 13, CustomProperty = 14, Filename = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21, Cover = 22, PlayedAt = 23}
 export const resourceProperties = Object.keys(ResourceProperty).filter(k => typeof ResourceProperty[k] === 'number').map(t => ({label: t, value: ResourceProperty[t]}));
 export enum ResourceTaskType {Moving = 1}
 export const resourceTaskTypes = Object.keys(ResourceTaskType).filter(k => typeof ResourceTaskType[k] === 'number').map(t => ({label: t, value: ResourceTaskType[t]}));
@@ -102,7 +102,7 @@ export enum ThirdPartyId {Bilibili = 1, ExHentai = 2, Pixiv = 3, Bangumi = 4}
 export const thirdPartyIds = Object.keys(ThirdPartyId).filter(k => typeof ThirdPartyId[k] === 'number').map(t => ({label: t, value: ThirdPartyId[t]}));
 export enum PasswordSearchOrder {Latest = 1, Frequency = 2}
 export const passwordSearchOrders = Object.keys(PasswordSearchOrder).filter(k => typeof PasswordSearchOrder[k] === 'number').map(t => ({label: t, value: PasswordSearchOrder[t]}));
-export enum ResourceSearchSortableProperty {FileCreateDt = 1, FileModifyDt = 2, Filename = 3, AddDt = 6}
+export enum ResourceSearchSortableProperty {FileCreateDt = 1, FileModifyDt = 2, Filename = 3, AddDt = 6, PlayedAt = 11}
 export const resourceSearchSortableProperties = Object.keys(ResourceSearchSortableProperty).filter(k => typeof ResourceSearchSortableProperty[k] === 'number').map(t => ({label: t, value: ResourceSearchSortableProperty[t]}));
 export enum AliasAdditionalItem {Candidates = 1}
 export const aliasAdditionalItems = Object.keys(AliasAdditionalItem).filter(k => typeof AliasAdditionalItem[k] === 'number').map(t => ({label: t, value: AliasAdditionalItem[t]}));
@@ -140,7 +140,7 @@ export enum PropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 
 export const propertyTypes = Object.keys(PropertyType).filter(k => typeof PropertyType[k] === 'number').map(t => ({label: t, value: PropertyType[t]}));
 export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000, ExHentaiEnhancer = 1001, BangumiEnhancer = 1002, DLsiteEnhancer = 1003, RegexEnhancer = 1004}
 export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
-export enum ReservedProperty {Introduction = 12, Rating = 13, Cover = 22}
+export enum ReservedProperty {Introduction = 12, Rating = 13, Cover = 22, PlayedAt = 23}
 export const reservedProperties = Object.keys(ReservedProperty).filter(k => typeof ReservedProperty[k] === 'number').map(t => ({label: t, value: ReservedProperty[t]}));
 export enum ResourceCacheType {Covers = 1, PlayableFiles = 2}
 export const resourceCacheTypes = Object.keys(ResourceCacheType).filter(k => typeof ResourceCacheType[k] === 'number').map(t => ({label: t, value: ResourceCacheType[t]}));

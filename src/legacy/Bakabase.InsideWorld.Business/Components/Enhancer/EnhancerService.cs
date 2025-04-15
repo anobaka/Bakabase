@@ -446,6 +446,11 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                     rpv.CoverPaths = nv as List<string>;
                                     break;
                                 }
+                                case Abstractions.Models.Domain.Constants.ReservedProperty.PlayedAt:
+                                {
+                                    rpv.PlayedAt = nv is DateTime nv1 ? nv1 : null;
+                                    break;
+                                }
                                 default:
                                     throw new ArgumentOutOfRangeException();
                             }

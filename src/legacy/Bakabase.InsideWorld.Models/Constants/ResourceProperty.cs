@@ -21,6 +21,7 @@ namespace Bakabase.InsideWorld.Models.Constants
         FileModifiedAt = 19,
         Category = 20,
         MediaLibrary = 21,
-        Cover = 22
+        Cover = 22,
+        PlayedAt = 23
     }
 }

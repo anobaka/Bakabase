@@ -75,6 +75,11 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/text',
         icon: 'FieldStringOutlined',
       },
+      {
+        name: 'Play history',
+        path: '/playhistory',
+        icon: 'HistoryOutlined',
+      },
       // {
       //   name: 'Enhancement Records',
       //   path: '/enhancementrecord',

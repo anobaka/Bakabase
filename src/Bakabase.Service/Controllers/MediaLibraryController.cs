@@ -52,6 +52,14 @@ namespace Bakabase.Service.Controllers
             return await service.Patch(id, model);
         }
 
+        [HttpPut("sync")]
+        [SwaggerOperation(OperationId = "StartSyncMediaLibrary")]
+        public Task<BaseResponse> Sync()
+        {
+            service.StartSyncing(null, null);
+            return Task.FromResult(BaseResponseBuilder.Ok);
+        }
+
         [HttpPost("path-configuration-validation")]
         [SwaggerOperation(OperationId = "ValidatePathConfiguration")]
         public async Task<SingletonResponse<PathConfigurationTestResult>> ValidatePathConfiguration(

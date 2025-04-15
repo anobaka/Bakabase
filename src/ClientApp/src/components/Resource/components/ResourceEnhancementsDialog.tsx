@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiOutlined, ExclamationCircleOutlined, QuestionCircleOutlined, SyncOutlined } from '@ant-design/icons';
+import { Dayjs } from 'dayjs';
 import BApi from '@/sdk/BApi';
 import { createPortalOfComponent } from '@/components/utils';
 import type { DestroyableProps } from '@/components/bakaui/types';
@@ -126,6 +127,10 @@ function ResourceEnhancementsDialog({
           case ReservedProperty.Cover:
             bizRv = rv.coverPaths;
             dbRv = rv.coverPaths;
+            break;
+          case ReservedProperty.PlayedAt:
+            bizRv = new Dayjs(rv.playedAt);
+            dbRv = new Dayjs(rv.playedAt);
             break;
           default:
             return t('Unsupported reserved property type: {{type}}', { type: e.propertyId });
