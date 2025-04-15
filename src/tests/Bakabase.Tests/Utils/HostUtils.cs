@@ -1,6 +1,5 @@
 ﻿using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Logging;
-using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Tests.Implementations;
@@ -38,7 +37,6 @@ public class HostUtils
             c.UseBootstrapSqLite(Directory.GetCurrentDirectory(), "bootstrap_log"));
         sc.AddSignalR(x => { });
         sc.AddSingleton<IGuiAdapter, TestGuiAdapter>();
-        sc.AddSingleton<BackgroundTaskManager>();
         sc.AddSingleton<IOptionsMonitor<FileSystemOptions>>(
             new TestOptionsMonitor<FileSystemOptions>(new FileSystemOptions()));
         sc.AddSingleton<AspNetCoreOptionsManager<FileSystemOptions>>(sp =>

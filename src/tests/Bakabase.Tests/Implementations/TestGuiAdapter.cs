@@ -102,4 +102,9 @@ public class TestGuiAdapter : IGuiAdapter
     {
         throw new NotImplementedException();
     }
+
+    public byte[]? GetIcon(IconType type, string? path)
+    {
+        throw new NotImplementedException();
+    }
 }

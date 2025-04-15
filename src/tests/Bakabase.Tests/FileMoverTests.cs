@@ -15,7 +15,6 @@ using Bootstrap.Components.Orm.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Bakabase.InsideWorld.Business.Components.Tasks;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Tests.Implementations;
 using Bootstrap.Components.Configuration;
