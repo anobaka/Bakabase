@@ -444,20 +444,43 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
                 return true;
               }
               case SelectionMode.Shift: {
-                if (!shiftSelectionStartRef.current || shiftSelectionStartRef.current.parent != e.parent) {
-                  shiftSelectionStartRef.current = e.parent!.filteredChildren![0];
+                shiftSelectionStartRef.current ??= e.parent!.filteredChildren![0]!;
+                let startParent = shiftSelectionStartRef.current.parent;
+                const startParentSet = new Set<Entry>();
+                while (startParent) {
+                  startParentSet.add(startParent);
+                  startParent = startParent.parent;
                 }
 
-                const newSelectedEntries: Entry[] = [];
-                const currentIdx = e.parent!.filteredChildren!.indexOf(e);
-                const shiftStartIdx = e.parent!.filteredChildren!.indexOf(shiftSelectionStartRef.current);
-                const startIdx = Math.min(currentIdx, shiftStartIdx);
-                const endIdx = Math.max(currentIdx, shiftStartIdx);
-                for (let i = startIdx; i <= endIdx; i++) {
-                  const en = e.parent!.filteredChildren![i];
-                  newSelectedEntries.push(en);
+                let endParent = e.parent;
+                while (endParent) {
+                  if (startParentSet.has(endParent)) {
+                    break;
+                  }
+                  endParent = endParent.parent;
+                }
+
+                const buildPreorderTraversal = (entry: Entry, result: Entry[]) => {
+                  result.push(entry);
+                  if (entry.expanded && entry.filteredChildren) {
+                    for (const child of entry.filteredChildren) {
+                      buildPreorderTraversal(child, result);
+                    }
+                  }
+                };
+                const preorderTraversal: Entry[] = [];
+                buildPreorderTraversal(endParent!, preorderTraversal);
+                const startIdx = preorderTraversal.indexOf(shiftSelectionStartRef.current);
+                const endIdx = preorderTraversal.indexOf(e);
+                const minIdx = Math.min(startIdx, endIdx);
+                const maxIdx = Math.max(startIdx, endIdx);
+                const newSelectedEntries = preorderTraversal.slice(minIdx, maxIdx + 1);
+                // console.log(minIdx, maxIdx, endParent);
+                for (let i = minIdx; i <= maxIdx; i++) {
+                  const en = preorderTraversal[i]!;
                   en.select(true);
                 }
+
                 for (const se of selectedEntriesRef.current) {
                   if (!newSelectedEntries.includes(se)) {
                     se.select(false);
@@ -465,6 +488,29 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
                 }
                 setSelectedEntries(newSelectedEntries);
                 return false;
+
+
+                // if (shiftSelectionStartRef.current.parent != e.parent) {
+                //   shiftSelectionStartRef.current = e.parent!.filteredChildren![0];
+                // }
+                //
+                // const newSelectedEntries: Entry[] = [];
+                // const currentIdx = e.parent!.filteredChildren!.indexOf(e);
+                // const shiftStartIdx = e.parent!.filteredChildren!.indexOf(shiftSelectionStartRef.current);
+                // const startIdx = Math.min(currentIdx, shiftStartIdx);
+                // const endIdx = Math.max(currentIdx, shiftStartIdx);
+                // for (let i = startIdx; i <= endIdx; i++) {
+                //   const en = e.parent!.filteredChildren![i];
+                //   newSelectedEntries.push(en);
+                //   en.select(true);
+                // }
+                // for (const se of selectedEntriesRef.current) {
+                //   if (!newSelectedEntries.includes(se)) {
+                //     se.select(false);
+                //   }
+                // }
+                // setSelectedEntries(newSelectedEntries);
+                // return false;
               }
             }
 

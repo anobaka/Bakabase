@@ -1,3 +1,4 @@
+'use strict';
 import { MenuItem, useMenuState } from '@szhsin/react-menu';
 import React, { useState } from 'react';
 import { useUpdateEffect } from 'react-use';
@@ -58,7 +59,7 @@ export default ({
     if (expandableEntries.length > 0) {
       items.push({
         icon: <CopyOutlined className={'text-base'} />,
-        label: t(selectedEntries.length == 1 ? 'Expand' : 'Expand all'),
+        label: t(selectedEntries.length == 1 ? 'Expand' : 'Expand selected'),
         onClick: () => {
           for (const entry of expandableEntries) {
             entry.expand(false);
@@ -70,7 +71,7 @@ export default ({
     if (collapsableEntries.length > 0) {
       items.push({
         icon: <CopyOutlined className={'text-base'} />,
-        label: t(selectedEntries.length == 1 ? 'Collapse' : 'Collapse all'),
+        label: t(selectedEntries.length == 1 ? 'Collapse' : 'Collapse selected'),
         onClick: () => {
           for (const entry of collapsableEntries) {
             entry.collapse();
@@ -102,7 +103,7 @@ export default ({
     if (capabilities?.includes('wrap')) {
       items.push({
         icon: <MergeOutlined className={'text-base'} />,
-        label: t('Wrap {{count}} items', { count: selectedEntries.length }),
+        label: t('Wrap {{count}} items using directory', { count: selectedEntries.length }),
         onClick: () => {
           createPortal(WrapModal, { entries: selectedEntries });
         },
@@ -126,7 +127,7 @@ export default ({
         onClick: () => {
           createPortal(DeleteItemsWithSameNamesModal, {
             entries: selectedEntries,
-            workingDirectory: selectedEntries[0].root.path,
+            workingDirectory: selectedEntries[0]!.root.path,
           });
         },
       });
@@ -154,7 +155,7 @@ export default ({
       if (targetEntries.length > 1) {
         items.push({
           icon: <GroupOutlined className={'text-base'} />,
-          label: t('Group {{count}} items', { count: targetEntries.length }),
+          label: t('Auto group {{count}} selected items', { count: targetEntries.length }),
           onClick: () => {
             createPortal(GroupModal, {
               entries: selectedEntries,
@@ -164,10 +165,11 @@ export default ({
         });
       }
 
-      if (selectedEntries.some(e => e.isDirectory)) {
+      const directoryEntries = selectedEntries.filter(e => e.isDirectory);
+      if (directoryEntries.length > 0) {
         items.push({
           icon: <GroupOutlined className={'text-base'} />,
-          label: t('Group internal items'),
+          label: t('Auto group internal items in {{count}} selected directories', { count: directoryEntries.length }),
           onClick: () => {
             createPortal(GroupModal, {
               entries: selectedEntries,

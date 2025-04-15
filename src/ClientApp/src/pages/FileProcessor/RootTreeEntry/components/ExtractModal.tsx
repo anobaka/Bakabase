@@ -7,6 +7,8 @@ import { Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import FileSystemEntryChangeExampleItem
   from '@/pages/FileProcessor/RootTreeEntry/components/FileSystemEntryChangeExampleItem';
+import FileSystemEntryChangeExampleMiscellaneousItem
+  from '@/pages/FileProcessor/RootTreeEntry/components/FileSystemEntryChangeExampleMiscellaneousItem';
 
 type Props = { entries: Entry[] } & DestroyableProps;
 
@@ -72,11 +74,7 @@ export default ({
                   </>
                 );
               })}
-              <FileSystemEntryChangeExampleItem
-                type={'others'}
-                text={`${t('Other files in {{parent}}', { parent })}...`}
-                indent={1}
-              />
+              <FileSystemEntryChangeExampleMiscellaneousItem parent={parent} indent={1} />
             </>
           );
         })}
