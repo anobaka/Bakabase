@@ -1,5 +1,5 @@
-import type { SelectedItems, SelectProps as NextUISelectProps } from '@nextui-org/react';
-import { Select, SelectItem } from '@nextui-org/react';
+import type { SelectedItems, SelectProps as NextUISelectProps } from "@heroui/react";
+import { Select, SelectItem } from "@heroui/react";
 import type { Key } from '@react-types/shared';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

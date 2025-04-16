@@ -1,5 +1,5 @@
 'use strict';
-import { CardHeader } from '@nextui-org/react';
+import { CardHeader } from "@heroui/react";
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';

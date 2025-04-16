@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import './index.scss';
 import { useTranslation } from 'react-i18next';
-import { ListboxItem } from '@nextui-org/react';
+import { ListboxItem } from "@heroui/react";
 import { useCookie } from 'react-use';
 import Psc from './cases/Psc';
 import Tour from './cases/Tour';

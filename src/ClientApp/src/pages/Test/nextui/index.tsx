@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
+import { Button, Popover, PopoverContent, PopoverTrigger } from "@heroui/react";
 import { Tooltip } from '@/components/bakaui';
 
 export default () => {

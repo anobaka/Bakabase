@@ -1,3 +1,3 @@
-import { Spacer } from '@nextui-org/react';
+import { Spacer } from "@heroui/react";
 
 export default Spacer;

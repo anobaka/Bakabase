@@ -1,5 +1,5 @@
-import type { TimeInputProps as NextUITimeInputProps } from '@nextui-org/react';
-import { TimeInput } from '@nextui-org/react';
+import type { TimeInputProps as NextUITimeInputProps } from "@heroui/react";
+import { TimeInput } from "@heroui/react";
 import dayjs from 'dayjs';
 import { Time } from '@internationalized/date';
 import type { Duration } from 'dayjs/plugin/duration';

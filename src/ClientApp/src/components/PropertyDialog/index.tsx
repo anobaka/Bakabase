@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Radio, RadioGroup, TableHeader } from '@nextui-org/react';
+import { Radio, RadioGroup, TableHeader } from "@heroui/react";
 import AceEditor from 'react-ace';
 import type { Key } from '@react-types/shared';
 import toast from 'react-hot-toast';

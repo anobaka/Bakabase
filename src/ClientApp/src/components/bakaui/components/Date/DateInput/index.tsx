@@ -1,6 +1,6 @@
-import type { DateInputProps as NextUIDateInputProps } from '@nextui-org/react';
-import { CalendarDate } from '@nextui-org/react';
-import { DateInput } from '@nextui-org/react';
+import type { DateInputProps as NextUIDateInputProps } from "@heroui/react";
+import { CalendarDate } from "@heroui/react";
+import { DateInput } from "@heroui/react";
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { CalendarDateTime } from '@internationalized/date';

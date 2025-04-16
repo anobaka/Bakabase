@@ -1,3 +1,3 @@
-import { Divider } from '@nextui-org/react';
+import { Divider } from "@heroui/react";
 
 export default Divider;

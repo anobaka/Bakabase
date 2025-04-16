@@ -1,3 +1,3 @@
-import { Checkbox, CheckboxGroup } from '@nextui-org/react';
+import { Checkbox, CheckboxGroup } from "@heroui/react";
 
 export { Checkbox, CheckboxGroup };

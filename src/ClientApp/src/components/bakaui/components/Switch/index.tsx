@@ -1,4 +1,4 @@
-import type { SwitchProps as NextUISwitchProps } from '@nextui-org/react';
-import { Switch } from '@nextui-org/react';
+import type { SwitchProps as NextUISwitchProps } from "@heroui/react";
+import { Switch } from "@heroui/react";
 
 export default Switch;

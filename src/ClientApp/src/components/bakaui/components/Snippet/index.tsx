@@ -1,3 +1,3 @@
-import { Snippet } from '@nextui-org/react';
+import { Snippet } from "@heroui/react";
 
 export default Snippet;

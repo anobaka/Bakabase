@@ -1,5 +1,5 @@
-import type { PopoverProps as NextUIPopoverProps } from '@nextui-org/react';
-import { Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
+import type { PopoverProps as NextUIPopoverProps } from "@heroui/react";
+import { Popover, PopoverContent, PopoverTrigger } from "@heroui/react";
 
 interface PopoverProps extends NextUIPopoverProps{
   trigger: any;

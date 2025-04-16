@@ -1,3 +1,3 @@
-import { Textarea as NextUiTextArea } from '@nextui-org/react';
+import { Textarea as NextUiTextArea } from "@heroui/react";
 
 export default NextUiTextArea;

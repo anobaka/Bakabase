@@ -1,3 +1,3 @@
-import { Image } from '@nextui-org/react';
+import { Image } from "@heroui/react";
 
 export default Image;

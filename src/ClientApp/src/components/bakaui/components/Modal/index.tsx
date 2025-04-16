@@ -1,5 +1,5 @@
-import type { ModalProps as NextUIModalProps } from '@nextui-org/react';
-import { Modal as NextUiModal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@nextui-org/react';
+import type { ModalProps as NextUIModalProps } from "@heroui/react";
+import { Modal as NextUiModal, ModalBody, ModalContent, ModalFooter, ModalHeader } from "@heroui/react";
 import type { LegacyRef } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';

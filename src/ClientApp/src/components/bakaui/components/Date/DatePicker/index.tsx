@@ -1,5 +1,5 @@
-import type { DateInputProps as NextUIDateInputProps } from '@nextui-org/react';
-import { DatePicker } from '@nextui-org/react';
+import type { DateInputProps as NextUIDateInputProps } from "@heroui/react";
+import { DatePicker } from "@heroui/react";
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { parseDateTime } from '@internationalized/date';

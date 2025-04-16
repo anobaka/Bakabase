@@ -1,5 +1,5 @@
-import type { InputProps as NextUIInputProps } from '@nextui-org/react';
-import { Input } from '@nextui-org/react';
+import type { InputProps as NextUIInputProps } from "@heroui/react";
+import { Input } from "@heroui/react";
 import { forwardRef, useState } from 'react';
 
 type NumberInputProps = {

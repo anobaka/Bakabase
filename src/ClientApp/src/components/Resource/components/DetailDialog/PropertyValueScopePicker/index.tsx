@@ -1,4 +1,4 @@
-import { TableBody, TableCell, TableColumn, TableHeader, TableRow } from '@nextui-org/react';
+import { TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@heroui/react";
 import { useTranslation } from 'react-i18next';
 import type { CSSProperties } from 'react';
 import React, { useCallback, useEffect, useState } from 'react';

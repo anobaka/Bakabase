@@ -1,5 +1,5 @@
-import type { ChipProps as NextUIChipProps } from '@nextui-org/react';
-import { Chip as NextUIChip } from '@nextui-org/react';
+import type { ChipProps as NextUIChipProps } from "@heroui/react";
+import { Chip as NextUIChip } from "@heroui/react";
 import React, { forwardRef } from 'react';
 
 

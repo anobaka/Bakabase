@@ -1,5 +1,5 @@
-import type { TabsProps as NextUITabsProps } from '@nextui-org/react';
-import { Tabs as NextUiTabs, Tab as NextUiTab } from '@nextui-org/react';
+import type { TabsProps as NextUITabsProps } from "@heroui/react";
+import { Tabs as NextUiTabs, Tab as NextUiTab } from "@heroui/react";
 import { forwardRef } from 'react';
 
 interface TabsProps extends NextUITabsProps {

@@ -1,3 +1,3 @@
-import { Spinner } from '@nextui-org/react';
+import { Spinner } from "@heroui/react";
 
 export default Spinner;

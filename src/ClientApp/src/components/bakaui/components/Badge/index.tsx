@@ -1,3 +1,3 @@
-import { Badge } from '@nextui-org/react';
+import { Badge } from "@heroui/react";
 
 export default Badge;

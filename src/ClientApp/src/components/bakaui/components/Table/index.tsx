@@ -6,7 +6,7 @@ import {
   TableRow,
   TableCell,
   TableRowProps,
-} from '@nextui-org/react';
+} from "@heroui/react";
 
 export {
   Table,

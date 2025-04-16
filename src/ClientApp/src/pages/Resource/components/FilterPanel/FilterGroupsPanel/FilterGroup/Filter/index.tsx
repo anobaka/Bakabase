@@ -3,7 +3,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useUpdateEffect } from 'react-use';
-import { DropdownItem, DropdownMenu, DropdownTrigger } from '@nextui-org/react';
+import { DropdownItem, DropdownMenu, DropdownTrigger } from "@heroui/react";
 import { ApiOutlined, DeleteOutlined, DisconnectOutlined } from '@ant-design/icons';
 import type { ResourceSearchFilter } from '../../models';
 import PropertySelector from '@/components/PropertySelector';

@@ -1,5 +1,5 @@
 import { ConfigProvider, theme } from 'antd';
-import { NextUIProvider, useModal } from '@nextui-org/react';
+import { HeroUIProvider, useModal } from "@heroui/react";
 import type { ComponentType, FC } from 'react';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigation } from 'ice';
@@ -64,7 +64,7 @@ export default ({ children }) => {
   // console.log(appOptions, isDarkMode);
 
   return (
-    <NextUIProvider>
+    <HeroUIProvider>
       <ConfigProvider
         theme={{
           algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
@@ -99,7 +99,7 @@ export default ({ children }) => {
           {/* })} */}
         </BakabaseContext.Provider>
       </ConfigProvider>
-    </NextUIProvider>
+    </HeroUIProvider>
   );
 };
 

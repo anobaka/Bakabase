@@ -1,3 +1,3 @@
-import { Kbd } from '@nextui-org/kbd';
+import { Kbd } from "@heroui/kbd";
 
 export default Kbd;
