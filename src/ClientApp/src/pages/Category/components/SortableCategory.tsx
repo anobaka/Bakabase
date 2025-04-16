@@ -136,17 +136,51 @@ export default (({
         closeable: true,
         onOk: () => new Promise((resolve, reject) => {
           if (newKey) {
-            return BApi.category.configureCategoryComponents(category.id, {
-              componentKeys: [newKey],
-              type: componentType,
-            }).then(a => {
-              if (!a.code) {
-                reloadCategory(category.id);
-                resolve(a);
-              } else {
-                reject();
-              }
-            });
+            if (componentType == ComponentType.PlayableFileSelector) {
+              createPortal(
+                Modal, {
+                  classNames: {
+                    wrapper: 'z-[10000]',
+                    backdrop: 'z-[10000]',
+                    // body: 'z-10000',
+                  },
+                  defaultVisible: true,
+                  title: t('Are you sure to change playable file selector?'),
+                  children: (
+                    <div>
+                      {t('Changing the playable file selector will clear all cached playable file information. The cache for these files will be rebuilt after the operation.')}
+                    </div>
+                  ),
+                  onOk: async () => {
+                    const rsp = await BApi.category.configureCategoryComponents(category.id, {
+                      componentKeys: [newKey],
+                      type: componentType,
+                    });
+                    if (!rsp.code) {
+                      reloadCategory(category.id);
+                      resolve(rsp);
+                    } else {
+                      reject();
+                    }
+                  },
+                  onClose: () => {
+                    reject();
+                  },
+                },
+              );
+            } else {
+              return BApi.category.configureCategoryComponents(category.id, {
+                componentKeys: [newKey],
+                type: componentType,
+              }).then(a => {
+                if (!a.code) {
+                  reloadCategory(category.id);
+                  resolve(a);
+                } else {
+                  reject();
+                }
+              });
+            }
           } else {
             reject();
           }

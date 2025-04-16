@@ -140,7 +140,7 @@ export enum PropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 
 export const propertyTypes = Object.keys(PropertyType).filter(k => typeof PropertyType[k] === 'number').map(t => ({label: t, value: PropertyType[t]}));
 export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000, ExHentaiEnhancer = 1001, BangumiEnhancer = 1002, DLsiteEnhancer = 1003, RegexEnhancer = 1004}
 export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
-export enum ReservedProperty {Introduction = 12, Rating = 13, Cover = 22, PlayedAt = 23}
+export enum ReservedProperty {Introduction = 12, Rating = 13, Cover = 22}
 export const reservedProperties = Object.keys(ReservedProperty).filter(k => typeof ReservedProperty[k] === 'number').map(t => ({label: t, value: ReservedProperty[t]}));
 export enum ResourceCacheType {Covers = 1, PlayableFiles = 2}
 export const resourceCacheTypes = Object.keys(ResourceCacheType).filter(k => typeof ResourceCacheType[k] === 'number').map(t => ({label: t, value: ResourceCacheType[t]}));
@@ -178,18 +178,6 @@ export enum EnhancementAdditionalItem {None = 0, GeneratedPropertyValue = 1}
 export const enhancementAdditionalItems = Object.keys(EnhancementAdditionalItem).filter(k => typeof EnhancementAdditionalItem[k] === 'number').map(t => ({label: t, value: EnhancementAdditionalItem[t]}));
 export enum EnhancerTargetOptionsItem {AutoBindProperty = 1, AutoMatchMultilevelString = 2, CoverSelectOrder = 3}
 export const enhancerTargetOptionsItems = Object.keys(EnhancerTargetOptionsItem).filter(k => typeof EnhancerTargetOptionsItem[k] === 'number').map(t => ({label: t, value: EnhancerTargetOptionsItem[t]}));
-export enum BulkModificationProcessorOptionsItemsFilterBy {All = 1, Containing = 2, Matching = 3}
-export const bulkModificationProcessorOptionsItemsFilterBies = Object.keys(BulkModificationProcessorOptionsItemsFilterBy).filter(k => typeof BulkModificationProcessorOptionsItemsFilterBy[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorOptionsItemsFilterBy[t]}));
-export enum BulkModificationStringProcessOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
-export const bulkModificationStringProcessOperations = Object.keys(BulkModificationStringProcessOperation).filter(k => typeof BulkModificationStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationStringProcessOperation[t]}));
-export enum BulkModificationListStringProcessOperation {SetWithFixedValue = 1, Append = 2, Prepend = 3, Modify = 4, Delete = 5}
-export const bulkModificationListStringProcessOperations = Object.keys(BulkModificationListStringProcessOperation).filter(k => typeof BulkModificationListStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationListStringProcessOperation[t]}));
-export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
-export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
-export enum BulkModificationProcessorValueType {ManuallyInput = 1, Variable = 2}
-export const bulkModificationProcessorValueTypes = Object.keys(BulkModificationProcessorValueType).filter(k => typeof BulkModificationProcessorValueType[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorValueType[t]}));
-export enum AliasExceptionType {ConflictAliasGroup = 1}
-export const aliasExceptionTypes = Object.keys(AliasExceptionType).filter(k => typeof AliasExceptionType[k] === 'number').map(t => ({label: t, value: AliasExceptionType[t]}));
 export enum CaptchaType {Image = 1, SmsMessage = 2}
 export const captchaTypes = Object.keys(CaptchaType).filter(k => typeof CaptchaType[k] === 'number').map(t => ({label: t, value: CaptchaType[t]}));
 export enum DingSysLevel {Other = 0, MainAdministrator = 1, SubAdministrator = 2, Boss = 100}
@@ -216,6 +204,18 @@ export enum AdbExceptionCode {Error = 1, InvalidExitCode = 2}
 export const adbExceptionCodes = Object.keys(AdbExceptionCode).filter(k => typeof AdbExceptionCode[k] === 'number').map(t => ({label: t, value: AdbExceptionCode[t]}));
 export enum AdbInternalError {Error = 1, INSTALL_FAILED_ALREADY_EXISTS = 100, DELETE_FAILED_INTERNAL_ERROR = 101, FailedToConnectDevice = 200}
 export const adbInternalErrors = Object.keys(AdbInternalError).filter(k => typeof AdbInternalError[k] === 'number').map(t => ({label: t, value: AdbInternalError[t]}));
+export enum BulkModificationProcessorOptionsItemsFilterBy {All = 1, Containing = 2, Matching = 3}
+export const bulkModificationProcessorOptionsItemsFilterBies = Object.keys(BulkModificationProcessorOptionsItemsFilterBy).filter(k => typeof BulkModificationProcessorOptionsItemsFilterBy[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorOptionsItemsFilterBy[t]}));
+export enum BulkModificationStringProcessOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
+export const bulkModificationStringProcessOperations = Object.keys(BulkModificationStringProcessOperation).filter(k => typeof BulkModificationStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationStringProcessOperation[t]}));
+export enum BulkModificationListStringProcessOperation {SetWithFixedValue = 1, Append = 2, Prepend = 3, Modify = 4, Delete = 5}
+export const bulkModificationListStringProcessOperations = Object.keys(BulkModificationListStringProcessOperation).filter(k => typeof BulkModificationListStringProcessOperation[k] === 'number').map(t => ({label: t, value: BulkModificationListStringProcessOperation[t]}));
+export enum BulkModificationDiffType {Added = 1, Removed = 2, Modified = 3}
+export const bulkModificationDiffTypes = Object.keys(BulkModificationDiffType).filter(k => typeof BulkModificationDiffType[k] === 'number').map(t => ({label: t, value: BulkModificationDiffType[t]}));
+export enum BulkModificationProcessorValueType {ManuallyInput = 1, Variable = 2}
+export const bulkModificationProcessorValueTypes = Object.keys(BulkModificationProcessorValueType).filter(k => typeof BulkModificationProcessorValueType[k] === 'number').map(t => ({label: t, value: BulkModificationProcessorValueType[t]}));
+export enum AliasExceptionType {ConflictAliasGroup = 1}
+export const aliasExceptionTypes = Object.keys(AliasExceptionType).filter(k => typeof AliasExceptionType[k] === 'number').map(t => ({label: t, value: AliasExceptionType[t]}));
 export enum ExHentaiCategory {Unknown = 0, Misc = 1, Doushijin = 2, Manga = 4, ArtistCG = 8, GameCG = 16, ImageSet = 32, Cosplay = 64, AsianPorn = 128, NonH = 256, Western = 512}
 export const exHentaiCategories = Object.keys(ExHentaiCategory).filter(k => typeof ExHentaiCategory[k] === 'number').map(t => ({label: t, value: ExHentaiCategory[t]}));
 export enum ExHentaiConnectionStatus {Ok = 1, InvalidCookie = 2, IpBanned = 3, UnknownError = 4}

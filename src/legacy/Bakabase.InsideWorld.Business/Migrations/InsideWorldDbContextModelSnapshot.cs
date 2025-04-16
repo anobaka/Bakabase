@@ -238,9 +238,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<string>("Introduction")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("PlayedAt")
-                        .HasColumnType("TEXT");
-
                     b.Property<decimal?>("Rating")
                         .HasColumnType("TEXT");
 
@@ -287,6 +284,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.Property<string>("Path")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PlayedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Tags")

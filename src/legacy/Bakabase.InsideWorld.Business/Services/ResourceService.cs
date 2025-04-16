@@ -171,16 +171,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     : exp.And(r => (r.Tags & tagsValue.Value) == tagsValue.Value);
             }
 
-            Dictionary<int, DateTime>? lastPlayedAt = null;
-            if (model.Orders?.Any(o => o.Property == ResourceSearchSortableProperty.PlayedAt) == true)
-            {
-                lastPlayedAt =
-                    (await _playHistoryService.GetAll(r => resourceIds == null || resourceIds.Contains(r.Id)))
-                    .GroupBy(d => d.ResourceId)
-                    .ToDictionary(d => d.Key, d => d.OrderByDescending(x => x.PlayedAt).First().PlayedAt);
-            }
-
-            var ordersForSearch = model.Orders.BuildForSearch(lastPlayedAt);
+            var ordersForSearch = model.Orders.BuildForSearch();
             var resources = await _orm.Search(exp?.Compile(), model.PageIndex, model.PageSize,
                 ordersForSearch,
                 false);
@@ -230,7 +221,6 @@ namespace Bakabase.InsideWorld.Business.Services
                         {
                             ReservedProperty.Rating => (Func<ReservedPropertyValue, object?>) (r => r.Rating),
                             ReservedProperty.Introduction => r => r.Introduction,
-                            ReservedProperty.PlayedAt => r => r.PlayedAt,
                             ReservedProperty.Cover => r => r.CoverPaths,
                             _ => null
                         });
@@ -452,16 +442,6 @@ namespace Bakabase.InsideWorld.Business.Services
                                         return new Resource.Property.PropertyValue(s.Scope, coverPaths, coverPaths,
                                             coverPaths);
                                     }).ToList(), true);
-
-                                reservedProperties[(int) ResourceProperty.PlayedAt] = new Resource.Property(
-                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.PlayedAt)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.PlayedAt)?.Type ??
-                                    default,
-                                    StandardValueType.DateTime,
-                                    StandardValueType.DateTime,
-                                    dbReservedProperties?.Select(s =>
-                                        new Resource.Property.PropertyValue(s.Scope, s.PlayedAt, s.PlayedAt,
-                                            s.PlayedAt)).ToList(), true);
                             }
 
                             SortPropertyValuesByScope(doList);
@@ -1127,6 +1107,11 @@ namespace Bakabase.InsideWorld.Business.Services
             });
         }
 
+        public async Task MarkAsNotPlayed(int id)
+        {
+            await _orm.UpdateByKey(id, r => r.PlayedAt = null);
+        }
+
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)
         {
             if (model.IsCustomProperty)
@@ -1398,7 +1383,14 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<BaseResponse> Play(int resourceId, string file)
         {
-            var playerRsp = await _categoryService.GetFirstComponent<IPlayer>(resourceId, ComponentType.Player);
+            var categoryId = (await _orm.GetByKey(resourceId))?.CategoryId;
+
+            if (!categoryId.HasValue)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            var playerRsp = await _categoryService.GetFirstComponent<IPlayer>(categoryId.Value, ComponentType.Player);
             if (playerRsp.Data == null)
             {
                 return playerRsp;
@@ -1406,8 +1398,10 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await playerRsp.Data.Play(file);
 
+            var now = DateTime.Now;
+            await _orm.UpdateByKey(resourceId, r => r.PlayedAt = now);
             await _playHistoryService.Add(new PlayHistoryDbModel
-                {ResourceId = resourceId, Item = file, PlayedAt = DateTime.Now});
+                {ResourceId = resourceId, Item = file, PlayedAt = now});
 
             return BaseResponseBuilder.Ok;
         }

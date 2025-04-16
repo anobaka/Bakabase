@@ -123,8 +123,8 @@ export default () => {
           <Tab key={'title'} title={t('Source type')} />
           {propertyTypes.map(cpt => {
             return (
-              <Tab key={cpt.value} title={t(PropertyType[cpt.value])}>
-                <Table>
+              <Tab key={cpt.value} title={t(PropertyType[cpt.value])} className={'w-full'} >
+                <Table isCompact isStriped removeWrapper isHeaderSticky>
                   <TableHeader>
                     {columns}
                   </TableHeader>

@@ -33,6 +33,16 @@ export interface BakabaseAbstractionsModelsDbCategoryComponent {
   descriptor: BakabaseAbstractionsModelsDomainComponentDescriptor;
 }
 
+export interface BakabaseAbstractionsModelsDbPlayHistoryDbModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  item?: string;
+  /** @format date-time */
+  playedAt: string;
+}
+
 export interface BakabaseAbstractionsModelsDomainCategory {
   /** @format int32 */
   id: number;
@@ -133,10 +143,10 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyType =
 export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope = 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004;
 
 /**
- * [12: Introduction, 13: Rating, 22: Cover, 23: PlayedAt]
+ * [12: Introduction, 13: Rating, 22: Cover]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 | 22 | 23;
+export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 | 22;
 
 /**
  * [1: Covers, 2: PlayableFiles]
@@ -300,8 +310,6 @@ export interface BakabaseAbstractionsModelsDomainReservedPropertyValue {
   rating?: number;
   introduction?: string;
   coverPaths?: string[];
-  /** @format date-time */
-  playedAt?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResource {
@@ -333,6 +341,8 @@ export interface BakabaseAbstractionsModelsDomainResource {
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
   pinned: boolean;
+  /** @format date-time */
+  playedAt?: string;
   cache?: BakabaseAbstractionsModelsDomainResourceCache;
   category?: BakabaseAbstractionsModelsDomainCategory;
   mediaLibraryName?: string;
@@ -1333,7 +1343,7 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
   description?: string;
   optionsItems?: number[];
   enhancementConverter?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter;
-  /** [12: Introduction, 13: Rating, 22: Cover, 23: PlayedAt] */
+  /** [12: Introduction, 13: Rating, 22: Cover] */
   reservedPropertyCandidate?: BakabaseAbstractionsModelsDomainConstantsReservedProperty;
 }
 
@@ -2003,6 +2013,19 @@ export interface BootstrapModelsResponseModelsListResponse1SystemString {
   code: number;
   message?: string;
   data?: string[];
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbPlayHistoryDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbPlayHistoryDbModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
 }
 
 export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDomainResource {
@@ -5439,6 +5462,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name MarkResourceAsNotPlayed
+     * @request DELETE:/resource/{id}/played-at
+     */
+    markResourceAsNotPlayed: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/played-at`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
   };
   mediaLibrary = {
     /**
@@ -6944,6 +6982,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/password/${password}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
+  playHistory = {
+    /**
+     * No description
+     *
+     * @tags PlayHistory
+     * @name SearchPlayHistories
+     * @request GET:/play-history
+     */
+    searchPlayHistories: (
+      query?: {
+        /** @format int32 */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @min 0
+         * @max 100
+         */
+        pageSize?: number;
+        /** @format int32 */
+        skipCount?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbPlayHistoryDbModel, any>({
+        path: `/play-history`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),

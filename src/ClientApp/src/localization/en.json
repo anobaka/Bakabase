@@ -158,5 +158,19 @@
   "Deleting {{count}} download tasks": "Deleting {{count}} download tasks",
   "Auto group {{count}} selected items": "Auto group {{count}} selected items",
   "Auto group internal items in {{count}} selected directories": "Auto group internal items in {{count}} selected directories",
-  "Wrap {{count}} items using directory": "Wrap {{count}} items using directory"
+  "Wrap {{count}} items using directory": "Wrap {{count}} items using directory",
+  "Last played at {{dt}}": "Last played at {{dt}}",
+  "ResourceTag.IsParent": "Is parent",
+  "ResourceTag.Pinned": "Pinned",
+  "ResourceTag.PathDoesNotExist": "Path does not exist",
+  "ResourceTag.UnknownMediaLibrary": "Unknown media library",
+  "StandardValueType.String": "Text",
+  "StandardValueType.ListString": "Multiple texts",
+  "StandardValueType.Decimal": "Number",
+  "StandardValueType.Link": "Link",
+  "StandardValueType.Boolean": "Yes/No",
+  "StandardValueType.DateTime": "Date time",
+  "StandardValueType.Time": "time",
+  "StandardValueType.ListListString": "Multilevel texts",
+  "StandardValueType.ListTag": "Tags"
 }

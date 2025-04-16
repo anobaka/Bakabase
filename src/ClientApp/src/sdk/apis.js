@@ -7643,6 +7643,66 @@ export const DeletePasswordURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: SearchPlayHistories
+ * url: SearchPlayHistoriesURL
+ * method: SearchPlayHistories_TYPE
+ * raw_url: SearchPlayHistories_RAW_URL
+ * @param pageIndex - 
+ * @param pageSize - 
+ * @param skipCount - 
+ */
+export const SearchPlayHistories = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/play-history'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['pageIndex'] !== undefined) {
+    queryParameters['pageIndex'] = parameters['pageIndex']
+  }
+  if (parameters['pageSize'] !== undefined) {
+    queryParameters['pageSize'] = parameters['pageSize']
+  }
+  if (parameters['skipCount'] !== undefined) {
+    queryParameters['skipCount'] = parameters['skipCount']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const SearchPlayHistories_RAW_URL = function() {
+  return '/play-history'
+}
+export const SearchPlayHistories_TYPE = function() {
+  return 'get'
+}
+export const SearchPlayHistoriesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/play-history'
+  if (parameters['pageIndex'] !== undefined) {
+    queryParameters['pageIndex'] = parameters['pageIndex']
+  }
+  if (parameters['pageSize'] !== undefined) {
+    queryParameters['pageSize'] = parameters['pageSize']
+  }
+  if (parameters['skipCount'] !== undefined) {
+    queryParameters['skipCount'] = parameters['skipCount']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetPlaylist
  * url: GetPlaylistURL
  * method: GetPlaylist_TYPE
@@ -9170,6 +9230,51 @@ export const SearchResourcePathsURL = function(parameters = {}) {
   if (parameters['keyword'] !== undefined) {
     queryParameters['keyword'] = parameters['keyword']
   }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: MarkResourceAsNotPlayed
+ * url: MarkResourceAsNotPlayedURL
+ * method: MarkResourceAsNotPlayed_TYPE
+ * raw_url: MarkResourceAsNotPlayed_RAW_URL
+ * @param id - 
+ */
+export const MarkResourceAsNotPlayed = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/{id}/played-at'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const MarkResourceAsNotPlayed_RAW_URL = function() {
+  return '/resource/{id}/played-at'
+}
+export const MarkResourceAsNotPlayed_TYPE = function() {
+  return 'delete'
+}
+export const MarkResourceAsNotPlayedURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/{id}/played-at'
+  path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

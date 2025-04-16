@@ -9,7 +9,7 @@ namespace Bakabase.Abstractions.Extensions
     public static class ResourceExtensions
     {
         public static (Func<ResourceDbModel, object> SelectKey, bool Asc, IComparer<object>? Comparer)[] BuildForSearch(
-            this ResourceSearchOrderInputModel[]? orders, Dictionary<int, DateTime>? lastPlayedAt = null)
+            this ResourceSearchOrderInputModel[]? orders)
         {
             var ordersForSearch =
                 new List<(Func<ResourceDbModel, object> SelectKey, bool Asc, IComparer<object>? Comparer)>();
@@ -28,7 +28,7 @@ namespace Bakabase.Abstractions.Extensions
                         ResourceSearchSortableProperty.Filename => (x => Path.GetFileName(x.Path),
                             Comparer<object>.Create(StringComparer.OrdinalIgnoreCase.Compare)),
                         // ResourceSearchSortableProperty.ReleaseDt => (x => x.re),
-                        ResourceSearchSortableProperty.PlayedAt => (x => lastPlayedAt.TryGetValue(x.Id, out var dt) ? dt : null, null),
+                        ResourceSearchSortableProperty.PlayedAt => (x => x.PlayedAt, null),
                         _ => throw new ArgumentOutOfRangeException()
                     })
                     select (s.SelectKey, a, s.Comparer));

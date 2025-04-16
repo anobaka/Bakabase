@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bakabase.InsideWorld.Business.Migrations
 {
     [DbContext(typeof(InsideWorldDbContext))]
-    [Migration("20250415100225_V191Beta5AddPlayedReservedProperty")]
-    partial class V191Beta5AddPlayedReservedProperty
+    [Migration("20250416023646_V191Beta5AddPlayHistory")]
+    partial class V191Beta5AddPlayHistory
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -205,6 +205,30 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("MediaLibraries");
                 });
 
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PlayHistoryDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Item")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PlayedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayedAt");
+
+                    b.HasIndex("ResourceId");
+
+                    b.ToTable("PlayHistories");
+                });
+
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ReservedPropertyValue", b =>
                 {
                     b.Property<int>("Id")
@@ -215,9 +239,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Introduction")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("PlayedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal?>("Rating")
@@ -266,6 +287,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.Property<string>("Path")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PlayedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Tags")

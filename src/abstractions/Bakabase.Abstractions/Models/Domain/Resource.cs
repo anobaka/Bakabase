@@ -110,6 +110,7 @@ public record Resource
     public Dictionary<int, Dictionary<int, Property>>? Properties { get; set; }
 
     public bool Pinned => Tags.Contains(ResourceTag.Pinned);
+    public DateTime? PlayedAt { get; set; }
 
     public ResourceCache? Cache { get; set; }
 

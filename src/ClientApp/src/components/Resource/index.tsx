@@ -8,6 +8,7 @@ import {
   ApartmentOutlined,
   DisconnectOutlined,
   FileUnknownOutlined,
+  HistoryOutlined,
   PlayCircleOutlined,
   PushpinOutlined,
 } from '@ant-design/icons';
@@ -27,7 +28,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import { Button, Chip, Link, Tooltip } from '@/components/bakaui';
 import {
   BTaskStatus,
-  PropertyPool,
+  PropertyPool, ReservedProperty,
   ResourceAdditionalItem,
   ResourceDisplayContent,
   ResourceTag,
@@ -262,8 +263,14 @@ const Resource = React.forwardRef((props: Props, ref) => {
               <DisconnectOutlined className={'text-warning'} />
             </Tooltip>
           )}
+          {resource.playedAt && (
+            <Tooltip content={t('Last played at {{dt}}', { dt: resource.playedAt })}>
+              <HistoryOutlined />
+            </Tooltip>
+          )}
         </div>
         <PlayableFiles
+          afterPlaying={reload}
           PortalComponent={({ onClick }) => (
             <div className={styles.play}>
               <Tooltip

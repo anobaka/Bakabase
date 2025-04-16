@@ -66,7 +66,7 @@ export default () => {
       ...pForm,
     };
     setForm(nf);
-    BApi.playHistory.search(nf)
+    BApi.playHistory.searchPlayHistories(nf)
       .then((a) => {
         setPlayHistories(a.data ?? []);
         setTotalCount(a.totalCount!);
@@ -92,14 +92,15 @@ export default () => {
 
   return (
     <div className="">
-      {playHistories.length > 0 && (
+      {playHistories.length > 0 ? (
         <div className={'mt-1'}>
           <Table
+            removeWrapper
             topContent={renderPagination()}
             bottomContent={renderPagination()}
             isStriped
             isCompact
-            color={'primary'}
+            isHeaderSticky
           >
             <TableHeader>
               <TableColumn>{t('Item')}</TableColumn>
@@ -118,6 +119,10 @@ export default () => {
               })}
             </TableBody>
           </Table>
+        </div>
+      ) : (
+        <div>
+          {t('No play history')}
         </div>
       )}
     </div>

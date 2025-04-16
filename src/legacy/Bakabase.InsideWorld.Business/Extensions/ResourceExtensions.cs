@@ -41,7 +41,8 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 ParentId = dbModel.ParentId,
                 Directory = Path.GetDirectoryName(dbModel.Path)!.StandardizePath()!,
                 FileName = Path.GetFileName(dbModel.Path),
-                Tags = SpecificEnumUtils<ResourceTag>.Values.Where(t => (dbModel.Tags & t) == t).ToHashSet()
+                Tags = SpecificEnumUtils<ResourceTag>.Values.Where(t => (dbModel.Tags & t) == t).ToHashSet(),
+                PlayedAt = dbModel.PlayedAt
             };
             return domainModel;
         }
@@ -60,7 +61,8 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 ParentId = domainModel.Parent?.Id ?? domainModel.ParentId,
                 IsFile = domainModel.IsFile,
                 Path = domainModel.Path,
-                Tags = domainModel.Tags.Aggregate(default(ResourceTag), (s, t) => (s | t))
+                Tags = domainModel.Tags.Aggregate(default(ResourceTag), (s, t) => (s | t)),
+                PlayedAt = domainModel.PlayedAt
             };
             return dbModel;
         }
@@ -180,6 +182,12 @@ namespace Bakabase.InsideWorld.Business.Extensions
             if (current.CategoryId != patches.CategoryId && patches.CategoryId > 0)
             {
                 current.CategoryId = patches.CategoryId;
+                changed = true;
+            }
+
+            if (patches.PlayedAt.HasValue && current.PlayedAt != patches.PlayedAt)
+            {
+                current.PlayedAt = patches.PlayedAt;
                 changed = true;
             }
 

@@ -2,13 +2,19 @@ import React, { useEffect, useState } from 'react';
 
 import './index.scss';
 import { useTranslation } from 'react-i18next';
-import { DisconnectOutlined, FolderOpenOutlined, PlayCircleOutlined, SettingOutlined } from '@ant-design/icons';
+import {
+  CloseCircleOutlined,
+  DisconnectOutlined,
+  FolderOpenOutlined,
+  PlayCircleOutlined,
+  SettingOutlined,
+} from '@ant-design/icons';
 import { history } from 'ice';
 import BasicInfo from './BasicInfo';
 import Properties from './Properties';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
-import { Button, ButtonGroup, Link, Modal } from '@/components/bakaui';
+import { Button, ButtonGroup, Chip, Modal, Tooltip } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import BApi from '@/sdk/BApi';
 import { PropertyPool, ReservedProperty, ResourceAdditionalItem } from '@/sdk/constants';
@@ -156,7 +162,7 @@ export default ({
                   </div>
                 )}
               />
-              <div>
+              <div className={'flex flex-col gap-1'}>
                 <Properties
                   resource={resource}
                   reload={loadResource}
@@ -166,15 +172,35 @@ export default ({
                     name: 'justify-end',
                   }}
                 />
-                <Properties
-                  resource={resource}
-                  reload={loadResource}
-                  restrictedPropertyPool={PropertyPool.Reserved}
-                  restrictedPropertyIds={[ReservedProperty.PlayedAt]}
-                  propertyClassNames={{
-                    name: 'justify-end',
-                  }}
-                />
+                {resource.playedAt && (
+                  <div
+                    style={{ gridTemplateColumns: 'calc(120px) minmax(0, 1fr)' }}
+                    className={'grid gap-x-4 gap-y-1 undefined items-center overflow-visible'}
+                  >
+                    <Chip size={'sm'} color={'default'} radius={'sm'} className={'text-right justify-self-end'}>
+                      {t('Last played at')}
+                    </Chip>
+                    <div className={'flex items-center gap-1'}>
+                      {resource.playedAt}
+                      <Tooltip content={t('Mark as not played')}>
+                        <Button
+                          isIconOnly
+                          variant={'light'}
+                          size={'sm'}
+                          onPress={() => {
+                            BApi.resource.markResourceAsNotPlayed(resource.id).then(r => {
+                              if (!r.code) {
+                                loadResource();
+                              }
+                            });
+                          }}
+                        >
+                          <CloseCircleOutlined className={'text-medium opacity-60'} />
+                        </Button>
+                      </Tooltip>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <Button

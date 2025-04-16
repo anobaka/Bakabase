@@ -8,5 +8,4 @@ public record ReservedPropertyValue
     public decimal? Rating { get; set; }
     public string? Introduction { get; set; }
     public List<string>? CoverPaths { get; set; }
-    public DateTime? PlayedAt { get; set; }
 }

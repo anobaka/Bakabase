@@ -14,6 +14,7 @@ type Props = {
   resource: ResourceModel;
   PortalComponent: React.FC<{ onClick: () => any }>;
   autoInitialize?: boolean;
+  afterPlaying?: () => any;
 };
 
 type Directory = {
@@ -53,7 +54,7 @@ const splitIntoDirs = (paths: string[], prefix: string): Directory[] => {
       };
       groups.push(dir);
     }
-    const extension = segments[segments.length - 1].split('.').pop()!;
+    const extension = segments[segments.length - 1]!.split('.').pop()!;
     let group = dir.groups.find(g => g.extension == extension);
     if (!group) {
       group = {
@@ -63,7 +64,7 @@ const splitIntoDirs = (paths: string[], prefix: string): Directory[] => {
       dir.groups.push(group);
     }
     group.files.push({
-      name: segments[segments.length - 1],
+      name: segments[segments.length - 1]!,
       path,
     });
   }
@@ -80,6 +81,7 @@ export default forwardRef<PlayableFilesRef, Props>(({
                                                       autoInitialize,
                                                       resource,
                                                       PortalComponent,
+                                                      afterPlaying,
                                                     }, ref) => {
   const { t } = useTranslation();
   const useCache = !store.useModelState('uiOptions').resource?.disableCache;
@@ -116,11 +118,12 @@ export default forwardRef<PlayableFilesRef, Props>(({
   }, []);
 
   const play = (file: string) =>
-    BApi.resource.playResourceFile(resource.categoryId, {
+    BApi.resource.playResourceFile(resource.id, {
       file,
     }).then((a) => {
       if (!a.code) {
         toast.success(t('Opened'));
+        afterPlaying?.();
       }
     });
 
@@ -130,7 +133,7 @@ export default forwardRef<PlayableFilesRef, Props>(({
         <PortalComponent
           onClick={() => {
             if (portalCtx.files.length == 1 && !portalCtx.hasMore) {
-              play(portalCtx.files[0]);
+              play(portalCtx.files[0]!);
             } else {
               if (dirs) {
                 setModalVisible(true);
@@ -188,14 +191,8 @@ export default forwardRef<PlayableFilesRef, Props>(({
                                 radius={'sm'}
                                 size={'sm'}
                                 className={'whitespace-break-spaces py-2 h-auto text-left'}
-                                onClick={() => {
-                                  BApi.resource.playResourceFile(resource.categoryId, {
-                                    file: file.path,
-                                  }).then((a) => {
-                                    if (!a.code) {
-                                      Message.success(t('Opened'));
-                                    }
-                                  });
+                                onPress={() => {
+                                  play(file.path);
                                 }}
                               >
                                 <PlayCircleOutlined className={'text-base'} />
@@ -208,7 +205,7 @@ export default forwardRef<PlayableFilesRef, Props>(({
                               size={'sm'}
                               color={'primary'}
                               variant={'light'}
-                              onClick={() => {
+                              onPress={() => {
                                 g.showAll = true;
                                 setDirs([...dirs]);
                               }}

@@ -262,7 +262,7 @@ export default ({
           return (
             <>
               <div className={'flex gap-4 items-center'}>
-                <div className={'w-[80px] text-right'}>
+                <div className={'w-[120px] text-right'}>
                   {blockTip ? (
                     <Tooltip content={blockTip}>
                       <Chip

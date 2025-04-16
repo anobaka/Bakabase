@@ -140,17 +140,6 @@ public class ReservedPropertyValueService(
 
                             break;
                         }
-                        case Abstractions.Models.Domain.Constants.ReservedProperty.PlayedAt:
-                        {
-                            var playedAt = stdValue is DateTime time ? time : default;
-                            if (playedAt != data.PlayedAt)
-                            {
-                                data.PlayedAt = playedAt;
-                                dataIsChanged = true;
-                            }
-
-                            break;
-                        }
                         default:
                             throw new ArgumentOutOfRangeException();
                     }

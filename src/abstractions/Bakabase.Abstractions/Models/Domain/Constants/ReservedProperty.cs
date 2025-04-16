@@ -6,7 +6,6 @@ namespace Bakabase.Abstractions.Models.Domain.Constants
     {
         Introduction = ResourceProperty.Introduction,
         Rating = ResourceProperty.Rating,
-        Cover = ResourceProperty.Cover,
-        PlayedAt = ResourceProperty.PlayedAt
+        Cover = ResourceProperty.Cover
     }
 }

@@ -501,5 +501,13 @@ namespace Bakabase.Service.Controllers
             await service.SaveCover(id, data, model.SaveMode);
             return BaseResponseBuilder.Ok;
         }
+
+        [HttpDelete("{id:int}/played-at")]
+        [SwaggerOperation(OperationId = "MarkResourceAsNotPlayed")]
+        public async Task<BaseResponse> MarkAsNotPlayed(int id)
+        {
+            await service.MarkAsNotPlayed(id);
+            return BaseResponseBuilder.Ok;
+        }
     }
 }

@@ -14,6 +14,7 @@ using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Helpers;
+using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Models.Input;
 using Bakabase.InsideWorld.Models.Constants;
@@ -29,6 +30,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
@@ -48,7 +50,8 @@ namespace Bakabase.InsideWorld.Business.Services
 {
     public class CategoryService(
         IServiceProvider serviceProvider,
-        ResourceService<InsideWorldDbContext, Bakabase.Abstractions.Models.Db.Category, int> orm)
+        ResourceService<InsideWorldDbContext, Bakabase.Abstractions.Models.Db.Category, int> orm,
+        FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm)
         : BootstrapService(serviceProvider), ICategoryService
     {
         protected IMediaLibraryService MediaLibraryService => GetRequiredService<IMediaLibraryService>();
@@ -69,6 +72,8 @@ namespace Bakabase.InsideWorld.Business.Services
         protected IPropertyLocalizer PropertyLocalizer => GetRequiredService<IPropertyLocalizer>();
 
         protected ISpecialTextService SpecialTextService => GetRequiredService<ISpecialTextService>();
+        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>
+            _resourceCacheOrm = resourceCacheOrm;
 
         #region Infrastructures
 
@@ -355,7 +360,6 @@ namespace Bakabase.InsideWorld.Business.Services
                     break;
                 }
                 case ComponentType.PlayableFileSelector:
-                    break;
                 case ComponentType.Player:
                     break;
                 default:
@@ -364,6 +368,15 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await using var tran = await orm.DbContext.Database.BeginTransactionAsync();
             await CategoryComponentService.Configure(id, componentKeys, model.Type);
+
+            if (model.Type == ComponentType.PlayableFileSelector)
+            {
+                var resourceIds = (await ResourceService.GetAllDbModels(x => x.CategoryId == id)).Select(c => c.Id)
+                    .ToList();
+                await _resourceCacheOrm.UpdateAll(c => resourceIds.Contains(c.ResourceId),
+                    c => c.CachedTypes &= ~ResourceCacheType.PlayableFiles);
+            }
+
             await orm.DbContext.SaveChangesAsync();
             await tran.CommitAsync();
             return BaseResponseBuilder.Ok;

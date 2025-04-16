@@ -85,14 +85,14 @@ public record PropertyInternals
                     (int) ResourceProperty.Category, PropertyType.SingleChoice),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
                     (int) ResourceProperty.MediaLibrary, PropertyType.Multilevel),
+                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
+                    (int) ResourceProperty.PlayedAt, PropertyType.DateTime),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Rating, PropertyType.Rating),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Introduction, PropertyType.MultilineText),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Cover, PropertyType.Attachment),
-                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
-                    (int) ResourceProperty.PlayedAt, PropertyType.DateTime),
             }.ToDictionary(d => (ResourceProperty) d.Id, d => d));
 
     public static readonly ConcurrentDictionary<ResourceProperty, Bakabase.Abstractions.Models.Domain.Property>
@@ -106,6 +106,7 @@ public record PropertyInternals
                 ResourceProperty.FileModifiedAt,
                 ResourceProperty.Category,
                 ResourceProperty.MediaLibrary,
+                ResourceProperty.PlayedAt
             }.ToDictionary(d => d, d => BuiltinPropertyMap[d]));
 
     public static readonly ConcurrentDictionary<ReservedProperty, Bakabase.Abstractions.Models.Domain.Property>
@@ -115,7 +116,6 @@ public record PropertyInternals
                 ResourceProperty.Rating,
                 ResourceProperty.Introduction,
                 ResourceProperty.Cover,
-                ResourceProperty.PlayedAt
             }.ToDictionary(
                 d => (ReservedProperty) d, d => BuiltinPropertyMap[d]));
 

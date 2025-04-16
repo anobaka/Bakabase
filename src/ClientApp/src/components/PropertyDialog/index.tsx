@@ -131,6 +131,7 @@ const PropertyDialog = ({
         case PropertyType.MultipleChoice: {
           const options = property.options as ChoicePropertyOptions;
           const multiple = property.type === PropertyType.MultipleChoice;
+          console.log(options);
           return (
             <>
               <ChoiceList
@@ -168,7 +169,7 @@ const PropertyDialog = ({
                 size={'sm'}
                 label={t('Default value')}
                 selectionMode={multiple ? 'multiple' : 'single'}
-                selectedKeys={options?.defaultValue}
+                selectedKeys={options?.defaultValue ? multiple ? options.defaultValue : [options.defaultValue] : undefined}
                 dataSource={options?.choices}
                 onSelectionChange={c => {
                   const array = Array.from((c as Set<Key>).values());
@@ -459,7 +460,7 @@ const PropertyDialog = ({
                   <div className={'pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0'}>
                     <div className={'mb-2 font-bold'}>{t(group)}</div>
                     <div className="grid grid-cols-3 gap-x-2 text-sm leading-5">
-                      {PropertyTypeGroup[group].map(type => {
+                      {PropertyTypeGroup[group]!.map(type => {
                         if (group == UnderDevelopmentGroupKey) {
                           return (
                             <Tooltip content={(

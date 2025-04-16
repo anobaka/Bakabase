@@ -38,6 +38,7 @@ export type Resource = {
   category?: {id: number; name: string};
   pinned: boolean;
   tags: ResourceTag[];
+  playedAt?: string;
   cache?: {
     playableFilePaths?: string[];
     hasMorePlayableFiles: boolean;

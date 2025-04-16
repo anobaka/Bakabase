@@ -25,5 +25,6 @@ namespace Bakabase.Abstractions.Models.Db
         public int CategoryId { get; set; }
         public int? ParentId { get; set; }
         public ResourceTag Tags { get; set; }
+        public DateTime? PlayedAt { get; set; }
     }
 }

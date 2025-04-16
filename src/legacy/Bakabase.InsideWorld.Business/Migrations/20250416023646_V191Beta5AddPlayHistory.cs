@@ -6,11 +6,17 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Bakabase.InsideWorld.Business.Migrations
 {
     /// <inheritdoc />
-    public partial class V191Beta5AddResourcePlayHistory : Migration
+    public partial class V191Beta5AddPlayHistory : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<DateTime>(
+                name: "PlayedAt",
+                table: "ResourcesV2",
+                type: "TEXT",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "PlayHistories",
                 columns: table => new
@@ -18,6 +24,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     ResourceId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Item = table.Column<string>(type: "TEXT", nullable: true),
                     PlayedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -41,6 +48,10 @@ namespace Bakabase.InsideWorld.Business.Migrations
         {
             migrationBuilder.DropTable(
                 name: "PlayHistories");
+
+            migrationBuilder.DropColumn(
+                name: "PlayedAt",
+                table: "ResourcesV2");
         }
     }
 }

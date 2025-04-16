@@ -59,8 +59,8 @@ export default () => {
           {propertyTypes.map(cpt => {
             const filteredResults = results?.filter(x => x.type == cpt.value) || [];
             return (
-              <Tab key={cpt.value} title={t(PropertyType[cpt.value])}>
-                <Table>
+              <Tab key={cpt.value} title={t(PropertyType[cpt.value])} className={'w-full'}>
+                <Table isCompact isStriped removeWrapper isHeaderSticky>
                   <TableHeader>
                     {columns}
                   </TableHeader>
