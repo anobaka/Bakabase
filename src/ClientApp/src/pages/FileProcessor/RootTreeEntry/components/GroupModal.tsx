@@ -62,20 +62,20 @@ export default ({
       {preview ? preview.map(p => {
         return (
           <div className={'flex flex-col gap-1'}>
-            <FileSystemEntryChangeExampleItem type={'root'} text={p.rootPath} isDirectory />
+            <FileSystemEntryChangeExampleItem type={'default'} text={p.rootPath} isDirectory />
             {p.groups && p.groups.length > 0 ? (
               p.groups.map(g => {
                 return (
                   <>
-                    <FileSystemEntryChangeExampleItem type={'added'} indent={1} text={g.directoryName} isDirectory />
+                    <FileSystemEntryChangeExampleItem type={'added'} layer={1} text={g.directoryName} isDirectory />
                     {g.filenames.map(f => {
                       return (
-                        <FileSystemEntryChangeExampleItem type={'added'} indent={2} text={f} />
+                        <FileSystemEntryChangeExampleItem type={'added'} layer={2} text={f} />
                       );
                     })}
                     {g.filenames.map(f => {
                       return (
-                        <FileSystemEntryChangeExampleItem type={'deleted'} indent={1} text={f} />
+                        <FileSystemEntryChangeExampleItem type={'deleted'} layer={1} text={f} />
                       );
                     })}
                   </>
@@ -83,7 +83,7 @@ export default ({
               })
             ) : <FileSystemEntryChangeExampleItem
               type={'error'}
-              indent={1}
+              layer={1}
               text={t('Nothing to group. Please check if the folder contains any files; subfolders cannot be grouped')}
             />}
             <FileSystemEntryChangeExampleMiscellaneousItem parent={p.rootPath} indent={1} />

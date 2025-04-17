@@ -936,6 +936,11 @@ namespace Bakabase.Service.Controllers
             {
                 foreach (var rootPath in model.Paths)
                 {
+                    if (System.IO.File.Exists(rootPath))
+                    {
+                        continue;
+                    }
+
                     if (!Directory.Exists(rootPath))
                     {
                         return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
@@ -959,6 +964,11 @@ namespace Bakabase.Service.Controllers
                         }
                     }
                 }
+            }
+
+            if (!batches.Any())
+            {
+                return ListResponseBuilder<FileSystemEntryGroupResultViewModel>.NotFound;
             }
 
             var vms = batches.Select(g =>

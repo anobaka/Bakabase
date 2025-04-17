@@ -60,7 +60,7 @@ export default ({
           const newParentName = newParentNames[parent] ?? '';
           return (
             <>
-              <FileSystemEntryChangeExampleItem type={'root'} text={parent ?? '.'} isDirectory />
+              <FileSystemEntryChangeExampleItem type={'default'} text={parent ?? '.'} isDirectory />
               <FileSystemEntryChangeItem
                 type={'added'}
                 editable
@@ -68,7 +68,7 @@ export default ({
                 onChange={v => {
                   setNewParentNames((old) => ({ ...old, [parent]: v }));
                 }}
-                indent={1}
+                layer={1}
                 isDirectory
               />
               {innerEntries.map((e, i) => {
@@ -76,7 +76,7 @@ export default ({
                   <FileSystemEntryChangeExampleItem
                     type={'added'}
                     text={e.name}
-                    indent={2}
+                    layer={2}
                     isDirectory={e.isDirectory}
                     path={e.path}
                   />
@@ -87,7 +87,7 @@ export default ({
                   <FileSystemEntryChangeExampleItem
                     type={'deleted'}
                     text={e.name}
-                    indent={1}
+                    layer={1}
                     isDirectory={e.isDirectory}
                     path={e.path}
                   />

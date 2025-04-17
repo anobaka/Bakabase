@@ -18,11 +18,31 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
 
+  const [targetEntries, setTargetEntries] = useState<Entry[]>([]);
+
   useEffect(() => {
-  }, []);
+    const directoryEntries = _.sortBy(_.sortBy(entries.filter(entry => entry.isDirectory), e => e.path),
+      x => x.path.length);
+    const outerDirectoryEntries: Entry[] = [];
+    const outerDirectoryPaths: Set<string> = new Set();
+    for (const de of directoryEntries) {
+      let skip = false;
+      for (const odp of outerDirectoryPaths) {
+        if (de.path.startsWith(odp)) {
+          skip = true;
+        }
+      }
+      if (!skip) {
+        outerDirectoryPaths.add(`${de.path}/`);
+        outerDirectoryEntries.push(de);
+      }
+    }
+    setTargetEntries(outerDirectoryEntries);
+  }, [entries]);
+
 
   // const { parent } = entries[0]!;
-  const groups = _.groupBy(entries, e => e.parent?.path);
+  const groups = _.groupBy(targetEntries, e => e.parent?.path);
 
   return (
     <Modal
@@ -31,7 +51,7 @@ export default ({
       onDestroyed={onDestroyed}
       title={t('Extract {{count}} directories', { count: entries.length })}
       onOk={async () => {
-        for (const e of entries) {
+        for (const e of targetEntries) {
           await BApi.file.extractAndRemoveDirectory({ directory: e.path });
         }
       }}
@@ -48,31 +68,43 @@ export default ({
           const innerEntries = groups[parent] ?? [];
           return (
             <>
-              <FileSystemEntryChangeExampleItem type={'root'} text={parent ?? '.'} isDirectory />
+              <FileSystemEntryChangeExampleItem type={'default'} text={parent ?? '.'} isDirectory />
               {innerEntries.map((e, i) => {
-                return (
-                  <>
+                if (e.isDirectoryOrDrive) {
+                  return (
+                    <>
+                      <FileSystemEntryChangeExampleItem
+                        path={e.path}
+                        type={'deleted'}
+                        layer={1}
+                        text={e.name}
+                        isDirectory={e.isDirectory}
+                      />
+                      <FileSystemEntryChangeExampleItem
+                        type={'deleted'}
+                        layer={2}
+                        text={`${t('Other files')}...`}
+                        isDirectory={false}
+                      />
+                      <FileSystemEntryChangeExampleItem
+                        type={'added'}
+                        layer={1}
+                        text={`${t('Other files in {{parent}}', { parent: e.name })}...`}
+                        isDirectory={false}
+                      />
+                    </>
+                  );
+                } else {
+                  return (
                     <FileSystemEntryChangeExampleItem
                       path={e.path}
-                      type={'deleted'}
-                      indent={1}
+                      type={'default'}
+                      layer={1}
                       text={e.name}
                       isDirectory={e.isDirectory}
                     />
-                    <FileSystemEntryChangeExampleItem
-                      type={'deleted'}
-                      indent={2}
-                      text={`${t('Other files')}...`}
-                      isDirectory={false}
-                    />
-                    <FileSystemEntryChangeExampleItem
-                      type={'added'}
-                      indent={1}
-                      text={`${t('Other files in {{parent}}', { parent: e.name })}...`}
-                      isDirectory={false}
-                    />
-                  </>
-                );
+                  );
+                }
               })}
               <FileSystemEntryChangeExampleMiscellaneousItem parent={parent} indent={1} />
             </>

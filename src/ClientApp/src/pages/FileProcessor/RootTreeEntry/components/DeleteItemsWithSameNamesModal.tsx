@@ -78,7 +78,7 @@ export default ({
       {deletingAllPaths ? (
         <>
           <div className={'flex flex-col gap-1'}>
-            <FileSystemEntryChangeExampleItem type={'root'} text={workingDirectory} />
+            <FileSystemEntryChangeExampleItem type={'default'} text={workingDirectory} />
             {deletingAllPaths.map((d, i) => {
               return (
                 <FileSystemEntryChangeExampleItem
@@ -86,7 +86,7 @@ export default ({
                   text={d.name}
                   path={d.path}
                   isDirectory={d.isDirectory}
-                  indent={1}
+                  layer={1}
                 />
               );
             })}

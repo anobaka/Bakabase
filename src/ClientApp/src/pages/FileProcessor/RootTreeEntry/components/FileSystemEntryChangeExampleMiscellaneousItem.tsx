@@ -11,7 +11,7 @@ export default ({ indent, parent }: Props) => {
   const { t } = useTranslation();
   return (
     <FileSystemEntryChangeExampleItem
-      indent={indent}
+      layer={indent}
       text={parent ? `${t('Other files in {{parent}}', { parent })}...` : `${t('Other files')}...`}
       type={'others'}
       className={'opacity-60'}
