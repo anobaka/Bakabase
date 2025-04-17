@@ -66,6 +66,7 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
 
   return (
     <Menu
+      inlineIndent={12}
       defaultOpenKeys={defaultOpenKeysRef.current}
       defaultSelectedKeys={defaultSelectedKeysRef.current}
       style={{

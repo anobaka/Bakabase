@@ -26,4 +26,4 @@
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=anobaka/insideworld&type=Date)]([https://star-history.com/#anobaka/insideworld&Date](https://star-history.com/embed?secret=Z2l0aHViX3BhdF8xMUFBV0JJVkkwdVFWRGxmOE1HTHRuX1ZzblFNRnRiaThva0FnbmpvcE1mWFh4b0NMZ2pOOFB5bHBZRmlkQmJTSFkzWDNSTkJOQXNXazdaU0lV#anobaka/insideworld&Date))
+[![Star History Chart](https://api.star-history.com/svg?repos=anobaka/Bakabase&type=Date)](https://www.star-history.com/#anobaka/Bakabase&Date)

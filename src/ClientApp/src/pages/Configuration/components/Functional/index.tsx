@@ -112,16 +112,16 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
             <div className={'operations'}>
               <Button
                 color={'primary'}
-                size={'small'}
+                size={'sm'}
                 onClick={() => {
                   applyPatches(PatchExHentaiOptions, tmpExHentaiOptions);
                 }}
               >{t('Save')}
               </Button>
               <Button
-                size={'small'}
+                size={'sm'}
                 disabled={!(tmpExHentaiOptions?.cookie?.length > 0) || validatingExHentaiCookie}
-                loading={validatingExHentaiCookie}
+                isLoading={validatingExHentaiCookie}
                 onClick={() => {
                   setValidatingExHentaiCookie(true);
                   ValidateCookie({
