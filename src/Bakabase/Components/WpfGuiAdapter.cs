@@ -201,6 +201,7 @@ namespace Bakabase.Components
 
                 _mainWindow.Title = title;
                 await _mainWindow.WebView2.EnsureCoreWebView2Async();
+                await _mainWindow.WebView2.CoreWebView2.Profile.ClearBrowsingDataAsync();
                 _mainWindow.WebView2.CoreWebView2.Navigate(url);
                 _mainWindow.Closing += async (sender, args) =>
                 {
