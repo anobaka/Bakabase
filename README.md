@@ -10,15 +10,15 @@
 
 ## 功能预览
 
-![resource-filter-v190-1](./docs/img/resource-filter-v190-1.png)
-![resource-detail-v190-1](./docs/img/resource-detail-v190-1.png)
-![resource-quick-preview](./docs/img/resource-quick-preview.png)
-![custom-property-1](./docs/img/custom-property-1.png)
-![custom-property-2](./docs/img/custom-property-2.png)
-![category-resource-name-template-2](./docs/img/category-resource-name-template-2.png)
-![categary-path-segment-matcher-3-4](./docs/img/categary-path-segment-matcher-3-4.png)
-![file-processor-basic](./docs/img/file-processor-basic.png)
-![downloader-1](./docs/img/downloader-1.png)
+![resource-filter-v190-1](https://github.com/anobaka/Bakabase.Docs/blob/main/img/resource-filter-v190-1.png)
+![resource-detail-v190-1](https://github.com/anobaka/Bakabase.Docs/blob/main/img/resource-detail-v190-1.png)
+![resource-quick-preview](https://github.com/anobaka/Bakabase.Docs/blob/main/img/resource-quick-preview.png)
+![custom-property-1](https://github.com/anobaka/Bakabase.Docs/blob/main/img/custom-property-1.png)
+![custom-property-2](https://github.com/anobaka/Bakabase.Docs/blob/main/img/custom-property-2.png)
+![category-resource-name-template-2](https://github.com/anobaka/Bakabase.Docs/blob/main/img/category-resource-name-template-2.png)
+![categary-path-segment-matcher-3-4](https://github.com/anobaka/Bakabase.Docs/blob/main/img/categary-path-segment-matcher-3-4.png)
+![file-processor-basic](https://github.com/anobaka/Bakabase.Docs/blob/main/img/file-processor-basic.png)
+![downloader-1](https://github.com/anobaka/Bakabase.Docs/blob/main/img/downloader-1.png)
 
 ## 如何参与
 
