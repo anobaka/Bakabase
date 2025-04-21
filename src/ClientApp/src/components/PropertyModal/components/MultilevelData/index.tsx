@@ -6,6 +6,7 @@ import { Button, ColorPicker, Input, Tree } from '@/components/bakaui';
 import { buildUntitledLabel, uuidv4 } from '@/components/utils';
 import type { MultilevelPropertyOptions } from '@/components/Property/models';
 import { buildColorValueString } from '@/components/bakaui/components/ColorPicker';
+import colors from '@/components/bakaui/colors';
 
 type Props = {
   options?: MultilevelPropertyOptions;
@@ -57,7 +58,7 @@ export default ({
         title: (
           <div className={'flex items-center gap-1'}>
             <ColorPicker
-              color={md.color ?? 'black'}
+              color={md.color ?? colors.color}
               onChange={c => {
                 md.color = buildColorValueString(c);
                 patchOptions({ ...options });

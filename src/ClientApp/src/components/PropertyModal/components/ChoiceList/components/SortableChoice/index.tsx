@@ -10,6 +10,7 @@ import type { IChoice } from '@/components/Property/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Color } from '@/components/bakaui/types';
 import { buildColorValueString } from '@/components/bakaui/components/ColorPicker';
+import colors from '@/components/bakaui/colors';
 
 interface IProps {
   id: string;
@@ -43,7 +44,6 @@ export function SortableChoice({
   const [choice, setChoice] = useState(propsChoice);
 
   useEffect(() => {
-    // console.log(9999, 'new rendering');
   }, []);
 
   useUpdateEffect(() => {
@@ -60,7 +60,7 @@ export function SortableChoice({
     <div ref={setNodeRef} style={style} className={'flex gap-1 items-center'}>
       <DragHandle {...listeners} {...attributes} />
       <ColorPicker
-        color={choice.color}
+        color={choice.color ?? colors.color}
         onChange={color => {
           setChoice({
             ...choice,
