@@ -690,3 +690,58 @@ export const getUiTheme = (appOptions?: BakabaseInfrastructuresComponentsConfigu
   }
   return uiTheme;
 };
+
+export const buildUntitledLabel = (translation: string, existed?: (string | undefined)[]): string => {
+  let i = 1;
+  while (true) {
+    const label = `${translation} ${i}`;
+    if (!existed || existed.length == 0 || !existed.includes(label)) {
+      return label;
+    }
+    i++;
+  }
+};
+
+export function adjustAlpha(color: string, alphaAdjustment: number): string {
+  if (color.startsWith('#')) {
+    return hexToRGBAWithAlpha(color, alphaAdjustment);
+  } else if (color.startsWith('rgb')) {
+    return adjustRGBAWithAlpha(color, alphaAdjustment);
+  } else if (color.startsWith('hsl')) {
+    return adjustHSLAWithAlpha(color, alphaAdjustment);
+  } else {
+    throw new Error('Unsupported color format');
+  }
+}
+
+function hexToRGBAWithAlpha(hex: string, alphaAdjustment: number): string {
+  hex = hex.replace(/^#/, '');
+  if (hex.length === 3) {
+    hex = hex.split('').map(char => char + char).join('');
+  }
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const adjustedAlpha = Math.min(1, Math.max(0, alphaAdjustment));
+  return `rgba(${r}, ${g}, ${b}, ${adjustedAlpha})`;
+}
+
+function adjustRGBAWithAlpha(rgba: string, alphaAdjustment: number): string {
+  const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(,\s*(\d+\.?\d*))?\)/);
+  if (!match) throw new Error('Invalid RGB(A) format');
+  const [_, r, g, b, a = 1] = match.map(Number);
+  const adjustedAlpha = Math.min(1, Math.max(0, a * alphaAdjustment));
+  return `rgba(${r}, ${g}, ${b}, ${adjustedAlpha})`;
+}
+
+function adjustHSLAWithAlpha(hsla: string, alphaAdjustment: number): string {
+  const match = hsla.match(/hsla?\((\d+),\s*(\d+)%,\s*(\d+)%(,\s*(\d+\.?\d*))?\)/);
+  if (!match) throw new Error('Invalid HSL(A) format');
+  const [_, h, s, l, a = 1] = match.map(Number);
+  const adjustedAlpha = Math.min(1, Math.max(0, a * alphaAdjustment));
+  return `hsla(${h}, ${s}%, ${l}%, ${adjustedAlpha})`;
+}
+
+export function autoBackgroundColor(color: string): string {
+  return adjustAlpha(color, 0.1);
+}

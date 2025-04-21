@@ -7,6 +7,6 @@ namespace Bakabase.Modules.Property.Components.Properties.Multilevel
         public List<MultilevelDataOptions>? Data { get; set; }
         public List<string>? DefaultValue { get; set; }
         public bool AllowAddingNewDataDynamically { get; set; }
-        public bool HasSingleValue { get; set; }
+        public bool ValueIsSingleton { get; set; }
     }
 }

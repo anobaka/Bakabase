@@ -8,6 +8,7 @@ import DragHandle from '@/components/DragHandle';
 import { Button, ColorPicker, Input, Modal } from '@/components/bakaui';
 import type { Tag } from '@/components/Property/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { buildColorValueString } from '@/components/bakaui/components/ColorPicker';
 
 interface IProps {
   id: string;
@@ -55,7 +56,15 @@ export function SortableTag({
   return (
     <div ref={setNodeRef} style={style} className={'flex gap-1 items-center'}>
       <DragHandle {...listeners} {...attributes} />
-      <ColorPicker />
+      <ColorPicker
+        color={tag.color}
+        onChange={color => {
+          setTag({
+            ...tag,
+            color: buildColorValueString(color),
+          });
+        }}
+      />
       <Input
         size={'sm'}
         value={tag?.group}

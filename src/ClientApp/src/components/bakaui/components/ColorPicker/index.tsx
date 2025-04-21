@@ -2,9 +2,7 @@ import { SketchPicker } from 'react-color';
 import React, { useState } from 'react';
 import { Popover } from '@/components/bakaui';
 
-type Color = 'string' |
-  { r: number; g: number; b: number; a: number } |
-  { h: number; s: number; l: number; a: number };
+type Color = string | { r: number; g: number; b: number; a: number } | { h: number; s: number; l: number; a: number };
 
 interface ColorPickerProps {
   trigger?: any;
@@ -13,7 +11,7 @@ interface ColorPickerProps {
   onChange?: (color: Color) => any;
 }
 
-function buildColorValueString(color: Color) {
+export function buildColorValueString(color: Color) {
   const strColor = color as string;
   if (strColor) {
     return strColor;
@@ -24,7 +22,7 @@ function buildColorValueString(color: Color) {
   }
   const hslColor = color as { h: number; s: number; l: number; a: number };
   if (hslColor) {
-    return `hsla(${hslColor.h},${hslColor.s},${hslColor.l},${hslColor.a})`;
+    return `hsla(${hslColor.h},${hslColor.s}%,${hslColor.l}%,${hslColor.a})`;
   }
   return '';
 }

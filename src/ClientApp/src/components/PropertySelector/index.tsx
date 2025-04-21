@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import PropertyDialog from '../PropertyDialog';
+import PropertyModal from '../PropertyModal';
 import type { IProperty } from '@/components/Property/models';
 import Property from '@/components/Property';
 import { buildLogger, createPortalOfComponent } from '@/components/utils';
@@ -9,6 +9,7 @@ import { PropertyPool, StandardValueType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import { Button, Chip, Modal, Spacer, Tab, Tabs } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 type Key = {
   id: number;
@@ -33,6 +34,7 @@ const log = buildLogger('PropertySelector');
 const PropertySelector = (props: IProps) => {
   log('props', props);
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const {
     selection: propsSelection,
     onSubmit: propsOnSubmit,
@@ -188,8 +190,8 @@ const PropertySelector = (props: IProps) => {
             <Button
               color={'primary'}
               size={'sm'}
-              onClick={() => {
-                PropertyDialog.show({
+              onPress={() => {
+                createPortal(PropertyModal, {
                   onSaved: loadProperties,
                   validValueTypes: valueTypes?.map(v => v as unknown as PropertyType),
                 });
@@ -235,11 +237,12 @@ const PropertySelector = (props: IProps) => {
             color={'primary'}
             size={'sm'}
             className={'mt-2'}
-            onClick={() => {
-              PropertyDialog.show({
-                onSaved: loadProperties,
-                validValueTypes: valueTypes?.map(v => v as unknown as PropertyType),
-              });
+            onPress={() => {
+              createPortal(PropertyModal, {
+                  onSaved: loadProperties,
+                  validValueTypes: valueTypes?.map(v => v as unknown as PropertyType),
+                },
+              );
             }}
           >
             {t('Add a property')}

@@ -180,7 +180,7 @@ export default ({
     },
     {
       label: 'Enable anonymous data tracking',
-      tip: 'The anonymous data will help us to improve our product experience, and no personal data will be collected',
+      tip: 'We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.',
       renderValue: () => {
         return (
           <Switch

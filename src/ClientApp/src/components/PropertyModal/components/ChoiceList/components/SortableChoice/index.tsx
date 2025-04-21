@@ -8,6 +8,8 @@ import DragHandle from '@/components/DragHandle';
 import { Button, ColorPicker, Input, Modal } from '@/components/bakaui';
 import type { IChoice } from '@/components/Property/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { Color } from '@/components/bakaui/types';
+import { buildColorValueString } from '@/components/bakaui/components/ColorPicker';
 
 interface IProps {
   id: string;
@@ -16,6 +18,7 @@ interface IProps {
   onChange?: (choice: IChoice) => any;
   style?: any;
   checkUsage?: (value: string) => Promise<number>;
+  onEnterKeyDown?: () => any;
 }
 
 export function SortableChoice({
@@ -25,6 +28,7 @@ export function SortableChoice({
                                  onChange,
                                  style: propsStyle,
                                  checkUsage,
+                                 onEnterKeyDown,
                                }: IProps) {
   const { t } = useTranslation();
   const {
@@ -55,8 +59,17 @@ export function SortableChoice({
   return (
     <div ref={setNodeRef} style={style} className={'flex gap-1 items-center'}>
       <DragHandle {...listeners} {...attributes} />
-      <ColorPicker />
+      <ColorPicker
+        color={choice.color}
+        onChange={color => {
+          setChoice({
+            ...choice,
+            color: buildColorValueString(color),
+          });
+        }}
+      />
       <Input
+        autoFocus={!choice.label}
         size={'sm'}
         value={choice?.label}
         onValueChange={label => {
@@ -64,6 +77,11 @@ export function SortableChoice({
             ...choice,
             label,
           });
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            onEnterKeyDown?.();
+          }
         }}
       />
       <div className={'flex items-center'}>

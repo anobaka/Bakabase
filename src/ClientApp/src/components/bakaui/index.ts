@@ -36,6 +36,7 @@ import Image from './components/Image';
 import { Radio, RadioGroup } from './components/Radio';
 import Kbd from './components/Kbd';
 import NumberInput from './components/NumberInput';
+import Tree from './components/Tree';
 
 export {
   Autocomplete,
@@ -104,4 +105,5 @@ export {
   TableRowProps,
   Kbd,
   NumberInput,
+  Tree,
 };

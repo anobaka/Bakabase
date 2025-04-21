@@ -38,7 +38,7 @@ export default () => {
             v2
           >
             <div style={{ width: 400 }}>
-              {t('We will do some data tracking, the anonymous data will help us to improve our product experience, and no personal data will be collected.')}
+              {t('We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.')}
               <br />
               {t('You can disable it in system settings.')}
             </div>

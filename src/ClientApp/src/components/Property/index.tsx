@@ -7,7 +7,7 @@ import type { IProperty } from './models';
 import { PropertyTypeIconMap } from './models';
 import Label from './components/Label';
 import ClickableIcon from '@/components/ClickableIcon';
-import PropertyDialog from '@/components/PropertyDialog';
+import PropertyModal from '@/components/PropertyModal';
 import { Chip, Icon, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { PropertyPool, PropertyType, ResourceProperty } from '@/sdk/constants';
@@ -113,7 +113,7 @@ export default ({
   };
 
   const showDetail = () => {
-    createPortal(PropertyDialog, {
+    createPortal(PropertyModal, {
       value: {
         ...property,
         type: property.type as unknown as PropertyType,

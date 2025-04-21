@@ -58,7 +58,7 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                     }).ToList()
                 };
             }).OfType<MultilevelDataOptions>().ToList(),
-            HasSingleValue = true
+            ValueIsSingleton = true
         };
     }
 

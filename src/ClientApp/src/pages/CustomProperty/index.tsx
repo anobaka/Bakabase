@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { SearchOutlined } from '@ant-design/icons';
-import PropertyDialog from '@/components/PropertyDialog';
+import PropertyModal from '@/components/PropertyModal';
 import BApi from '@/sdk/BApi';
 import type {
   PropertyType } from '@/sdk/constants';
@@ -63,8 +63,8 @@ export default () => {
           <Button
             size={'sm'}
             color={'primary'}
-            onClick={() => {
-              PropertyDialog.show({
+            onPress={() => {
+              createPortal(PropertyModal, {
                 onSaved: loadProperties,
               });
             }}

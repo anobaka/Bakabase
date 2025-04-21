@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import React from 'react';
+import _ from 'lodash';
 import type { IProperty } from '@/components/Property/models';
 import { PropertyType, StandardValueType } from '@/sdk/constants';
 import {
@@ -117,7 +118,8 @@ export default (props: Props) => {
       // console.log(editor, property);
 
       bv ??= (property.options?.choices ?? []).find(x => x.value == dv)?.label;
-
+      const vas = _.sortBy(property.options?.choices?.filter(o => dv?.includes(o.value)) ?? [],
+        x => dv?.findIndex(d => d.value == x.value));
       return (
         <ChoiceValueRenderer
           value={bv == undefined ? undefined : [bv]}
@@ -127,12 +129,14 @@ export default (props: Props) => {
             return property.options?.choices ?? [];
           }}
           defaultEditing={defaultEditing}
+          valueAttributes={vas}
         />
       );
     }
     case PropertyType.MultipleChoice: {
       bv ??= (property.options?.choices ?? []).filter(x => dv?.includes(x.value)).map(x => x.label);
-
+      const vas = _.sortBy(property.options?.choices?.filter(o => dv?.includes(o.value)) ?? [],
+        x => dv?.findIndex(d => d.value == x.value));
       return (
         <ChoiceValueRenderer
           value={bv}
@@ -143,6 +147,7 @@ export default (props: Props) => {
             return property.options?.choices ?? [];
           }}
           defaultEditing={defaultEditing}
+          valueAttributes={vas}
         />
       );
     }
@@ -260,9 +265,11 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Multilevel: {
-      bv ??= dv?.map(v => findNodeChainInMultilevelData(property?.options?.data || [], v)).filter(x => x != undefined);
+      const tbv = dv?.map(v => findNodeChainInMultilevelData(property?.options?.data || [], v)).filter(x => x != undefined);
+      bv ??= tbv?.map(x => x.map(y => y.label));
+      const vas = tbv?.map(v => v.map(x => ({ color: x.color })));
 
-      log(bv);
+      // log(tbv, bv, vas);
 
       return (
         <MultilevelValueRenderer
@@ -272,8 +279,9 @@ export default (props: Props) => {
           getDataSource={async () => {
             return property?.options?.data || [];
           }}
-          multiple={property?.options?.hasSingleValue ?? true}
+          multiple={property?.options?.valueIsSingleton ?? true}
           defaultEditing={defaultEditing}
+          valueAttributes={vas}
         />
       );
     }
@@ -282,6 +290,8 @@ export default (props: Props) => {
         group: x.group,
         name: x.name,
       }));
+      const vas = _.sortBy(property.options?.tags?.filter(o => dv?.includes(o.value)) ?? [],
+        x => dv?.findIndex(d => d.value == x.value));
       return (
         <TagsValueRenderer
           value={bv}
@@ -291,6 +301,7 @@ export default (props: Props) => {
             return property?.options?.tags || [];
           }}
           defaultEditing={defaultEditing}
+          valueAttributes={vas}
         />
       );
     }

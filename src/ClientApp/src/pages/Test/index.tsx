@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import './index.scss';
 import { useTranslation } from 'react-i18next';
-import { ListboxItem } from "@heroui/react";
+import { ListboxItem } from '@heroui/react';
 import { useCookie } from 'react-use';
 import Psc from './cases/Psc';
 import Tour from './cases/Tour';
@@ -9,6 +9,7 @@ import Sortable from './cases/Sortable';
 import MediaPreviewer from './cases/MediaPreviewer';
 import CategoryEnhancerOptionsDialog from './cases/CategoryEnhancerOptionsDialog';
 import ResourceFilter from './cases/ResourceFilter';
+import Properties from './cases/Properties';
 import { Button, Listbox } from '@/components/bakaui';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
@@ -22,6 +23,7 @@ import { StandardValueType } from '@/sdk/constants';
 
 
 const components = {
+  Properties: <Properties />,
   BulkModification: <ProcessValueEditor valueType={StandardValueType.Boolean} />,
   ResourceTransfer: <ResourceTransfer />,
   Filter: <ResourceFilter />,

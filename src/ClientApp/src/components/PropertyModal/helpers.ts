@@ -1,4 +1,6 @@
 export const optimizeOptions = (options?: any) => {
+  // console.log(options);
+
   if (!options) {
     return {};
   }
