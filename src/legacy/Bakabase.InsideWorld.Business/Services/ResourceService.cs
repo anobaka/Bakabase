@@ -1323,11 +1323,11 @@ namespace Bakabase.InsideWorld.Business.Services
 
             var allEntitiesMap = allEntities.ToDictionary(a => a.Id, a => a);
 
-            var totalCounts = allEntities.GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-                .ToList();
-
-            statistics.CategoryResourceCounts = totalCounts;
+            // var totalCounts = allEntities.GroupBy(a => a.CategoryId)
+            //     .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+            //     .ToList();
+            //
+            // statistics.CategoryMediaLibraryCounts = totalCounts;
 
             var today = DateTime.Today;
             var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)

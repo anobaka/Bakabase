@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
-import { Icon, Loading } from '@alifd/next';
+import { Icon } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import { Axis, Chart, Coordinate, Interval, Legend, LineAdvance, Tooltip } from 'bizcharts';
+import { Chart, LineAdvance } from 'bizcharts';
+import { history } from 'ice';
 import BApi from '@/sdk/BApi';
 import type {
   BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
-  BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount,
 } from '@/sdk/Api';
 import { downloadTaskStatuses, PropertyPool, ThirdPartyId } from '@/sdk/constants';
-import { Chip } from '@/components/bakaui';
+import { Button, Chip, Spinner } from '@/components/bakaui';
 
 const textColor = getComputedStyle(document.body).getPropertyValue('--bakaui-color');
 
@@ -25,48 +25,16 @@ export default () => {
     });
   }, []);
 
-  const renderPeriodResourceAddition = (period: string, counts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[]) => {
-    return (
-      <>
-        <div className={'title'}>{t(period)}</div>
-        <div className={'content'}>
-          {(counts && counts.length > 0) ? counts.map((c, i) => {
-            return (
-              <div className="t-t-c" title={c.name!} key={i}>
-                <div className="left">
-                  <div className="text">
-                    {c.name}
-                  </div>
-                </div>
-                <div className="right">
-                  <div className="count">
-                    {c.count}
-                  </div>
-                </div>
-              </div>
-            );
-          }) : (
-            t('No content')
-          )}
-        </div>
-      </>
-    );
-  };
-
-  const trendingContentDomRef = useRef<HTMLDivElement>(null);
-
   const renderTrending = () => {
-    if (data && trendingContentDomRef.current && data.resourceTrending) {
+    if (data && data.resourceTrending) {
       const chartData = data.resourceTrending?.map(r => ({
         week: r.offset == 0 ? t('This week') : r.offset == -1 ? t('Last week') : `${t('{{count}} weeks ago', { count: -(r.offset!) })}`,
         count: r.count,
       }));
-      // console.log(chartData, trendingContentDomRef.current.clientHeight);
       return (
         <Chart
-          padding={[10, 20, 50, 40]}
+          // padding={[10, 20, 50, 40]}
           autoFit
-          height={trendingContentDomRef.current.clientHeight}
           data={chartData}
         >
           <LineAdvance
@@ -81,90 +49,72 @@ export default () => {
     }
     return;
   };
-  return (
-    <div className={'dashboard-page'}>
-      <Loading visible={!initializedRef.current}>
-        <section style={{ maxHeight: '40%' }}>
-          <div className="block" style={{ flex: 1 }}>
-            <div className={'title'}>{t('Overview')}</div>
-            <div className={'content'}>
-              {(data.categoryResourceCounts && data.categoryResourceCounts.length > 0) ? (
-                <Chart
-                  height={240}
-                  data={data.categoryResourceCounts}
-                  // scale={{
-                  //   count: {
-                  //     formatter: (val) => {
-                  //       val = `${val * 100}%`;
-                  //       return val;
-                  //     },
-                  //   },
-                  // }}
-                  interactions={['element-active']}
-                  autoFit
-                >
-                  <Coordinate type="theta" radius={0.75} />
-                  <Tooltip showTitle={false} />
-                  <Axis visible={false} />
-                  <Legend visible={false} />
-                  <Interval
-                    position="count"
-                    adjust="stack"
-                    color="name"
-                    style={{
-                      lineWidth: 1,
-                      stroke: '#fff',
-                    }}
-                    label={[
-                      'name',
-                      (item) => {
-                        return {
-                          offset: 20,
-                          content: (data) => {
-                            return `${data.name}[${data.count}]`;
-                          },
-                          style: {
-                            // fill: colors[item],
-                            fill: textColor,
-                          },
-                        };
-                      },
-                    ]}
-                  />
-                </Chart>
-              ) : (
-                t('No content')
-              )}
 
-
-              {/* {data.categoryResourceCounts && data.categoryResourceCounts.length > 0 && data.categoryResourceCounts.map((c, i) => { */}
-              {/*   return ( */}
-              {/*     <div className="t-t-c" title={c.name!} key={i}> */}
-              {/*       <div className="left"> */}
-              {/*         <div className="text"> */}
-              {/*           {c.name} */}
-              {/*         </div> */}
-              {/*       </div> */}
-              {/*       <div className="right"> */}
-              {/*         <div className="count"> */}
-              {/*           {c.count} */}
-              {/*         </div> */}
-              {/*       </div> */}
-              {/*     </div> */}
-              {/*   ); */}
-              {/* }) || ( */}
-              {/*   t('No content') */}
-              {/* )} */}
+  const renderResourceCounts = () => {
+    const list = data.categoryMediaLibraryCounts ?? [];
+    const total = list.reduce((s, t) => s + t.mediaLibraryCounts.reduce((s1, t1) => s1 + t1.count, 0), 0);
+    const categoryCounts: any[] = list.map(l => {
+      return (
+        <>
+          <div className={'flex flex-col'}>
+            <div className={'text-xl'}>
+              {l.categoryName}
+            </div>
+            <div className={'flex flex-wrap gap-1'}>
+              {l.mediaLibraryCounts.map(c => {
+                return (
+                  <div>
+                    <div className={'text-medium'}>{c.name}</div>
+                    <div>{c.count}</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <div className="block" style={{ flex: 1 }}>
-            {renderPeriodResourceAddition('Added today', data.todayAddedCategoryResourceCounts || [])}
-            {renderPeriodResourceAddition('Added this week', data.thisWeekAddedCategoryResourceCounts || [])}
-            {renderPeriodResourceAddition('Added this month', data.thisMonthAddedCategoryResourceCounts || [])}
+        </>
+      );
+    });
+
+    return (
+      <div className={'flex gap-2'}>
+        <div className={'w-[160px]'}>
+          <div className={'text-lg'}>
+            {t('Resource count')}
+          </div>
+          <div className={'text-3xl'}>
+            {total}
+          </div>
+        </div>
+        {categoryCounts.length > 0 ? (
+          <div className={'flex flex-wrap gap-1'}>
+            {categoryCounts}
+          </div>
+        ) : (
+          <Button
+            variant={'flat'}
+            color={'primary'}
+            onPress={() => {
+            history!.push('/category');
+          }}
+          >{t('Add your resources')}</Button>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className={'dashboard-page'}>
+      {initializedRef.current ? (<>
+        <section className={'h-1/3 max-h-1/3'}>
+          <div className="block w-2/3">
+            <div className={'title'}>{t('Overview')}</div>
+            <div className={'content'}>
+              {renderResourceCounts()}
+            </div>
           </div>
           <div className="block trending" style={{ flex: 1 }}>
             <div className="title">{t('Trending')}</div>
-            <div className="content" ref={trendingContentDomRef}>
+            <div className="content">
               {renderTrending()}
             </div>
           </div>
@@ -201,6 +151,7 @@ export default () => {
                           <Chip
                             variant={'flat'}
                             size={'sm'}
+                            radius={'sm'}
                             color={x.pool == PropertyPool.Reserved ? 'secondary' : 'success'}
                           >
                             {x.name}
@@ -239,7 +190,7 @@ export default () => {
                   {data.downloaderDataCounts?.map(c => {
                     return (
                       <div className={'downloader-item'}>
-                        <div>{t(ThirdPartyId[c.id as number])}</div>
+                        <div>{t(ThirdPartyId[c.id]!)}</div>
                         {downloadTaskStatuses.map((s, i) => {
                           return (
                             <div key={i}>
@@ -304,7 +255,11 @@ export default () => {
           </div>
           <div className="block hidden" style={{ flex: 1.5 }} />
         </section>
-      </Loading>
+      </>) : (
+        <div className={'w-full h-full flex items-center justify-center'}>
+          <Spinner size={'lg'} />
+        </div>
+      )}
     </div>
   );
 };

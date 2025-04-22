@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
@@ -27,6 +28,7 @@ namespace Bakabase.Service.Controllers
     {
         private readonly IResourceService _resourceService;
         private readonly ICategoryService _categoryService;
+        private readonly IMediaLibraryService _mediaLibraryService;
         private readonly DownloadTaskService _downloadTaskService;
         private readonly ThirdPartyHttpRequestLogger _thirdPartyHttpRequestLogger;
         private readonly IThirdPartyService _thirdPartyService;
@@ -39,6 +41,7 @@ namespace Bakabase.Service.Controllers
         private readonly ICustomPropertyService _customPropertyService;
         private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly IPropertyService _propertyService;
+        private readonly IBakabaseLocalizer _localizer;
 
         public DashboardController(IResourceService resourceService, DownloadTaskService downloadTaskService,
             ThirdPartyHttpRequestLogger thirdPartyHttpRequestLogger, IThirdPartyService thirdPartyService,
@@ -46,7 +49,7 @@ namespace Bakabase.Service.Controllers
             ComponentService componentService, PasswordService passwordService,
             ComponentOptionsService componentOptionsService, ICategoryService categoryService,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
-            IPropertyService propertyService)
+            IPropertyService propertyService, IMediaLibraryService mediaLibraryService, IBakabaseLocalizer localizer)
         {
             _resourceService = resourceService;
             _downloadTaskService = downloadTaskService;
@@ -62,6 +65,8 @@ namespace Bakabase.Service.Controllers
             _customPropertyService = customPropertyService;
             _customPropertyValueService = customPropertyValueService;
             _propertyService = propertyService;
+            _mediaLibraryService = mediaLibraryService;
+            _localizer = localizer;
         }
 
         [HttpGet]
@@ -72,13 +77,19 @@ namespace Bakabase.Service.Controllers
 
             // Resource
             var categories = (await _categoryService.GetAll()).ToDictionary(a => a.Id, a => a.Name);
+            var mediaLibraries = (await _mediaLibraryService.GetAll()).ToDictionary(d => d.Id, d => d);
             var allEntities = await _resourceService.GetAllDbModels();
 
             var totalCounts = allEntities.GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
+                .Select(a => new DashboardStatistics.CategoryMediaLibraryCount(
+                    categories.GetValueOrDefault(a.Key) ?? _localizer.Unknown(),
+                    a.GroupBy(x => x.MediaLibraryId).Select(x =>
+                        new DashboardStatistics.TextAndCount(
+                            mediaLibraries.GetValueOrDefault(x.Key)?.Name ?? _localizer.Unknown(),
+                            x.Count())).ToList()))
                 .ToList();
 
-            ds.CategoryResourceCounts = totalCounts;
+            ds.CategoryMediaLibraryCounts = totalCounts;
 
             var today = DateTime.Today;
             var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
