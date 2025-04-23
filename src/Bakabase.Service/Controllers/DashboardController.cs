@@ -139,7 +139,7 @@ namespace Bakabase.Service.Controllers
             var allDownloadTasks = await _downloadTaskService.GetAll();
             ds.DownloaderDataCounts = allDownloadTasks.GroupBy(a => a.ThirdPartyId).Select(a =>
                 new DashboardStatistics.DownloaderTaskCount(a.Key,
-                    a.GroupBy(b => b.Status).ToDictionary(b => (int) b.Key, b => b.Count()))).ToList();
+                    a.GroupBy(b => b.Status).ToDictionary(b => (int)b.Key, b => b.Count()))).ToList();
 
             // Third party
             var requests = _thirdPartyService.GetAllThirdPartyRequestStatistics();
@@ -171,6 +171,15 @@ namespace Bakabase.Service.Controllers
                 new("Saved passwords", await _passwordService.Count(null))
             });
 
+            return new SingletonResponse<DashboardStatistics>(ds);
+        }
+
+        [HttpGet("property")]
+        [SwaggerOperation(OperationId = "GetPropertyStatistics")]
+        public async Task<SingletonResponse<DashboardPropertyStatistics>> GetPropertyStatistics()
+        {
+            var ds = new DashboardPropertyStatistics();
+
             // Property value coverage
             var resources = await _resourceService.GetAll(null, ResourceAdditionalItem.All);
             var propertyValueExpectedCounts = new Dictionary<int, Dictionary<int, int>>();
@@ -181,7 +190,7 @@ namespace Bakabase.Service.Controllers
             {
                 foreach (var (pt, pvs) in r.Properties!)
                 {
-                    var pp = (PropertyPool) pt;
+                    var pp = (PropertyPool)pt;
                     if (pp is PropertyPool.Reserved or PropertyPool.Custom)
                     {
                         foreach (var (pId, pv) in pvs)
@@ -202,12 +211,12 @@ namespace Bakabase.Service.Controllers
             {
                 foreach (var (pId, expectedCount) in pcs)
                 {
-                    var property = propertyMap.GetProperty((PropertyPool) pt, pId);
+                    var property = propertyMap.GetProperty((PropertyPool)pt, pId);
                     if (property != null)
                     {
                         var filledCount = propertyValueFilledCounts.GetValueOrDefault(pt)?.GetValueOrDefault(pId) ?? 0;
                         ds.PropertyValueCoverages.Add(
-                            new DashboardStatistics.PropertyValueCoverage(pt, pId, property.Name, filledCount,
+                            new DashboardPropertyStatistics.PropertyValueCoverage(pt, pId, property.Name, filledCount,
                                 expectedCount));
                     }
                 }
@@ -215,11 +224,11 @@ namespace Bakabase.Service.Controllers
 
 
             ds.PropertyValueCoverages = ds.PropertyValueCoverages
-                .OrderByDescending(x => (decimal) x.FilledCount / x.ExpectedCount).ToList();
+                .OrderByDescending(x => (decimal)x.FilledCount / x.ExpectedCount).ToList();
             ds.TotalExpectedPropertyValueCount = ds.PropertyValueCoverages.Sum(x => x.ExpectedCount);
             ds.TotalFilledPropertyValueCount = ds.PropertyValueCoverages.Sum(x => x.FilledCount);
 
-            return new SingletonResponse<DashboardStatistics>(ds);
+            return new SingletonResponse<DashboardPropertyStatistics>(ds);
         }
     }
 }

@@ -16,12 +16,17 @@ const textColor = getComputedStyle(document.body).getPropertyValue('--bakaui-col
 export default () => {
   const { t } = useTranslation();
   const [data, setData] = useState<BakabaseInsideWorldModelsModelsDtosDashboardStatistics>({});
+  const [property, setProperty] = useState<any>();
   const initializedRef = useRef(false);
 
   useEffect(() => {
     BApi.dashboard.getStatistics().then(res => {
       initializedRef.current = true;
       setData(res.data || {});
+    });
+
+    BApi.dashboard.getPropertyStatistics().then(r => {
+      setProperty(r.data);
     });
   }, []);
 
@@ -57,15 +62,15 @@ export default () => {
       return (
         <>
           <div className={'flex flex-col'}>
-            <div className={'text-xl'}>
+            <div className={'text-xl opacity-80'}>
               {l.categoryName}
             </div>
             <div className={'flex flex-wrap gap-1'}>
               {l.mediaLibraryCounts.map(c => {
                 return (
                   <div>
-                    <div className={'text-medium'}>{c.name}</div>
-                    <div>{c.count}</div>
+                    <div className={'opacity-60 text-sm'}>{c.name}</div>
+                    <div className={''}>{c.count}</div>
                   </div>
                 );
               })}
@@ -76,7 +81,7 @@ export default () => {
     });
 
     return (
-      <div className={'flex gap-2'}>
+      <div className={'flex gap-2 max-h-full'}>
         <div className={'w-[160px]'}>
           <div className={'text-lg'}>
             {t('Resource count')}
@@ -86,7 +91,7 @@ export default () => {
           </div>
         </div>
         {categoryCounts.length > 0 ? (
-          <div className={'flex flex-wrap gap-1'}>
+          <div className={'flex flex-wrap gap-1 overflow-auto gap-x-4'}>
             {categoryCounts}
           </div>
         ) : (
@@ -94,8 +99,8 @@ export default () => {
             variant={'flat'}
             color={'primary'}
             onPress={() => {
-            history!.push('/category');
-          }}
+              history!.push('/category');
+            }}
           >{t('Add your resources')}</Button>
         )}
       </div>
@@ -108,7 +113,7 @@ export default () => {
         <section className={'h-1/3 max-h-1/3'}>
           <div className="block w-2/3">
             <div className={'title'}>{t('Overview')}</div>
-            <div className={'content'}>
+            <div className={'content min-h-0'}>
               {renderResourceCounts()}
             </div>
           </div>
@@ -127,48 +132,53 @@ export default () => {
                 {t('As more data is filled in, property value coverage increases')}
               </div>
             </div>
-            <div className={'flex items-start gap-8'}>
-              <div className={'w-[200px]'}>
-                <div className={'text-lg'}>
-                  {t('Overall')}
+            {property && (
+              <div className={'flex items-start gap-8 min-h-0'}>
+                <div className={'w-[200px]'}>
+                  <div className={'text-lg'}>
+                    {t('Overall')}
+                  </div>
+                  <div className={'text-3xl'}>
+                    {property.totalExpectedPropertyValueCount > 0
+                      ? (property.totalFilledPropertyValueCount / property.totalExpectedPropertyValueCount * 100)
+                        .toFixed(2) : 0}%
+                  </div>
+                  <div className={'opacity-60 text-xs'}>
+                    {property.totalExpectedPropertyValueCount > 0
+                      ? property.totalFilledPropertyValueCount / property.totalExpectedPropertyValueCount : 0}
+                  </div>
                 </div>
-                <div className={'text-3xl'}>
-                  {(data.totalFilledPropertyValueCount / data.totalExpectedPropertyValueCount * 100).toFixed(2)}%
-                </div>
-                <div className={'opacity-60 text-xs'}>
-                  {data.totalFilledPropertyValueCount} / {data.totalExpectedPropertyValueCount}
-                </div>
-              </div>
-              <div>
-                <div className={'text-lg'}>
-                  {t('Details')}
-                </div>
-                <div className={'flex flex-wrap gap-2'}>
-                  {data.propertyValueCoverages?.map(x => {
-                    return (
-                      <div>
-                        <div className={'flex items-center gap-1'}>
-                          <Chip
-                            variant={'flat'}
-                            size={'sm'}
-                            radius={'sm'}
-                            color={x.pool == PropertyPool.Reserved ? 'secondary' : 'success'}
-                          >
-                            {x.name}
-                          </Chip>
-                          <div>
-                            {(x.filledCount / x.expectedCount * 100).toFixed(2)}%
+                <div className={'flex flex-col min-h-0 max-h-full'}>
+                  <div className={'text-lg'}>
+                    {t('Details')}
+                  </div>
+                  <div className={'flex flex-wrap gap-2 min-h-0 overflow-auto'}>
+                    {property.propertyValueCoverages?.map(x => {
+                      return (
+                        <div>
+                          <div className={'flex items-center gap-1'}>
+                            <Chip
+                              variant={'flat'}
+                              size={'sm'}
+                              radius={'sm'}
+                              color={x.pool == PropertyPool.Reserved ? 'secondary' : 'success'}
+                            >
+                              {x.name}
+                            </Chip>
+                            <div>
+                              {(x.filledCount / x.expectedCount * 100).toFixed(2)}%
+                            </div>
+                          </div>
+                          <div className={'opacity-60 text-xs text-center'}>
+                            {x.filledCount} / {x.expectedCount}
                           </div>
                         </div>
-                        <div className={'opacity-60 text-xs text-center'}>
-                          {x.filledCount} / {x.expectedCount}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
         <section>

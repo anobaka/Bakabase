@@ -30,34 +30,27 @@ const _mergeItems = (entries: SimpleEntry[],
                      entryRestSegmentsMap: Map<string, string[]>, path?: string): Item[] => {
   const prefixes: string[] = [];
   const ret: Item[] = [];
-  while (true) {
-    const groups = _.groupBy(entries, e => entryRestSegmentsMap.get(e.path)!.shift()!);
-    const keys = _.sortBy(_.keys(groups), x => x);
-    if (keys.length == 1) {
-      prefixes.push(keys[0]!);
+  const groups = _.groupBy(entries, e => entryRestSegmentsMap.get(e.path)!.shift()!);
+  const keys = _.sortBy(_.keys(groups), x => x);
+  for (const key of keys) {
+    const childrenEntries = groups[key]!.filter(x => entryRestSegmentsMap.get(x.path)!.length > 0);
+    const pathSegment = [...prefixes, key].join('/');
+    const newPath = [path, pathSegment].filter(x => x != undefined).join('/');
+    if (childrenEntries.length == 1) {
+      ret.push({
+        pathSegment,
+        isDirectory: childrenEntries[0]!.isDirectory,
+        path: newPath,
+        willBeDeleted: entryRestSegmentsMap.has(newPath),
+      });
     } else {
-      for (const key of keys) {
-        const childrenEntries = groups[key]!.filter(x => entryRestSegmentsMap.get(x.path)!.length > 0);
-        const pathSegment = [...prefixes, key].join('/');
-        const newPath = [path, pathSegment].filter(x => x != undefined).join('/');
-        if (childrenEntries.length == 1) {
-          ret.push({
-            pathSegment,
-            isDirectory: childrenEntries[0]!.isDirectory,
-            path: newPath,
-            willBeDeleted: entryRestSegmentsMap.has(newPath),
-          });
-        } else {
-          ret.push({
-            pathSegment,
-            children: _mergeItems(childrenEntries, entryRestSegmentsMap, newPath),
-            isDirectory: true,
-            path: newPath,
-            willBeDeleted: entryRestSegmentsMap.has(newPath),
-          });
-        }
-      }
-      break;
+      ret.push({
+        pathSegment,
+        children: _mergeItems(childrenEntries, entryRestSegmentsMap, newPath),
+        isDirectory: true,
+        path: newPath,
+        willBeDeleted: entryRestSegmentsMap.has(newPath),
+      });
     }
   }
   return ret;

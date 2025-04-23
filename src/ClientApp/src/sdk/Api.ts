@@ -1028,6 +1028,26 @@ export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
   counts: Record<string, number>;
 }
 
+export interface BakabaseInsideWorldModelsModelsDtosDashboardPropertyStatistics {
+  /** @format int32 */
+  totalExpectedPropertyValueCount: number;
+  /** @format int32 */
+  totalFilledPropertyValueCount: number;
+  propertyValueCoverages: BakabaseInsideWorldModelsModelsDtosDashboardPropertyStatisticsPropertyValueCoverage[];
+}
+
+export interface BakabaseInsideWorldModelsModelsDtosDashboardPropertyStatisticsPropertyValueCoverage {
+  /** @format int32 */
+  pool: number;
+  /** @format int32 */
+  id: number;
+  name: string;
+  /** @format int32 */
+  filledCount: number;
+  /** @format int32 */
+  expectedCount: number;
+}
+
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
   categoryMediaLibraryCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsCategoryMediaLibraryCount[];
   todayAddedCategoryResourceCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
@@ -1039,11 +1059,6 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
   thirdPartyRequestCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount[];
   fileMover: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMoverInfo;
   otherCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[][];
-  /** @format int32 */
-  totalExpectedPropertyValueCount: number;
-  /** @format int32 */
-  totalFilledPropertyValueCount: number;
-  propertyValueCoverages: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyValueCoverage[];
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsCategoryMediaLibraryCount {
@@ -1062,18 +1077,6 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMover
   sourceCount: number;
   /** @format int32 */
   targetCount: number;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsPropertyValueCoverage {
-  /** @format int32 */
-  pool: number;
-  /** @format int32 */
-  id: number;
-  name: string;
-  /** @format int32 */
-  filledCount: number;
-  /** @format int32 */
-  expectedCount: number;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount {
@@ -2279,6 +2282,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics[];
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDashboardPropertyStatistics {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldModelsModelsDtosDashboardPropertyStatistics;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
@@ -4782,6 +4792,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/dashboard`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Dashboard
+     * @name GetPropertyStatistics
+     * @request GET:/dashboard/property
+     */
+    getPropertyStatistics: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDashboardPropertyStatistics,
+        any
+      >({
+        path: `/dashboard/property`,
         method: "GET",
         format: "json",
         ...params,

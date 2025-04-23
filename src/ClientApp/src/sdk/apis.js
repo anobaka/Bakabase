@@ -3442,6 +3442,45 @@ export const GetStatisticsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetPropertyStatistics
+ * url: GetPropertyStatisticsURL
+ * method: GetPropertyStatistics_TYPE
+ * raw_url: GetPropertyStatistics_RAW_URL
+ */
+export const GetPropertyStatistics = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/dashboard/property'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetPropertyStatistics_RAW_URL = function() {
+  return '/dashboard/property'
+}
+export const GetPropertyStatistics_TYPE = function() {
+  return 'get'
+}
+export const GetPropertyStatisticsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/dashboard/property'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllDownloaderNamingDefinitions
  * url: GetAllDownloaderNamingDefinitionsURL
  * method: GetAllDownloaderNamingDefinitions_TYPE
