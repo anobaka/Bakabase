@@ -48,7 +48,6 @@ const PropertySelector = (props: IProps) => {
     onDestroyed,
     isDisabled,
   } = props;
-  const [visible, setVisible] = useState(true);
 
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [selection, setSelection] = useState<Key[]>(propsSelection || []);
@@ -70,10 +69,6 @@ const PropertySelector = (props: IProps) => {
   useEffect(() => {
     loadProperties();
   }, []);
-
-  const close = () => {
-    setVisible(false);
-  };
 
   const renderProperty = (property: IProperty) => {
     const selected = selection.some(s => s.id == property.id && s.pool == property.pool);
@@ -204,6 +199,8 @@ const PropertySelector = (props: IProps) => {
       );
     }
 
+    // todo: make framer-motion up-to-date once https://github.com/heroui-inc/heroui/issues/4805 is resolved.
+
     return (
       <>
         <Tabs aria-label="Selectable" isVertical selectedKey={currentTab} onSelectionChange={key => setCurrentTab(key as string)}>
@@ -255,15 +252,13 @@ const PropertySelector = (props: IProps) => {
   return (
     <Modal
       size={'xl'}
-      visible={visible}
-      onClose={close}
+      defaultVisible
       onOk={async () => {
         await onSubmit(selection);
-        close();
       }}
       onDestroyed={onDestroyed}
       title={title ?? t(multiple ? 'Select properties' : 'Select a property')}
-      footer={(multiple === true && propertyCount > 0) ? true : (<Spacer />)}
+      footer={(multiple && propertyCount > 0) ? true : (<Spacer />)}
     >
       <div>
         {renderFilter()}

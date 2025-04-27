@@ -81,8 +81,9 @@ export default () => {
 
     const onClick = (e: globalThis.MouseEvent) => {
       if (!multiSelectionRef.current) {
-        // alert('clear all');
-        setSelectedIds([]);
+        if (selectedIdsRef.current.length != 0) {
+          setSelectedIds([]);
+        }
       }
     };
 
@@ -255,7 +256,7 @@ export default () => {
     );
   }, [resources, multiSelection, columnCount, selectedIds]);
 
-  log(searchForm?.page, pageable?.page, 'aaaa');
+  log(searchForm?.page, pageable?.page, 'resource page rerender');
 
   return (
     <div

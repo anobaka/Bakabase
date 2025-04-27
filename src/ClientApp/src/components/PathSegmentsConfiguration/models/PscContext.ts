@@ -11,8 +11,8 @@ class PscContext {
   globalErrors: PscContext.SimpleGlobalError[] = [];
   globalMatches: PscContext.SimpleGlobalMatchResult[] = [];
 
-  get hasError(): boolean {
-    const error = this.globalErrors?.length > 0 ||
+  get preventSubmitting(): boolean {
+    const error = this.globalErrors?.filter(e => e.preventSubmitting).length > 0 ||
       this.segments.some(s => s.matchResults?.some(t => t.errors && t.errors.length > 0));
     if (error) {
       return true;
@@ -134,11 +134,13 @@ namespace PscContext {
   export class SimpleGlobalError extends SimplePscContextItem {
     message: string;
     deletable: boolean;
+    preventSubmitting: boolean;
 
-    constructor(property: PscProperty, valueIndex: number | undefined, message: string, deletable: boolean) {
+    constructor(property: PscProperty, valueIndex: number | undefined, message: string, deletable: boolean, preventSubmitting: boolean) {
       super(property, valueIndex);
       this.message = message;
       this.deletable = deletable;
+      this.preventSubmitting = preventSubmitting;
     }
 
     equals(other: SimpleGlobalError): boolean {

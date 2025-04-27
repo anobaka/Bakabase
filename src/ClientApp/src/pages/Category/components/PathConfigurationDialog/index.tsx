@@ -156,7 +156,7 @@ export default ({
                 size={'sm'}
                 color={s.isResourceProperty ? 'primary' : 'default'}
               >{label}</Chip>
-              <div className="value">
+              <div className="value select-text">
                 {PscMatcherValue.ToString(t, {
                   fixedText: s.fixedText ?? undefined,
                   layer: s.layer ?? undefined,

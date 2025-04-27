@@ -43,7 +43,7 @@
       "diff-match-patch": "^1.0.5",
       "enquire-js": "0.2.x",
       "file-loader": "^6.2.0",
-      "framer-motion": "^11.0.22",
+      "framer-motion": "11.9.0",
       "hoist-non-react-statics": "^3.3.2",
       "i18next": "^21.6.0",
       "i18next-browser-languagedetector": "^6.1.2",

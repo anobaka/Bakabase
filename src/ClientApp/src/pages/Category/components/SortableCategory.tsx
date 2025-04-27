@@ -4,15 +4,7 @@ import { SketchPicker } from 'react-color';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
-import {
-  CopyOutlined,
-  DatabaseOutlined,
-  EditOutlined,
-  PictureOutlined,
-  QuestionCircleOutlined,
-  SyncOutlined,
-  UnorderedListOutlined,
-} from '@ant-design/icons';
+import { CopyOutlined, EditOutlined, PictureOutlined, SyncOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import AddMediaLibraryInBulkDialog from './AddMediaLibraryInBulkDialog';
 import DisplayNameTemplateEditorDialog from './DisplayNameTemplateEditorDialog';
 import CustomIcon from '@/components/CustomIcon';
@@ -22,10 +14,9 @@ import DragHandle from '@/components/DragHandle';
 import BasicCategoryComponentSelector from '@/components/BasicCategoryComponentSelector';
 import BApi from '@/sdk/BApi';
 import ClickableIcon from '@/components/ClickableIcon';
-import CategoryCustomPropertyBinderDialog from '@/pages/Category/components/CustomPropertyBinder';
+import CustomPropertyBinderModal from '@/pages/Category/components/CustomPropertyBinderModal';
 import {
   Button,
-  Checkbox,
   Chip,
   Dropdown,
   DropdownItem,
@@ -658,10 +649,11 @@ export default (({
                         variant={'flat'}
                         key={e.id}
                         onClick={() => {
-                          CategoryCustomPropertyBinderDialog.show({
-                            category: category,
-                            onSaved: () => reloadCategory(category.id),
-                          });
+                          createPortal(CustomPropertyBinderModal, {
+                              category: category,
+                              onSaved: () => reloadCategory(category.id),
+                            },
+                          );
                         }}
                       >
                         <Icon type={PropertyTypeIconMap[e.type]} className={'text-base'} />
@@ -677,10 +669,11 @@ export default (({
                   size={'sm'}
                   color={'primary'}
                   onClick={() => {
-                    CategoryCustomPropertyBinderDialog.show({
-                      category: category,
-                      onSaved: () => reloadCategory(category.id),
-                    });
+                    createPortal(CustomPropertyBinderModal, {
+                        category: category,
+                        onSaved: () => reloadCategory(category.id),
+                      },
+                    );
                   }}
                 >
                   {t('Click to set')}

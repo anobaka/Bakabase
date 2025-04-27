@@ -69,24 +69,17 @@ export default ({
 
         );
       } else {
-        let tip: string | undefined;
-        if (testResult.groups && testResult.groups.length > 0) {
-          tip = t('Capturing groups are used, only matched text will be applied');
-        } else {
-          if (testResult.text != undefined && testResult.text.length > 0) {
-            tip = t('Whole segment will be applied if capturing group is not used');
-          }
-        }
-
+        let { tip } = testResult;
         let values: string[] | undefined;
-
         if (testResult.groups != undefined) {
           values = testResult.groups;
         } else {
-          const sub = textToBeMatched.substring(0, testResult.index! + testResult.text!.length);
-          const segments = splitPathIntoSegments(sub);
-          const match = splitPathIntoSegments(textToBeMatched)[segments.length - 1];
-          values = [match];
+          if (testResult.text != undefined && testResult.text.length > 0) {
+            const sub = textToBeMatched.substring(0, testResult.index! + testResult.text!.length);
+            const segments = splitPathIntoSegments(sub);
+            const match = splitPathIntoSegments(textToBeMatched)[segments.length - 1];
+            values = match == undefined ? [] : [match];
+          }
         }
 
         return (
@@ -198,17 +191,27 @@ export default ({
                     if (v && v.groups && v.groups.length > 0 && isResourceProperty) {
                       throw new Error(t('Capturing groups are not allowed on Resource property'));
                     }
+
+                    let tip: string | undefined;
                     if (v) {
-                      setTestResult({
-                        success: true,
-                        ...v,
-                      });
-                      onRegexChange(value);
+                      if (v.groups && v.groups.length > 0) {
+                        tip = t('Capturing groups are used, only matched text will be applied');
+                      } else {
+                        if (v.text != undefined && v.text.length > 0) {
+                          tip = t('Whole segment will be applied if capturing group is not used');
+                        }
+                      }
                     } else {
-                      setTestResult({
-                        success: false,
-                      });
+                      tip = t('No text was matched, but you can still save the regular expression.');
                     }
+
+                    setTestResult({
+                      success: true,
+                      ...v,
+                      tip,
+                    });
+
+                    onRegexChange(value);
                   } catch (e) {
                     setTestResult({
                       success: false,

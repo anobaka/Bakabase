@@ -146,7 +146,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
       />
       <BottomOperations
         value={value}
-        hasError={ctx.hasError}
+        hasError={ctx.preventSubmitting}
       />
     </div>
   );

@@ -106,6 +106,8 @@ export default ({
     }
   };
 
+  console.log('resource page filter panel rerender');
+
   return (
     <div className={`${styles.filterPanel}`}>
       <div className={'flex items-center gap-4'}>

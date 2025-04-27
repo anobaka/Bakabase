@@ -132,6 +132,8 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
     );
   };
 
+  console.log('saved search rerender');
+
   return (
     <div className={'flex items-center flex-wrap gap-1'}>
       {savedSearches.map((savedSearch, idx) => {

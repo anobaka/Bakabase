@@ -8,6 +8,7 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
+using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher
 {
@@ -64,7 +65,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyM
                         var matches = Regex.Matches(subPath, value.Regex!);
                         if (matches.Any())
                         {
-                            var groups = matches.SelectMany(a => a.Groups.Values.Skip(1).Select(b => b.Value))
+                            var groups = matches.SelectMany(a => a.Groups.Values.Skip(1).Select(b => b.Value)).Where(x => x.IsNotEmpty())
                                 .ToHashSet();
                             if (groups.Any())
                             {
@@ -74,9 +75,12 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyM
                             {
                                 var match = matches.FirstOrDefault()!;
                                 var matchedValue = subPath.Substring(0, match.Index + match.Value.Length);
-                                // matched value can't starts with unc prefix, so we can split it safely.
-                                var layer = matchedValue.Split(InternalOptions.DirSeparator).Length;
-                                return MatchResult.OfLayer(layer, layer + startIndex.Value);
+                                if (matchedValue.IsNotEmpty())
+                                {
+                                    // matched value can't starts with unc prefix, so we can split it safely.
+                                    var layer = matchedValue.Split(InternalOptions.DirSeparator).Length;
+                                    return MatchResult.OfLayer(layer, layer + startIndex.Value);
+                                }
                             }
                         }
                     }

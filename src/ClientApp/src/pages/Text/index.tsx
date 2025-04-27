@@ -50,10 +50,21 @@ const typeTagRendersMapping = {
 const typeDescriptions = {
   [SpecialTextType.Useless]: 'Text will be ignored if it surrounded by [wrappers]',
   [SpecialTextType.Language]: 'Text will be parsed as [specific language] if it surrounded by [wrappers]',
-  [SpecialTextType.Wrapper]: 'General text wrappers',
-  [SpecialTextType.Standardization]: 'Convert [text1] to [text2] during analysis',
+  [SpecialTextType.Wrapper]: 'Text wrapper, used to match and extract the text within the wrapper',
+  [SpecialTextType.Standardization]: 'Treat [text1] as [text2] during analyzation',
   [SpecialTextType.Volume]: 'Extract volume information from this text group',
   [SpecialTextType.Trim]: 'TBD, do not set it for now',
+  [SpecialTextType.DateTime]: 'Date and time parsing template, used to extract dates and times from text',
+};
+
+const usedInMapping: Record<SpecialTextType, string[]> = {
+  [SpecialTextType.Useless]: ['Bakabase enhancer pretreatment'],
+  [SpecialTextType.Language]: ['Bakabase enhancer analysis'],
+  [SpecialTextType.Wrapper]: ['Bakabase enhancer pretreatment', 'Resource display name template', 'Exhentai enhancer analysis'],
+  [SpecialTextType.Standardization]: ['Bakabase enhancer pretreatment'],
+  [SpecialTextType.Volume]: ['Bakabase enhancer analysis'],
+  [SpecialTextType.Trim]: ['Bakabase enhancer pretreatment'],
+  [SpecialTextType.DateTime]: ['Bakabase enhancer analysis', 'Parsing or converting property value'],
 };
 
 export default () => {
@@ -109,10 +120,10 @@ export default () => {
 
   return (
     <div className="text-page" title="Text">
-
-      <Table isStriped>
+      <Table isStriped removeWrapper>
         <TableHeader>
           <TableColumn>{t('Type')}</TableColumn>
+          <TableColumn>{t('Applied to')}</TableColumn>
           <TableColumn>{t('Texts')}</TableColumn>
           <TableColumn>{t('Opt')}</TableColumn>
         </TableHeader>
@@ -128,6 +139,22 @@ export default () => {
                   >
                     {t(SpecialTextType[type])}
                   </Tooltip>
+                </TableCell>
+                <TableCell>
+                  <div className={'flex gap-1 flex-wrap'}>
+                    {usedInMapping[type].map(x => {
+                      return (
+                        <Chip
+                          size={'sm'}
+                          radius={'sm'}
+                          color={'default'}
+                          variant={'flat'}
+                        >
+                          {t(x)}
+                        </Chip>
+                      );
+                    })}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className={'flex flex-wrap gap-1'}>

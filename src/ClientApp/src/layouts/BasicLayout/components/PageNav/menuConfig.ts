@@ -16,35 +16,18 @@ const asideMenuConfig: IMenuItem[] = [
   {
     name: 'Media library',
     icon: 'ProductOutlined',
-    path: '/expandable-1',
-    children: [
-      {
-        name: 'Category',
-        path: '/category',
-        icon: 'ClusterOutlined',
-      },
-      {
-        name: 'Custom Component',
-        path: '/customcomponent',
-        icon: 'ControlOutlined',
-      },
-      // {
-      //   name: 'Favorites',
-      //   path: '/favorites',
-      //   icon: 'StarOutlined',
-      // },
-    ],
+    path: '/category',
   },
   {
     name: 'Data',
     icon: 'DatabaseOutlined',
     path: '/expandable-2',
     children: [
-      // {
-      //   name: 'Resource property',
-      //   path: '/resourceproperty',
-      //   icon: 'RadarChartOutlined',
-      // },
+      {
+        name: 'Custom component',
+        path: '/customcomponent',
+        icon: 'ControlOutlined',
+      },
       {
         name: 'Custom property',
         path: '/customproperty',

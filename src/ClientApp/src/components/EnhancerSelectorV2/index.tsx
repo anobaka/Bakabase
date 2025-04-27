@@ -107,7 +107,7 @@ const EnhancerSelector = ({
                 {e.name}
               </div>
               {e.description && (
-                <div className={'opacity-60 grow'}>
+                <div className={'opacity-60 grow break-all'}>
                   {e.description}
                 </div>
               )}
