@@ -1,5 +1,5 @@
 import { ConfigProvider, theme } from 'antd';
-import { HeroUIProvider, useModal } from "@heroui/react";
+import { HeroUIProvider, useModal } from '@heroui/react';
 import type { ComponentType, FC } from 'react';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigation } from 'ice';

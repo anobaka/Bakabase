@@ -5422,6 +5422,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name DeleteUnknownResources
+     * @request DELETE:/resource/unknown
+     */
+    deleteUnknownResources: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/unknown`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name GetUnknownResourcesCount
      * @request GET:/resource/unknown/count
      */

@@ -465,6 +465,14 @@ namespace Bakabase.Service.Controllers
             return new SingletonResponse<int>(data: await service.GetUnknownCount());
         }
 
+        [HttpDelete("unknown")]
+        [SwaggerOperation(OperationId = "DeleteUnknownResources")]
+        public async Task<BaseResponse> DeleteUnknown()
+        {
+            await service.DeleteUnknown();
+            return BaseResponseBuilder.Ok;
+        }
+
         [HttpPut("{id:int}/pin")]
         [SwaggerOperation(OperationId = "PinResource")]
         public async Task<BaseResponse> Pin(int id, bool pin)

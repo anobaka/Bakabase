@@ -9099,6 +9099,45 @@ export const GetUnknownResourcesURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: DeleteUnknownResources
+ * url: DeleteUnknownResourcesURL
+ * method: DeleteUnknownResources_TYPE
+ * raw_url: DeleteUnknownResources_RAW_URL
+ */
+export const DeleteUnknownResources = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/unknown'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteUnknownResources_RAW_URL = function() {
+  return '/resource/unknown'
+}
+export const DeleteUnknownResources_TYPE = function() {
+  return 'delete'
+}
+export const DeleteUnknownResourcesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/unknown'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetUnknownResourcesCount
  * url: GetUnknownResourcesCountURL
  * method: GetUnknownResourcesCount_TYPE

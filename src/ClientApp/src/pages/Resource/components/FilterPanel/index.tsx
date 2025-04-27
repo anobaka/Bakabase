@@ -24,6 +24,7 @@ import SavedSearches from '@/pages/Resource/components/FilterPanel/SavedSearches
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import MiscellaneousOptions from '@/pages/Resource/components/FilterPanel/MiscellaneousOptions';
 import { ResourceTag } from '@/sdk/constants';
+import HandleUnknownResources from '@/components/HandleUnknownResources';
 
 const { Popup } = Overlay;
 
@@ -267,7 +268,7 @@ export default ({
               size={'sm'}
             >{selectedAll ? t('{{count}} items selected', { count: selectedResourceIds?.length }) : t('Select all')}</Checkbox>
           </Tooltip>
-          {/* <HandleUnknownResources onHandled={() => search({})} /> */}
+          <HandleUnknownResources onHandled={() => search({})} />
           <OrderSelector
             className={'mr-2'}
             value={searchForm.orders}

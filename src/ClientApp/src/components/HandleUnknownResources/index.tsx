@@ -31,7 +31,7 @@ export default ({ onHandled }: Props) => {
         size={'sm'}
         color={'warning'}
         onClick={() => {
-          createPortal(Modal, {
+          const modal = createPortal(Modal, {
             defaultVisible: true,
             title: t('Choose a method to handle unknown resources'),
             size: 'lg',
@@ -61,6 +61,10 @@ export default ({ onHandled }: Props) => {
                         createPortal(
                           ResourceTransferModal, {
                             fromResources: r.data || [],
+                            onDestroyed: () => {
+                              onHandled?.();
+                              modal.destroy();
+                            },
                           },
                         );
                       });
@@ -93,6 +97,7 @@ export default ({ onHandled }: Props) => {
                           await BApi.resource.deleteUnknownResources();
                           init();
                           onHandled?.();
+                          modal.destroy();
                         },
                       });
                     }}
@@ -109,9 +114,6 @@ export default ({ onHandled }: Props) => {
                 </div>
               </div>
             ),
-            onClose: () => {
-              onHandled?.();
-            },
             footer: false,
           });
         }}

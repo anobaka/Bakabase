@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Helpers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -45,8 +46,18 @@ public record CoverDiscoveryResult(bool IsVirtualPath, string Path, string Ext, 
 
     public async Task<Image<Argb32>> LoadByImageSharp(CancellationToken ct)
     {
-        return IsVirtualPath
-            ? await Image.LoadAsync<Argb32>(new MemoryStream(Data!), ct)
-            : await Image.LoadAsync<Argb32>(Path, ct);
+        if (IsVirtualPath)
+        {
+            return await Image.LoadAsync<Argb32>(new MemoryStream(Data!), ct);
+        }
+
+        var ext = System.IO.Path.GetExtension(Path);
+        if (ext == InternalOptions.IcoFileExtension)
+        {
+            var data = ImageHelpers.ExtractIconAsPng(Path);
+            return Image.Load<Argb32>(data);
+        }
+
+        return await Image.LoadAsync<Argb32>(Path, ct);
     }
 }

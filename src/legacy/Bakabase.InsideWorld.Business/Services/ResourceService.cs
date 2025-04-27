@@ -1413,7 +1413,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return domainModels;
         }
 
-        private async Task<List<Abstractions.Models.Db.ResourceDbModel>> GetUnknownResourceDbModels()
+        private async Task<List<ResourceDbModel>> GetUnknownResourceDbModels()
         {
             var categories = await _categoryService.GetAll();
             var mediaLibraries = await _mediaLibraryService.GetAll();
@@ -1422,7 +1422,7 @@ namespace Bakabase.InsideWorld.Business.Services
             var mediaLibraryIds = mediaLibraries.Select(m => m.Id).ToHashSet();
 
             var unknownResources = await GetAllDbModels(x =>
-                !categoryIds.Contains(x.CategoryId) || !mediaLibraryIds.Contains(x.MediaLibraryId));
+                !categoryIds.Contains(x.CategoryId) || !mediaLibraryIds.Contains(x.MediaLibraryId) || (x.Tags & ResourceTag.PathDoesNotExist) > 0);
             return unknownResources;
         }
 
@@ -1430,6 +1430,12 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             var unknownResources = await GetUnknownResourceDbModels();
             return unknownResources.Count;
+        }
+
+        public async Task DeleteUnknown()
+        {
+            var unknownResources = await GetUnknownResourceDbModels();
+            await DeleteByKeys(unknownResources.Select(x => x.Id).ToArray(), false);
         }
 
         public async Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId,
