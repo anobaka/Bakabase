@@ -1681,5 +1681,6 @@
   "Resource display name template":"资源展示名称模板",
   "Exhentai enhancer analysis":"Exhentai增强器分析",
   "Parsing or converting property value":"解析或转换属性值",
-  "Be careful, this operation can not be undone": "请注意，该操作无法撤销"
+  "Be careful, this operation can not be undone": "请注意，该操作无法撤销",
+  "No text was matched, but you can still save the regular expression.": "未匹配到任何文本，但您依旧可以保存该正则表达式。"
 }

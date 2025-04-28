@@ -207,7 +207,7 @@ export default ({
               size={'sm'}
               isIconOnly
               variant={'light'}
-              className={'absolute top-0 right-0'}
+              className={'absolute top-0 right-[-24px]'}
               onClick={() => {
                 createPortal(PropertyValueScopePicker, {
                   resource,
