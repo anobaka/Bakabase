@@ -1365,7 +1365,7 @@
   "Advance filter": "高级筛选",
   "Value is being referenced in {{count}} places": "该值当前在{{count}}处被引用",
   "{{count}} values": "{{count}}个值",
-  "Show attributes not bound to categories": "显示未与分类绑定的属性",
+  "Show properties not bound to categories": "显示未与分类绑定的属性",
   "Group of tag, optional": "标签组（非必填）",
   "Add or delete tags in bulk": "批量添加或删除标签",
   "Add or delete in bulk": "批量添加或删除",
@@ -1682,5 +1682,10 @@
   "Exhentai enhancer analysis":"Exhentai增强器分析",
   "Parsing or converting property value":"解析或转换属性值",
   "Be careful, this operation can not be undone": "请注意，该操作无法撤销",
-  "No text was matched, but you can still save the regular expression.": "未匹配到任何文本，但您依旧可以保存该正则表达式。"
+  "No text was matched, but you can still save the regular expression.": "未匹配到任何文本，但您依旧可以保存该正则表达式。",
+  "You can adjust orders or properties by dragging and dropping them": "您可以通过拖拽调整属性顺序",
+  "Adjust orders of properties": "调整属性顺序",
+  "Adjust the display priority of property scopes": "调整多维属性值展示优先级",
+  "Adjust orders of linked properties for current category": "调整当前分类关联的属性顺序",
+  "Adjust orders of properties globally": "调整全局属性顺序"
 }

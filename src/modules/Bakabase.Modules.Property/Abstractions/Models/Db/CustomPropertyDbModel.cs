@@ -8,6 +8,7 @@ namespace Bakabase.Modules.Property.Abstractions.Models.Db
 		public string Name { get; set; } = null!;
 		public PropertyType Type { get; set; }
 		public DateTime CreatedAt { get; set; }
+		public int Order { get; set; }
 		public string? Options { get; set; }
 	}
 }

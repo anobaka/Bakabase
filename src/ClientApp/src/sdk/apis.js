@@ -2009,6 +2009,106 @@ export const BindCustomPropertyToCategoryURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: UnlinkCustomPropertyFromCategory
+ * url: UnlinkCustomPropertyFromCategoryURL
+ * method: UnlinkCustomPropertyFromCategory_TYPE
+ * raw_url: UnlinkCustomPropertyFromCategory_RAW_URL
+ * @param categoryId - 
+ * @param customPropertyId - 
+ */
+export const UnlinkCustomPropertyFromCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{categoryId}/custom-property/{customPropertyId}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  if (parameters['categoryId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: categoryId'))
+  }
+  path = path.replace('{customPropertyId}', `${parameters['customPropertyId']}`)
+  if (parameters['customPropertyId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: customPropertyId'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const UnlinkCustomPropertyFromCategory_RAW_URL = function() {
+  return '/category/{categoryId}/custom-property/{customPropertyId}'
+}
+export const UnlinkCustomPropertyFromCategory_TYPE = function() {
+  return 'delete'
+}
+export const UnlinkCustomPropertyFromCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{categoryId}/custom-property/{customPropertyId}'
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  path = path.replace('{customPropertyId}', `${parameters['customPropertyId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: SortCustomPropertiesInCategory
+ * url: SortCustomPropertiesInCategoryURL
+ * method: SortCustomPropertiesInCategory_TYPE
+ * raw_url: SortCustomPropertiesInCategory_RAW_URL
+ * @param categoryId - 
+ * @param model - 
+ */
+export const SortCustomPropertiesInCategory = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/category/{categoryId}/custom-property/order'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  if (parameters['categoryId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: categoryId'))
+  }
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const SortCustomPropertiesInCategory_RAW_URL = function() {
+  return '/category/{categoryId}/custom-property/order'
+}
+export const SortCustomPropertiesInCategory_TYPE = function() {
+  return 'put'
+}
+export const SortCustomPropertiesInCategoryURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/category/{categoryId}/custom-property/order'
+  path = path.replace('{categoryId}', `${parameters['categoryId']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: PreviewCategoryDisplayNameTemplate
  * url: PreviewCategoryDisplayNameTemplateURL
  * method: PreviewCategoryDisplayNameTemplate_TYPE
@@ -3116,6 +3216,49 @@ export const RemoveCustomPropertyURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/custom-property/{id}'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: SortCustomProperties
+ * url: SortCustomPropertiesURL
+ * method: SortCustomProperties_TYPE
+ * raw_url: SortCustomProperties_RAW_URL
+ * @param model - 
+ */
+export const SortCustomProperties = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/custom-property/order'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const SortCustomProperties_RAW_URL = function() {
+  return '/custom-property/order'
+}
+export const SortCustomProperties_TYPE = function() {
+  return 'put'
+}
+export const SortCustomPropertiesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/custom-property/order'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

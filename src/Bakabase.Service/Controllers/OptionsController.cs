@@ -428,6 +428,23 @@ namespace Bakabase.Service.Controllers
                     options.LastSearchV2 = model.SearchCriteria.ToDbModel();
                 }
 
+                if (model.SynchronizationOptions != null)
+                {
+                    options.SynchronizationOptions = model.SynchronizationOptions.Select(x =>
+                    {
+                        x.EnhancerOptionsMap = x.EnhancerOptionsMap.Where(a => a.Value.IsSet)
+                            .ToDictionary(d => d.Key, d => d.Value);
+
+                        if (!x.IsSet)
+                        {
+                            return null;
+                        }
+
+                        return x;
+
+                    }).OfType<ResourceOptions.SynchronizationOptionsModel>().ToList();
+                }
+
             });
             return BaseResponseBuilder.Ok;
         }

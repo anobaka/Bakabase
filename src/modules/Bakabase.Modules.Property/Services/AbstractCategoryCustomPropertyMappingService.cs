@@ -13,9 +13,11 @@ namespace Bakabase.Modules.Property.Services
     {
         public async Task BindCustomPropertiesToCategory(int categoryId, int[]? customPropertyIds)
         {
+            customPropertyIds ??= [];
+
             var existingMappings = (await GetAll(x => x.CategoryId == categoryId))!;
 
-            var newMappings = (customPropertyIds ?? [])
+            var newMappings = customPropertyIds
                 .Select(x => new CategoryCustomPropertyMapping
                 {
                     CategoryId = categoryId,
@@ -30,10 +32,36 @@ namespace Bakabase.Modules.Property.Services
             await AddRange(toBeAdded);
         }
 
+        public async Task Unlink(int categoryId, int customPropertyId)
+        {
+            var mapping = await GetFirstOrDefault(x => x.CategoryId == categoryId && x.PropertyId == customPropertyId);
+            if (mapping != null)
+            {
+                await RemoveByKey(mapping.Id);
+            }
+        }
+
         public async Task<ListResponse<CategoryCustomPropertyMapping>> AddAll(
             List<CategoryCustomPropertyMapping> resources)
         {
             return await base.AddRange(resources);
+        }
+
+        public async Task Sort(int categoryId, int[] propertyIds)
+        {
+            var mappings = (await GetAll(x => x.CategoryId == categoryId)) ?? [];
+            var orderMap = new Dictionary<int, int>();
+            for (var i = 0; i < propertyIds.Length; i++)
+            {
+                orderMap[propertyIds[i]] = i;
+            }
+
+            foreach (var mapping in mappings)
+            {
+                mapping.Order = orderMap.GetValueOrDefault(mapping.PropertyId, int.MaxValue);
+            }
+
+            await UpdateRange(mappings);
         }
     }
 }

@@ -9,7 +9,9 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Models.Input;
+using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Service.Extensions;
+using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -22,7 +24,8 @@ namespace Bakabase.Service.Controllers
     public class CategoryController(
         ICategoryService service,
         ICategoryEnhancerOptionsService categoryEnhancerOptionsService,
-        IMediaLibraryService mediaLibraryService
+        IMediaLibraryService mediaLibraryService,
+        ICategoryCustomPropertyMappingService categoryCustomPropertyMappingService
     )
         : Controller
     {
@@ -113,6 +116,24 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> BindCustomProperty(int categoryId, int customPropertyId)
         {
             return await service.BindCustomProperty(categoryId, customPropertyId);
+        }
+
+
+        [HttpDelete("{categoryId:int}/custom-property/{customPropertyId:int}")]
+        [SwaggerOperation(OperationId = "UnlinkCustomPropertyFromCategory")]
+        public async Task<BaseResponse> UnlinkCustomPropertyFromCategory(int categoryId, int customPropertyId)
+        {
+            await categoryCustomPropertyMappingService.Unlink(categoryId, customPropertyId);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("{categoryId:int}/custom-property/order")]
+        [SwaggerOperation(OperationId = "SortCustomPropertiesInCategory")]
+        public async Task<BaseResponse> SortCustomProperties(int categoryId,
+            [FromBody] CategoryCustomPropertySortInputModel model)
+        {
+            await categoryCustomPropertyMappingService.Sort(categoryId, model.OrderedPropertyIds);
+            return BaseResponseBuilder.Ok;
         }
 
         [HttpGet("{id:int}/resource/resource-display-name-template/preview")]

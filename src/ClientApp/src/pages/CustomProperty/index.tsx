@@ -28,6 +28,7 @@ import Property from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import TypeConversionRuleOverviewDialog from '@/pages/CustomProperty/components/TypeConversionRuleOverviewDialog';
+import CustomPropertySortModal from '@/components/CustomPropertySortModal';
 
 export default () => {
   const { t } = useTranslation();
@@ -40,7 +41,7 @@ export default () => {
     // @ts-ignore
     const rsp = await BApi.customProperty.getAllCustomProperties({ additionalItems: CustomPropertyAdditionalItem.Category | CustomPropertyAdditionalItem.ValueCount });
     // @ts-ignore
-    setProperties((rsp.data || []));
+    setProperties((rsp.data || []).sort((a, b) => a.order - b.order));
   };
 
   useEffect(() => {
@@ -85,11 +86,24 @@ export default () => {
             size={'sm'}
             color={'secondary'}
             variant={'light'}
-            onClick={async () => {
+            onPress={async () => {
               createPortal(TypeConversionRuleOverviewDialog, {});
             }}
           >
             {t('Check type conversion rules')}
+          </Button>
+          <Button
+            size={'sm'}
+            color={'default'}
+            variant={'light'}
+            onPress={async () => {
+              createPortal(CustomPropertySortModal, {
+                properties,
+                onDestroyed: loadProperties,
+              });
+            }}
+          >
+            {t('Adjust display orders')}
           </Button>
         </div>
         <div />
@@ -99,7 +113,7 @@ export default () => {
         style={{ gridTemplateColumns: 'auto 1fr' }}
       >
         {Object.keys(groupedFilteredProperties).map(k => {
-          const ps = groupedFilteredProperties[k];
+          const ps = groupedFilteredProperties[k].sort((a, b) => a.order - b.order);
           return (
             <>
               <div className={'mb-1 text-right'}>

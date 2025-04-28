@@ -68,7 +68,7 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
                 Choices = options?.Choices,
                 AllowAddingNewDataDynamically = options?.AllowAddingNewDataDynamically ?? false,
                 DefaultValue = string.IsNullOrEmpty(options?.DefaultValue) ? null : [options.DefaultValue]
-            });
+            }, p.Order);
     }
 
     protected override (string? DbValue, bool PropertyChanged) PrepareDbValueInternal(

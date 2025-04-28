@@ -1,6 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import type { Property, Resource } from '@/core/models/Resource';
 import { PropertyValueScope, propertyValueScopes, PropertyPool } from '@/sdk/constants';
 import store from '@/store';
@@ -14,6 +28,7 @@ import { buildLogger } from '@/components/utils';
 import { deserializeStandardValue } from '@/components/StandardValue/helpers';
 import { Button } from '@/components/bakaui';
 
+
 type Props = {
   resource: Resource;
   reload: () => Promise<any>;
@@ -24,6 +39,7 @@ type Props = {
   hidePropertyName?: boolean;
   propertyClassNames?: PropertyContainerProps['classNames'];
   noPropertyContent?: any;
+  sortable?: boolean;
 };
 
 type PropertyRenderContext = {
@@ -31,9 +47,10 @@ type PropertyRenderContext = {
   propertyValues: Property;
   propertyPool: PropertyPool;
   visible: boolean;
+  order: number;
 };
 
-type RenderContext = PropertyRenderContext[];
+export type RenderContext = PropertyRenderContext[];
 
 const log = buildLogger('Properties');
 
@@ -48,6 +65,7 @@ export default (props: Props) => {
     hidePropertyName = false,
     propertyClassNames,
     noPropertyContent,
+    sortable = false,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -142,13 +160,14 @@ export default (props: Props) => {
           renderContext.push({
             property,
             propertyPool: pp,
-            propertyValues: sp,
-            visible: sp.visible ?? false,
+            propertyValues: sp!,
+            visible: sp!.visible ?? false,
+            order: sp!.order,
           });
         }
       });
     });
-    return renderContext.sort((a, b) => (a.visible ? 0 : 1) - (b.visible ? 0 : 1));
+    return renderContext.sort((a, b) => a.order - b.order);
   };
 
   const renderProperty = (pCtx: PropertyRenderContext) => {
@@ -160,6 +179,8 @@ export default (props: Props) => {
     // log(pCtx);
     return (
       <PropertyContainer
+        isLinked={pCtx.visible}
+        categoryId={resource.categoryId}
         classNames={propertyClassNames}
         hidePropertyName={hidePropertyName}
         key={`${propertyPool}-${property.id}`}
@@ -228,7 +249,7 @@ export default (props: Props) => {
             size={'sm'}
             color={'primary'}
           >
-            {t('Show attributes not bound to categories')}
+            {t('Show properties not bound to categories')}
           </Button>
         </div>
       )}

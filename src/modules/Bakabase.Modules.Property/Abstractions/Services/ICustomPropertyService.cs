@@ -38,6 +38,7 @@ public interface ICustomPropertyService
 
     // Task<SingletonResponse<Bakabase.Abstractions.Models.Db.CustomProperty>> Add(Bakabase.Abstractions.Models.Db.CustomProperty resource);
     Task<CustomProperty> Put(int id, CustomPropertyAddOrPutDto model);
+    Task Sort(int[] ids);
     Task<BaseResponse> RemoveByKey(int id);
 
     Task<CustomPropertyTypeConversionPreviewViewModel> PreviewTypeConversion(int sourcePropertyId, PropertyType toType);

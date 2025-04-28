@@ -120,7 +120,8 @@ public record Resource
         StandardValueType DbValueType,
         StandardValueType BizValueType,
         List<Property.PropertyValue>? Values,
-        bool Visible = false)
+        bool Visible = false,
+        int Order = 0)
     {
         public string? Name { get; set; } = Name;
         public List<PropertyValue>? Values { get; set; } = Values;
@@ -128,6 +129,7 @@ public record Resource
         public StandardValueType BizValueType { get; set; } = BizValueType;
         public PropertyType Type { get; set; } = Type;
         public bool Visible { get; set; } = Visible;
+        public int Order { get; set; } = Order;
 
         public record PropertyValue(
             int Scope,

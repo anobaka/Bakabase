@@ -25,7 +25,9 @@ using Bakabase.Modules.StandardValue.Models.Domain;
 using Bakabase.Modules.StandardValue.Models.View;
 using Bakabase.Modules.StandardValue.Services;
 using Bakabase.Service.Extensions;
+using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
+using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -77,6 +79,14 @@ namespace Bakabase.Service.Controllers
             [FromBody] CustomPropertyAddOrPutDto model)
         {
             return new((await service.Put(id, model)).ToViewModel(propertyLocalizer));
+        }
+
+        [HttpPut("order")]
+        [SwaggerOperation(OperationId = "SortCustomProperties")]
+        public async Task<BaseResponse> Sort([FromBody] IdBasedDataSortInputModel model)
+        {
+            await service.Sort(model.Ids);
+            return BaseResponseBuilder.Ok;
         }
 
         [HttpDelete("{id:int}")]

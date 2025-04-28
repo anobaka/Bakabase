@@ -72,9 +72,14 @@ namespace Bakabase.Modules.Property.Services
             var propertyIds = mappings.Select(x => x.PropertyId).ToHashSet();
             var properties = await GetAll(x => propertyIds.Contains(x.Id));
             var propertyMap = properties.ToDictionary(x => x.Id);
+            var orderMap = mappings.GroupBy(d => d.CategoryId)
+                .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.PropertyId, a => a.Order));
 
             return mappings.GroupBy(x => x.CategoryId).ToDictionary(x => x.Key,
-                x => x.Select(y => propertyMap.GetValueOrDefault(y.PropertyId)).Where(y => y != null).ToList())!;
+                x => x.Select(y => propertyMap.GetValueOrDefault(y.PropertyId)).OfType<CustomProperty>()
+                    .OrderBy(a =>
+                        orderMap.GetValueOrDefault(x.Key)?.GetValueOrDefault(a.Id, int.MaxValue) ?? int.MaxValue)
+                    .ToList());
         }
 
         private async Task PopulateAdditionalItems(List<CustomProperty> properties,
@@ -166,6 +171,26 @@ namespace Bakabase.Modules.Property.Services
             });
 
             return rsp.Data!.ToDomainModel();
+        }
+
+        public async Task Sort(int[] ids)
+        {
+            var properties = await GetAll();
+            var orderMap = new Dictionary<int, int>();
+            for (var i = 0; i < ids.Length; i++)
+            {
+                orderMap[ids[i]] = i;
+            }
+
+            foreach (var property in properties)
+            {
+                if (orderMap.TryGetValue(property.Id, out var order))
+                {
+                    property.Order = order;
+                }
+            }
+
+            await UpdateRange(properties.Select(x => x.ToDbModel()).ToList());
         }
 
         public override async Task<BaseResponse> RemoveByKey(int id)

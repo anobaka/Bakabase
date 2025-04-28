@@ -12,5 +12,6 @@ namespace Bakabase.Abstractions.Models.Domain
         public List<Category>? Categories { get; set; }
         public object? Options { get; set; }
         public int? ValueCount { get; set; }
+        public int Order { get; set; }
     }
 }

@@ -3,18 +3,21 @@ import React, { useEffect, useState } from 'react';
 import './index.scss';
 import { useTranslation } from 'react-i18next';
 import {
+  AppstoreOutlined,
   CloseCircleOutlined,
   DisconnectOutlined,
   FolderOpenOutlined,
-  PlayCircleOutlined,
+  PlayCircleOutlined, ProfileOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
 import { history } from 'ice';
+import _ from 'lodash';
+import { reloadResources } from 'i18next';
 import BasicInfo from './BasicInfo';
 import Properties from './Properties';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
-import { Button, ButtonGroup, Chip, Modal, Tooltip } from '@/components/bakaui';
+import { Button, ButtonGroup, Chip, Listbox, ListboxItem, Modal, Popover, Tooltip } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import BApi from '@/sdk/BApi';
 import { PropertyPool, ReservedProperty, ResourceAdditionalItem } from '@/sdk/constants';
@@ -22,6 +25,8 @@ import { convertFromApiValue } from '@/components/StandardValue/helpers';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import PropertyValueScopePicker from '@/components/Resource/components/DetailDialog/PropertyValueScopePicker';
 import PlayableFiles from '@/components/Resource/components/PlayableFiles';
+import CategoryPropertySortModal from '@/components/Resource/components/DetailDialog/CategoryPropertySortModal';
+import CustomPropertySortModal from '@/components/CustomPropertySortModal';
 
 
 interface Props extends DestroyableProps {
@@ -203,19 +208,72 @@ export default ({
                 )}
               </div>
             </div>
-            <Button
-              size={'sm'}
-              isIconOnly
-              variant={'light'}
-              className={'absolute top-0 right-[-24px]'}
-              onClick={() => {
-                createPortal(PropertyValueScopePicker, {
-                  resource,
-                });
-              }}
+            <Popover
+              trigger={(
+                <Button
+                  size={'sm'}
+                  isIconOnly
+                  variant={'light'}
+                  className={'absolute top-0 right-[-24px]'}
+                >
+                  <SettingOutlined className={'text-base'} />
+                </Button>
+              )}
+              shouldCloseOnBlur
             >
-              <SettingOutlined className={'text-base'} />
-            </Button>
+              <Listbox
+                aria-label="Actions"
+                onAction={(key) => {
+                    switch (key) {
+                      case 'AdjustPropertyScopePriority': {
+                        createPortal(PropertyValueScopePicker, {
+                          resource,
+                        });
+                        break;
+                      }
+                      case 'SortPropertiesInCategory': {
+                        const propertyMap = resource?.properties?.[PropertyPool.Custom] ?? {};
+                        const properties = _.keys(propertyMap).map(x => {
+                          const id = parseInt(x, 10);
+                          const p = propertyMap[id]!;
+                          if (p.visible) {
+                            return {
+                              id,
+                              name: p.name!,
+                            };
+                          }
+                          return null;
+                        }).filter(x => x != null);
+                        createPortal(CategoryPropertySortModal, {
+                          categoryId: resource.categoryId,
+                          properties,
+                          onDestroyed: loadResource,
+                        });
+                        break;
+                      }
+                      case 'SortPropertiesGlobally': {
+                        BApi.customProperty.getAllCustomProperties().then(r => {
+                          const properties = (r.data || []).sort((a, b) => a.order - b.order);
+                          createPortal(CustomPropertySortModal, {
+                            properties,
+                            onDestroyed: loadResource,
+                          });
+                        });
+                      }
+                    }
+                  }}
+              >
+                <ListboxItem key="AdjustPropertyScopePriority" startContent={<AppstoreOutlined className={'text-small'} />}>
+                  {t('Adjust the display priority of property scopes')}
+                </ListboxItem>
+                <ListboxItem key="SortPropertiesInCategory" startContent={<ProfileOutlined className={'text-small'} />}>
+                  {t('Adjust orders of linked properties for current category')}
+                </ListboxItem>
+                <ListboxItem key="SortPropertiesGlobally" startContent={<ProfileOutlined className={'text-small'} />}>
+                  {t('Adjust orders of properties globally')}
+                </ListboxItem>
+              </Listbox>
+            </Popover>
           </div>
           <div className={'mt-2'}>
             <Properties

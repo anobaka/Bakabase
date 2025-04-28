@@ -210,8 +210,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             var customPropertiesMap = await CustomPropertyService.GetByCategoryIds(cIds);
                             foreach (var d in dtoList)
                             {
-                                d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id)
-                                    ?.OfType<CustomProperty>().ToList();
+                                d.CustomProperties = customPropertiesMap.GetValueOrDefault(d.Id);
                             }
 
                             break;

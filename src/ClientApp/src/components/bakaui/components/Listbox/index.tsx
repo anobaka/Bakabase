@@ -2,7 +2,7 @@ import {
   Listbox,
   ListboxSection,
   ListboxItem,
-} from "@heroui/react";
+} from '@heroui/react';
 
 export {
   Listbox,

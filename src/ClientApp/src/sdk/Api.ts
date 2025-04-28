@@ -214,6 +214,8 @@ export interface BakabaseAbstractionsModelsDomainCustomProperty {
   options?: any;
   /** @format int32 */
   valueCount?: number;
+  /** @format int32 */
+  order: number;
 }
 
 export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
@@ -358,6 +360,8 @@ export interface BakabaseAbstractionsModelsDomainResourceProperty {
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
   visible: boolean;
+  /** @format int32 */
+  order: number;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {
@@ -686,6 +690,7 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
   additionalCoverDiscoveringSources: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[];
   savedSearches: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSavedSearch[];
   idsOfMediaLibraryRecentlyMovedTo?: number[];
+  synchronizationOptions: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel[];
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
@@ -696,6 +701,26 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSavedSearch {
   search: BakabaseModulesSearchModelsDbResourceSearchDbModel;
   name: string;
+}
+
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel {
+  /** @format int32 */
+  categoryId?: number;
+  /** @format int32 */
+  mediaLibraryId?: number;
+  deleteResourcesWithUnknownPath?: boolean;
+  deleteResourcesWithUnknownMediaLibrary?: boolean;
+  enhancerOptionsMap: Record<
+    string,
+    BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModelSynchronizationEnhancerOptions
+  >;
+  isSet: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModelSynchronizationEnhancerOptions {
+  reApply?: boolean;
+  reEnhance?: boolean;
+  isSet: boolean;
 }
 
 export interface BakabaseInsideWorldModelsConfigsBilibiliOptions {
@@ -1447,6 +1472,8 @@ export interface BakabaseModulesPropertyModelsViewPropertyViewModel {
   bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   poolName: string;
   typeName: string;
+  /** @format int32 */
+  order: number;
 }
 
 export interface BakabaseModulesSearchModelsDbResourceSearchDbModel {
@@ -1545,9 +1572,17 @@ export interface BakabaseServiceModelsInputBulkModificationVariableInputModel {
   preprocesses?: string;
 }
 
+export interface BakabaseServiceModelsInputCategoryCustomPropertySortInputModel {
+  orderedPropertyIds: number[];
+}
+
 export interface BakabaseServiceModelsInputFileSystemEntryGroupInputModel {
   paths: string[];
   groupInternal: boolean;
+}
+
+export interface BakabaseServiceModelsInputIdBasedDataSortInputModel {
+  ids: number[];
 }
 
 export interface BakabaseServiceModelsInputResourceCoverSaveInputModel {
@@ -1561,6 +1596,7 @@ export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
   propertyValueScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
   searchCriteria?: BakabaseServiceModelsInputResourceSearchInputModel;
+  synchronizationOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel[];
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
@@ -1695,6 +1731,8 @@ export interface BakabaseServiceModelsViewCustomPropertyViewModel {
   bizValueType: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
   poolName: string;
   typeName: string;
+  /** @format int32 */
+  order: number;
   /** @format int32 */
   valueCount?: number;
   categories?: BakabaseAbstractionsModelsDomainCategory[];
@@ -4123,6 +4161,42 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Category
+     * @name UnlinkCustomPropertyFromCategory
+     * @request DELETE:/category/{categoryId}/custom-property/{customPropertyId}
+     */
+    unlinkCustomPropertyFromCategory: (categoryId: number, customPropertyId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${categoryId}/custom-property/${customPropertyId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
+     * @name SortCustomPropertiesInCategory
+     * @request PUT:/category/{categoryId}/custom-property/order
+     */
+    sortCustomPropertiesInCategory: (
+      categoryId: number,
+      data: BakabaseServiceModelsInputCategoryCustomPropertySortInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/category/${categoryId}/custom-property/order`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Category
      * @name PreviewCategoryDisplayNameTemplate
      * @request GET:/category/{id}/resource/resource-display-name-template/preview
      */
@@ -4660,6 +4734,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/custom-property/${id}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
+     * @name SortCustomProperties
+     * @request PUT:/custom-property/order
+     */
+    sortCustomProperties: (data: BakabaseServiceModelsInputIdBasedDataSortInputModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/custom-property/order`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

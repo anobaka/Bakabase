@@ -459,8 +459,8 @@ namespace Bakabase.InsideWorld.Business.Services
                             var categoryMap =
                                 (await _categoryService.GetByKeys(categoryIds, CategoryAdditionalItem.CustomProperties))
                                 .ToDictionary(d => d.Id, d => d);
-                            var categoryIdCustomPropertyIdsMap = categoryMap.ToDictionary(d => d.Key,
-                                d => d.Value.CustomProperties?.Select(x => x.Id).ToHashSet());
+                            var categoryIdCustomPropertiesMap = categoryMap.ToDictionary(d => d.Key,
+                                d => d.Value.CustomProperties);
 
                             var propertyIdsOfNotEmptyProperties =
                                 customPropertiesValuesMap.Values.SelectMany(x => x.Keys).ToHashSet();
@@ -487,15 +487,25 @@ namespace Bakabase.InsideWorld.Business.Services
                                     r.Properties.GetOrAdd((int) PropertyPool.Custom, () => []);
 
                                 var propertyIds = new List<int>();
-                                if (categoryIdCustomPropertyIdsMap.TryGetValue(r.CategoryId,
-                                        out var boundPropertyIds) && boundPropertyIds != null)
+                                HashSet<int>? boundPropertyIds = null;
+                                if (categoryIdCustomPropertiesMap.TryGetValue(r.CategoryId,
+                                        out var boundProperties) && boundProperties != null)
                                 {
-                                    propertyIds.AddRange(boundPropertyIds);
+                                    var bPIds = boundProperties.Select(p => p.Id).ToArray();
+                                    boundPropertyIds = bPIds.ToHashSet();
+                                    propertyIds.AddRange(bPIds);
                                 }
 
                                 if (customPropertiesValuesMap.TryGetValue(r.Id, out var pValues))
                                 {
-                                    propertyIds.AddRange(pValues.Keys.Except(propertyIds));
+                                    propertyIds.AddRange(pValues.Keys.Except(propertyIds).OrderBy(x =>
+                                        propertyMap.GetValueOrDefault(x)?.Order ?? int.MaxValue));
+                                }
+
+                                var propertyOrderMap = new Dictionary<int, int>();
+                                for (var j = 0; j < propertyIds.Count; j++)
+                                {
+                                    propertyOrderMap[propertyIds[j]] = j;
                                 }
 
                                 foreach (var pId in propertyIds)
@@ -511,7 +521,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                     var p = customProperties.GetOrAdd(pId,
                                         () => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
-                                            property.Type.GetBizValueType(), [], visible));
+                                            property.Type.GetBizValueType(), [], visible, propertyOrderMap[pId]));
                                     if (values != null)
                                     {
                                         p.Values ??= [];

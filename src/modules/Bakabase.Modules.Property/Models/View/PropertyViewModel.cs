@@ -14,4 +14,5 @@ public record PropertyViewModel
     public StandardValueType BizValueType => Type.GetBizValueType();
     public string PoolName { get; set; } = null!;
     public string TypeName { get; set; } = null!;
+    public int Order { get; set; }
 }

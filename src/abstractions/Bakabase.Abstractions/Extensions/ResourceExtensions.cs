@@ -85,7 +85,8 @@ namespace Bakabase.Abstractions.Extensions
                             z.BizValue,
                             z.AliasAppliedBizValue
                         )).ToList(),
-                        y.Value.Visible
+                        y.Value.Visible,
+                        y.Value.Order
                     )
                 )
             );

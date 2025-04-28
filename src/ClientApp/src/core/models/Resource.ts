@@ -14,6 +14,7 @@ export type Property = {
   bizValueType: StandardValueType;
   values?: Value[];
   visible?: boolean;
+  order: number;
 };
 
 export type Resource = {

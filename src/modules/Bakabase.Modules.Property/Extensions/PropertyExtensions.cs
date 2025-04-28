@@ -40,7 +40,8 @@ public static class PropertyExtensions
             Name = domain.Name,
             Id = domain.Id,
             Type = domain.Type,
-            Options = domain.Options == null ? null : JsonConvert.SerializeObject(domain.Options)
+            Options = domain.Options == null ? null : JsonConvert.SerializeObject(domain.Options),
+            Order = domain.Order
         };
     }
 
@@ -54,6 +55,7 @@ public static class PropertyExtensions
             Type = dbModel.Type,
             ValueCount = null,
             Categories = null,
+            Order = dbModel.Order
         };
         if (dbModel.Options.IsNotEmpty())
         {
@@ -178,7 +180,7 @@ public static class PropertyExtensions
 
     public static Bakabase.Abstractions.Models.Domain.Property ToProperty(this CustomProperty property) => new(
         PropertyPool.Custom, property.Id,
-        property.Type, property.Name, property.Options);
+        property.Type, property.Name, property.Options, property.Order);
 
     public static CustomPropertyValue InitializeCustomPropertyValue(this PropertyType type, object? dbValue,
         int resourceId, int propertyId, int scope)
@@ -209,7 +211,8 @@ public static class PropertyExtensions
             Pool = property.Pool,
             PoolName = propertyLocalizer?.PropertyPoolName(property.Pool) ?? property.Pool.ToString(),
             Type = property.Type,
-            TypeName = propertyLocalizer?.PropertyTypeName(property.Type) ?? property.Type.ToString()
+            TypeName = propertyLocalizer?.PropertyTypeName(property.Type) ?? property.Type.ToString(),
+            Order = property.Order
         };
     }
 }

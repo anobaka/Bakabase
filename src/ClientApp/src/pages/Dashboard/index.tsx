@@ -132,7 +132,7 @@ export default () => {
                 {t('As more data is filled in, property value coverage increases')}
               </div>
             </div>
-            {property && (
+            {property ? (
               <div className={'flex items-start gap-8 min-h-0'}>
                 <div className={'w-[200px]'}>
                   <div className={'text-lg'}>
@@ -177,6 +177,10 @@ export default () => {
                     })}
                   </div>
                 </div>
+              </div>
+            ) : (
+              <div className={'flex justify-center py-4'}>
+                <Spinner />
               </div>
             )}
           </div>

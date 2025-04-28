@@ -7,6 +7,8 @@ namespace Bakabase.Modules.Property.Abstractions.Services;
 public interface ICategoryCustomPropertyMappingService
 {
     Task BindCustomPropertiesToCategory(int categoryId, int[]? customPropertyIds);
+
+    Task Unlink(int categoryId, int customPropertyId);
     // Task<CategoryCustomPropertyMapping> GetByKey(int key, bool returnCopy = true);
     // Task<CategoryCustomPropertyMapping[]> GetByKeys(IEnumerable<int> keys, bool returnCopy = true);
     //
@@ -51,4 +53,6 @@ public interface ICategoryCustomPropertyMappingService
     //
     // Task<ListResponse<CategoryCustomPropertyMapping>> UpdateAll(Expression<Func<CategoryCustomPropertyMapping, bool>> selector,
     //     Action<CategoryCustomPropertyMapping> modify);
+
+    Task Sort(int categoryId, int[] propertyIds);
 }

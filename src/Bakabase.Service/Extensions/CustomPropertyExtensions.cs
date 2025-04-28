@@ -20,7 +20,8 @@ public static class CustomPropertyExtensions
             PoolName = propertyLocalizer?.PropertyPoolName(PropertyPool.Custom) ?? PropertyPool.Custom.ToString(),
             Type = property.Type,
             TypeName = propertyLocalizer?.PropertyTypeName(property.Type) ?? property.Type.ToString(),
-            ValueCount = property.ValueCount
+            ValueCount = property.ValueCount,
+            Order = property.Order
         };
     }
 }
