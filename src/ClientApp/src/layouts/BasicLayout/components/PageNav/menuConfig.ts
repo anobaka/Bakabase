@@ -24,6 +24,11 @@ const asideMenuConfig: IMenuItem[] = [
     path: '/expandable-2',
     children: [
       {
+        name: 'Synchronization options',
+        path: '/synchronizationoptions',
+        icon: 'SyncOutlined',
+      },
+      {
         name: 'Custom component',
         path: '/customcomponent',
         icon: 'ControlOutlined',
