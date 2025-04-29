@@ -260,4 +260,10 @@
   <data name="Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties" xml:space="preserve">
     <value>Property id [{0}] is not found in custom properties</value>
   </data>
+  <data name="Enhancer_DeletingEnhancementRecords" xml:space="preserve">
+    <value>Deleting {0} enhancement records</value>
+  </data>
+  <data name="Enhancer_ReApplyingEnhancements" xml:space="preserve">
+    <value>ReApplying {0} enhancements</value>
+  </data>
 </root>

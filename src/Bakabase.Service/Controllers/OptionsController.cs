@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Configurations.Extensions;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
@@ -430,19 +431,7 @@ namespace Bakabase.Service.Controllers
 
                 if (model.SynchronizationOptions != null)
                 {
-                    options.SynchronizationOptions = model.SynchronizationOptions.Select(x =>
-                    {
-                        x.EnhancerOptionsMap = x.EnhancerOptionsMap.Where(a => a.Value.IsSet)
-                            .ToDictionary(d => d.Key, d => d.Value);
-
-                        if (!x.IsSet)
-                        {
-                            return null;
-                        }
-
-                        return x;
-
-                    }).OfType<ResourceOptions.SynchronizationOptionsModel>().ToList();
+                    options.SynchronizationOptions = model.SynchronizationOptions.Optimize();
                 }
 
             });

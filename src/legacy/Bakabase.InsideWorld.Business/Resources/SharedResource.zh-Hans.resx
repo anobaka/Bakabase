@@ -402,4 +402,7 @@
   <data name="WrongPassword" xml:space="preserve">
     <value>密码错误</value>
   </data>
+  <data name="DeletingInvalidResources" xml:space="preserve">
+    <value>正在删除{0}个无效资源</value>
+  </data>
 </root>

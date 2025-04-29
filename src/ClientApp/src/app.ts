@@ -23,6 +23,7 @@ export default defineAppConfig(() => ({
     type: 'hash',
   },
   app: {
+    strict: true,
     // errorBoundary: true,
     // strict: true,ga
   },

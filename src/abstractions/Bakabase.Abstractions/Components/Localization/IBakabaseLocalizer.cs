@@ -38,4 +38,5 @@ public interface IBakabaseLocalizer
     string BTask_FailedToRunTaskDueToUnknownTaskId(string id);
     string BTask_FailedToRunTaskDueToIdExisting(string id);
     string? WrongPassword();
+    string DeletingInvalidResources(int count);
 }

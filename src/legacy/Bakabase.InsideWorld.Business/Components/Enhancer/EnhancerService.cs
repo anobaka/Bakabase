@@ -729,5 +729,13 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                 resourceIds.Contains(x.ResourceId) && enhancerIds.Contains(x.EnhancerId));
             await ApplyEnhancementsToResources(enhancements, ct);
         }
+
+        public async Task ReapplyEnhancementsByResources(Dictionary<int, int[]> resourceIdsEnhancerIdsMap, CancellationToken ct)
+        {
+            var enhancements = await _enhancementService.GetAll(x =>
+                resourceIdsEnhancerIdsMap.ContainsKey(x.ResourceId) &&
+                resourceIdsEnhancerIdsMap[x.ResourceId].Contains(x.EnhancerId));
+            await ApplyEnhancementsToResources(enhancements, ct);
+        }
     }
 }

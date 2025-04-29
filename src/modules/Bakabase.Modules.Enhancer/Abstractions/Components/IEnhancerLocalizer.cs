@@ -14,4 +14,6 @@ public interface IEnhancerLocalizer
     string Enhancer_Target_Options_PropertyTypeIsNullButPropertyIdIsNot(int id, string target);
     string Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties(int id);
     string Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties(int id);
+    string Enhancer_DeletingEnhancementRecords(int count);
+    string Enhancer_ReApplyingEnhancements(int count);
 }

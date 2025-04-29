@@ -322,6 +322,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Deleting {0} invalid resources.
+        /// </summary>
+        internal static string DeletingInvalidResources {
+            get {
+                return ResourceManager.GetString("DeletingInvalidResources", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to This component is used to update Bakabase app..
         /// </summary>
         internal static string Dependency_Component_Bakabase_Updater_Description {

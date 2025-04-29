@@ -29,7 +29,8 @@ export const filterMultilevelData = <V>(data: MultilevelData<V>[], keyword: stri
   return result;
 };
 
-export const findNodeChainInMultilevelData = <V>(data: MultilevelData<V>[], value: V): MultilevelData<V>[] | undefined => {
+export const findNodeChainInMultilevelData = <V>(data: MultilevelData<V>[], value: V):
+  MultilevelData<V>[] | undefined => {
   for (const d of data) {
     if (d.value === value) {
       return [d];

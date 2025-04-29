@@ -53,4 +53,8 @@
 		</EmbeddedResource>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Configurations\Extensions\" />
+	</ItemGroup>
+
 </Project>

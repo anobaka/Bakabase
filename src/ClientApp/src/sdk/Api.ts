@@ -690,7 +690,7 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
   additionalCoverDiscoveringSources: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[];
   savedSearches: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSavedSearch[];
   idsOfMediaLibraryRecentlyMovedTo?: number[];
-  synchronizationOptions: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel[];
+  synchronizationOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
@@ -703,24 +703,42 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
   name: string;
 }
 
-export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel {
-  /** @format int32 */
-  categoryId?: number;
-  /** @format int32 */
-  mediaLibraryId?: number;
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions {
   deleteResourcesWithUnknownPath?: boolean;
-  deleteResourcesWithUnknownMediaLibrary?: boolean;
-  enhancerOptionsMap: Record<
+  enhancerOptionsMap?: Record<
     string,
-    BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModelSynchronizationEnhancerOptions
+    BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions
   >;
-  isSet: boolean;
+  mediaLibraryOptionsMap?: Record<
+    string,
+    BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions
+  >;
 }
 
-export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModelSynchronizationEnhancerOptions {
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions {
   reApply?: boolean;
   reEnhance?: boolean;
-  isSet: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions {
+  deleteResourcesWithUnknownPath?: boolean;
+  enhancerOptionsMap?: Record<
+    string,
+    BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions
+  >;
+}
+
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel {
+  deleteResourcesWithUnknownPath?: boolean;
+  deleteResourcesWithUnknownMediaLibrary?: boolean;
+  categoryOptionsMap?: Record<
+    string,
+    BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions
+  >;
+  enhancerOptionsMap?: Record<
+    string,
+    BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions
+  >;
 }
 
 export interface BakabaseInsideWorldModelsConfigsBilibiliOptions {
@@ -1596,7 +1614,7 @@ export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   coverOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
   propertyValueScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
   searchCriteria?: BakabaseServiceModelsInputResourceSearchInputModel;
-  synchronizationOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel[];
+  synchronizationOptions?: BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {

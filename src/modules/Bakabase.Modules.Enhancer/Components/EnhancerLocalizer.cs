@@ -7,6 +7,10 @@ namespace Bakabase.Modules.Enhancer.Components;
 
 internal class EnhancerLocalizer(IStringLocalizer<EnhancerResource> localizer) : IEnhancerLocalizer
 {
+    public LocalizedString this[string name] => localizer[name];
+
+    public LocalizedString this[string name, params object[] arguments] => localizer[name, arguments];
+
     public string Enhancer_Name(EnhancerId enhancerId)
     {
         return localizer[$"Enhancer_{enhancerId}_Name"];
@@ -62,5 +66,15 @@ internal class EnhancerLocalizer(IStringLocalizer<EnhancerResource> localizer) :
     public string Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties(int id)
     {
         return localizer[nameof(Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties), id];
+    }
+
+    public string Enhancer_DeletingEnhancementRecords(int count)
+    {
+        return this[nameof(Enhancer_DeletingEnhancementRecords), count];
+    }
+
+    public string Enhancer_ReApplyingEnhancements(int count)
+    {
+        return this[nameof(Enhancer_ReApplyingEnhancements), count];
     }
 }

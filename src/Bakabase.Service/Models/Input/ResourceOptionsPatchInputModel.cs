@@ -10,6 +10,6 @@ namespace Bakabase.Service.Models.Input
         public ResourceOptions.CoverOptionsModel? CoverOptions { get; set; }
         public PropertyValueScope[]? PropertyValueScopePriority { get; set; }
         public ResourceSearchInputModel? SearchCriteria { get; set; }
-        public ResourceOptions.SynchronizationOptionsModel[]? SynchronizationOptions { get; set; }
+        public ResourceOptions.SynchronizationOptionsModel? SynchronizationOptions { get; set; }
     }
 }

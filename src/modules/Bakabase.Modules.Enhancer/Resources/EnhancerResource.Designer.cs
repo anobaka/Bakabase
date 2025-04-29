@@ -286,6 +286,15 @@ namespace Bakabase.Modules.Enhancer.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Deleting {0} enhancement records.
+        /// </summary>
+        public static string Enhancer_DeletingEnhancementRecords {
+            get {
+                return ResourceManager.GetString("Enhancer_DeletingEnhancementRecords", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to DLsite.
         /// </summary>
         public static string Enhancer_DLsite_Name {
@@ -401,6 +410,15 @@ namespace Bakabase.Modules.Enhancer.Resources {
         public static string Enhancer_ExHentai_Target_Tags_Name {
             get {
                 return ResourceManager.GetString("Enhancer_ExHentai_Target_Tags_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ReApplying {0} enhancements.
+        /// </summary>
+        public static string Enhancer_ReApplyingEnhancements {
+            get {
+                return ResourceManager.GetString("Enhancer_ReApplyingEnhancements", resourceCulture);
             }
         }
         

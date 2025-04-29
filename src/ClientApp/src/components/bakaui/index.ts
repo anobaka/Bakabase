@@ -37,8 +37,10 @@ import { Radio, RadioGroup } from './components/Radio';
 import Kbd from './components/Kbd';
 import NumberInput from './components/NumberInput';
 import Tree from './components/Tree';
+import Alert from './components/Alert';
 
 export {
+  Alert,
   Autocomplete,
   AutocompleteItem,
   Button,

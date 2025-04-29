@@ -161,5 +161,10 @@ namespace Bakabase.InsideWorld.Business.Components
         {
             return this[nameof(WrongPassword)];
         }
+
+        public string DeletingInvalidResources(int count)
+        {
+            return this[nameof(DeletingInvalidResources), count];
+        }
     }
 }

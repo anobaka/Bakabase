@@ -9,6 +9,7 @@ using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Search.Models.Db;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Doc.Swagger;
+using static Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions.SynchronizationCategoryOptions;
 
 namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
 {
@@ -25,7 +26,7 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
         public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; } = [];
         public List<SavedSearch> SavedSearches { get; set; } = [];
         public int[]? IdsOfMediaLibraryRecentlyMovedTo { get; set; }
-        public List<SynchronizationOptionsModel> SynchronizationOptions { get; set; } = [];
+        public SynchronizationOptionsModel? SynchronizationOptions { get; set; }
 
         public void AddIdOfMediaLibraryRecentlyMovedTo(int id)
         {
@@ -50,23 +51,29 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
 
         public record SynchronizationOptionsModel
         {
-            public int? CategoryId { get; set; }
-            public int? MediaLibraryId { get; set; }
             public bool? DeleteResourcesWithUnknownPath { get; set; }
             public bool? DeleteResourcesWithUnknownMediaLibrary { get; set; }
-            public Dictionary<int, SynchronizationEnhancerOptions> EnhancerOptionsMap { get; set; } = [];
+            public Dictionary<int, SynchronizationCategoryOptions>? CategoryOptionsMap { get; set; }
+            public Dictionary<int, SynchronizationEnhancerOptions>? EnhancerOptionsMap { get; set; }
+        }
 
-            public bool IsSet => DeleteResourcesWithUnknownPath.HasValue ||
-                                    DeleteResourcesWithUnknownMediaLibrary.HasValue ||
-                                    EnhancerOptionsMap.Values.Any(x => x.IsSet);
+        public record SynchronizationCategoryOptions
+        {
+            public bool? DeleteResourcesWithUnknownPath { get; set; }
+            public Dictionary<int, SynchronizationEnhancerOptions>? EnhancerOptionsMap { get; set; }
+            public Dictionary<int, SynchronizationMediaLibraryOptions>? MediaLibraryOptionsMap { get; set; }
+        }
 
-            public record SynchronizationEnhancerOptions
-            {
-                public bool? ReApply { get; set; }
-                public bool? ReEnhance { get; set; }
+        public record SynchronizationMediaLibraryOptions
+        {
+            public bool? DeleteResourcesWithUnknownPath { get; set; }
+            public Dictionary<int, SynchronizationEnhancerOptions>? EnhancerOptionsMap { get; set; }
+        }
 
-                public bool IsSet => ReApply.HasValue || ReEnhance.HasValue;
-            }
+        public record SynchronizationEnhancerOptions
+        {
+            public bool? ReApply { get; set; }
+            public bool? ReEnhance { get; set; }
         }
     }
 }

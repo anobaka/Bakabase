@@ -1,7 +1,11 @@
+'use strict';
+
 import { useTranslation } from 'react-i18next';
 import React from 'react';
 import _ from 'lodash';
-import type { IProperty } from '@/components/Property/models';
+import type { Dayjs } from 'dayjs';
+import type { Duration } from 'dayjs/plugin/duration';
+import type { IChoice, IProperty } from '@/components/Property/models';
 import { PropertyType, StandardValueType } from '@/sdk/constants';
 import {
   AttachmentValueRenderer,
@@ -23,6 +27,7 @@ import {
   serializeStandardValue,
 } from '@/components/StandardValue/helpers';
 import { buildLogger } from '@/components/utils';
+import type { LinkValue, TagValue } from '@/components/StandardValue/models';
 
 
 export type DataPool = {};
@@ -80,10 +85,12 @@ export default (props: Props) => {
 
   switch (property.type!) {
     case PropertyType.SingleLineText: {
-      bv ??= dv;
+      const typedDv = dv as string;
+      const typedBv = bv as string ?? typedDv;
+
       return (
         <StringValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           defaultEditing={defaultEditing}
@@ -91,10 +98,13 @@ export default (props: Props) => {
       );
     }
     case PropertyType.MultilineText: {
+      const typedDv = dv as string;
+      const typedBv = bv as string ?? typedDv;
+
       bv ??= dv;
       return (
         <StringValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           multiline
@@ -103,6 +113,8 @@ export default (props: Props) => {
       );
     }
     case PropertyType.SingleChoice: {
+      const typedDv = dv as string;
+
       const oc = onValueChange == undefined ? undefined : (dbValue?: string[], bizValue?: string[]) => {
         onValueChange(
           (dbValue && dbValue.length > 0) ? serializeStandardValue(dbValue[0], StandardValueType.String) : undefined,
@@ -111,18 +123,18 @@ export default (props: Props) => {
       };
 
       const editor = oc ? {
-        value: dv == undefined ? undefined : [dv],
+        value: typedDv == undefined ? undefined : [typedDv],
         onValueChange: oc,
       } : undefined;
 
       // console.log(editor, property);
 
-      bv ??= (property.options?.choices ?? []).find(x => x.value == dv)?.label;
-      const vas = _.sortBy(property.options?.choices?.filter(o => dv?.includes(o.value)) ?? [],
-        x => x.value == dv);
+      const typedBv = (bv as string) ?? (property.options?.choices ?? []).find(x => x.value == typedDv)?.label;
+      const vas: IChoice[] = _.sortBy(property.options?.choices?.filter(o => dv?.includes(o.value)) ?? [],
+        x => x.value == typedDv);
       return (
         <ChoiceValueRenderer
-          value={bv == undefined ? undefined : [bv]}
+          value={typedBv == undefined ? undefined : [typedBv]}
           variant={variant}
           editor={editor}
           getDataSource={async () => {
@@ -134,12 +146,14 @@ export default (props: Props) => {
       );
     }
     case PropertyType.MultipleChoice: {
-      bv ??= (property.options?.choices ?? []).filter(x => dv?.includes(x.value)).map(x => x.label);
-      const vas = _.sortBy(property.options?.choices?.filter(o => dv?.includes(o.value)) ?? [],
-        x => dv?.findIndex(d => d.value == x.value));
+      const typedDv = dv as string[];
+      const typedBv = (bv as string[]) ?? (property.options?.choices ?? [])
+        .filter(x => typedDv?.includes(x.value)).map(x => x.label);
+      const vas: IChoice[] = _.sortBy(property.options?.choices?.filter(o => dv?.includes(o.value)) ?? [],
+        x => typedDv?.findIndex(d => d == x.value));
       return (
         <ChoiceValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           multiple
@@ -152,11 +166,12 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Number: {
-      bv ??= dv;
+      const typedDv = dv as number;
+      const typedBv = bv as number ?? typedDv;
 
       return (
         <NumberValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           defaultEditing={defaultEditing}
@@ -165,11 +180,12 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Percentage: {
-      bv ??= dv;
+      const typedDv = dv as number;
+      const typedBv = bv as number ?? typedDv;
 
       return (
         <NumberValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           suffix={'%'}
           editor={simpleEditor}
@@ -179,11 +195,12 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Rating: {
-      bv ??= dv;
+      const typedDv = dv as number;
+      const typedBv = bv as number ?? typedDv;
 
       return (
         <RatingValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           defaultEditing={defaultEditing}
@@ -191,11 +208,12 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Boolean: {
-      bv ??= dv;
+      const typedDv = dv as boolean;
+      const typedBv = bv as boolean ?? typedDv;
 
       return (
         <BooleanValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           defaultEditing={defaultEditing}
@@ -203,11 +221,12 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Link: {
-      bv ??= dv;
+      const typedDv = dv as LinkValue;
+      const typedBv = bv as LinkValue ?? typedDv;
 
       return (
         <LinkValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           defaultEditing={defaultEditing}
@@ -215,11 +234,12 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Attachment: {
-      bv ??= dv;
+      const typedDv = dv as string[];
+      const typedBv = bv as string[] ?? typedDv;
 
       return (
         <AttachmentValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           defaultEditing={defaultEditing}
@@ -228,11 +248,12 @@ export default (props: Props) => {
     }
     case PropertyType.Date:
     case PropertyType.DateTime: {
-      bv ??= dv;
+      const typedDv = dv as Dayjs;
+      const typedBv = bv as Dayjs ?? typedDv;
 
       return (
         <DateTimeValueRenderer
-          value={bv}
+          value={typedBv}
           as={property.type == PropertyType.DateTime ? 'datetime' : 'date'}
           variant={variant}
           editor={simpleEditor}
@@ -241,11 +262,12 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Time: {
-      bv ??= dv;
+      const typedDv = dv as Duration;
+      const typedBv = bv as Duration ?? typedDv;
 
       return (
         <TimeValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           defaultEditing={defaultEditing}
@@ -253,11 +275,12 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Formula: {
-      bv ??= dv;
+      const typedDv = dv as string;
+      const typedBv = bv as string ?? typedDv;
 
       return (
         <FormulaValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           defaultEditing={defaultEditing}
@@ -265,15 +288,18 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Multilevel: {
-      const tbv = dv?.map(v => findNodeChainInMultilevelData(property?.options?.data || [], v)).filter(x => x != undefined);
-      bv ??= tbv?.map(x => x.map(y => y.label));
-      const vas = tbv?.map(v => v.map(x => ({ color: x.color })));
+      const typedDv = dv as string[];
+      const tbv = typedDv
+        ?.map(v => findNodeChainInMultilevelData(property?.options?.data || [], v))
+        .filter(x => x != undefined);
+      const typedBv = bv as string[][] ?? tbv?.map(x => x!.map(y => y.label));
+      const vas = tbv?.map(v => v!.map(x => ({ color: x.color })));
 
       // log(tbv, bv, vas);
 
       return (
         <MultilevelValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           getDataSource={async () => {
@@ -286,15 +312,17 @@ export default (props: Props) => {
       );
     }
     case PropertyType.Tags: {
-      bv ??= (property.options?.tags || []).filter(x => dv?.includes(x.value)).map(x => ({
+      const typedDv = dv as string[];
+
+      const typedBv = bv as TagValue[] ?? (property.options?.tags || []).filter(x => dv?.includes(x.value)).map(x => ({
         group: x.group,
         name: x.name,
       }));
-      const vas = _.sortBy(property.options?.tags?.filter(o => dv?.includes(o.value)) ?? [],
-        x => dv?.findIndex(d => d.value == x.value));
+      const vas = _.sortBy(property.options?.tags?.filter(o => typedDv?.includes(o.value)) ?? [],
+        x => typedDv?.findIndex(d => d == x.value));
       return (
         <TagsValueRenderer
-          value={bv}
+          value={typedBv}
           variant={variant}
           editor={simpleEditor}
           getDataSource={async () => {

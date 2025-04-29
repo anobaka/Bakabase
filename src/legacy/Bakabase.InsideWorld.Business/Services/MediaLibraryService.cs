@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
@@ -18,18 +19,24 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Enhancer;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
 using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Business.Configurations.Extensions;
+using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
+using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Cryptography;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Logging.LogService.Services;
@@ -39,6 +46,7 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CsQuery.ExtensionMethods.Internal;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using static Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult.Resource;
@@ -57,7 +65,6 @@ namespace Bakabase.InsideWorld.Business.Services
         private const decimal MinimalFreeSpace = 1_000_000_000; 
         protected ICategoryService ResourceCategoryService => GetRequiredService<ICategoryService>();
         protected IResourceService ResourceService => GetRequiredService<IResourceService>();
-        private readonly InsideWorldLocalizer _localizer;
         protected LogService LogService => GetRequiredService<LogService>();
         protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
         protected BTaskManager TaskManager => GetRequiredService<BTaskManager>();
@@ -69,14 +76,24 @@ namespace Bakabase.InsideWorld.Business.Services
 
         private readonly IPropertyLocalizer _propertyLocalizer;
 
-        public MediaLibraryService(IServiceProvider serviceProvider, InsideWorldLocalizer localizer,
+        private readonly IBOptions<ResourceOptions> _resourceOptions;
+        protected IEnhancementRecordService EnhancementRecordService => GetRequiredService<IEnhancementRecordService>();
+        protected IEnhancerService EnhancerService => GetRequiredService<IEnhancerService>();
+        private readonly IBakabaseLocalizer _localizer;
+        private readonly IEnhancerLocalizer _enhancerLocalizer;
+
+        public MediaLibraryService(IServiceProvider serviceProvider,
             ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibrary, int> orm,
-            IPropertyService propertyService, IPropertyLocalizer propertyLocalizer) : base(serviceProvider)
+            IPropertyService propertyService, IPropertyLocalizer propertyLocalizer,
+            IBOptions<ResourceOptions> resourceOptions, IEnhancerLocalizer enhancerLocalizer,
+            IBakabaseLocalizer localizer) : base(serviceProvider)
         {
-            _localizer = localizer;
             _orm = orm;
             _propertyService = propertyService;
             _propertyLocalizer = propertyLocalizer;
+            _resourceOptions = resourceOptions;
+            _enhancerLocalizer = enhancerLocalizer;
+            _localizer = localizer;
         }
 
         public async Task<BaseResponse> Add(MediaLibraryAddDto model)
@@ -613,6 +630,9 @@ namespace Bakabase.InsideWorld.Business.Services
             var parentResources = new Dictionary<string, Resource>();
             var prevPathResourceMap = new Dictionary<string, Resource>();
             var unknownResources = new List<Resource>();
+            var fileNotFoundResources = new List<Resource>();
+            var categoryMediaLibraryKeyMap = categoryMap.ToDictionary(d => d.Key,
+                d => libraries.Where(l => l.CategoryId == d.Key).Select(x => x.Id).ToHashSet());
 
             var changedResources = new ConcurrentDictionary<string, Resource>();
 
@@ -738,11 +758,18 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
 
                         // Delete resources with unknown paths
-                        unknownResources.AddRange(prevResources.Where(x => !patchingResources.Keys.Contains(x.Path)));
+                        fileNotFoundResources.AddRange(
+                            prevResources.Where(x => !patchingResources.Keys.Contains(x.Path)));
+
+                        unknownResources.AddRange(prevResources.Where(x =>
+                            !categoryMediaLibraryKeyMap.TryGetValue(x.CategoryId, out var lIds) ||
+                            !lIds.Contains(x.MediaLibraryId)));
+
+                        var invalidResources = unknownResources.Concat(unknownResources).ToHashSet();
 
                         // var invalidIds = invalidResources.Select(r => r.Id).ToArray();
                         // await ResourceService.DeleteByKeys(invalidIds);
-                        prevResources.RemoveAll(x => unknownResources.Contains(x));
+                        prevResources.RemoveAll(x => invalidResources.Contains(x));
 
                         prevPathResourceMap = prevResources.ToDictionary(t => t.Path);
 
@@ -764,7 +791,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 changedResources[path] = resource;
                             }
 
-                            onProgressChange(basePercentage  + (int) (++count / resourceCountPerPercentage));
+                            onProgressChange(basePercentage + (int) (++count / resourceCountPerPercentage));
                         }
 
                         foreach (var (_, r) in changedResources)
@@ -797,6 +824,74 @@ namespace Bakabase.InsideWorld.Business.Services
                         onProgressChange(basePercentage + stepPercentage);
 
                         await InsideWorldAppService.Resource.SaveAsync(t => t.LastSyncDt = DateTime.Now);
+
+                        // Synchronization options
+                        var so = _resourceOptions.Value.SynchronizationOptions;
+                        if (so != null)
+                        {
+                            var toBeDeletedResourceIds =
+                                (from r in fileNotFoundResources
+                                    where r.ShouldBeDeletedSinceFileNotFound(so)
+                                    select r.Id).Concat(from r in unknownResources
+                                    where r.ShouldBeDeletedSinceUnknown(so)
+                                    select r.Id).ToList();
+
+                            if (toBeDeletedResourceIds.Any())
+                            {
+                                onProcessChange(_localizer.DeletingInvalidResources(toBeDeletedResourceIds.Count));
+
+                                await ResourceService.DeleteByKeys(toBeDeletedResourceIds.ToArray(), false);
+                            }
+
+                            // ResourceId - EnhancerIds
+                            var toBeDeletedEnhancementKeys = new Dictionary<int, HashSet<int>>();
+                            foreach (var pr in patchingResources.Values)
+                            {
+                                var eIds = pr.GetIdsOfEnhancersShouldBeReEnhanced(so);
+                                if (eIds?.Any() == true)
+                                {
+                                    toBeDeletedEnhancementKeys.GetOrAdd(pr.Id, eIds.ToHashSet);
+                                }
+                            }
+
+                            if (toBeDeletedEnhancementKeys.Any())
+                            {
+                                onProcessChange(
+                                    _enhancerLocalizer.Enhancer_DeletingEnhancementRecords(
+                                        toBeDeletedEnhancementKeys.Sum(x => x.Value.Count)));
+
+                                await EnhancementRecordService.DeleteAll(x =>
+                                    toBeDeletedEnhancementKeys.ContainsKey(x.ResourceId) &&
+                                    toBeDeletedEnhancementKeys[x.ResourceId].Contains(x.EnhancerId));
+                            }
+
+                            var toBeReAppliedEnhancementKeys = new Dictionary<int, HashSet<int>>();
+                            foreach (var pr in patchingResources.Values)
+                            {
+                                var eIds = pr.GetIdsOfEnhancersShouldBeReApplied(so);
+                                if (eIds != null)
+                                {
+                                    var delIds = toBeDeletedEnhancementKeys.GetValueOrDefault(pr.Id);
+                                    if (delIds?.Any() == true)
+                                    {
+                                        eIds = eIds.Except(delIds).ToArray();
+                                    }
+
+                                    toBeReAppliedEnhancementKeys.GetOrAdd(pr.Id, eIds.ToHashSet);
+                                }
+                            }
+
+                            if (toBeReAppliedEnhancementKeys.Any())
+                            {
+                                onProcessChange(
+                                    _enhancerLocalizer.Enhancer_ReApplyingEnhancements(
+                                        toBeReAppliedEnhancementKeys.Sum(x => x.Value.Count)));
+
+                                await EnhancerService.ReapplyEnhancementsByResources(
+                                    toBeReAppliedEnhancementKeys.ToDictionary(d => d.Key, d => d.Value.ToArray()),
+                                    CancellationToken.None);
+                            }
+                        }
 
                         break;
                     }

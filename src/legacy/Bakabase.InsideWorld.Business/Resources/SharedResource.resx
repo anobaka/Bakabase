@@ -402,4 +402,7 @@ The version of lux is not limited.</value>
   <data name="WrongPassword" xml:space="preserve">
     <value>Wrong password</value>
   </data>
+  <data name="DeletingInvalidResources" xml:space="preserve">
+    <value>Deleting {0} invalid resources</value>
+  </data>
 </root>

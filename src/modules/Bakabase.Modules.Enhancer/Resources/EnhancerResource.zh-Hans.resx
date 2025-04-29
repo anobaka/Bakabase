@@ -260,4 +260,10 @@
   <data name="Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties" xml:space="preserve">
     <value>在自定义属性中未能找到属性id为[{0}]的属性</value>
   </data>
+  <data name="Enhancer_DeletingEnhancementRecords" xml:space="preserve">
+    <value>正在删除{0}条增强记录</value>
+  </data>
+  <data name="Enhancer_ReApplyingEnhancements" xml:space="preserve">
+    <value>正在重新应用{0}条增强数据</value>
+  </data>
 </root>

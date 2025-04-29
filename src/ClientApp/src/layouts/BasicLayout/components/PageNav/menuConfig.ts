@@ -24,6 +24,11 @@ const asideMenuConfig: IMenuItem[] = [
     path: '/expandable-2',
     children: [
       {
+        name: 'Custom property',
+        path: '/customproperty',
+        icon: 'RadarChartOutlined',
+      },
+      {
         name: 'Synchronization options',
         path: '/synchronizationoptions',
         icon: 'SyncOutlined',
@@ -32,11 +37,6 @@ const asideMenuConfig: IMenuItem[] = [
         name: 'Custom component',
         path: '/customcomponent',
         icon: 'ControlOutlined',
-      },
-      {
-        name: 'Custom property',
-        path: '/customproperty',
-        icon: 'RadarChartOutlined',
       },
       {
         name: 'Bulk modification',
