@@ -119,7 +119,7 @@ export default (props: Props) => {
 
       bv ??= (property.options?.choices ?? []).find(x => x.value == dv)?.label;
       const vas = _.sortBy(property.options?.choices?.filter(o => dv?.includes(o.value)) ?? [],
-        x => dv?.findIndex(d => d.value == x.value));
+        x => x.value == dv);
       return (
         <ChoiceValueRenderer
           value={bv == undefined ? undefined : [bv]}
