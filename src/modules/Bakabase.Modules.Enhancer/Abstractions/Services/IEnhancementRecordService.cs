@@ -13,4 +13,5 @@ public interface IEnhancementRecordService
     Task Update(EnhancementRecord record);
     Task Update(IEnumerable<EnhancementRecord> records);
     Task DeleteAll(Expression<Func<Bakabase.Abstractions.Models.Db.EnhancementRecord, bool>>? exp);
+    Task DeleteByResourceAndEnhancers(Dictionary<int, HashSet<int>> resourceIdsAndEnhancerIds);
 }

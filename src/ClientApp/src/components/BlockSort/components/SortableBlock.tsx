@@ -5,9 +5,10 @@ import { Card, CardBody } from '@/components/bakaui';
 type Props = {
   id: any;
   name: any;
+  idx: number;
 };
 
-export default ({ id, name }: Props) => {
+export default ({ id, name, idx }: Props) => {
   const {
     attributes,
     listeners,
@@ -25,6 +26,7 @@ export default ({ id, name }: Props) => {
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <Card>
         <CardBody>
+          [{idx + 1}]
           {name}
         </CardBody>
       </Card>

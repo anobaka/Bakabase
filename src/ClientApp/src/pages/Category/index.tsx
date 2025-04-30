@@ -3,7 +3,8 @@ import { Loading, Menu } from '@alifd/next';
 import './index.scss';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import { DisconnectOutlined } from '@ant-design/icons';
+import { DisconnectOutlined, SettingOutlined } from '@ant-design/icons';
+import { history } from 'ice';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
 import { GetComponentDescriptors } from '@/sdk/apis';
 import SortableCategoryList from '@/pages/Category/components/SortableCategoryList';
@@ -95,6 +96,7 @@ export default () => {
   };
 
   useEffect(() => {
+    console.log('init');
     init();
   }, []);
 
@@ -184,6 +186,17 @@ export default () => {
         </div>
         <div className="right">
           <HandleUnknownResources />
+          <Button
+            size={'small'}
+            color={'primary'}
+            onPress={() => {
+              history!.push('/synchronizationoptions');
+            }}
+            variant={'light'}
+          >
+            <SettingOutlined className={'text-medium'} />
+            {t('Synchronization options')}
+          </Button>
           <Button
             color={'default'}
             size={'small'}

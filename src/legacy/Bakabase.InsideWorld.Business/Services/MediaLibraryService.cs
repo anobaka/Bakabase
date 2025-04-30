@@ -804,7 +804,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     case MediaLibrarySyncStep.SaveResources:
                     {
                         var resourcesToBeSaved = changedResources.Values.ToList();
-                        resourcesToBeSaved.AddRange(unknownResources.Where(ir =>
+                        resourcesToBeSaved.AddRange(fileNotFoundResources.Where(ir =>
                             ir.Tags.Add(ResourceTag.PathDoesNotExist)));
 
                         var newResources = resourcesToBeSaved.Where(a => a.Id == 0).ToArray();
@@ -824,6 +824,8 @@ namespace Bakabase.InsideWorld.Business.Services
                         onProgressChange(basePercentage + stepPercentage);
 
                         await InsideWorldAppService.Resource.SaveAsync(t => t.LastSyncDt = DateTime.Now);
+
+                        var allResources = resourcesToBeSaved.Concat(prevPathResourceMap.Values).ToList();
 
                         // Synchronization options
                         var so = _resourceOptions.Value.SynchronizationOptions;
@@ -845,7 +847,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             // ResourceId - EnhancerIds
                             var toBeDeletedEnhancementKeys = new Dictionary<int, HashSet<int>>();
-                            foreach (var pr in patchingResources.Values)
+                            foreach (var pr in allResources)
                             {
                                 var eIds = pr.GetIdsOfEnhancersShouldBeReEnhanced(so);
                                 if (eIds?.Any() == true)
@@ -860,13 +862,11 @@ namespace Bakabase.InsideWorld.Business.Services
                                     _enhancerLocalizer.Enhancer_DeletingEnhancementRecords(
                                         toBeDeletedEnhancementKeys.Sum(x => x.Value.Count)));
 
-                                await EnhancementRecordService.DeleteAll(x =>
-                                    toBeDeletedEnhancementKeys.ContainsKey(x.ResourceId) &&
-                                    toBeDeletedEnhancementKeys[x.ResourceId].Contains(x.EnhancerId));
+                                await EnhancementRecordService.DeleteByResourceAndEnhancers(toBeDeletedEnhancementKeys);
                             }
 
                             var toBeReAppliedEnhancementKeys = new Dictionary<int, HashSet<int>>();
-                            foreach (var pr in patchingResources.Values)
+                            foreach (var pr in allResources)
                             {
                                 var eIds = pr.GetIdsOfEnhancersShouldBeReApplied(so);
                                 if (eIds != null)
@@ -877,7 +877,10 @@ namespace Bakabase.InsideWorld.Business.Services
                                         eIds = eIds.Except(delIds).ToArray();
                                     }
 
-                                    toBeReAppliedEnhancementKeys.GetOrAdd(pr.Id, eIds.ToHashSet);
+                                    if (eIds.Any())
+                                    {
+                                        toBeReAppliedEnhancementKeys.GetOrAdd(pr.Id, eIds.ToHashSet);
+                                    }
                                 }
                             }
 

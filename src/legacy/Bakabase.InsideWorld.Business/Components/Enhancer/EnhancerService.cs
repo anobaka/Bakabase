@@ -732,9 +732,11 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
 
         public async Task ReapplyEnhancementsByResources(Dictionary<int, int[]> resourceIdsEnhancerIdsMap, CancellationToken ct)
         {
-            var enhancements = await _enhancementService.GetAll(x =>
-                resourceIdsEnhancerIdsMap.ContainsKey(x.ResourceId) &&
-                resourceIdsEnhancerIdsMap[x.ResourceId].Contains(x.EnhancerId));
+            var resourceIds = resourceIdsEnhancerIdsMap.Keys.ToList();
+            var enhancements = await _enhancementService.GetAll(x => resourceIds.Contains(x.ResourceId));
+
+            enhancements.RemoveAll(x => !resourceIdsEnhancerIdsMap[x.ResourceId].Contains(x.EnhancerId));
+
             await ApplyEnhancementsToResources(enhancements, ct);
         }
     }

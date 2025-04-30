@@ -29,11 +29,6 @@ const asideMenuConfig: IMenuItem[] = [
         icon: 'RadarChartOutlined',
       },
       {
-        name: 'Synchronization options',
-        path: '/synchronizationoptions',
-        icon: 'SyncOutlined',
-      },
-      {
         name: 'Custom component',
         path: '/customcomponent',
         icon: 'ControlOutlined',
@@ -116,6 +111,11 @@ const asideMenuConfig: IMenuItem[] = [
         name: 'Configuration',
         path: '/configuration',
         icon: 'AppstoreOutlined',
+      },
+      {
+        name: 'Synchronization options',
+        path: '/synchronizationoptions',
+        icon: 'SyncOutlined',
       },
       {
         name: 'Background Task',

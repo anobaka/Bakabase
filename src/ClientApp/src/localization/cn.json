@@ -1706,5 +1706,7 @@
   "It will delete all acquired enhanced data and applied enhanced data. Then, the enhancer will automatically attempt to reacquire and apply the data.":"此操作将删除所有已获取的增强数据和已应用的增强数据。然后，增强器将自动尝试重新获取并应用数据。",
   "Configuration item instructions": "配置项说明",
   "View configuration item instructions": "查看配置项说明",
-  "Synchronization options": "同步配置"
+  "Synchronization options": "同步配置",
+  "Adjust display orders": "调整展示顺序",
+  "Ignore the part inside the wrapper that is successfully matched by the regular expression": "忽略包裹符内部被正则匹配成功的部分"
 }

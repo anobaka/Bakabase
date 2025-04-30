@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './index.scss';
 import { useTranslation } from 'react-i18next';
-import { ArrowRightOutlined, DoubleRightOutlined } from '@ant-design/icons';
+import { ArrowRightOutlined, DoubleRightOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { SpecialTextType, specialTextTypes } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import {
@@ -48,7 +48,7 @@ const typeTagRendersMapping = {
 };
 
 const typeDescriptions = {
-  [SpecialTextType.Useless]: 'Text will be ignored if it surrounded by [wrappers]',
+  [SpecialTextType.Useless]: 'Ignore the part inside the wrapper that is successfully matched by the regular expression',
   [SpecialTextType.Language]: 'Text will be parsed as [specific language] if it surrounded by [wrappers]',
   [SpecialTextType.Wrapper]: 'Text wrapper, used to match and extract the text within the wrapper',
   [SpecialTextType.Standardization]: 'Treat [text1] as [text2] during analyzation',
@@ -134,11 +134,14 @@ export default () => {
             return (
               <TableRow>
                 <TableCell>
-                  <Tooltip
-                    content={t(typeDescriptions[type])}
-                  >
+                  <div className={'flex items-center gap-1'}>
                     {t(SpecialTextType[type])}
-                  </Tooltip>
+                    <Tooltip
+                      content={t(typeDescriptions[type])}
+                    >
+                      <QuestionCircleOutlined className={'text-medium'} />
+                    </Tooltip>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className={'flex gap-1 flex-wrap'}>

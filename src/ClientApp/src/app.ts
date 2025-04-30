@@ -23,8 +23,8 @@ export default defineAppConfig(() => ({
     type: 'hash',
   },
   app: {
-    strict: true,
     // errorBoundary: true,
+    // will cause rendering twice in development mode
     // strict: true,ga
   },
 }));

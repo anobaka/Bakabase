@@ -47,9 +47,10 @@ export default ({ blocks, onSorted }: Props) => {
         <SortableContext
           items={items}
         >
-          {items.map(id => (<SortableBlock
+          {items.map((id, idx) => (<SortableBlock
             key={id}
             id={id}
+            idx={idx}
             name={blocks.find(b => b.id == id)!.name}
           />))}
         </SortableContext>

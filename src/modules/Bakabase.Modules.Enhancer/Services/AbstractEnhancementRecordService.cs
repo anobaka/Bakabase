@@ -38,4 +38,17 @@ public abstract class AbstractEnhancementRecordService<TDbContext>(
     {
         await orm.RemoveAll(exp);
     }
+
+    public async Task DeleteByResourceAndEnhancers(Dictionary<int, HashSet<int>> resourceIdsAndEnhancerIds)
+    {
+        var resourceIds = resourceIdsAndEnhancerIds.Keys.ToList();
+        var data = await orm.GetAll(x => resourceIds.Contains(x.ResourceId));
+        var recordsToDelete = data.Where(x =>
+            resourceIdsAndEnhancerIds.TryGetValue(x.ResourceId, out var enhancerIds) &&
+            enhancerIds.Contains(x.EnhancerId)).ToList();
+        if (recordsToDelete.Any())
+        {
+            await orm.RemoveRange(recordsToDelete);
+        }
+    }
 }
