@@ -28,6 +28,7 @@ using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.Migrations;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Extensions;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Service.Components;
 using Bakabase.Service.Components.Tasks;
@@ -120,6 +121,8 @@ namespace Bakabase.Service
 
             services.AddBTask<BTaskEventHandler>();
             services.AddSingleton<PredefinedTasksProvider>();
+
+            services.AddMediaLibraryTemplate();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

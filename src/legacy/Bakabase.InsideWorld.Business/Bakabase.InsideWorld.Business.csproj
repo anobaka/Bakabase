@@ -10,6 +10,7 @@
 		<ProjectReference Include="..\..\miscellaneous\Bakabase.Prefabs\Bakabase.Prefabs.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.BulkModification\Bakabase.Modules.BulkModification.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.MediaLibraryTemplate\Bakabase.Modules.MediaLibraryTemplate.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Search\Bakabase.Modules.Search.csproj" />

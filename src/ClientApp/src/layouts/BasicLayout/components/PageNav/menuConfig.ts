@@ -24,6 +24,16 @@ const asideMenuConfig: IMenuItem[] = [
     path: '/expandable-2',
     children: [
       {
+        name: 'Media library template',
+        icon: 'AppstoreAddOutlined',
+        path: '/medialibrarytemplate',
+      },
+      {
+        name: 'Media library(Old)',
+        icon: 'ProductOutlined',
+        path: '/category',
+      },
+      {
         name: 'Custom property',
         path: '/customproperty',
         icon: 'RadarChartOutlined',
