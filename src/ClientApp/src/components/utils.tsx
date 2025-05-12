@@ -745,3 +745,20 @@ function adjustHSLAWithAlpha(hsla: string, alphaAdjustment: number): string {
 export function autoBackgroundColor(color: string): string {
   return adjustAlpha(color, 0.1);
 }
+
+export function generateNextWithPrefix(prefix: string, currentList: string[]): string {
+  const regex = new RegExp(`^${prefix} (\\d+)$`);
+
+  // Extract numbers from the list
+  const numbers = currentList
+    .map(item => {
+      const match = item.match(regex);
+      return match ? parseInt(match[1]!, 10) : null;
+    })
+    .filter(num => num !== null) as number[];
+
+  // Determine the next number
+  const nextNumber = numbers.length ? Math.max(...numbers) + 1 : 1;
+
+  return `${prefix} ${nextNumber}`;
+}

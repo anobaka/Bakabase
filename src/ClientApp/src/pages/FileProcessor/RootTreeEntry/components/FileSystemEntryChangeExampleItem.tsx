@@ -65,7 +65,7 @@ export default (props: Props) => {
             <Chip
               size={'sm'}
               variant={'light'}
-              className={'px-0'}
+              className={'px-0 whitespace-break-spaces'}
               classNames={{ content: 'px-0' }}
             >
               {text}

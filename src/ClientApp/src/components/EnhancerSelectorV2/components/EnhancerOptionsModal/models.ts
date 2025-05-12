@@ -22,7 +22,7 @@ export interface EnhancerTargetFullOptions {
   propertyPool?: PropertyPool;
 }
 
-export function defaultCategoryEnhancerTargetOptions(descriptor: EnhancerTargetDescriptor): EnhancerTargetFullOptions {
+export function createEnhancerTargetOptions(descriptor: EnhancerTargetDescriptor): EnhancerTargetFullOptions {
   const eto: EnhancerTargetFullOptions = {
     target: descriptor.id,
   };
@@ -30,7 +30,3 @@ export function defaultCategoryEnhancerTargetOptions(descriptor: EnhancerTargetD
   }
   return eto;
 }
-
-export type RegexEnhancerFullOptions = EnhancerFullOptions & {
-  expressions: string[];
-};

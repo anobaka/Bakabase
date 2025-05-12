@@ -12,6 +12,7 @@ import ClickableIcon from '@/components/ClickableIcon';
 import { Button, Checkbox, Switch, Tooltip } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
+import type { BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions } from '@/sdk/Api';
 
 interface IValue {
   targets: {
@@ -52,7 +53,7 @@ export default () => {
   const loadOptions = () => {
     BApi.options.getFileSystemOptions()
       .then(a => {
-        const fm = a.data?.fileMover || {};
+        const fm: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions = a.data?.fileMover || {};
         const value = {
           delay: fm.delay as string,
           enabled: fm.enabled ?? false,
@@ -60,6 +61,7 @@ export default () => {
             return {
               path: t.path!,
               sources: t.sources || [],
+              overwrite: t.overwrite,
             };
           }) || [],
         };
@@ -160,7 +162,14 @@ export default () => {
     targets = [],
   } = value;
 
-  const ds = targets.reduce((s: any[], t: any) => {
+  type Item = {
+    target: string;
+    rowSpan: number | undefined;
+    source: string;
+    overwrite: boolean;
+  };
+
+  const ds = targets.reduce<Item[]>((s, t) => {
     const sources = (t.sources || []).slice();
     // sources.push(null);
     const newArr = sources.map((x, i) => (
@@ -168,8 +177,19 @@ export default () => {
         target: t.path,
         rowSpan: i == 0 ? sources.length : undefined,
         source: x,
+        overwrite: t.overwrite,
       }
     ));
+
+    if (sources.length == 0) {
+      newArr.push({
+        target: t.path,
+        rowSpan: undefined,
+        source: undefined,
+        overwrite: undefined,
+      });
+    }
+
     newArr.sort((a, b) => {
       return (a == preferredSource ? -1 : 0) - (b == preferredSource ? -1 : 0);
     });
@@ -373,7 +393,7 @@ export default () => {
                   <div className={'flex items-center gap-1'}>
                     <Tooltip content={t('Overwrite files in target path')}>
                       <Checkbox
-                        checked={r.overwrite}
+                        isSelected={r.overwrite}
                         onValueChange={v => setOverwrite(target, v)}
                         size={'sm'}
                       >{t('Overwrite')}</Checkbox>

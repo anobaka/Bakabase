@@ -1,4 +1,5 @@
 import { FieldStringOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { BsRegex } from 'react-icons/bs';
 import { EnhancerId } from '@/sdk/constants';
 import DLsite from '@/assets/logo/dlsite.png';
 import Bangumi from '@/assets/logo/bangumi.png';
@@ -29,7 +30,7 @@ export default ({ id }: Props) => {
       );
     case EnhancerId.Regex:
       return (
-        <FieldStringOutlined className={'text-base'} />
+        <BsRegex className={'text-base'} />
       );
   }
   return (

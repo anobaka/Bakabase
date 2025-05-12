@@ -1708,5 +1708,11 @@
   "View configuration item instructions": "查看配置项说明",
   "Synchronization options": "同步配置",
   "Adjust display orders": "调整展示顺序",
-  "Ignore the part inside the wrapper that is successfully matched by the regular expression": "忽略包裹符内部被正则匹配成功的部分"
+  "Ignore the part inside the wrapper that is successfully matched by the regular expression": "忽略包裹符内部被正则匹配成功的部分",
+  "Rule": "规则",
+  "Through": "通过",
+  "Resource filter": "资源过滤器",
+  "Determine which files or folders will be considered as resources": "决定哪些文件或文件夹会被视作资源",
+  "Playable(Runnable) files": "可播放(运行)文件",
+  "Properties": "属性"
 }

@@ -7,7 +7,7 @@ import { buildLogger, createPortalOfComponent } from '@/components/utils';
 import type { PropertyType } from '@/sdk/constants';
 import { PropertyPool, StandardValueType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
-import { Button, Chip, Modal, Spacer, Tab, Tabs } from '@/components/bakaui';
+import { Button, Chip, Divider, Modal, Spacer, Tab, Tabs } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
@@ -52,18 +52,12 @@ const PropertySelector = (props: IProps) => {
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [selection, setSelection] = useState<Key[]>(propsSelection || []);
 
-  const [currentTab, setCurrentTab] = useState<string>('selected');
-
   // console.log('props selection', propsSelection, properties, addable, editable, removable);
 
   const loadProperties = async () => {
     const psr = (await BApi.property.getPropertiesByPool(pool)).data || [];
     // @ts-ignore
     setProperties(psr);
-
-    if (selection.length == 0) {
-      setCurrentTab('notSelected');
-    }
   };
 
   useEffect(() => {
@@ -72,7 +66,6 @@ const PropertySelector = (props: IProps) => {
 
   const renderProperty = (property: IProperty) => {
     const selected = selection.some(s => s.id == property.id && s.pool == property.pool);
-    // console.log(selection, property);
     return (
       <Property
         key={`${property.id}-${property.pool}`}
@@ -97,7 +90,6 @@ const PropertySelector = (props: IProps) => {
               }];
               setSelection(ns);
               await onSubmit(ns);
-              close();
             }
           }
         }}
@@ -112,7 +104,8 @@ const PropertySelector = (props: IProps) => {
   const onSubmit = async (selection: Key[]) => {
     // console.log(customProperties, selection);
     if (propsOnSubmit) {
-      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.pool == s.pool)).filter(x => x != undefined) as IProperty[]);
+      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.pool == s.pool))
+        .filter(x => x != undefined) as IProperty[]);
     }
   };
 
@@ -172,7 +165,8 @@ const PropertySelector = (props: IProps) => {
     }
     return true;
   });
-  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.pool == s.pool)).filter(x => x).map(x => x!);
+  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.pool == s.pool))
+    .filter(x => x).map(x => x!);
   const unselectedProperties = filteredProperties.filter(p => !selection.some(s => s.id == p.id && s.pool == p.pool));
   const propertyCount = selectedProperties.length + unselectedProperties.length;
 
@@ -202,50 +196,21 @@ const PropertySelector = (props: IProps) => {
     // todo: make framer-motion up-to-date once https://github.com/heroui-inc/heroui/issues/4805 is resolved.
 
     return (
-      <>
-        <Tabs aria-label="Selectable" isVertical selectedKey={currentTab} onSelectionChange={key => setCurrentTab(key as string)}>
-          <Tab key="selected" title={`${t('Selected')}(${selectedProperties.length})`}>
-            <div className={'flex flex-wrap gap-2 items-start'}>
-              {selectedProperties.map(p => renderProperty(p))}
-            </div>
-          </Tab>
-          <Tab key="notSelected" title={`${t('Not selected')}(${unselectedProperties.length})`}>
-            <div className={'flex flex-wrap gap-2 items-start'}>
-              {unselectedProperties.map(p => renderProperty(p))}
-            </div>
-          </Tab>
-        </Tabs>
-
-        {/* <div className={'flex gap-2'}> */}
-        {/*   <div className={'border-1 rounded p-2'}> */}
-        {/*     <div className={'font-bold'}>{t('Selected')}</div> */}
-
-        {/*   </div> */}
-        {/*   <div className={'border-1 rounded p-2 flex-1 border-dashed'}> */}
-        {/*     <div className={'font-bold'}>{t('Not selected')}</div> */}
-        {/*     <div className={'mt-2 flex flex-wrap gap-2 items-start'}> */}
-        {/*       {unselectedProperties.map(p => renderProperty(p))} */}
-        {/*     </div> */}
-        {/*   </div> */}
-        {/* </div> */}
-
-        {addable && (
-          <Button
-            color={'primary'}
-            size={'sm'}
-            className={'mt-2'}
-            onPress={() => {
-              createPortal(PropertyModal, {
-                  onSaved: loadProperties,
-                  validValueTypes: valueTypes?.map(v => v as unknown as PropertyType),
-                },
-              );
-            }}
-          >
-            {t('Add a property')}
-          </Button>
-        )}
-      </>
+      <div className={'flex flex-col gap-2'}>
+        <div className={'flex items-start gap-2'}>
+          <div className={'w-[100px] min-w-[100px] text-medium'}>{`${t('Selected')}(${selectedProperties.length})`}</div>
+          <div className={'flex flex-wrap gap-2 items-start'}>
+            {selectedProperties.map(p => renderProperty(p))}
+          </div>
+        </div>
+        <Divider />
+        <div className={'flex items-start gap-2'}>
+          <div className={'w-[100px] min-w-[100px] text-medium'}>{`${t('Not selected')}(${unselectedProperties.length})`}</div>
+          <div className={'flex flex-wrap gap-2 items-start'}>
+            {unselectedProperties.map(p => renderProperty(p))}
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -263,6 +228,24 @@ const PropertySelector = (props: IProps) => {
       <div>
         {renderFilter()}
         {renderProperties()}
+        <div>
+          {addable && (
+            <Button
+              color={'primary'}
+              size={'sm'}
+              className={'mt-2'}
+              onPress={() => {
+                createPortal(PropertyModal, {
+                    onSaved: loadProperties,
+                    validValueTypes: valueTypes?.map(v => v as unknown as PropertyType),
+                  },
+                );
+              }}
+            >
+              {t('Add a property')}
+            </Button>
+          )}
+        </div>
       </div>
     </Modal>
   );

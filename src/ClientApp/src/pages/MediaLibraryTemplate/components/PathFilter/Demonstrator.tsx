@@ -1,7 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { BsRegex } from 'react-icons/bs';
+import { FaLayerGroup } from 'react-icons/fa';
+import { IoLayersOutline } from 'react-icons/io5';
 import type { PathFilter } from '@/pages/MediaLibraryTemplate/models';
 import { pathFilterFsTypes, PathPositioner } from '@/sdk/constants';
 import PathFilterFsTypeBlock from '@/pages/MediaLibraryTemplate/components/PathFilterFsTypeBlock';
+import { Chip } from '@/components/bakaui';
 
 type Props = {
   filter: PathFilter;
@@ -10,15 +14,33 @@ type Props = {
 export default ({ filter }: Props) => {
   const { t } = useTranslation();
 
+  const renderPositioner = () => {
+    switch (filter.positioner) {
+      case PathPositioner.Layer:
+        return (
+          <>
+            <IoLayersOutline className={'text-medium'} />
+            {t('Layer')}
+          </>
+        );
+      case PathPositioner.Regex:
+        return (
+          <>
+            <BsRegex className={'text-medium'} />
+            {t('Regex')}
+          </>
+        );
+      default:
+        return t('Not supported');
+    }
+  };
+
   const renderLayerOrRegex = () => {
     switch (filter.positioner) {
       case PathPositioner.Layer:
-        if (filter.layer == 0) {
-          return t('Current path');
-        }
-        return t('The {{layer}} layer', { layer: filter.layer });
+        return filter.layer == undefined ? t('Not set') : filter.layer == 0 ? t('Current path') : t('The {{layer}} layer', { layer: filter.layer });
       case PathPositioner.Regex:
-        return filter.regex;
+        return filter.regex ?? t('Not set');
       default:
         return t('Not supported');
     }
@@ -33,29 +55,33 @@ export default ({ filter }: Props) => {
   };
 
   const renderExtensions = () => {
+    const texts = (filter.extensionGroups?.map(x => x.name) ?? []).concat(filter.extensions ?? []);
     return (
-      <>
-        {filter.extensionGroups?.map(g => g.name).join(',')}
-        {Array.from(filter.extensions ?? []).join(',')}
-      </>
+      <div className={'flex items-center gap-1'}>
+        {texts.map(t => {
+          return (
+            <Chip size={'sm'} radius={'sm'} variant={'flat'}>
+              {t}
+            </Chip>
+          );
+        })}
+      </div>
     );
   };
 
   return (
-    <>
-      <div>
+    <div className={'flex items-center gap-2'}>
+      <div className={'flex items-center gap-1'}>
         {t('Through')}
-        {PathPositioner[filter.positioner]}
+        {renderPositioner()}
       </div>
-      <div>
+      <div className={'flex items-center gap-1'}>
         {renderLayerOrRegex()}
       </div>
-      <div>
+      <div className={'flex items-center gap-1'}>
         {renderFsTypeBlocks()}
       </div>
-      <div>
-        {renderExtensions()}
-      </div>
-    </>
+      {renderExtensions()}
+    </div>
   );
 };

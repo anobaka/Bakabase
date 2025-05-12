@@ -1,3 +1,5 @@
+import type { IdName } from '@/components/types';
+
 export enum PathPositioner {
   Layer = 1,
   Regex = 2,
@@ -11,9 +13,9 @@ export enum PathFilterFsType {
 
 export type PathFilter = PathLocator & {
   fsType?: PathFilterFsType;
-  extensionGroupIds?: Set<number>;
-  extensionGroups?: {id: number; name: string}[];
-  extensions?: Set<string>;
+  extensionGroupIds?: number[];
+  extensionGroups?: IdName[];
+  extensions?: string[];
 };
 
 export type PathLocator = {

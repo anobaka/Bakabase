@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button, Message } from '@alifd/next';
 import type { ButtonProps } from '@alifd/next/types/button';
 import { useTranslation } from 'react-i18next';
+import { useUpdateEffect } from 'react-use';
 import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 
@@ -30,6 +31,10 @@ export default ({
   const { t } = useTranslation();
   const [innerValue, setInnerValue] = useState(propsValue ?? propsDefaultValue);
 
+  useUpdateEffect(() => {
+    setInnerValue(propsValue);
+  }, [propsValue]);
+6;
   const onChange = v => {
     if (propsValue === undefined) {
       setInnerValue(v);
