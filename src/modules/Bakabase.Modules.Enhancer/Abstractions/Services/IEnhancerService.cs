@@ -1,4 +1,6 @@
 ﻿using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bootstrap.Components.Tasks;
 
 namespace Bakabase.Modules.Enhancer.Abstractions.Services;
@@ -10,4 +12,5 @@ public interface IEnhancerService
     Task ReapplyEnhancementsByCategory(int categoryId, int enhancerId, CancellationToken ct);
     Task ReapplyEnhancementsByResources(int[] resourceIds, int[] enhancerIds, CancellationToken ct);
     Task ReapplyEnhancementsByResources(Dictionary<int, int[]> resourceIdsEnhancerIdsMap, CancellationToken ct);
+    Task Enhance(Resource resource, Dictionary<int, EnhancerFullOptions> optionsMap);
 }

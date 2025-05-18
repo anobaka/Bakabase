@@ -40,6 +40,7 @@ using Humanizer.Localisation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using static Bakabase.Abstractions.Models.Domain.Resource.Property;
 using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancer;
 
 namespace Bakabase.InsideWorld.Business.Components.Enhancer
@@ -63,6 +64,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
         private readonly ICategoryService _categoryService;
         private readonly IEnhancementRecordService _enhancementRecordService;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IPropertyService _propertyService;
 
         public EnhancerService(ICustomPropertyService customPropertyService, IResourceService resourceService,
             ICustomPropertyValueService customPropertyValueService,
@@ -71,7 +73,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger,
             ICategoryService categoryService, IEnhancementRecordService enhancementRecordService,
             IBakabaseLocalizer bakabaseLocalizer, IReservedPropertyValueService reservedPropertyValueService,
-            IPropertyLocalizer propertyLocalizer, IServiceProvider serviceProvider)
+            IPropertyLocalizer propertyLocalizer, IServiceProvider serviceProvider, IPropertyService propertyService)
         {
             _customPropertyService = customPropertyService;
             _resourceService = resourceService;
@@ -89,6 +91,7 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             _reservedPropertyValueService = reservedPropertyValueService;
             _propertyLocalizer = propertyLocalizer;
             _serviceProvider = serviceProvider;
+            _propertyService = propertyService;
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 
@@ -738,6 +741,104 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
             enhancements.RemoveAll(x => !resourceIdsEnhancerIdsMap[x.ResourceId].Contains(x.EnhancerId));
 
             await ApplyEnhancementsToResources(enhancements, ct);
+        }
+
+        public async Task Enhance(Abstractions.Models.Domain.Resource resource, Dictionary<int, EnhancerFullOptions> optionsMap)
+        {
+            var propertyMap = (await _propertyService.GetProperties(PropertyPool.All)).ToMap();
+            foreach (var (enhancerId, fullOptions) in optionsMap)
+            {
+                var enhancer = _enhancers.GetValueOrDefault(enhancerId);
+                if (enhancer != null)
+                {
+                    var rawValues = await enhancer.CreateEnhancements(resource, fullOptions, CancellationToken.None);
+                    if (rawValues != null)
+                    {
+                        var enhancerDescriptor = _enhancerDescriptors[enhancerId];
+                        foreach (var rawValue in rawValues)
+                        {
+                            var targetDescriptor = enhancerDescriptor.Targets.First(x => x.Id == rawValue.Target);
+                            var targetOptions = fullOptions.TargetOptions?.FirstOrDefault(x =>
+                                x.Target == rawValue.Target && rawValue.DynamicTarget == x.DynamicTarget);
+                            if (targetDescriptor.IsDynamic && rawValue.DynamicTarget.IsNotEmpty() &&
+                                targetOptions == null)
+                            {
+                                targetOptions = fullOptions.TargetOptions?.FirstOrDefault(x =>
+                                    x.Target == rawValue.Target && x.DynamicTarget.IsNullOrEmpty());
+                            }
+
+                            if (targetOptions != null)
+                            {
+                                Property? property = null;
+                                if (targetOptions.AutoBindProperty == true)
+                                {
+                                    if (targetDescriptor.ReservedPropertyCandidate.HasValue)
+                                    {
+                                        property = propertyMap.GetValueOrDefault(PropertyPool.Reserved)
+                                            ?.GetValueOrDefault((int)targetDescriptor.ReservedPropertyCandidate);
+                                    }
+                                    else
+                                    {
+                                        var pd = PropertyInternals.DescriptorMap[targetDescriptor.PropertyType];
+                                        property = new Property(PropertyPool.Custom, 0, targetDescriptor.PropertyType,
+                                            targetDescriptor.Name, pd.InitializeOptions());
+                                    }
+                                }
+                                else
+                                {
+                                    if (targetOptions.PropertyPool.HasValue && targetOptions.PropertyId.HasValue)
+                                    {
+                                        property = propertyMap.GetValueOrDefault(targetOptions.PropertyPool.Value)
+                                            ?.GetValueOrDefault(targetOptions.PropertyId.Value);
+                                    }
+                                }
+
+                                if (property != null)
+                                {
+                                    var value = targetDescriptor.EnhancementConverter == null
+                                        ? rawValue.Value 
+                                        : targetDescriptor.EnhancementConverter.Convert(rawValue.Value, property);
+
+                                    var nv = await _standardValueService.Convert(value, rawValue.ValueType,
+                                        property.Type.GetBizValueType());
+
+                                    resource.Properties ??= [];
+                                    var rpp = resource.Properties.GetOrAdd((int)property.Pool, () => [])!;
+                                    Abstractions.Models.Domain.Resource.Property rp;
+                                    if (property.Id > 0)
+                                    {
+                                        rp = rpp.GetOrAdd(
+                                            property.Id,
+                                            () => new Abstractions.Models.Domain.Resource.Property(property.Name,
+                                                property.Type, property.Type.GetDbValueType(),
+                                                property.Type.GetBizValueType(), [], true, property.Order));
+                                    }
+                                    else
+                                    {
+                                        var t = rpp.Values.FirstOrDefault(x =>
+                                            x.Type == property.Type && x.Name == property.Name);
+                                        if (t == null)
+                                        {
+                                            // Fake property
+                                            var fakeId = Math.Max(rpp.Keys.Any() ? rpp.Keys.Max() : 0, 9999) + 1;
+                                            t = new Abstractions.Models.Domain.Resource.Property(property.Name,
+                                                property.Type, property.Type.GetDbValueType(),
+                                                property.Type.GetBizValueType(), [], true, property.Order);
+                                            rpp[fakeId] = t;
+                                        }
+
+                                        rp = t;
+                                    }
+
+                                    rp.Values ??= [];
+                                    rp.Values.Add(new Abstractions.Models.Domain.Resource.Property.PropertyValue(
+                                        enhancerDescriptor.PropertyValueScope, null, nv, nv));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

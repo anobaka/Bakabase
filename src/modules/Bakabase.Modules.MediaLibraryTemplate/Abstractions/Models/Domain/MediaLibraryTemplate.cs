@@ -2,7 +2,7 @@
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator;
 
-namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models;
+namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 
 public record MediaLibraryTemplate
 {
@@ -14,6 +14,5 @@ public record MediaLibraryTemplate
     public MediaLibraryTemplatePlayableFileLocator? PlayableFileLocator { get; set; }
     public List<MediaLibraryTemplateEnhancerOptions>? Enhancers { get; set; }
     public string? DisplayNameTemplate { get; set; }
-
     public List<string>? SamplePaths { get; set; }
 }

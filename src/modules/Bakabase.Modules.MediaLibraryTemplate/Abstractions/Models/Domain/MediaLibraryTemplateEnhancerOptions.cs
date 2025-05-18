@@ -1,6 +1,6 @@
 ﻿using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 
-namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models;
+namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 
 public record MediaLibraryTemplateEnhancerOptions
 {

@@ -1,7 +1,8 @@
-﻿using Bakabase.Abstractions.Models.Domain.Constants;
+﻿using Bakabase.Abstractions.Components.Property;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator;
 
-namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models;
+namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 
 public record MediaLibraryTemplateProperty
 {

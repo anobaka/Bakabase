@@ -7,12 +7,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
-    <ProjectReference Include="..\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj" />
+    <Compile Remove="Abstractions\Models\Constants\**" />
+    <EmbeddedResource Remove="Abstractions\Models\Constants\**" />
+    <None Remove="Abstractions\Models\Constants\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Abstractions\Models\Constants\" />
+    <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
+    <ProjectReference Include="..\Bakabase.Modules.Enhancer\Bakabase.Modules.Enhancer.csproj" />
+    <ProjectReference Include="..\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Abstractions\Models\Db\" />
     <Folder Include="Abstractions\Services\" />
     <Folder Include="Services\" />
   </ItemGroup>

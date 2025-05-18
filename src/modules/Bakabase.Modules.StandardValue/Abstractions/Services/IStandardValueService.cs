@@ -6,5 +6,5 @@ namespace Bakabase.Modules.StandardValue.Abstractions.Services;
 
 public interface IStandardValueService
 {
-    Task<object? > Convert(object? data, StandardValueType fromType, StandardValueType toType);
+    Task<object?> Convert(object? data, StandardValueType fromType, StandardValueType toType);
 }

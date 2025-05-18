@@ -1,4 +1,4 @@
-﻿namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models;
+﻿namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 
 public record PathMediaLibraryTemplateBinding
 {

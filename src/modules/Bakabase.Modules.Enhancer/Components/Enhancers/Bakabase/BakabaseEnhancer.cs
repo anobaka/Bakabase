@@ -106,7 +106,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             {
                 if (string.IsNullOrEmpty(cover.Path))
                 {
-                    ctx.CoverPath = await cover.SaveTo(BuildFilePath(resource.Id, "cover"), true, CancellationToken.None);
+                    ctx.CoverPath = await cover.SaveTo(BuildFilePath(resource, "cover"), true, CancellationToken.None);
                 }
                 else
                 {

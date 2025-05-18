@@ -60,7 +60,7 @@ public class DLsiteEnhancer : AbstractEnhancer<DLsiteEnhancerTarget, DLsiteEnhan
                 var queryIdx = coverUrl.IndexOf('?');
                 var coverUrlWithoutQuery = queryIdx == -1 ? coverUrl : coverUrl[..queryIdx];
                 var filenameInUrl = Path.GetFileName(coverUrlWithoutQuery).RemoveInvalidFileNameChars();
-                var coverPath = await SaveFile(resource.Id, $"cover.{index}.{filenameInUrl}", imageData);
+                var coverPath = await SaveFile(resource, $"cover.{index}.{filenameInUrl}", imageData);
                 coverPaths.Add(coverPath);
             }
 
