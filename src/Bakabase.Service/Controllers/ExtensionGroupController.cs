@@ -1,10 +1,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers;
 
@@ -13,13 +15,15 @@ namespace Bakabase.Service.Controllers;
 public class ExtensionGroupController(IExtensionGroupService service) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<ExtensionGroup[]>> GetAll()
+    [SwaggerOperation(OperationId = "GetAllExtensionGroups")]
+    public async Task<ListResponse<ExtensionGroup>> GetAll()
     {
         var groups = await service.GetAll();
-        return Ok(groups);
+        return new ListResponse<ExtensionGroup>(groups);
     }
 
     [HttpGet("{id:int}")]
+    [SwaggerOperation(OperationId = "GetExtensionGroup")]
     public async Task<SingletonResponse<ExtensionGroup>> Get(int id)
     {
         var g = await service.Get(id);
@@ -27,14 +31,16 @@ public class ExtensionGroupController(IExtensionGroupService service) : Controll
     }
 
     [HttpPost]
-    public async Task<BaseResponse> Add([FromBody] ExtensionGroup group)
+    [SwaggerOperation(OperationId = "AddExtensionGroup")]
+    public async Task<BaseResponse> Add([FromBody] ExtensionGroupAddInputModel group)
     {
         await service.Add(group);
         return BaseResponseBuilder.Ok;
     }
 
     [HttpPut("{id:int}")]
-    public async Task<BaseResponse> Put(int id, [FromBody] ExtensionGroup group)
+    [SwaggerOperation(OperationId = "PutExtensionGroup")]
+    public async Task<BaseResponse> Put(int id, [FromBody] ExtensionGroupPutInputModel group)
     {
         await service.Put(id, group);
         return BaseResponseBuilder.Ok;
@@ -42,6 +48,7 @@ public class ExtensionGroupController(IExtensionGroupService service) : Controll
     }
 
     [HttpDelete("{id:int}")]
+    [SwaggerOperation(OperationId = "DeleteExtensionGroup")]
     public async Task<BaseResponse> Delete(int id)
     {
         await service.Delete(id);

@@ -1,5 +1,6 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Legacy.Models;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Models.Entities;
@@ -9,8 +10,14 @@ using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using Category = Bakabase.Abstractions.Models.Db.Category;
+using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions;
+using Enhancement = Bakabase.Abstractions.Models.Db.Enhancement;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
 using LegacyAlias = Bakabase.InsideWorld.Models.Models.Entities.LegacyAlias;
+using MediaLibrary = Bakabase.Abstractions.Models.Db.MediaLibrary;
+using ReservedPropertyValue = Bakabase.Abstractions.Models.Db.ReservedPropertyValue;
+using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 using Tag = Bakabase.InsideWorld.Models.Models.Entities.Tag;
 
 namespace Bakabase.InsideWorld.Business
@@ -66,6 +73,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ResourceCacheDbModel> ResourceCaches { get; set; }
 
         public DbSet<PlayHistoryDbModel> PlayHistories { get; set; }
+
+        public DbSet<ExtensionGroupDbModel> ExtensionGroups { get; set; }
 
         public InsideWorldDbContext()
         {

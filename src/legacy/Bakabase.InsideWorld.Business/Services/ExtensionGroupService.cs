@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bootstrap.Components.Orm;
 
@@ -12,22 +13,26 @@ public class ExtensionGroupService(FullMemoryCacheResourceService<InsideWorldDbC
     : IExtensionGroupService
 {
     public async Task<ExtensionGroup[]> GetAll() => (await orm.GetAll()).Select(x => x.ToDomainModel()).ToArray();
-
-    public async Task Add(ExtensionGroup group)
+    public async Task<ExtensionGroup> Get(int id)
     {
-        await orm.Add(group.ToDbModel());
+        var eg = await orm.GetByKey(id);
+        return eg.ToDomainModel();
     }
 
-    public async Task Put(int id, ExtensionGroup group)
+    public async Task Add(ExtensionGroupAddInputModel group)
     {
-        var data = await orm.GetByKey(id);
-        var putModel = group.ToDbModel();
+        await orm.Add(new ExtensionGroupDbModel(0, group.Name, string.Empty));
+    }
+
+    public async Task Put(int id, ExtensionGroupPutInputModel group)
+    {
+        var data = await Get(id);
         data = data with
         {
-            Name = putModel.Name,
-            Extensions = putModel.Extensions
+            Name = group.Name,
+            Extensions = group.Extensions
         };
-        await orm.Update(data);
+        await orm.Update(data.ToDbModel());
     }
 
     public async Task Delete(int id)

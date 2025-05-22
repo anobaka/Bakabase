@@ -233,6 +233,14 @@ export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
   bizValue?: any;
 }
 
+export interface BakabaseAbstractionsModelsDomainExtensionGroup {
+  /** @format int32 */
+  id: number;
+  name: string;
+  /** @uniqueItems true */
+  extensions: string[];
+}
+
 export interface BakabaseAbstractionsModelsDomainMediaLibrary {
   /** @format int32 */
   id: number;
@@ -283,6 +291,19 @@ export interface BakabaseAbstractionsModelsDomainPathConfigurationTestResultReso
   /** @format int32 */
   id: number;
   isCustom: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainProperty {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  id: number;
+  name: string;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+  options?: any;
+  /** @format int32 */
+  order: number;
 }
 
 export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
@@ -437,6 +458,16 @@ export interface BakabaseAbstractionsModelsInputCategoryPatchInputModel {
   /** @format int32 */
   order?: number;
   generateNfo?: boolean;
+}
+
+export interface BakabaseAbstractionsModelsInputExtensionGroupAddInputModel {
+  name: string;
+}
+
+export interface BakabaseAbstractionsModelsInputExtensionGroupPutInputModel {
+  name: string;
+  /** @uniqueItems true */
+  extensions: string[];
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryAddInBulkInputModel {
@@ -1439,6 +1470,73 @@ export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptions
   dynamicTarget?: string;
 }
 
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilter {
+  /** [1: Layer, 2: Regex] */
+  positioner: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathPositioner;
+  /** @format int32 */
+  layer?: number;
+  regex?: string;
+  /** [1: File, 2: Directory] */
+  fsType?: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilterFsType;
+  /** @uniqueItems true */
+  extensions?: string[];
+}
+
+/**
+ * [1: File, 2: Directory]
+ * @format int32
+ */
+export type BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilterFsType = 1 | 2;
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathLocator {
+  /** [1: Layer, 2: Regex] */
+  positioner: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathPositioner;
+  /** @format int32 */
+  layer?: number;
+  regex?: string;
+}
+
+/**
+ * [1: Layer, 2: Regex]
+ * @format int32
+ */
+export type BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathPositioner = 1 | 2;
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate {
+  /** @format int32 */
+  id: number;
+  name: string;
+  resourceFilters?: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilter[];
+  properties?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateProperty[];
+  playableFileLocator?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplatePlayableFileLocator;
+  enhancers?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateEnhancerOptions[];
+  displayNameTemplate?: string;
+  samplePaths?: string[];
+}
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateEnhancerOptions {
+  /** @format int32 */
+  enhancerId: number;
+  options?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions;
+}
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplatePlayableFileLocator {
+  /** @uniqueItems true */
+  extensionGroupIds?: number[];
+  extensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
+  /** @uniqueItems true */
+  extensions?: string[];
+}
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateProperty {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  id: number;
+  property?: BakabaseAbstractionsModelsDomainProperty;
+  valueLocators?: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathLocator[];
+}
+
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
   results?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTin[];
 }
@@ -1918,6 +2016,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsDomainConstantsSearchOperation[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainExtensionGroup {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainExtensionGroup[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibrary {
   /** @format int32 */
   code: number;
@@ -1979,6 +2084,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhanc
   code: number;
   message?: string;
   data?: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel {
@@ -2186,6 +2298,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data: BakabaseAbstractionsModelsDomainConstantsInitializationContentType;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainExtensionGroup {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainExtensionGroup;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibrary {
   /** @format int32 */
   code: number;
@@ -2373,6 +2492,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsEntitiesComponentOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
@@ -5951,6 +6077,90 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  extensionGroup = {
+    /**
+     * No description
+     *
+     * @tags ExtensionGroup
+     * @name GetAllExtensionGroups
+     * @request GET:/extension-group
+     */
+    getAllExtensionGroups: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainExtensionGroup, any>({
+        path: `/extension-group`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExtensionGroup
+     * @name AddExtensionGroup
+     * @request POST:/extension-group
+     */
+    addExtensionGroup: (data: BakabaseAbstractionsModelsInputExtensionGroupAddInputModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/extension-group`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExtensionGroup
+     * @name GetExtensionGroup
+     * @request GET:/extension-group/{id}
+     */
+    getExtensionGroup: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainExtensionGroup, any>({
+        path: `/extension-group/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExtensionGroup
+     * @name PutExtensionGroup
+     * @request PUT:/extension-group/{id}
+     */
+    putExtensionGroup: (
+      id: number,
+      data: BakabaseAbstractionsModelsInputExtensionGroupPutInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/extension-group/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExtensionGroup
+     * @name DeleteExtensionGroup
+     * @request DELETE:/extension-group/{id}
+     */
+    deleteExtensionGroup: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/extension-group/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
   file = {
     /**
      * No description
@@ -6656,6 +6866,128 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/log/read`,
         method: "PATCH",
         format: "json",
+        ...params,
+      }),
+  };
+  mediaLibraryTemplate = {
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name MediaLibraryTemplateList
+     * @request GET:/media-library-template
+     */
+    mediaLibraryTemplateList: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate,
+        any
+      >({
+        path: `/media-library-template`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name MediaLibraryTemplateCreate
+     * @request POST:/media-library-template
+     */
+    mediaLibraryTemplateCreate: (
+      data: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name MediaLibraryTemplateDetail
+     * @request GET:/media-library-template/{id}
+     */
+    mediaLibraryTemplateDetail: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate,
+        any
+      >({
+        path: `/media-library-template/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name MediaLibraryTemplateUpdate
+     * @request PUT:/media-library-template/{id}
+     */
+    mediaLibraryTemplateUpdate: (
+      id: number,
+      data: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name MediaLibraryTemplateDelete
+     * @request DELETE:/media-library-template/{id}
+     */
+    mediaLibraryTemplateDelete: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetMediaLibraryTemplateShareText
+     * @request GET:/media-library-template/{id}/share-text
+     */
+    getMediaLibraryTemplateShareText: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/media-library-template/${id}/share-text`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name AppendMediaLibraryTemplateShareTextToPng
+     * @request PUT:/media-library-template/{id}/share-png/text
+     */
+    appendMediaLibraryTemplateShareTextToPng: (id: number, params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/media-library-template/${id}/share-png/text`,
+        method: "PUT",
         ...params,
       }),
   };

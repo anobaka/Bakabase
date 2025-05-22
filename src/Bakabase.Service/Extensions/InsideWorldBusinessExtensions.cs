@@ -128,6 +128,9 @@ namespace Bakabase.Service.Extensions
 
             services.AddBulkModification<InsideWorldDbContext>();
 
+            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ExtensionGroupDbModel, int>>();
+            services.AddScoped<IExtensionGroupService, ExtensionGroupService>();
+
             #endregion
 
             return services;

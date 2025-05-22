@@ -334,6 +334,14 @@ public abstract class AbstractMediaLibraryTemplateService<TDbContext>(
         return domainModel;
     }
 
+    public async Task<Abstractions.Models.Domain.MediaLibraryTemplate[]> GetAll()
+    {
+        var templates = await orm.GetAll();
+        var domainModels = templates.Select(x => x.ToDomainModel()).ToArray();
+        await Populate(domainModels);
+        return domainModels;
+    }
+
     public async Task Add(Abstractions.Models.Domain.MediaLibraryTemplate template)
     {
         await orm.Add(template.ToDbModel());

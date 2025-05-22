@@ -44,6 +44,11 @@ const asideMenuConfig: IMenuItem[] = [
         icon: 'ControlOutlined',
       },
       {
+        name: 'Extension group',
+        path: '/extensiongroup',
+        icon: 'UngroupOutlined',
+      },
+      {
         name: 'Bulk modification',
         path: '/bulkmodification2',
         icon: 'FormOutlined',

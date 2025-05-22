@@ -24,6 +24,7 @@ using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
+using Bakabase.InsideWorld.Business.Components.MediaLibraryTemplate;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
 using Bakabase.InsideWorld.Business.Configurations;
@@ -122,7 +123,7 @@ namespace Bakabase.Service
             services.AddBTask<BTaskEventHandler>();
             services.AddSingleton<PredefinedTasksProvider>();
 
-            services.AddMediaLibraryTemplate();
+            services.AddMediaLibraryTemplate<MediaLibraryTemplateService>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

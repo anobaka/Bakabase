@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
@@ -63,6 +64,6 @@ public class MediaLibraryTemplateController(IMediaLibraryTemplateService service
     public async Task<IActionResult> AppendShareTextToPng(int id)
     {
         var text = await service.ExportToText(id);
-        return new SingletonResponse<string>(text);
+        throw new NotImplementedException();
     }
 }
