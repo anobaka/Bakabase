@@ -1,10 +1,12 @@
-﻿using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator;
+﻿using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator;
 
 namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter;
 
-public record PathFilter(
-    PathPositioner Positioner,
-    int? Layer,
-    string? Regex,
-    PathFilterFsType? FsType,
-    HashSet<string>? Extensions) : PathLocator.PathLocator(Positioner, Layer, Regex);
+public record PathFilter : PathLocator.PathLocator
+{
+    public PathFilterFsType? FsType { get; set; }
+    public int[]? ExtensionGroupIds { get; set; }
+    public ExtensionGroup[]? ExtensionGroups { get; set; }
+    public HashSet<string>? Extensions { get; set; }
+}

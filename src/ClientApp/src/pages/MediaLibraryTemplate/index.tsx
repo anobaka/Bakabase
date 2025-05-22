@@ -15,6 +15,9 @@ import { CardHeader } from '@heroui/react';
 import { CiFilter } from 'react-icons/ci';
 import { FaRightLong } from 'react-icons/fa6';
 import { TiChevronRightOutline } from 'react-icons/ti';
+import { GoShareAndroid } from 'react-icons/go';
+import { MdDeleteOutline } from 'react-icons/md';
+import toast from 'react-hot-toast';
 import type { PathFilter, PathLocator } from './models';
 import { PathFilterFsType } from './models';
 import { PathFilterDemonstrator, PathFilterModal } from './components/PathFilter';
@@ -91,7 +94,7 @@ type MediaLibraryTemplateEnhancerOptions = {
   options?: EnhancerFullOptions;
 };
 
-const testFileExtensionsGroups: IdName[] = [
+const testFileExtensionGroups: IdName[] = [
   {
     id: 1,
     name: 'Video files',
@@ -113,7 +116,7 @@ export default () => {
   const forceUpdate = useUpdate();
 
   const [templates, setTemplates] = useState<MediaLibraryTemplate[]>(testData);
-  const [fileExtensionsGroups, setFileExtensionsGroups] = useState<IdName[]>(testFileExtensionsGroups);
+  const [extensionGroups, setExtensionGroups] = useState<IdName[]>([]);
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
   const [propertyMap, setPropertyMap] = useState<PropertyMap>({});
 
@@ -122,6 +125,21 @@ export default () => {
     const psr = (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
     const ps = _.mapValues(_.groupBy(psr, x => x.pool), (v) => _.keyBy(v, x => x.id));
     setPropertyMap(ps);
+  };
+
+  const loadTemplates = async () => {
+    const r = await BApi.mediaLibraryTemplate.getAllMediaLibraryTemplates();
+    if (!r.code) {
+      setTemplates(r.data || []);
+    }
+  };
+
+  // load one template
+  const loadTemplate = async (id: number) => {
+    const r = await BApi.mediaLibraryTemplate.getMediaLibraryTemplate(id);
+    if (!r.code) {
+      setTemplates(templates.map(t => (t.id == r.data?.id ? r.data : t)));
+    }
   };
 
   useEffect(() => {
@@ -134,7 +152,16 @@ export default () => {
       setEnhancers(r.data || []);
     });
     loadProperties();
+    loadTemplates();
   }, []);
+
+  const putTemplate = async (tpl: MediaLibraryTemplate) => {
+    const r = await BApi.mediaLibraryTemplate.putMediaLibraryTemplate(tpl.id, tpl);
+    if (!r.code) {
+      toast.success(t('Saved successfully'));
+      await loadTemplate(tpl.id);
+    }
+  };
 
   return (
     <div>
@@ -142,10 +169,46 @@ export default () => {
         <Button
           size={'sm'}
           color={'primary'}
+          onPress={() => {
+            let name = '';
+            createPortal(Modal, {
+              defaultVisible: true,
+              title: t('Create a template'),
+              children: (
+                <Input
+                  label={t('Template name')}
+                  placeholder={t('Enter template name')}
+                  isRequired
+                  onValueChange={v => {
+                    name = v;
+                  }}
+                />
+              ),
+              onOk: async () => {
+                const r = await BApi.mediaLibraryTemplate.addMediaLibraryTemplate({ name });
+                if (!r.code) {
+                  loadTemplates();
+                }
+              },
+            });
+          }}
         >{t('Create a template')}</Button>
         <Button
           size={'sm'}
           color={'default'}
+          onPress={() => {
+            let code = '';
+            createPortal(Modal, {
+              defaultVisible: true,
+              title: t('Importing a template'),
+              children: (
+                <Textarea label={t('Share code')} placeholder={t('Paste share code here')} isRequired onValueChange={v => code = v} />
+              ),
+              onOk: async () => {
+                // todo:
+              },
+            });
+          }}
         >
           <ImportOutlined />
           {t('Import a template')}
@@ -161,7 +224,55 @@ export default () => {
               <AccordionItem
                 key={tpl.id}
                 title={(
-                  <div className={'font-bold'}>{tpl.name}</div>
+                  <div className={'flex items-center justify-between'}>
+                    <div className={'font-bold'}>{tpl.name}</div>
+                    <div className={'flex items-center gap-1'}>
+                      <Button
+                        size={'sm'}
+                        isIconOnly
+                        variant={'light'}
+                        onPress={async () => {
+                          // todo: get share text
+                          const r = await BApi.mediaLibraryTemplate.getMediaLibraryTemplateShareText(tpl.id);
+                          if (!r.code && r.data) {
+                            const shareText = r.data;
+                            await navigator.clipboard.writeText(shareText);
+                            createPortal(Modal, {
+                              defaultVisible: true,
+                              title: t('Share code has been copied'),
+                              children: t('Share code has been copied to your clipboard, you can send it to your friends. (ctrl+v)'),
+                              footer: {
+                                actions: ['ok'],
+                                okProps: {
+                                  children: t('I got it'),
+                                },
+                              },
+                            });
+                          }
+                        }}
+                      >
+                        <GoShareAndroid className={'text-large'} />
+                      </Button>
+                      <Button
+                        size={'sm'}
+                        color={'danger'}
+                        isIconOnly
+                        variant={'light'}
+                        onPress={() => {
+                          createPortal(Modal, {
+                            defaultVisible: true,
+                            title: t('Deleting template {{name}}', { name: tpl.name }),
+                            children: t('This action cannot be undone. Are you sure you want to delete this template?'),
+                            onOk: async () => {
+                              // todo:
+                            },
+                          });
+                        }}
+                      >
+                        <MdDeleteOutline className={'text-large'} />
+                      </Button>
+                    </div>
+                  </div>
                 )}
               >
                 <div className={'flex flex-col gap-2'}>
@@ -172,10 +283,9 @@ export default () => {
                     onIconPress={() => {
                       createPortal(
                         PathFilterModal, {
-                          fileExtensionGroups: fileExtensionsGroups,
-                          onSubmit: f => {
+                          onSubmit: async f => {
                             (tpl.resourceFilters ??= []).push(f);
-                            // todo: update api
+                            await putTemplate(tpl);
                             forceUpdate();
                           },
                         },
@@ -196,11 +306,10 @@ export default () => {
                               onPress={() => {
                                 createPortal(
                                   PathFilterModal, {
-                                    fileExtensionGroups: fileExtensionsGroups,
                                     filter: f,
-                                    onSubmit: nf => {
+                                    onSubmit: async nf => {
                                       Object.assign(f, nf);
-                                      // todo: update api
+                                      await putTemplate(tpl);
                                       forceUpdate();
                                     },
                                   },
@@ -219,9 +328,9 @@ export default () => {
                                   defaultVisible: true,
                                   title: t('Delete resource filter'),
                                   children: t('Sure to delete?'),
-                                  onOk: () => {
+                                  onOk: async () => {
                                     tpl.resourceFilters?.splice(i, 1);
-                                    // todo: update api
+                                    await putTemplate(tpl);
                                     forceUpdate();
                                   },
                                 });
@@ -241,8 +350,9 @@ export default () => {
                       createPortal(
                         PlayableFileSelectorModal, {
                           selection: tpl.playableFileLocator,
-                          onSubmit: selection => {
+                          onSubmit: async selection => {
                             tpl.playableFileLocator = selection;
+                            await putTemplate(tpl);
                             forceUpdate();
                           },
                         },
@@ -251,7 +361,7 @@ export default () => {
                   >
                     <div className={'flex items-center gap-1'}>
                       {tpl.playableFileLocator?.extensionGroupIds?.map(id => {
-                        const group = fileExtensionsGroups.find(g => g.id == id);
+                        const group = extensionGroups.find(g => g.id == id);
                         return (
                           <Chip size={'sm'} variant={'flat'}>
                             {group?.name}
@@ -282,6 +392,7 @@ export default () => {
                               property: p,
                               valueLocators: [],
                             }));
+                            await putTemplate(tpl);
                             forceUpdate();
                           },
                         },
@@ -326,8 +437,9 @@ export default () => {
                                   createPortal(
                                     PathLocatorModal, {
                                       locators: p.valueLocators,
-                                      onSubmit: vls => {
+                                      onSubmit: async vls => {
                                         p.valueLocators = vls;
+                                        await putTemplate(tpl);
                                         forceUpdate();
                                       },
                                     },
@@ -346,9 +458,9 @@ export default () => {
                                     defaultVisible: true,
                                     title: t('Delete resource filter'),
                                     children: t('Sure to delete?'),
-                                    onOk: () => {
+                                    onOk: async () => {
                                       tpl.properties?.splice(i, 1);
-                                      // todo: update api
+                                      await putTemplate(tpl);
                                       forceUpdate();
                                     },
                                   });
@@ -369,11 +481,12 @@ export default () => {
                       createPortal(
                         EnhancerSelectorModal, {
                           selectedIds: tpl.enhancers?.map(e => e.enhancerId),
-                          onSubmit: ids => {
+                          onSubmit: async ids => {
                             tpl.enhancers = ids.map(id => ({
                               enhancerId: id,
                               options: tpl.enhancers?.find(x => x.enhancerId == id)?.options,
                             }));
+                            await putTemplate(tpl);
                             forceUpdate();
                           },
                         },
@@ -397,14 +510,14 @@ export default () => {
                                 variant={'light'}
                                 size={'sm'}
                                 isIconOnly
-                                onPress={() => {
+                                onPress={async () => {
                                   createPortal(
                                     EnhancerOptionsModal, {
                                       enhancer,
                                       options: e.options,
-                                      onSubmit: options => {
-                                        console.log(options);
+                                      onSubmit: async options => {
                                         e.options = options;
+                                        await putTemplate(tpl);
                                         forceUpdate();
                                       },
                                     },
@@ -423,9 +536,9 @@ export default () => {
                                     defaultVisible: true,
                                     title: t('Delete resource filter'),
                                     children: t('Sure to delete?'),
-                                    onOk: () => {
+                                    onOk: async () => {
                                       tpl.enhancers?.splice(i, 1);
-                                      // todo: update api
+                                      await putTemplate(tpl);
                                       forceUpdate();
                                     },
                                   });
@@ -563,10 +676,11 @@ export default () => {
                     onIconPress={() => {
                       createPortal(
                         DisplayNameTemplateEditorModal, {
-                          properties: tpl.properties?.map(p => p.property),
+                          properties: tpl.properties?.map(p => p.property!) ?? [],
                           template: tpl.displayNameTemplate,
-                          onSubmit: template => {
+                          onSubmit: async template => {
                             tpl.displayNameTemplate = template;
+                            await putTemplate(tpl);
                             forceUpdate();
                           },
                         },
@@ -575,56 +689,56 @@ export default () => {
                   >
                     {tpl.displayNameTemplate}
                   </Block>
-                  <Block
-                    title={t('Preview')}
-                    icon={<AiOutlineEdit className={'text-medium'} />}
-                    onIconPress={() => {
-                      let { samplePaths } = tpl;
-                      createPortal(
-                        Modal, {
-                          defaultVisible: true,
-                          title: t('Setup paths for preview'),
-                          children: (
-                            <div>
-                              <div className={'opacity-60'}>
-                                <div>{t('To create a preview, you must enter at least one path that will be applied to the current template. For a better preview effect, you can add as many representative subpaths as possible starting from the second line.')}</div>
-                                <div>{t('If you have set up an enhancer to retrieve data from third parties, an excessive number of subpaths may slow down the preview creation process.')}</div>
-                              </div>
-                              <div>
-                                <Textarea
-                                  defaultValue={samplePaths?.join('\n')}
-                                  onValueChange={v => samplePaths = v.split('\n')}
-                                  placeholder={t('Paths separated by line')}
-                                  fullWidth
-                                  isMultiline
-                                />
-                              </div>
-                            </div>
-                          ),
-                          size: 'lg',
-                          onOk: () => {
-                            tpl.samplePaths = samplePaths;
-                            forceUpdate();
-                          },
-                        },
-                      );
-                    }}
-                  >
-                    {(!tpl.samplePaths || tpl.samplePaths.length == 0) ? (
-                      <div>{t('This template cannot be previewed because no sample path has been configured.')}</div>
-                    ) : (
-                      <div>
-                        <Button
-                          size={'sm'}
-                          isIconOnly
-                          variant={'light'}
-                          color={'secondary'}
-                        >
-                          <AiOutlineSync className={'text-medium'} />
-                        </Button>
-                      </div>
-                    )}
-                  </Block>
+                  {/* <Block */}
+                  {/*   title={t('Preview')} */}
+                  {/*   icon={<AiOutlineEdit className={'text-medium'} />} */}
+                  {/*   onIconPress={() => { */}
+                  {/*     let { samplePaths } = tpl; */}
+                  {/*     createPortal( */}
+                  {/*       Modal, { */}
+                  {/*         defaultVisible: true, */}
+                  {/*         title: t('Setup paths for preview'), */}
+                  {/*         children: ( */}
+                  {/*           <div> */}
+                  {/*             <div className={'opacity-60'}> */}
+                  {/*               <div>{t('To create a preview, you must enter at least one path that will be applied to the current template. For a better preview effect, you can add as many representative subpaths as possible starting from the second line.')}</div> */}
+                  {/*               <div>{t('If you have set up an enhancer to retrieve data from third parties, an excessive number of subpaths may slow down the preview creation process.')}</div> */}
+                  {/*             </div> */}
+                  {/*             <div> */}
+                  {/*               <Textarea */}
+                  {/*                 defaultValue={samplePaths?.join('\n')} */}
+                  {/*                 onValueChange={v => samplePaths = v.split('\n')} */}
+                  {/*                 placeholder={t('Paths separated by line')} */}
+                  {/*                 fullWidth */}
+                  {/*                 isMultiline */}
+                  {/*               /> */}
+                  {/*             </div> */}
+                  {/*           </div> */}
+                  {/*         ), */}
+                  {/*         size: 'lg', */}
+                  {/*         onOk: () => { */}
+                  {/*           tpl.samplePaths = samplePaths; */}
+                  {/*           forceUpdate(); */}
+                  {/*         }, */}
+                  {/*       }, */}
+                  {/*     ); */}
+                  {/*   }} */}
+                  {/* > */}
+                  {/*   {(!tpl.samplePaths || tpl.samplePaths.length == 0) ? ( */}
+                  {/*     <div>{t('This template cannot be previewed because no sample path has been configured.')}</div> */}
+                  {/*   ) : ( */}
+                  {/*     <div> */}
+                  {/*       <Button */}
+                  {/*         size={'sm'} */}
+                  {/*         isIconOnly */}
+                  {/*         variant={'light'} */}
+                  {/*         color={'secondary'} */}
+                  {/*       > */}
+                  {/*         <AiOutlineSync className={'text-medium'} /> */}
+                  {/*       </Button> */}
+                  {/*     </div> */}
+                  {/*   )} */}
+                  {/* </Block> */}
                 </div>
               </AccordionItem>
             );

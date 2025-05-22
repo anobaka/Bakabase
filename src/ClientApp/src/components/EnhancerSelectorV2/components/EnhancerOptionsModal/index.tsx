@@ -19,7 +19,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 type Props<TOptions extends EnhancerFullOptions> = {
   enhancer: EnhancerDescriptor;
   options?: TOptions;
-  onSubmit?: (options: EnhancerFullOptions) => void;
+  onSubmit?: (options: EnhancerFullOptions) => any;
 } & DestroyableProps;
 
 export default function EnhancerOptionsModal<T extends EnhancerFullOptions>({
@@ -63,9 +63,7 @@ export default function EnhancerOptionsModal<T extends EnhancerFullOptions>({
       footer={{
         actions: ['cancel', 'ok'],
       }}
-      onOk={() => {
-        onSubmit?.(options);
-      }}
+      onOk={() => onSubmit?.(options)}
     >
       {enhancer.id == EnhancerId.Regex ? (
         <RegexEnhancerOptions

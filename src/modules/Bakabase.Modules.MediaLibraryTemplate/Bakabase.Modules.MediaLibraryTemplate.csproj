@@ -21,7 +21,6 @@
   <ItemGroup>
     <Folder Include="Abstractions\Models\Db\" />
     <Folder Include="Abstractions\Services\" />
-    <Folder Include="Services\" />
   </ItemGroup>
 
 </Project>

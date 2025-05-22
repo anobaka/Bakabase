@@ -34,9 +34,7 @@ export default ({
     <Modal
       defaultVisible
       size={'xl'}
-      onOk={() => {
-        onSubmit?.(selectedIds);
-      }}
+      onOk={() => onSubmit?.(selectedIds)}
     >
       <div className={'flex flex-col gap-2'}>
         {enhancers.map(e => {

@@ -10,7 +10,7 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 
 type Props = {
   locators?: PathLocator[];
-  onSubmit?: (locators: PathLocator[]) => void;
+  onSubmit?: (locators: PathLocator[]) => any;
 } & DestroyableProps;
 
 export default ({
@@ -86,9 +86,7 @@ export default ({
           isDisabled: !isValid(),
         },
       }}
-      onOk={() => {
-        onSubmit?.(locators!);
-      }}
+      onOk={() => onSubmit?.(locators!)}
     >
       <div className={'flex flex-col gap-2 min-h-0 overflow-auto'}>
         <Accordion variant="splitted" selectedKeys={locators.map((l, i) => i.toString())}>

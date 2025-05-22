@@ -55,7 +55,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Components\MediaLibraryTemplate\" />
 	  <Folder Include="Configurations\Extensions\" />
 	</ItemGroup>
 

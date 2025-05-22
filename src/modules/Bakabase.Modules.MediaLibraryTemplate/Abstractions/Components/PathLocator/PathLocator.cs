@@ -1,3 +1,8 @@
 ﻿namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator;
 
-public record PathLocator(PathPositioner Positioner, int? Layer, string? Regex);
+public record PathLocator
+{
+    public PathPositioner Positioner { get; set; }
+    public int? Layer { get; set; }
+    public string? Regex { get; set; }
+}

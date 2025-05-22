@@ -7,6 +7,8 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Extensions;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
@@ -23,8 +25,8 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace Bakabase.Modules.MediaLibraryTemplate.Services;
 
 
-public abstract class AbstractMediaLibraryTemplateService<TDbContext>(
-    FullMemoryCacheResourceService<TDbContext, Abstractions.Models.Db.MediaLibraryTemplateDbModel, int> orm,
+public class MediaLibraryTemplateService<TDbContext>(
+    FullMemoryCacheResourceService<TDbContext, MediaLibraryTemplateDbModel, int> orm,
     IStandardValueService standardValueService,
     IEnhancerService enhancerService,
     ICategoryService categoryService,
@@ -61,7 +63,9 @@ public abstract class AbstractMediaLibraryTemplateService<TDbContext>(
             }
         }
 
-        var extensionGroupIds = templates.SelectMany(t => t.PlayableFileLocator?.ExtensionGroupIds ?? []).ToHashSet();
+        var extensionGroupIds = templates.SelectMany(t =>
+            (t.PlayableFileLocator?.ExtensionGroupIds ?? []).Concat(
+                t.ResourceFilters?.SelectMany(x => x.ExtensionGroupIds ?? []) ?? [])).ToHashSet();
         if (extensionGroupIds.Any())
         {
             var extensionGroups = (await extensionGroupService.GetAll()).ToDictionary(d => d.Id, d => d);
@@ -73,6 +77,19 @@ public abstract class AbstractMediaLibraryTemplateService<TDbContext>(
                         .Select(x => extensionGroups.GetValueOrDefault(x))
                         .OfType<ExtensionGroup>()
                         .ToArray();
+                }
+                if (t.ResourceFilters != null)
+                {
+                    foreach (var rf in t.ResourceFilters)
+                    {
+                        if (rf.ExtensionGroupIds != null)
+                        {
+                            rf.ExtensionGroups = rf.ExtensionGroupIds
+                                .Select(x => extensionGroups.GetValueOrDefault(x))
+                                .OfType<ExtensionGroup>()
+                                .ToArray();
+                        }
+                    }
                 }
             }
         }
@@ -342,9 +359,9 @@ public abstract class AbstractMediaLibraryTemplateService<TDbContext>(
         return domainModels;
     }
 
-    public async Task Add(Abstractions.Models.Domain.MediaLibraryTemplate template)
+    public async Task Add(MediaLibraryTemplateAddInputModel model)
     {
-        await orm.Add(template.ToDbModel());
+        await orm.Add(new MediaLibraryTemplateDbModel(0, model.Name));
     }
 
     public async Task Put(int id, Abstractions.Models.Domain.MediaLibraryTemplate template)
@@ -358,7 +375,7 @@ public abstract class AbstractMediaLibraryTemplateService<TDbContext>(
         await orm.RemoveByKey(id);
     }
 
-    public async Task<string> ExportToText(int id)
+    public async Task<string> GenerateShareText(int id)
     {
         var template = await Get(id);
         return template.Encode();
@@ -366,7 +383,7 @@ public abstract class AbstractMediaLibraryTemplateService<TDbContext>(
 
     public async Task<byte[]> AppendShareTextToPng(int id, byte[] png)
     {
-        var text = await ExportToText(id);
+        var text = await GenerateShareText(id);
 
         using var image = Image.Load<Rgb24>(png);
 

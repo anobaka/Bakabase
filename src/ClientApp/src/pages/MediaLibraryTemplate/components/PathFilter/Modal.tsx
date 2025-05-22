@@ -1,27 +1,25 @@
 import { BsFileEarmark, BsFolder } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Divider, Input, Modal, Radio, RadioGroup, Select, Textarea } from '@/components/bakaui';
 import type { PathFilter } from '@/pages/MediaLibraryTemplate/models';
 import { PathFilterFsType } from '@/pages/MediaLibraryTemplate/models';
 import { pathFilterFsTypes, PathPositioner, pathPositioners } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import type { IdName } from '@/components/types';
+import ExtensionsInput from '@/components/ExtensionsInput';
+import ExtensionGroupSelect from '@/components/ExtensionGroupSelect';
 
 type Props = {
   filter?: PathFilter;
-  onSubmit?: (filter: PathFilter) => void;
-  fileExtensionGroups?: IdName[];
+  onSubmit?: (filter: PathFilter) => Promise<any>;
 } & DestroyableProps;
 
 export default ({
                   filter: propsFilter,
                   onSubmit,
                   onDestroyed,
-                  fileExtensionGroups,
                 }: Props) => {
   const { t } = useTranslation();
-
   const [filter, setFilter] = useState<Partial<PathFilter>>(propsFilter ?? { positioner: PathPositioner.Layer });
 
   const renderFsItem = (type: PathFilterFsType) => {
@@ -96,6 +94,12 @@ export default ({
     }
   };
 
+  console.log(filter, pathFilterFsTypes.map(t => ({
+    label: renderFsItem(t.value),
+    value: t.value.toString(),
+    textValue: t.label,
+  })));
+
   return (
     <Modal
       size={'lg'}
@@ -107,9 +111,7 @@ export default ({
           isDisabled: !isValid(),
         },
       }}
-      onOk={() => {
-        onSubmit?.(filter);
-      }}
+      onOk={async () => await onSubmit?.(filter as PathFilter)}
     >
       <div className={'flex flex-col gap-2'}>
         <RadioGroup
@@ -138,59 +140,49 @@ export default ({
               label={t('Limit path type')}
               placeholder={t('No limited')}
               dataSource={pathFilterFsTypes.map(t => ({
-                label: renderFsItem(t.value),
-                value: t.value,
-                textValue: t.label,
-              }))}
+                  label: renderFsItem(t.value),
+                  value: t.value.toString(),
+                  textValue: t.label,
+                }))}
               onSelectionChange={keys => {
-                const fsType = Array.from(keys)[0] as PathFilterFsType;
-                setFilter({
-                  ...filter,
-                  fsType,
-                });
-              }}
-              value={filter.fsType}
+                  const fsType: PathFilterFsType = parseInt(Array.from(keys)[0] as string, 10);
+                  setFilter({
+                    ...filter,
+                    fsType,
+                  });
+                }}
+              selectedKeys={filter.fsType ? [filter.fsType.toString()] : undefined}
               selectionMode={'single'}
               renderValue={items => {
-                return items.map(t => renderFsItem((t.data as { value: any })!.value));
-              }}
+                  return items.map(t => renderFsItem(parseInt((t.data as { value: string })!.value, 10)));
+                }}
             />
             {(filter.fsType == undefined || filter.fsType == PathFilterFsType.File) && (
               <>
-                <Select
-                  selectionMode={'multiple'}
-                  label={t('Limit file type groups')}
-                  placeholder={t('Select from predefined file type groups')}
-                  dataSource={fileExtensionGroups?.map(l => ({
-                    label: l.name,
-                    value: l.id,
-                  }))}
-                  value={(filter.extensionGroupIds ?? []).map(x => x.toString())}
-                  onSelectionChange={keys => {
+                <ExtensionGroupSelect
+                  value={filter.extensionGroupIds}
+                  onSelectionChange={ids => {
                     setFilter({
                       ...filter,
-                      extensionGroupIds: Array.from(keys).map(k => parseInt(k as string, 10)),
+                      extensionGroupIds: ids,
                     });
                   }}
                 />
-                <Textarea
+                <ExtensionsInput
                   label={t('Limit file extensions')}
-                  placeholder={t('custom extensions, split by space')}
-                  isMultiline
-                  description={t('File type groups and extensions will be merged during filtering')}
-                  value={(filter.extensions ?? []).join(' ')}
-                  onValueChange={text => {
+                  onValueChange={v => {
                     setFilter({
                       ...filter,
-                      extensions: text.split(' ').map(t => t.trim()).map(t => `.${t.replace(/^[\.]+/, '')}`),
+                      extensions: v,
                     });
                   }}
+                  defaultValue={filter.extensions}
                 />
               </>
             )}
           </>
         )}
-        <div>{JSON.stringify(filter)}</div>
+        <pre>{JSON.stringify(filter)}</pre>
       </div>
     </Modal>
   );

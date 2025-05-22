@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -17,6 +18,7 @@ namespace Bakabase.Service.Controllers;
 public class MediaLibraryTemplateController(IMediaLibraryTemplateService service) : ControllerBase
 {
     [HttpGet]
+    [SwaggerOperation(OperationId = "GetAllMediaLibraryTemplates")]
     public async Task<ListResponse<MediaLibraryTemplate>> GetAll()
     {
         var templates = await service.GetAll();
@@ -24,6 +26,7 @@ public class MediaLibraryTemplateController(IMediaLibraryTemplateService service
     }
 
     [HttpGet("{id:int}")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryTemplate")]
     public async Task<SingletonResponse<MediaLibraryTemplate>> Get(int id)
     {
         var template = await service.Get(id);
@@ -31,13 +34,15 @@ public class MediaLibraryTemplateController(IMediaLibraryTemplateService service
     }
 
     [HttpPost]
-    public async Task<BaseResponse> Add([FromBody] MediaLibraryTemplate template)
+    [SwaggerOperation(OperationId = "AddMediaLibraryTemplate")]
+    public async Task<BaseResponse> Add([FromBody] MediaLibraryTemplateAddInputModel model)
     {
-        await service.Add(template);
+        await service.Add(model);
         return BaseResponseBuilder.Ok;
     }
 
     [HttpPut("{id:int}")]
+    [SwaggerOperation(OperationId = "PutMediaLibraryTemplate")]
     public async Task<BaseResponse> Put(int id, [FromBody] MediaLibraryTemplate template)
     {
         await service.Put(id, template);
@@ -45,6 +50,7 @@ public class MediaLibraryTemplateController(IMediaLibraryTemplateService service
     }
 
     [HttpDelete("{id:int}")]
+    [SwaggerOperation(OperationId = "DeleteMediaLibraryTemplate")]
     public async Task<BaseResponse> Delete(int id)
     {
         await service.Delete(id);
@@ -55,15 +61,15 @@ public class MediaLibraryTemplateController(IMediaLibraryTemplateService service
     [SwaggerOperation(OperationId = "GetMediaLibraryTemplateShareText")]
     public async Task<SingletonResponse<string>> GetShareText(int id)
     {
-        var text = await service.ExportToText(id);
+        var text = await service.GenerateShareText(id);
         return new SingletonResponse<string>(text);
     }
 
-    [HttpPut("{id:int}/share-png/text")]
-    [SwaggerOperation(OperationId = "AppendMediaLibraryTemplateShareTextToPng")]
-    public async Task<IActionResult> AppendShareTextToPng(int id)
-    {
-        var text = await service.ExportToText(id);
-        throw new NotImplementedException();
-    }
+    // [HttpPut("{id:int}/share-png/text")]
+    // [SwaggerOperation(OperationId = "AppendMediaLibraryTemplateShareTextToPng")]
+    // public async Task<IActionResult> AppendShareTextToPng(int id)
+    // {
+    //     var text = await service.GenerateShareText(id);
+    //     throw new NotImplementedException();
+    // }
 }

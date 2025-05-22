@@ -1537,6 +1537,10 @@ export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMedi
   valueLocators?: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathLocator[];
 }
 
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateAddInputModel {
+  name: string;
+}
+
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
   results?: BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModelTin[];
 }
@@ -6874,10 +6878,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryTemplate
-     * @name MediaLibraryTemplateList
+     * @name GetAllMediaLibraryTemplates
      * @request GET:/media-library-template
      */
-    mediaLibraryTemplateList: (params: RequestParams = {}) =>
+    getAllMediaLibraryTemplates: (params: RequestParams = {}) =>
       this.request<
         BootstrapModelsResponseModelsListResponse1BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate,
         any
@@ -6892,11 +6896,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryTemplate
-     * @name MediaLibraryTemplateCreate
+     * @name AddMediaLibraryTemplate
      * @request POST:/media-library-template
      */
-    mediaLibraryTemplateCreate: (
-      data: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate,
+    addMediaLibraryTemplate: (
+      data: BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateAddInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -6912,10 +6916,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryTemplate
-     * @name MediaLibraryTemplateDetail
+     * @name GetMediaLibraryTemplate
      * @request GET:/media-library-template/{id}
      */
-    mediaLibraryTemplateDetail: (id: number, params: RequestParams = {}) =>
+    getMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
       this.request<
         BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate,
         any
@@ -6930,10 +6934,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryTemplate
-     * @name MediaLibraryTemplateUpdate
+     * @name PutMediaLibraryTemplate
      * @request PUT:/media-library-template/{id}
      */
-    mediaLibraryTemplateUpdate: (
+    putMediaLibraryTemplate: (
       id: number,
       data: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate,
       params: RequestParams = {},
@@ -6951,10 +6955,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryTemplate
-     * @name MediaLibraryTemplateDelete
+     * @name DeleteMediaLibraryTemplate
      * @request DELETE:/media-library-template/{id}
      */
-    mediaLibraryTemplateDelete: (id: number, params: RequestParams = {}) =>
+    deleteMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library-template/${id}`,
         method: "DELETE",
@@ -6974,20 +6978,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/media-library-template/${id}/share-text`,
         method: "GET",
         format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name AppendMediaLibraryTemplateShareTextToPng
-     * @request PUT:/media-library-template/{id}/share-png/text
-     */
-    appendMediaLibraryTemplateShareTextToPng: (id: number, params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/media-library-template/${id}/share-png/text`,
-        method: "PUT",
         ...params,
       }),
   };

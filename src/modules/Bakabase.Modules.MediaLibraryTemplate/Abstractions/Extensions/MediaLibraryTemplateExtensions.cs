@@ -3,6 +3,9 @@ using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
+using Bakabase.Modules.MediaLibraryTemplate.Services;
+using Bootstrap.Components.Orm;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -11,10 +14,10 @@ namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Extensions;
 public static class MediaLibraryTemplateExtensions
 {
     public static IServiceCollection
-        AddMediaLibraryTemplate<TMediaLibraryTemplateService>(this IServiceCollection services)
-        where TMediaLibraryTemplateService : class, IMediaLibraryTemplateService
+        AddMediaLibraryTemplate<TDbContext>(this IServiceCollection services) where TDbContext : DbContext
     {
-        services.AddScoped<IMediaLibraryTemplateService, TMediaLibraryTemplateService>();
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryTemplateDbModel, int>>();
+        services.AddScoped<IMediaLibraryTemplateService, MediaLibraryTemplateService<TDbContext>>();
         return services;
     }
 
@@ -23,11 +26,11 @@ public static class MediaLibraryTemplateExtensions
         return new MediaLibraryTemplateDbModel(
             template.Id,
             template.Name,
-            template.DisplayNameTemplate,
             JsonConvert.SerializeObject(template.ResourceFilters),
             JsonConvert.SerializeObject(template.Properties),
             JsonConvert.SerializeObject(template.PlayableFileLocator),
             JsonConvert.SerializeObject(template.Enhancers),
+            template.DisplayNameTemplate,
             JsonConvert.SerializeObject(template.SamplePaths)
         );
     }

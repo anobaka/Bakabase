@@ -15,6 +15,7 @@ export interface IProperty {
   valueCount?: number;
   typeName: string;
   poolName: string;
+  order: number;
 }
 
 export type PropertyValue = {

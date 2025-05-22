@@ -6911,12 +6911,12 @@ export const StartSyncingMediaLibraryResourcesURL = function(parameters = {}) {
 }
 /**
  * 
- * request: getMediaLibraryTemplate
- * url: getMediaLibraryTemplateURL
- * method: getMediaLibraryTemplate_TYPE
- * raw_url: getMediaLibraryTemplate_RAW_URL
+ * request: GetAllMediaLibraryTemplates
+ * url: GetAllMediaLibraryTemplatesURL
+ * method: GetAllMediaLibraryTemplates_TYPE
+ * raw_url: GetAllMediaLibraryTemplates_RAW_URL
  */
-export const getMediaLibraryTemplate = function(parameters = {}) {
+export const GetAllMediaLibraryTemplates = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/media-library-template'
@@ -6930,13 +6930,13 @@ export const getMediaLibraryTemplate = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const getMediaLibraryTemplate_RAW_URL = function() {
+export const GetAllMediaLibraryTemplates_RAW_URL = function() {
   return '/media-library-template'
 }
-export const getMediaLibraryTemplate_TYPE = function() {
+export const GetAllMediaLibraryTemplates_TYPE = function() {
   return 'get'
 }
-export const getMediaLibraryTemplateURL = function(parameters = {}) {
+export const GetAllMediaLibraryTemplatesURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-template'
@@ -6950,13 +6950,13 @@ export const getMediaLibraryTemplateURL = function(parameters = {}) {
 }
 /**
  * 
- * request: postMediaLibraryTemplate
- * url: postMediaLibraryTemplateURL
- * method: postMediaLibraryTemplate_TYPE
- * raw_url: postMediaLibraryTemplate_RAW_URL
+ * request: AddMediaLibraryTemplate
+ * url: AddMediaLibraryTemplateURL
+ * method: AddMediaLibraryTemplate_TYPE
+ * raw_url: AddMediaLibraryTemplate_RAW_URL
  * @param model - 
  */
-export const postMediaLibraryTemplate = function(parameters = {}) {
+export const AddMediaLibraryTemplate = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/media-library-template'
@@ -6973,13 +6973,13 @@ export const postMediaLibraryTemplate = function(parameters = {}) {
   }
   return request('post', domain + path, body, queryParameters, form, config)
 }
-export const postMediaLibraryTemplate_RAW_URL = function() {
+export const AddMediaLibraryTemplate_RAW_URL = function() {
   return '/media-library-template'
 }
-export const postMediaLibraryTemplate_TYPE = function() {
+export const AddMediaLibraryTemplate_TYPE = function() {
   return 'post'
 }
-export const postMediaLibraryTemplateURL = function(parameters = {}) {
+export const AddMediaLibraryTemplateURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-template'
@@ -6993,13 +6993,13 @@ export const postMediaLibraryTemplateURL = function(parameters = {}) {
 }
 /**
  * 
- * request: getMediaLibraryTemplateById
- * url: getMediaLibraryTemplateByIdURL
- * method: getMediaLibraryTemplateById_TYPE
- * raw_url: getMediaLibraryTemplateById_RAW_URL
+ * request: GetMediaLibraryTemplate
+ * url: GetMediaLibraryTemplateURL
+ * method: GetMediaLibraryTemplate_TYPE
+ * raw_url: GetMediaLibraryTemplate_RAW_URL
  * @param id - 
  */
-export const getMediaLibraryTemplateById = function(parameters = {}) {
+export const GetMediaLibraryTemplate = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/media-library-template/{id}'
@@ -7017,13 +7017,13 @@ export const getMediaLibraryTemplateById = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const getMediaLibraryTemplateById_RAW_URL = function() {
+export const GetMediaLibraryTemplate_RAW_URL = function() {
   return '/media-library-template/{id}'
 }
-export const getMediaLibraryTemplateById_TYPE = function() {
+export const GetMediaLibraryTemplate_TYPE = function() {
   return 'get'
 }
-export const getMediaLibraryTemplateByIdURL = function(parameters = {}) {
+export const GetMediaLibraryTemplateURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-template/{id}'
@@ -7038,14 +7038,14 @@ export const getMediaLibraryTemplateByIdURL = function(parameters = {}) {
 }
 /**
  * 
- * request: putMediaLibraryTemplateById
- * url: putMediaLibraryTemplateByIdURL
- * method: putMediaLibraryTemplateById_TYPE
- * raw_url: putMediaLibraryTemplateById_RAW_URL
+ * request: PutMediaLibraryTemplate
+ * url: PutMediaLibraryTemplateURL
+ * method: PutMediaLibraryTemplate_TYPE
+ * raw_url: PutMediaLibraryTemplate_RAW_URL
  * @param id - 
  * @param model - 
  */
-export const putMediaLibraryTemplateById = function(parameters = {}) {
+export const PutMediaLibraryTemplate = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/media-library-template/{id}'
@@ -7066,13 +7066,13 @@ export const putMediaLibraryTemplateById = function(parameters = {}) {
   }
   return request('put', domain + path, body, queryParameters, form, config)
 }
-export const putMediaLibraryTemplateById_RAW_URL = function() {
+export const PutMediaLibraryTemplate_RAW_URL = function() {
   return '/media-library-template/{id}'
 }
-export const putMediaLibraryTemplateById_TYPE = function() {
+export const PutMediaLibraryTemplate_TYPE = function() {
   return 'put'
 }
-export const putMediaLibraryTemplateByIdURL = function(parameters = {}) {
+export const PutMediaLibraryTemplateURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-template/{id}'
@@ -7087,13 +7087,13 @@ export const putMediaLibraryTemplateByIdURL = function(parameters = {}) {
 }
 /**
  * 
- * request: deleteMediaLibraryTemplateById
- * url: deleteMediaLibraryTemplateByIdURL
- * method: deleteMediaLibraryTemplateById_TYPE
- * raw_url: deleteMediaLibraryTemplateById_RAW_URL
+ * request: DeleteMediaLibraryTemplate
+ * url: DeleteMediaLibraryTemplateURL
+ * method: DeleteMediaLibraryTemplate_TYPE
+ * raw_url: DeleteMediaLibraryTemplate_RAW_URL
  * @param id - 
  */
-export const deleteMediaLibraryTemplateById = function(parameters = {}) {
+export const DeleteMediaLibraryTemplate = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/media-library-template/{id}'
@@ -7111,13 +7111,13 @@ export const deleteMediaLibraryTemplateById = function(parameters = {}) {
   }
   return request('delete', domain + path, body, queryParameters, form, config)
 }
-export const deleteMediaLibraryTemplateById_RAW_URL = function() {
+export const DeleteMediaLibraryTemplate_RAW_URL = function() {
   return '/media-library-template/{id}'
 }
-export const deleteMediaLibraryTemplateById_TYPE = function() {
+export const DeleteMediaLibraryTemplate_TYPE = function() {
   return 'delete'
 }
-export const deleteMediaLibraryTemplateByIdURL = function(parameters = {}) {
+export const DeleteMediaLibraryTemplateURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-template/{id}'
@@ -7166,51 +7166,6 @@ export const GetMediaLibraryTemplateShareTextURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-template/{id}/share-text'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: AppendMediaLibraryTemplateShareTextToPng
- * url: AppendMediaLibraryTemplateShareTextToPngURL
- * method: AppendMediaLibraryTemplateShareTextToPng_TYPE
- * raw_url: AppendMediaLibraryTemplateShareTextToPng_RAW_URL
- * @param id - 
- */
-export const AppendMediaLibraryTemplateShareTextToPng = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/media-library-template/{id}/share-png/text'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const AppendMediaLibraryTemplateShareTextToPng_RAW_URL = function() {
-  return '/media-library-template/{id}/share-png/text'
-}
-export const AppendMediaLibraryTemplateShareTextToPng_TYPE = function() {
-  return 'put'
-}
-export const AppendMediaLibraryTemplateShareTextToPngURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/media-library-template/{id}/share-png/text'
   path = path.replace('{id}', `${parameters['id']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {

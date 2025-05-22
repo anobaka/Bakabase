@@ -110,9 +110,7 @@ export default ({ template,
       title={t('Edit display name template for resources')}
       onClose={close}
       size={'xl'}
-      onOk={async () => {
-        onSubmit?.(templateRef.current);
-      }}
+      onOk={() => onSubmit?.(templateRef.current)}
     >
       <div>
         <div>

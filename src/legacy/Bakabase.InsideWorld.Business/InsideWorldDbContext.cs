@@ -7,6 +7,8 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.BulkModification.Abstractions.Models;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Models.Db;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -75,6 +77,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<PlayHistoryDbModel> PlayHistories { get; set; }
 
         public DbSet<ExtensionGroupDbModel> ExtensionGroups { get; set; }
+        public DbSet<MediaLibraryTemplateDbModel> MediaLibraryTemplates { get; set; }
 
         public InsideWorldDbContext()
         {

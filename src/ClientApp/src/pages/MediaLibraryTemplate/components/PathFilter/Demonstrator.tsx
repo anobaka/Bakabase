@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { BsRegex } from 'react-icons/bs';
-import { FaLayerGroup } from 'react-icons/fa';
 import { IoLayersOutline } from 'react-icons/io5';
 import type { PathFilter } from '@/pages/MediaLibraryTemplate/models';
+import { PathFilterFsType } from '@/pages/MediaLibraryTemplate/models';
 import { pathFilterFsTypes, PathPositioner } from '@/sdk/constants';
 import PathFilterFsTypeBlock from '@/pages/MediaLibraryTemplate/components/PathFilterFsTypeBlock';
 import { Chip } from '@/components/bakaui';
@@ -81,7 +81,7 @@ export default ({ filter }: Props) => {
       <div className={'flex items-center gap-1'}>
         {renderFsTypeBlocks()}
       </div>
-      {renderExtensions()}
+      {filter.fsType == PathFilterFsType.File && renderExtensions()}
     </div>
   );
 };
