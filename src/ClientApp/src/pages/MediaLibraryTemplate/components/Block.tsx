@@ -4,29 +4,30 @@ import { Button, Divider } from '@/components/bakaui';
 type Props = {
   title: any;
   description?: any;
-  icon?: any;
-  onIconPress?: any;
+  leftIcon?: any;
+  rightIcon?: any;
+  onRightIconPress?: any;
   children: any;
 };
 
-export default ({ title, description, icon, onIconPress, children }: Props) => {
+export default ({ leftIcon, title, description, rightIcon, onRightIconPress, children }: Props) => {
   return (
     <div>
       <div>
         <div className={'flex items-center gap-1'}>
-          <AiOutlineBlock className={'text-lg'} />
+          {leftIcon ?? <AiOutlineBlock className={'text-lg'} />}
           <div className={'text-medium'}>{title}</div>
-          {icon && onIconPress ? (
+          {rightIcon && onRightIconPress ? (
             <Button
               isIconOnly
               variant={'light'}
               color={'secondary'}
               size={'sm'}
-              onPress={onIconPress}
+              onPress={onRightIconPress}
             >
-              {icon}
+              {rightIcon}
             </Button>
-          ) : icon}
+          ) : rightIcon}
           <div className={'opacity-60'}>{description}</div>
         </div>
       </div>

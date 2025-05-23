@@ -246,5 +246,8 @@
   "Property.FileModifiedAt": "File modification time",
   "PropertyPool.Internal": "Built-in",
   "PropertyPool.Reserved": "Reserved",
-  "PropertyPool.Custom": "Custom"
+  "PropertyPool.Custom": "Custom",
+  "PropertyPool.Abbreviation.Internal": "I",
+  "PropertyPool.Abbreviation.Reserved": "R",
+  "PropertyPool.Abbreviation.Custom": "C"
 }

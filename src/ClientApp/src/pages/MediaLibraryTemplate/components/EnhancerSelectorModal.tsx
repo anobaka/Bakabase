@@ -5,6 +5,7 @@ import { Card, CardBody, CardHeader, Chip, Modal, Tooltip } from '@/components/b
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import BApi from '@/sdk/BApi';
 import type { DestroyableProps } from '@/components/bakaui/types';
+import { EnhancerIcon } from '@/components/Enhancer';
 
 type Props = {
   selectedIds?: number[];
@@ -52,6 +53,7 @@ export default ({
             >
               <CardBody>
                 <div className={'text-medium flex items-center gap-1'}>
+                  <EnhancerIcon id={e.id} />
                   {e.name}
                   {isSelected && (
                     <Chip
@@ -77,7 +79,12 @@ export default ({
                         <Tooltip
                           content={target.description}
                         >
-                          <Chip size={'sm'} radius={'sm'} color={'default'}>
+                          <Chip
+                            variant={'flat'}
+                            size={'sm'}
+                            radius={'sm'}
+                            color={'default'}
+                          >
                             <div className={'flex items-center'}>
                               {target.name}
                               <AiOutlineQuestionCircle className={'text-medium'} />
@@ -87,7 +94,12 @@ export default ({
                       );
                     }
                     return (
-                      <Chip size={'sm'} radius={'sm'} color={'default'}>
+                      <Chip
+                        size={'sm'}
+                        radius={'sm'}
+                        color={'default'}
+                        variant={'flat'}
+                      >
                         {target.name}
                       </Chip>
                     );

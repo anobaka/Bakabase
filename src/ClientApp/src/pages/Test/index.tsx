@@ -3,6 +3,7 @@ import './index.scss';
 import { useTranslation } from 'react-i18next';
 import { ListboxItem } from '@heroui/react';
 import { useCookie } from 'react-use';
+import { AiOutlineChrome } from 'react-icons/ai';
 import Psc from './cases/Psc';
 import Tour from './cases/Tour';
 import Sortable from './cases/Sortable';
@@ -10,7 +11,7 @@ import MediaPreviewer from './cases/MediaPreviewer';
 import CategoryEnhancerOptionsDialog from './cases/CategoryEnhancerOptionsDialog';
 import ResourceFilter from './cases/ResourceFilter';
 import Properties from './cases/Properties';
-import { Button, Listbox } from '@/components/bakaui';
+import { Button, Listbox, Card, CardBody, CardHeader, CardFooter, Divider } from '@/components/bakaui';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AntdMenu from '@/layouts/BasicLayout/components/PageNav/components/AntdMenu';
@@ -95,36 +96,38 @@ export default () => {
   }, []);
 
   return (
-    <div className={'flex items-start gap-2 max-h-full h-full'}>
-      <div className={'border-small px-1 py-2 rounded-small border-default-200 dark:border-default-100'}>
-        <Listbox
-          onAction={k => {
-          // const tk: keyof typeof components = k as any;
-          // document.getElementById(tk)?.scrollIntoView();
-            setTestingKey(k as string);
-        }}
-          selectedKeys={testingKey ? [testingKey] : undefined}
-        >
-          {Object.keys(components).map(c => {
-            return (
-              <ListboxItem key={c}>{c}</ListboxItem>
-            );
-          })}
-        </Listbox>
-      </div>
-      <div className={'flex flex-col gap-2 grow max-h-full h-full overflow-auto'}>
-        {/* {Object.keys(components).map(c => { */}
-        {/*   return ( */}
-        {/*     <> */}
-        {/*       <div id={c} className={''}> */}
-        {/*         {components[c]} */}
-        {/*       </div> */}
-        {/*       <Divider /> */}
-        {/*     </> */}
-        {/*   ); */}
-        {/* })} */}
-        <div id={testingKey} className={''}>
-          {components[testingKey]}
+    <div>
+      <div className={'flex items-start gap-2 max-h-full h-full'}>
+        <div className={'border-small px-1 py-2 rounded-small border-default-200 dark:border-default-100'}>
+          <Listbox
+            onAction={k => {
+              // const tk: keyof typeof components = k as any;
+              // document.getElementById(tk)?.scrollIntoView();
+              setTestingKey(k as string);
+            }}
+            selectedKeys={testingKey ? [testingKey] : undefined}
+          >
+            {Object.keys(components).map(c => {
+              return (
+                <ListboxItem key={c}>{c}</ListboxItem>
+              );
+            })}
+          </Listbox>
+        </div>
+        <div className={'flex flex-col gap-2 grow max-h-full h-full overflow-auto'}>
+          {/* {Object.keys(components).map(c => { */}
+          {/*   return ( */}
+          {/*     <> */}
+          {/*       <div id={c} className={''}> */}
+          {/*         {components[c]} */}
+          {/*       </div> */}
+          {/*       <Divider /> */}
+          {/*     </> */}
+          {/*   ); */}
+          {/* })} */}
+          <div id={testingKey} className={''}>
+            {components[testingKey]}
+          </div>
         </div>
       </div>
     </div>

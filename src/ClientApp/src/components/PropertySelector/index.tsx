@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import PropertyModal from '../PropertyModal';
 import type { IProperty } from '@/components/Property/models';
 import Property from '@/components/Property';
+import PropertyV2 from '@/components/Property/v2';
 import { buildLogger, createPortalOfComponent } from '@/components/utils';
 import type { PropertyType } from '@/sdk/constants';
 import { PropertyPool, StandardValueType } from '@/sdk/constants';
@@ -27,6 +28,7 @@ interface IProps extends DestroyableProps{
   removable?: boolean;
   title?: any;
   isDisabled?: (p: IProperty) => boolean;
+  v2?: boolean;
 }
 
 const log = buildLogger('PropertySelector');
@@ -47,6 +49,7 @@ const PropertySelector = (props: IProps) => {
     title,
     onDestroyed,
     isDisabled,
+    v2,
   } = props;
 
   const [properties, setProperties] = useState<IProperty[]>([]);
@@ -66,6 +69,43 @@ const PropertySelector = (props: IProps) => {
 
   const renderProperty = (property: IProperty) => {
     const selected = selection.some(s => s.id == property.id && s.pool == property.pool);
+
+    if (v2) {
+      return (
+        <PropertyV2
+          key={`${property.id}-${property.pool}`}
+          property={property}
+          onClick={async () => {
+            if (multiple) {
+              if (selected) {
+                setSelection(selection.filter(s => s.id != property.id && s.pool == property.pool));
+              } else {
+                setSelection([...selection, {
+                  id: property.id,
+                  pool: property.pool,
+                }]);
+              }
+            } else {
+              if (selected) {
+                setSelection([]);
+              } else {
+                const ns: Key[] = [{
+                  id: property.id,
+                  pool: property.pool,
+                }];
+                setSelection(ns);
+                await onSubmit(ns);
+              }
+            }
+          }}
+          editable={editable}
+          removable={removable}
+          onSaved={loadProperties}
+          disabled={isDisabled?.(property)}
+        />
+      );
+    }
+
     return (
       <Property
         key={`${property.id}-${property.pool}`}

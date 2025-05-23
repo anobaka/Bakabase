@@ -10,14 +10,16 @@ import {
 } from 'react-icons/ai';
 import { useUpdate } from 'react-use';
 import _ from 'lodash';
-import { IoLocate } from 'react-icons/io5';
+import { IoLocate, IoPlayCircleOutline, IoRocketOutline } from 'react-icons/io5';
 import { CardHeader } from '@heroui/react';
 import { CiFilter } from 'react-icons/ci';
 import { FaRightLong } from 'react-icons/fa6';
 import { TiChevronRightOutline } from 'react-icons/ti';
 import { GoShareAndroid } from 'react-icons/go';
-import { MdDeleteOutline } from 'react-icons/md';
+import { MdDeleteOutline, MdOutlineSubtitles } from 'react-icons/md';
 import toast from 'react-hot-toast';
+import { TbDatabase } from 'react-icons/tb';
+import { CgRename } from 'react-icons/cg';
 import type { PathFilter, PathLocator } from './models';
 import { PathFilterFsType } from './models';
 import { PathFilterDemonstrator, PathFilterModal } from './components/PathFilter';
@@ -54,6 +56,8 @@ import type {
 import PlayableFileSelectorModal from '@/pages/MediaLibraryTemplate/components/PlayableFileSelectorModal';
 import { EnhancerIcon } from '@/components/Enhancer';
 import DisplayNameTemplateEditorModal from '@/pages/MediaLibraryTemplate/components/DisplayNameTemplateEditorModal';
+import PropertyPoolIcon from '@/components/Property/components/PropertyPoolIcon';
+import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
 
 
 enum FileExtensionGroup {
@@ -85,6 +89,7 @@ type MediaLibraryTemplateProperty = {
 };
 
 type MediaLibraryTemplatePlayableFileLocator = {
+  extensionGroups?: IdName[];
   extensionGroupIds?: number[];
   extensions?: string[];
 };
@@ -277,10 +282,11 @@ export default () => {
               >
                 <div className={'flex flex-col gap-2'}>
                   <Block
+                    leftIcon={<IoLocate className={'text-large'} />}
                     title={t('Resource filter')}
                     description={t('Determine which files or folders will be considered as resources')}
-                    icon={<AiOutlinePlusCircle className={'text-medium'} />}
-                    onIconPress={() => {
+                    rightIcon={<AiOutlinePlusCircle className={'text-large'} />}
+                    onRightIconPress={() => {
                       createPortal(
                         PathFilterModal, {
                           onSubmit: async f => {
@@ -345,8 +351,10 @@ export default () => {
                   </Block>
                   <Block
                     title={t('Playable(Runnable) files')}
-                    icon={<AiOutlineEdit className={'text-medium'} />}
-                    onIconPress={() => {
+                    description={t('Determine which files be considered as playable files')}
+                    leftIcon={<IoPlayCircleOutline className={'text-large'} />}
+                    rightIcon={<AiOutlineEdit className={'text-medium'} />}
+                    onRightIconPress={() => {
                       createPortal(
                         PlayableFileSelectorModal, {
                           selection: tpl.playableFileLocator,
@@ -360,8 +368,7 @@ export default () => {
                     }}
                   >
                     <div className={'flex items-center gap-1'}>
-                      {tpl.playableFileLocator?.extensionGroupIds?.map(id => {
-                        const group = extensionGroups.find(g => g.id == id);
+                      {tpl.playableFileLocator?.extensionGroups?.map(group => {
                         return (
                           <Chip size={'sm'} variant={'flat'}>
                             {group?.name}
@@ -379,12 +386,17 @@ export default () => {
                   </Block>
                   <Block
                     title={t('Properties')}
-                    icon={<AiOutlineEdit className={'text-medium'} />}
-                    onIconPress={() => {
+                    description={t('You can configure which properties your resource includes')}
+                    leftIcon={<TbDatabase className={'text-large'} />}
+                    rightIcon={<AiOutlineEdit className={'text-large'} />}
+                    onRightIconPress={() => {
                       createPortal(
                         PropertySelector, {
+                          v2: true,
                           selection: tpl.properties,
                           pool: PropertyPool.Reserved | PropertyPool.Custom,
+                          editable: true,
+                          addable: true,
                           onSubmit: async properties => {
                             tpl.properties = properties.map(p => ({
                               pool: p.pool,
@@ -403,18 +415,9 @@ export default () => {
                       {tpl.properties?.map((p, i) => {
                         return (
                           <div className={'flex items-center gap-2'}>
-                            <Chip
-                              variant={'flat'}
-                              size={'sm'}
-                              radius={'sm'}
-                            >
-                              {t(`${PropertyPool[p.pool]} property`)}
-                            </Chip>
+                            <PropertyPoolIcon pool={p.property.pool} />
+                            <PropertyTypeIcon type={p.property.type} />
                             {p.property.name}
-                            <div className={'flex items-center'}>
-                              <Icon type={PropertyTypeIconMap[p.property.type]!} className={'text-medium'} />
-                              {p.property.typeName}
-                            </div>
                             <div className={'flex items-center gap-1'}>
                               {p.valueLocators?.map(v => {
                                 return (
@@ -476,8 +479,10 @@ export default () => {
                   </Block>
                   <Block
                     title={t('Enhancers')}
-                    icon={<AiOutlineEdit className={'text-medium'} />}
-                    onIconPress={() => {
+                    description={t('You can use enhancers to automatically populate resource information or files')}
+                    leftIcon={<IoRocketOutline className={'text-large'} />}
+                    rightIcon={<AiOutlineEdit className={'text-large'} />}
+                    onRightIconPress={() => {
                       createPortal(
                         EnhancerSelectorModal, {
                           selectedIds: tpl.enhancers?.map(e => e.enhancerId),
@@ -623,19 +628,26 @@ export default () => {
                                         ? propertyMap[to.propertyPool]?.[to.propertyId] : undefined;
                                       return (
                                         <div className={'flex items-center gap-1'}>
-                                          <Chip
-                                            size={'sm'}
-                                            radius={'sm'}
-                                            variant={'flat'}
-                                          >
-                                            {target.name}
-                                          </Chip>
-                                          {target.description && (
-                                            <Popover
-                                              trigger={<AiOutlineQuestionCircle className={'text-medium'} />}
+                                          {target.description ? (
+                                            <Tooltip
+                                              content={target.description}
                                             >
-                                              {target.description}
-                                            </Popover>
+                                              <Chip
+                                                size={'sm'}
+                                                radius={'sm'}
+                                                variant={'flat'}
+                                              >
+                                                {target.name}
+                                              </Chip>
+                                            </Tooltip>
+                                          ) : (
+                                            <Chip
+                                              size={'sm'}
+                                              radius={'sm'}
+                                              variant={'flat'}
+                                            >
+                                              {target.name}
+                                            </Chip>
                                           )}
                                           <TiChevronRightOutline className={'text-medium'} />
                                           {to.autoBindProperty ? t('Auto bind property') : property ? (
@@ -672,8 +684,10 @@ export default () => {
                   </Block>
                   <Block
                     title={t('Display name template')}
-                    icon={<AiOutlineEdit className={'text-medium'} />}
-                    onIconPress={() => {
+                    description={t('You can customize the display name of the resource')}
+                    leftIcon={<MdOutlineSubtitles className={'text-large'} />}
+                    rightIcon={<AiOutlineEdit className={'text-large'} />}
+                    onRightIconPress={() => {
                       createPortal(
                         DisplayNameTemplateEditorModal, {
                           properties: tpl.properties?.map(p => p.property!) ?? [],

@@ -2,7 +2,7 @@ import {
   DeleteOutlined,
   DisconnectOutlined,
   EditOutlined,
-  InfoCircleOutlined,
+  InfoCircleOutlined, QuestionCircleOutlined,
 } from '@ant-design/icons';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +12,7 @@ import {
   AiOutlineClose,
   AiOutlineCloseCircle,
   AiOutlineDisconnect,
-  AiOutlineLine,
+  AiOutlineLine, AiOutlineQuestionCircle,
 } from 'react-icons/ai';
 import type { EnhancerTargetFullOptions } from '../../models';
 import { createEnhancerTargetOptions } from '../../models';
@@ -175,7 +175,7 @@ export default (props: Props) => {
                     content={descriptor.description}
                     placement={'right'}
                   >
-                    <InfoCircleOutlined className={'text-base'} />
+                    <QuestionCircleOutlined className={'text-medium'} />
                   </Tooltip>
                 )}
               </>
