@@ -47,6 +47,7 @@ const ExtensionsInput: React.FC<ExtensionsInputProps> = ({
   return (
     <div>
       <Textarea
+        isClearable
         label={label ?? t('Extensions')}
         placeholder={placeholder ?? t('Separate by space or newline')}
         value={text}

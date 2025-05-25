@@ -59,7 +59,7 @@ namespace Bakabase.InsideWorld.Business.Services
     public class MediaLibraryService : BootstrapService, IMediaLibraryService
     {
         private readonly ResourceService<InsideWorldDbContext,
-            Abstractions.Models.Db.MediaLibrary, int> _orm;
+            Abstractions.Models.Db.MediaLibraryDbModel, int> _orm;
 
         private readonly IPropertyService _propertyService;
         private const decimal MinimalFreeSpace = 1_000_000_000; 
@@ -83,7 +83,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IEnhancerLocalizer _enhancerLocalizer;
 
         public MediaLibraryService(IServiceProvider serviceProvider,
-            ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibrary, int> orm,
+            ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibraryDbModel, int> orm,
             IPropertyService propertyService, IPropertyLocalizer propertyLocalizer,
             IBOptions<ResourceOptions> resourceOptions, IEnhancerLocalizer enhancerLocalizer,
             IBakabaseLocalizer localizer) : base(serviceProvider)
@@ -154,14 +154,14 @@ namespace Bakabase.InsideWorld.Business.Services
         }
 
         public async Task<List<MediaLibrary>> GetAll(
-            Expression<Func<Abstractions.Models.Db.MediaLibrary, bool>>? exp = null,
+            Expression<Func<Abstractions.Models.Db.MediaLibraryDbModel, bool>>? exp = null,
             MediaLibraryAdditionalItem additionalItems = MediaLibraryAdditionalItem.None)
         {
             var wss = (await _orm.GetAll(exp)).OrderBy(a => a.Order).ToList();
             return await ToDomainModels(wss, additionalItems);
         }
 
-        public async Task<BaseResponse> DeleteAll(Expression<Func<Abstractions.Models.Db.MediaLibrary, bool>> selector)
+        public async Task<BaseResponse> DeleteAll(Expression<Func<Abstractions.Models.Db.MediaLibraryDbModel, bool>> selector)
         {
             return await _orm.RemoveAll(selector);
         }
@@ -171,7 +171,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return await _orm.RemoveByKey(key);
         }
 
-        protected async Task<List<MediaLibrary>> ToDomainModels(List<Abstractions.Models.Db.MediaLibrary> mls,
+        protected async Task<List<MediaLibrary>> ToDomainModels(List<Abstractions.Models.Db.MediaLibraryDbModel> mls,
             MediaLibraryAdditionalItem additionalItems)
         {
             var dtoList = mls.Select(ml => ml.ToDomainModel()!).ToList();
@@ -289,7 +289,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<BaseResponse> Sort(int[] ids)
         {
             var libraries = (await _orm.GetByKeys(ids)).ToDictionary(t => t.Id, t => t);
-            var changed = new List<Abstractions.Models.Db.MediaLibrary>();
+            var changed = new List<Abstractions.Models.Db.MediaLibraryDbModel>();
             for (var i = 0; i < ids.Length; i++)
             {
                 var id = ids[i];

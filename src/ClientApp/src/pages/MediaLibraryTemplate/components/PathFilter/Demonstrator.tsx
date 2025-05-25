@@ -38,7 +38,7 @@ export default ({ filter }: Props) => {
   const renderLayerOrRegex = () => {
     switch (filter.positioner) {
       case PathPositioner.Layer:
-        return filter.layer == undefined ? t('Not set') : filter.layer == 0 ? t('Current path') : t('The {{layer}} layer', { layer: filter.layer });
+        return filter.layer == undefined ? t('Not set') : filter.layer == 0 ? t('Directory of media library') : t('The {{layer}} layer', { layer: filter.layer });
       case PathPositioner.Regex:
         return filter.regex ?? t('Not set');
       default:

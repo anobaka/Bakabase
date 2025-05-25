@@ -1717,5 +1717,6 @@
   "Properties": "属性",
   "PropertyPool.Abbreviation.Internal": "内",
   "PropertyPool.Abbreviation.Reserved": "预",
-  "PropertyPool.Abbreviation.Custom": "自"
+  "PropertyPool.Abbreviation.Custom": "自",
+  "Sort by {{sortBy}}": "按{{sortBy}}排序"
 }

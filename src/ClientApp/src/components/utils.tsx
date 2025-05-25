@@ -762,3 +762,7 @@ export function generateNextWithPrefix(prefix: string, currentList: string[]): s
 
   return `${prefix} ${nextNumber}`;
 }
+
+export function isNotEmpty(str: string | undefined): boolean {
+  return str !== undefined && str !== null && str.length > 0;
+}

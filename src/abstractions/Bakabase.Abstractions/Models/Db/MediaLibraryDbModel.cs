@@ -2,7 +2,7 @@
 
 namespace Bakabase.Abstractions.Models.Db
 {
-    public record MediaLibrary
+    public record MediaLibraryDbModel
     {
         public int Id { get; set; }
         [Required] public string Name { get; set; } = string.Empty;

@@ -42,7 +42,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
             return null;
         }
 
-        public static MediaLibrary? ToDomainModel(this Abstractions.Models.Db.MediaLibrary? ml)
+        public static MediaLibrary? ToDomainModel(this Abstractions.Models.Db.MediaLibraryDbModel? ml)
         {
             if (ml == null)
             {
@@ -106,14 +106,14 @@ namespace Bakabase.InsideWorld.Business.Extensions
             return d;
         }
 
-        public static Abstractions.Models.Db.MediaLibrary? ToDbModel(this MediaLibrary? ml)
+        public static Abstractions.Models.Db.MediaLibraryDbModel? ToDbModel(this MediaLibrary? ml)
         {
             if (ml == null)
             {
                 return null;
             }
 
-            var entity = new Abstractions.Models.Db.MediaLibrary
+            var entity = new Abstractions.Models.Db.MediaLibraryDbModel
             {
                 Id = ml.Id,
                 CategoryId = ml.CategoryId,

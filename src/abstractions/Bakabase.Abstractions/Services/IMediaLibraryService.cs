@@ -31,7 +31,7 @@ public interface IMediaLibraryService
     Task<BaseResponse> Put(MediaLibrary dto);
     Task<MediaLibrary?> Get(int id, MediaLibraryAdditionalItem additionalItems = MediaLibraryAdditionalItem.None);
     //
-    Task<List<MediaLibrary>> GetAll(Expression<Func<Models.Db.MediaLibrary, bool>>? exp = null,
+    Task<List<MediaLibrary>> GetAll(Expression<Func<Models.Db.MediaLibraryDbModel, bool>>? exp = null,
         MediaLibraryAdditionalItem additionalItems = MediaLibraryAdditionalItem.None);
     //
     Task<BaseResponse> Sort(int[] ids);
@@ -81,7 +81,7 @@ public interface IMediaLibraryService
     // Task<BaseResponse> Remove(InsideWorld.Models.Models.Entities.MediaLibrary resource);
     // Task<BaseResponse> RemoveRange(IEnumerable<InsideWorld.Models.Models.Entities.MediaLibrary> resources);
     
-    Task<BaseResponse> DeleteAll(Expression<Func<Models.Db.MediaLibrary, bool>> selector);
+    Task<BaseResponse> DeleteAll(Expression<Func<Models.Db.MediaLibraryDbModel, bool>> selector);
     //
     // Task<int> Count(Expression<Func<InsideWorld.Models.Models.Entities.MediaLibrary, bool>> selector);
     // Task<bool> Any(Expression<Func<InsideWorld.Models.Models.Entities.MediaLibrary, bool>> selector);

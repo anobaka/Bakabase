@@ -18,6 +18,10 @@ public static class MediaLibraryTemplateExtensions
     {
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryTemplateDbModel, int>>();
         services.AddScoped<IMediaLibraryTemplateService, MediaLibraryTemplateService<TDbContext>>();
+
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryV2DbModel, int>>();
+        services.AddScoped<IMediaLibraryV2Service, MediaLibraryV2Service<TDbContext>>();
+
         return services;
     }
 

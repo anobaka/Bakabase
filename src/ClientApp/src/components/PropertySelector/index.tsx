@@ -78,7 +78,7 @@ const PropertySelector = (props: IProps) => {
           onClick={async () => {
             if (multiple) {
               if (selected) {
-                setSelection(selection.filter(s => s.id != property.id && s.pool == property.pool));
+                setSelection(selection.filter(s => s.id != property.id || s.pool != property.pool));
               } else {
                 setSelection([...selection, {
                   id: property.id,
@@ -113,7 +113,7 @@ const PropertySelector = (props: IProps) => {
         onClick={async () => {
           if (multiple) {
             if (selected) {
-              setSelection(selection.filter(s => s.id != property.id && s.pool == property.pool));
+              setSelection(selection.filter(s => s.id != property.id || s.pool != property.pool));
             } else {
               setSelection([...selection, {
                 id: property.id,

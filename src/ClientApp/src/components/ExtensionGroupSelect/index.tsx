@@ -17,7 +17,7 @@ export default ({ value = [], onSelectionChange }: Props) => {
   const { t } = useTranslation();
   const [extensionGroups, setExtensionGroups] = useState<ExtensionGroup[]>([]);
 
-  console.log(extensionGroups, value);
+  // console.log(extensionGroups, value);
 
   useEffect(() => {
     BApi.extensionGroup.getAllExtensionGroups().then((res) => {

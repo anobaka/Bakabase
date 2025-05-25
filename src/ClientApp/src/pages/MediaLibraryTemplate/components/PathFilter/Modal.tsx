@@ -60,7 +60,7 @@ export default ({
                 layer,
               });
             }}
-            description={t('Layer 0 is current path')}
+            description={t('Layer 0 is directory of media library')}
           />
         );
       case PathPositioner.Regex:

@@ -16,7 +16,7 @@ const asideMenuConfig: IMenuItem[] = [
   {
     name: 'Media library',
     icon: 'ProductOutlined',
-    path: '/category',
+    path: '/medialibrary',
   },
   {
     name: 'Data',

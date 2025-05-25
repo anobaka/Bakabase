@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
@@ -21,6 +22,9 @@ using Bakabase.Migrations.V190;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.Modules.BulkModification.Extensions;
 using Bakabase.Modules.Enhancer.Extensions;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.ThirdParty.Extensions;
@@ -29,6 +33,9 @@ using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Category = Bakabase.Abstractions.Models.Db.Category;
+using MediaLibraryDbModel = Bakabase.Abstractions.Models.Db.MediaLibraryDbModel;
+using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 
 namespace Bakabase.Service.Extensions
 {
@@ -111,7 +118,7 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, SpecialText, int>>();
             services.AddScoped<SpecialTextService>();
             services.AddScoped<ISpecialTextService>(sp => sp.GetRequiredService<SpecialTextService>());
-            services.AddScoped<ResourceService<InsideWorldDbContext, MediaLibrary, int>>();
+            services.AddScoped<ResourceService<InsideWorldDbContext, MediaLibraryDbModel, int>>();
             services.AddScoped<IMediaLibraryService, MediaLibraryService>();
             services.AddScoped<ResourceService<InsideWorldDbContext, Category, int>>();
             services.AddScoped<ICategoryService, CategoryService>();

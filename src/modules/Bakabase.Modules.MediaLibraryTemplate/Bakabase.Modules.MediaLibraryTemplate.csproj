@@ -18,9 +18,4 @@
     <ProjectReference Include="..\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Abstractions\Models\Db\" />
-    <Folder Include="Abstractions\Services\" />
-  </ItemGroup>
-
 </Project>

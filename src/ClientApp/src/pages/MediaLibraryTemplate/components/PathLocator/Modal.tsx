@@ -40,7 +40,7 @@ export default ({
               locator.layer = layer;
               forceUpdate();
             }}
-            description={t('Layer 0 is current path')}
+            description={t('Layer 0 is directory of media library')}
           />
         );
       case PathPositioner.Regex:
@@ -95,7 +95,7 @@ export default ({
               <AccordionItem
                 key={i}
                 title={(
-                  <div>
+                  <div className={'flex items-center gap-1'}>
                     {t('Rule')} {i + 1}
                     <Button
                       isIconOnly
@@ -112,24 +112,26 @@ export default ({
                   </div>
                 )}
               >
-                <RadioGroup
-                  label={t('Positioning')}
-                  onValueChange={v => {
-                    const nv = parseInt(v, 10);
-                    if (locator.positioner != nv) {
-                      locators[i] = { positioner: nv };
-                      forceUpdate();
-                    }
-                  }}
-                  value={locator.positioner?.toString()}
-                  orientation="horizontal"
-                  isRequired
-                >
-                  {pathPositioners.map(p => (
-                    <Radio value={p.value.toString()}>{p.label}</Radio>
-                  ))}
-                </RadioGroup>
-                {locator.positioner && renderPositioner(locator)}
+                <div className={'flex flex-col gap-1'}>
+                  <RadioGroup
+                    label={t('Positioning')}
+                    onValueChange={v => {
+                      const nv = parseInt(v, 10);
+                      if (locator.positioner != nv) {
+                        locators[i] = { positioner: nv };
+                        forceUpdate();
+                      }
+                    }}
+                    value={locator.positioner?.toString()}
+                    orientation="horizontal"
+                    isRequired
+                  >
+                    {pathPositioners.map(p => (
+                      <Radio value={p.value.toString()}>{p.label}</Radio>
+                    ))}
+                  </RadioGroup>
+                  {locator.positioner && renderPositioner(locator)}
+                </div>
               </AccordionItem>
             );
           })}

@@ -14,13 +14,13 @@ import { IoLocate, IoPlayCircleOutline, IoRocketOutline } from 'react-icons/io5'
 import { CardHeader } from '@heroui/react';
 import { CiFilter } from 'react-icons/ci';
 import { FaRightLong } from 'react-icons/fa6';
-import { TiChevronRightOutline } from 'react-icons/ti';
+import { TiChevronRightOutline, TiFlowChildren } from 'react-icons/ti';
 import { GoShareAndroid } from 'react-icons/go';
 import { MdDeleteOutline, MdOutlineSubtitles } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import { TbDatabase } from 'react-icons/tb';
 import { CgRename } from 'react-icons/cg';
-import type { PathFilter, PathLocator } from './models';
+import type { MediaLibraryTemplate, PathFilter, PathLocator } from './models';
 import { PathFilterFsType } from './models';
 import { PathFilterDemonstrator, PathFilterModal } from './components/PathFilter';
 import testData from './data.json';
@@ -58,62 +58,7 @@ import { EnhancerIcon } from '@/components/Enhancer';
 import DisplayNameTemplateEditorModal from '@/pages/MediaLibraryTemplate/components/DisplayNameTemplateEditorModal';
 import PropertyPoolIcon from '@/components/Property/components/PropertyPoolIcon';
 import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
-
-
-enum FileExtensionGroup {
-  Image = 1,
-  Audio,
-  Video,
-  Document,
-  Application,
-  Archive,
-}
-
-type MediaLibraryTemplate = {
-  id: number;
-  name: string;
-  resourceFilters?: PathFilter[];
-  properties?: MediaLibraryTemplateProperty[];
-  playableFileLocator?: MediaLibraryTemplatePlayableFileLocator;
-  enhancers?: MediaLibraryTemplateEnhancerOptions[];
-  displayNameTemplate?: string;
-  samplePaths?: string[];
-};
-
-
-type MediaLibraryTemplateProperty = {
-  pool: PropertyPool;
-  id: number;
-  property: IProperty;
-  valueLocators?: PathLocator[];
-};
-
-type MediaLibraryTemplatePlayableFileLocator = {
-  extensionGroups?: IdName[];
-  extensionGroupIds?: number[];
-  extensions?: string[];
-};
-
-type MediaLibraryTemplateEnhancerOptions = {
-  enhancerId: number;
-  options?: EnhancerFullOptions;
-};
-
-const testFileExtensionGroups: IdName[] = [
-  {
-    id: 1,
-    name: 'Video files',
-  },
-  {
-    id: 2,
-    name: 'Audio files',
-  },
-  {
-    id: 3,
-    name: 'Image files',
-  },
-];
-
+import FeatureStatusTip from '@/components/FeatureStatusTip';
 
 export default () => {
   const { t } = useTranslation();
@@ -230,7 +175,39 @@ export default () => {
                 key={tpl.id}
                 title={(
                   <div className={'flex items-center justify-between'}>
-                    <div className={'font-bold'}>{tpl.name}</div>
+                    <div className={'font-bold flex items-center gap-1'}>
+                      {tpl.name}
+                      <Button
+                        size={'sm'}
+                        isIconOnly
+                        onPress={() => {
+                        let { name } = tpl;
+                        createPortal(Modal, {
+                          defaultVisible: true,
+                          title: t('Rename template'),
+                          children: (
+                            <Input
+                              label={t('Template name')}
+                              placeholder={t('Enter template name')}
+                              isRequired
+                              defaultValue={name}
+                              onValueChange={v => {
+                                name = v;
+                              }}
+                            />
+                          ),
+                          onOk: async () => {
+                            tpl.name = name;
+                            await putTemplate(tpl);
+                            forceUpdate();
+                          },
+                        });
+                      }}
+                        variant={'light'}
+                      >
+                        <AiOutlineEdit className={'text-medium'} />
+                      </Button>
+                    </div>
                     <div className={'flex items-center gap-1'}>
                       <Button
                         size={'sm'}
@@ -599,21 +576,9 @@ export default () => {
                                                 <TiChevronRightOutline className={'text-medium'} />
                                                 {to.autoBindProperty ? t('Auto bind property') : property ? (
                                                   <div className={'flex items-center gap-1'}>
-                                                    <Chip
-                                                      variant={'flat'}
-                                                      size={'sm'}
-                                                      radius={'sm'}
-                                                    >
-                                                      {t(`${PropertyPool[property.pool]} property`)}
-                                                    </Chip>
+                                                    <PropertyPoolIcon pool={property.pool} />
+                                                    <PropertyTypeIcon type={property.type} />
                                                     {property.name}
-                                                    <div className={'flex items-center'}>
-                                                      <Icon
-                                                        type={PropertyTypeIconMap[property.type]!}
-                                                        className={'text-medium'}
-                                                      />
-                                                      {property.typeName}
-                                                    </div>
                                                   </div>
                                                 ) : t('Unknown property')}
                                                 {to.autoMatchMultilevelString && t('Auto match multilevel string')}
@@ -652,21 +617,9 @@ export default () => {
                                           <TiChevronRightOutline className={'text-medium'} />
                                           {to.autoBindProperty ? t('Auto bind property') : property ? (
                                             <div className={'flex items-center gap-1'}>
-                                              <Chip
-                                                variant={'flat'}
-                                                size={'sm'}
-                                                radius={'sm'}
-                                              >
-                                                {t(`${PropertyPool[property.pool]} property`)}
-                                              </Chip>
+                                              <PropertyPoolIcon pool={property.pool} />
+                                              <PropertyTypeIcon type={property.type} />
                                               {property.name}
-                                              <div className={'flex items-center'}>
-                                                <Icon
-                                                  type={PropertyTypeIconMap[property.type]!}
-                                                  className={'text-medium'}
-                                                />
-                                                {property.typeName}
-                                              </div>
                                             </div>
                                           ) : t('Unknown property')}
                                           {to.autoMatchMultilevelString && t('Auto match multilevel string')}
@@ -702,6 +655,27 @@ export default () => {
                     }}
                   >
                     {tpl.displayNameTemplate}
+                  </Block>
+                  <Block
+                    title={t('Subresource')}
+                    // description={t('You can customize the display name of the resource')}
+                    leftIcon={<TiFlowChildren className={'text-large'} />}
+                    // rightIcon={<AiOutlineEdit className={'text-large'} />}
+                    // onRightIconPress={() => {
+                    //   createPortal(
+                    //     DisplayNameTemplateEditorModal, {
+                    //       properties: tpl.properties?.map(p => p.property!) ?? [],
+                    //       template: tpl.displayNameTemplate,
+                    //       onSubmit: async template => {
+                    //         tpl.displayNameTemplate = template;
+                    //         await putTemplate(tpl);
+                    //         forceUpdate();
+                    //       },
+                    //     },
+                    //   );
+                    // }}
+                  >
+                    <FeatureStatusTip status={'developing'} name={t('Subresource')} />
                   </Block>
                   {/* <Block */}
                   {/*   title={t('Preview')} */}

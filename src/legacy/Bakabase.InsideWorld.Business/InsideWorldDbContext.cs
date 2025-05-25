@@ -8,6 +8,7 @@ using Bakabase.Modules.BulkModification.Abstractions.Models;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
@@ -17,7 +18,7 @@ using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancer
 using Enhancement = Bakabase.Abstractions.Models.Db.Enhancement;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
 using LegacyAlias = Bakabase.InsideWorld.Models.Models.Entities.LegacyAlias;
-using MediaLibrary = Bakabase.Abstractions.Models.Db.MediaLibrary;
+using MediaLibraryDbModel = Bakabase.Abstractions.Models.Db.MediaLibraryDbModel;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Db.ReservedPropertyValue;
 using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 using Tag = Bakabase.InsideWorld.Models.Models.Entities.Tag;
@@ -49,7 +50,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<SpecialText> SpecialTexts { get; set; }
         public DbSet<Category> ResourceCategories { get; set; }
 
-        public DbSet<MediaLibrary> MediaLibraries { get; set; }
+        public DbSet<MediaLibraryDbModel> MediaLibraries { get; set; }
         public DbSet<Playlist> Playlists { get; set; }
         public DbSet<ComponentOptions> ComponentOptions { get; set; }
         public DbSet<CategoryComponent> CategoryComponents { get; set; }
@@ -78,6 +79,7 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<ExtensionGroupDbModel> ExtensionGroups { get; set; }
         public DbSet<MediaLibraryTemplateDbModel> MediaLibraryTemplates { get; set; }
+        public DbSet<MediaLibraryV2DbModel> MediaLibrariesV2 { get; set; }
 
         public InsideWorldDbContext()
         {
@@ -159,7 +161,7 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => new {a.Name, a.GroupId}).IsUnique();
             });
 
-            modelBuilder.Entity<MediaLibrary>(t =>
+            modelBuilder.Entity<MediaLibraryDbModel>(t =>
             {
                 t.HasIndex(a => a.CategoryId);
                 t.HasIndex(a => a.Name);

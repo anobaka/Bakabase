@@ -249,5 +249,6 @@
   "PropertyPool.Custom": "Custom",
   "PropertyPool.Abbreviation.Internal": "I",
   "PropertyPool.Abbreviation.Reserved": "R",
-  "PropertyPool.Abbreviation.Custom": "C"
+  "PropertyPool.Abbreviation.Custom": "C",
+  "Sort by {{sortBy}}": "Sort by {{sortBy}}"
 }
