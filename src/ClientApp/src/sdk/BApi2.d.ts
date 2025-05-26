@@ -494,6 +494,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["BindCustomPropertyToCategory"];
+        delete: operations["UnlinkCustomPropertyFromCategory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/category/{categoryId}/custom-property/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SortCustomPropertiesInCategory"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -809,6 +825,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/custom-property/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SortCustomProperties"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/custom-property/{sourceCustomPropertyId}/{targetType}/conversion-preview": {
         parameters: {
             query?: never;
@@ -913,6 +945,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["GetStatistics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dashboard/property": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPropertyStatistics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1124,6 +1172,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/extension-group": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllExtensionGroups"];
+        put?: never;
+        post: operations["AddExtensionGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/extension-group/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetExtensionGroup"];
+        put: operations["PutExtensionGroup"];
+        post?: never;
+        delete: operations["DeleteExtensionGroup"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1673,6 +1753,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/media-library/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["StartSyncMediaLibrary"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/media-library/path-configuration-validation": {
         parameters: {
             query?: never;
@@ -1764,6 +1860,118 @@ export interface paths {
         put: operations["StartSyncingMediaLibraryResources"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-library-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllMediaLibraryTemplates"];
+        put?: never;
+        post: operations["AddMediaLibraryTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-library-template/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMediaLibraryTemplate"];
+        put: operations["PutMediaLibraryTemplate"];
+        post?: never;
+        delete: operations["DeleteMediaLibraryTemplate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-library-template/{id}/share-text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMediaLibraryTemplateShareCode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-library-template/share-code/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateMediaLibraryTemplateShareCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-library-template/share-code/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportMediaLibraryTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-library-v2": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllMediaLibraryV2"];
+        put: operations["SaveAllMediaLibrariesV2"];
+        post: operations["AddMediaLibraryV2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-library-v2/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMediaLibraryV2"];
+        put: operations["PutMediaLibraryV2"];
+        post?: never;
+        delete: operations["DeleteMediaLibraryV2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2004,6 +2212,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["DeletePassword"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/play-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchPlayHistories"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2387,7 +2611,7 @@ export interface paths {
         get: operations["GetUnknownResources"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["DeleteUnknownResources"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2452,6 +2676,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{id}/played-at": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["MarkResourceAsNotPlayed"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2722,6 +2962,15 @@ export interface components {
             componentType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ComponentType"];
             descriptor: components["schemas"]["Bakabase.Abstractions.Models.Domain.ComponentDescriptor"];
         };
+        "Bakabase.Abstractions.Models.Db.PlayHistoryDbModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            resourceId: number;
+            item?: string;
+            /** Format: date-time */
+            playedAt: string;
+        };
         "Bakabase.Abstractions.Models.Domain.Category": {
             /** Format: int32 */
             id: number;
@@ -2852,6 +3101,8 @@ export interface components {
             options?: unknown;
             /** Format: int32 */
             valueCount?: number;
+            /** Format: int32 */
+            order: number;
         };
         "Bakabase.Abstractions.Models.Domain.CustomPropertyValue": {
             /** Format: int32 */
@@ -2866,6 +3117,12 @@ export interface components {
             scope: number;
             readonly bizKey: string;
             bizValue?: unknown;
+        };
+        "Bakabase.Abstractions.Models.Domain.ExtensionGroup": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            extensions?: string[];
         };
         "Bakabase.Abstractions.Models.Domain.MediaLibrary": {
             /** Format: int32 */
@@ -2915,6 +3172,16 @@ export interface components {
             /** Format: int32 */
             id: number;
             isCustom: boolean;
+        };
+        "Bakabase.Abstractions.Models.Domain.Property": {
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            id: number;
+            name: string;
+            type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
+            options?: unknown;
+            /** Format: int32 */
+            order: number;
         };
         "Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue": {
             fixedText?: string;
@@ -2974,6 +3241,8 @@ export interface components {
                 };
             };
             readonly pinned: boolean;
+            /** Format: date-time */
+            playedAt?: string;
             cache?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceCache"];
             category?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"];
             mediaLibraryName?: string;
@@ -2985,6 +3254,8 @@ export interface components {
             bizValueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
             visible: boolean;
+            /** Format: int32 */
+            order: number;
         };
         "Bakabase.Abstractions.Models.Domain.Resource+Property+PropertyValue": {
             /** Format: int32 */
@@ -3044,6 +3315,14 @@ export interface components {
             /** Format: int32 */
             order?: number;
             generateNfo?: boolean;
+        };
+        "Bakabase.Abstractions.Models.Input.ExtensionGroupAddInputModel": {
+            name: string;
+            extensions?: string[];
+        };
+        "Bakabase.Abstractions.Models.Input.ExtensionGroupPutInputModel": {
+            name: string;
+            extensions: string[];
         };
         "Bakabase.Abstractions.Models.Input.MediaLibraryAddInBulkInputModel": {
             nameAndPaths: {
@@ -3252,6 +3531,7 @@ export interface components {
             additionalCoverDiscoveringSources: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalCoverDiscoveringSource"][];
             savedSearches: components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SavedSearch"][];
             idsOfMediaLibraryRecentlyMovedTo?: number[];
+            synchronizationOptions?: components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationOptionsModel"];
         };
         "Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+CoverOptionsModel": {
             saveMode?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSaveMode"];
@@ -3259,6 +3539,35 @@ export interface components {
         "Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SavedSearch": {
             search: components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel"];
             name: string;
+        };
+        "Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationCategoryOptions": {
+            deleteResourcesWithUnknownPath?: boolean;
+            enhancerOptionsMap?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationEnhancerOptions"];
+            };
+            mediaLibraryOptionsMap?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationMediaLibraryOptions"];
+            };
+        };
+        "Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationEnhancerOptions": {
+            reApply?: boolean;
+            reEnhance?: boolean;
+        };
+        "Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationMediaLibraryOptions": {
+            deleteResourcesWithUnknownPath?: boolean;
+            enhancerOptionsMap?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationEnhancerOptions"];
+            };
+        };
+        "Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationOptionsModel": {
+            deleteResourcesWithUnknownPath?: boolean;
+            deleteResourcesWithUnknownMediaLibrary?: boolean;
+            categoryOptionsMap?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationCategoryOptions"];
+            };
+            enhancerOptionsMap?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationEnhancerOptions"];
+            };
         };
         "Bakabase.InsideWorld.Models.Configs.BilibiliOptions": {
             downloader?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.Infrastructures.CommonDownloaderOptions"];
@@ -3407,10 +3716,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.Aos.PasswordSearchOrder": 1 | 2;
         /**
          * Format: int32
-         * @description [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt]
+         * @description [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty": 1 | 2 | 3 | 6;
+        "Bakabase.InsideWorld.Models.Constants.Aos.ResourceSearchSortableProperty": 1 | 2 | 3 | 6 | 11;
         /**
          * Format: int32
          * @description [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
@@ -3547,8 +3856,26 @@ export interface components {
                 [key: string]: number;
             };
         };
+        "Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics": {
+            /** Format: int32 */
+            totalExpectedPropertyValueCount: number;
+            /** Format: int32 */
+            totalFilledPropertyValueCount: number;
+            propertyValueCoverages: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics+PropertyValueCoverage"][];
+        };
+        "Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics+PropertyValueCoverage": {
+            /** Format: int32 */
+            pool: number;
+            /** Format: int32 */
+            id: number;
+            name: string;
+            /** Format: int32 */
+            filledCount: number;
+            /** Format: int32 */
+            expectedCount: number;
+        };
         "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics": {
-            categoryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
+            categoryMediaLibraryCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+CategoryMediaLibraryCount"][];
             todayAddedCategoryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
             thisWeekAddedCategoryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
             thisMonthAddedCategoryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
@@ -3558,11 +3885,10 @@ export interface components {
             thirdPartyRequestCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+ThirdPartyRequestCount"][];
             fileMover: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+FileMoverInfo"];
             otherCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][][];
-            /** Format: int32 */
-            totalExpectedPropertyValueCount: number;
-            /** Format: int32 */
-            totalFilledPropertyValueCount: number;
-            propertyValueCoverages: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+PropertyValueCoverage"][];
+        };
+        "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+CategoryMediaLibraryCount": {
+            categoryName: string;
+            mediaLibraryCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
         };
         "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+DownloaderTaskCount": {
             id: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
@@ -3575,17 +3901,6 @@ export interface components {
             sourceCount: number;
             /** Format: int32 */
             targetCount: number;
-        };
-        "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+PropertyValueCoverage": {
-            /** Format: int32 */
-            pool: number;
-            /** Format: int32 */
-            id: number;
-            name: string;
-            /** Format: int32 */
-            filledCount: number;
-            /** Format: int32 */
-            expectedCount: number;
         };
         "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount": {
             label?: string;
@@ -3826,10 +4141,11 @@ export interface components {
             dynamicTarget?: string;
             autoMatchMultilevelString?: boolean;
             autoBindProperty?: boolean;
+            coverSelectOrder?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSelectOrder"];
+            propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             propertyId?: number;
-            propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
-            coverSelectOrder?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSelectOrder"];
+            property?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
         };
         "Bakabase.Modules.Enhancer.Models.Input.CategoryEnhancerOptionsPatchInputModel": {
             options?: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerFullOptions"];
@@ -3843,6 +4159,106 @@ export interface components {
             propertyId?: number;
             propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             dynamicTarget?: string;
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter.PathFilter": {
+            positioner: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator.PathPositioner"];
+            /** Format: int32 */
+            layer?: number;
+            regex?: string;
+            fsType?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter.PathFilterFsType"];
+            extensionGroupIds?: number[];
+            extensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
+            extensions?: string[];
+        };
+        /**
+         * Format: int32
+         * @description [1: File, 2: Directory]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter.PathFilterFsType": 1 | 2;
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator.PathLocator": {
+            positioner: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator.PathPositioner"];
+            /** Format: int32 */
+            layer?: number;
+            regex?: string;
+        };
+        /**
+         * Format: int32
+         * @description [1: Layer, 2: Regex]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator.PathPositioner": 1 | 2;
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            author?: string;
+            description?: string;
+            resourceFilters?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter.PathFilter"][];
+            properties?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplateProperty"][];
+            playableFileLocator?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplatePlayableFileLocator"];
+            enhancers?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplateEnhancerOptions"][];
+            displayNameTemplate?: string;
+            samplePaths?: string[];
+            /** Format: int32 */
+            childrenTemplateId?: number;
+            children?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate"];
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplateEnhancerOptions": {
+            /** Format: int32 */
+            enhancerId: number;
+            options?: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerFullOptions"];
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplatePlayableFileLocator": {
+            extensionGroupIds?: number[];
+            extensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
+            extensions?: string[];
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplateProperty": {
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            id: number;
+            property?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
+            valueLocators?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator.PathLocator"][];
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            path: string;
+            /** Format: int32 */
+            templateId: number;
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateAddInputModel": {
+            name: string;
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel": {
+            shareCode: string;
+            customPropertyConversionsMap?: {
+                [key: string]: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel+TCustomPropertyConversion"];
+            };
+            extensionGroupConversionsMap?: {
+                [key: string]: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel+TExtensionGroupConversion"];
+            };
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel+TCustomPropertyConversion": {
+            /** Format: int32 */
+            toPropertyId?: number;
+            autoBinding?: boolean;
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel+TExtensionGroupConversion": {
+            /** Format: int32 */
+            toExtensionGroupId?: number;
+            autoBinding?: boolean;
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel": {
+            name: string;
+            path: string;
+        };
+        "Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel": {
+            readonly passed: boolean;
+            unhandledProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"][];
+            unhandledExtensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
         };
         "Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel": {
             results?: components["schemas"]["Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel+Tin"][];
@@ -3880,6 +4296,8 @@ export interface components {
             bizValueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
             poolName: string;
             typeName: string;
+            /** Format: int32 */
+            order: number;
         };
         "Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel": {
             group?: components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchFilterGroupDbModel"];
@@ -3945,9 +4363,15 @@ export interface components {
             name: string;
             preprocesses?: string;
         };
+        "Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel": {
+            orderedPropertyIds: number[];
+        };
         "Bakabase.Service.Models.Input.FileSystemEntryGroupInputModel": {
             paths: string[];
             groupInternal: boolean;
+        };
+        "Bakabase.Service.Models.Input.IdBasedDataSortInputModel": {
+            ids: number[];
         };
         "Bakabase.Service.Models.Input.ResourceCoverSaveInputModel": {
             base64String: string;
@@ -3958,6 +4382,7 @@ export interface components {
             coverOptions?: components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+CoverOptionsModel"];
             propertyValueScopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
             searchCriteria?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            synchronizationOptions?: components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationOptionsModel"];
         };
         "Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel": {
             combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
@@ -4068,6 +4493,8 @@ export interface components {
             bizValueType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
             poolName: string;
             typeName: string;
+            /** Format: int32 */
+            order: number;
             /** Format: int32 */
             valueCount?: number;
             categories?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"][];
@@ -4206,6 +4633,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchOperation"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ExtensionGroup]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]": {
             /** Format: int32 */
             code: number;
@@ -4259,6 +4692,18 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Property.Models.View.PropertyViewModel]": {
             /** Format: int32 */
@@ -4344,6 +4789,18 @@ export interface components {
             message?: string;
             data?: string[];
         };
+        "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PlayHistoryDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Db.PlayHistoryDbModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
         "Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Domain.Resource]": {
             /** Format: int32 */
             code: number;
@@ -4427,6 +4884,12 @@ export interface components {
             code: number;
             message?: string;
             data: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.InitializationContentType"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ExtensionGroup]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.MediaLibrary]": {
             /** Format: int32 */
@@ -4560,6 +5023,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Aos.ThirdPartyRequestStatistics"][];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics]": {
             /** Format: int32 */
             code: number;
@@ -4583,6 +5052,24 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel]": {
             /** Format: int32 */
@@ -6370,6 +6857,62 @@ export interface operations {
             };
         };
     };
+    UnlinkCustomPropertyFromCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: number;
+                customPropertyId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SortCustomPropertiesInCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     PreviewCategoryDisplayNameTemplate: {
         parameters: {
             query?: {
@@ -6936,6 +7479,35 @@ export interface operations {
             };
         };
     };
+    SortCustomProperties: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.IdBasedDataSortInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.IdBasedDataSortInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.IdBasedDataSortInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.IdBasedDataSortInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     PreviewCustomPropertyTypeConversion: {
         parameters: {
             query?: never;
@@ -7100,6 +7672,28 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics]"];
+                };
+            };
+        };
+    };
+    GetPropertyStatistics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DashboardPropertyStatistics]"];
                 };
             };
         };
@@ -7593,6 +8187,136 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]"];
+                };
+            };
+        };
+    };
+    GetAllExtensionGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ExtensionGroup]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ExtensionGroup]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ExtensionGroup]"];
+                };
+            };
+        };
+    };
+    AddExtensionGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ExtensionGroupAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ExtensionGroupAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ExtensionGroupAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ExtensionGroupAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetExtensionGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ExtensionGroup]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ExtensionGroup]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ExtensionGroup]"];
+                };
+            };
+        };
+    };
+    PutExtensionGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ExtensionGroupPutInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ExtensionGroupPutInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ExtensionGroupPutInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ExtensionGroupPutInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteExtensionGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -8585,6 +9309,28 @@ export interface operations {
             };
         };
     };
+    StartSyncMediaLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     ValidatePathConfiguration: {
         parameters: {
             query?: never;
@@ -8768,6 +9514,377 @@ export interface operations {
         };
     };
     StartSyncingMediaLibraryResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAllMediaLibraryTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate]"];
+                };
+            };
+        };
+    };
+    AddMediaLibraryTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetMediaLibraryTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate]"];
+                };
+            };
+        };
+    };
+    PutMediaLibraryTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate"];
+                "application/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate"];
+                "text/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteMediaLibraryTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetMediaLibraryTemplateShareCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    ValidateMediaLibraryTemplateShareCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": string;
+                "application/json": string;
+                "text/json": string;
+                "application/*+json": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel]"];
+                };
+            };
+        };
+    };
+    ImportMediaLibraryTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAllMediaLibraryV2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2]"];
+                };
+            };
+        };
+    };
+    SaveAllMediaLibrariesV2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2"][];
+                "application/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2"][];
+                "text/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2"][];
+                "application/*+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2"][];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    AddMediaLibraryV2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetMediaLibraryV2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryV2]"];
+                };
+            };
+        };
+    };
+    PutMediaLibraryV2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteMediaLibraryV2: {
         parameters: {
             query?: never;
             header?: never;
@@ -9473,6 +10590,32 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SearchPlayHistories: {
+        parameters: {
+            query?: {
+                pageIndex?: number;
+                pageSize?: number;
+                skipCount?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PlayHistoryDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PlayHistoryDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Db.PlayHistoryDbModel]"];
                 };
             };
         };
@@ -10227,6 +11370,28 @@ export interface operations {
             };
         };
     };
+    DeleteUnknownResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetUnknownResourcesCount: {
         parameters: {
             query?: never;
@@ -10324,6 +11489,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePathInfoViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePathInfoViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourcePathInfoViewModel]"];
+                };
+            };
+        };
+    };
+    MarkResourceAsNotPlayed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

@@ -7132,13 +7132,13 @@ export const DeleteMediaLibraryTemplateURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetMediaLibraryTemplateShareText
- * url: GetMediaLibraryTemplateShareTextURL
- * method: GetMediaLibraryTemplateShareText_TYPE
- * raw_url: GetMediaLibraryTemplateShareText_RAW_URL
+ * request: GetMediaLibraryTemplateShareCode
+ * url: GetMediaLibraryTemplateShareCodeURL
+ * method: GetMediaLibraryTemplateShareCode_TYPE
+ * raw_url: GetMediaLibraryTemplateShareCode_RAW_URL
  * @param id - 
  */
-export const GetMediaLibraryTemplateShareText = function(parameters = {}) {
+export const GetMediaLibraryTemplateShareCode = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/media-library-template/{id}/share-text'
@@ -7156,17 +7156,103 @@ export const GetMediaLibraryTemplateShareText = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetMediaLibraryTemplateShareText_RAW_URL = function() {
+export const GetMediaLibraryTemplateShareCode_RAW_URL = function() {
   return '/media-library-template/{id}/share-text'
 }
-export const GetMediaLibraryTemplateShareText_TYPE = function() {
+export const GetMediaLibraryTemplateShareCode_TYPE = function() {
   return 'get'
 }
-export const GetMediaLibraryTemplateShareTextURL = function(parameters = {}) {
+export const GetMediaLibraryTemplateShareCodeURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-template/{id}/share-text'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: ValidateMediaLibraryTemplateShareCode
+ * url: ValidateMediaLibraryTemplateShareCodeURL
+ * method: ValidateMediaLibraryTemplateShareCode_TYPE
+ * raw_url: ValidateMediaLibraryTemplateShareCode_RAW_URL
+ * @param model - 
+ */
+export const ValidateMediaLibraryTemplateShareCode = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library-template/share-code/validate'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const ValidateMediaLibraryTemplateShareCode_RAW_URL = function() {
+  return '/media-library-template/share-code/validate'
+}
+export const ValidateMediaLibraryTemplateShareCode_TYPE = function() {
+  return 'post'
+}
+export const ValidateMediaLibraryTemplateShareCodeURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library-template/share-code/validate'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: ImportMediaLibraryTemplate
+ * url: ImportMediaLibraryTemplateURL
+ * method: ImportMediaLibraryTemplate_TYPE
+ * raw_url: ImportMediaLibraryTemplate_RAW_URL
+ * @param model - 
+ */
+export const ImportMediaLibraryTemplate = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library-template/share-code/import'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const ImportMediaLibraryTemplate_RAW_URL = function() {
+  return '/media-library-template/share-code/import'
+}
+export const ImportMediaLibraryTemplate_TYPE = function() {
+  return 'post'
+}
+export const ImportMediaLibraryTemplateURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library-template/share-code/import'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

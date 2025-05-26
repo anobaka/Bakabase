@@ -238,7 +238,7 @@ export interface BakabaseAbstractionsModelsDomainExtensionGroup {
   id: number;
   name: string;
   /** @uniqueItems true */
-  extensions: string[];
+  extensions?: string[];
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibrary {
@@ -462,6 +462,8 @@ export interface BakabaseAbstractionsModelsInputCategoryPatchInputModel {
 
 export interface BakabaseAbstractionsModelsInputExtensionGroupAddInputModel {
   name: string;
+  /** @uniqueItems true */
+  extensions?: string[];
 }
 
 export interface BakabaseAbstractionsModelsInputExtensionGroupPutInputModel {
@@ -1445,12 +1447,13 @@ export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFu
   dynamicTarget?: string;
   autoMatchMultilevelString?: boolean;
   autoBindProperty?: boolean;
-  /** @format int32 */
-  propertyId?: number;
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** [1: FilenameAscending, 2: FileModifyDtDescending] */
   coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId?: number;
+  property?: BakabaseAbstractionsModelsDomainProperty;
 }
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
@@ -1478,6 +1481,7 @@ export interface BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFi
   regex?: string;
   /** [1: File, 2: Directory] */
   fsType?: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilterFsType;
+  /** @uniqueItems true */
   extensionGroupIds?: number[];
   extensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
   /** @uniqueItems true */
@@ -1508,12 +1512,17 @@ export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMedi
   /** @format int32 */
   id: number;
   name: string;
+  author?: string;
+  description?: string;
   resourceFilters?: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilter[];
   properties?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateProperty[];
   playableFileLocator?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplatePlayableFileLocator;
   enhancers?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateEnhancerOptions[];
   displayNameTemplate?: string;
   samplePaths?: string[];
+  /** @format int32 */
+  childrenTemplateId?: number;
+  children?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate;
 }
 
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateEnhancerOptions {
@@ -1552,9 +1561,39 @@ export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMedia
   name: string;
 }
 
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateImportInputModel {
+  shareCode: string;
+  customPropertyConversionsMap?: Record<
+    string,
+    BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateImportInputModelTCustomPropertyConversion
+  >;
+  extensionGroupConversionsMap?: Record<
+    string,
+    BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateImportInputModelTExtensionGroupConversion
+  >;
+}
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateImportInputModelTCustomPropertyConversion {
+  /** @format int32 */
+  toPropertyId?: number;
+  autoBinding?: boolean;
+}
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateImportInputModelTExtensionGroupConversion {
+  /** @format int32 */
+  toExtensionGroupId?: number;
+  autoBinding?: boolean;
+}
+
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryV2AddOrPutInputModel {
   name: string;
   path: string;
+}
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsViewMediaLibraryTemplateValidationViewModel {
+  passed: boolean;
+  unhandledProperties?: BakabaseAbstractionsModelsDomainProperty[];
+  unhandledExtensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
 }
 
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
@@ -2533,6 +2572,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesM
   code: number;
   message?: string;
   data?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryV2;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesMediaLibraryTemplateAbstractionsModelsViewMediaLibraryTemplateValidationViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsViewMediaLibraryTemplateValidationViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
@@ -7000,13 +7046,53 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryTemplate
-     * @name GetMediaLibraryTemplateShareText
+     * @name GetMediaLibraryTemplateShareCode
      * @request GET:/media-library-template/{id}/share-text
      */
-    getMediaLibraryTemplateShareText: (id: number, params: RequestParams = {}) =>
+    getMediaLibraryTemplateShareCode: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
         path: `/media-library-template/${id}/share-text`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name ValidateMediaLibraryTemplateShareCode
+     * @request POST:/media-library-template/share-code/validate
+     */
+    validateMediaLibraryTemplateShareCode: (data: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesMediaLibraryTemplateAbstractionsModelsViewMediaLibraryTemplateValidationViewModel,
+        any
+      >({
+        path: `/media-library-template/share-code/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name ImportMediaLibraryTemplate
+     * @request POST:/media-library-template/share-code/import
+     */
+    importMediaLibraryTemplate: (
+      data: BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateImportInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/share-code/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

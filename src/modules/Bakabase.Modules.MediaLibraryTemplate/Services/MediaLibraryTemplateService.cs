@@ -1,14 +1,19 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Dto;
+using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Extensions;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.Shared;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
@@ -16,6 +21,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Namotion.Reflection;
 using NPOI.SS.Formula.Functions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png.Chunks;
@@ -32,7 +38,8 @@ public class MediaLibraryTemplateService<TDbContext>(
     ICategoryService categoryService,
     ISpecialTextService specialTextService,
     IExtensionGroupService extensionGroupService,
-    IPropertyService propertyService
+    IPropertyService propertyService,
+    ICustomPropertyService customPropertyService
 )
     : IMediaLibraryTemplateService
     where TDbContext : DbContext
@@ -49,7 +56,7 @@ public class MediaLibraryTemplateService<TDbContext>(
         var propertyKeysMap = templates.SelectMany(x => x.Properties ?? []).GroupBy(d => d.Pool)
             .ToDictionary(d => d.Key, d => d.Select(x => x.Id).ToHashSet());
 
-        var propertiesMap = (await propertyService.GetProperties((PropertyPool)propertyKeysMap.Keys.Sum(x => (int)x)))
+        var propertiesMap = (await propertyService.GetProperties((PropertyPool) propertyKeysMap.Keys.Sum(x => (int) x)))
             .ToMap();
 
         foreach (var template in templates)
@@ -71,13 +78,14 @@ public class MediaLibraryTemplateService<TDbContext>(
             var extensionGroups = (await extensionGroupService.GetAll()).ToDictionary(d => d.Id, d => d);
             foreach (var t in templates)
             {
-                if (t.PlayableFileLocator is { ExtensionGroupIds: not null })
+                if (t.PlayableFileLocator is {ExtensionGroupIds: not null})
                 {
                     t.PlayableFileLocator.ExtensionGroups = t.PlayableFileLocator.ExtensionGroupIds
                         .Select(x => extensionGroups.GetValueOrDefault(x))
                         .OfType<ExtensionGroup>()
                         .ToArray();
                 }
+
                 if (t.ResourceFilters != null)
                 {
                     foreach (var rf in t.ResourceFilters)
@@ -277,11 +285,11 @@ public class MediaLibraryTemplateService<TDbContext>(
                         {
                             var r = resourcesMap[rpi.Path];
                             r.Properties ??= [];
-                            var rp = r.Properties.GetOrAdd((int)p.Pool, () => []).GetOrAdd(p.Id,
+                            var rp = r.Properties.GetOrAdd((int) p.Pool, () => []).GetOrAdd(p.Id,
                                 () => new Resource.Property(p.Property.Name, p.Property.Type,
                                     p.Property.Type.GetDbValueType(), p.Property.Type.GetBizValueType(), [], true));
                             rp.Values ??= [];
-                            rp.Values.Add(new Resource.Property.PropertyValue((int)PropertyValueScope.Synchronization,
+                            rp.Values.Add(new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization,
                                 null, bv, bv));
                         }
                     }
@@ -361,7 +369,7 @@ public class MediaLibraryTemplateService<TDbContext>(
 
     public async Task Add(MediaLibraryTemplateAddInputModel model)
     {
-        await orm.Add(new MediaLibraryTemplateDbModel(0, model.Name));
+        await orm.Add(new MediaLibraryTemplateDbModel {Name = model.Name,});
     }
 
     public async Task Put(int id, Abstractions.Models.Domain.MediaLibraryTemplate template)
@@ -375,15 +383,192 @@ public class MediaLibraryTemplateService<TDbContext>(
         await orm.RemoveByKey(id);
     }
 
-    public async Task<string> GenerateShareText(int id)
+    public async Task<string> GenerateShareCode(int id)
     {
         var template = await Get(id);
-        return template.Encode();
+        return template.ToShared().ToSharedText();
     }
 
-    public async Task<byte[]> AppendShareTextToPng(int id, byte[] png)
+    public async Task Import(MediaLibraryTemplateImportInputModel model)
     {
-        var text = await GenerateShareText(id);
+        var err = await Import(model, false);
+        if (err != null)
+        {
+            throw new Exception("Import failed because validation was unsuccessful.");
+        }
+    }
+
+    public async Task<MediaLibraryTemplateValidationViewModel?> Validate(string shareCode)
+    {
+        return await Import(new MediaLibraryTemplateImportInputModel {ShareCode = shareCode}, true);
+    }
+
+    protected async Task<MediaLibraryTemplateValidationViewModel?> Import(MediaLibraryTemplateImportInputModel model, bool validateOnly)
+    {
+        var shared = SharedMediaLibraryTemplate.FromSharedText(model.ShareCode);
+        var flat = shared.Flat();
+
+        #region Validation
+
+        var refProperties = flat.ExtractProperties();
+        var missingProperties = new List<Bakabase.Abstractions.Models.Domain.Property>();
+        var customPropertyIdConversion = new Dictionary<int, (PropertyPool Pool, int Id)>();
+        var unhandledProperties = new List<Bakabase.Abstractions.Models.Domain.Property>();
+        if (refProperties.Any())
+        {
+            var localPropertiesMap = (await propertyService.GetProperties(PropertyPool.All)).ToMap();
+            foreach (var p in refProperties)
+            {
+                if (p.Pool == PropertyPool.Custom)
+                {
+                    var conversion = model.CustomPropertyConversionsMap?.GetValueOrDefault(p.Id);
+                    if (conversion != null)
+                    {
+                        if (conversion is {ToPropertyId: not null, ToPropertyPool: not null})
+                        {
+                            customPropertyIdConversion[p.Id] = (conversion.ToPropertyPool.Value,
+                                conversion.ToPropertyId.Value);
+                            continue;
+                        }
+
+                        if (conversion.AutoBinding == true)
+                        {
+                            var lp = localPropertiesMap.GetValueOrDefault(p.Pool)?.Values
+                                .FirstOrDefault(x => x.Name == p.Name && x.Type == p.Type);
+                            if (lp != null)
+                            {
+                                customPropertyIdConversion[p.Id] = (lp.Pool, lp.Id);
+                            }
+                            else
+                            {
+                                missingProperties.Add(p);
+                            }
+
+                            continue;
+                        }
+                    }
+                }
+                else
+                {
+                    var rp = localPropertiesMap.GetValueOrDefault(p.Pool)?.GetValueOrDefault(p.Id);
+                    if (rp == null)
+                    {
+                        throw new Exception(
+                            $"{p.Pool} property with id:{p.Id} is not found. The template is not compatible with current version of application.");
+                    }
+                }
+
+                unhandledProperties.Add(p);
+            }
+
+
+        }
+
+        var refExtensionGroups = flat.ExtractExtensionGroups();
+        var extensionGroupConversionsMap = new Dictionary<int, int>();
+        var missingExtensionGroups = new List<ExtensionGroup>();
+        var unhandledExtensionGroups = new List<ExtensionGroup>();
+        if (refExtensionGroups.Any())
+        {
+            var extensionGroups = await extensionGroupService.GetAll();
+            foreach (var rg in refExtensionGroups)
+            {
+                var conversion = model.ExtensionGroupConversionsMap?.GetValueOrDefault(rg.Id);
+                if (conversion != null)
+                {
+                    if (conversion.ToExtensionGroupId.HasValue)
+                    {
+                        extensionGroupConversionsMap[rg.Id] = conversion.ToExtensionGroupId.Value;
+                        continue;
+                    }
+
+                    if (conversion.AutoBinding.HasValue)
+                    {
+                        var leg =
+                            extensionGroups.FirstOrDefault(x =>
+                                x.Name == rg.Name && x.Extensions.SetEquals(rg.Extensions));
+                        if (leg != null)
+                        {
+                            extensionGroupConversionsMap[rg.Id] = leg.Id;
+                        }
+                        else
+                        {
+                            missingExtensionGroups.Add(rg);
+                        }
+
+                        continue;
+                    }
+                }
+
+                unhandledExtensionGroups.Add(rg);
+            }
+        }
+
+        if (unhandledExtensionGroups.Any() || unhandledProperties.Any())
+        {
+            return new MediaLibraryTemplateValidationViewModel
+            {
+                UnhandledProperties = unhandledProperties,
+                UnhandledExtensionGroups = unhandledExtensionGroups
+            };
+        }
+
+        if (validateOnly)
+        {
+            return null;
+        }
+
+        #endregion
+
+        #region Prepare missing parts
+
+        var addedProperties = await customPropertyService.AddRange(missingProperties.Select(p =>
+            new CustomPropertyAddOrPutDto
+            {
+                Name = p.Name,
+                Type = p.Type,
+                Options = p.Options.SerializeAsCustomPropertyOptions(true)
+            }).ToArray());
+
+        foreach (var p in missingProperties)
+        {
+            customPropertyIdConversion[p.Id] = addedProperties.First(x => x.Type == p.Type && x.Name == p.Name).Id;
+        }
+
+        var addedExtensionGroups = await extensionGroupService.AddRange(missingExtensionGroups.Select(x =>
+            new ExtensionGroupAddInputModel(x.Name, x.Extensions)).ToArray());
+        foreach (var meg in missingExtensionGroups)
+        {
+            extensionGroupConversionsMap[meg.Id] = addedExtensionGroups
+                .First(x => x.Name == meg.Name && x.Extensions?.SetEquals(meg.Extensions ?? []) == true).Id;
+        }
+
+        #endregion
+
+        var templates = flat.Select(f => f.ToDomainModel(customPropertyIdConversion, extensionGroupConversionsMap))
+            .ToArray();
+        var dbModels = templates.Select(t => t.ToDbModel()).ToList();
+        var addedDbModels = (await orm.AddRange(dbModels)).Data!;
+        if (addedDbModels.Count > 1)
+        {
+            var parent = addedDbModels[0]!;
+            for (var i = 1; i < addedDbModels.Count; i++)
+            {
+                if (parent != null)
+                {
+                    addedDbModels[i - 1].ChildTemplateId = parent.Id;
+                }
+            }
+
+            await orm.UpdateRange(addedDbModels);
+        }
+
+        return null;
+    }
+
+    public async Task<byte[]> AppendShareCodeToPng(int id, byte[] png)
+    {
+        var text = await GenerateShareCode(id);
 
         using var image = Image.Load<Rgb24>(png);
 

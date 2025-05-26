@@ -2,12 +2,14 @@
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.Shared;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
 using Bakabase.Modules.MediaLibraryTemplate.Services;
 using Bootstrap.Components.Orm;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using MediaLibraryTemplateEnhancerOptions = Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.MediaLibraryTemplateEnhancerOptions;
 
 namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Extensions;
 
@@ -27,16 +29,18 @@ public static class MediaLibraryTemplateExtensions
 
     public static MediaLibraryTemplateDbModel ToDbModel(this Models.Domain.MediaLibraryTemplate template)
     {
-        return new MediaLibraryTemplateDbModel(
-            template.Id,
-            template.Name,
-            JsonConvert.SerializeObject(template.ResourceFilters),
-            JsonConvert.SerializeObject(template.Properties),
-            JsonConvert.SerializeObject(template.PlayableFileLocator),
-            JsonConvert.SerializeObject(template.Enhancers),
-            template.DisplayNameTemplate,
-            JsonConvert.SerializeObject(template.SamplePaths)
-        );
+        return new MediaLibraryTemplateDbModel
+        {
+            Id = template.Id,
+            Name = template.Name,
+            ResourceFilters = JsonConvert.SerializeObject(template.ResourceFilters),
+            Properties = JsonConvert.SerializeObject(template.Properties),
+            PlayableFileLocator = JsonConvert.SerializeObject(template.PlayableFileLocator),
+            Enhancers = JsonConvert.SerializeObject(template.Enhancers),
+            DisplayNameTemplate = template.DisplayNameTemplate,
+            SamplePaths = JsonConvert.SerializeObject(template.SamplePaths),
+            ChildTemplateId = template.ChildrenTemplateId
+        };
     }
 
     public static Models.Domain.MediaLibraryTemplate ToDomainModel(this MediaLibraryTemplateDbModel dbModel)
@@ -61,27 +65,7 @@ public static class MediaLibraryTemplateExtensions
             SamplePaths = dbModel.SamplePaths != null
                 ? JsonConvert.DeserializeObject<List<string>>(dbModel.SamplePaths)
                 : null,
+            ChildrenTemplateId = dbModel.ChildTemplateId
         };
-    }
-
-    public static string Encode(this Models.Domain.MediaLibraryTemplate template)
-    {
-        var copy =
-            JsonConvert.DeserializeObject<Models.Domain.MediaLibraryTemplate>(JsonConvert.SerializeObject(template))!;
-        copy.Id = 0;
-        if (copy.Properties != null)
-        {
-            foreach (var p in copy.Properties.Where(p => p.Pool == PropertyPool.Custom))
-            {
-                p.Id = 0;
-            }
-        }
-
-        if (copy.PlayableFileLocator != null)
-        {
-            copy.PlayableFileLocator.ExtensionGroupIds = null;
-        }
-
-        return JsonConvert.SerializeObject(copy);
     }
 }

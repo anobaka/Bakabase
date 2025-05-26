@@ -5,6 +5,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -58,18 +59,36 @@ public class MediaLibraryTemplateController(IMediaLibraryTemplateService service
     }
 
     [HttpGet("{id:int}/share-text")]
-    [SwaggerOperation(OperationId = "GetMediaLibraryTemplateShareText")]
-    public async Task<SingletonResponse<string>> GetShareText(int id)
+    [SwaggerOperation(OperationId = "GetMediaLibraryTemplateShareCode")]
+    public async Task<SingletonResponse<string>> GetShareCode(int id)
     {
-        var text = await service.GenerateShareText(id);
+        var text = await service.GenerateShareCode(id);
         return new SingletonResponse<string>(text);
     }
 
-    // [HttpPut("{id:int}/share-png/text")]
-    // [SwaggerOperation(OperationId = "AppendMediaLibraryTemplateShareTextToPng")]
-    // public async Task<IActionResult> AppendShareTextToPng(int id)
+    [HttpPost("share-code/validate")]
+    [SwaggerOperation(OperationId = "ValidateMediaLibraryTemplateShareCode")]
+    public async Task<SingletonResponse<MediaLibraryTemplateValidationViewModel>> ValidateShareCode(
+        [FromBody] string shareCode)
+    {
+        var r = await service.Validate(shareCode);
+        return new SingletonResponse<MediaLibraryTemplateValidationViewModel>(r);
+    }
+
+    [HttpPost("share-code/import")]
+    [SwaggerOperation(OperationId = "ImportMediaLibraryTemplate")]
+    public async Task<BaseResponse> Import(
+        [FromBody] MediaLibraryTemplateImportInputModel model)
+    {
+        await service.Import(model);
+        return BaseResponseBuilder.Ok;
+    }
+
+    // [HttpPut("{id:int}/share-png/code")]
+    // [SwaggerOperation(OperationId = "AppendMediaLibraryTemplateShareCodeToPng")]
+    // public async Task<IActionResult> AppendShareCodeToPng(int id)
     // {
-    //     var text = await service.GenerateShareText(id);
+    //     var code = await service.GenerateShareCode(id);
     //     throw new NotImplementedException();
     // }
 }

@@ -13,15 +13,24 @@ public class ExtensionGroupService(FullMemoryCacheResourceService<InsideWorldDbC
     : IExtensionGroupService
 {
     public async Task<ExtensionGroup[]> GetAll() => (await orm.GetAll()).Select(x => x.ToDomainModel()).ToArray();
+
     public async Task<ExtensionGroup> Get(int id)
     {
         var eg = await orm.GetByKey(id);
         return eg.ToDomainModel();
     }
 
-    public async Task Add(ExtensionGroupAddInputModel group)
+    public async Task<ExtensionGroup[]> AddRange(ExtensionGroupAddInputModel[] groups)
     {
-        await orm.Add(new ExtensionGroupDbModel(0, group.Name, string.Empty));
+        var domainModels = groups.Select(g => new ExtensionGroup(0, g.Name, g.Extensions)).ToArray();
+        var dbModels = domainModels.Select(d => d.ToDbModel()).ToList();
+        var data = (await orm.AddRange(dbModels)).Data!;
+        return data.Select(d => d.ToDomainModel()).ToArray();
+    }
+
+    public async Task<ExtensionGroup> Add(ExtensionGroupAddInputModel group)
+    {
+        return (await AddRange([group]))[0];
     }
 
     public async Task Put(int id, ExtensionGroupPutInputModel group)

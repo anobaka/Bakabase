@@ -59,6 +59,7 @@ import DisplayNameTemplateEditorModal from '@/pages/MediaLibraryTemplate/compone
 import PropertyPoolIcon from '@/components/Property/components/PropertyPoolIcon';
 import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
+import ImportModal from '@/pages/MediaLibraryTemplate/components/ImportModal';
 
 export default () => {
   const { t } = useTranslation();
@@ -147,15 +148,11 @@ export default () => {
           size={'sm'}
           color={'default'}
           onPress={() => {
-            let code = '';
-            createPortal(Modal, {
-              defaultVisible: true,
-              title: t('Importing a template'),
-              children: (
-                <Textarea label={t('Share code')} placeholder={t('Paste share code here')} isRequired onValueChange={v => code = v} />
-              ),
-              onOk: async () => {
-                // todo:
+            createPortal(ImportModal, {
+              onImported: async () => {
+                await loadProperties();
+                await loadTemplates();
+                // await loadExtensionGroups();
               },
             });
           }}

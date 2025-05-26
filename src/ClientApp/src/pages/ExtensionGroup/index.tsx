@@ -19,10 +19,10 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import BApi from '@/sdk/BApi';
 import type { BootstrapModelsResponseModelsBaseResponse } from '@/sdk/Api';
 
-type Group = {
+export type ExtensionGroup = {
   id: number;
   name: string;
-  extensions: string[];
+  extensions?: string[];
 };
 
 // const testGroups: Group[] = [
@@ -61,8 +61,8 @@ function extractExtensions(text: string): string[] {
 export default () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [editingGroup, setEditingGroup] = useState<Group | undefined>(undefined);
+  const [groups, setGroups] = useState<ExtensionGroup[]>([]);
+  const [editingGroup, setEditingGroup] = useState<ExtensionGroup | undefined>(undefined);
   const [editingExtensionsText, setEditingExtensionsText] = useState<string>('');
 
   useEffect(() => {

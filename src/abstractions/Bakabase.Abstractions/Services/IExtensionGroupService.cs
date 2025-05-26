@@ -7,7 +7,8 @@ public interface IExtensionGroupService
 {
     Task<ExtensionGroup[]> GetAll();
     Task<ExtensionGroup> Get(int id);
-    Task Add(ExtensionGroupAddInputModel group);
+    Task<ExtensionGroup> Add(ExtensionGroupAddInputModel group);
+    Task<ExtensionGroup[]> AddRange(ExtensionGroupAddInputModel[] groups);
     Task Put(int id, ExtensionGroupPutInputModel group);
     Task Delete(int id);
 }

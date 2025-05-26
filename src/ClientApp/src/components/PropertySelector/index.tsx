@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import PropertyModal from '../PropertyModal';
 import type { IProperty } from '@/components/Property/models';
 import Property from '@/components/Property';
 import PropertyV2 from '@/components/Property/v2';
 import { buildLogger, createPortalOfComponent } from '@/components/utils';
-import type { PropertyType } from '@/sdk/constants';
-import { PropertyPool, StandardValueType } from '@/sdk/constants';
+import { PropertyPool, PropertyType, StandardValueType } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
-import { Button, Chip, Divider, Modal, Spacer, Tab, Tabs } from '@/components/bakaui';
+import { Button, Chip, Divider, Modal, Spacer } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
@@ -17,12 +16,13 @@ type Key = {
   pool: PropertyPool;
 };
 
-interface IProps extends DestroyableProps{
+interface IProps extends DestroyableProps {
   selection?: Key[];
   onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
   multiple?: boolean;
   pool: PropertyPool;
   valueTypes?: StandardValueType[];
+  types?: PropertyType[];
   editable?: boolean;
   addable?: boolean;
   removable?: boolean;
@@ -42,6 +42,7 @@ const PropertySelector = (props: IProps) => {
     onSubmit: propsOnSubmit,
     multiple = true,
     pool,
+    types,
     valueTypes,
     addable,
     editable,
@@ -186,6 +187,15 @@ const PropertySelector = (props: IProps) => {
       );
     }
 
+    if (types) {
+      filters.push(
+        ...types.map(pt => (<Chip
+          key={pt}
+          size={'sm'}
+        >{t(PropertyType[pt])}</Chip>)),
+      );
+    }
+
     if (filters.length > 0) {
       return (
         <div className={'flex gap-1 items-center mb-2 flex-wrap'}>
@@ -200,8 +210,12 @@ const PropertySelector = (props: IProps) => {
   };
 
   const filteredProperties = properties.filter(p => {
-    if (valueTypes) {
-      return valueTypes.includes(p.dbValueType);
+    if (valueTypes && !valueTypes.includes(p.dbValueType)) {
+      return false;
+    }
+
+    if (types && !types.includes(p.type)) {
+      return false;
     }
     return true;
   });
@@ -238,14 +252,18 @@ const PropertySelector = (props: IProps) => {
     return (
       <div className={'flex flex-col gap-2'}>
         <div className={'flex items-start gap-2'}>
-          <div className={'w-[100px] min-w-[100px] text-medium'}>{`${t('Selected')}(${selectedProperties.length})`}</div>
+          <div
+            className={'w-[100px] min-w-[100px] text-medium'}
+          >{`${t('Selected')}(${selectedProperties.length})`}</div>
           <div className={'flex flex-wrap gap-2 items-start'}>
             {selectedProperties.map(p => renderProperty(p))}
           </div>
         </div>
         <Divider />
         <div className={'flex items-start gap-2'}>
-          <div className={'w-[100px] min-w-[100px] text-medium'}>{`${t('Not selected')}(${unselectedProperties.length})`}</div>
+          <div
+            className={'w-[100px] min-w-[100px] text-medium'}
+          >{`${t('Not selected')}(${unselectedProperties.length})`}</div>
           <div className={'flex flex-wrap gap-2 items-start'}>
             {unselectedProperties.map(p => renderProperty(p))}
           </div>
