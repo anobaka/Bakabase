@@ -1,8 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
-using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.Shared;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
 using Bakabase.Modules.MediaLibraryTemplate.Services;
 using Bootstrap.Components.Orm;

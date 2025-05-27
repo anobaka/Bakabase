@@ -1,7 +1,6 @@
-﻿using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathFilter;
-using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.Shared;
-using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
+﻿using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Microsoft.AspNetCore.Mvc.Filters;
 using NPOI.Util.Collections;
 
@@ -9,144 +8,195 @@ namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Extensions;
 
 public static class SharedMediaLibraryTemplateExtensions
 {
-    public static SharedMediaLibraryTemplate ToShared(this Models.Domain.MediaLibraryTemplate template)
+    public static void EnsureSharable(this Models.Domain.MediaLibraryTemplate template)
     {
-        return new SharedMediaLibraryTemplate
+        if (template.ResourceFilters == null || template.ResourceFilters.Count == 0)
+        {
+            throw new ArgumentException("Template must have at least one resource filter to be sharable.");
+        }
+    }
+
+    public static SharableMediaLibraryTemplate ToShared(this Models.Domain.MediaLibraryTemplate template,
+        PropertyMap? propertyMap, Dictionary<int, ExtensionGroup>? extensionGroupMap)
+    {
+        template.EnsureSharable();
+        return new SharableMediaLibraryTemplate
         {
             Name = template.Name,
             Author = template.Author,
             Description = template.Description,
-            ResourceFilters = template.ResourceFilters?.Select(x => x.ToShared()).ToList(),
-            Properties = template.Properties?.Select(x => x.ToShared()).ToList(),
-            PlayableFileLocator = template.PlayableFileLocator?.ToShared(),
-            Enhancers = template.Enhancers?.Select(x => x.ToShared()).ToList(),
+            ResourceFilters = template.ResourceFilters!,
+            Properties = template.Properties,
+            PlayableFileLocator = template.PlayableFileLocator,
+            Enhancers = template.Enhancers,
             DisplayNameTemplate = template.DisplayNameTemplate,
             SamplePaths = template.SamplePaths,
-            Child = template.Children?.ToShared()
+            Child = template.Children?.ToShared(propertyMap, extensionGroupMap)
         };
     }
 
-    public static SharedMediaLibraryTemplateProperty ToShared(this MediaLibraryTemplateProperty property)
-    {
-        var p = property.Property;
-        // We do not clear custom property id because it will be used to distinct properties during importing
-        return new SharedMediaLibraryTemplateProperty
-        {
-            Property = p,
-            ValueLocators = property.ValueLocators
-        };
-    }
+    // public static SharedMediaLibraryTemplateProperty ToShared(this MediaLibraryTemplateProperty property,
+    //     PropertyMap propertyMap)
+    // {
+    //     return new SharedMediaLibraryTemplateProperty
+    //     {
+    //         Property = propertyMap[property.Pool][property.Id],
+    //         ValueLocators = property.ValueLocators
+    //     };
+    // }
+    //
+    // public static SharedMediaLibraryTemplatePlayableFileLocator ToShared(
+    //     this MediaLibraryTemplatePlayableFileLocator locator, Dictionary<int, ExtensionGroup>? extensionGroupMap)
+    // {
+    //     return new SharedMediaLibraryTemplatePlayableFileLocator
+    //     {
+    //         ExtensionGroups = locator.ExtensionGroupIds?.Select(g => extensionGroupMap![g]).ToArray(),
+    //         Extensions = locator.Extensions
+    //     };
+    // }
+    //
+    // public static SharedMediaLibraryTemplateEnhancerOptions ToShared(this MediaLibraryTemplateEnhancerOptions options,
+    //     PropertyMap? propertyMap)
+    // {
+    //     // We do not clear custom property id because it will be used to distinct properties during importing
+    //     return new SharedMediaLibraryTemplateEnhancerOptions
+    //     {
+    //         EnhancerId = options.EnhancerId,
+    //         TargetOptions = options.TargetOptions?.Select(x => x.ToShared(propertyMap!)).ToList()
+    //     };
+    // }
+    //
+    // public static SharedMediaLibraryTemplateEnhancerTargetAllInOneOptions ToShared(
+    //     this MediaLibraryTemplateEnhancerTargetAllInOneOptions options, PropertyMap propertyMap)
+    // {
+    //     return new SharedMediaLibraryTemplateEnhancerTargetAllInOneOptions
+    //     {
+    //         Property = propertyMap[options.PropertyPool][options.PropertyId],
+    //         CoverSelectOrder = options.CoverSelectOrder,
+    //         DynamicTarget = options.DynamicTarget,
+    //         Target = options.Target
+    //     };
+    // }
+    //
+    // public static SharedPathFilter ToShared(this PathFilter filter)
+    // {
+    //     return new SharedPathFilter
+    //     {
+    //         FsType = filter.FsType,
+    //         ExtensionGroups = filter.ExtensionGroups,
+    //         Extensions = filter.Extensions,
+    //         Layer = filter.Layer,
+    //         Positioner = filter.Positioner,
+    //         Regex = filter.Regex
+    //     };
+    // }
 
-    public static SharedMediaLibraryTemplatePlayableFileLocator ToShared(
-        this MediaLibraryTemplatePlayableFileLocator locator)
-    {
-        return new SharedMediaLibraryTemplatePlayableFileLocator
-        {
-            ExtensionGroups = locator.ExtensionGroups,
-            Extensions = locator.Extensions
-        };
-    }
-
-    public static SharedMediaLibraryTemplateEnhancerOptions ToShared(this MediaLibraryTemplateEnhancerOptions options)
-    {
-        var o = options.Options;
-        // We do not clear custom property id because it will be used to distinct properties during importing
-        return new SharedMediaLibraryTemplateEnhancerOptions
-        {
-            EnhancerId = options.EnhancerId,
-            Options = o
-        };
-    }
-
-    public static SharedPathFilter ToShared(this PathFilter filter)
-    {
-        return new SharedPathFilter
-        {
-            FsType = filter.FsType,
-            ExtensionGroups = filter.ExtensionGroups,
-            Extensions = filter.Extensions,
-            Layer = filter.Layer,
-            Positioner = filter.Positioner,
-            Regex = filter.Regex
-        };
-    }
-
-    public static Models.Domain.MediaLibraryTemplate ToDomainModel(this SharedMediaLibraryTemplate shared,
-        Dictionary<int, int>? customPropertyIdConversionMap, Dictionary<int, int>? extensionGroupIdConversionMap)
+    public static Models.Domain.MediaLibraryTemplate ToDomainModel(this SharableMediaLibraryTemplate shared,
+        Dictionary<int, (PropertyPool Pool, int Id)>? customPropertyConversionMap,
+        Dictionary<int, ExtensionGroup>? extensionGroupConversionMap, PropertyMap? propertyMap)
     {
         return new Models.Domain.MediaLibraryTemplate
         {
             Name = shared.Name,
             Author = shared.Author,
             Description = shared.Description,
-            ResourceFilters = shared.ResourceFilters?.Select(x => x.ToDomainModel(extensionGroupIdConversionMap))
-                .ToList(),
-            Properties = shared.Properties?.Select(x => x.ToDomainModel(customPropertyIdConversionMap)).ToList(),
-            PlayableFileLocator = shared.PlayableFileLocator?.ToDomainModel(extensionGroupIdConversionMap),
-            Enhancers = shared.Enhancers?.Select(x => x.ToDomainModel(customPropertyIdConversionMap)).ToList(),
+            ResourceFilters = shared.ResourceFilters.Select(r => r.ToDomainModel(extensionGroupConversionMap)).ToList(),
+            Properties = shared.Properties?.Select(x => x.ToDomainModel(customPropertyConversionMap, propertyMap!)).ToList(),
+            PlayableFileLocator = shared.PlayableFileLocator?.ToDomainModel(extensionGroupConversionMap),
+            Enhancers = shared.Enhancers?.Select(e => e.ToDomainModel(customPropertyConversionMap, propertyMap!)).ToList(),
             DisplayNameTemplate = shared.DisplayNameTemplate,
             SamplePaths = shared.SamplePaths,
-            Children = shared.Child?.ToDomainModel(customPropertyIdConversionMap, extensionGroupIdConversionMap)
+            Children = shared.Child?.ToDomainModel(customPropertyConversionMap, extensionGroupConversionMap, propertyMap)
         };
     }
 
-    public static MediaLibraryTemplateProperty ToDomainModel(this SharedMediaLibraryTemplateProperty shared,
-        Dictionary<int, int>? customPropertyIdConversionMap)
+    public static MediaLibraryTemplateProperty ToDomainModel(this MediaLibraryTemplateProperty shared,
+        Dictionary<int, (PropertyPool Pool, int Id)>? customPropertyConversionMap, PropertyMap propertyMap)
     {
-        var pool = shared.Property.Pool;
-        var id = customPropertyIdConversionMap?.GetValueOrDefault(shared.Property.Id) ?? shared.Property.Id;
+        var p = shared.Property;
+        var pool = p.Pool;
+        var id = p.Id;
+        if (p.Pool == PropertyPool.Custom)
+        {
+            if (customPropertyConversionMap?.TryGetValue(p.Id, out var pi) == true)
+            {
+                pool = pi.Pool;
+                id = pi.Id;
+            }
+            else
+            {
+                throw new Exception(
+                    "A custom property must have a corresponding receiving property in order to be converted.");
+            }
+        }
+
         return new MediaLibraryTemplateProperty
         {
-            Pool = pool,
-            Id = id,
-            Property = shared.Property,
+            Property = propertyMap[pool][id],
             ValueLocators = shared.ValueLocators
         };
     }
 
     public static MediaLibraryTemplatePlayableFileLocator ToDomainModel(
-        this SharedMediaLibraryTemplatePlayableFileLocator shared, Dictionary<int, int>? extensionGroupIdConversionMap)
+        this MediaLibraryTemplatePlayableFileLocator shared, Dictionary<int, ExtensionGroup>? extensionGroupIdConversionMap)
     {
-        var groups = shared.ExtensionGroups
-            ?.Select(g => g with {Id = extensionGroupIdConversionMap?.GetValueOrDefault(g.Id) ?? g.Id}).ToArray();
-        return new MediaLibraryTemplatePlayableFileLocator
-        {
-            ExtensionGroups = groups,
-            Extensions = shared.Extensions,
-            ExtensionGroupIds = groups?.Select(d => d.Id).ToHashSet()
-        };
+        return shared with { ExtensionGroups = shared.ExtensionGroups?.Select(x => extensionGroupIdConversionMap![x.Id]).ToList() };
     }
-
+    
     public static MediaLibraryTemplateEnhancerOptions ToDomainModel(
-        this SharedMediaLibraryTemplateEnhancerOptions shared, Dictionary<int, int>? customPropertyIdConversionMap)
+        this MediaLibraryTemplateEnhancerOptions shared,
+        Dictionary<int, (PropertyPool Pool, int Id)>? customPropertyConversionMap, PropertyMap propertyMap)
     {
-        return new MediaLibraryTemplateEnhancerOptions
+        return shared with
         {
-            EnhancerId = shared.EnhancerId,
-            Options = shared.Options
+            TargetOptions = shared.TargetOptions
+                ?.Select(x => x.ToDomainModel(customPropertyConversionMap, propertyMap)).ToList()
+        };
+    }
+    
+    public static MediaLibraryTemplateEnhancerTargetAllInOneOptions ToDomainModel(
+        this MediaLibraryTemplateEnhancerTargetAllInOneOptions options,
+        Dictionary<int, (PropertyPool Pool, int Id)>? customPropertyConversionMap, PropertyMap propertyMap)
+    {
+        var p = options.Property;
+        var pool = p.Pool;
+        var id = p.Id;
+        if (p.Pool == PropertyPool.Custom)
+        {
+            if (customPropertyConversionMap?.TryGetValue(p.Id, out var pi) == true)
+            {
+                pool = pi.Pool;
+                id = pi.Id;
+            }
+            else
+            {
+                throw new Exception(
+                    "A custom property must have a corresponding receiving property in order to be converted.");
+            }
+        }
+    
+        return new MediaLibraryTemplateEnhancerTargetAllInOneOptions
+        {
+            Property = propertyMap[pool][id],
+            CoverSelectOrder = options.CoverSelectOrder,
+            DynamicTarget = options.DynamicTarget,
+            Target = options.Target
         };
     }
 
-    public static PathFilter ToDomainModel(this SharedPathFilter shared,
-        Dictionary<int, int>? extensionGroupIdConversionMap)
+    public static PathFilter ToDomainModel(this PathFilter shared,
+        Dictionary<int, ExtensionGroup>? extensionGroupIdConversionMap)
     {
-        var groups = shared.ExtensionGroups
-            ?.Select(g => g with {Id = extensionGroupIdConversionMap?.GetValueOrDefault(g.Id) ?? g.Id}).ToArray();
-        return new PathFilter
+
+        return shared with
         {
-            FsType = shared.FsType,
-            Extensions = shared.Extensions,
-            Layer = shared.Layer,
-            Positioner = shared.Positioner,
-            Regex = shared.Regex,
-            ExtensionGroups = groups,
-            ExtensionGroupIds = groups?.Select(d => d.Id).ToHashSet()
+            ExtensionGroups = shared.ExtensionGroups?.Select(x => extensionGroupIdConversionMap![x.Id]).ToList()
         };
     }
 
-    public static SharedMediaLibraryTemplate[] Flat(this SharedMediaLibraryTemplate template)
+    public static SharableMediaLibraryTemplate[] Flat(this SharableMediaLibraryTemplate template)
     {
-        var list = new List<SharedMediaLibraryTemplate> {template};
+        var list = new List<SharableMediaLibraryTemplate> { template };
         while (template.Child != null)
         {
             template = template.Child;
@@ -157,22 +207,22 @@ public static class SharedMediaLibraryTemplateExtensions
     }
 
     public static List<Bakabase.Abstractions.Models.Domain.Property> ExtractProperties(
-        this SharedMediaLibraryTemplate[] templates)
+        this SharableMediaLibraryTemplate[] templates)
     {
         return templates
             .SelectMany(t =>
                 (t.Properties ?? []).Select(x => x.Property).Concat(
-                    (t.Enhancers ?? []).SelectMany(e => e.Options?.TargetOptions?.Select(b => b.Property) ?? [])))
-            .OfType<Bakabase.Abstractions.Models.Domain.Property>().GroupBy(d => $"{d.Pool}-{d.Id}")
+                    (t.Enhancers ?? []).SelectMany(e => e.TargetOptions?.Select(b => b.Property) ?? [])))
+            .GroupBy(d => $"{d.Pool}-{d.Id}")
             .Select(x => x.First()).ToList();
     }
 
-    public static List<ExtensionGroup> ExtractExtensionGroups(this SharedMediaLibraryTemplate[] templates)
+    public static List<ExtensionGroup> ExtractExtensionGroups(this SharableMediaLibraryTemplate[] templates)
     {
         return templates
             .SelectMany(t =>
                 t.ResourceFilters.SelectMany(x => x.ExtensionGroups ?? [])
-                    .Concat(t.PlayableFileLocator?.ExtensionGroups ?? []))
+                    .Concat(t.PlayableFileLocator?.ExtensionGroups ?? Enumerable.Empty<ExtensionGroup>()))
             .GroupBy(d => d.Id)
             .Select(x => x.First())
             .ToList();

@@ -8,10 +8,10 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
-using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Components.PathLocator;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Extensions;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
-using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.Shared;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
@@ -405,7 +405,7 @@ public class MediaLibraryTemplateService<TDbContext>(
 
     protected async Task<MediaLibraryTemplateValidationViewModel?> Import(MediaLibraryTemplateImportInputModel model, bool validateOnly)
     {
-        var shared = SharedMediaLibraryTemplate.FromSharedText(model.ShareCode);
+        var shared = SharableMediaLibraryTemplate.FromSharedText(model.ShareCode);
         var flat = shared.Flat();
 
         #region Validation

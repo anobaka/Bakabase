@@ -16,5 +16,4 @@ public record EnhancerTargetFullOptions() : EnhancerTargetOptions
     public CoverSelectOrder? CoverSelectOrder { get; set; }
     public PropertyPool? PropertyPool { get; set; }
     public int? PropertyId { get; set; }
-    public Bakabase.Abstractions.Models.Domain.Property? Property { get; set; }
 }
