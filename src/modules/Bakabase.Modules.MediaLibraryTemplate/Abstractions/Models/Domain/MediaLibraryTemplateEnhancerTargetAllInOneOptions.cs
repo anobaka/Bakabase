@@ -7,5 +7,7 @@ namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 public record MediaLibraryTemplateEnhancerTargetAllInOneOptions : EnhancerTargetOptions
 {
     public CoverSelectOrder? CoverSelectOrder { get; set; }
-    public Bakabase.Abstractions.Models.Domain.Property Property { get; set; } = null!;
+    public PropertyPool PropertyPool { get; set; }
+    public int PropertyId { get; set; }
+    public Bakabase.Abstractions.Models.Domain.Property? Property { get; set; }
 }

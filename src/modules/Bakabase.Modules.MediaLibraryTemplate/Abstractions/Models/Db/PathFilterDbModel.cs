@@ -1,9 +1,10 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
 
-public record PathFilterDbModel
+public record PathFilterDbModel: PathLocator
 {
     public HashSet<int>? ExtensionGroupIds { get; set; }
     public PathFilterFsType? FsType { get; set; }

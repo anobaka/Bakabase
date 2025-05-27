@@ -15,5 +15,5 @@ public record MediaLibraryTemplate
     public List<MediaLibraryTemplateEnhancerOptions>? Enhancers { get; set; }
     public string? DisplayNameTemplate { get; set; }
     public List<string>? SamplePaths { get; set; }
-    public MediaLibraryTemplate? Children { get; set; }
+    public MediaLibraryTemplate? Child { get; set; }
 }

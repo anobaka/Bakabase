@@ -12,14 +12,12 @@ public record MediaLibraryTemplateImportInputModel
 
     public record TCustomPropertyConversion
     {
-        public PropertyPool? ToPropertyPool { get; set; }
-        public int? ToPropertyId { get; set; }
-        public bool? AutoBinding { get; set; }
+        public PropertyPool ToPropertyPool { get; set; }
+        public int ToPropertyId { get; set; }
     }
 
     public record TExtensionGroupConversion
     {
-        public int? ToExtensionGroupId { get; set; }
-        public bool? AutoBinding { get; set; }
+        public int ToExtensionGroupId { get; set; }
     }
 }

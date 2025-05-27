@@ -1,9 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Services;
-using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
@@ -12,7 +6,7 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace Bakabase.Service.Controllers;
+namespace Bakabase.Modules.MediaLibraryTemplate.Controllers;
 
 [ApiController]
 [Route("~/media-library-template")]
@@ -20,18 +14,18 @@ public class MediaLibraryTemplateController(IMediaLibraryTemplateService service
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryTemplates")]
-    public async Task<ListResponse<MediaLibraryTemplate>> GetAll()
+    public async Task<ListResponse<Abstractions.Models.Domain.MediaLibraryTemplate>> GetAll()
     {
         var templates = await service.GetAll();
-        return new ListResponse<MediaLibraryTemplate>(templates);
+        return new ListResponse<Abstractions.Models.Domain.MediaLibraryTemplate>(templates);
     }
 
     [HttpGet("{id:int}")]
     [SwaggerOperation(OperationId = "GetMediaLibraryTemplate")]
-    public async Task<SingletonResponse<MediaLibraryTemplate>> Get(int id)
+    public async Task<SingletonResponse<Abstractions.Models.Domain.MediaLibraryTemplate>> Get(int id)
     {
         var template = await service.Get(id);
-        return new SingletonResponse<MediaLibraryTemplate>(template);
+        return new SingletonResponse<Abstractions.Models.Domain.MediaLibraryTemplate>(template);
     }
 
     [HttpPost]
@@ -44,7 +38,7 @@ public class MediaLibraryTemplateController(IMediaLibraryTemplateService service
 
     [HttpPut("{id:int}")]
     [SwaggerOperation(OperationId = "PutMediaLibraryTemplate")]
-    public async Task<BaseResponse> Put(int id, [FromBody] MediaLibraryTemplate template)
+    public async Task<BaseResponse> Put(int id, [FromBody] Abstractions.Models.Domain.MediaLibraryTemplate template)
     {
         await service.Put(id, template);
         return BaseResponseBuilder.Ok;

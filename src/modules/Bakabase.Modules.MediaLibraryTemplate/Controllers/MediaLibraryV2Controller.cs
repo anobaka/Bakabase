@@ -1,18 +1,12 @@
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Input;
-using Bakabase.Abstractions.Services;
-using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Db;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Domain;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.Input;
 using Bakabase.Modules.MediaLibraryTemplate.Abstractions.Services;
-using Bakabase.Service.Models.Input;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace Bakabase.Service.Controllers;
+namespace Bakabase.Modules.MediaLibraryTemplate.Controllers;
 
 [ApiController]
 [Route("~/media-library-v2")]
