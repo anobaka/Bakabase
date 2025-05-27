@@ -1453,7 +1453,6 @@ export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFu
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId?: number;
-  property?: BakabaseAbstractionsModelsDomainProperty;
 }
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
@@ -1473,40 +1472,17 @@ export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptions
   dynamicTarget?: string;
 }
 
-export interface BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilter {
-  /** [1: Layer, 2: Regex] */
-  positioner: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathPositioner;
-  /** @format int32 */
-  layer?: number;
-  regex?: string;
-  /** [1: File, 2: Directory] */
-  fsType?: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilterFsType;
-  /** @uniqueItems true */
-  extensionGroupIds?: number[];
-  extensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
-  /** @uniqueItems true */
-  extensions?: string[];
-}
-
 /**
  * [1: File, 2: Directory]
  * @format int32
  */
-export type BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilterFsType = 1 | 2;
-
-export interface BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathLocator {
-  /** [1: Layer, 2: Regex] */
-  positioner: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathPositioner;
-  /** @format int32 */
-  layer?: number;
-  regex?: string;
-}
+export type BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainConstantsPathFilterFsType = 1 | 2;
 
 /**
  * [1: Layer, 2: Regex]
  * @format int32
  */
-export type BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathPositioner = 1 | 2;
+export type BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainConstantsPathPositioner = 1 | 2;
 
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate {
   /** @format int32 */
@@ -1514,21 +1490,32 @@ export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMedi
   name: string;
   author?: string;
   description?: string;
-  resourceFilters?: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathFilterPathFilter[];
+  resourceFilters?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainPathFilter[];
   properties?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateProperty[];
   playableFileLocator?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplatePlayableFileLocator;
   enhancers?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateEnhancerOptions[];
   displayNameTemplate?: string;
   samplePaths?: string[];
-  /** @format int32 */
-  childrenTemplateId?: number;
-  children?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate;
+  child?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplate;
 }
 
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateEnhancerOptions {
   /** @format int32 */
   enhancerId: number;
-  options?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions;
+  targetOptions?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateEnhancerTargetAllInOneOptions[];
+}
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplateEnhancerTargetAllInOneOptions {
+  /** @format int32 */
+  target: number;
+  dynamicTarget?: string;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  property?: BakabaseAbstractionsModelsDomainProperty;
 }
 
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryTemplatePlayableFileLocator {
@@ -1545,7 +1532,7 @@ export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMedi
   /** @format int32 */
   id: number;
   property?: BakabaseAbstractionsModelsDomainProperty;
-  valueLocators?: BakabaseModulesMediaLibraryTemplateAbstractionsComponentsPathLocatorPathLocator[];
+  valueLocators?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainPathLocator[];
 }
 
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMediaLibraryV2 {
@@ -1555,6 +1542,29 @@ export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainMedi
   path: string;
   /** @format int32 */
   templateId: number;
+}
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainPathFilter {
+  /** [1: Layer, 2: Regex] */
+  positioner: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainConstantsPathPositioner;
+  /** @format int32 */
+  layer?: number;
+  regex?: string;
+  /** [1: File, 2: Directory] */
+  fsType?: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainConstantsPathFilterFsType;
+  /** @uniqueItems true */
+  extensionGroupIds?: number[];
+  extensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
+  /** @uniqueItems true */
+  extensions?: string[];
+}
+
+export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainPathLocator {
+  /** [1: Layer, 2: Regex] */
+  positioner: BakabaseModulesMediaLibraryTemplateAbstractionsModelsDomainConstantsPathPositioner;
+  /** @format int32 */
+  layer?: number;
+  regex?: string;
 }
 
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateAddInputModel {
@@ -1574,15 +1584,15 @@ export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMedia
 }
 
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateImportInputModelTCustomPropertyConversion {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  toPropertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
-  toPropertyId?: number;
-  autoBinding?: boolean;
+  toPropertyId: number;
 }
 
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryTemplateImportInputModelTExtensionGroupConversion {
   /** @format int32 */
-  toExtensionGroupId?: number;
-  autoBinding?: boolean;
+  toExtensionGroupId: number;
 }
 
 export interface BakabaseModulesMediaLibraryTemplateAbstractionsModelsInputMediaLibraryV2AddOrPutInputModel {

@@ -86,6 +86,8 @@ public static class MediaLibraryTemplateExtensions
         {
             Id = template.Id,
             Name = template.Name,
+            Author = template.Author,
+            Description = template.Description,
             ResourceFilters = JsonConvert.SerializeObject(template.ResourceFilters?.Select(x => x.ToDbModel())),
             Properties = JsonConvert.SerializeObject(template.Properties?.Select(p => p.ToDbModel())),
             PlayableFileLocator = JsonConvert.SerializeObject(template.PlayableFileLocator?.ToDbModel()),

@@ -10,7 +10,7 @@ import {
 } from 'react-icons/ai';
 import { useUpdate } from 'react-use';
 import _ from 'lodash';
-import { IoLocate, IoPlayCircleOutline, IoRocketOutline } from 'react-icons/io5';
+import { IoDuplicate, IoDuplicateOutline, IoLocate, IoPlayCircleOutline, IoRocketOutline } from 'react-icons/io5';
 import { CardHeader } from '@heroui/react';
 import { CiFilter } from 'react-icons/ci';
 import { FaRightLong } from 'react-icons/fa6';
@@ -172,29 +172,62 @@ export default () => {
                 key={tpl.id}
                 title={(
                   <div className={'flex items-center justify-between'}>
-                    <div className={'font-bold flex items-center gap-1'}>
-                      {tpl.name}
+                    <div className={'flex items-center gap-1'}>
+                      <div className={'font-bold'}>
+                        {tpl.name}
+                      </div>
+                      {tpl.author && (
+                        <div className={'opacity-60'}>
+                          {tpl.author}
+                        </div>
+                      )}
+                      {tpl.description && (
+                        <Tooltip placement={'bottom'} content={tpl.description}>
+                          <QuestionCircleOutlined className={'text-medium'} />
+                        </Tooltip>
+                      )}
                       <Button
                         size={'sm'}
                         isIconOnly
                         onPress={() => {
-                        let { name } = tpl;
+                        let { name, author, description } = tpl;
                         createPortal(Modal, {
                           defaultVisible: true,
-                          title: t('Rename template'),
+                          title: t('Edit template'),
                           children: (
-                            <Input
-                              label={t('Template name')}
-                              placeholder={t('Enter template name')}
-                              isRequired
-                              defaultValue={name}
-                              onValueChange={v => {
-                                name = v;
-                              }}
-                            />
+                            <div className={'flex flex-col gap-2'}>
+                              <Input
+                                label={t('Name')}
+                                placeholder={t('Enter template name')}
+                                isRequired
+                                defaultValue={name}
+                                onValueChange={v => {
+                                  name = v;
+                                }}
+                              />
+                              <Input
+                                label={`${t('Author')}${t('(optional)')}`}
+                                placeholder={t('Enter author name')}
+                                defaultValue={author}
+                                onValueChange={v => {
+                                  author = v;
+                                }}
+                              />
+                              <Textarea
+                                label={`${t('Description')}${t('(optional)')}`}
+                                placeholder={t('Enter description')}
+                                defaultValue={description}
+                                onValueChange={v => {
+                                  description = v;
+                                }}
+                              />
+                            </div>
                           ),
+                          size: 'lg',
                           onOk: async () => {
                             tpl.name = name;
+                            tpl.author = author;
+                            tpl.description = description;
                             await putTemplate(tpl);
                             forceUpdate();
                           },
@@ -206,13 +239,16 @@ export default () => {
                       </Button>
                     </div>
                     <div className={'flex items-center gap-1'}>
+                      <Chip variant={'light'} className={'opacity-60'}>
+                        {tpl.createdAt}
+                        2025-01-01 12:00:00
+                      </Chip>
                       <Button
                         size={'sm'}
                         isIconOnly
                         variant={'light'}
                         onPress={async () => {
-                          // todo: get share text
-                          const r = await BApi.mediaLibraryTemplate.getMediaLibraryTemplateShareText(tpl.id);
+                          const r = await BApi.mediaLibraryTemplate.getMediaLibraryTemplateShareCode(tpl.id);
                           if (!r.code && r.data) {
                             const shareText = r.data;
                             await navigator.clipboard.writeText(shareText);
@@ -231,6 +267,36 @@ export default () => {
                         }}
                       >
                         <GoShareAndroid className={'text-large'} />
+                      </Button>
+                      <Button
+                        color={'default'}
+                        variant={'light'}
+                        size={'sm'}
+                        isIconOnly
+                        onPress={() => {
+                          let newName = '';
+                          createPortal(
+                            Modal, {
+                              defaultVisible: true,
+                              title: t('Duplicate current template'),
+                              children: (
+                                <Input
+                                  label={t('New template name')}
+                                  placeholder={t('Enter new template name')}
+                                  isRequired
+                                  onValueChange={v => {
+                                    newName = v;
+                                  }}
+                                />
+                              ),
+                              onOk: async () => {
+                                // todo:
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        <IoDuplicateOutline className={'text-medium'} />
                       </Button>
                       <Button
                         size={'sm'}
@@ -729,7 +795,7 @@ export default () => {
             );
           })}
         </Accordion>
-        <div className={'select-text'}>{JSON.stringify(templates)}</div>
+        {/* <div className={'select-text'}>{JSON.stringify(templates)}</div> */}
       </div>
     </div>
   );

@@ -32,12 +32,15 @@ export type PathLocator = {
 export type MediaLibraryTemplate = {
   id: number;
   name: string;
+  author?: string;
+  description?: string;
   resourceFilters?: PathFilter[];
   properties?: MediaLibraryTemplateProperty[];
   playableFileLocator?: MediaLibraryTemplatePlayableFileLocator;
   enhancers?: MediaLibraryTemplateEnhancerOptions[];
   displayNameTemplate?: string;
   samplePaths?: string[];
+  createdAt: string;
 };
 
 
