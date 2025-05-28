@@ -62,7 +62,7 @@ public static class MediaLibraryTemplateExtensions
         {
             var resource = new TempSyncResource(path);
             var fi = new FileInfo(path);
-            resource.IsDirectory = fi.Attributes.HasFlag(FileAttributes.Directory);
+            resource.IsFile = !fi.Attributes.HasFlag(FileAttributes.Directory);
             resource.FileCreatedAt = fi.CreationTime;
             resource.FileModifiedAt = fi.LastWriteTime;
 

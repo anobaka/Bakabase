@@ -2,7 +2,7 @@
 
 public record TempSyncResource(string Path)
 {
-    public bool IsDirectory { get; set; }
+    public bool IsFile { get; set; }
     public Dictionary<Property, object?>? PropertyValues { get; set; }
     public List<TempSyncResource>? Children { get; set; }
     public TempSyncResource? Parent { get; set; }
