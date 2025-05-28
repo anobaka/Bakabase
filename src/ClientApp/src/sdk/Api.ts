@@ -6191,7 +6191,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/extension-group
      */
     addExtensionGroup: (data: BakabaseAbstractionsModelsInputExtensionGroupAddInputModel, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainExtensionGroup, any>({
         path: `/extension-group`,
         method: "POST",
         body: data,

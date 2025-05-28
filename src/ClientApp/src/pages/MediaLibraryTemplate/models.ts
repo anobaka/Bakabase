@@ -41,6 +41,7 @@ export type MediaLibraryTemplate = {
   displayNameTemplate?: string;
   samplePaths?: string[];
   createdAt: string;
+  childId?: number;
 };
 
 

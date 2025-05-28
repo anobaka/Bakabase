@@ -7,7 +7,7 @@ import { TbSectionSign } from 'react-icons/tb';
 import { TiChevronRightOutline } from 'react-icons/ti';
 import { MdAutoFixHigh } from 'react-icons/md';
 import _ from 'lodash';
-import { Alert, Button, Checkbox, Chip, Modal, Select, Textarea, Tooltip } from '@/components/bakaui';
+import { Alert, Button, Chip, Modal, Select, Textarea, Tooltip } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import type { IProperty } from '@/components/Property/models';
 import type { ExtensionGroup } from '@/pages/ExtensionGroup';
@@ -194,7 +194,7 @@ export default ({ onImported }: Props) => {
                             isIconOnly
                             variant={'light'}
                             onPress={async () => {
-                              const candidate = findProperProperty(p, propertyMap!);
+                              const candidate = findProperProperty(p, propertyMap ?? []);
                               if (candidate) {
                                 setPropertyConversionsMap({
                                   ...propertyConversionsMap,
@@ -209,8 +209,29 @@ export default ({ onImported }: Props) => {
                                   title: t('No proper property found'),
                                   children: t('Should we create a new property for this?'),
                                   onOk: async () => {
-                                    // perform creating
-                                    // reload property map, set selected keys
+                                    const r = await BApi.customProperty.addCustomProperty({
+                                      name: p.name,
+                                      type: p.type,
+                                      options: p.options ? JSON.stringify(p.options) : undefined,
+                                    });
+                                    if (r.code) {
+                                      throw new Error(r.message);
+                                    }
+                                    const np = r.data!;
+                                    setPropertyMap({
+                                      ...propertyMap,
+                                      [np.pool]: {
+                                        ...propertyMap![np.pool],
+                                        [np.id]: np,
+                                      },
+                                    });
+                                    setPropertyConversionsMap({
+                                      ...propertyConversionsMap,
+                                      [p.id]: {
+                                        toPropertyPool: np.pool,
+                                        toPropertyId: np.id,
+                                      },
+                                    });
                                   },
                                 });
                               }
@@ -300,7 +321,7 @@ export default ({ onImported }: Props) => {
                             isIconOnly
                             variant={'light'}
                             onPress={async () => {
-                              const candidate = findProperExtensionGroup(eg, extensionGroups);
+                              const candidate = findProperExtensionGroup(eg, extensionGroups ?? []);
                               if (candidate) {
                                 setExtensionGroupConversionsMap({
                                   ...extensionGroupConversionsMap,
@@ -314,8 +335,22 @@ export default ({ onImported }: Props) => {
                                   title: t('No proper extension group found'),
                                   children: t('Should we create a new extension group for this?'),
                                   onOk: async () => {
-                                    // perform creating
-                                    // reload extension group, set selected keys
+                                    const r = await BApi.extensionGroup.addExtensionGroup({
+                                      name: eg.name,
+                                      extensions: eg.extensions,
+                                    });
+                                    if (r.code) {
+                                      throw new Error(r.message);
+                                    } else {
+                                      const newEg = r.data!;
+                                      setExtensionGroups([...extensionGroups!, newEg]);
+                                      setExtensionGroupConversionsMap({
+                                        ...extensionGroupConversionsMap,
+                                        [eg.id]: {
+                                          toExtensionGroupId: newEg.id,
+                                        },
+                                      });
+                                    }
                                   },
                                 });
                               }

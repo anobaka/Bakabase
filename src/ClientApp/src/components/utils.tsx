@@ -766,3 +766,43 @@ export function generateNextWithPrefix(prefix: string, currentList: string[]): s
 export function isNotEmpty(str: string | undefined): boolean {
   return str !== undefined && str !== null && str.length > 0;
 }
+
+export function hasCircleReference<TObject, TKey>(
+  data: TObject,
+  all: TObject[],
+  getKey: (item: TObject) => TKey,
+  getChildKey: (item: TObject) => TKey | undefined,
+): boolean {
+  const visited = new Set<TKey>();
+  let current = data;
+  while (current) {
+    const key = getKey(current);
+    if (visited.has(key)) {
+      return true;
+    }
+    visited.add(key);
+    const childKey = getChildKey(current);
+    if (childKey === undefined || childKey === null) {
+      return false;
+    }
+    current = all.find(item => getKey(item) === childKey)!;
+  }
+
+  return false;
+}
+
+
+export function willCauseCircleReference<TObject, TKey>(
+  parent: TObject,
+  childKey: TKey,
+  all: TObject[],
+  getKey: (item: TObject) => TKey,
+  getChildKey: (item: TObject) => TKey | undefined,
+  setChildKey: (item: TObject, key: TKey | undefined) => void,
+): boolean {
+  const prevChildKey = getChildKey(parent);
+  setChildKey(parent, childKey);
+  const hasCircle = hasCircleReference(parent, all, getKey, getChildKey);
+  setChildKey(parent, prevChildKey);
+  return hasCircle;
+}

@@ -4,6 +4,7 @@ import { Icon } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { Chart, LineAdvance } from 'bizcharts';
 import { history } from 'ice';
+import { AiOutlinePlusCircle } from 'react-icons/ai';
 import BApi from '@/sdk/BApi';
 import type {
   BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
@@ -101,7 +102,10 @@ export default () => {
             onPress={() => {
               history!.push('/category');
             }}
-          >{t('Add your resources')}</Button>
+          >
+            <AiOutlinePlusCircle className={'text-medium'} />
+            {t('Add your resources')}
+          </Button>
         )}
       </div>
     );

@@ -1,11 +1,11 @@
-import type { SelectedItems, SelectProps as NextUISelectProps } from "@heroui/react";
-import { Select, SelectItem } from "@heroui/react";
+import type { SelectedItems, SelectProps as NextUISelectProps } from '@heroui/react';
+import { Select, SelectItem } from '@heroui/react';
 import type { Key } from '@react-types/shared';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Chip } from '@/components/bakaui';
 
-type Data = { label?: any; value: Key; textValue?: string };
+type Data = { label?: any; value: Key; textValue?: string; isDisabled?: boolean };
 
 export interface SelectProps extends Omit<NextUISelectProps, 'children'> {
   dataSource?: Data[];
@@ -38,24 +38,25 @@ export default ({
 
   return (
     <Select
-      aria-label={'Select'}
+      // aria-label={'Select'}
       items={dataSource ?? []}
       isMultiline={isMultiline}
       renderValue={renderValue}
       {...props}
     >
-      {(data: Data) => {
-        return (
-          <SelectItem
-            key={data.value}
-            value={data.value}
-            textValue={data.textValue ?? data.label?.toString()}
-            aria-label={data.label?.toString()}
-          >
-            {data.label}
-          </SelectItem>
-        );
-      }}
+      {props.children ?? (
+        (data: Data) => {
+          return (
+            <SelectItem
+              key={data.value}
+              textValue={data.textValue ?? data.label?.toString()}
+              aria-label={data.label?.toString()}
+            >
+              {data.label}
+            </SelectItem>
+          );
+        }
+      )}
     </Select>
   );
 };

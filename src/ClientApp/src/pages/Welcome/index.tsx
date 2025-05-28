@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Balloon, Button } from '@alifd/next';
 import { history } from 'ice';
 import { useTranslation } from 'react-i18next';
-import styles from './index.module.scss';
-import SimpleLabel from '@/components/SimpleLabel';
+import { Button, Chip, Popover } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 
 export default () => {
@@ -17,38 +15,41 @@ export default () => {
   }, []);
 
   return (
-    <div className={styles.welcomePage}>
-      <div className={styles.main}>
-        <div className={styles.name}>
-          <div className={styles.title}>Inside World</div>
-          <SimpleLabel>v{version}</SimpleLabel>
+    <div className={'flex items-center justify-center w-screen h-screen'}>
+      <div className={'flex flex-col gap-4'}>
+        <div className={'flex justify-center'}>
+          <span className={'text-5xl relative'}>
+            Bakabase
+            <Chip
+              className={'r-0 bottom-[4px] absolute'}
+              color={'success'}
+              variant={'light'}
+            >
+              v{version}
+            </Chip>
+          </span>
         </div>
-        <div className={styles.agreement}>
+        <div className={'flex items-center gap-1'}>
           {t('Please read terms and conditions carefully before you start to use this app')}
-          &nbsp;
-          <Balloon
-            align={'t'}
-            triggerType={'click'}
-            closable={false}
+          <Popover
             trigger={(
-              <span>
+              <Button
+                // size={'sm'}
+                color={'success'}
+                radius={'sm'}
+                variant={'light'}
+              >
                 {t('Click to check')}
-              </span>
+              </Button>
             )}
-            v2
           >
-            <div style={{ width: 400 }}>
-              {t('We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.')}
-              <br />
-              {t('You can disable it in system settings.')}
-            </div>
-          </Balloon>
-
+            {t('We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.')}
+          </Popover>
         </div>
-        <div className={styles.opt}>
+        <div className={'flex justify-center'}>
           <Button
-            type={'primary'}
-            onClick={() => {
+            color={'primary'}
+            onPress={() => {
               BApi.app.acceptTerms().then((a) => {
                 history!.push('/');
               });

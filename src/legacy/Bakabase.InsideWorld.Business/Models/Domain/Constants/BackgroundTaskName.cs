@@ -1,4 +1,4 @@
-﻿namespace Bakabase.Abstractions.Models.Domain.Constants;
+﻿namespace Bakabase.InsideWorld.Business.Models.Domain.Constants;
 
 public enum BackgroundTaskName
 {

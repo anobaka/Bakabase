@@ -1,65 +1,37 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ImportOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import {
-  AiOutlineDelete,
-  AiOutlineEdit,
-  AiOutlinePlusCircle,
-  AiOutlineQuestionCircle,
-  AiOutlineSisternode, AiOutlineSync,
-} from 'react-icons/ai';
+import { AiOutlineDelete, AiOutlineEdit, AiOutlinePlusCircle, AiOutlineSisternode } from 'react-icons/ai';
 import { useUpdate } from 'react-use';
 import _ from 'lodash';
-import { IoDuplicate, IoDuplicateOutline, IoLocate, IoPlayCircleOutline, IoRocketOutline } from 'react-icons/io5';
-import { CardHeader } from '@heroui/react';
+import { IoDuplicateOutline, IoLocate, IoPlayCircleOutline, IoRocketOutline } from 'react-icons/io5';
 import { CiFilter } from 'react-icons/ci';
-import { FaRightLong } from 'react-icons/fa6';
 import { TiChevronRightOutline, TiFlowChildren } from 'react-icons/ti';
 import { GoShareAndroid } from 'react-icons/go';
 import { MdDeleteOutline, MdOutlineSubtitles } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import { TbDatabase } from 'react-icons/tb';
-import { CgRename } from 'react-icons/cg';
-import type { MediaLibraryTemplate, PathFilter, PathLocator } from './models';
-import { PathFilterFsType } from './models';
+import type { MediaLibraryTemplate } from './models';
 import { PathFilterDemonstrator, PathFilterModal } from './components/PathFilter';
 import testData from './data.json';
 import Block from './components/Block';
-import {
-  Accordion,
-  AccordionItem,
-  Button,
-  Card,
-  CardBody, Chip, Divider, Icon,
-  Input,
-  Modal,
-  Popover,
-  Select,
-  Textarea, Tooltip,
-} from '@/components/bakaui';
-import { PathPositioner, PropertyPool, PropertyType } from '@/sdk/constants';
-import type { IProperty } from '@/components/Property/models';
-import { PropertyTypeIconMap } from '@/components/Property/models';
+import { Accordion, AccordionItem, Button, Chip, Input, Modal, Select, Textarea, Tooltip } from '@/components/bakaui';
+import { PropertyPool } from '@/sdk/constants';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IdName, PropertyMap } from '@/components/types';
 import PropertySelector from '@/components/PropertySelector';
-import Property from '@/components/Property';
 import BApi from '@/sdk/BApi';
 import { PathLocatorDemonstrator, PathLocatorModal } from '@/pages/MediaLibraryTemplate/components/PathLocator';
-import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import EnhancerSelectorModal from '@/pages/MediaLibraryTemplate/components/EnhancerSelectorModal';
 import EnhancerOptionsModal from '@/components/EnhancerSelectorV2/components/EnhancerOptionsModal';
-import type {
-  EnhancerFullOptions,
-} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
 import PlayableFileSelectorModal from '@/pages/MediaLibraryTemplate/components/PlayableFileSelectorModal';
-import { EnhancerIcon } from '@/components/Enhancer';
 import DisplayNameTemplateEditorModal from '@/pages/MediaLibraryTemplate/components/DisplayNameTemplateEditorModal';
-import PropertyPoolIcon from '@/components/Property/components/PropertyPoolIcon';
-import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
-import FeatureStatusTip from '@/components/FeatureStatusTip';
 import ImportModal from '@/pages/MediaLibraryTemplate/components/ImportModal';
+import BriefProperty from '@/components/Chips/Property/BriefProperty';
+import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
+import { willCauseCircleReference } from '@/components/utils';
+import { animals } from '@/pages/Test/nextui';
 
 export default () => {
   const { t } = useTranslation();
@@ -112,6 +84,38 @@ export default () => {
       toast.success(t('Saved successfully'));
       await loadTemplate(tpl.id);
     }
+  };
+
+  const renderChildSelector = (tpl: MediaLibraryTemplate) => {
+    const willCauseLoopKeys = new Set<string>(
+      templates.filter(t1 => {
+        return willCauseCircleReference(tpl, t1.id, templates,
+          x => x.id,
+          x => x.childId,
+          (x, k) => x.childId = k,
+        );
+      }).map(x => x.id.toString()),
+    );
+    return (
+      <div className={'inline-block'}>
+        <Select
+          className={'min-w-[320px]'}
+          label={`${t('Child template')} (${t('optional')})`}
+          placeholder={t('Select a child template')}
+          size={'sm'}
+          fullWidth={false}
+          disabledKeys={willCauseLoopKeys}
+          dataSource={templates.map(t1 => {
+            const hasLoop = willCauseLoopKeys.has(t1.id.toString());
+            return {
+              label: t1.name + (hasLoop ? ` (${t('Loop detected')})` : ''),
+              value: t1.id.toString(),
+            };
+          })}
+        />
+      </div>
+
+    );
   };
 
   return (
@@ -455,9 +459,7 @@ export default () => {
                       {tpl.properties?.map((p, i) => {
                         return (
                           <div className={'flex items-center gap-2'}>
-                            <PropertyPoolIcon pool={p.property.pool} />
-                            <PropertyTypeIcon type={p.property.type} />
-                            {p.property.name}
+                            <BriefProperty property={p.property} />
                             <div className={'flex items-center gap-1'}>
                               {p.valueLocators?.map(v => {
                                 return (
@@ -547,10 +549,7 @@ export default () => {
                         return (
                           <div>
                             <div className={'flex items-center gap-1'}>
-                              <div className={'flex items-center gap-1'}>
-                                <EnhancerIcon id={enhancer.id} />
-                                {enhancer.name}
-                              </div>
+                              <BriefEnhancer enhancer={enhancer} />
                               <Button
                                 variant={'light'}
                                 size={'sm'}
@@ -638,11 +637,7 @@ export default () => {
                                                 </Chip>
                                                 <TiChevronRightOutline className={'text-medium'} />
                                                 {to.autoBindProperty ? t('Auto bind property') : property ? (
-                                                  <div className={'flex items-center gap-1'}>
-                                                    <PropertyPoolIcon pool={property.pool} />
-                                                    <PropertyTypeIcon type={property.type} />
-                                                    {property.name}
-                                                  </div>
+                                                  <BriefProperty property={property} />
                                                 ) : t('Unknown property')}
                                                 {to.autoMatchMultilevelString && t('Auto match multilevel string')}
                                               </div>
@@ -679,11 +674,7 @@ export default () => {
                                           )}
                                           <TiChevronRightOutline className={'text-medium'} />
                                           {to.autoBindProperty ? t('Auto bind property') : property ? (
-                                            <div className={'flex items-center gap-1'}>
-                                              <PropertyPoolIcon pool={property.pool} />
-                                              <PropertyTypeIcon type={property.type} />
-                                              {property.name}
-                                            </div>
+                                            <BriefProperty property={property} />
                                           ) : t('Unknown property')}
                                           {to.autoMatchMultilevelString && t('Auto match multilevel string')}
                                         </div>
@@ -721,7 +712,8 @@ export default () => {
                   </Block>
                   <Block
                     title={t('Subresource')}
-                    // description={t('You can customize the display name of the resource')}
+                    description={t('You can create cascading resources through sub-templates, where the rules of the sub-template will use the path of the resource determined by the current template as the root directory.')}
+                    descriptionPlacement={'bottom'}
                     leftIcon={<TiFlowChildren className={'text-large'} />}
                     // rightIcon={<AiOutlineEdit className={'text-large'} />}
                     // onRightIconPress={() => {
@@ -738,7 +730,7 @@ export default () => {
                     //   );
                     // }}
                   >
-                    <FeatureStatusTip status={'developing'} name={t('Subresource')} />
+                    {renderChildSelector(tpl)}
                   </Block>
                   {/* <Block */}
                   {/*   title={t('Preview')} */}

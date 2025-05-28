@@ -32,10 +32,9 @@ public class ExtensionGroupController(IExtensionGroupService service) : Controll
 
     [HttpPost]
     [SwaggerOperation(OperationId = "AddExtensionGroup")]
-    public async Task<BaseResponse> Add([FromBody] ExtensionGroupAddInputModel group)
+    public async Task<SingletonResponse<ExtensionGroup>> Add([FromBody] ExtensionGroupAddInputModel group)
     {
-        await service.Add(group);
-        return BaseResponseBuilder.Ok;
+        return new SingletonResponse<ExtensionGroup>(await service.Add(group));
     }
 
     [HttpPut("{id:int}")]

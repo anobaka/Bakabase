@@ -117,4 +117,6 @@ public interface IResourceService
     Task DeleteResourceCacheByCategoryIdAndCacheType(int categoryId, ResourceCacheType type);
 
     Task MarkAsNotPlayed(int id);
+
+    Task<Resource[]> GetAllGeneratedByMediaLibraryV2();
 }
