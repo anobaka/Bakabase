@@ -3,7 +3,7 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.Abstractions.Models.Db
 {
-    public record Category
+    public record CategoryDbModel
     {
         public int Id { get; set; }
         [Required] public string Name { get; set; } = null!;

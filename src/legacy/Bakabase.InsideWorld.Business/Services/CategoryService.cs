@@ -50,7 +50,7 @@ namespace Bakabase.InsideWorld.Business.Services
 {
     public class CategoryService(
         IServiceProvider serviceProvider,
-        ResourceService<InsideWorldDbContext, Bakabase.Abstractions.Models.Db.Category, int> orm,
+        ResourceService<InsideWorldDbContext, Bakabase.Abstractions.Models.Db.CategoryDbModel, int> orm,
         FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm)
         : BootstrapService(serviceProvider), ICategoryService
     {
@@ -126,7 +126,7 @@ namespace Bakabase.InsideWorld.Business.Services
         #endregion
 
         public async Task<List<Abstractions.Models.Domain.Category>> GetAll(
-            Expression<Func<Bakabase.Abstractions.Models.Db.Category, bool>>? selector = null,
+            Expression<Func<Bakabase.Abstractions.Models.Db.CategoryDbModel, bool>>? selector = null,
             CategoryAdditionalItem additionalItems = CategoryAdditionalItem.None)
         {
             var data = await orm.GetAll(selector);

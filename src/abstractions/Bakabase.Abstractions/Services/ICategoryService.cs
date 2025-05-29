@@ -24,7 +24,7 @@ public interface ICategoryService
     //
     // Task<BaseResponse> Play(int id, string file);
 
-    Task<List<Category>> GetAll(Expression<Func<Models.Db.Category, bool>>? selector = null,
+    Task<List<Category>> GetAll(Expression<Func<Models.Db.CategoryDbModel, bool>>? selector = null,
         CategoryAdditionalItem additionalItems = CategoryAdditionalItem.None);
 
     Task<Category?> Get(int id, CategoryAdditionalItem additionalItems = CategoryAdditionalItem.None);

@@ -10,7 +10,7 @@ using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using Category = Bakabase.Abstractions.Models.Db.Category;
+using CategoryDbModel = Bakabase.Abstractions.Models.Db.CategoryDbModel;
 using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions;
 using Enhancement = Bakabase.Abstractions.Models.Db.Enhancement;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
@@ -45,7 +45,7 @@ namespace Bakabase.InsideWorld.Business
         [Obsolete] public DbSet<CustomPlayableFileSelectorOptions> CustomPlayableFileSelectorOptionsList { get; set; }
 
         public DbSet<SpecialText> SpecialTexts { get; set; }
-        public DbSet<Category> ResourceCategories { get; set; }
+        public DbSet<CategoryDbModel> ResourceCategories { get; set; }
 
         public DbSet<MediaLibraryDbModel> MediaLibraries { get; set; }
         public DbSet<Playlist> Playlists { get; set; }

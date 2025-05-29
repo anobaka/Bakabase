@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -84,7 +85,6 @@ public class MediaLibraryV2Service<TDbContext>(
         var templateMap = (await templateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id, d => d);
         var mlResourceMap = (await resourceService.GetAllGeneratedByMediaLibraryV2()).GroupBy(d => d.MediaLibraryId)
             .ToDictionary(d => d.Key, d => d.ToList());
-        var propertyMap = (await propertyService.GetProperties(PropertyPool.All)).ToMap();
         var syncOptions = resourceOptions.Value.SynchronizationOptions;
         foreach (var ml in data)
         {
@@ -96,17 +96,16 @@ public class MediaLibraryV2Service<TDbContext>(
 
             var treeTempSyncResources = template.DiscoverResources(ml.Path);
             var flattenTempSyncResources = treeTempSyncResources.SelectMany(d => d.Flatten()).ToList();
-            var tempSyncResourcePaths = flattenTempSyncResources.Select(d => d.Path).ToHashSet();
+            var flattenTempResources = flattenTempSyncResources.Select(x => x.ToDomainModel()).ToList();
+            var tempSyncResourcePaths = flattenTempResources.Select(d => d.Path).ToHashSet();
 
             var mlResources = mlResourceMap.GetValueOrDefault(ml.Id) ?? [];
-            var pathDbResourceMap = mlResources.GroupBy(d => d.Path)
-                .Where(x => x.Key.IsNotEmpty()).ToDictionary(d => d.Key, d => d.First());
 
             var unknownDbResources = mlResources.Where(r => !tempSyncResourcePaths.Contains(r.Path)).ToList();
             var conflictDbResources = mlResources.Except(unknownDbResources).ToList();
             var dbResourcePaths = mlResources.Select(x => x.Path).ToHashSet();
-            var newTempSyncResources = flattenTempSyncResources.Where(c => !dbResourcePaths.Contains(c.Path)).ToList();
-            var tempSyncResourceMap = flattenTempSyncResources.ToDictionary(d => d.Path);
+            var newTempSyncResources = flattenTempResources.Where(c => !dbResourcePaths.Contains(c.Path)).ToList();
+            var tempSyncResourceMap = flattenTempResources.ToDictionary(d => d.Path);
 
             // delete
             var resourcesToBeDeleted =
@@ -117,63 +116,22 @@ public class MediaLibraryV2Service<TDbContext>(
             }
 
             // add
-            var resourcesToBeAdded = newTempSyncResources.Select(r => new Resource
-            {
-                // todo: 
-            }).ToList();
-            await resourceService.AddOrPutRange(resourcesToBeAdded);
-            var allPathIdMap = mlResources.Concat(resourcesToBeAdded).ToDictionary(d => d.Path, d => d.Id);
+            await resourceService.AddOrPutRange(newTempSyncResources);
+            var allPathIdMap = mlResources.Concat(newTempSyncResources).ToDictionary(d => d.Path, d => d.Id);
+
             // merge and update
             var changedResources = new HashSet<Resource>();
             foreach (var cr in conflictDbResources)
             {
-                var changed = false;
                 var tmpResource = tempSyncResourceMap[cr.Path];
-                if (tmpResource.IsFile != cr.IsFile)
+                if (cr.MergeOnSynchronization(tmpResource))
                 {
-                    cr.IsFile = tmpResource.IsFile;
-                }
-
-                if (tmpResource.FileCreatedAt != cr.FileCreatedAt)
-                {
-                    cr.FileCreatedAt = tmpResource.FileCreatedAt;
-                    changed = true;
-                }
-
-                if (tmpResource.FileModifiedAt != cr.FileModifiedAt)
-                {
-                    cr.FileModifiedAt = tmpResource.FileModifiedAt;
-                    changed = true;
-                }
-
-                if (tmpResource.PropertyValues != null)
-                {
-                    foreach (var (p, bizValue) in tmpResource.PropertyValues)
-                    {
-                        var crp = (cr.Properties ??= []).GetOrAdd((int)p.Pool, () => []).GetOrAdd(p.Id,
-                            () => new Resource.Property(p.Name, p.Type, p.Type.GetDbValueType(),
-                                p.Type.GetBizValueType(), []))!;
-                        crp.Values ??= [];
-                        var v = crp.Values.FirstOrDefault(x => x.Scope == (int)PropertyValueScope.Synchronization);
-                        if (v == null)
-                        {
-                            v = new Resource.Property.PropertyValue((int)PropertyValueScope.Synchronization, null,
-                                bizValue, bizValue);
-                            crp.Values.Add(v);
-                        }
-
-                        v.BizValue = bizValue;
-                        changed = true;
-                    }
-                }
-
-                if (changed)
-                {
+                    cr.UpdatedAt = DateTime.Now;
                     changedResources.Add(cr);
                 }
             }
 
-            foreach (var dbResource in resourcesToBeAdded.Concat(conflictDbResources))
+            foreach (var dbResource in newTempSyncResources.Concat(conflictDbResources))
             {
                 var tmpResource = tempSyncResourceMap[dbResource.Path];
                 int? parentId = tmpResource.Parent == null ? null : allPathIdMap[tmpResource.Parent.Path];

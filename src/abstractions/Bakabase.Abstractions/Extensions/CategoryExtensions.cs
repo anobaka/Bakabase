@@ -6,7 +6,7 @@ namespace Bakabase.Abstractions.Extensions
 {
     public static class CategoryExtensions
     {
-        public static Category ToDomainModel(this Abstractions.Models.Db.Category c)
+        public static Category ToDomainModel(this Abstractions.Models.Db.CategoryDbModel c)
         {
             var rc = new Category
             {
@@ -36,9 +36,9 @@ namespace Bakabase.Abstractions.Extensions
             return rc;
         }
 
-        public static Models.Db.Category ToDbModel(this Category c)
+        public static Models.Db.CategoryDbModel ToDbModel(this Category c)
         {
-            var rc = new Models.Db.Category
+            var rc = new Models.Db.CategoryDbModel
             {
                 Color = c.Color,
                 CreateDt = c.CreateDt,

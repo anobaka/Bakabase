@@ -30,7 +30,7 @@ using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Infrastructures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Category = Bakabase.Abstractions.Models.Db.Category;
+using CategoryDbModel = Bakabase.Abstractions.Models.Db.CategoryDbModel;
 using MediaLibraryDbModel = Bakabase.Abstractions.Models.Db.MediaLibraryDbModel;
 using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 
@@ -117,7 +117,7 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<ISpecialTextService>(sp => sp.GetRequiredService<SpecialTextService>());
             services.AddScoped<ResourceService<InsideWorldDbContext, MediaLibraryDbModel, int>>();
             services.AddScoped<IMediaLibraryService, MediaLibraryService>();
-            services.AddScoped<ResourceService<InsideWorldDbContext, Category, int>>();
+            services.AddScoped<ResourceService<InsideWorldDbContext, CategoryDbModel, int>>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>>();
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, PlayHistoryDbModel, int>>();
