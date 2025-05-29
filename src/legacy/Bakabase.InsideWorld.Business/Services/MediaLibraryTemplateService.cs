@@ -355,6 +355,14 @@ public class MediaLibraryTemplateService<TDbContext>(
         return domainModel;
     }
 
+    public async Task<MediaLibraryTemplate[]> GetByKeys(int[] ids)
+    {
+        var dbData = await orm.GetByKeys(ids);
+        var domainModels = dbData.Select(d => d.ToDomainModel()).ToArray();
+        await Populate(domainModels);
+        return domainModels;
+    }
+
     public async Task<Abstractions.Models.Domain.MediaLibraryTemplate[]> GetAll()
     {
         var templates = await orm.GetAll();

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { AiOutlineWarning } from 'react-icons/ai';
 import Card from './Card';
 import type { IdName } from '@/pages/SynchronizationOptions/models';
 import { SubjectLabels } from '@/pages/SynchronizationOptions/models';
@@ -7,6 +8,7 @@ import type {
 } from '@/sdk/Api';
 import BooleanOptions from '@/pages/SynchronizationOptions/components/BooleanOptions';
 import EnhancerOptions from '@/pages/SynchronizationOptions/components/EnhancerOptions';
+import { Tooltip } from '@/components/bakaui';
 
 type Options = BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions;
 
@@ -18,11 +20,14 @@ type Props = {
   options?: Options;
 };
 
-export default ({
-                  category,
-                  onChange,
-                  options,
-                }: Props) => {
+/**
+ * @deprecated
+ */
+const CategoryOptions = ({
+                           category,
+                           onChange,
+                           options,
+                         }: Props) => {
   const { t } = useTranslation();
 
   const patchOptions = (patches: Partial<Options>) => {
@@ -36,7 +41,18 @@ export default ({
   // console.log(options, mediaLibrariesOptionsMap);
 
   return (
-    <Card header={category.name}>
+    <Card header={(
+      <div className={'flex items-center gap-1 line-through opacity-60'}>
+        {category.name}
+        <Tooltip content={t('Category is deprecated and will be removed in a future version.')}>
+          <div className={'flex items-center gap-1'}>
+            <AiOutlineWarning className={'text-lg'} />
+            {t('Deprecated')}
+          </div>
+        </Tooltip>
+      </div>
+    )}
+    >
       <BooleanOptions
         subject={t(SubjectLabels.DeleteResourcesWithUnknownPath)}
         onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownPath: isSelected })}
@@ -103,3 +119,5 @@ export default ({
     </Card>
   );
 };
+
+export default CategoryOptions;

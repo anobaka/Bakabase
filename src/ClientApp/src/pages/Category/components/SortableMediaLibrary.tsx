@@ -13,6 +13,8 @@ import {
 } from '@ant-design/icons';
 import { useUpdate } from 'react-use';
 import { AutoTextSize } from 'auto-text-size';
+import { TbPackageExport } from 'react-icons/tb';
+import toast from 'react-hot-toast';
 import CustomIcon from '@/components/CustomIcon';
 import DragHandle from '@/components/DragHandle';
 import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
@@ -22,9 +24,10 @@ import PathConfigurationDialog from '@/pages/Category/components/PathConfigurati
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsInBulkDialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Button, Chip, Input, Modal, Tooltip } from '@/components/bakaui';
+import { Alert, Button, Chip, Input, Modal, Tooltip } from '@/components/bakaui';
 import SynchronizationConfirmModal from '@/pages/Category/components/SynchronizationConfirmModal';
 import DeleteEnhancementsModal from '@/pages/Category/components/DeleteEnhancementsModal';
+import category from '@/pages/Category';
 
 export default (({
                    library,
@@ -369,6 +372,49 @@ export default (({
                   {library.fileSystemInformation?.[p.path]?.freeSpaceInGb}GB
                 </Chip>
                 <div className={'flex items-center'}>
+                  <Button
+                    size={'sm'}
+                    isIconOnly
+                    color={'primary'}
+                    variant={'light'}
+                    className={'w-auto min-w-fit px-1'}
+                    onPress={(e) => {
+                      let templateName = '';
+                      createPortal(Modal, {
+                        defaultVisible: true,
+                        size: 'lg',
+                        title: t('Exporting path configuration as new media library template'),
+                        children: (
+                          <div className={'flex flex-col gap-1'}>
+                            <Alert
+                              color={'default'}
+                              title={t('The old categorization and media library features will soon be removed. Please export the data as a new media library template.')}
+                              description={(
+                                <div>
+                                  <div>{t('The resource selection rules, attribute value settings, enhancer configurations, playable file locator, ' +
+                                    'and resource naming conventions of the current path will all be exported to the media library template.')}</div>
+                                  <div>{t('However, the player will not be included. Please configure the player manually in the new media library.')}</div>
+                                  <div>{t('A media library template is a combination of the rules below and can be reused across multiple paths.')}</div>
+                                  <div>{t('It is not necessary to create a separate template for each path.')}</div>
+                                </div>
+                              )}
+                            />
+                            <Input isRequired onValueChange={v => templateName = v} label={t('Template name')} />
+                          </div>
+                        ),
+                        onOk: async () => {
+                          if (templateName == undefined || templateName.length == 0) {
+                            const msg = t('Template name is required');
+                            toast.error(msg);
+                            throw new Error(msg);
+                          }
+                          // todo: Create template from media library path configuration
+                        },
+                      });
+                    }}
+                  >
+                    <TbPackageExport className={'text-base'} />
+                  </Button>
                   <Button
                     size={'sm'}
                     isIconOnly

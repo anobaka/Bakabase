@@ -6,6 +6,6 @@ public static class PathFilterExtensions
 {
     public static string[] Filter(this PathFilter filter, string rootPath)
     {
-
+        throw new NotImplementedException();
     }
 }

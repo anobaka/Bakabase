@@ -835,7 +835,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 (from r in fileNotFoundResources
                                     where r.ShouldBeDeletedSinceFileNotFound(so)
                                     select r.Id).Concat(from r in unknownResources
-                                    where r.ShouldBeDeletedSinceUnknown(so)
+                                    where r.ShouldBeDeletedSinceUnknownMediaLibrary(so)
                                     select r.Id).ToList();
 
                             if (toBeDeletedResourceIds.Any())

@@ -113,6 +113,7 @@ public record Resource
     public DateTime? PlayedAt { get; set; }
 
     public ResourceCache? Cache { get; set; }
+    public bool IsMediaLibraryV2 => CategoryId == 0;
 
     public record Property(
         string? Name,

@@ -14,7 +14,7 @@ import BApi from '@/sdk/BApi';
 import { CategoryAdditionalItem, MediaLibraryAdditionalItem } from '@/sdk/constants';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Modal } from '@/components/bakaui';
+import { Alert, Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Modal } from '@/components/bakaui';
 import HandleUnknownResources from '@/components/HandleUnknownResources';
 
 export default () => {
@@ -113,6 +113,13 @@ export default () => {
 
   return (
     <div className={'category-page'}>
+      <div>
+        <Alert
+          color={'danger'}
+          title={t('Please note that the categorization feature will be removed soon. Please switch to the new media library function as soon as possible.')}
+          description={t('You can use the export button on the right side of the path to export the current media library configuration as a new media library template and bind it to the new media library.')}
+        />
+      </div>
       <div className="header mb-1">
         <div className="left">
           <Button

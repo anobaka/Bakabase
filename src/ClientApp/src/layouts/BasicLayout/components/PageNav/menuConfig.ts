@@ -29,9 +29,9 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/medialibrarytemplate',
       },
       {
-        name: 'Media library(Old)',
-        icon: 'ProductOutlined',
-        path: '/category',
+        name: 'Synchronization options',
+        path: '/synchronizationoptions',
+        icon: 'SyncOutlined',
       },
       {
         name: 'Custom property',
@@ -83,6 +83,11 @@ const asideMenuConfig: IMenuItem[] = [
       //   path: '/enhancementrecord',
       //   icon: 'ThunderboltOutlined',
       // },
+      {
+        name: 'Media library(Deprec)',
+        icon: 'ProductOutlined',
+        path: '/category',
+      },
     ],
   },
   {
@@ -126,11 +131,6 @@ const asideMenuConfig: IMenuItem[] = [
         name: 'Configuration',
         path: '/configuration',
         icon: 'AppstoreOutlined',
-      },
-      {
-        name: 'Synchronization options',
-        path: '/synchronizationoptions',
-        icon: 'SyncOutlined',
       },
       {
         name: 'Background Task',

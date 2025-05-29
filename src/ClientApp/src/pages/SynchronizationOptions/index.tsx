@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import _ from 'lodash';
 import type { IdName } from './models';
-import { Alert, Button, Card, CardBody, CardHeader, Chip, Modal } from '@/components/bakaui';
+import { Alert, Button, Card, CardBody, CardHeader, Chip, Divider, Modal } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
-import { CategoryAdditionalItem, enhancerIds } from '@/sdk/constants';
+import { CategoryAdditionalItem, enhancerIds, MediaLibraryV2AdditionalItem } from '@/sdk/constants';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import store from '@/store';
 import type {
@@ -12,9 +12,11 @@ import type {
 } from '@/sdk/Api';
 import GlobalOptions from '@/pages/SynchronizationOptions/components/GlobalOptions';
 import CategoryOptions from '@/pages/SynchronizationOptions/components/CategoryOptions';
+import MediaLibraryOptions from '@/pages/SynchronizationOptions/components/MediaLibraryOptions';
 
 type Options = BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
 
+type MediaLibrary = IdName & { enhancers?: IdName[]};
 
 type Category = {
   order: number;
@@ -29,6 +31,7 @@ export default () => {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const synchronizationOptions = store.useModelState('resourceOptions')?.synchronizationOptions;
+  const [mediaLibraryV2s, setMediaLibraryV2s] = useState<MediaLibrary[]>([]);
 
   const [options, setOptions] = useState<Options>();
 
@@ -37,27 +40,40 @@ export default () => {
   }, [synchronizationOptions]);
 
   const init = async () => {
-    const categories = (await BApi.category
-      .getAllCategories({ additionalItems: CategoryAdditionalItem.EnhancerOptions })).data ?? [];
-    const categoryMediaLibraryMap = _
-      .groupBy((await BApi.mediaLibrary.getAllMediaLibraries()).data ?? [], x => x.categoryId);
-
     const enhancerName = enhancerIds.reduce<Record<number, string>>((s, t) => {
       s[t.value] = t.label;
       return s;
     }, {});
+
+    const categories = (await BApi.category
+      .getAllCategories({ additionalItems: CategoryAdditionalItem.EnhancerOptions })).data ?? [];
+    const categoryMediaLibraryMap = _
+      .groupBy((await BApi.mediaLibrary.getAllMediaLibraries()).data ?? [], x => x.categoryId);
+    const mediaLibrariesRsp = await BApi.mediaLibraryV2
+      .getAllMediaLibraryV2({ additionalItems: MediaLibraryV2AdditionalItem.Template });
+    const mediaLibraries = (mediaLibrariesRsp.data ?? []).map(ml => ({
+      ...ml,
+      enhancers: ml.template?.enhancers?.map(e => ({
+        id: e.enhancerId,
+        name: enhancerName[e.enhancerId]!,
+      })),
+    }));
     const simpleCategories = categories.map(c => {
       const eIds = c.enhancerOptions?.filter(x => x.active).map(x => x.enhancerId);
       const nc: Category = {
         id: c.id,
         name: c.name,
         order: c.order,
-        enhancers: eIds?.map(e => ({ id: e, name: enhancerName[e]! })),
+        enhancers: eIds?.map(e => ({
+          id: e,
+          name: enhancerName[e]!,
+        })),
         mediaLibraries: categoryMediaLibraryMap[c.id],
       };
       return nc;
     });
 
+    setMediaLibraryV2s(mediaLibraries);
     setCategories(simpleCategories);
   };
 
@@ -90,7 +106,7 @@ export default () => {
                 const data: { label: string; description: string }[] = [
                   {
                     label: 'Priority',
-                    description: 'Media library > Category > Global',
+                    description: 'Media library > Category(Deprecated) > Global',
                   },
                   {
                     label: 'Resources with unknown path',
@@ -141,6 +157,22 @@ export default () => {
         )}
       />
       <GlobalOptions onChange={saveOptions} options={options} />
+      {mediaLibraryV2s.map(ml => {
+        return (
+          <MediaLibraryOptions
+            mediaLibrary={ml}
+            onChange={o => saveOptions({
+              ...options,
+              mediaLibraryOptionsMap: {
+                ...options?.mediaLibraryOptionsMap,
+                [ml.id]: o,
+              },
+            })}
+            options={options?.mediaLibraryOptionsMap?.[ml.id]}
+          />
+        );
+      })}
+      <Divider />
       {categories.map(c => {
         return (
           <CategoryOptions

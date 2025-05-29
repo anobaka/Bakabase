@@ -136,6 +136,12 @@ export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
 export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
 export enum InternalProperty {RootPath = 1, ParentResource = 2, Resource = 3, Filename = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21}
 export const internalProperties = Object.keys(InternalProperty).filter(k => typeof InternalProperty[k] === 'number').map(t => ({label: t, value: InternalProperty[t]}));
+export enum MediaLibraryV2AdditionalItem {None = 0, Template = 1}
+export const mediaLibraryV2AdditionalItems = Object.keys(MediaLibraryV2AdditionalItem).filter(k => typeof MediaLibraryV2AdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryV2AdditionalItem[t]}));
+export enum PathFilterFsType {File = 1, Directory = 2}
+export const pathFilterFsTypes = Object.keys(PathFilterFsType).filter(k => typeof PathFilterFsType[k] === 'number').map(t => ({label: t, value: PathFilterFsType[t]}));
+export enum PathPositioner {Layer = 1, Regex = 2}
+export const pathPositioners = Object.keys(PathPositioner).filter(k => typeof PathPositioner[k] === 'number').map(t => ({label: t, value: PathPositioner[t]}));
 export enum PropertyPool {Internal = 1, Reserved = 2, Custom = 4, All = 7}
 export const propertyPools = Object.keys(PropertyPool).filter(k => typeof PropertyPool[k] === 'number').map(t => ({label: t, value: PropertyPool[t]}));
 export enum PropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15, Tags = 16}
@@ -228,9 +234,5 @@ export enum StandardValueConversionRule {Directly = 1, Incompatible = 2, ValuesW
 export const standardValueConversionRules = Object.keys(StandardValueConversionRule).filter(k => typeof StandardValueConversionRule[k] === 'number').map(t => ({label: t, value: StandardValueConversionRule[t]}));
 export enum LegacyResourceProperty {ReleaseDt = 4, Publisher = 5, Name = 6, Language = 7, Volume = 8, Original = 9, Series = 10, Tag = 11, CustomProperty = 14, Favorites = 22, Cover = 23}
 export const legacyResourceProperties = Object.keys(LegacyResourceProperty).filter(k => typeof LegacyResourceProperty[k] === 'number').map(t => ({label: t, value: LegacyResourceProperty[t]}));
-export enum PathFilterFsType {File = 1, Directory = 2}
-export const pathFilterFsTypes = Object.keys(PathFilterFsType).filter(k => typeof PathFilterFsType[k] === 'number').map(t => ({label: t, value: PathFilterFsType[t]}));
-export enum PathPositioner {Layer = 1, Regex = 2}
-export const pathPositioners = Object.keys(PathPositioner).filter(k => typeof PathPositioner[k] === 'number').map(t => ({label: t, value: PathPositioner[t]}));
 export enum LogLevel {Trace = 0, Debug = 1, Information = 2, Warning = 3, Error = 4, Critical = 5, None = 6}
 export const logLevels = Object.keys(LogLevel).filter(k => typeof LogLevel[k] === 'number').map(t => ({label: t, value: LogLevel[t]}));

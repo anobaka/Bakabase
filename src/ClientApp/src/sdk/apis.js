@@ -7267,6 +7267,7 @@ export const ImportMediaLibraryTemplateURL = function(parameters = {}) {
  * url: GetAllMediaLibraryV2URL
  * method: GetAllMediaLibraryV2_TYPE
  * raw_url: GetAllMediaLibraryV2_RAW_URL
+ * @param additionalItems - [0: None, 1: Template]
  */
 export const GetAllMediaLibraryV2 = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -7275,6 +7276,9 @@ export const GetAllMediaLibraryV2 = function(parameters = {}) {
   let body
   let queryParameters = {}
   let form = {}
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -7292,6 +7296,9 @@ export const GetAllMediaLibraryV2URL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-v2'
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

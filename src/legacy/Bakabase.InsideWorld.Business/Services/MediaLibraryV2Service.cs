@@ -58,14 +58,49 @@ public class MediaLibraryV2Service<TDbContext>(
         await orm.UpdateRange(dbData.Select(d => d.ToDbModel()).ToList());
     }
 
+    protected async Task Populate(List<MediaLibraryV2> models,
+        MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None)
+    {
+        foreach (var ai in SpecificEnumUtils<MediaLibraryV2AdditionalItem>.Values)
+        {
+            if (additionalItems.HasFlag(ai))
+            {
+                switch (ai)
+                {
+                    case MediaLibraryV2AdditionalItem.None:
+                        break;
+                    case MediaLibraryV2AdditionalItem.Template:
+                    {
+                        var templateIds = models.Select(d => d.TemplateId).OfType<int>().ToHashSet();
+                        var templates = (await templateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id);
+                        foreach (var model in models)
+                        {
+                            if (model.TemplateId.HasValue)
+                            {
+                                model.Template = templates.GetValueOrDefault(model.TemplateId.Value);
+                            }
+                        }
+
+                        break;
+                    }
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
+    }
+
     public async Task<MediaLibraryV2> Get(int id)
     {
         return (await orm.GetByKey(id)).ToDomainModel();
     }
 
-    public async Task<List<MediaLibraryV2>> GetAll()
+    public async Task<List<MediaLibraryV2>> GetAll(
+        MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None)
     {
-        return (await orm.GetAll()).Select(x => x.ToDomainModel()).ToList();
+        var data = (await orm.GetAll()).Select(x => x.ToDomainModel()).ToList();
+        await Populate(data, additionalItems);
+        return data;
     }
 
     public async Task Delete(int id)

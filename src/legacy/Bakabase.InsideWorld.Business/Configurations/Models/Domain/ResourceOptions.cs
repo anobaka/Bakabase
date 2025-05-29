@@ -9,6 +9,7 @@ using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Search.Models.Db;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Doc.Swagger;
+using static Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions.SynchronizationCategoryOptions;
 
 namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
 {
@@ -52,6 +53,18 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
         {
             public bool? DeleteResourcesWithUnknownPath { get; set; }
             public bool? DeleteResourcesWithUnknownMediaLibrary { get; set; }
+            [Obsolete] public Dictionary<int, SynchronizationCategoryOptions>? CategoryOptionsMap { get; set; }
+            public Dictionary<int, SynchronizationEnhancerOptions>? EnhancerOptionsMap { get; set; }
+
+            /// <summary>
+            /// V2
+            /// </summary>
+            public Dictionary<int, SynchronizationMediaLibraryOptions>? MediaLibraryOptionsMap { get; set; }
+        }
+
+        public record SynchronizationCategoryOptions
+        {
+            public bool? DeleteResourcesWithUnknownPath { get; set; }
             public Dictionary<int, SynchronizationEnhancerOptions>? EnhancerOptionsMap { get; set; }
             public Dictionary<int, SynchronizationMediaLibraryOptions>? MediaLibraryOptionsMap { get; set; }
         }

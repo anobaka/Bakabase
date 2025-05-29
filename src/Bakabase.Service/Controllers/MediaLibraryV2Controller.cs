@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -15,9 +16,10 @@ public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : Controll
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryV2")]
-    public async Task<ListResponse<MediaLibraryV2>> GetAll()
+    public async Task<ListResponse<MediaLibraryV2>> GetAll(
+        MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None)
     {
-        var items = await service.GetAll();
+        var items = await service.GetAll(additionalItems);
         return new ListResponse<MediaLibraryV2>(items);
     }
 

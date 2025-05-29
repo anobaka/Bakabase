@@ -1122,6 +1122,11 @@ namespace Bakabase.InsideWorld.Business.Services
             await _orm.UpdateByKey(id, r => r.PlayedAt = null);
         }
 
+        public Task<Resource[]> GetAllGeneratedByMediaLibraryV2()
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)
         {
             if (model.IsCustomProperty)
