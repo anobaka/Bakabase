@@ -31,6 +31,7 @@ using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
+using Bakabase.InsideWorld.Business.Components.Resource.Components.Player;
 using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
@@ -79,6 +80,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IPropertyService _propertyService;
         private readonly IFileManager _fileManager;
         private readonly IPlayHistoryService _playHistoryService;
+        private readonly ISystemPlayer _systemPlayer;
 
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
@@ -88,7 +90,7 @@ namespace Bakabase.InsideWorld.Business.Services
             ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager,
             IPropertyService propertyService,
             FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
-            IFileManager fileManager, IPlayHistoryService playHistoryService)
+            IFileManager fileManager, IPlayHistoryService playHistoryService, ISystemPlayer systemPlayer)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -104,6 +106,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _resourceCacheOrm = resourceCacheOrm;
             _fileManager = fileManager;
             _playHistoryService = playHistoryService;
+            _systemPlayer = systemPlayer;
             _orm =
                 new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int>(
                     serviceProvider);
@@ -1122,9 +1125,9 @@ namespace Bakabase.InsideWorld.Business.Services
             await _orm.UpdateByKey(id, r => r.PlayedAt = null);
         }
 
-        public Task<Resource[]> GetAllGeneratedByMediaLibraryV2()
+        public async Task<Resource[]> GetAllGeneratedByMediaLibraryV2(ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
-            throw new NotImplementedException();
+            return (await GetAll(x=>x.CategoryId == 0, additionalItems)).ToArray();
         }
 
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)
@@ -1400,24 +1403,27 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             var categoryId = (await _orm.GetByKey(resourceId))?.CategoryId;
 
-            if (!categoryId.HasValue)
+            var playedByCustomPlayer = false;
+            if (categoryId.HasValue)
             {
-                return BaseResponseBuilder.NotFound;
+                var playerRsp = await _categoryService.GetFirstComponent<IPlayer>(categoryId.Value, ComponentType.Player);
+                if (playerRsp.Data != null)
+                {
+                    await playerRsp.Data.Play(file);
+                    playedByCustomPlayer = true;
+                }
             }
 
-            var playerRsp = await _categoryService.GetFirstComponent<IPlayer>(categoryId.Value, ComponentType.Player);
-            if (playerRsp.Data == null)
+            if (!playedByCustomPlayer)
             {
-                return playerRsp;
+                await _systemPlayer.Play(file);
             }
-
-            await playerRsp.Data.Play(file);
-
+            
             var now = DateTime.Now;
             await _orm.UpdateByKey(resourceId, r => r.PlayedAt = now);
             await _playHistoryService.Add(new PlayHistoryDbModel
                 {ResourceId = resourceId, Item = file, PlayedAt = now});
-
+            
             return BaseResponseBuilder.Ok;
         }
 

@@ -11,6 +11,7 @@ using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Abstractions.Services;
 
+[Obsolete]
 public interface ICategoryService
 {
     // Task<ListResponse<TComponent>> GetComponents<TComponent>(Abstractions.Models.Domain.Category category,

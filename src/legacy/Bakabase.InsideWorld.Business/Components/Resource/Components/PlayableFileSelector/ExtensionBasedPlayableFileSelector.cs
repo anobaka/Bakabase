@@ -14,7 +14,7 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableF
         Description = "Select files with specific extensions as playable files.")]
     public class ExtensionBasedPlayableFileSelector : IPlayableFileSelector
     {
-        protected ExtensionBasedPlayableFileSelectorOptions Options { get; }
+        public ExtensionBasedPlayableFileSelectorOptions Options { get; }
 
         public ExtensionBasedPlayableFileSelector(ExtensionBasedPlayableFileSelectorOptions options)
         {

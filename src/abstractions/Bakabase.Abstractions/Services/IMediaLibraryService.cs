@@ -7,6 +7,7 @@ using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Abstractions.Services;
 
+[Obsolete]
 public interface IMediaLibraryService
 {
     Task<BaseResponse> Add(MediaLibraryAddDto model);

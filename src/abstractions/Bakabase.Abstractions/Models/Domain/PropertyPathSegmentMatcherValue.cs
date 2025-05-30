@@ -1,9 +1,11 @@
-﻿using Bakabase.InsideWorld.Models.Constants;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Components.Doc.Swagger;
 using Bootstrap.Extensions;
 
 namespace Bakabase.Abstractions.Models.Domain
 {
+    [Obsolete]
     [SwaggerCustomModel]
     public record PropertyPathSegmentMatcherValue
     {
@@ -24,6 +26,17 @@ namespace Bakabase.Abstractions.Models.Domain
 
         public bool IsResourceProperty => !IsCustomProperty && PropertyId == (int) ResourceProperty.Resource;
 
+        public PropertyPool PropertyPool
+        {
+            get
+            {
+                if (IsSecondaryProperty)
+                {
+
+                }
+            }
+        }
+
 
         public bool IsValid => PropertyId > 0 && ValueType switch
         {
@@ -41,5 +54,27 @@ namespace Bakabase.Abstractions.Models.Domain
                 PropertyId = (int) ResourceProperty.Resource,
                 IsCustomProperty = false
             };
+
+        public PathFilter ToPathFilter()
+        {
+            switch (ValueType)
+            {
+                case ResourceMatcherValueType.Layer:
+                    return new PathFilter
+                    {
+                        Layer = Layer,
+                        Positioner = PathPositioner.Layer
+                    };
+                case ResourceMatcherValueType.Regex:
+                    return new PathFilter
+                    {
+                        Regex = Regex,
+                        Positioner = PathPositioner.Regex
+                    };
+                case ResourceMatcherValueType.FixedText:
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
     }
 }

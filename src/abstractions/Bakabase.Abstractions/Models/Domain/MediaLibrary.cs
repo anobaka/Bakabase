@@ -3,6 +3,7 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 
 namespace Bakabase.Abstractions.Models.Domain
 {
+    [Obsolete]
     public record MediaLibrary
     {
         public int Id { get; set; }

@@ -135,6 +135,8 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();
 
+            services.AddSingleton<ISystemPlayer, SelfPlayer>();
+
             #endregion
 
             return services;

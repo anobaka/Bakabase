@@ -34,6 +34,7 @@ using ComponentDescriptor = Bakabase.Abstractions.Models.Domain.ComponentDescrip
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+    [Obsolete]
     public class ComponentService : BootstrapService
     {
         private ComponentOptionsService OptionsService => GetRequiredService<ComponentOptionsService>();

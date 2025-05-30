@@ -48,6 +48,7 @@ using Resource = Bakabase.Abstractions.Models.Domain.Resource;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+    [Obsolete]
     public class CategoryService(
         IServiceProvider serviceProvider,
         ResourceService<InsideWorldDbContext, Bakabase.Abstractions.Models.Db.CategoryDbModel, int> orm,

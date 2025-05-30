@@ -2,12 +2,11 @@
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
-using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Player
 {
     [Player(Description = "Use playable file as executable")]
-    public class SelfPlayer : IPlayer
+    public class SelfPlayer : IPlayer, ISystemPlayer
     {
         public Task<string> Validate()
         {

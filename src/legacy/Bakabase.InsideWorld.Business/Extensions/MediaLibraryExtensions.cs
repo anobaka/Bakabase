@@ -13,6 +13,7 @@ using Quartz.Impl.AdoJobStore;
 
 namespace Bakabase.InsideWorld.Business.Extensions
 {
+    [Obsolete]
     public static class MediaLibraryExtensions
     {
         public static MediaLibrary Duplicate(this MediaLibrary ml, int toCategoryId)

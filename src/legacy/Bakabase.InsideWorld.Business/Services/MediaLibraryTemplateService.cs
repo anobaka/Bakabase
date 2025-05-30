@@ -13,7 +13,10 @@ using Bakabase.Abstractions.Models.Domain.Sharable;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
@@ -36,7 +39,8 @@ public class MediaLibraryTemplateService<TDbContext>(
     ISpecialTextService specialTextService,
     IExtensionGroupService extensionGroupService,
     IPropertyService propertyService,
-    ICustomPropertyService customPropertyService
+    ICustomPropertyService customPropertyService,
+    IMediaLibraryService mediaLibraryService
 )
     : IMediaLibraryTemplateService
     where TDbContext : DbContext
@@ -371,9 +375,10 @@ public class MediaLibraryTemplateService<TDbContext>(
         return domainModels;
     }
 
-    public async Task Add(MediaLibraryTemplateAddInputModel model)
+    public async Task<MediaLibraryTemplate> Add(MediaLibraryTemplateAddInputModel model)
     {
-        await orm.Add(new MediaLibraryTemplateDbModel {Name = model.Name,});
+        var dbModel = (await orm.Add(new MediaLibraryTemplateDbModel {Name = model.Name,})).Data!;
+        return dbModel.ToDomainModel();
     }
 
     public async Task Put(int id, Abstractions.Models.Domain.MediaLibraryTemplate template)
@@ -490,5 +495,18 @@ public class MediaLibraryTemplateService<TDbContext>(
         using var ms = new MemoryStream();
         await image.SaveAsPngAsync(ms);
         return ms.ToArray();
+    }
+
+    public async Task ImportFromMediaLibraryV1(int v1Id, int pcIdx, string templateName)
+    {
+        var ml = (await mediaLibraryService.Get(v1Id, MediaLibraryAdditionalItem.None))!;
+        var category = await categoryService.Get(ml.CategoryId,
+            CategoryAdditionalItem.CustomProperties | CategoryAdditionalItem.EnhancerOptions);
+        var playableFilesSelector =
+            (await categoryService.GetFirstComponent<IPlayableFileSelector>(category.Id,
+                ComponentType.PlayableFileSelector)).Data;
+        var template = await Add(new MediaLibraryTemplateAddInputModel(templateName));
+        template.InitFromMediaLibraryV1(ml, pcIdx, category, playableFilesSelector);
+        await Put(template.Id, template);
     }
 }

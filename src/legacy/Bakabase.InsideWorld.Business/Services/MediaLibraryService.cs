@@ -56,6 +56,7 @@ using SearchOption = System.IO.SearchOption;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
+    [Obsolete]
     public class MediaLibraryService : BootstrapService, IMediaLibraryService
     {
         private readonly ResourceService<InsideWorldDbContext,

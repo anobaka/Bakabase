@@ -118,5 +118,5 @@ public interface IResourceService
 
     Task MarkAsNotPlayed(int id);
 
-    Task<Resource[]> GetAllGeneratedByMediaLibraryV2();
+    Task<Resource[]> GetAllGeneratedByMediaLibraryV2(ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
 }
