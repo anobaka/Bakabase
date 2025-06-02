@@ -24,8 +24,8 @@ public static class MediaLibraryTemplateExtensions
     {
         return new MediaLibraryTemplatePropertyDbModel
         {
-            Id = property.Id,
-            Pool = property.Pool,
+            Id = property.Property?.Id ?? property.Id,
+            Pool = property.Property?.Pool ?? property.Pool,
             ValueLocators = property.ValueLocators,
         };
     }
@@ -70,6 +70,8 @@ public static class MediaLibraryTemplateExtensions
             Name = template.Name,
             Author = template.Author,
             Description = template.Description,
+            CreatedAt = template.CreatedAt,
+            UpdatedAt = template.UpdatedAt,
             ResourceFilters = JsonConvert.SerializeObject(template.ResourceFilters?.Select(x => x.ToDbModel())),
             Properties = JsonConvert.SerializeObject(template.Properties?.Select(p => p.ToDbModel())),
             PlayableFileLocator = JsonConvert.SerializeObject(template.PlayableFileLocator?.ToDbModel()),
@@ -158,6 +160,8 @@ public static class MediaLibraryTemplateExtensions
             Name = dbModel.Name,
             Author = dbModel.Author,
             Description = dbModel.Description,
+            CreatedAt = dbModel.CreatedAt,
+            UpdatedAt = dbModel.UpdatedAt,
             DisplayNameTemplate = dbModel.DisplayNameTemplate,
             ResourceFilters = dbFilters?.Select(f => f.ToDomainModel()).ToList(),
             Properties = dbProperties?.Select(p => p.ToDomainModel()).ToList(),

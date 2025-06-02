@@ -17,5 +17,6 @@ public interface IMediaLibraryTemplateService
     Task Import(MediaLibraryTemplateImportInputModel model);
     Task<MediaLibraryTemplateValidationViewModel?> Validate(string shareCode);
     Task<byte[]> AppendShareCodeToPng(int id, byte[] png);
-    Task ImportFromMediaLibraryV1(int v1Id, int pcIdx, string templateName);
+    Task AddByMediaLibraryV1(int v1Id, int pcIdx, string templateName);
+    Task Duplicate(int id);
 }

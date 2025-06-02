@@ -19,7 +19,7 @@ public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : Controll
     public async Task<ListResponse<MediaLibraryV2>> GetAll(
         MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None)
     {
-        var items = await service.GetAll(additionalItems);
+        var items = await service.GetAll(null, additionalItems);
         return new ListResponse<MediaLibraryV2>(items);
     }
 
@@ -60,6 +60,22 @@ public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : Controll
     public async Task<BaseResponse> Delete(int id)
     {
         await service.Delete(id);
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("{id:int}/sync")]
+    [SwaggerOperation(OperationId = "SyncMediaLibraryV2")]
+    public async Task<BaseResponse> Sync(int id)
+    {
+        await service.Sync(id);
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("sync-all")]
+    [SwaggerOperation(OperationId = "SyncAllMediaLibrariesV2")]
+    public async Task<BaseResponse> SyncAll()
+    {
+        await service.SyncAll();
         return BaseResponseBuilder.Ok;
     }
 }

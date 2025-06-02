@@ -245,7 +245,6 @@ export default () => {
                     <div className={'flex items-center gap-1'}>
                       <Chip variant={'light'} className={'opacity-60'}>
                         {tpl.createdAt}
-                        2025-01-01 12:00:00
                       </Chip>
                       <Button
                         size={'sm'}
@@ -283,18 +282,14 @@ export default () => {
                             Modal, {
                               defaultVisible: true,
                               title: t('Duplicate current template'),
-                              children: (
-                                <Input
-                                  label={t('New template name')}
-                                  placeholder={t('Enter new template name')}
-                                  isRequired
-                                  onValueChange={v => {
-                                    newName = v;
-                                  }}
-                                />
-                              ),
+                              // children: (
+                              //
+                              // ),
                               onOk: async () => {
-                                // todo:
+                                const r = await BApi.mediaLibraryTemplate.duplicateMediaLibraryTemplate(tpl.id);
+                                if (!r.code) {
+                                  loadTemplates();
+                                }
                               },
                             },
                           );
@@ -313,7 +308,10 @@ export default () => {
                             title: t('Deleting template {{name}}', { name: tpl.name }),
                             children: t('This action cannot be undone. Are you sure you want to delete this template?'),
                             onOk: async () => {
-                              // todo:
+                              const r = await BApi.mediaLibraryTemplate.deleteMediaLibraryTemplate(tpl.id);
+                              if (!r.code) {
+                                loadTemplates();
+                              }
                             },
                           });
                         }}

@@ -140,6 +140,9 @@ export default () => {
                 // variant={'flat'}
                 size={'sm'}
                 color={'secondary'}
+                onPress={() => {
+                  BApi.mediaLibraryV2.syncAllMediaLibrariesV2();
+                }}
               >
                 <IoIosSync className={'text-lg'} />
                 {t('Synchronize all media libraries')}
@@ -266,6 +269,9 @@ export default () => {
                       variant={'light'}
                       size={'sm'}
                       color={'secondary'}
+                      onPress={() => {
+                        BApi.mediaLibraryV2.syncMediaLibraryV2(ml.id);
+                      }}
                     >
                       <IoIosSync className={'text-lg'} />
                     </Button>

@@ -281,6 +281,10 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplate {
   name: string;
   author?: string;
   description?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
   resourceFilters?: BakabaseAbstractionsModelsDomainPathFilter[];
   properties?: BakabaseAbstractionsModelsDomainMediaLibraryTemplateProperty[];
   playableFileLocator?: BakabaseAbstractionsModelsDomainMediaLibraryTemplatePlayableFileLocator;
@@ -586,6 +590,14 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryPathConfigurationAdd
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryRootPathsAddInBulkInputModel {
   rootPaths: string[];
+}
+
+export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateAddByMediaLibraryV1InputModel {
+  /** @format int32 */
+  v1Id: number;
+  /** @format int32 */
+  pcIdx: number;
+  name: string;
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateAddInputModel {
@@ -7118,6 +7130,41 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name AddMediaLibraryTemplateByMediaLibraryV1
+     * @request POST:/media-library-template/by-media-library-v1
+     */
+    addMediaLibraryTemplateByMediaLibraryV1: (
+      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddByMediaLibraryV1InputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/by-media-library-v1`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name DuplicateMediaLibraryTemplate
+     * @request POST:/media-library-template/{id}/duplicate
+     */
+    duplicateMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${id}/duplicate`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
   };
   mediaLibraryV2 = {
     /**
@@ -7226,6 +7273,36 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library-v2/${id}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
+     * @name SyncMediaLibraryV2
+     * @request POST:/media-library-v2/{id}/sync
+     */
+    syncMediaLibraryV2: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-v2/${id}/sync`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
+     * @name SyncAllMediaLibrariesV2
+     * @request POST:/media-library-v2/sync-all
+     */
+    syncAllMediaLibrariesV2: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-v2/sync-all`,
+        method: "POST",
         format: "json",
         ...params,
       }),

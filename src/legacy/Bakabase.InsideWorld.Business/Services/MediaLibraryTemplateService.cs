@@ -15,6 +15,7 @@ using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
@@ -45,18 +46,12 @@ public class MediaLibraryTemplateService<TDbContext>(
     : IMediaLibraryTemplateService
     where TDbContext : DbContext
 {
-    internal record ResourcePathInfo(
-        string Path,
-        string RelativePath,
-        string[] RelativePathSegments,
-        string[] InsidePaths);
-
     protected async Task Populate(Abstractions.Models.Domain.MediaLibraryTemplate[] templates)
     {
         var propertyKeysMap = templates.SelectMany(x => x.Properties ?? []).GroupBy(d => d.Pool)
             .ToDictionary(d => d.Key, d => d.Select(x => x.Id).ToHashSet());
 
-        var propertiesMap = (await propertyService.GetProperties((PropertyPool) propertyKeysMap.Keys.Sum(x => (int) x)))
+        var propertiesMap = (await propertyService.GetProperties((PropertyPool)propertyKeysMap.Keys.Sum(x => (int)x)))
             .ToMap();
 
         foreach (var template in templates)
@@ -78,7 +73,7 @@ public class MediaLibraryTemplateService<TDbContext>(
             var extensionGroups = (await extensionGroupService.GetAll()).ToDictionary(d => d.Id, d => d);
             foreach (var t in templates)
             {
-                if (t.PlayableFileLocator is {ExtensionGroupIds: not null})
+                if (t.PlayableFileLocator is { ExtensionGroupIds: not null })
                 {
                     t.PlayableFileLocator.ExtensionGroups = t.PlayableFileLocator.ExtensionGroupIds
                         .Select(x => extensionGroups.GetValueOrDefault(x))
@@ -116,7 +111,7 @@ public class MediaLibraryTemplateService<TDbContext>(
 
         var rootFilename = Path.GetFileName(rootPath);
 
-        var subPaths = template.SamplePaths!.Skip(1).Select(x => x.StandardizePath()!).ToList();
+        var subPaths = template.SamplePaths!.Skip(1).Select(x => x.StandardizePath()!).ToArray();
         if (!subPaths.Any())
         {
             throw new ArgumentNullException(nameof(subPaths));
@@ -129,64 +124,7 @@ public class MediaLibraryTemplateService<TDbContext>(
             throw new ArgumentNullException(nameof(template.ResourceFilters));
         }
 
-        var subRelativePaths =
-            subPaths.Select(x => x.Replace(rootPath, null).Trim(InternalOptions.DirSeparator)).ToList();
-        var subPathRelativeSegments = subRelativePaths.Select(x => x.Split(InternalOptions.DirSeparator)).ToList();
-        var resourcePathInfoMap = new Dictionary<string, ResourcePathInfo>();
-        foreach (var rf in template.ResourceFilters)
-        {
-            switch (rf.Positioner)
-            {
-                case PathPositioner.Layer:
-                {
-                    if (rf.Layer.HasValue)
-                    {
-                        foreach (var segments in subPathRelativeSegments)
-                        {
-                            var len = rf.Layer.Value;
-                            if (len >= 0 && len < segments.Length)
-                            {
-                                var relativeSegments = segments.Take(len).ToArray();
-                                var relativePath = string.Join(InternalOptions.DirSeparator, relativeSegments);
-                                var path = string.Join(InternalOptions.DirSeparator, rootPath, relativePath);
-                                var insidePaths = subPaths.Where(x => x != path && x.StartsWith(path)).ToArray();
-                                resourcePathInfoMap[path] =
-                                    new ResourcePathInfo(path, relativePath, relativeSegments, insidePaths);
-                            }
-                        }
-                    }
-
-                    break;
-                }
-                case PathPositioner.Regex:
-                {
-                    if (rf.Regex.IsNotEmpty())
-                    {
-                        for (var i = 0; i < subRelativePaths.Count; i++)
-                        {
-                            var relativePath = subRelativePaths[i];
-                            var match = Regex.Match(relativePath, rf.Regex);
-                            if (match.Success)
-                            {
-                                var len = match.Value.Split(InternalOptions.DirSeparator,
-                                    StringSplitOptions.RemoveEmptyEntries).Length;
-                                var segments = subPathRelativeSegments[i];
-                                var relativeSegments = segments.Take(len).ToArray();
-                                var path = string.Join(InternalOptions.DirSeparator, rootPath, relativePath);
-                                var insidePaths = subPaths.Where(x => x != path && x.StartsWith(path)).ToArray();
-                                resourcePathInfoMap[path] =
-                                    new ResourcePathInfo(path, relativePath, relativeSegments, insidePaths);
-                            }
-                        }
-                    }
-
-                    break;
-                }
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
+        var resourcePathInfoMap = template.ResourceFilters?.Filter(rootPath, subPaths) ?? [];
         var resourcesMap = resourcePathInfoMap.ToDictionary(d => d.Key, d => new Resource
         {
             Path = d.Key
@@ -210,69 +148,10 @@ public class MediaLibraryTemplateService<TDbContext>(
                     var pvs = new List<string>();
                     if (p.ValueLocators != null)
                     {
-                        foreach (var vl in p.ValueLocators)
+                        foreach (var vs in p.ValueLocators.Select(vl => vl.LocateValues(rootFilename, rpi))
+                                     .OfType<string[]>())
                         {
-                            switch (vl.Positioner)
-                            {
-                                case PathPositioner.Layer:
-                                {
-                                    if (vl.Layer.HasValue)
-                                    {
-                                        switch (vl.Layer.Value)
-                                        {
-                                            case 0:
-                                            {
-                                                pvs.Add(rootFilename);
-                                                break;
-                                            }
-                                            default:
-                                            {
-                                                if (vl.Layer > 0)
-                                                {
-                                                    if (vl.Layer <= rpi.RelativePathSegments.Length)
-                                                    {
-                                                        pvs.Add(rpi.RelativePathSegments[vl.Layer.Value - 1]);
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    var len = Math.Abs(vl.Layer.Value);
-                                                    if (len <= rpi.RelativePathSegments.Length)
-                                                    {
-                                                        pvs.Add(rpi.RelativePathSegments[^len]);
-                                                    }
-                                                }
-
-                                                break;
-                                            }
-                                        }
-                                    }
-
-                                    break;
-                                }
-                                case PathPositioner.Regex:
-                                {
-                                    if (vl.Regex.IsNotEmpty())
-                                    {
-                                        var matches = Regex.Matches(rpi.RelativePath, vl.Regex);
-                                        if (matches.Any())
-                                        {
-                                            var groups = matches
-                                                .SelectMany(a => a.Groups.Values.Skip(1).Select(b => b.Value))
-                                                .Where(x => x.IsNotEmpty())
-                                                .ToHashSet();
-                                            if (groups.Any())
-                                            {
-                                                pvs.AddRange(groups.ToArray());
-                                            }
-                                        }
-                                    }
-
-                                    break;
-                                }
-                                default:
-                                    throw new ArgumentOutOfRangeException();
-                            }
+                            pvs.AddRange(vs);
                         }
                     }
 
@@ -285,11 +164,11 @@ public class MediaLibraryTemplateService<TDbContext>(
                         {
                             var r = resourcesMap[rpi.Path];
                             r.Properties ??= [];
-                            var rp = r.Properties.GetOrAdd((int) p.Pool, () => []).GetOrAdd(p.Id,
+                            var rp = r.Properties.GetOrAdd((int)p.Pool, () => []).GetOrAdd(p.Id,
                                 () => new Resource.Property(p.Property.Name, p.Property.Type,
                                     p.Property.Type.GetDbValueType(), p.Property.Type.GetBizValueType(), [], true));
                             rp.Values ??= [];
-                            rp.Values.Add(new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization,
+                            rp.Values.Add(new Resource.Property.PropertyValue((int)PropertyValueScope.Synchronization,
                                 null, bv, bv));
                         }
                     }
@@ -369,7 +248,7 @@ public class MediaLibraryTemplateService<TDbContext>(
 
     public async Task<Abstractions.Models.Domain.MediaLibraryTemplate[]> GetAll()
     {
-        var templates = await orm.GetAll();
+        var templates = (await orm.GetAll()).OrderByDescending(d => d.Id);
         var domainModels = templates.Select(x => x.ToDomainModel()).ToArray();
         await Populate(domainModels);
         return domainModels;
@@ -377,14 +256,15 @@ public class MediaLibraryTemplateService<TDbContext>(
 
     public async Task<MediaLibraryTemplate> Add(MediaLibraryTemplateAddInputModel model)
     {
-        var dbModel = (await orm.Add(new MediaLibraryTemplateDbModel {Name = model.Name,})).Data!;
+        var dbModel = (await orm.Add(new MediaLibraryTemplateDbModel
+            { Name = model.Name, CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now })).Data!;
         return dbModel.ToDomainModel();
     }
 
     public async Task Put(int id, Abstractions.Models.Domain.MediaLibraryTemplate template)
     {
         template.Id = id;
-        await orm.Update(template.ToDbModel());
+        await orm.Update(template.ToDbModel() with { UpdatedAt = DateTime.Now });
     }
 
     public async Task Delete(int id)
@@ -462,7 +342,11 @@ public class MediaLibraryTemplateService<TDbContext>(
             d => extensionGroupMap[d.Value.ToExtensionGroupId]);
 
         var templates = flat
-            .Select(f => f.ToDomainModel(customPropertyIdConversion, extensionGroupConversionsMap, propertyMap))
+            .Select(f => f.ToDomainModel(customPropertyIdConversion, extensionGroupConversionsMap, propertyMap) with
+            {
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            })
             .ToArray();
         var dbModels = templates.Select(t => t.ToDbModel()).ToList();
         var addedDbModels = (await orm.AddRange(dbModels)).Data!;
@@ -497,7 +381,7 @@ public class MediaLibraryTemplateService<TDbContext>(
         return ms.ToArray();
     }
 
-    public async Task ImportFromMediaLibraryV1(int v1Id, int pcIdx, string templateName)
+    public async Task AddByMediaLibraryV1(int v1Id, int pcIdx, string templateName)
     {
         var ml = (await mediaLibraryService.Get(v1Id, MediaLibraryAdditionalItem.None))!;
         var category = await categoryService.Get(ml.CategoryId,
@@ -508,5 +392,16 @@ public class MediaLibraryTemplateService<TDbContext>(
         var template = await Add(new MediaLibraryTemplateAddInputModel(templateName));
         template.InitFromMediaLibraryV1(ml, pcIdx, category, playableFilesSelector);
         await Put(template.Id, template);
+    }
+
+    public async Task Duplicate(int id)
+    {
+        var original = await Get(id);
+        var @new = await Add(new MediaLibraryTemplateAddInputModel($"{original.Name}-{DateTime.Now:yyyyMMddHHmmss}"));
+        await Put(@new.Id, original with
+        {
+            Name = @new.Name,
+            CreatedAt = @new.CreatedAt,
+        });
     }
 }

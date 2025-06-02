@@ -26,17 +26,6 @@ namespace Bakabase.Abstractions.Models.Domain
 
         public bool IsResourceProperty => !IsCustomProperty && PropertyId == (int) ResourceProperty.Resource;
 
-        public PropertyPool PropertyPool
-        {
-            get
-            {
-                if (IsSecondaryProperty)
-                {
-
-                }
-            }
-        }
-
 
         public bool IsValid => PropertyId > 0 && ValueType switch
         {

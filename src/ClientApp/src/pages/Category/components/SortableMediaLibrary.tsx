@@ -408,7 +408,15 @@ export default (({
                             toast.error(msg);
                             throw new Error(msg);
                           }
-                          // todo: Create template from media library path configuration
+                          const r = await BApi.mediaLibraryTemplate
+                            .addMediaLibraryTemplateByMediaLibraryV1({
+                              v1Id: library.id,
+                              pcIdx: i,
+                              name: templateName,
+                            });
+                          if (!r.code) {
+                            Message.success(t('Media library template created successfully'));
+                          }
                         },
                       });
                     }}

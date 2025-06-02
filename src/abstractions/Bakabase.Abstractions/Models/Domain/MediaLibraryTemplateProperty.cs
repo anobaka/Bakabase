@@ -4,8 +4,21 @@ namespace Bakabase.Abstractions.Models.Domain;
 
 public record MediaLibraryTemplateProperty
 {
-    public PropertyPool Pool { get; set; }
-    public int Id { get; set; }
-    public Bakabase.Abstractions.Models.Domain.Property? Property { get; set; }
+    private PropertyPool _pool;
+    private int _id;
+
+    public PropertyPool Pool
+    {
+        get => Property?.Pool ?? _pool;
+        set => _pool = value;
+    }
+
+    public int Id
+    {
+        get => Property?.Id ?? _id;
+        set => _id = value;
+    }
+
+    public Property? Property { get; set; }
     public List<PathLocator>? ValueLocators { get; set; }
 }

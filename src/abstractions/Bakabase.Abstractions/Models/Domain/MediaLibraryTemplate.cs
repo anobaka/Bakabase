@@ -6,6 +6,8 @@ public record MediaLibraryTemplate
     public string Name { get; set; } = null!;
     public string? Author { get; set; }
     public string? Description { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
     public List<PathFilter>? ResourceFilters { get; set; }
     public List<MediaLibraryTemplateProperty>? Properties { get; set; }

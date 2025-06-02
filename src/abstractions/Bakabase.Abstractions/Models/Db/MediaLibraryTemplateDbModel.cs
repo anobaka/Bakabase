@@ -13,4 +13,6 @@ public record MediaLibraryTemplateDbModel
     public string? DisplayNameTemplate { get; set; }
     public string? SamplePaths { get; set; }
     public int? ChildTemplateId { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }

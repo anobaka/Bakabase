@@ -293,8 +293,9 @@ export default ({ onImported }: Props) => {
                   {validation.unhandledExtensionGroups.map(eg => {
                     const conversion = extensionGroupConversionsMap?.[eg.id];
                     const leg = conversion?.toExtensionGroupId
-                      ? extensionGroups?.[conversion.toExtensionGroupId] : undefined;
+                      ? extensionGroups?.find(g => g.id == conversion.toExtensionGroupId) : undefined;
                     const isSet = !!leg;
+                    // console.log(conversion, leg, isSet);
                     return (
                       <>
                         <div>

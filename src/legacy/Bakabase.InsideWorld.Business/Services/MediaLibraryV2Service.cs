@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -72,7 +74,8 @@ public class MediaLibraryV2Service<TDbContext>(
                     case MediaLibraryV2AdditionalItem.Template:
                     {
                         var templateIds = models.Select(d => d.TemplateId).OfType<int>().ToHashSet();
-                        var templates = (await templateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id);
+                        var templates =
+                            (await templateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id);
                         foreach (var model in models)
                         {
                             if (model.TemplateId.HasValue)
@@ -95,10 +98,14 @@ public class MediaLibraryV2Service<TDbContext>(
         return (await orm.GetByKey(id)).ToDomainModel();
     }
 
-    public async Task<List<MediaLibraryV2>> GetAll(
+    public Task<List<MediaLibraryV2>> GetByKeys(int[] ids,
+        MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None) =>
+        GetAll(x => ids.Contains(x.Id), additionalItems);
+
+    public async Task<List<MediaLibraryV2>> GetAll(Expression<Func<MediaLibraryV2DbModel, bool>>? filter = null,
         MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None)
     {
-        var data = (await orm.GetAll()).Select(x => x.ToDomainModel()).ToList();
+        var data = (await orm.GetAll(filter)).Select(x => x.ToDomainModel()).ToList();
         await Populate(data, additionalItems);
         return data;
     }
@@ -110,12 +117,12 @@ public class MediaLibraryV2Service<TDbContext>(
 
     public async Task Sync(int id)
     {
-        throw new System.NotImplementedException();
+        await SyncAll([id]);
     }
 
-    public async Task SyncAll()
+    public async Task SyncAll(int[]? ids = null)
     {
-        var data = await GetAll();
+        var data = await (ids == null ? GetAll() : GetByKeys(ids));
         var templateIds = data.Select(d => d.TemplateId).OfType<int>().ToHashSet();
         var templateMap = (await templateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id, d => d);
         var mlResourceMap = (await resourceService.GetAllGeneratedByMediaLibraryV2()).GroupBy(d => d.MediaLibraryId)

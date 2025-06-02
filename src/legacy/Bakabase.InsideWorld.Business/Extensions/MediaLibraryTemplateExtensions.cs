@@ -62,7 +62,8 @@ public static class MediaLibraryTemplateExtensions
     public static List<TempSyncResource> DiscoverResources(this MediaLibraryTemplate template, string rootPath)
     {
         var resources = new List<TempSyncResource>();
-        foreach (var path in template.ResourceFilters?.SelectMany(f => f.Filter(rootPath)).Distinct() ?? [])
+        var rpiMap = template.ResourceFilters?.Filter(rootPath) ?? [];
+        foreach (var (path, rpi) in rpiMap)
         {
             var resource = new TempSyncResource(path);
             var fi = new FileInfo(path);
@@ -81,7 +82,9 @@ public static class MediaLibraryTemplateExtensions
                     if (propertyDefinition.ValueLocators != null)
                     {
                         var listStr = propertyDefinition.ValueLocators
-                            .SelectMany(v => v.LocateValues(relativePath)).Distinct()
+                            .Select(v => v.LocateValues(relativePath, rpi))
+                            .OfType<string[]>()
+                            .SelectMany(v => v).Distinct()
                             .ToList();
                         bizValue = StandardValueInternals.HandlerMap[StandardValueType.ListString]
                             .Convert(listStr, property!.Type.GetBizValueType());
@@ -173,11 +176,16 @@ public static class MediaLibraryTemplateExtensions
         template.Enhancers = category.EnhancerOptions?.Select(eo =>
         {
             var ceo = eo as CategoryEnhancerFullOptions;
+            if (ceo?.Active != true)
+            {
+                return null;
+            }
+
             return new MediaLibraryTemplateEnhancerOptions
             {
                 EnhancerId = eo.EnhancerId,
                 TargetOptions = ceo?.Options?.TargetOptions
-                    ?.Where(to => to is {PropertyPool: not null, PropertyId: not null}).Select(to =>
+                    ?.Where(to => to is { PropertyPool: not null, PropertyId: not null }).Select(to =>
                         new MediaLibraryTemplateEnhancerTargetAllInOneOptions
                         {
                             CoverSelectOrder = to.CoverSelectOrder,
@@ -187,7 +195,7 @@ public static class MediaLibraryTemplateExtensions
                             PropertyPool = to.PropertyPool!.Value,
                         }).ToList()
             };
-        }).ToList();
-        template.DisplayNameTemplate = mediaLibrary.Category!.ResourceDisplayNameTemplate;
+        }).OfType<MediaLibraryTemplateEnhancerOptions>().ToList();
+        template.DisplayNameTemplate = category.ResourceDisplayNameTemplate;
     }
 }

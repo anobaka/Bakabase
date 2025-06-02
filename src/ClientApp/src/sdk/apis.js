@@ -7263,6 +7263,94 @@ export const ImportMediaLibraryTemplateURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: AddMediaLibraryTemplateByMediaLibraryV1
+ * url: AddMediaLibraryTemplateByMediaLibraryV1URL
+ * method: AddMediaLibraryTemplateByMediaLibraryV1_TYPE
+ * raw_url: AddMediaLibraryTemplateByMediaLibraryV1_RAW_URL
+ * @param model - 
+ */
+export const AddMediaLibraryTemplateByMediaLibraryV1 = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library-template/by-media-library-v1'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const AddMediaLibraryTemplateByMediaLibraryV1_RAW_URL = function() {
+  return '/media-library-template/by-media-library-v1'
+}
+export const AddMediaLibraryTemplateByMediaLibraryV1_TYPE = function() {
+  return 'post'
+}
+export const AddMediaLibraryTemplateByMediaLibraryV1URL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library-template/by-media-library-v1'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DuplicateMediaLibraryTemplate
+ * url: DuplicateMediaLibraryTemplateURL
+ * method: DuplicateMediaLibraryTemplate_TYPE
+ * raw_url: DuplicateMediaLibraryTemplate_RAW_URL
+ * @param id - 
+ */
+export const DuplicateMediaLibraryTemplate = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library-template/{id}/duplicate'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const DuplicateMediaLibraryTemplate_RAW_URL = function() {
+  return '/media-library-template/{id}/duplicate'
+}
+export const DuplicateMediaLibraryTemplate_TYPE = function() {
+  return 'post'
+}
+export const DuplicateMediaLibraryTemplateURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library-template/{id}/duplicate'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllMediaLibraryV2
  * url: GetAllMediaLibraryV2URL
  * method: GetAllMediaLibraryV2_TYPE
@@ -7524,6 +7612,90 @@ export const DeleteMediaLibraryV2URL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-v2/{id}'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: SyncMediaLibraryV2
+ * url: SyncMediaLibraryV2URL
+ * method: SyncMediaLibraryV2_TYPE
+ * raw_url: SyncMediaLibraryV2_RAW_URL
+ * @param id - 
+ */
+export const SyncMediaLibraryV2 = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library-v2/{id}/sync'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const SyncMediaLibraryV2_RAW_URL = function() {
+  return '/media-library-v2/{id}/sync'
+}
+export const SyncMediaLibraryV2_TYPE = function() {
+  return 'post'
+}
+export const SyncMediaLibraryV2URL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library-v2/{id}/sync'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: SyncAllMediaLibrariesV2
+ * url: SyncAllMediaLibrariesV2URL
+ * method: SyncAllMediaLibrariesV2_TYPE
+ * raw_url: SyncAllMediaLibrariesV2_RAW_URL
+ */
+export const SyncAllMediaLibrariesV2 = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library-v2/sync-all'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const SyncAllMediaLibrariesV2_RAW_URL = function() {
+  return '/media-library-v2/sync-all'
+}
+export const SyncAllMediaLibrariesV2_TYPE = function() {
+  return 'post'
+}
+export const SyncAllMediaLibrariesV2URL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library-v2/sync-all'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
