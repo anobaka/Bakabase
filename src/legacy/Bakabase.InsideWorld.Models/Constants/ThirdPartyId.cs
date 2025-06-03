@@ -11,6 +11,7 @@ namespace Bakabase.InsideWorld.Models.Constants
         Bilibili = 1,
         ExHentai = 2,
         Pixiv = 3,
-        Bangumi = 4
+        Bangumi = 4,
+        SoulPlus = 5
     }
 }

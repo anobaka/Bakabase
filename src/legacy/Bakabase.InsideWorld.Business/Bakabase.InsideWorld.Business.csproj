@@ -54,6 +54,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Folder Include="Components\ThirdParty\SoulPlus\" />
 	  <Folder Include="Configurations\Extensions\" />
 	</ItemGroup>
 

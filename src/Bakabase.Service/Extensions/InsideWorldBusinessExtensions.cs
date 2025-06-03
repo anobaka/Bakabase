@@ -5,6 +5,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
+using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.Enhancer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.Legacy;
@@ -136,6 +137,8 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();
 
             services.AddSingleton<ISystemPlayer, SelfPlayer>();
+
+            services.AddDownloadTaskParser<InsideWorldDbContext>();
 
             #endregion
 
