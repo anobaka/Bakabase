@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.Ai;
+using Bakabase.InsideWorld.Business.Components.Ai;
 using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Configs;
@@ -12,12 +13,15 @@ using OllamaSharp.Models.Chat;
 
 namespace Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Parsers;
 
-public class SoulPlusDownloadTaskParser(IBOptions<SoulPlusOptions> options, SoulPlusClient spClient, OllamaApiClientAccessor oaca)
+public class SoulPlusDownloadTaskParser(
+    IBOptions<SoulPlusOptions> options,
+    SoulPlusClient spClient,
+    OllamaApiClientAccessor oaca)
     : AbstractDownloadTaskParser
 {
     public override DownloadTaskParserSource Source => DownloadTaskParserSource.SoulPlus;
 
-    public override async Task<DownloadTaskParseTask> Parse(string link)
+    public override async Task<DownloadTaskParseTask> Parse(string link, CancellationToken ct)
     {
         var post = await spClient.GetPostAsync(link);
         if (post.LockedContents != null)
@@ -36,7 +40,7 @@ public class SoulPlusDownloadTaskParser(IBOptions<SoulPlusOptions> options, Soul
                         $"Failed due to price {lc.Price} is larger than auto buy threshold {options.Value.AutoBuyThreshold}");
                 }
 
-                await spClient.BuyLockedContent();
+                await spClient.BuyLockedContent(lc.Url!);
                 boughtSomething = true;
             }
 
@@ -46,7 +50,6 @@ public class SoulPlusDownloadTaskParser(IBOptions<SoulPlusOptions> options, Soul
             }
         }
 
-        
         var task = new DownloadTaskParseTask
         {
             Link = link,
@@ -58,10 +61,8 @@ public class SoulPlusDownloadTaskParser(IBOptions<SoulPlusOptions> options, Soul
         var aiClient = oaca.Client;
         var stream = aiClient.GenerateAsync(new GenerateRequest {Model = "", Prompt = "", System = ""});
 
-        var chatRsp = await aiClient.
+        // var chatRsp = await aiClient.
 
-        // analyze title and contents
-        var title = "";
-        
+        return task;
     }
 }

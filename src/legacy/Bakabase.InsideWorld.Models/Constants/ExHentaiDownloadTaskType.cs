@@ -10,6 +10,7 @@ namespace Bakabase.InsideWorld.Models.Constants
     {
         SingleWork = 1,
         Watched = 2,
-        List = 3
+        List = 3,
+        Torrent = 4
     }
 }

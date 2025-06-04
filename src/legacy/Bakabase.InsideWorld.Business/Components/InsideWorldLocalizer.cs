@@ -167,5 +167,10 @@ namespace Bakabase.InsideWorld.Business.Components
         {
             return this[nameof(DeletingInvalidResources), count];
         }
+
+        public string DownloadTaskParser_ParseAll_TaskName()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

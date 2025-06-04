@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
@@ -17,6 +20,7 @@ using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Components.Office.Excel;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
@@ -29,6 +33,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NPOI.SS.Formula.Functions;
+using NPOI.XSSF.UserModel;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -40,11 +45,14 @@ namespace Bakabase.InsideWorld.Business.Services
             GetRequiredService<IHubContext<WebGuiHub, IWebGuiClient>>();
 
         private InsideWorldLocalizer _localizer;
+        private readonly IGuiAdapter _guiAdapter;
 
-        public DownloadTaskService(IServiceProvider serviceProvider, InsideWorldLocalizer localizer) : base(
+        public DownloadTaskService(IServiceProvider serviceProvider, InsideWorldLocalizer localizer,
+            IGuiAdapter guiAdapter) : base(
             serviceProvider)
         {
             _localizer = localizer;
+            _guiAdapter = guiAdapter;
         }
 
         public async Task<DownloadTaskDto> GetDto(int id)
@@ -343,6 +351,26 @@ namespace Bakabase.InsideWorld.Business.Services
 
             PushAllDataToUi();
             return BaseResponseBuilder.Ok;
+        }
+
+        public async Task Export()
+        {
+            var tasks = await GetAllDto();
+            var lines = new List<SimpleColumn[]>
+            {
+                new[] {nameof(DownloadTask.Key), nameof(DownloadTask.DisplayName), nameof(DownloadTask.Status)}
+                    .Select(c => new SimpleColumn(c)).ToArray()
+            };
+            foreach (var task in tasks)
+            {
+                lines.Add(new[] {task.Key, task.DisplayName, task.Status.ToString()}.Select(c => new SimpleColumn(c))
+                    .ToArray());
+            }
+
+            var bytes = ExcelUtils.CreateExcel(new ExcelData(lines));
+            var path = Path.Combine(_guiAdapter.GetDownloadsDirectory(),
+                $"{nameof(DownloadTask)}-{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+            await File.WriteAllBytesAsync(path, bytes);
         }
     }
 }

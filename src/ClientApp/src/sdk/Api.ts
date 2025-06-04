@@ -798,9 +798,36 @@ export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDepe
   canUpdate: boolean;
 }
 
+/**
+ * [1: SoulPlus]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainConstantsDownloadTaskParserSource = 1;
+
+export interface BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTask {
+  /** @format int32 */
+  id: number;
+  /** [1: SoulPlus] */
+  source: BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainConstantsDownloadTaskParserSource;
+  link: string;
+  title?: string;
+  content?: string;
+  /** @format date-time */
+  parsedAt?: string;
+  items?: BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTaskItem[];
+  error?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTaskItem {
+  title: string;
+  link?: string;
+  accessCode?: string;
+  decompressionPassword?: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskDeleteInputModel {
   ids?: number[];
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
@@ -1218,10 +1245,10 @@ export type BakabaseInsideWorldModelsConstantsResourceMatcherValueType = 1 | 2 |
 export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
 
 /**
- * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi]
+ * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsThirdPartyId = 1 | 2 | 3 | 4;
+export type BakabaseInsideWorldModelsConstantsThirdPartyId = 1 | 2 | 3 | 4 | 5;
 
 export interface BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
   fields: BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitionsField[];
@@ -1258,7 +1285,7 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
 }
 
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   counts: Record<string, number>;
 }
@@ -1302,7 +1329,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsCategoryM
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   statusAndCounts: Record<string, number>;
 }
@@ -1322,7 +1349,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCo
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   resultType: number;
@@ -1342,7 +1369,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
   id: number;
   key: string;
   name: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -1420,7 +1447,7 @@ export interface BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
   /** @minLength 1 */
   key: string;
   name?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -1463,7 +1490,7 @@ export interface BakabaseInsideWorldModelsRequestModelsComponentOptionsAddReques
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -2157,6 +2184,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTask[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
@@ -5326,6 +5360,102 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "DELETE",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name ExportAllDownloadTasks
+     * @request GET:/download-task/xlsx
+     */
+    exportAllDownloadTasks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task/xlsx`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
+  downloadTaskParseTask = {
+    /**
+     * No description
+     *
+     * @tags DownloadTaskParseTask
+     * @name GetAllDownloadTaskParseTasks
+     * @request GET:/download-task-parse-task/all
+     */
+    getAllDownloadTaskParseTasks: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTask,
+        any
+      >({
+        path: `/download-task-parse-task/all`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTaskParseTask
+     * @name DeleteAllDownloadTaskParseTasks
+     * @request DELETE:/download-task-parse-task/all
+     */
+    deleteAllDownloadTaskParseTasks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task-parse-task/all`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTaskParseTask
+     * @name AddDownloadTaskParseTasks
+     * @request POST:/download-task-parse-task
+     */
+    addDownloadTaskParseTasks: (data: Record<string, string[]>, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task-parse-task`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTaskParseTask
+     * @name DeleteDownloadTaskParseTask
+     * @request DELETE:/download-task-parse-task/{id}
+     */
+    deleteDownloadTaskParseTask: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task-parse-task/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTaskParseTask
+     * @name StartAllDownloadTaskParseTasks
+     * @request POST:/download-task-parse-task/start
+     */
+    startAllDownloadTaskParseTasks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task-parse-task/start`,
+        method: "POST",
         format: "json",
         ...params,
       }),

@@ -78,7 +78,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 
             if (targetUrl != null)
             {
-                var detail = await _exHentaiClient.ParseDetail(targetUrl);
+                var detail = await _exHentaiClient.ParseDetail(targetUrl, false);
                 if (detail != null)
                 {
                     var ctx = new ExHentaiEnhancerContext

@@ -8,9 +8,10 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus.Models
 {
     public record SoulPlusPostLockedContent
     {
-        public int Id { get; set; }
-        public string Content { get; set; } = null!;
-        public int Price { get; set; }
+        // public int Id { get; set; }
+        public string? Url { get; set; }
+        public int? Price { get; set; }
+        public string? ContentHtml { get; set; }
         public bool IsBought { get; set; }
     }
 }

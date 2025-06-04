@@ -49,6 +49,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
                 [(int) ExHentaiDownloadTaskType.SingleWork] = SpecificTypeUtils<ExHentaiSingleWorkDownloader>.Type,
                 [(int) ExHentaiDownloadTaskType.List] = SpecificTypeUtils<ExHentaiListDownloader>.Type,
                 [(int) ExHentaiDownloadTaskType.Watched] = SpecificTypeUtils<ExHentaiWatchedDownloader>.Type,
+                [(int) ExHentaiDownloadTaskType.Torrent] = SpecificTypeUtils<ExHentaiTorrentDownloader>.Type,
             },
             [ThirdPartyId.Pixiv] = new Dictionary<int, Type>
             {

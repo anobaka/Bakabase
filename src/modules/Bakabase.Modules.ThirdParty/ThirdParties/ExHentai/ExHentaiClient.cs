@@ -17,7 +17,8 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
         private readonly SemaphoreSlim _lock = new(1, 1);
         protected override string HttpClientName => InternalOptions.HttpClientNames.ExHentai;
 
-        public ExHentaiClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) : base(httpClientFactory, loggerFactory)
+        public ExHentaiClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) : base(
+            httpClientFactory, loggerFactory)
         {
         }
 
@@ -55,7 +56,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
         {
             await _lock.WaitAsync();
             var tryTimes = 0;
-        @try:
+            @try:
             try
             {
                 tryTimes++;
@@ -179,7 +180,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
 
             if (model.HideCategories.Any())
             {
-                queryParameters["f_cats"] = model.HideCategories.Sum(t => (int)t).ToString();
+                queryParameters["f_cats"] = model.HideCategories.Sum(t => (int) t).ToString();
             }
 
             if (model.PageIndex > 1)
@@ -195,7 +196,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             return await ParseList(searchUrl);
         }
 
-        public async Task<ExHentaiResource> ParseDetail(string url)
+        public async Task<ExHentaiResource> ParseDetail(string url, bool includeTorrents)
         {
             var html = await GetHtmlAsync(HttpClient, url);
             var cq = new CQ(html);
@@ -258,7 +259,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
                 fileCount = int.TryParse(fileCountText, out var fc) ? fc : 0;
             }
 
-            return new ExHentaiResource
+            var r = new ExHentaiResource
             {
                 Name = name,
                 RawName = rawName.IsNotEmpty() ? rawName : name,
@@ -273,6 +274,13 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
                 Url = url,
                 Id = ExtractIdFromUrl(url)
             };
+
+            if (includeTorrents && r.TorrentPageUrl.IsNotEmpty())
+            {
+                r.Torrents = await GetTorrentList(r.TorrentPageUrl);
+            }
+
+            return r;
         }
 
         public async Task<byte[]> DownloadImage(string pageUrl)
@@ -297,182 +305,182 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
                     // Minimal
                     // Minimal+
                     case "gltm":
+                    {
+                        resources = container.Children("tbody").Children("tr").Skip(1).Select(a =>
                         {
-                            resources = container.Children("tbody").Children("tr").Skip(1).Select(a =>
+                            var acq = a.Cq();
+                            var nameCq = acq.Find(".gl3m.glname>a");
+                            var name = nameCq.Text();
+                            var url = nameCq.Attr<string>("href");
+
+                            var imgCq = acq.Find(".gl2m .glthumb img");
+                            var imgUrl = imgCq.Attr<string>("src");
+
+                            var categoryCq = acq.Find(".gl1m.glcat>.cs").Eq(0);
+                            var categoryClass = categoryCq.Attr<string>("class");
+                            if (!ExHentaiExtensions.TryParseFromClassName(categoryClass, out var category))
                             {
-                                var acq = a.Cq();
-                                var nameCq = acq.Find(".gl3m.glname>a");
-                                var name = nameCq.Text();
-                                var url = nameCq.Attr<string>("href");
+                                throw new Exception($"Failed to parsing category from class: {categoryClass}");
+                            }
 
-                                var imgCq = acq.Find(".gl2m .glthumb img");
-                                var imgUrl = imgCq.Attr<string>("src");
+                            var dateCq = acq.Find(".gl2m>div").Last();
+                            var dateStr = dateCq.Text();
+                            var updateDt = DateTime.Parse(dateStr);
 
-                                var categoryCq = acq.Find(".gl1m.glcat>.cs").Eq(0);
-                                var categoryClass = categoryCq.Attr<string>("class");
-                                if (!ExHentaiExtensions.TryParseFromClassName(categoryClass, out var category))
-                                {
-                                    throw new Exception($"Failed to parsing category from class: {categoryClass}");
-                                }
+                            var pageCq = acq.Find(".gl2m>.glthumb")?.Children()?.Last()?.Children()?.Last()?.Children()
+                                ?.Last();
+                            var page = int.Parse(Regex.Match(pageCq.Text(), @"\d+").Value);
+                            var torrentUrlCq = acq.Find(".gldown>a");
+                            var torrentUrl = torrentUrlCq.Attr<string>("href");
 
-                                var dateCq = acq.Find(".gl2m>div").Last();
-                                var dateStr = dateCq.Text();
-                                var updateDt = DateTime.Parse(dateStr);
-
-                                var pageCq = acq.Find(".gl2m>.glthumb")?.Children()?.Last()?.Children()?.Last()?.Children()
-                                    ?.Last();
-                                var page = int.Parse(Regex.Match(pageCq.Text(), @"\d+").Value);
-                                var torrentUrlCq = acq.Find(".gldown>a");
-                                var torrentUrl = torrentUrlCq.Attr<string>("href");
-
-                                var resource = new ExHentaiResource
-                                {
-                                    Name = name,
-                                    Category = category,
-                                    CoverUrl = imgUrl,
-                                    FileCount = page,
-                                    TorrentPageUrl = torrentUrl,
-                                    UpdateDt = updateDt,
-                                    Url = url
-                                };
-                                return resource;
-                            }).ToList();
-                            break;
-                        }
+                            var resource = new ExHentaiResource
+                            {
+                                Name = name,
+                                Category = category,
+                                CoverUrl = imgUrl,
+                                FileCount = page,
+                                TorrentPageUrl = torrentUrl,
+                                UpdateDt = updateDt,
+                                Url = url
+                            };
+                            return resource;
+                        }).ToList();
+                        break;
+                    }
                     // Compact
                     case "gltc":
+                    {
+                        resources = container.Children("tbody").Children("tr").Skip(1).Select(a =>
                         {
-                            resources = container.Children("tbody").Children("tr").Skip(1).Select(a =>
+                            var acq = a.Cq();
+                            var nameCq = acq.Find(".gl3c.glname>a");
+                            var name = nameCq.Text();
+                            var url = nameCq.Attr<string>("href");
+
+                            var imgCq = acq.Find(".gl2c .glthumb img");
+                            var imgUrl = imgCq.Attr<string>("src");
+
+                            var categoryCq = acq.Find(".gl1c.glcat>.cn").Eq(0);
+                            var categoryClass = categoryCq.Attr<string>("class");
+                            if (!ExHentaiExtensions.TryParseFromClassName(categoryClass, out var category))
                             {
-                                var acq = a.Cq();
-                                var nameCq = acq.Find(".gl3c.glname>a");
-                                var name = nameCq.Text();
-                                var url = nameCq.Attr<string>("href");
+                                throw new Exception($"Failed to parsing category from class: {categoryClass}");
+                            }
 
-                                var imgCq = acq.Find(".gl2c .glthumb img");
-                                var imgUrl = imgCq.Attr<string>("src");
+                            var dateCq = acq.Find(".gl2c>div").Last()?.First();
+                            var dateStr = dateCq.Text();
+                            var updateDt = DateTime.Parse(dateStr);
 
-                                var categoryCq = acq.Find(".gl1c.glcat>.cn").Eq(0);
-                                var categoryClass = categoryCq.Attr<string>("class");
-                                if (!ExHentaiExtensions.TryParseFromClassName(categoryClass, out var category))
-                                {
-                                    throw new Exception($"Failed to parsing category from class: {categoryClass}");
-                                }
+                            var pageCq = acq.Find(".gl2c>.glthumb")?.Children()?.Last()?.Children()?.Last()?.Children()
+                                ?.Last();
+                            var page = int.Parse(Regex.Match(pageCq.Text(), @"\d+").Value);
+                            var torrentUrlCq = acq.Find(".gldown>a");
+                            var torrentUrl = torrentUrlCq.Attr<string>("href");
 
-                                var dateCq = acq.Find(".gl2c>div").Last()?.First();
-                                var dateStr = dateCq.Text();
-                                var updateDt = DateTime.Parse(dateStr);
-
-                                var pageCq = acq.Find(".gl2c>.glthumb")?.Children()?.Last()?.Children()?.Last()?.Children()
-                                    ?.Last();
-                                var page = int.Parse(Regex.Match(pageCq.Text(), @"\d+").Value);
-                                var torrentUrlCq = acq.Find(".gldown>a");
-                                var torrentUrl = torrentUrlCq.Attr<string>("href");
-
-                                var resource = new ExHentaiResource
-                                {
-                                    Name = name,
-                                    Category = category,
-                                    CoverUrl = imgUrl,
-                                    FileCount = page,
-                                    TorrentPageUrl = torrentUrl,
-                                    UpdateDt = updateDt,
-                                    Url = url
-                                };
-                                return resource;
-                            }).ToList();
-                            break;
-                        }
+                            var resource = new ExHentaiResource
+                            {
+                                Name = name,
+                                Category = category,
+                                CoverUrl = imgUrl,
+                                FileCount = page,
+                                TorrentPageUrl = torrentUrl,
+                                UpdateDt = updateDt,
+                                Url = url
+                            };
+                            return resource;
+                        }).ToList();
+                        break;
+                    }
                     // Extended
                     case "glte":
+                    {
+                        resources = container.Children("tbody").Children("tr").Select(a =>
                         {
-                            resources = container.Children("tbody").Children("tr").Select(a =>
+                            var acq = a.Cq();
+                            var nameCq = acq.Find(".gl4e.glname>div").First();
+                            var name = nameCq.Text();
+
+                            var url = acq.Find(".gl1e a").Attr<string>("href");
+
+                            var imgCq = acq.Find(".gl1e img");
+                            var imgUrl = imgCq.Attr<string>("src");
+
+                            var categoryCq = acq.Find(".gl3e>.cn").Eq(0);
+                            var categoryClass = categoryCq.Attr<string>("class");
+                            if (!ExHentaiExtensions.TryParseFromClassName(categoryClass, out var category))
                             {
-                                var acq = a.Cq();
-                                var nameCq = acq.Find(".gl4e.glname>div").First();
-                                var name = nameCq.Text();
+                                throw new Exception($"Failed to parsing category from class: {categoryClass}");
+                            }
 
-                                var url = acq.Find(".gl1e a").Attr<string>("href");
+                            var dateCq = acq.Find(".gl3e>div")[1].Cq();
+                            var dateStr = dateCq.Text();
+                            var updateDt = DateTime.Parse(dateStr);
 
-                                var imgCq = acq.Find(".gl1e img");
-                                var imgUrl = imgCq.Attr<string>("src");
+                            var pageCq = acq.Find(".gl3e>div")[4].Cq();
+                            var page = int.Parse(Regex.Match(pageCq.Text(), @"\d+").Value);
+                            var torrentUrlCq = acq.Find(".gldown>a");
+                            var torrentUrl = torrentUrlCq.Attr<string>("href");
 
-                                var categoryCq = acq.Find(".gl3e>.cn").Eq(0);
-                                var categoryClass = categoryCq.Attr<string>("class");
-                                if (!ExHentaiExtensions.TryParseFromClassName(categoryClass, out var category))
-                                {
-                                    throw new Exception($"Failed to parsing category from class: {categoryClass}");
-                                }
-
-                                var dateCq = acq.Find(".gl3e>div")[1].Cq();
-                                var dateStr = dateCq.Text();
-                                var updateDt = DateTime.Parse(dateStr);
-
-                                var pageCq = acq.Find(".gl3e>div")[4].Cq();
-                                var page = int.Parse(Regex.Match(pageCq.Text(), @"\d+").Value);
-                                var torrentUrlCq = acq.Find(".gldown>a");
-                                var torrentUrl = torrentUrlCq.Attr<string>("href");
-
-                                var resource = new ExHentaiResource
-                                {
-                                    Name = name,
-                                    Category = category,
-                                    CoverUrl = imgUrl,
-                                    FileCount = page,
-                                    TorrentPageUrl = torrentUrl,
-                                    UpdateDt = updateDt,
-                                    Url = url
-                                };
-                                return resource;
-                            }).ToList();
-                            break;
-                        }
+                            var resource = new ExHentaiResource
+                            {
+                                Name = name,
+                                Category = category,
+                                CoverUrl = imgUrl,
+                                FileCount = page,
+                                TorrentPageUrl = torrentUrl,
+                                UpdateDt = updateDt,
+                                Url = url
+                            };
+                            return resource;
+                        }).ToList();
+                        break;
+                    }
                     // Thumbnail
                     case "gld":
+                    {
+                        resources = container.Children().Select(a =>
                         {
-                            resources = container.Children().Select(a =>
+                            var acq = a.Cq();
+                            var nameCq = acq.Find("a").Eq(0);
+                            var name = nameCq.Text();
+                            var url = nameCq.Attr<string>("href");
+
+                            var imgCq = acq.Find(".gl3t img");
+                            var imgUrl = imgCq.Attr<string>("src");
+
+                            var infoCq = acq.Find(".gl5t");
+                            var infoCq1 = infoCq.Children("div").Eq(0);
+                            var categoryCq = infoCq1.Children("div").Eq(0);
+                            var categoryClass = categoryCq.Attr<string>("class");
+                            if (!ExHentaiExtensions.TryParseFromClassName(categoryClass, out var category))
                             {
-                                var acq = a.Cq();
-                                var nameCq = acq.Find("a").Eq(0);
-                                var name = nameCq.Text();
-                                var url = nameCq.Attr<string>("href");
+                                throw new Exception($"Failed to parsing category from class: {categoryClass}");
+                            }
 
-                                var imgCq = acq.Find(".gl3t img");
-                                var imgUrl = imgCq.Attr<string>("src");
+                            var dateCq = infoCq1.Children("div").Eq(1);
+                            var dateStr = dateCq.Text();
+                            var updateDt = DateTime.Parse(dateStr);
 
-                                var infoCq = acq.Find(".gl5t");
-                                var infoCq1 = infoCq.Children("div").Eq(0);
-                                var categoryCq = infoCq1.Children("div").Eq(0);
-                                var categoryClass = categoryCq.Attr<string>("class");
-                                if (!ExHentaiExtensions.TryParseFromClassName(categoryClass, out var category))
-                                {
-                                    throw new Exception($"Failed to parsing category from class: {categoryClass}");
-                                }
+                            var infoCq2 = infoCq.Children("div").Eq(1);
+                            var pageCq = infoCq2.Children("div").Eq(1);
+                            var page = int.Parse(Regex.Match(pageCq.Text(), @"\d+").Value);
+                            var torrentUrlCq = infoCq2.Find(".gldown>a");
+                            var torrentUrl = torrentUrlCq.Attr<string>("href");
 
-                                var dateCq = infoCq1.Children("div").Eq(1);
-                                var dateStr = dateCq.Text();
-                                var updateDt = DateTime.Parse(dateStr);
-
-                                var infoCq2 = infoCq.Children("div").Eq(1);
-                                var pageCq = infoCq2.Children("div").Eq(1);
-                                var page = int.Parse(Regex.Match(pageCq.Text(), @"\d+").Value);
-                                var torrentUrlCq = infoCq2.Find(".gldown>a");
-                                var torrentUrl = torrentUrlCq.Attr<string>("href");
-
-                                var resource = new ExHentaiResource
-                                {
-                                    Name = name,
-                                    Category = category,
-                                    CoverUrl = imgUrl,
-                                    FileCount = page,
-                                    TorrentPageUrl = torrentUrl,
-                                    UpdateDt = updateDt,
-                                    Url = url
-                                };
-                                return resource;
-                            }).ToList();
-                            break;
-                        }
+                            var resource = new ExHentaiResource
+                            {
+                                Name = name,
+                                Category = category,
+                                CoverUrl = imgUrl,
+                                FileCount = page,
+                                TorrentPageUrl = torrentUrl,
+                                UpdateDt = updateDt,
+                                Url = url
+                            };
+                            return resource;
+                        }).ToList();
+                        break;
+                    }
                 }
             }
 
@@ -527,6 +535,22 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
                 Limit = limit,
                 ResetCost = resetCost
             };
+        }
+
+        protected async Task<List<ExHentaiTorrent>?> GetTorrentList(string torrentPageUrl)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task DownloadTorrent(string torrentUrl, string downloadPath)
+        {
+            if (File.Exists(downloadPath))
+            {
+                return;
+            }
+
+            var bytes = await HttpClient.GetByteArrayAsync(torrentUrl);
+            await File.WriteAllBytesAsync(downloadPath, bytes);
         }
     }
 }

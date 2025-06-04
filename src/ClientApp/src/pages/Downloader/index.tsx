@@ -1,13 +1,21 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import './index.scss';
-import { Balloon, Button, Dialog, Dropdown, Icon, Input, Menu, Progress, Tag } from '@alifd/next';
+import { Balloon, Dialog, Dropdown, Icon, Input, Menu, Progress, Tag } from '@alifd/next';
 import moment from 'moment';
 import { Axis, Chart, Interval, Legend, Tooltip } from 'bizcharts';
 import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
 import { AutoSizer, List } from 'react-virtualized';
+import {
+  AiOutlineExport,
+  AiOutlinePlayCircle,
+  AiOutlinePlusCircle,
+  AiOutlineSetting,
+  AiOutlineStop,
+} from 'react-icons/ai';
+import { Button, Modal } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
@@ -21,7 +29,6 @@ import {
   DownloadTaskActionOnConflict,
   DownloadTaskDtoStatus,
   downloadTaskDtoStatuses,
-  downloadTaskStatuses,
   ExHentaiDownloadTaskType,
   exHentaiDownloadTaskTypes,
   pixivDownloadTaskTypes,
@@ -36,7 +43,6 @@ import BApi from '@/sdk/BApi';
 import { buildLogger, useTraceUpdate } from '@/components/utils';
 import SimpleLabel from '@/components/SimpleLabel';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Modal } from '@/components/bakaui';
 
 const testTasks = [
   {
@@ -682,35 +688,35 @@ export default () => {
         >
           <div className="left">
             <Button
-              type={'secondary'}
+              color={'primary'}
               size={'small'}
-              onClick={() => {
+              onPress={() => {
                 setTaskId(0);
               }}
             >
               <>
-                <CustomIcon type={'plus-circle'} size={'small'} />
+                <AiOutlinePlusCircle className={'text-medium'} />
                 {t('Create task')}
               </>
             </Button>
             <Button
-              type={'normal'}
+              color={'success'}
               size={'small'}
-              onClick={() => {
+              onPress={() => {
                 startTasksManually(undefined, DownloadTaskActionOnConflict.Ignore);
               }}
             >
-              <CustomIcon type={'play-circle'} size={'small'} />
+              <AiOutlinePlayCircle className={'text-medium'} />
               {t('Start all')}
             </Button>
             <Button
-              type={'normal'}
+              color={'warning'}
               size={'small'}
-              onClick={() => {
+              onPress={() => {
                 BApi.downloadTask.stopDownloadTasks([]);
               }}
             >
-              <CustomIcon type={'timeout'} size={'small'} />
+              <AiOutlineStop className={'text-medium'} />
               {t('Stop all')}
             </Button>
 
@@ -766,14 +772,25 @@ export default () => {
               </div>
             )}
           </div>
-          <div className="right">
+          <div className="flex items-center gap-1">
             <Button
-              type={'normal'}
+              size={'sm'}
+              onPress={() => {
+                BApi.downloadTask.exportAllDownloadTasks();
+              }}
+              variant={'flat'}
+            >
+              <AiOutlineExport className={'text-medium'} />
+              {t('Export all tasks')}
+            </Button>
+            <Button
+              color={'secondary'}
               size={'small'}
-              onClick={() => {
+              onPress={() => {
                 setConfigurationsVisible(true);
               }}
             >
+              <AiOutlineSetting className={'text-medium'} />
               {t('Configurations')}
             </Button>
           </div>
@@ -1003,9 +1020,9 @@ export default () => {
       ) : (
         <div className={'no-task-yet'}>
           <Button
-            type={'primary'}
+            color={'primary'}
             size={'large'}
-            onClick={() => {
+            onPress={() => {
               setTaskId(0);
             }}
           >

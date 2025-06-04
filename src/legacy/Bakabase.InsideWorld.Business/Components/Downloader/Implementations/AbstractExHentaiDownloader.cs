@@ -55,7 +55,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
             Func<string, Task> onCheckpointChanged,
             CancellationToken ct)
         {
-            var detail = await Client.ParseDetail(url);
+            var detail = await Client.ParseDetail(url, false);
             if (detail == null)
             {
                 throw new Exception($"Got empty response from: {url}");

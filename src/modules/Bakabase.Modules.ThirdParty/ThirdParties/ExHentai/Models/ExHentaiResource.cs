@@ -18,6 +18,7 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models
         public int PageCount { get; set; }
 
         public string TorrentPageUrl { get; set; }
+        public List<ExHentaiTorrent>? Torrents { get; set; }
         public DateTime UpdateDt { get; set; }
         public decimal Rate { get; set; }
         public string Introduction { get; set; }

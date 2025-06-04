@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Input;
@@ -28,11 +31,14 @@ namespace Bakabase.Service.Controllers
     {
         private DownloadTaskService _service;
         private readonly IStringLocalizer<SharedResource> _localizer;
+        private readonly IGuiAdapter _guiAdapter;
 
-        public DownloadTaskController(DownloadTaskService service, IStringLocalizer<SharedResource> localizer)
+        public DownloadTaskController(DownloadTaskService service, IStringLocalizer<SharedResource> localizer,
+            IGuiAdapter guiAdapter)
         {
             _service = service;
             _localizer = localizer;
+            _guiAdapter = guiAdapter;
         }
 
         [SwaggerOperation(OperationId = "GetAllDownloaderNamingDefinitions")]
@@ -160,6 +166,15 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> StopAll([FromBody] int[] ids)
         {
             await _service.Stop(ids.Any() ? t => ids.Contains(t.Id) : null);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("xlsx")]
+        [SwaggerOperation(OperationId = "ExportAllDownloadTasks")]
+        public async Task<BaseResponse> Export()
+        {
+            await _service.Export();
+            FileService.Open(_guiAdapter.GetDownloadsDirectory(), false);
             return BaseResponseBuilder.Ok;
         }
     }

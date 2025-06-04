@@ -7,6 +7,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
+using Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -28,13 +29,17 @@ public static class ServiceCollectionExtensions
             .ExHentai);
         services.TryAddSingleton<ExHentaiClient>();
 
-        services.AddBakabaseHttpClient<PixivThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
+        services.AddBakabaseHttpClient<SoulPlusThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
             .Pixiv);
         services.TryAddSingleton<PixivClient>();
 
         services.AddBakabaseHttpClient<BilibiliThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
             .Bilibili);
         services.TryAddSingleton<BilibiliClient>();
+
+        services.AddBakabaseHttpClient<SoulPlusThirdPartyHttpMessageHandler>(InternalOptions.HttpClientNames
+            .SoulPlus);
+        services.TryAddSingleton<SoulPlusClient>();
 
         services.AddTransient<IThirdPartyLocalizer, ThirdPartyLocalizer>();
         services.TryAddSingleton<ThirdPartyHttpRequestLogger>();

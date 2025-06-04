@@ -2,8 +2,8 @@
 
 public record SoulPlusPost
 {
-    public int Id { get; set; }
+    // public int Id { get; set; }
     public string Title { get; set; } = null!;
-    public string Content { get; set; } = null!;
+    public string Html { get; set; } = null!;
     public List<SoulPlusPostLockedContent>? LockedContents { get; set; }
 }

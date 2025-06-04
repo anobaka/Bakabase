@@ -8,6 +8,8 @@ export enum IwFsEntryChangeType {Created = 1, Renamed = 2, Changed = 3, Deleted 
 export const iwFsEntryChangeTypes = Object.keys(IwFsEntryChangeType).filter(k => typeof IwFsEntryChangeType[k] === 'number').map(t => ({label: t, value: IwFsEntryChangeType[t]}));
 export enum IwFsType {Unknown = 0, Directory = 100, Image = 200, CompressedFileEntry = 300, CompressedFilePart = 400, Symlink = 500, Video = 600, Audio = 700, Drive = 1000, Invalid = 10000}
 export const iwFsTypes = Object.keys(IwFsType).filter(k => typeof IwFsType[k] === 'number').map(t => ({label: t, value: IwFsType[t]}));
+export enum DownloadTaskParserSource {SoulPlus = 1}
+export const downloadTaskParserSources = Object.keys(DownloadTaskParserSource).filter(k => typeof DownloadTaskParserSource[k] === 'number').map(t => ({label: t, value: DownloadTaskParserSource[t]}));
 export enum DownloaderStatus {JustCreated = 0, Starting = 100, Downloading = 200, Complete = 300, Failed = 400, Stopping = 500, Stopped = 600}
 export const downloaderStatuses = Object.keys(DownloaderStatus).filter(k => typeof DownloaderStatus[k] === 'number').map(t => ({label: t, value: DownloaderStatus[t]}));
 export enum DependentComponentStatus {NotInstalled = 1, Installed = 2, Installing = 3}
@@ -62,7 +64,7 @@ export enum DownloadTaskStartMode {AutoStart = 1, ManualStart = 2}
 export const downloadTaskStartModes = Object.keys(DownloadTaskStartMode).filter(k => typeof DownloadTaskStartMode[k] === 'number').map(t => ({label: t, value: DownloadTaskStartMode[t]}));
 export enum DownloadTaskStatus {InProgress = 100, Disabled = 200, Complete = 300, Failed = 400}
 export const downloadTaskStatuses = Object.keys(DownloadTaskStatus).filter(k => typeof DownloadTaskStatus[k] === 'number').map(t => ({label: t, value: DownloadTaskStatus[t]}));
-export enum ExHentaiDownloadTaskType {SingleWork = 1, Watched = 2, List = 3}
+export enum ExHentaiDownloadTaskType {SingleWork = 1, Watched = 2, List = 3, Torrent = 4}
 export const exHentaiDownloadTaskTypes = Object.keys(ExHentaiDownloadTaskType).filter(k => typeof ExHentaiDownloadTaskType[k] === 'number').map(t => ({label: t, value: ExHentaiDownloadTaskType[t]}));
 export enum MatchResultType {Layer = 1, Regex = 2}
 export const matchResultTypes = Object.keys(MatchResultType).filter(k => typeof MatchResultType[k] === 'number').map(t => ({label: t, value: MatchResultType[t]}));
@@ -98,7 +100,7 @@ export enum StartupPage {Default = 0, Resource = 1}
 export const startupPages = Object.keys(StartupPage).filter(k => typeof StartupPage[k] === 'number').map(t => ({label: t, value: StartupPage[t]}));
 export enum SubscriptionType {ExHentai = 1, Jav = 2, SoulPlus = 4}
 export const subscriptionTypes = Object.keys(SubscriptionType).filter(k => typeof SubscriptionType[k] === 'number').map(t => ({label: t, value: SubscriptionType[t]}));
-export enum ThirdPartyId {Bilibili = 1, ExHentai = 2, Pixiv = 3, Bangumi = 4}
+export enum ThirdPartyId {Bilibili = 1, ExHentai = 2, Pixiv = 3, Bangumi = 4, SoulPlus = 5}
 export const thirdPartyIds = Object.keys(ThirdPartyId).filter(k => typeof ThirdPartyId[k] === 'number').map(t => ({label: t, value: ThirdPartyId[t]}));
 export enum PasswordSearchOrder {Latest = 1, Frequency = 2}
 export const passwordSearchOrders = Object.keys(PasswordSearchOrder).filter(k => typeof PasswordSearchOrder[k] === 'number').map(t => ({label: t, value: PasswordSearchOrder[t]}));

@@ -11,7 +11,6 @@ using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Db;
 using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.Constants;
-using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Input;
 using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Parsers;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
