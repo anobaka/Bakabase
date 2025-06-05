@@ -110,6 +110,11 @@ const asideMenuConfig: IMenuItem[] = [
         path: '/filemover',
         icon: 'FileSyncOutlined',
       },
+      {
+        name: 'Post parser',
+        path: '/postparser',
+        icon: 'HeatMapOutlined',
+      },
       // {
       //   name: 'Other tools',
       //   path: '/tools',
