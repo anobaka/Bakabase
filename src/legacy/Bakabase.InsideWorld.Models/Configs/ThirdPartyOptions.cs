@@ -18,5 +18,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             public string Name { get; set; } = string.Empty;
             public string UrlTemplate { get; set; } = string.Empty;
         }
+
+        public string? CurlExecutable { get; set; }
     }
 }

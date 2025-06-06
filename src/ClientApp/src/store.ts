@@ -26,6 +26,7 @@ const {
   networkOptions,
   enhancerOptions,
   taskOptions,
+  aiOptions,
 } = Optionses;
 
 export default createStore({
@@ -53,4 +54,5 @@ export default createStore({
   networkOptions,
   enhancerOptions,
   taskOptions,
+  aiOptions,
 });

@@ -1,26 +1,3 @@
-import type { InputProps as NextUIInputProps } from "@heroui/react";
-import { Input } from "@heroui/react";
-import { forwardRef, useState } from 'react';
+import { NumberInput } from '@heroui/react';
 
-type NumberInputProps = {
-  value?: number;
-  defaultValue?: number;
-  onValueChange?: (value: number) => void;
-} & Omit<NextUIInputProps, 'onValueChange' | 'value' | 'defaultValue'>;
-
-export default forwardRef<HTMLInputElement, NumberInputProps>(({ onValueChange, value, defaultValue, ...otherProps }, ref) => {
-  return (
-    <Input
-      ref={ref}
-      onValueChange={v => {
-        const n = Number(v);
-        if (!Number.isNaN(n)) {
-          onValueChange?.(n);
-        }
-      }}
-      value={value?.toString()}
-      defaultValue={defaultValue?.toString()}
-      {...otherProps}
-    />
-  );
-});
+export default NumberInput;

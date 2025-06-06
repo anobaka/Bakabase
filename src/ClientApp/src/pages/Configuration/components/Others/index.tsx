@@ -21,11 +21,12 @@ import {
   TableColumn,
   TableBody,
   TableRow, TableCell, Tooltip,
-  Table,
+  Table, NumberInput,
 } from '@/components/bakaui';
 import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel } from '@/sdk/Api';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
+import appContext from '@/models/appContext';
 
 const cookies = new Cookies();
 
@@ -45,6 +46,7 @@ export default ({
   const [appOptions, appOptionsDispatcher] = store.useModel('appOptions');
   const thirdPartyOptions = store.useModelState('thirdPartyOptions');
   const networkOptions = store.useModelState('networkOptions');
+  const appContext = store.useModelState('appContext');
 
   const [proxy, setProxy] = useState(networkOptions.proxy);
   useEffect(() => {
@@ -191,6 +193,43 @@ export default ({
                 enableAnonymousDataTracking: checked,
               }, () => {
               });
+            }}
+          />
+        );
+      },
+    },
+    {
+      label: 'Listening port',
+      tip: 'You can set a fixed port for Bakabase to listen on.',
+      renderValue: () => {
+        const minPort = 5000;
+        const maxPort = 65000;
+        return (
+          <NumberInput
+            size={'sm'}
+            isWheelDisabled
+            min={minPort}
+            max={maxPort}
+            hideStepper
+            className={'max-w-[320px]'}
+            placeholder={t('Port number')}
+            description={(
+              <div>
+                <div>
+                  {t('Current listening port is {{port}}', { port: appContext?.serverAddresses?.[0]?.split(':').slice(-1)[0] })}
+                </div>
+                <div>
+                  {t('The configurable port range is {{min}}-{{max}}', { min: minPort, max: maxPort })}
+                </div>
+                <div>
+                  {t('Changes will take effect after restarting the application')}
+                </div>
+              </div>
+            )}
+            fullWidth={false}
+            value={appOptions.listeningPort}
+            onBlur={() => {
+
             }}
           />
         );

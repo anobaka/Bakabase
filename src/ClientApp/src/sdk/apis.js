@@ -8032,6 +8032,49 @@ export const PatchAppOptionsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: PutAppOptions
+ * url: PutAppOptionsURL
+ * method: PutAppOptions_TYPE
+ * raw_url: PutAppOptions_RAW_URL
+ * @param model - 
+ */
+export const PutAppOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/app'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PutAppOptions_RAW_URL = function() {
+  return '/options/app'
+}
+export const PutAppOptions_TYPE = function() {
+  return 'put'
+}
+export const PutAppOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/app'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetUIOptions
  * url: GetUIOptionsURL
  * method: GetUIOptions_TYPE
@@ -8688,6 +8731,49 @@ export const PatchThirdPartyOptionsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: PutThirdPartyOptions
+ * url: PutThirdPartyOptionsURL
+ * method: PutThirdPartyOptions_TYPE
+ * raw_url: PutThirdPartyOptions_RAW_URL
+ * @param model - 
+ */
+export const PutThirdPartyOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/thirdparty'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PutThirdPartyOptions_RAW_URL = function() {
+  return '/options/thirdparty'
+}
+export const PutThirdPartyOptions_TYPE = function() {
+  return 'put'
+}
+export const PutThirdPartyOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/thirdparty'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetNetworkOptions
  * url: GetNetworkOptionsURL
  * method: GetNetworkOptions_TYPE
@@ -8924,6 +9010,131 @@ export const PatchTaskOptionsURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/options/task'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetAIOptions
+ * url: GetAIOptionsURL
+ * method: GetAIOptions_TYPE
+ * raw_url: GetAIOptions_RAW_URL
+ */
+export const GetAIOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/ai'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAIOptions_RAW_URL = function() {
+  return '/options/ai'
+}
+export const GetAIOptions_TYPE = function() {
+  return 'get'
+}
+export const GetAIOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/ai'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PatchAIOptions
+ * url: PatchAIOptionsURL
+ * method: PatchAIOptions_TYPE
+ * raw_url: PatchAIOptions_RAW_URL
+ * @param model - 
+ */
+export const PatchAIOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/ai'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('patch', domain + path, body, queryParameters, form, config)
+}
+export const PatchAIOptions_RAW_URL = function() {
+  return '/options/ai'
+}
+export const PatchAIOptions_TYPE = function() {
+  return 'patch'
+}
+export const PatchAIOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/ai'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PutAIOptions
+ * url: PutAIOptionsURL
+ * method: PutAIOptions_TYPE
+ * raw_url: PutAIOptions_RAW_URL
+ * @param model - 
+ */
+export const PutAIOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/ai'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PutAIOptions_RAW_URL = function() {
+  return '/options/ai'
+}
+export const PutAIOptions_TYPE = function() {
+  return 'put'
+}
+export const PutAIOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/ai'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

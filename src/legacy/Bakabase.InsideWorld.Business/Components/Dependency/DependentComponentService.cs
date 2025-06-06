@@ -120,7 +120,16 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
         {
             if (!fromCache || _latestVersion == null)
             {
-                _latestVersion = await GetLatestVersion(ct);
+                try
+                {
+                    _latestVersion = await GetLatestVersion(ct);
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError(e,
+                        $"An error occurred during getting latest version of dependent component {this.DisplayName}");
+                    _latestVersion = DependentComponentVersion.Unknown;
+                }
             }
 
             if (_latestVersion.CanUpdate)

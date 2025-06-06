@@ -806,3 +806,7 @@ export function willCauseCircleReference<TObject, TKey>(
   setChildKey(parent, prevChildKey);
   return hasCircle;
 }
+
+export function isPromise(value: any): boolean {
+  return !!value && typeof value === 'object' && typeof value.then === 'function';
+}

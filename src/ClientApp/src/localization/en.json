@@ -52,9 +52,9 @@
   "CategoryResourceDisplayNameSegmentType.Property": "property",
   "CategoryResourceDisplayNameSegmentType.LeftWrapper": "left wrapper",
   "CategoryResourceDisplayNameSegmentType.RightWrapper": "right wrapper",
-  "FeatureRequestTip.Developing": "The <1>name</1> feature is under development. You can urge the author or make suggestions on <3>Github</3> or <5>QQ group</5>",
-  "FeatureRequestTip.Deprecated": "The <1>name</1> feature has been deprecated. If you need this feature, please propose it on <3>Github</3> or <5>QQ group</5>",
-  "FeatureRequestTip.Deprecating": "The <1>name</1> feature will be deprecated. If you need this feature, please propose it on <3>Github</3> or <5>QQ group</5>",
+  "FeatureRequestTip.Developing": "The <1>{{name}}</1> feature is under development. You can urge the author or make suggestions on <3>Github</3> or <5>QQ group</5>",
+  "FeatureRequestTip.Deprecated": "The <1>{{name}}</1> feature has been deprecated. If you need this feature, please propose it on <3>Github</3> or <5>QQ group</5>",
+  "FeatureRequestTip.Deprecating": "The <1>{{name}}</1> feature will be deprecated. If you need this feature, please propose it on <3>Github</3> or <5>QQ group</5>",
   "Keyboard.Enter": "Enter",
   "Filter(Verb)": "Filter",
   "Move {{count}} resources to media library (Including file system entries)": "Move {{count}} resources to media library (Including file system entries)",
@@ -250,5 +250,9 @@
   "PropertyPool.Abbreviation.Internal": "I",
   "PropertyPool.Abbreviation.Reserved": "R",
   "PropertyPool.Abbreviation.Custom": "C",
-  "Sort by {{sortBy}}": "Sort by {{sortBy}}"
+  "Sort by {{sortBy}}": "Sort by {{sortBy}}",
+  "Post links in {{source}}": "Post links in {{source}}",
+  "DownloadTaskParserSource.SoulPlus": "SoulPlus",
+  "Current listening port is {{port}}": "Current listening port is {{port}}",
+  "The configurable port range is {{min}}-{{max}}": "The configurable port range is {{min}}-{{max}}"
 }

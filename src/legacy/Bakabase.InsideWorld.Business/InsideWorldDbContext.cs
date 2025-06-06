@@ -1,6 +1,8 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Db;
+using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Legacy.Models;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Models.Entities;
@@ -77,6 +79,8 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ExtensionGroupDbModel> ExtensionGroups { get; set; }
         public DbSet<MediaLibraryTemplateDbModel> MediaLibraryTemplates { get; set; }
         public DbSet<MediaLibraryV2DbModel> MediaLibrariesV2 { get; set; }
+
+        public DbSet<DownloadTaskParseTaskDbModel> DownloadTaskParseTasks { get; set; }
 
         public InsideWorldDbContext()
         {

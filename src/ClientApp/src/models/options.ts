@@ -2,6 +2,7 @@ import type {
   BakabaseAbstractionsComponentsConfigurationTaskOptions,
   BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel,
   BakabaseInfrastructuresComponentsConfigurationsAppAppOptions,
+  BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions,
   BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions,
   BakabaseInsideWorldModelsConfigsBilibiliOptions,
   BakabaseInsideWorldModelsConfigsEnhancerOptions,
@@ -78,4 +79,5 @@ export default {
   networkOptions: buildModel<BakabaseInsideWorldModelsConfigsNetworkOptions, BakabaseInsideWorldModelsConfigsNetworkOptions>(BApi.options.patchNetworkOptions),
   enhancerOptions: buildModel<BakabaseInsideWorldModelsConfigsEnhancerOptions, BakabaseInsideWorldModelsConfigsEnhancerOptions>(BApi.options.patchEnhancerOptions),
   taskOptions: buildModel<BakabaseAbstractionsComponentsConfigurationTaskOptions, BakabaseAbstractionsComponentsConfigurationTaskOptions>(BApi.options.patchTaskOptions),
+  aiOptions: buildModel<BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions, BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions>(BApi.options.patchAiOptions),
 };

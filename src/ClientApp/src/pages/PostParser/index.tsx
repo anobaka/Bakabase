@@ -1,26 +1,91 @@
 import { useTranslation } from 'react-i18next';
-import { AiOutlineQuestionCircle } from 'react-icons/ai';
-import { Alert, Button, Modal } from '@/components/bakaui';
+import { AiOutlineDelete, AiOutlineQuestionCircle } from 'react-icons/ai';
+import _ from 'lodash';
+import React, { useEffect, useState } from 'react';
+import {
+  Alert,
+  Button,
+  Chip,
+  Divider,
+  Modal,
+  Snippet,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+  Textarea,
+} from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import FeatureStatusTip from '@/components/FeatureStatusTip';
+import BApi from '@/sdk/BApi';
+import { DownloadTaskParserSource, downloadTaskParserSources } from '@/sdk/constants';
+import type { components } from '@/sdk/BApi2';
+
+type Task = components['schemas']['Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask']
+  ;
 
 export default () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const loadAllTasks = async () => {
+    const r = (await BApi.downloadTaskParseTask.getAllDownloadTaskParseTasks()).data ?? [];
+    setTasks(r);
+  };
+
+  useEffect(() => {
+    loadAllTasks();
+  }, []);
+
   return (
     <div>
-      <div>
-        <div>
+      <div className={'flex justify-between items-center'}>
+        <div className={'flex items-center gap-2'}>
           <Button
             size={'sm'}
-            variant={'flat'}
+            // variant={'flat'}
             color={'secondary'}
           >
             {t('Start parsing')}
           </Button>
           <Button
             size={'sm'}
-            variant={'flat'}
+            // variant={'flat'}
             color={'primary'}
+            onPress={() => {
+              let linksTextMap: Record<number, string> = {};
+              createPortal(Modal, {
+                defaultVisible: true,
+                size: 'xl',
+                title: t('Add tasks'),
+                children: (
+                  <div>
+                    {downloadTaskParserSources.map(s => {
+                      return (
+                        <Textarea
+                          onValueChange={v => {
+                            linksTextMap[s.value] = v;
+                          }}
+                          label={t('Post links in {{source}}', { source: s.label })}
+                          minRows={10}
+                          placeholder={`https://xxxxxxx
+https://xxxxxxx
+...`}
+                        />
+                      );
+                    })}
+                    <FeatureStatusTip status={'developing'} name={t('Support for other sites')} />
+                  </div>
+                ),
+                onOk: async () => {
+                  const linksMap = _.mapValues(linksTextMap, value => value.split('\n').map(x => x.trim()).filter(x => x));
+                  await BApi.downloadTaskParseTask.addDownloadTaskParseTasks(linksMap);
+                },
+              });
+            }}
           >
             {t('Add tasks')}
           </Button>
@@ -51,7 +116,7 @@ export default () => {
                         <div>
                           <div>本功能内部使用ollama，您需要先安装并运行ollama，并安装至少1个模型，然后在系统配置中配置ollama的api地址。</div>
                           <div>本功能会优先使用ollama模型列表中最大的模型。</div>
-                          <div>目前deepseek-r1:8b,14b,32b已经过测试，可放心使用。</div>
+                          <div>目前deepseek-r1:14b,32b已经过测试，可放心使用。</div>
                         </div>
                       )}
                       title={'ollama'}
@@ -69,7 +134,122 @@ export default () => {
           </Button>
         </div>
       </div>
-      <div />
+      <div className={'mt-2'}>
+        <Table
+          removeWrapper
+          isStriped
+          className={'break-all'}
+        >
+          <TableHeader>
+            <TableColumn>{t('#')}</TableColumn>
+            <TableColumn>{t('Target')}</TableColumn>
+            <TableColumn>{t('Content')}</TableColumn>
+            <TableColumn>{t('Items')}</TableColumn>
+            <TableColumn>{t('ParsedAt')}</TableColumn>
+            <TableColumn>{t('Operations')}</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {tasks.map((task) => {
+              return (
+                <TableRow>
+                  <TableCell>{task.id}</TableCell>
+                  <TableCell>
+                    {task.title ? (
+                      <div className={'flex flex-col gap-1'}>
+                        <div className={'flex items-center gap-1'}>
+                          <Chip
+                            size={'sm'}
+                            variant={'flat'}
+                          >{t(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip>
+                          <div>{task.title}</div>
+                        </div>
+                        <div>
+                          <Button
+                            color={'primary'}
+                            size={'sm'}
+                            variant={'light'}
+                            onPress={e => {
+                              BApi.gui.openUrlInDefaultBrowser({ url: task.link });
+                            }}
+                          >{task.link}</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={'flex items-center gap-1'}>
+                        <Chip
+                          size={'sm'}
+                          variant={'flat'}
+                        >{t(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip>
+                        <div>
+                          <Button
+                            color={'primary'}
+                            size={'sm'}
+                            variant={'light'}
+                            onPress={e => {
+                              BApi.gui.openUrlInDefaultBrowser({ url: task.link });
+                            }}
+                          >{task.link}</Button>
+                        </div>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {task.content && (
+                      <Button onPress={() => {
+                        createPortal(Modal, {
+                          size: 'xl',
+                          defaultVisible: true,
+                          children: (
+                            <pre>{task.content}</pre>
+                          ),
+                        });
+                      }}
+                      >
+                        {t('View')}
+                      </Button>
+                    )}
+                  </TableCell>
+                  <TableCell>{task.items?.map((item, idx) => {
+                    return (
+                      <React.Fragment key={idx}>
+                        <div className={'flex flex-col gap-1'}>
+                          {item.link && (
+                            <Button
+                              color={'primary'}
+                              size={'sm'}
+                              variant={'light'}
+                              onPress={e => {
+                                BApi.gui.openUrlInDefaultBrowser({ url: item.link });
+                              }}
+                            >{item.link}</Button>
+                          )}
+                          <div>
+                            {item.accessCode && (
+                              <Snippet symbol={t('Access code')} size={'sm'}>{item.accessCode}</Snippet>
+                            )}
+                            {item.decompressionPassword && (
+                              <Snippet symbol={t('Decompression password')} size={'sm'}>{}</Snippet>
+                            )}
+                          </div>
+                        </div>
+                        {idx < task.items!.length - 1 && <Divider />}
+                      </React.Fragment>
+                    );
+                  })}</TableCell>
+                  <TableCell>{task.parsedAt}</TableCell>
+                  <TableCell>
+                    <div className={'flex items-center gap-1'}>
+                      <Button isIconOnly color={'danger'} size={'sm'} variant={'light'}>
+                        <AiOutlineDelete className={'text-medium'} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

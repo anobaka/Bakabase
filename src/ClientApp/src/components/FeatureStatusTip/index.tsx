@@ -20,6 +20,7 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  console.log(name);
 
   const renderText = useCallback(() => {
     let i18nKey: string;

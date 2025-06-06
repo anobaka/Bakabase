@@ -720,6 +720,8 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptio
   closeBehavior?: BakabaseInfrastructuresComponentsGuiCloseBehavior;
   /** [0: FollowSystem, 1: Light, 2: Dark] */
   uiTheme?: BakabaseInfrastructuresComponentsGuiUiTheme;
+  /** @format int32 */
+  listeningPort?: number;
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel {
@@ -764,6 +766,8 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   closeBehavior: BakabaseInfrastructuresComponentsGuiCloseBehavior;
   /** [0: FollowSystem, 1: Light, 2: Dark] */
   uiTheme: BakabaseInfrastructuresComponentsGuiUiTheme;
+  /** @format int32 */
+  listeningPort?: number;
 }
 
 /**
@@ -891,6 +895,10 @@ export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
   | 700
   | 1000
   | 10000;
+
+export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions {
+  ollamaEndpoint?: string;
+}
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions {
   /** @format date-time */
@@ -1064,6 +1072,7 @@ export interface BakabaseInsideWorldModelsConfigsPixivOptions {
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
   simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[];
+  curlExecutable?: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions {
@@ -2536,6 +2545,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptions {
@@ -7480,6 +7496,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Options
+     * @name PutAppOptions
+     * @request PUT:/options/app
+     */
+    putAppOptions: (data: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/app`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
      * @name GetUiOptions
      * @request GET:/options/ui
      */
@@ -7758,6 +7791,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Options
+     * @name PutThirdPartyOptions
+     * @request PUT:/options/thirdparty
+     */
+    putThirdPartyOptions: (data: BakabaseInsideWorldModelsConfigsThirdPartyOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/thirdparty`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
      * @name GetNetworkOptions
      * @request GET:/options/network
      */
@@ -7852,6 +7902,61 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/task`,
         method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetAiOptions
+     * @request GET:/options/ai
+     */
+    getAiOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions,
+        any
+      >({
+        path: `/options/ai`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchAiOptions
+     * @request PATCH:/options/ai
+     */
+    patchAiOptions: (
+      data: BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/ai`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PutAiOptions
+     * @request PUT:/options/ai
+     */
+    putAiOptions: (data: BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/ai`,
+        method: "PUT",
         body: data,
         type: ContentType.Json,
         format: "json",

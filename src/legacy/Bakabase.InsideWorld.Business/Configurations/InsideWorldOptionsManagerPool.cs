@@ -28,13 +28,14 @@ namespace Bakabase.InsideWorld.Business.Configurations
         public readonly IBOptionsManager<MigrationOptions> Migration;
         public readonly IBOptionsManager<EnhancerOptions> Enhancer;
         public readonly IBOptionsManager<TaskOptions> Task;
+        public readonly IBOptionsManager<AiOptions> Ai;
 
         public InsideWorldOptionsManagerPool(IBOptionsManager<UIOptions> ui, IBOptionsManager<BilibiliOptions> bilibili,
             IBOptionsManager<ExHentaiOptions> exHentai, IBOptionsManager<FileSystemOptions> fileSystem,
             IBOptionsManager<JavLibraryOptions> javLibrary, IBOptionsManager<PixivOptions> pixiv,
             IBOptionsManager<ThirdPartyOptions> thirdParty, IBOptionsManager<ResourceOptions> resource,
             IBOptionsManager<AppOptions> app, IBOptionsManager<NetworkOptions> network,
-            IBOptionsManager<MigrationOptions> migration, IBOptionsManager<EnhancerOptions> enhancer, IBOptionsManager<TaskOptions> task)
+            IBOptionsManager<MigrationOptions> migration, IBOptionsManager<EnhancerOptions> enhancer, IBOptionsManager<TaskOptions> task, IBOptionsManager<AiOptions> ai)
         {
             UI = ui;
             Bilibili = bilibili;
@@ -49,6 +50,7 @@ namespace Bakabase.InsideWorld.Business.Configurations
             Migration = migration;
             Enhancer = enhancer;
             Task = task;
+            Ai = ai;
 
             AllOptionsManagers = SpecificTypeUtils<InsideWorldOptionsManagerPool>.Type.GetFields()
                 .Where(a =>

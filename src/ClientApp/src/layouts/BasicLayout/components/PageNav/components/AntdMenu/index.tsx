@@ -3,9 +3,9 @@ import type { MenuProps } from 'antd';
 import { Menu } from 'antd';
 import { history, useLocation } from 'ice';
 import { useTranslation } from 'react-i18next';
+import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import type { IMenuItem } from '../../menuConfig';
 import { asideMenuConfig } from '../../menuConfig';
-import { Icon } from '@/components/bakaui';
 
 type MenuItem = Required<MenuProps>['items'][number];
 
@@ -41,8 +41,8 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   }
 
   function convertItem(item: IMenuItem) {
+    const Icon = item.icon ?? AiOutlineQuestionCircle;
     return getItem(t(item.name), item.path, <Icon
-      type={item.icon}
       style={IconStyle}
     />, item.children?.map(convertItem));
   }

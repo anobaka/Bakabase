@@ -4,6 +4,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Ai;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.Enhancer;
@@ -139,6 +140,7 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<ISystemPlayer, SelfPlayer>();
 
             services.AddDownloadTaskParser<InsideWorldDbContext>();
+            services.AddSingleton<OllamaApiClientAccessor>();
 
             #endregion
 

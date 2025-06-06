@@ -94,6 +94,12 @@ namespace Bakabase.Service.Controllers
                     options.UiTheme = model.UiTheme.Value;
                     newUiTheme = model.UiTheme;
                 }
+
+                if (model.ListeningPort.HasValue)
+                {
+                    options.ListeningPort = model.ListeningPort.Value;
+                }
+
             });
 
             if (newUiTheme.HasValue)
@@ -104,122 +110,13 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        //[HttpPatch("app-options")]
-        //[SwaggerOperation(OperationId = "PatchAppOptions")]
-        //public async Task<BaseResponse> PatchOptions([FromBody] InsideWorldAppOptionsUpdateRequestModel model)
-        //{
-        //    if (options.FileMover != null)
-        //    {
-        //        var result = options.FileMover.StandardizeAndValidate(_prevLocalizer);
-        //        if (result.Code != 0)
-        //        {
-        //            return result;
-        //        }
-        //    }
-
-        //    await InsideWorldAppService.SaveInsideWorldOptions((Action<InsideWorldAppOptions>)(a =>
-        //    {
-
-        //        if (options.ResourceColCount > 0)
-        //        {
-        //            a.ResourceColCount = options.ResourceColCount;
-        //        }
-
-
-        //        if (options.ResourceSearchRequestModelSlot != null)
-        //        {
-        //            a.ResourceSearchRequestModelSlot = options.ResourceSearchRequestModelSlot;
-        //        }
-
-        //        if (options.JavLibraryCookie != null)
-        //        {
-        //            a.JavLibraryCookie = options.JavLibraryCookie;
-        //        }
-
-        //        if (options.JavLibraryDownloadPath != null)
-        //        {
-        //            a.JavLibraryDownloadPath = options.JavLibraryDownloadPath;
-        //        }
-
-        //        if (options.JavLibraryTorrentLinkKeywords != null)
-        //        {
-        //            a.JavLibraryTorrentLinkKeywords = options.JavLibraryTorrentLinkKeywords.Distinct().ToArray();
-        //        }
-
-        //        if (options.JavLibraryUrls != null)
-        //        {
-        //            a.JavLibraryUrls = options.JavLibraryUrls.Distinct().ToArray();
-        //        }
-
-        //        if (options.MediaLibrarySyncInterval.HasValue)
-        //        {
-        //            a.MediaLibrarySyncInterval = options.MediaLibrarySyncInterval.Value;
-        //        }
-
-        //        if (options.AdditionalCoverDiscoveringSources != null)
-        //        {
-        //            a.AdditionalCoverDiscoveringSources = options.AdditionalCoverDiscoveringSources;
-        //        }
-
-        //        if (options.FileExplorerWorkingDirectory.IsNotEmpty())
-        //        {
-        //            a.FileExplorerWorkingDirectory = options.FileExplorerWorkingDirectory;
-        //        }
-
-        //        if (options.ExHentaiCookie.IsNotEmpty())
-        //        {
-        //            a.ExHentaiCookie = options.ExHentaiCookie;
-        //        }
-
-        //        if (options.ExHentaiExcludedTags != null)
-        //        {
-        //            a.ExHentaiExcludedTags =
-        //                options.ExHentaiExcludedTags.Where(t => t.IsNotEmpty()).Distinct().ToArray();
-        //        }
-
-        //        if (options.ExHentaiDownloadPath.IsNotEmpty())
-        //        {
-        //            a.ExHentaiDownloadPath = options.ExHentaiDownloadPath;
-        //        }
-
-        //        if (options.ExHentaiLinks != null)
-        //        {
-        //            a.ExHentaiLinks =
-        //                options.ExHentaiLinks.Where(t => t.IsNotEmpty()).Select(a => a.Trim()).Distinct().ToArray();
-        //        }
-
-        //        if (options.ExHentaiDownloadThreads > 0)
-        //        {
-        //            a.ExHentaiDownloadThreads = options.ExHentaiDownloadThreads;
-        //        }
-
-        //        if (options.FileMover != null)
-        //        {
-        //            a.FileMover = options.FileMover.ToOptions();
-        //        }
-
-        //        if (options.PixivDownloadInterval.HasValue)
-        //        {
-        //            a.PixivDownloadInterval = options.PixivDownloadInterval.Value;
-        //        }
-
-        //        if (options.PixivCookie.IsNotEmpty())
-        //        {
-        //            a.PixivCookie = options.PixivCookie;
-        //        }
-
-        //        if (options.PixivDownloadPath.IsNotEmpty())
-        //        {
-        //            a.PixivDownloadPath = options.PixivDownloadPath;
-        //        }
-
-        //        if (options.PixivDownloadThreads > 0)
-        //        {
-        //            a.PixivDownloadThreads = options.PixivDownloadThreads;
-        //        }
-        //    }));
-        //    return BaseResponseBuilder.Ok.WithLocalization(_prevLocalizer);
-        //}
+        [HttpPut("app")]
+        [SwaggerOperation(OperationId = "PutAppOptions")]
+        public async Task<BaseResponse> PutAppOptions([FromBody] AppOptions model)
+        {
+            await _appOptionsManager.SaveAsync(model);
+            return BaseResponseBuilder.Ok;
+        }
 
         [HttpGet("ui")]
         [SwaggerOperation(OperationId = "GetUIOptions")]
@@ -457,7 +354,20 @@ namespace Bakabase.Service.Controllers
                     options.SimpleSearchEngines = model.SimpleSearchEngines;
                 }
 
+                if (model.CurlExecutable.IsNotEmpty())
+                {
+                    options.CurlExecutable = model.CurlExecutable;
+                }
+
             });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("thirdparty")]
+        [SwaggerOperation(OperationId = "PutThirdPartyOptions")]
+        public async Task<BaseResponse> PutThirdPartyOptions([FromBody] ThirdPartyOptions model)
+        {
+            await _insideWorldOptionsManager.ThirdParty.SaveAsync(model);
             return BaseResponseBuilder.Ok;
         }
 
@@ -527,6 +437,35 @@ namespace Bakabase.Service.Controllers
                     options.Tasks = model.Tasks.OrderBy(x => x.Id).ToList();
                 }
             });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("ai")]
+        [SwaggerOperation(OperationId = "GetAIOptions")]
+        public async Task<SingletonResponse<AiOptions>> GetAiOptions()
+        {
+            return new SingletonResponse<AiOptions>(_insideWorldOptionsManager.Ai.Value);
+        }
+
+        [HttpPatch("ai")]
+        [SwaggerOperation(OperationId = "PatchAIOptions")]
+        public async Task<BaseResponse> PatchAiOptions([FromBody] AiOptions model)
+        {
+            await _insideWorldOptionsManager.Ai.SaveAsync(options =>
+            {
+                if (model.OllamaEndpoint.IsNotEmpty())
+                {
+                    options.OllamaEndpoint = model.OllamaEndpoint;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("ai")]
+        [SwaggerOperation(OperationId = "PutAIOptions")]
+        public async Task<BaseResponse> PutAiOptions([FromBody] AiOptions model)
+        {
+            await _insideWorldOptionsManager.Ai.SaveAsync(model);
             return BaseResponseBuilder.Ok;
         }
     }

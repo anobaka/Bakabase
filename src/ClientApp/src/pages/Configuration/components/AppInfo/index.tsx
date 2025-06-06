@@ -32,6 +32,7 @@ export default ({ appInfo }) => {
   const { t } = useTranslation();
   const [newVersion, setNewVersion] = useState();
   const appUpdaterState = store.useModelState('appUpdaterState');
+  const appContext = store.useModelState('appContext');
   // const appUpdaterState = {
   //   status: UpdaterStatus.Running,
   //   percentage: 10,
@@ -154,6 +155,23 @@ export default ({ appInfo }) => {
     }
   };
   const buildAppInfoDataSource = () => [
+    {
+      label: 'Endpoints',
+      value: (
+        <div className={'flex flex-wrap gap-1 items-center'}>
+          {appContext.serverAddresses?.map(x => (
+            <Snippet
+              symbol={<>&nbsp;</>}
+              size={'sm'}
+              variant={'flat'}
+            >
+              {x}
+            </Snippet>
+          ))}
+        </div>
+      ),
+      // value: <Snippet hideSymbol>{appInfo.appDataPath}</Snippet>,
+    },
     {
       label: 'App Data Path',
       tip: 'This is where core data files stored and DO NOT change them if not necessary.',

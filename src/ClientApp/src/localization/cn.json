@@ -1718,5 +1718,9 @@
   "PropertyPool.Abbreviation.Internal": "内",
   "PropertyPool.Abbreviation.Reserved": "预",
   "PropertyPool.Abbreviation.Custom": "自",
-  "Sort by {{sortBy}}": "按{{sortBy}}排序"
+  "Sort by {{sortBy}}": "按{{sortBy}}排序",
+  "Post links in {{source}}": "{{source}}帖子链接",
+  "DownloadTaskParserSource.SoulPlus": "SoulPlus",
+  "Current listening port is {{port}}": "当前监听端口为 {{port}}",
+  "The configurable port range is {{min}}-{{max}}": "可配置的端口范围是 {{min}}-{{max}}"
 }
