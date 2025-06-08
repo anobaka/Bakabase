@@ -2,6 +2,8 @@ export enum BackgroundTaskName {SyncMediaLibrary = 1, PrepareCache = 2, MoveFile
 export const backgroundTaskNames = Object.keys(BackgroundTaskName).filter(k => typeof BackgroundTaskName[k] === 'number').map(t => ({label: t, value: BackgroundTaskName[t]}));
 export enum BuiltinPropertyForDisplayName {Filename = 15}
 export const builtinPropertyForDisplayNames = Object.keys(BuiltinPropertyForDisplayName).filter(k => typeof BuiltinPropertyForDisplayName[k] === 'number').map(t => ({label: t, value: BuiltinPropertyForDisplayName[t]}));
+export enum TampermonkeyScript {SoulPlus = 1, ExHentai = 2}
+export const tampermonkeyScripts = Object.keys(TampermonkeyScript).filter(k => typeof TampermonkeyScript[k] === 'number').map(t => ({label: t, value: TampermonkeyScript[t]}));
 export enum IwFsAttribute {Hidden = 1}
 export const iwFsAttributes = Object.keys(IwFsAttribute).filter(k => typeof IwFsAttribute[k] === 'number').map(t => ({label: t, value: IwFsAttribute[t]}));
 export enum IwFsEntryChangeType {Created = 1, Renamed = 2, Changed = 3, Deleted = 4}

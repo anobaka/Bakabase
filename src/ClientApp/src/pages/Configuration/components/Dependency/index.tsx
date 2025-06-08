@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { AiOutlineCheck, AiOutlineClose, AiOutlineEdit } from 'react-icons/ai';
+import type { InputProps } from '@heroui/react';
 import Component from './components/Component';
 import store from '@/store';
 import {
@@ -17,7 +18,8 @@ import {
   TableRow,
 } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
-import EditableInput from '@/components/EditableInput';
+import EditableInput from '@/components/EditableValue/components/EditableSnippetWithInput';
+import { EditableValue } from '@/components/EditableValue';
 
 export default () => {
   const { t } = useTranslation();
@@ -89,11 +91,16 @@ export default () => {
                 {t('curl')}
               </TableCell>
               <TableCell>
-                <EditableInput
+                <EditableValue<InputProps, InputProps, string>
+                  Viewer={({
+                             value,
+                             ...props
+                           }) => (<Snippet symbol={<>&nbsp;</>} {...props}>{value}</Snippet>)}
+                  Editor={Input}
                   onSubmit={async v => await BApi.options.putThirdPartyOptions({
-                  ...thirdPartyOptions,
-                  curlExecutable: v,
-                })}
+                    ...thirdPartyOptions,
+                    curlExecutable: v,
+                  })}
                   value={thirdPartyOptions.curlExecutable}
                 />
               </TableCell>

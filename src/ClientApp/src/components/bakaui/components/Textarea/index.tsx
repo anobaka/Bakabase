@@ -1,3 +1,6 @@
-import { Textarea as NextUiTextArea } from "@heroui/react";
+import { Textarea, TextAreaProps } from '@heroui/react';
 
-export default NextUiTextArea;
+export {
+  TextAreaProps as TextareaProps,
+  Textarea,
+};

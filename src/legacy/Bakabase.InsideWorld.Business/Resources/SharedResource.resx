@@ -405,4 +405,7 @@ The version of lux is not limited.</value>
   <data name="DeletingInvalidResources" xml:space="preserve">
     <value>Deleting {0} invalid resources</value>
   </data>
+  <data name="DownloadTaskParser_ParseAll_TaskName" xml:space="preserve">
+    <value>Parse posts</value>
+  </data>
 </root>

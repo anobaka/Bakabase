@@ -3,18 +3,53 @@ using Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus.Models;
 using CsQuery;
 using Microsoft.Extensions.Logging;
 using OllamaSharp;
+using System.Diagnostics;
+using System.Net;
+using System;
 using System.Security.Policy;
+using System.Text;
 using System.Text.RegularExpressions;
+using Bakabase.InsideWorld.Models.Configs;
+using Bootstrap.Components.Configuration.Abstractions;
+using Bootstrap.Extensions;
 using static Bakabase.Abstractions.Components.Configuration.InternalOptions;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
 
-public class SoulPlusClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
+public class SoulPlusClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IBOptions<ThirdPartyOptions> thirdPartyOptions, IBOptions<SoulPlusOptions> options)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
     public async Task<SoulPlusPost> GetPostAsync(string link)
     {
-        var html = await HttpClient.GetStringAsync(link);
+        if (thirdPartyOptions.Value.CurlExecutable.IsNullOrEmpty())
+        {
+            throw new Exception("Curl executable is not set");
+        }
+
+        if (options.Value.Cookie.IsNullOrEmpty())
+        {
+            throw new Exception("Cookie is not set");
+        }
+
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = thirdPartyOptions.Value.CurlExecutable,
+                Arguments = $"""
+                             --cookie "{options.Value.Cookie}" -H "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0" {link}
+                             """,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8
+            }
+        };
+
+        process.Start();
+        await process.WaitForExitAsync();
+
+        var html = await process.StandardOutput.ReadToEndAsync();
         var cq = new CQ(html);
         var topicContent = cq["#read_tpc"].Text();
 

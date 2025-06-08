@@ -22,4 +22,5 @@ public class BTaskHandlerBuilder
     public required BTaskType Type { get; init; }
     public required BTaskResourceType ResourceType { get; init; }
     public object[]? ResourceKeys { get; set; }
+    public bool StartNow { get; set; }
 }

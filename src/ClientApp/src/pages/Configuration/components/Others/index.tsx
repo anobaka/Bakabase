@@ -27,6 +27,7 @@ import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchIn
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
 import appContext from '@/models/appContext';
+import { EditableChipWithNumberInput } from '@/components/EditableValue';
 
 const cookies = new Cookies();
 
@@ -205,14 +206,11 @@ export default ({
         const minPort = 5000;
         const maxPort = 65000;
         return (
-          <NumberInput
-            size={'sm'}
-            isWheelDisabled
+          <EditableChipWithNumberInput
             min={minPort}
             max={maxPort}
-            hideStepper
-            className={'max-w-[320px]'}
             placeholder={t('Port number')}
+            className={'max-w-[320px]'}
             description={(
               <div>
                 <div>
@@ -225,11 +223,13 @@ export default ({
                   {t('Changes will take effect after restarting the application')}
                 </div>
               </div>
-            )}
-            fullWidth={false}
+          )}
             value={appOptions.listeningPort}
-            onBlur={() => {
-
+            onSubmit={async v => {
+              await BApi.options.putAppOptions({
+                ...appOptions,
+                listeningPort: v,
+              });
             }}
           />
         );

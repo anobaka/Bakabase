@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
@@ -7,6 +8,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models.Constants;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models.RequestModels;
 using Bootstrap.Extensions;
 using CsQuery;
+using MathNet.Numerics.Distributions;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
@@ -272,8 +274,24 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
                 // Introduction = , 
                 // UpdateDt = , 
                 Url = url,
-                Id = ExtractIdFromUrl(url)
+                Id = ExtractIdFromUrl(url),
+                TorrentPageUrl = "",
             };
+
+            var torrentElement = cq["#gd5 a"].FirstOrDefault(x => x.TextContent.Contains("Torrent"));
+            if (torrentElement != null)
+            {
+                var countMatch = Regex.Match(torrentElement.TextContent, @"\d+");
+                if (countMatch.Success)
+                {
+                    var count = int.Parse(countMatch.Value);
+                    if (count > 0)
+                    {
+                        r.TorrentPageUrl = Regex.Match(torrentElement.GetAttribute("onclick"), "'http.*?'").Value
+                            .TrimEnd('\'').TrimStart('\'');
+                    }
+                }
+            }
 
             if (includeTorrents && r.TorrentPageUrl.IsNotEmpty())
             {
@@ -539,7 +557,51 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
 
         protected async Task<List<ExHentaiTorrent>?> GetTorrentList(string torrentPageUrl)
         {
-            throw new NotImplementedException();
+            var html = await HttpClient.GetStringAsync(torrentPageUrl);
+            var cq = new CQ(html);
+            var forms = cq["form"];
+            var torrents = new List<ExHentaiTorrent>();
+            foreach (var form in forms)
+            {
+                var trs = form.Cq()["table tr"];
+                if (trs?.Length >= 3)
+                {
+                    
+                    var meta = trs.FirstOrDefault()!.Cq().Find("td").Select(x => x.TextContent.Split(':', 2))
+                        .Where(x => x.Length == 2)
+                        .ToDictionary(d => d[0].Trim(), d => d[1].Trim());
+                    var downloadLink = trs![2]!.Cq().Find("a").Attr<string>("href");
+                    var torrent = new ExHentaiTorrent
+                    {
+                        DownloadUrl = downloadLink,
+                        Size = ConvertToBytes(meta["Size"]),
+                        Downloaded = int.Parse(meta["Downloads"]),
+                        UpdatedAt = DateTime.Parse(meta["Posted"])
+                    };
+                    torrents.Add(torrent);
+                }
+            }
+
+            return torrents;
+        }
+
+        static long ConvertToBytes(string size)
+        {
+            string[] parts = size.Trim().Split(' ');
+            if (parts.Length != 2)
+                throw new ArgumentException("Invalid format");
+
+            double value = double.Parse(parts[0], CultureInfo.InvariantCulture);
+            string unit = parts[1].ToUpperInvariant();
+
+            return unit switch
+            {
+                "B" => (long)value,
+                "KIB" => (long)(value * 1024),
+                "MIB" => (long)(value * 1024 * 1024),
+                "GIB" => (long)(value * 1024 * 1024 * 1024),
+                _ => throw new ArgumentException("Unknown unit"),
+            };
         }
 
         public async Task DownloadTorrent(string torrentUrl, string downloadPath)

@@ -17,6 +17,7 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileS
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
+using Bakabase.InsideWorld.Business.Components.Tampermonkey;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Services;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Services;
@@ -141,6 +142,7 @@ namespace Bakabase.Service.Extensions
 
             services.AddDownloadTaskParser<InsideWorldDbContext>();
             services.AddSingleton<OllamaApiClientAccessor>();
+            services.AddSingleton<TampermonkeyService>();
 
             #endregion
 

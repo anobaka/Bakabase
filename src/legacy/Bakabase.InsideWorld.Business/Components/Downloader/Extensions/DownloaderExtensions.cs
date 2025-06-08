@@ -97,7 +97,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 }
                 case DownloadTaskDtoStatus.Failed:
                 {
-                    if (downloader?.FailureTimes > 0)
+                    if (downloader?.FailureTimes > 0 && task.AutoRetry)
                     {
                         if (!DownloaderUtils.IntervalsOnContinuousFailures.TryGetValue(downloader.FailureTimes,
                                 out var ts))
@@ -150,7 +150,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 Current = downloader?.Current,
                 FailureTimes = downloader?.FailureTimes ?? 0,
                 NextStartDt = nextStartDt,
-                AvailableActions = actions
+                AvailableActions = actions,
+                AutoRetry = task.AutoRetry
             };
 
             return dto;

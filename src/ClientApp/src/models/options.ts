@@ -12,9 +12,9 @@ import type {
   BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions,
   BakabaseInsideWorldModelsConfigsJavLibraryOptions,
   BakabaseInsideWorldModelsConfigsNetworkOptions,
-  BakabaseInsideWorldModelsConfigsPixivOptions,
+  BakabaseInsideWorldModelsConfigsPixivOptions, BakabaseInsideWorldModelsConfigsSoulPlusOptions,
   BakabaseInsideWorldModelsConfigsThirdPartyOptions,
-  BakabaseInsideWorldModelsConfigsUIOptions,
+  BakabaseInsideWorldModelsConfigsUIOptions, BakabaseInsideWorldModelsRequestModelsSoulPlusOptionsPatchInputModel,
   BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel,
   BakabaseServiceModelsInputResourceOptionsPatchInputModel,
   BootstrapModelsResponseModelsBaseResponse,
@@ -80,4 +80,5 @@ export default {
   enhancerOptions: buildModel<BakabaseInsideWorldModelsConfigsEnhancerOptions, BakabaseInsideWorldModelsConfigsEnhancerOptions>(BApi.options.patchEnhancerOptions),
   taskOptions: buildModel<BakabaseAbstractionsComponentsConfigurationTaskOptions, BakabaseAbstractionsComponentsConfigurationTaskOptions>(BApi.options.patchTaskOptions),
   aiOptions: buildModel<BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions, BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions>(BApi.options.patchAiOptions),
+  soulPlusOptions: buildModel<BakabaseInsideWorldModelsConfigsSoulPlusOptions, BakabaseInsideWorldModelsRequestModelsSoulPlusOptionsPatchInputModel>(BApi.options.patchSoulPlusOptions),
 };

@@ -10,7 +10,9 @@ using Microsoft.EntityFrameworkCore;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bootstrap.Extensions;
 using System.Reflection;
+using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Parsers;
+using Microsoft.AspNetCore.Builder;
 
 namespace Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Extensions;
 
@@ -21,6 +23,7 @@ public static class DownloadTaskParserExtensions
     {
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, DownloadTaskParseTaskDbModel, int>>();
         services.AddScoped<IDownloadTaskParseTaskService, DownloadTaskParseTaskService<TDbContext>>();
+        services.AddSingleton<DownloadTaskParserTaskTrigger>();
 
         var currentAssemblyTypes = Assembly.GetExecutingAssembly().GetTypes();
         var dtp = currentAssemblyTypes.Where(s =>
@@ -35,6 +38,12 @@ public static class DownloadTaskParserExtensions
         return services;
     }
 
+    public static async Task ConfigureDownloadTaskParser(this IApplicationBuilder app)
+    {
+        var trigger = app.ApplicationServices.GetRequiredService<DownloadTaskParserTaskTrigger>();
+        await trigger.Initialize();
+    }
+
     public static DownloadTaskParseTaskDbModel ToDbModel(this DownloadTaskParseTask task)
     {
         return new DownloadTaskParseTaskDbModel
@@ -45,6 +54,7 @@ public static class DownloadTaskParserExtensions
             Title = task.Title,
             ParsedAt = task.ParsedAt,
             Items = task.Items != null ? JsonConvert.SerializeObject(task.Items) : null,
+            Error = task.Error
         };
     }
 
@@ -60,6 +70,7 @@ public static class DownloadTaskParserExtensions
             Items = dbModel.Items != null
                 ? JsonConvert.DeserializeObject<List<DownloadTaskParseTask.Item>>(dbModel.Items)
                 : null,
+            Error = dbModel.Error
         };
     }
 }

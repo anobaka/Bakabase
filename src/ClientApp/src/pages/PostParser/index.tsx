@@ -1,10 +1,18 @@
 import { useTranslation } from 'react-i18next';
-import { AiOutlineDelete, AiOutlineQuestionCircle } from 'react-icons/ai';
+import {
+  AiOutlineDelete,
+  AiOutlinePlusCircle,
+  AiOutlineQuestionCircle,
+  AiOutlineSetting,
+  AiOutlineWarning,
+} from 'react-icons/ai';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
+import { MdOutlineAutoMode } from 'react-icons/md';
 import {
   Alert,
   Button,
+  Checkbox,
   Chip,
   Divider,
   Modal,
@@ -20,15 +28,23 @@ import {
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
 import BApi from '@/sdk/BApi';
-import { DownloadTaskParserSource, downloadTaskParserSources } from '@/sdk/constants';
+import { DownloadTaskParserSource, downloadTaskParserSources, ThirdPartyId } from '@/sdk/constants';
 import type { components } from '@/sdk/BApi2';
+import store from '@/store';
+import ConfigurationModal from '@/pages/PostParser/components/ConfigurationModal';
+import ThirdPartyIcon from '@/components/ThirdPartyIcon';
 
 type Task = components['schemas']['Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask']
   ;
 
+const ThirdPartyMap: Record<DownloadTaskParserSource, ThirdPartyId> = {
+  [DownloadTaskParserSource.SoulPlus]: ThirdPartyId.SoulPlus,
+};
+
 export default () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const thirdPartyOptions = store.useModelState('thirdPartyOptions');
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const loadAllTasks = async () => {
@@ -44,13 +60,6 @@ export default () => {
     <div>
       <div className={'flex justify-between items-center'}>
         <div className={'flex items-center gap-2'}>
-          <Button
-            size={'sm'}
-            // variant={'flat'}
-            color={'secondary'}
-          >
-            {t('Start parsing')}
-          </Button>
           <Button
             size={'sm'}
             // variant={'flat'}
@@ -87,10 +96,29 @@ https://xxxxxxx
               });
             }}
           >
+            <AiOutlinePlusCircle className={'text-medium'} />
             {t('Add tasks')}
           </Button>
+          <Button
+            size={'sm'}
+            onPress={() => {
+              createPortal(ConfigurationModal, {});
+            }}
+          >
+            <AiOutlineSetting className={'text-medium'} />
+            {t('Configuration')}
+          </Button>
         </div>
-        <div>
+        <div className={'flex items-center gap-2'}>
+          <Checkbox
+            size={'sm'}
+            // variant={'flat'}
+            color={'secondary'}
+            isSelected={thirdPartyOptions.automaticallyParsingPosts}
+            onValueChange={v => BApi.options.patchThirdPartyOptions({ automaticallyParsingPosts: v })}
+          >
+            {t('Automatically parsing')}
+          </Checkbox>
           <Button
             variant={'light'}
             size={'sm'}
@@ -157,10 +185,11 @@ https://xxxxxxx
                     {task.title ? (
                       <div className={'flex flex-col gap-1'}>
                         <div className={'flex items-center gap-1'}>
-                          <Chip
-                            size={'sm'}
-                            variant={'flat'}
-                          >{t(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip>
+                          {/* <Chip */}
+                          {/*   size={'sm'} */}
+                          {/*   variant={'flat'} */}
+                          {/* >{t(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip> */}
+                          <ThirdPartyIcon thirdPartyId={ThirdPartyMap[task.source]} />
                           <div>{task.title}</div>
                         </div>
                         <div>
@@ -176,10 +205,11 @@ https://xxxxxxx
                       </div>
                     ) : (
                       <div className={'flex items-center gap-1'}>
-                        <Chip
-                          size={'sm'}
-                          variant={'flat'}
-                        >{t(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip>
+                        {/* <Chip */}
+                        {/*   size={'sm'} */}
+                        {/*   variant={'flat'} */}
+                        {/* >{t(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip> */}
+                        <ThirdPartyIcon thirdPartyId={ThirdPartyMap[task.source]} />
                         <div>
                           <Button
                             color={'primary'}
@@ -236,10 +266,45 @@ https://xxxxxxx
                       </React.Fragment>
                     );
                   })}</TableCell>
-                  <TableCell>{task.parsedAt}</TableCell>
+                  <TableCell>
+                    {task.parsedAt ? task.parsedAt : task.error ? (
+                      <Button
+                        onPress={() => {
+                          createPortal(Modal, {
+                            defaultVisible: true,
+                            size: 'xl',
+                            children: (
+                              <pre>
+                                {task.error}
+                              </pre>
+                            ),
+                            footer: {
+                              actions: ['cancel'],
+                            },
+                          });
+                          }}
+                        size={'sm'}
+
+                        variant={'light'}
+                        color={'danger'}
+                        isIconOnly
+                      >
+                        <AiOutlineWarning className={'text-medium'} />
+                      </Button>
+                    ) : null}
+                  </TableCell>
                   <TableCell>
                     <div className={'flex items-center gap-1'}>
-                      <Button isIconOnly color={'danger'} size={'sm'} variant={'light'}>
+                      <Button
+                        isIconOnly
+                        color={'danger'}
+                        size={'sm'}
+                        variant={'light'}
+                        onPress={async () => {
+                          await BApi.downloadTaskParseTask.deleteDownloadTaskParseTask(task.id);
+                          setTasks(tasks.filter(x => x.id != task.id));
+                        }}
+                      >
                         <AiOutlineDelete className={'text-medium'} />
                       </Button>
                     </div>

@@ -32,6 +32,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         protected override async Task StartCore(DownloadTask task, CancellationToken ct)
         {
             var gallery = await Client.ParseDetail(task.Key, true);
+            task.Name = gallery.RawName ?? gallery.Name;
             if (gallery.Torrents?.Any() != true)
             {
                 throw new Exception("No torrent for this gallery");
@@ -42,7 +43,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
                 .ThenByDescending(t => t.UpdatedAt)
                 .First();
 
-            var path = Path.Combine(task.DownloadPath, gallery.Name.RemoveInvalidFilePathChars());
+            var path = Path.Combine(task.DownloadPath, $"{gallery.Name.RemoveInvalidFilePathChars()}.torrent");
             await Client.DownloadTorrent(bestTorrent.DownloadUrl, path);
         }
     }

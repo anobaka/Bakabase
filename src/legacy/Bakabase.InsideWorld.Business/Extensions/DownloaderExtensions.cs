@@ -59,7 +59,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
             // todo: extract abstractions
             if (model.ThirdPartyId == ThirdPartyId.Bilibili)
             {
-                switch ((BilibiliDownloadTaskType) model.Type)
+                switch ((BilibiliDownloadTaskType)model.Type)
                 {
                     case BilibiliDownloadTaskType.Favorites:
                         if (model.KeyAndNames?.Any() != true ||
@@ -78,9 +78,10 @@ namespace Bakabase.InsideWorld.Business.Extensions
             {
                 if (model.ThirdPartyId == ThirdPartyId.ExHentai)
                 {
-                    switch ((ExHentaiDownloadTaskType) model.Type)
+                    switch ((ExHentaiDownloadTaskType)model.Type)
                     {
                         case ExHentaiDownloadTaskType.SingleWork:
+                        case ExHentaiDownloadTaskType.Torrent:
                             if (model.KeyAndNames.IsNullOrEmpty())
                             {
                                 return ListResponseBuilder<DownloadTask>.BuildBadRequest(
@@ -107,7 +108,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 {
                     if (model.ThirdPartyId == ThirdPartyId.Pixiv)
                     {
-                        switch ((PixivDownloadTaskType) model.Type)
+                        switch ((PixivDownloadTaskType)model.Type)
                         {
                             case PixivDownloadTaskType.Following:
                                 doNotNeedKey = true;
@@ -142,7 +143,8 @@ namespace Bakabase.InsideWorld.Business.Extensions
                     Type = model.Type,
                     Key = sn.Key,
                     Name = sn.Value,
-                    DownloadPath = model.DownloadPath
+                    DownloadPath = model.DownloadPath,
+                    AutoRetry = model.AutoRetry
                 }).ToList();
                 return new ListResponse<DownloadTask>(tasks);
             }
@@ -155,9 +157,10 @@ namespace Bakabase.InsideWorld.Business.Extensions
                     Interval = model.Interval,
                     Status = DownloadTaskStatus.InProgress,
                     Type = model.Type,
-                    DownloadPath = model.DownloadPath
+                    DownloadPath = model.DownloadPath,
+                    AutoRetry = model.AutoRetry
                 };
-                return new ListResponse<DownloadTask>(new[] {task});
+                return new ListResponse<DownloadTask>([task]);
             }
 
             return ListResponseBuilder<DownloadTask>.BuildBadRequest(localizer[SharedResource.Downloader_KeyIsMissing]);

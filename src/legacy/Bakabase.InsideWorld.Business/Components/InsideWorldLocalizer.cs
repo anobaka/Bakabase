@@ -170,7 +170,7 @@ namespace Bakabase.InsideWorld.Business.Components
 
         public string DownloadTaskParser_ParseAll_TaskName()
         {
-            throw new NotImplementedException();
+            return this[nameof(DownloadTaskParser_ParseAll_TaskName)];
         }
     }
 }

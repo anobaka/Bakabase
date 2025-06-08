@@ -20,5 +20,6 @@ namespace Bakabase.InsideWorld.Models.Configs
         }
 
         public string? CurlExecutable { get; set; }
+        public bool AutomaticallyParsingPosts { get; set; }
     }
 }

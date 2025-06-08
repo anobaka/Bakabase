@@ -11,11 +11,13 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Models.Input;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
@@ -32,13 +34,15 @@ namespace Bakabase.Service.Controllers
         private DownloadTaskService _service;
         private readonly IStringLocalizer<SharedResource> _localizer;
         private readonly IGuiAdapter _guiAdapter;
+        private readonly IBOptions<ExHentaiOptions> _exhentaiOptions;
 
         public DownloadTaskController(DownloadTaskService service, IStringLocalizer<SharedResource> localizer,
-            IGuiAdapter guiAdapter)
+            IGuiAdapter guiAdapter, IBOptions<ExHentaiOptions> exhentaiOptions)
         {
             _service = service;
             _localizer = localizer;
             _guiAdapter = guiAdapter;
+            _exhentaiOptions = exhentaiOptions;
         }
 
         [SwaggerOperation(OperationId = "GetAllDownloaderNamingDefinitions")]
@@ -72,7 +76,7 @@ namespace Bakabase.Service.Controllers
             };
 
             return new SingletonResponse<Dictionary<int, DownloaderNamingDefinitions>>(
-                dict.ToDictionary(a => (int) a.Key, a => a.Value));
+                dict.ToDictionary(a => (int)a.Key, a => a.Value));
         }
 
         [SwaggerOperation(OperationId = "GetAllDownloadTasks")]
@@ -91,7 +95,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost]
         [SwaggerOperation(OperationId = "CreateDownloadTask")]
-        public async Task<BaseResponse> Create([FromBody] DownloadTaskCreateRequestModel model)
+        public async Task<ListResponse<DownloadTask>> Create([FromBody] DownloadTaskCreateRequestModel model)
         {
             var taskResult = model.CreateTasks(_localizer);
             if (taskResult.Code != 0)
@@ -115,7 +119,7 @@ namespace Bakabase.Service.Controllers
                     }).Where(a => a.Value.IsNotEmpty()).ToDictionary(a => a.Key.Name ?? a.Key.Key, a => a.Value);
                     if (similarTasks.Any())
                     {
-                        return BaseResponseBuilder.Build(ResponseCode.Conflict,
+                        return ListResponseBuilder<DownloadTask>.Build(ResponseCode.Conflict,
                             _localizer[SharedResource.Downloader_MayBeDuplicate,
                                 string.Join(Environment.NewLine, similarTasks.Select(a => $"{a.Key}: {a.Value}"))]);
                     }
@@ -124,7 +128,7 @@ namespace Bakabase.Service.Controllers
                 return await _service.AddRange(tasks);
             }
 
-            return BaseResponseBuilder.NotModified;
+            return ListResponseBuilder<DownloadTask>.NotModified;
         }
 
         [HttpDelete("{id}")]
@@ -175,6 +179,37 @@ namespace Bakabase.Service.Controllers
         {
             await _service.Export();
             FileService.Open(_guiAdapter.GetDownloadsDirectory(), false);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("exhentai")]
+        [SwaggerOperation(OperationId = "AddExHentaiDownloadTask")]
+        public async Task<BaseResponse> AddExHentaiTask([FromBody] ExHentaiDownloadTaskAddInputModel model)
+        {
+            var downloadPath = _exhentaiOptions.Value.Downloader?.DefaultPath;
+            if (downloadPath.IsNullOrEmpty())
+            {
+                throw new Exception("Download path for exhentai is not set");
+            }
+
+            var baseModel = new DownloadTaskCreateRequestModel
+            {
+                Type = (int)model.Type,
+                ThirdPartyId = ThirdPartyId.ExHentai,
+                KeyAndNames = new Dictionary<string, string> { { model.Link, null } },
+                DownloadPath = downloadPath,
+                AutoRetry = false
+            };
+
+
+            var rsp = (await Create(baseModel));
+            if (rsp.Code != 0)
+            {
+                return rsp;
+            }
+
+            var task = rsp.Data!.First();
+            await _service.Start(x => x.Id == task.Id);
             return BaseResponseBuilder.Ok;
         }
     }

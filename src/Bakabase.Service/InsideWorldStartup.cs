@@ -20,6 +20,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsValidator;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
+using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
@@ -38,6 +39,7 @@ using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage.OneDrive;
 using Bootstrap.Components.Tasks.Progressor;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
@@ -77,6 +79,7 @@ namespace Bakabase.Service
             services.TryAddSingleton<BilibiliCookieValidator>();
 
             services.AddTransient<ExHentaiSingleWorkDownloader>();
+            services.AddTransient<ExHentaiTorrentDownloader>();
             services.AddTransient<ExHentaiListDownloader>();
             services.AddTransient<ExHentaiWatchedDownloader>();
             services.TryAddSingleton<ExHentaiDownloaderOptionsValidator>();
@@ -130,10 +133,17 @@ namespace Bakabase.Service
             routeBuilder.MapHub<WebGuiHub>("/hub/ui");
         }
 
+        protected override void ConfigureCors(CorsPolicyBuilder builder)
+        {
+            builder.WithOrigins("https://www.north-plus.net", "https://exhentai.org");
+        }
+
         public override void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime)
         {
             var logger = app.ApplicationServices.GetRequiredService<ILogger<InsideWorldStartup>>();
             logger.LogInformation($"Using app data directory: {AppService.DefaultAppDataDirectory}");
+
+            app.ConfigureDownloadTaskParser();
 
             // todo: merge gui configuration
             app.ApplicationServices.GetRequiredService<WebGuiHubConfigurationAdapter>().Initialize();

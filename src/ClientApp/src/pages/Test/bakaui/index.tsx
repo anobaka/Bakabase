@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import { SyncOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { Button, Carousel, DateInput, Icon, Modal, Popover, Tooltip } from '@/components/bakaui';
+import { Button, Carousel, DateInput, Icon, Modal, NumberInput, Popover, Tooltip } from '@/components/bakaui';
 import ClickableIcon from '@/components/ClickableIcon';
 import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -32,6 +32,12 @@ export default () => {
 
   return (
     <>
+      <NumberInput
+        label="Amount"
+        placeholder="Enter the amount"
+        value={123}
+        onValueChange={console.log}
+      />
       <div className={'w-[400px] h-[400px]'}>
         <Carousel>
           <img

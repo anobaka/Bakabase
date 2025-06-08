@@ -8,7 +8,7 @@ import Modal, { ModalProps } from './components/Modal';
 import Popover from './components/Popover';
 import Progress from './components/Progress';
 import Switch from './components/Switch';
-import Textarea from './components/Textarea';
+import { Textarea, TextareaProps } from './components/Textarea';
 import ColorPicker from './components/ColorPicker';
 import { Tab, Tabs } from './components/Tabs';
 import { Card, CardBody, CardFooter, CardHeader } from './components/Card';
@@ -61,6 +61,7 @@ export {
   Progress,
   Switch,
   Textarea,
+  TextareaProps,
   DateInput,
   DatePicker,
   TimeInput,

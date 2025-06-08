@@ -28,6 +28,7 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
         public string? Message { get; set; }
         public string? Checkpoint { get; set; }
         public DownloadTaskStatus Status { get; set; } = DownloadTaskStatus.InProgress;
+        public bool AutoRetry { get; set; }
         [Required]
         public string DownloadPath { get; set; } = string.Empty;
         [NotMapped] public string DisplayName => Name ?? Key;

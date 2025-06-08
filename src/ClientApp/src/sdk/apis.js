@@ -9145,6 +9145,131 @@ export const PutAIOptionsURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetSoulPlusOptions
+ * url: GetSoulPlusOptionsURL
+ * method: GetSoulPlusOptions_TYPE
+ * raw_url: GetSoulPlusOptions_RAW_URL
+ */
+export const GetSoulPlusOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/soulplus'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetSoulPlusOptions_RAW_URL = function() {
+  return '/options/soulplus'
+}
+export const GetSoulPlusOptions_TYPE = function() {
+  return 'get'
+}
+export const GetSoulPlusOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/soulplus'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PatchSoulPlusOptions
+ * url: PatchSoulPlusOptionsURL
+ * method: PatchSoulPlusOptions_TYPE
+ * raw_url: PatchSoulPlusOptions_RAW_URL
+ * @param model - 
+ */
+export const PatchSoulPlusOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/soulplus'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('patch', domain + path, body, queryParameters, form, config)
+}
+export const PatchSoulPlusOptions_RAW_URL = function() {
+  return '/options/soulplus'
+}
+export const PatchSoulPlusOptions_TYPE = function() {
+  return 'patch'
+}
+export const PatchSoulPlusOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/soulplus'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: PutSoulPlusOptions
+ * url: PutSoulPlusOptionsURL
+ * method: PutSoulPlusOptions_TYPE
+ * raw_url: PutSoulPlusOptions_RAW_URL
+ * @param model - 
+ */
+export const PutSoulPlusOptions = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/options/soulplus'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('put', domain + path, body, queryParameters, form, config)
+}
+export const PutSoulPlusOptions_RAW_URL = function() {
+  return '/options/soulplus'
+}
+export const PutSoulPlusOptions_TYPE = function() {
+  return 'put'
+}
+export const PutSoulPlusOptionsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/options/soulplus'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: SearchPasswords
  * url: SearchPasswordsURL
  * method: SearchPasswords_TYPE
@@ -11228,6 +11353,97 @@ export const PretreatTextURL = function(parameters = {}) {
   if (parameters['text'] !== undefined) {
     queryParameters['text'] = parameters['text']
   }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: InstallTampermonkeyScript
+ * url: InstallTampermonkeyScriptURL
+ * method: InstallTampermonkeyScript_TYPE
+ * raw_url: InstallTampermonkeyScript_RAW_URL
+ * @param script - [1: SoulPlus, 2: ExHentai]
+ */
+export const InstallTampermonkeyScript = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/Tampermonkey/install'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['script'] !== undefined) {
+    queryParameters['script'] = parameters['script']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const InstallTampermonkeyScript_RAW_URL = function() {
+  return '/Tampermonkey/install'
+}
+export const InstallTampermonkeyScript_TYPE = function() {
+  return 'get'
+}
+export const InstallTampermonkeyScriptURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/Tampermonkey/install'
+  if (parameters['script'] !== undefined) {
+    queryParameters['script'] = parameters['script']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetTampermonkeyScript
+ * url: GetTampermonkeyScriptURL
+ * method: GetTampermonkeyScript_TYPE
+ * raw_url: GetTampermonkeyScript_RAW_URL
+ * @param script - [1: SoulPlus, 2: ExHentai]
+ */
+export const GetTampermonkeyScript = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/Tampermonkey/script/{script}.user.js'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{script}', `${parameters['script']}`)
+  if (parameters['script'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: script'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetTampermonkeyScript_RAW_URL = function() {
+  return '/Tampermonkey/script/{script}.user.js'
+}
+export const GetTampermonkeyScript_TYPE = function() {
+  return 'get'
+}
+export const GetTampermonkeyScriptURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/Tampermonkey/script/{script}.user.js'
+  path = path.replace('{script}', `${parameters['script']}`)
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

@@ -89,14 +89,38 @@ public class BTaskManager : IAsyncDisposable
         _ = OnAllTasksChange();
     }
 
+    /// <summary>
+    /// You don't need to start task manually, the daemon will do it for you automatically.
+    /// </summary>
+    /// <param name="taskBuilder"></param>
+    /// <exception cref="Exception"></exception>
+    public void EnqueueSafely(BTaskHandlerBuilder taskBuilder)
+    {
+        var handler = _buildHandler(taskBuilder);
+
+        if (_taskMap.TryAdd(handler.Id, handler))
+        {
+            _ = OnAllTasksChange();
+        }
+    }
+
     private BTaskHandler _buildHandler(BTaskHandlerBuilder builder)
     {
         var dbModel = _options.Value.Tasks?.FirstOrDefault(x => x.Id == builder.Id);
 
+        var enableAfter = dbModel?.EnableAfter;
+        if (!enableAfter.HasValue)
+        {
+            if (builder is { StartNow: false, Interval: not null })
+            {
+                enableAfter = DateTime.Now.Add(builder.Interval.Value);
+            }
+        }
+
         var task = new BTask(builder.Id, builder.GetName, builder.GetDescription, builder.GetMessageOnInterruption,
             builder.ConflictKeys, builder.Level, builder.IsPersistent, builder.Type, builder.ResourceType, builder.ResourceKeys)
         {
-            EnableAfter = dbModel?.EnableAfter,
+            EnableAfter = enableAfter,
             Interval = dbModel?.Interval ?? builder.Interval
         };
 
@@ -128,13 +152,21 @@ public class BTaskManager : IAsyncDisposable
     /// Start or resume a task
     /// </summary>
     /// <param name="id"></param>
+    /// <param name="newTaskBuilder"></param>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public async Task Start(string id)
+    public async Task Start(string id, Func<BTaskHandlerBuilder>? newTaskBuilder = null)
     {
         if (!_taskMap.TryGetValue(id, out var d))
         {
+            if (newTaskBuilder != null)
+            {
+                Enqueue(newTaskBuilder());
+                await Start(id, null);
+                return;
+            }
+
             throw new Exception(_localizer.BTask_FailedToRunTaskDueToUnknownTaskId(id));
         }
 
@@ -196,7 +228,8 @@ public class BTaskManager : IAsyncDisposable
                 {
                     var now = DateTime.Now;
                     var activeTasks = _taskMap.Values
-                        .Where(x => x.NextTimeStartAt < now || x.Task.Status is BTaskStatus.NotStarted)
+                        .Where(x => (x.NextTimeStartAt < now || x.Task.Status is BTaskStatus.NotStarted) &&
+                                    (!x.Task.EnableAfter.HasValue || x.Task.EnableAfter <= now))
                         .OrderBy(x => x.Task.LastFinishedAt).ThenBy(x => x.Task.CreatedAt).ToArray();
                     foreach (var at in activeTasks)
                     {

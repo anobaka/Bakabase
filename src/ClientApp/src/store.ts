@@ -27,6 +27,7 @@ const {
   enhancerOptions,
   taskOptions,
   aiOptions,
+  soulPlusOptions,
 } = Optionses;
 
 export default createStore({
@@ -55,4 +56,5 @@ export default createStore({
   enhancerOptions,
   taskOptions,
   aiOptions,
+  soulPlusOptions,
 });

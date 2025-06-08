@@ -1,38 +1,70 @@
 import { AiOutlineCheck, AiOutlineClose, AiOutlineEdit } from 'react-icons/ai';
-import type { FC, ReactElement } from 'react';
-import React, { useState } from 'react';
+import type { ReactNode } from 'react';
+import React, { useState, FC, ReactElement } from 'react';
+import EditableSnippetWithInput from './components/EditableSnippetWithInput';
+import EditableChipWithNumberInput from './components/EditableChipWithNumberInput';
 import { Button } from '@/components/bakaui';
 import { isPromise } from '@/components/utils';
+import IntrinsicAttributes = React.JSX.IntrinsicAttributes;
 
-type CommonProps<TValue> = {
+// export type SimpleEditableValueProps<TValue> = {
+//   onSubmit?: (value?: TValue) => any | Promise<any>;
+// };
+
+type ComponentCommonProps<TValue> = {
   value?: TValue;
-  onValueChange?: (value: TValue) => void;
-  className?: string | undefined;
-  size?: 'sm' | 'md' | 'lg' | undefined;
+  label?: ReactNode;
+  description?: ReactNode;
 };
 
-type Props<TValue> = {
-  onSubmit?: (value?: TValue) => any | Promise<any>;
-  Viewer: (props: CommonProps<TValue>) => ReactElement;
-  Editor: (props: CommonProps<TValue>) => ReactElement;
-} & CommonProps<TValue>;
+type ViewerProps<TValue> = ComponentCommonProps<TValue> & {
+  isReadonly?: boolean;
+};
 
-export default function EditableValue<TValue>(
+type EditorProps<TValue> = ComponentCommonProps<TValue> & {
+  onValueChange?: (value?: TValue) => void;
+};
+
+type Props<TValue,
+  TEditorProps extends EditorProps<TValue>,
+  TViewerProps extends ViewerProps<TValue> = TEditorProps> =
+  {
+    Viewer: React.FC<TViewerProps>;
+    Editor: React.FC<TEditorProps>;
+    viewerProps?: Omit<TViewerProps, keyof ComponentCommonProps<TValue>>;
+    editorProps?: Omit<TEditorProps, keyof ComponentCommonProps<TValue>>;
+    onSubmit?: (value?: TValue) => any | Promise<any>;
+  }
+  & ComponentCommonProps<TValue>;
+
+// & SimpleEditableValueProps<TValue> & EditorProps<TValue> & ViewProps<TValue>;
+
+function EditableValue<TValue,
+  TEditorProps extends EditorProps<TValue>,
+  TViewerProps extends ViewerProps<TValue> = TEditorProps>(
   {
     onSubmit,
     Viewer,
+    viewerProps,
     Editor,
+    editorProps,
     ...commonProps
-  }: Props<TValue>) {
+  }: Props<TValue, TEditorProps, TViewerProps>) {
   const [editing, setEditing] = useState(false);
   const [editingValue, setEditingValue] = useState<TValue>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // console.log(commonProps);
 
   return (
     <div className={'flex items-center gap-2'}>
       {editing ? (
         <>
-          <Editor {...commonProps} />
+          <Editor
+            {...editorProps as unknown as TEditorProps}
+            {...commonProps}
+            onValueChange={v => setEditingValue(v)}
+          />
           <Button
             variant={'light'}
             size={'sm'}
@@ -66,7 +98,11 @@ export default function EditableValue<TValue>(
         </>
       ) : (
         <>
-          <Viewer {...commonProps} />
+          <Viewer
+            {...viewerProps as unknown as TViewerProps}
+            {...commonProps}
+            isReadonly
+          />
           <Button
             variant={'light'}
             size={'sm'}
@@ -83,3 +119,9 @@ export default function EditableValue<TValue>(
     </div>
   );
 }
+
+export {
+  EditableValue,
+  EditableSnippetWithInput,
+  EditableChipWithNumberInput,
+};

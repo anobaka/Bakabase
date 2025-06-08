@@ -472,6 +472,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Parse posts.
+        /// </summary>
+        internal static string DownloadTaskParser_ParseAll_TaskName {
+            get {
+                return ResourceManager.GetString("DownloadTaskParser_ParseAll_TaskName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to English.
         /// </summary>
         internal static string English {

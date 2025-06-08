@@ -6,5 +6,5 @@ namespace Bakabase.InsideWorld.Models.Configs;
 public record SoulPlusOptions
 {
     public string? Cookie { get; set; }
-    public int AutoBuyThreshold { get; set; } = 5;
+    public int AutoBuyThreshold { get; set; } = 10;
 }

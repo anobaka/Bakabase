@@ -345,20 +345,31 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("thirdparty")]
         [SwaggerOperation(OperationId = "PatchThirdPartyOptions")]
-        public async Task<BaseResponse> PatchThirdPartyOptions([FromBody] ThirdPartyOptions model)
+        public async Task<BaseResponse> PatchThirdPartyOptions([FromBody] ThirdPartyOptionsPatchInput model)
         {
             await _insideWorldOptionsManager.ThirdParty.SaveAsync(options =>
             {
-                if (model.SimpleSearchEngines != null)
-                {
-                    options.SimpleSearchEngines = model.SimpleSearchEngines;
-                }
-
-                if (model.CurlExecutable.IsNotEmpty())
+                if (model.CurlExecutable != null)
                 {
                     options.CurlExecutable = model.CurlExecutable;
                 }
 
+                if (model.AutomaticallyParsingPosts.HasValue)
+                {
+                    options.AutomaticallyParsingPosts = model.AutomaticallyParsingPosts.Value;
+                }
+
+                if (model.SimpleSearchEngines != null)
+                {
+                    // Replace the entire list if provided
+                    options.SimpleSearchEngines = model.SimpleSearchEngines
+                        .Select(x => new ThirdPartyOptions.SimpleSearchEngineOptions
+                        {
+                            Name = x.Name ?? string.Empty,
+                            UrlTemplate = x.UrlTemplate ?? string.Empty
+                        })
+                        .ToList();
+                }
             });
             return BaseResponseBuilder.Ok;
         }
@@ -466,6 +477,40 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> PutAiOptions([FromBody] AiOptions model)
         {
             await _insideWorldOptionsManager.Ai.SaveAsync(model);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("soulplus")]
+        [SwaggerOperation(OperationId = "GetSoulPlusOptions")]
+        public async Task<SingletonResponse<SoulPlusOptions>> GetSoulPlusOptions()
+        {
+            return new SingletonResponse<SoulPlusOptions>(_insideWorldOptionsManager.SoulPlus.Value);
+        }
+
+        [HttpPatch("soulplus")]
+        [SwaggerOperation(OperationId = "PatchSoulPlusOptions")]
+        public async Task<BaseResponse> PatchSoulPlusOptions([FromBody] SoulPlusOptionsPatchInputModel model)
+        {
+            await _insideWorldOptionsManager.SoulPlus.SaveAsync(options =>
+            {
+                if (model.Cookie != null)
+                {
+                    options.Cookie = model.Cookie;
+                }
+
+                if (model.AutoBuyThreshold.HasValue)
+                {
+                    options.AutoBuyThreshold = model.AutoBuyThreshold.Value;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("soulplus")]
+        [SwaggerOperation(OperationId = "PutSoulPlusOptions")]
+        public async Task<BaseResponse> PutSoulPlusOptions([FromBody] SoulPlusOptions model)
+        {
+            await _insideWorldOptionsManager.SoulPlus.SaveAsync(model);
             return BaseResponseBuilder.Ok;
         }
     }

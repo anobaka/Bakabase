@@ -32,6 +32,7 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
         public string DownloadPath { get; set; }
         public string Current { get; set; }
         public int FailureTimes { get; set; }
+        public bool AutoRetry { get; set; }
         public DateTime? NextStartDt { get; set; }
         public HashSet<DownloadTaskAction> AvailableActions { get; set; } = new();
 

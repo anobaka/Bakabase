@@ -896,6 +896,12 @@ export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
   | 1000
   | 10000;
 
+/**
+ * [1: SoulPlus, 2: ExHentai]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript = 1 | 2;
+
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions {
   ollamaEndpoint?: string;
 }
@@ -1070,9 +1076,16 @@ export interface BakabaseInsideWorldModelsConfigsPixivOptions {
   downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
 }
 
+export interface BakabaseInsideWorldModelsConfigsSoulPlusOptions {
+  cookie?: string;
+  /** @format int32 */
+  autoBuyThreshold: number;
+}
+
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
   simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[];
   curlExecutable?: string;
+  automaticallyParsingPosts: boolean;
 }
 
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions {
@@ -1571,6 +1584,23 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel 
   /** @format int32 */
   mediaLibraryId: number;
   path?: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsSoulPlusOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  autoBuyThreshold?: number;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsThirdPartyOptionsPatchInput {
+  simpleSearchEngines?: BakabaseInsideWorldModelsRequestModelsThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput[];
+  curlExecutable?: string;
+  automaticallyParsingPosts?: boolean;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput {
+  name?: string;
+  urlTemplate?: string;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel {
@@ -2608,6 +2638,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsConfigsPixivOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsSoulPlusOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldModelsConfigsSoulPlusOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsThirdPartyOptions {
@@ -7777,7 +7814,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchThirdPartyOptions
      * @request PATCH:/options/thirdparty
      */
-    patchThirdPartyOptions: (data: BakabaseInsideWorldModelsConfigsThirdPartyOptions, params: RequestParams = {}) =>
+    patchThirdPartyOptions: (
+      data: BakabaseInsideWorldModelsRequestModelsThirdPartyOptionsPatchInput,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/thirdparty`,
         method: "PATCH",
@@ -7956,6 +7996,60 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     putAiOptions: (data: BakabaseInsideWorldBusinessConfigurationsModelsDomainAiOptions, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/ai`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetSoulPlusOptions
+     * @request GET:/options/soulplus
+     */
+    getSoulPlusOptions: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsSoulPlusOptions, any>(
+        {
+          path: `/options/soulplus`,
+          method: "GET",
+          format: "json",
+          ...params,
+        },
+      ),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchSoulPlusOptions
+     * @request PATCH:/options/soulplus
+     */
+    patchSoulPlusOptions: (
+      data: BakabaseInsideWorldModelsRequestModelsSoulPlusOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/soulplus`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PutSoulPlusOptions
+     * @request PUT:/options/soulplus
+     */
+    putSoulPlusOptions: (data: BakabaseInsideWorldModelsConfigsSoulPlusOptions, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/soulplus`,
         method: "PUT",
         body: data,
         type: ContentType.Json,
@@ -8337,6 +8431,46 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "POST",
         query: query,
         format: "json",
+        ...params,
+      }),
+  };
+  tampermonkey = {
+    /**
+     * No description
+     *
+     * @tags Tampermonkey
+     * @name InstallTampermonkeyScript
+     * @request GET:/Tampermonkey/install
+     */
+    installTampermonkeyScript: (
+      query?: {
+        /** [1: SoulPlus, 2: ExHentai] */
+        script?: BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/Tampermonkey/install`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Tampermonkey
+     * @name GetTampermonkeyScript
+     * @request GET:/Tampermonkey/script/{script}.user.js
+     */
+    getTampermonkeyScript: (
+      script: BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/Tampermonkey/script/${script}.user.js`,
+        method: "GET",
         ...params,
       }),
   };
