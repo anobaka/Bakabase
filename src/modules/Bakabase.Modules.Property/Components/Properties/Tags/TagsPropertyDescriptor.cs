@@ -31,13 +31,13 @@ public class TagsPropertyDescriptor : AbstractPropertyDescriptor<TagsPropertyOpt
         var dbValue = new List<string>();
         var propertyChanged = false;
         var options =
-            ((property.Options ??= new TagsPropertyOptions() {AllowAddingNewDataDynamically = true}) as
+            ((property.Options ??= new TagsPropertyOptions()) as
                 TagsPropertyOptions)!;
         options.Tags ??= [];
         foreach (var tag in bizValue)
         {
             var definedTag = options.Tags.FirstOrDefault(x => x.Name == tag.Name && x.Group == tag.Group);
-            if (definedTag == null && options.AllowAddingNewDataDynamically)
+            if (definedTag == null)
             {
                 definedTag = new TagsPropertyOptions.TagOptions(tag.Group, tag.Name)
                     {Value = TagsPropertyOptions.TagOptions.GenerateValue()};
@@ -45,10 +45,7 @@ public class TagsPropertyDescriptor : AbstractPropertyDescriptor<TagsPropertyOpt
                 propertyChanged = true;
             }
 
-            if (definedTag != null)
-            {
-                dbValue.Add(definedTag.Value);
-            }
+            dbValue.Add(definedTag.Value);
         }
 
         return (dbValue, propertyChanged);

@@ -270,21 +270,21 @@ namespace Bakabase.InsideWorld.Business.Components.Enhancer
                                         {
                                             case PropertyType.SingleChoice:
                                             {
-                                                options = new SingleChoicePropertyOptions()
-                                                    {AllowAddingNewDataDynamically = true};
+                                                options = new SingleChoicePropertyOptions();
+                                                    // {AllowAddingNewDataDynamically = true};
                                                 kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
                                                 break;
                                             }
                                             case PropertyType.MultipleChoice:
                                             {
-                                                options = new MultipleChoicePropertyOptions()
-                                                    {AllowAddingNewDataDynamically = true};
+                                                options = new MultipleChoicePropertyOptions();
+                                                    // {AllowAddingNewDataDynamically = true};
                                                 break;
                                             }
                                             case PropertyType.Multilevel:
                                             {
-                                                options = new MultilevelPropertyOptions
-                                                    {AllowAddingNewDataDynamically = true};
+                                                options = new MultilevelPropertyOptions();
+                                                    // {AllowAddingNewDataDynamically = true};
                                                 break;
                                             }
                                         }

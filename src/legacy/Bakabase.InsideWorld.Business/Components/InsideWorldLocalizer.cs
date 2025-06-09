@@ -168,9 +168,9 @@ namespace Bakabase.InsideWorld.Business.Components
             return this[nameof(DeletingInvalidResources), count];
         }
 
-        public string DownloadTaskParser_ParseAll_TaskName()
+        public string PostParser_ParseAll_TaskName()
         {
-            return this[nameof(DownloadTaskParser_ParseAll_TaskName)];
+            return this[nameof(PostParser_ParseAll_TaskName)];
         }
     }
 }

@@ -23,6 +23,7 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Org.BouncyCastle.Asn1.Sec;
 
 namespace Bakabase.InsideWorld.Business.Services;
@@ -33,7 +34,7 @@ public class MediaLibraryV2Service<TDbContext>(
     IResourceService resourceService,
     IPropertyService propertyService,
     FullMemoryCacheResourceService<TDbContext, ResourceCacheDbModel, int> cacheOrm,
-    IBOptions<ResourceOptions> resourceOptions)
+    IBOptions<ResourceOptions> resourceOptions, BTaskManager btm)
     : IMediaLibraryV2Service where TDbContext : DbContext
 {
     public async Task Add(MediaLibraryV2AddOrPutInputModel model)
@@ -125,7 +126,7 @@ public class MediaLibraryV2Service<TDbContext>(
         var data = await (ids == null ? GetAll() : GetByKeys(ids));
         var templateIds = data.Select(d => d.TemplateId).OfType<int>().ToHashSet();
         var templateMap = (await templateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id, d => d);
-        var mlResourceMap = (await resourceService.GetAllGeneratedByMediaLibraryV2()).GroupBy(d => d.MediaLibraryId)
+        var mlResourceMap = (await resourceService.GetAllGeneratedByMediaLibraryV2(ids)).GroupBy(d => d.MediaLibraryId)
             .ToDictionary(d => d.Key, d => d.ToList());
         var syncOptions = resourceOptions.Value.SynchronizationOptions;
         foreach (var ml in data)
@@ -188,6 +189,33 @@ public class MediaLibraryV2Service<TDbContext>(
 
             // clean cache
             await cacheOrm.RemoveByKeys(conflictDbResources.Select(r => r.Id));
+        }
+    }
+
+    public async Task StartSyncAll(int[]? ids = null)
+    {
+        if (ids?.Any() != true)
+        {
+            ids = (await GetAll()).Select(d => d.Id).ToArray();
+        }
+
+        const string taskConflictKey = "SyncMediaLibrary";
+        var taskIds = ids.Select(id => $"{taskConflictKey}_{id}").ToList();
+
+        foreach (var id in ids)
+        {
+            var taskId = $"{taskConflictKey}_{id}";
+            var taskHandlerBuilder = new BTaskHandlerBuilder
+            {
+                ConflictKeys = [taskConflictKey],
+                Id = taskId,
+                Run = async args =>
+                {
+                    var scope = args.RootServiceProvider.CreateAsyncScope();
+                    var service = scope.ServiceProvider.GetRequiredService<IMediaLibraryV2Service>();
+
+                }
+            }
         }
     }
 }

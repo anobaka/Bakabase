@@ -123,7 +123,7 @@ namespace Bakabase.Modules.Property.Extensions
         {
             bizValueBranches?.TrimAll();
             var optionsChanged = false;
-            if (bizValueBranches != null && options.AllowAddingNewDataDynamically)
+            if (bizValueBranches != null)
             {
                 foreach (var bizValueBranch in bizValueBranches)
                 {

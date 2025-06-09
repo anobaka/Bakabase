@@ -4052,94 +4052,16 @@ export const ExportAllDownloadTasksURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetAllDownloadTaskParseTasks
- * url: GetAllDownloadTaskParseTasksURL
- * method: GetAllDownloadTaskParseTasks_TYPE
- * raw_url: GetAllDownloadTaskParseTasks_RAW_URL
- */
-export const GetAllDownloadTaskParseTasks = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/download-task-parse-task/all'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('get', domain + path, body, queryParameters, form, config)
-}
-export const GetAllDownloadTaskParseTasks_RAW_URL = function() {
-  return '/download-task-parse-task/all'
-}
-export const GetAllDownloadTaskParseTasks_TYPE = function() {
-  return 'get'
-}
-export const GetAllDownloadTaskParseTasksURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/download-task-parse-task/all'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: DeleteAllDownloadTaskParseTasks
- * url: DeleteAllDownloadTaskParseTasksURL
- * method: DeleteAllDownloadTaskParseTasks_TYPE
- * raw_url: DeleteAllDownloadTaskParseTasks_RAW_URL
- */
-export const DeleteAllDownloadTaskParseTasks = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/download-task-parse-task/all'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const DeleteAllDownloadTaskParseTasks_RAW_URL = function() {
-  return '/download-task-parse-task/all'
-}
-export const DeleteAllDownloadTaskParseTasks_TYPE = function() {
-  return 'delete'
-}
-export const DeleteAllDownloadTaskParseTasksURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/download-task-parse-task/all'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: AddDownloadTaskParseTasks
- * url: AddDownloadTaskParseTasksURL
- * method: AddDownloadTaskParseTasks_TYPE
- * raw_url: AddDownloadTaskParseTasks_RAW_URL
+ * request: AddExHentaiDownloadTask
+ * url: AddExHentaiDownloadTaskURL
+ * method: AddExHentaiDownloadTask_TYPE
+ * raw_url: AddExHentaiDownloadTask_RAW_URL
  * @param model - 
  */
-export const AddDownloadTaskParseTasks = function(parameters = {}) {
+export const AddExHentaiDownloadTask = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/download-task-parse-task'
+  let path = '/download-task/exhentai'
   let body
   let queryParameters = {}
   let form = {}
@@ -4153,100 +4075,16 @@ export const AddDownloadTaskParseTasks = function(parameters = {}) {
   }
   return request('post', domain + path, body, queryParameters, form, config)
 }
-export const AddDownloadTaskParseTasks_RAW_URL = function() {
-  return '/download-task-parse-task'
+export const AddExHentaiDownloadTask_RAW_URL = function() {
+  return '/download-task/exhentai'
 }
-export const AddDownloadTaskParseTasks_TYPE = function() {
+export const AddExHentaiDownloadTask_TYPE = function() {
   return 'post'
 }
-export const AddDownloadTaskParseTasksURL = function(parameters = {}) {
+export const AddExHentaiDownloadTaskURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/download-task-parse-task'
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: DeleteDownloadTaskParseTask
- * url: DeleteDownloadTaskParseTaskURL
- * method: DeleteDownloadTaskParseTask_TYPE
- * raw_url: DeleteDownloadTaskParseTask_RAW_URL
- * @param id - 
- */
-export const DeleteDownloadTaskParseTask = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/download-task-parse-task/{id}'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('delete', domain + path, body, queryParameters, form, config)
-}
-export const DeleteDownloadTaskParseTask_RAW_URL = function() {
-  return '/download-task-parse-task/{id}'
-}
-export const DeleteDownloadTaskParseTask_TYPE = function() {
-  return 'delete'
-}
-export const DeleteDownloadTaskParseTaskURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/download-task-parse-task/{id}'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
- * request: StartAllDownloadTaskParseTasks
- * url: StartAllDownloadTaskParseTasksURL
- * method: StartAllDownloadTaskParseTasks_TYPE
- * raw_url: StartAllDownloadTaskParseTasks_RAW_URL
- */
-export const StartAllDownloadTaskParseTasks = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/download-task-parse-task/start'
-  let body
-  let queryParameters = {}
-  let form = {}
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('post', domain + path, body, queryParameters, form, config)
-}
-export const StartAllDownloadTaskParseTasks_RAW_URL = function() {
-  return '/download-task-parse-task/start'
-}
-export const StartAllDownloadTaskParseTasks_TYPE = function() {
-  return 'post'
-}
-export const StartAllDownloadTaskParseTasksURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/download-task-parse-task/start'
+  let path = '/download-task/exhentai'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -9731,6 +9569,211 @@ export const GetPlaylistFilesURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/playlist/{id}/files'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetAllPostParserTasks
+ * url: GetAllPostParserTasksURL
+ * method: GetAllPostParserTasks_TYPE
+ * raw_url: GetAllPostParserTasks_RAW_URL
+ */
+export const GetAllPostParserTasks = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/post-parser/task/all'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetAllPostParserTasks_RAW_URL = function() {
+  return '/post-parser/task/all'
+}
+export const GetAllPostParserTasks_TYPE = function() {
+  return 'get'
+}
+export const GetAllPostParserTasksURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/post-parser/task/all'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DeleteAllPostParserTasks
+ * url: DeleteAllPostParserTasksURL
+ * method: DeleteAllPostParserTasks_TYPE
+ * raw_url: DeleteAllPostParserTasks_RAW_URL
+ */
+export const DeleteAllPostParserTasks = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/post-parser/task/all'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteAllPostParserTasks_RAW_URL = function() {
+  return '/post-parser/task/all'
+}
+export const DeleteAllPostParserTasks_TYPE = function() {
+  return 'delete'
+}
+export const DeleteAllPostParserTasksURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/post-parser/task/all'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: AddPostParserTasks
+ * url: AddPostParserTasksURL
+ * method: AddPostParserTasks_TYPE
+ * raw_url: AddPostParserTasks_RAW_URL
+ * @param model - 
+ */
+export const AddPostParserTasks = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/post-parser/task'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const AddPostParserTasks_RAW_URL = function() {
+  return '/post-parser/task'
+}
+export const AddPostParserTasks_TYPE = function() {
+  return 'post'
+}
+export const AddPostParserTasksURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/post-parser/task'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: DeletePostParserTask
+ * url: DeletePostParserTaskURL
+ * method: DeletePostParserTask_TYPE
+ * raw_url: DeletePostParserTask_RAW_URL
+ * @param id - 
+ */
+export const DeletePostParserTask = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/post-parser/task/{id}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['id'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeletePostParserTask_RAW_URL = function() {
+  return '/post-parser/task/{id}'
+}
+export const DeletePostParserTask_TYPE = function() {
+  return 'delete'
+}
+export const DeletePostParserTaskURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/post-parser/task/{id}'
+  path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: StartAllPostParserTasks
+ * url: StartAllPostParserTasksURL
+ * method: StartAllPostParserTasks_TYPE
+ * raw_url: StartAllPostParserTasks_RAW_URL
+ */
+export const StartAllPostParserTasks = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/post-parser/start'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const StartAllPostParserTasks_RAW_URL = function() {
+  return '/post-parser/start'
+}
+export const StartAllPostParserTasks_TYPE = function() {
+  return 'post'
+}
+export const StartAllPostParserTasksURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/post-parser/start'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

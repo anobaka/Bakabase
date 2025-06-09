@@ -7,13 +7,11 @@ import {
   AiOutlineWarning,
 } from 'react-icons/ai';
 import _ from 'lodash';
-import React, { useEffect, useState } from 'react';
-import { MdOutlineAutoMode } from 'react-icons/md';
+import React, { useEffect } from 'react';
 import {
   Alert,
   Button,
   Checkbox,
-  Chip,
   Divider,
   Modal,
   Snippet,
@@ -28,17 +26,13 @@ import {
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
 import BApi from '@/sdk/BApi';
-import { DownloadTaskParserSource, downloadTaskParserSources, ThirdPartyId } from '@/sdk/constants';
-import type { components } from '@/sdk/BApi2';
+import { PostParserSource, postParserSources, ThirdPartyId } from '@/sdk/constants';
 import store from '@/store';
 import ConfigurationModal from '@/pages/PostParser/components/ConfigurationModal';
 import ThirdPartyIcon from '@/components/ThirdPartyIcon';
 
-type Task = components['schemas']['Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask']
-  ;
-
-const ThirdPartyMap: Record<DownloadTaskParserSource, ThirdPartyId> = {
-  [DownloadTaskParserSource.SoulPlus]: ThirdPartyId.SoulPlus,
+const ThirdPartyMap: Record<PostParserSource, ThirdPartyId> = {
+  [PostParserSource.SoulPlus]: ThirdPartyId.SoulPlus,
 };
 
 export default () => {
@@ -46,14 +40,9 @@ export default () => {
   const { createPortal } = useBakabaseContext();
   const thirdPartyOptions = store.useModelState('thirdPartyOptions');
 
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const loadAllTasks = async () => {
-    const r = (await BApi.downloadTaskParseTask.getAllDownloadTaskParseTasks()).data ?? [];
-    setTasks(r);
-  };
+  const tasks = store.useModelState('postParserTasks');
 
   useEffect(() => {
-    loadAllTasks();
   }, []);
 
   return (
@@ -72,7 +61,7 @@ export default () => {
                 title: t('Add tasks'),
                 children: (
                   <div>
-                    {downloadTaskParserSources.map(s => {
+                    {postParserSources.map(s => {
                       return (
                         <Textarea
                           onValueChange={v => {
@@ -91,7 +80,7 @@ https://xxxxxxx
                 ),
                 onOk: async () => {
                   const linksMap = _.mapValues(linksTextMap, value => value.split('\n').map(x => x.trim()).filter(x => x));
-                  await BApi.downloadTaskParseTask.addDownloadTaskParseTasks(linksMap);
+                  await BApi.postParser.addPostParserTasks(linksMap);
                 },
               });
             }}
@@ -115,7 +104,12 @@ https://xxxxxxx
             // variant={'flat'}
             color={'secondary'}
             isSelected={thirdPartyOptions.automaticallyParsingPosts}
-            onValueChange={v => BApi.options.patchThirdPartyOptions({ automaticallyParsingPosts: v })}
+            onValueChange={async v => {
+              const r = await BApi.options.patchThirdPartyOptions({ automaticallyParsingPosts: v });
+              if (v && !r.code) {
+                await BApi.postParser.startAllPostParserTasks();
+              }
+            }}
           >
             {t('Automatically parsing')}
           </Checkbox>
@@ -133,21 +127,31 @@ https://xxxxxxx
                     <Alert
                       description={(
                         <div>
-                          <div>本功能内部使用curl，如果您的系统级curl低于8.14版本，请先在系统配置中配置正确的curl路径。</div>
-                          <div>配置请求间隔暂时无法配置，默认内置间隔为3秒。</div>
+                          <div>{t('This feature internally uses curl. If your system-level curl version is lower than 8.14, please configure the correct curl path in the system settings.')}</div>
+                          <div>{t('The request interval configuration is temporarily unavailable. The built-in default interval is 3 seconds.')}</div>
                         </div>
                       )}
-                      title={'curl'}
+                      title={t('curl')}
                     />
                     <Alert
                       description={(
                         <div>
-                          <div>本功能内部使用ollama，您需要先安装并运行ollama，并安装至少1个模型，然后在系统配置中配置ollama的api地址。</div>
-                          <div>本功能会优先使用ollama模型列表中最大的模型。</div>
-                          <div>目前deepseek-r1:14b,32b已经过测试，可放心使用。</div>
+                          <div>{t('This feature internally uses Ollama. You need to install and run Ollama first, and install at least one model. Then configure the Ollama API address in the system settings.')}</div>
+                          <div>{t('This feature will prioritize the largest model in the Ollama model list.')}</div>
+                          <div>{t('Currently, deepseek-r1:14b and 32b have been tested and can be used safely.')}</div>
                         </div>
                       )}
-                      title={'ollama'}
+                      title={t('ollama')}
+                    />
+                    <Alert
+                      color={'success'}
+                      variant={'flat'}
+                      description={(
+                        <div>
+                          <div>{t('Some sites can integrate quick actions through the browser (such as one-click task creation). You can check the "Third-Party Integrations" section.')}</div>
+                        </div>
+                      )}
+                      title={t('browser integrations')}
                     />
                   </div>
                 ),
@@ -171,7 +175,7 @@ https://xxxxxxx
           <TableHeader>
             <TableColumn>{t('#')}</TableColumn>
             <TableColumn>{t('Target')}</TableColumn>
-            <TableColumn>{t('Content')}</TableColumn>
+            {/* <TableColumn>{t('Content')}</TableColumn> */}
             <TableColumn>{t('Items')}</TableColumn>
             <TableColumn>{t('ParsedAt')}</TableColumn>
             <TableColumn>{t('Operations')}</TableColumn>
@@ -223,22 +227,22 @@ https://xxxxxxx
                       </div>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {task.content && (
-                      <Button onPress={() => {
-                        createPortal(Modal, {
-                          size: 'xl',
-                          defaultVisible: true,
-                          children: (
-                            <pre>{task.content}</pre>
-                          ),
-                        });
-                      }}
-                      >
-                        {t('View')}
-                      </Button>
-                    )}
-                  </TableCell>
+                  {/* <TableCell> */}
+                  {/*   {task.content && ( */}
+                  {/*     <Button onPress={() => { */}
+                  {/*       createPortal(Modal, { */}
+                  {/*         size: 'xl', */}
+                  {/*         defaultVisible: true, */}
+                  {/*         children: ( */}
+                  {/*           <pre>{task.content}</pre> */}
+                  {/*         ), */}
+                  {/*       }); */}
+                  {/*     }} */}
+                  {/*     > */}
+                  {/*       {t('View')} */}
+                  {/*     </Button> */}
+                  {/*   )} */}
+                  {/* </TableCell> */}
                   <TableCell>{task.items?.map((item, idx) => {
                     return (
                       <React.Fragment key={idx}>
@@ -282,9 +286,8 @@ https://xxxxxxx
                               actions: ['cancel'],
                             },
                           });
-                          }}
+                        }}
                         size={'sm'}
-
                         variant={'light'}
                         color={'danger'}
                         isIconOnly
@@ -301,8 +304,7 @@ https://xxxxxxx
                         size={'sm'}
                         variant={'light'}
                         onPress={async () => {
-                          await BApi.downloadTaskParseTask.deleteDownloadTaskParseTask(task.id);
-                          setTasks(tasks.filter(x => x.id != task.id));
+                          await BApi.postParser.deletePostParserTask(task.id);
                         }}
                       >
                         <AiOutlineDelete className={'text-medium'} />

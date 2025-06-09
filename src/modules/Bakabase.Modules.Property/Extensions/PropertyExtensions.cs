@@ -145,19 +145,19 @@ public static class PropertyExtensions
     public static bool IsReferenceValueType(this PropertyType type) =>
         PropertyInternals.PropertyAttributeMap[type].IsReferenceValueType;
 
-    public static void SetAllowAddingNewDataDynamically(this Bakabase.Abstractions.Models.Domain.Property property,
-        bool enable)
-    {
-        if (property.Options?.GetType() != PropertyInternals.DescriptorMap[property.Type].OptionsType)
-        {
-            property.Options = PropertyInternals.DescriptorMap[property.Type].InitializeOptions();
-        }
-
-        if (property.Options is IAllowAddingNewDataDynamically options)
-        {
-            options.AllowAddingNewDataDynamically = enable;
-        }
-    }
+    // public static void SetAllowAddingNewDataDynamically(this Bakabase.Abstractions.Models.Domain.Property property,
+    //     bool enable)
+    // {
+    //     if (property.Options?.GetType() != PropertyInternals.DescriptorMap[property.Type].OptionsType)
+    //     {
+    //         property.Options = PropertyInternals.DescriptorMap[property.Type].InitializeOptions();
+    //     }
+    //
+    //     if (property.Options is IAllowAddingNewDataDynamically options)
+    //     {
+    //         options.AllowAddingNewDataDynamically = enable;
+    //     }
+    // }
 
     public static CustomProperty ToCustomProperty(this Bakabase.Abstractions.Models.Domain.Property property)
     {

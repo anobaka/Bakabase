@@ -11,7 +11,7 @@ namespace Bakabase.Modules.Property.Abstractions.Services;
 
 public interface ICustomPropertyService
 {
-    Task<BaseResponse> EnableAddingNewDataDynamically(int id);
+    // Task<BaseResponse> EnableAddingNewDataDynamically(int id);
 
     Task<List<Bakabase.Abstractions.Models.Domain.CustomProperty>> GetAll(
         Expression<Func<CustomPropertyDbModel, bool>>? selector = null,

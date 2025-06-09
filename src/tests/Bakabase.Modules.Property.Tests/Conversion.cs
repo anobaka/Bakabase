@@ -80,10 +80,10 @@ namespace Bakabase.Modules.Property.Tests
 
                 var customProperties = await customPropertyService.AddRange(fromPropertiesAddModels.ToArray());
 
-                foreach (var cp in customProperties)
-                {
-                    await customPropertyService.EnableAddingNewDataDynamically(cp.Id);
-                }
+                // foreach (var cp in customProperties)
+                // {
+                //     await customPropertyService.EnableAddingNewDataDynamically(cp.Id);
+                // }
 
                 customProperties = await customPropertyService.GetByKeys(customProperties.Select(c => c.Id));
 

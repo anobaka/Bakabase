@@ -66,7 +66,7 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
             new MultipleChoicePropertyOptions
             {
                 Choices = options?.Choices,
-                AllowAddingNewDataDynamically = options?.AllowAddingNewDataDynamically ?? false,
+                // AllowAddingNewDataDynamically = options?.AllowAddingNewDataDynamically ?? false,
                 DefaultValue = string.IsNullOrEmpty(options?.DefaultValue) ? null : [options.DefaultValue]
             }, p.Order);
     }
@@ -77,7 +77,7 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
         bizValue = bizValue.Trim();
         if (!string.IsNullOrEmpty(bizValue))
         {
-            property.Options ??= new SingleChoicePropertyOptions {AllowAddingNewDataDynamically = true};
+            property.Options ??= new SingleChoicePropertyOptions();
             var options = (property.Options as SingleChoicePropertyOptions)!;
             var propertyChanged = options.AddChoices(true, [bizValue], null);
             var stringValue = options.Choices?.Find(x => x.Label == bizValue)?.Value;

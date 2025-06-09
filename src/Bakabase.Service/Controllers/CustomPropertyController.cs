@@ -149,12 +149,12 @@ namespace Bakabase.Service.Controllers
             return await service.ChangeType(id, type);
         }
 
-        [HttpPut("{id:int}/options/adding-new-data-dynamically")]
-        [SwaggerOperation(OperationId = "EnableAddingNewDataDynamicallyForCustomProperty")]
-        public async Task<BaseResponse> EnableAddingNewDataDynamically(int id)
-        {
-            return await service.EnableAddingNewDataDynamically(id);
-        }
+        // [HttpPut("{id:int}/options/adding-new-data-dynamically")]
+        // [SwaggerOperation(OperationId = "EnableAddingNewDataDynamicallyForCustomProperty")]
+        // public async Task<BaseResponse> EnableAddingNewDataDynamically(int id)
+        // {
+        //     return await service.EnableAddingNewDataDynamically(id);
+        // }
 
         [HttpGet("{id:int}/value-usage")]
         [SwaggerOperation(OperationId = "GetCustomPropertyValueUsage")]
@@ -205,7 +205,7 @@ namespace Bakabase.Service.Controllers
                 };
 
                 var fakeInProperty = new Property(PropertyPool.Custom, 0, @in.Type);
-                fakeInProperty.SetAllowAddingNewDataDynamically(true);
+                // fakeInProperty.SetAllowAddingNewDataDynamically(true);
 
                 var inBizValue = @in.SerializedBizValue?.DeserializeAsStandardValue(inPropertyDescriptor.BizValueType);
 

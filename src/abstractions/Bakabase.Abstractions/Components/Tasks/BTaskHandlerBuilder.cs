@@ -4,7 +4,7 @@ using Bakabase.Abstractions.Models.Domain;
 
 namespace Bakabase.Abstractions.Components.Tasks;
 
-public class BTaskHandlerBuilder
+public record BTaskHandlerBuilder
 {
     public required Func<string> GetName { get; init; }
     public Func<string?>? GetDescription { get; set; }

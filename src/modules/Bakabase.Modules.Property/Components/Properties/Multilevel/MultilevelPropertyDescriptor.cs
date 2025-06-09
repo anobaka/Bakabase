@@ -51,9 +51,7 @@ public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<Multileve
         if (bizValue.Any())
         {
             bizValue.TrimAll();
-            var options =
-                ((property.Options ??= new MultilevelPropertyOptions() {AllowAddingNewDataDynamically = true}) as
-                    MultilevelPropertyOptions)!;
+            var options = ((property.Options ??= new MultilevelPropertyOptions()) as MultilevelPropertyOptions)!;
             if (options.ValueIsSingleton)
             {
                 bizValue = bizValue.Take(1).ToList();

@@ -12,6 +12,7 @@ import appUpdaterState from '@/models/appUpdaterState';
 import appContext from '@/models/appContext';
 import bulkModificationInternals from '@/models/bulkModificationInternals';
 import bTasks from '@/models/bTasks';
+import postParserTasks from '@/models/postParserTasks';
 
 const {
   appOptions,
@@ -42,6 +43,7 @@ export default createStore({
   appContext,
   bulkModificationInternals,
   bTasks,
+  postParserTasks,
 
   appOptions,
   uiOptions,

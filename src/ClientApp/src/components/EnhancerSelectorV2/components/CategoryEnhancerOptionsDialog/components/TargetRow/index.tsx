@@ -238,7 +238,7 @@ export default (props: Props) => {
                 <PropertyTip
                   property={property}
                   category={category}
-                  onAllowAddingNewDataDynamicallyEnabled={onPropertyChanged}
+                  // onAllowAddingNewDataDynamicallyEnabled={onPropertyChanged}
                   onPropertyBoundToCategory={onCategoryChanged}
                 />
                 <Tooltip

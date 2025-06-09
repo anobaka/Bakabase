@@ -62,6 +62,19 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
         };
     }
 
+    private static SingleChoicePropertyOptions BuildOptionsForMediaLibraryV2(List<MediaLibraryV2> mediaLibraries)
+    {
+        return new SingleChoicePropertyOptions
+        {
+            Choices = mediaLibraries.Select(m => new ChoiceOptions
+            {
+                Color = null,
+                Label = m.Name,
+                Value = m.Id.ToString()
+            }).ToList(),
+        };
+    }
+
     public async Task<Bakabase.Abstractions.Models.Domain.Property> GetProperty(PropertyPool pool, int id)
     {
         switch (pool)
@@ -76,6 +89,7 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
 
                 Dictionary<int, Category>? categoryMap = null;
                 List<MediaLibrary>? mediaLibraries = null;
+                List<MediaLibraryV2>? mediaLibrariesV2 = null;
 
                 if (rp == ResourceProperty.Category || rp == ResourceProperty.MediaLibrary)
                 {
@@ -91,6 +105,12 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                         await mediaLibraryService.GetAll(null, MediaLibraryAdditionalItem.Category);
                 }
 
+                if (rp == ResourceProperty.MediaLibraryV2)
+                {
+                    var mediaLibraryService = serviceProvider.GetRequiredService<IMediaLibraryV2Service>();
+                    mediaLibrariesV2 = await mediaLibraryService.GetAll();
+                }
+
                 switch ((InternalProperty) id)
                 {
                     case InternalProperty.Category:
@@ -101,6 +121,11 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                     case InternalProperty.MediaLibrary:
                     {
                         tmpProperty.Options = BuildOptionsForMediaLibrary(categoryMap!, mediaLibraries!);
+                        break;
+                    }
+                    case InternalProperty.MediaLibraryV2:
+                    {
+                        tmpProperty.Options = BuildOptionsForMediaLibraryV2(mediaLibrariesV2!);
                         break;
                     }
                     case InternalProperty.RootPath:
@@ -148,6 +173,8 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                         var mediaLibraryService = serviceProvider.GetRequiredService<IMediaLibraryService>();
                         var mediaLibraries =
                             await mediaLibraryService.GetAll(null, MediaLibraryAdditionalItem.Category);
+                        var mediaLibraryServiceV2 = serviceProvider.GetRequiredService<IMediaLibraryV2Service>();
+                        var mediaLibrariesV2 = await mediaLibraryServiceV2.GetAll();
                         var internalProperties = PropertyInternals.InternalPropertyMap.Values.Select(v =>
                         {
                             var tmpProperty = v with
@@ -164,6 +191,11 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                                 case InternalProperty.MediaLibrary:
                                 {
                                     tmpProperty.Options = BuildOptionsForMediaLibrary(categoryMap!, mediaLibraries!);
+                                    break;
+                                }
+                                case InternalProperty.MediaLibraryV2:
+                                {
+                                    tmpProperty.Options = BuildOptionsForMediaLibraryV2(mediaLibrariesV2);
                                     break;
                                 }
                                 case InternalProperty.RootPath:

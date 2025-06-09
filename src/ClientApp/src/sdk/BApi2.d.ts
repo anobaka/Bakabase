@@ -1049,23 +1049,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/download-task-parse-task/all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetAllDownloadTaskParseTasks"];
-        put?: never;
-        post?: never;
-        delete: operations["DeleteAllDownloadTaskParseTasks"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/download-task-parse-task": {
+    "/download-task/exhentai": {
         parameters: {
             query?: never;
             header?: never;
@@ -1074,39 +1058,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["AddDownloadTaskParseTasks"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/download-task-parse-task/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["DeleteDownloadTaskParseTask"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/download-task-parse-task/start": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["StartAllDownloadTaskParseTasks"];
+        post: operations["AddExHentaiDownloadTask"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2129,7 +2081,7 @@ export interface paths {
             cookie?: never;
         };
         get: operations["GetAppOptions"];
-        put?: never;
+        put: operations["PutAppOptions"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2329,6 +2281,22 @@ export interface paths {
         patch: operations["PatchAIOptions"];
         trace?: never;
     };
+    "/options/soulplus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSoulPlusOptions"];
+        put: operations["PutSoulPlusOptions"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PatchSoulPlusOptions"];
+        trace?: never;
+    };
     "/password": {
         parameters: {
             query?: never;
@@ -2435,6 +2403,70 @@ export interface paths {
         get: operations["GetPlaylistFiles"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllPostParserTasks"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteAllPostParserTasks"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddPostParserTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/task/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeletePostParserTask"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/post-parser/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartAllPostParserTasks"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2915,6 +2947,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["PretreatText"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Tampermonkey/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["InstallTampermonkeyScript"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/Tampermonkey/script/{script}.user.js": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTampermonkeyScript"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3689,6 +3753,8 @@ export interface components {
             enableAnonymousDataTracking?: boolean;
             closeBehavior?: components["schemas"]["Bakabase.Infrastructures.Components.Gui.CloseBehavior"];
             uiTheme?: components["schemas"]["Bakabase.Infrastructures.Components.Gui.UiTheme"];
+            /** Format: int32 */
+            listeningPort?: number;
         };
         "Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel": {
             dataPath: string;
@@ -3724,6 +3790,8 @@ export interface components {
             prevDataPath?: string;
             closeBehavior: components["schemas"]["Bakabase.Infrastructures.Components.Gui.CloseBehavior"];
             uiTheme: components["schemas"]["Bakabase.Infrastructures.Components.Gui.UiTheme"];
+            /** Format: int32 */
+            listeningPort?: number;
         };
         /**
          * Format: int32
@@ -3754,30 +3822,6 @@ export interface components {
             version: string;
             description?: string;
             canUpdate: boolean;
-        };
-        /**
-         * Format: int32
-         * @description [1: SoulPlus]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.Constants.DownloadTaskParserSource": 1;
-        "Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask": {
-            /** Format: int32 */
-            id: number;
-            source: components["schemas"]["Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.Constants.DownloadTaskParserSource"];
-            link: string;
-            title?: string;
-            content?: string;
-            /** Format: date-time */
-            parsedAt?: string;
-            items?: components["schemas"]["Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask+Item"][];
-            error?: string;
-        };
-        "Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask+Item": {
-            title: string;
-            link?: string;
-            accessCode?: string;
-            decompressionPassword?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskDeleteInputModel": {
             ids?: number[];
@@ -3829,6 +3873,36 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsType": 0 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 1000 | 10000;
+        /**
+         * Format: int32
+         * @description [5: SoulPlus]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource": 5;
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask": {
+            /** Format: int32 */
+            id: number;
+            source: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants.PostParserSource"];
+            link: string;
+            title?: string;
+            content?: string;
+            /** Format: date-time */
+            parsedAt?: string;
+            items?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask+Item"][];
+            error?: string;
+        };
+        "Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask+Item": {
+            title: string;
+            link?: string;
+            accessCode?: string;
+            decompressionPassword?: string;
+        };
+        /**
+         * Format: int32
+         * @description [1: SoulPlus, 2: ExHentai]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript": 1 | 2;
         "Bakabase.InsideWorld.Business.Configurations.Models.Domain.AiOptions": {
             ollamaEndpoint?: string;
         };
@@ -3968,9 +4042,15 @@ export interface components {
             cookie?: string;
             downloader?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.Infrastructures.CommonDownloaderOptions"];
         };
+        "Bakabase.InsideWorld.Models.Configs.SoulPlusOptions": {
+            cookie?: string;
+            /** Format: int32 */
+            autoBuyThreshold: number;
+        };
         "Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions": {
             simpleSearchEngines?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions+SimpleSearchEngineOptions"][];
             curlExecutable?: string;
+            automaticallyParsingPosts: boolean;
         };
         "Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions+SimpleSearchEngineOptions": {
             name: string;
@@ -4098,6 +4178,12 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Models.Constants.DownloadTaskStatus": 100 | 200 | 300 | 400;
+        /**
+         * Format: int32
+         * @description [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Models.Constants.ExHentaiDownloadTaskType": 1 | 2 | 3 | 4;
         /**
          * Format: int32
          * @description [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied]
@@ -4264,6 +4350,7 @@ export interface components {
             current: string;
             /** Format: int32 */
             failureTimes: number;
+            autoRetry: boolean;
             /** Format: date-time */
             nextStartDt?: string;
             availableActions: components["schemas"]["Bakabase.InsideWorld.Models.Constants.DownloadTaskAction"][];
@@ -4326,6 +4413,7 @@ export interface components {
             message?: string;
             checkpoint?: string;
             status: components["schemas"]["Bakabase.InsideWorld.Models.Constants.DownloadTaskStatus"];
+            autoRetry: boolean;
             downloadPath: string;
             readonly displayName: string;
         };
@@ -4356,12 +4444,17 @@ export interface components {
             /** Format: int32 */
             endPage?: number;
             checkpoint?: string;
+            autoRetry: boolean;
             forceCreating: boolean;
             downloadPath: string;
         };
         "Bakabase.InsideWorld.Models.RequestModels.DownloadTaskStartRequestModel": {
             ids: number[];
             actionOnConflict: components["schemas"]["Bakabase.InsideWorld.Models.Constants.DownloadTaskActionOnConflict"];
+        };
+        "Bakabase.InsideWorld.Models.RequestModels.ExHentaiDownloadTaskAddInputModel": {
+            type: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ExHentaiDownloadTaskType"];
+            link: string;
         };
         "Bakabase.InsideWorld.Models.RequestModels.FileDecompressRequestModel": {
             paths: string[];
@@ -4403,6 +4496,20 @@ export interface components {
             /** Format: int32 */
             mediaLibraryId: number;
             path?: string;
+        };
+        "Bakabase.InsideWorld.Models.RequestModels.SoulPlusOptionsPatchInputModel": {
+            cookie?: string;
+            /** Format: int32 */
+            autoBuyThreshold?: number;
+        };
+        "Bakabase.InsideWorld.Models.RequestModels.ThirdPartyOptionsPatchInput": {
+            simpleSearchEngines?: components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ThirdPartyOptionsPatchInput+SimpleSearchEngineOptionsPatchInput"][];
+            curlExecutable?: string;
+            automaticallyParsingPosts?: boolean;
+        };
+        "Bakabase.InsideWorld.Models.RequestModels.ThirdPartyOptionsPatchInput+SimpleSearchEngineOptionsPatchInput": {
+            name?: string;
+            urlTemplate?: string;
         };
         "Bakabase.InsideWorld.Models.RequestModels.UIOptionsPatchRequestModel": {
             resource?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+UIResourceOptions"];
@@ -4892,11 +4999,11 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Compression.CompressedFileEntry"][];
         };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask]": {
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]": {
             /** Format: int32 */
             code: number;
             message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask"][];
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Aos.PreviewerItem]": {
             /** Format: int32 */
@@ -4915,6 +5022,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.PlaylistDto"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.DownloadTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.DownloadTask"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]": {
             /** Format: int32 */
@@ -5251,6 +5364,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.PixivOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.SoulPlusOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.SoulPlusOptions"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions]": {
             /** Format: int32 */
@@ -7993,9 +8112,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.DownloadTask]"];
                 };
             };
         };
@@ -8188,51 +8307,7 @@ export interface operations {
             };
         };
     };
-    GetAllDownloadTaskParseTasks: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.DownloadTaskParseTask]"];
-                };
-            };
-        };
-    };
-    DeleteAllDownloadTaskParseTasks: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    AddDownloadTaskParseTasks: {
+    AddExHentaiDownloadTask: {
         parameters: {
             query?: never;
             header?: never;
@@ -8241,66 +8316,12 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": {
-                    [key: string]: string[];
-                };
-                "application/json": {
-                    [key: string]: string[];
-                };
-                "text/json": {
-                    [key: string]: string[];
-                };
-                "application/*+json": {
-                    [key: string]: string[];
-                };
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ExHentaiDownloadTaskAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ExHentaiDownloadTaskAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ExHentaiDownloadTaskAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ExHentaiDownloadTaskAddInputModel"];
             };
         };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    DeleteDownloadTaskParseTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    StartAllDownloadTaskParseTasks: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -10410,6 +10431,35 @@ export interface operations {
             };
         };
     };
+    PutAppOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Infrastructures.Components.Configurations.App.AppOptions"];
+                "application/json": components["schemas"]["Bakabase.Infrastructures.Components.Configurations.App.AppOptions"];
+                "text/json": components["schemas"]["Bakabase.Infrastructures.Components.Configurations.App.AppOptions"];
+                "application/*+json": components["schemas"]["Bakabase.Infrastructures.Components.Configurations.App.AppOptions"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     PatchAppOptions: {
         parameters: {
             query?: never;
@@ -10856,10 +10906,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.ThirdPartyOptions"];
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ThirdPartyOptionsPatchInput"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ThirdPartyOptionsPatchInput"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ThirdPartyOptionsPatchInput"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.ThirdPartyOptionsPatchInput"];
             };
         };
         responses: {
@@ -11093,6 +11143,86 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.AiOptions"];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.AiOptions"];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Configurations.Models.Domain.AiOptions"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetSoulPlusOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.SoulPlusOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.SoulPlusOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.SoulPlusOptions]"];
+                };
+            };
+        };
+    };
+    PutSoulPlusOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.SoulPlusOptions"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.SoulPlusOptions"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.SoulPlusOptions"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.SoulPlusOptions"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    PatchSoulPlusOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.SoulPlusOptionsPatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.SoulPlusOptionsPatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.SoulPlusOptionsPatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.SoulPlusOptionsPatchInputModel"];
             };
         };
         responses: {
@@ -11357,6 +11487,133 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Collections.Generic.List`1[System.String]]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Collections.Generic.List`1[System.String]]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Collections.Generic.List`1[System.String]]"];
+                };
+            };
+        };
+    };
+    GetAllPostParserTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]"];
+                };
+            };
+        };
+    };
+    DeleteAllPostParserTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    AddPostParserTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": {
+                    [key: string]: string[];
+                };
+                "application/json": {
+                    [key: string]: string[];
+                };
+                "text/json": {
+                    [key: string]: string[];
+                };
+                "application/*+json": {
+                    [key: string]: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeletePostParserTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    StartAllPostParserTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -12255,6 +12512,52 @@ export interface operations {
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
                 };
+            };
+        };
+    };
+    InstallTampermonkeyScript: {
+        parameters: {
+            query?: {
+                /** @description [1: SoulPlus, 2: ExHentai] */
+                script?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetTampermonkeyScript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description [1: SoulPlus, 2: ExHentai] */
+                script: components["schemas"]["Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

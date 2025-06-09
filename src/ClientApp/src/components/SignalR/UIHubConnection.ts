@@ -50,6 +50,9 @@ export default class UIHubConnection {
         case 'BTask':
           store.dispatch.bTasks.setState(data);
           break;
+        case 'PostParserTask':
+          store.dispatch.postParserTasks.setState(data);
+          break;
       }
     });
 
@@ -72,8 +75,27 @@ export default class UIHubConnection {
         case 'BTask':
           store.dispatch.bTasks.update(data);
           break;
+        case 'PostParserTask':
+          store.dispatch.postParserTasks.update(data);
+          break;
       }
     });
+
+    conn.on('DeleteData', (key, id) => {
+      switch (key) {
+        case 'PostParserTask':
+          store.dispatch.postParserTasks.delete(id);
+          break;
+      }
+    });
+    conn.on('DeleteAllData', (key) => {
+      switch (key) {
+        case 'PostParserTask':
+          store.dispatch.postParserTasks.deleteAll();
+          break;
+      }
+    });
+
 
     conn.on('GetResponse', (rsp) => {
       if (rsp.code == 0) {

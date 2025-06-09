@@ -18,7 +18,7 @@ namespace Bakabase.Modules.Property.Extensions
         public static bool AddChoices<T>(this ChoicePropertyOptions<T> options, bool ignoreSameValue,
             string[] values, string[]? dbValues)
         {
-            if (options.AllowAddingNewDataDynamically)
+            // if (options.AllowAddingNewDataDynamically)
             {
                 var goodValues = values.TrimAndRemoveEmpty()?.ToArray();
                 if (goodValues?.Any() == true)

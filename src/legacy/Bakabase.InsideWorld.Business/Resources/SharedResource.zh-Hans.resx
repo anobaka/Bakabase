@@ -405,7 +405,7 @@
   <data name="DeletingInvalidResources" xml:space="preserve">
     <value>正在删除{0}个无效资源</value>
   </data>
-  <data name="DownloadTaskParser_ParseAll_TaskName" xml:space="preserve">
+  <data name="PostParser_ParseAll_TaskName" xml:space="preserve">
     <value>解析帖子</value>
   </data>
 </root>

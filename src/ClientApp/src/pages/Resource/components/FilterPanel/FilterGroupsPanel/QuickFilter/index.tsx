@@ -11,6 +11,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 const quickFilterMap = {
   [ResourceProperty.MediaLibrary]: SearchOperation.In,
   [ResourceProperty.Filename]: SearchOperation.Contains,
+  [ResourceProperty.MediaLibraryV2]: SearchOperation.In,
 };
 
 type Props = {
@@ -54,7 +55,6 @@ export default ({ onAdded }: Props) => {
                     propertyId: p.id,
                   })
                 ).data ?? [];
-
                 const newFilter: ResourceSearchFilter = {
                   propertyId: p.id,
                   operation: operation,
@@ -63,7 +63,6 @@ export default ({ onAdded }: Props) => {
                   valueProperty: vp,
                   availableOperations,
                 };
-
                 onAdded(newFilter);
               }}
             >

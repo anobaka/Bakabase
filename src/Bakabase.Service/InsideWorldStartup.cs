@@ -20,11 +20,11 @@ using Bakabase.InsideWorld.Business.Components.Downloader;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsValidator;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
-using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
+using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
 using Bakabase.InsideWorld.Business.Configurations;
@@ -143,7 +143,7 @@ namespace Bakabase.Service
             var logger = app.ApplicationServices.GetRequiredService<ILogger<InsideWorldStartup>>();
             logger.LogInformation($"Using app data directory: {AppService.DefaultAppDataDirectory}");
 
-            app.ConfigureDownloadTaskParser();
+            app.ConfigurePostParser();
 
             // todo: merge gui configuration
             app.ApplicationServices.GetRequiredService<WebGuiHubConfigurationAdapter>().Initialize();

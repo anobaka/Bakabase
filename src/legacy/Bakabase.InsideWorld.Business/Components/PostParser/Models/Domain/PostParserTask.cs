@@ -1,13 +1,13 @@
-﻿using Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain.Constants;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.Constants;
 
-namespace Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Domain;
+namespace Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 
-public record DownloadTaskParseTask
+public record PostParserTask
 {
     public int Id { get; set; }
-    public DownloadTaskParserSource Source { get; set; }
+    public PostParserSource Source { get; set; }
     public string Link { get; set; } = null!;
     public string? Title { get; set; }
     public string? Content { get; set; }

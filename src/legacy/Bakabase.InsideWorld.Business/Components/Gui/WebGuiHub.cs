@@ -16,6 +16,8 @@ using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.FileMover.Models;
+using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.PostParser.Services;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Models.View;
 using Bakabase.InsideWorld.Business.Services;
@@ -37,6 +39,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
     {
         Task GetData(string key, object data);
         Task GetIncrementalData(string key, object data);
+        Task DeleteData(string key, object id);
+        Task DeleteAllData(string key);
         Task OptionsChanged(string optionsName, object options);
         Task GetResponse(BaseResponse rsp);
         Task IwFsEntriesChange(List<IwFsEntryChangeEvent> events, CancellationToken ct);
@@ -53,12 +57,13 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly AppUpdater _appUpdater;
         private readonly AppContext _appContext;
         private readonly BTaskManager _bTaskManager;
+        private readonly IPostParserTaskService _postParserTaskService;
 
         public WebGuiHub(
             DownloadTaskService downloadTaskService,
             InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
             IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover,
-            AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager)
+            AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager, IPostParserTaskService postParserTaskService)
         {
             _downloadTaskService = downloadTaskService;
             _optionsManagerPool = optionsManagerPool;
@@ -68,6 +73,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             _appUpdater = appUpdater;
             _appContext = appContext;
             _bTaskManager = bTaskManager;
+            _postParserTaskService = postParserTaskService;
         }
 
         public async Task GetInitialData()
@@ -98,6 +104,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             await Clients.Caller.GetData(nameof(BulkModificationInternals), new BulkModificationInternalsViewModel());
 
             await Clients.Caller.GetData("BTask", _bTaskManager.GetTasksViewModel());
+
+            await Clients.Caller.GetData(nameof(PostParserTask), await _postParserTaskService.GetAll());
         }
     }
 }

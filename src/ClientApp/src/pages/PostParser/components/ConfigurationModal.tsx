@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import type { TextareaProps } from '@/components/bakaui';
 import { Modal, NumberInput, Tab, Tabs, Textarea } from '@/components/bakaui';
 import store from '@/store';
 import BApi from '@/sdk/BApi';

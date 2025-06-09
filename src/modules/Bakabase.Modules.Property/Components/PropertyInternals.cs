@@ -84,6 +84,8 @@ public record PropertyInternals
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
                     (int) ResourceProperty.Category, PropertyType.SingleChoice),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
+                    (int) ResourceProperty.MediaLibraryV2, PropertyType.SingleChoice),
+                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
                     (int) ResourceProperty.MediaLibrary, PropertyType.Multilevel),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
                     (int) ResourceProperty.PlayedAt, PropertyType.DateTime),
@@ -106,7 +108,8 @@ public record PropertyInternals
                 ResourceProperty.FileModifiedAt,
                 ResourceProperty.Category,
                 ResourceProperty.MediaLibrary,
-                ResourceProperty.PlayedAt
+                ResourceProperty.PlayedAt,
+                ResourceProperty.MediaLibraryV2
             }.ToDictionary(d => d, d => BuiltinPropertyMap[d]));
 
     public static readonly ConcurrentDictionary<ReservedProperty, Bakabase.Abstractions.Models.Domain.Property>

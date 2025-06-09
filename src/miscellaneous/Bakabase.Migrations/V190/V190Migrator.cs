@@ -155,7 +155,7 @@ namespace Bakabase.Migrations.V190
                     Type = cpType,
                 });
 
-            await _customPropertyService.EnableAddingNewDataDynamically(cp.Id);
+            // await _customPropertyService.EnableAddingNewDataDynamically(cp.Id);
 
             cp = await _customPropertyService.GetByKey(cp.Id);
 

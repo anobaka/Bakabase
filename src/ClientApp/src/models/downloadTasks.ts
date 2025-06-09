@@ -1,5 +1,7 @@
+import type { DownloadTask } from '@/core/models/DownloadTask';
+
 export default {
-  state: [],
+  state: [] as DownloadTask[],
 
   // 定义改变该模型状态的纯函数
   reducers: {

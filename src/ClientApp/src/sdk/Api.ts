@@ -802,33 +802,6 @@ export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDepe
   canUpdate: boolean;
 }
 
-/**
- * [1: SoulPlus]
- * @format int32
- */
-export type BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainConstantsDownloadTaskParserSource = 1;
-
-export interface BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTask {
-  /** @format int32 */
-  id: number;
-  /** [1: SoulPlus] */
-  source: BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainConstantsDownloadTaskParserSource;
-  link: string;
-  title?: string;
-  content?: string;
-  /** @format date-time */
-  parsedAt?: string;
-  items?: BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTaskItem[];
-  error?: string;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTaskItem {
-  title: string;
-  link?: string;
-  accessCode?: string;
-  decompressionPassword?: string;
-}
-
 export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskDeleteInputModel {
   ids?: number[];
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
@@ -895,6 +868,33 @@ export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
   | 700
   | 1000
   | 10000;
+
+/**
+ * [5: SoulPlus]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource = 5;
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
+  /** @format int32 */
+  id: number;
+  /** [5: SoulPlus] */
+  source: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource;
+  link: string;
+  title?: string;
+  content?: string;
+  /** @format date-time */
+  parsedAt?: string;
+  items?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskItem[];
+  error?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTaskItem {
+  title: string;
+  link?: string;
+  accessCode?: string;
+  decompressionPassword?: string;
+}
 
 /**
  * [1: SoulPlus, 2: ExHentai]
@@ -1231,6 +1231,12 @@ export type BakabaseInsideWorldModelsConstantsDownloadTaskDtoStatus = 100 | 200 
 export type BakabaseInsideWorldModelsConstantsDownloadTaskStatus = 100 | 200 | 300 | 400;
 
 /**
+ * [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
+ * @format int32
+ */
+export type BakabaseInsideWorldModelsConstantsExHentaiDownloadTaskType = 1 | 2 | 3 | 4;
+
+/**
  * [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied]
  * @format int32
  */
@@ -1413,6 +1419,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
   current: string;
   /** @format int32 */
   failureTimes: number;
+  autoRetry: boolean;
   /** @format date-time */
   nextStartDt?: string;
   /** @uniqueItems true */
@@ -1487,6 +1494,7 @@ export interface BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
   checkpoint?: string;
   /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
   status: BakabaseInsideWorldModelsConstantsDownloadTaskStatus;
+  autoRetry: boolean;
   /** @minLength 1 */
   downloadPath: string;
   displayName: string;
@@ -1524,6 +1532,7 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequest
   /** @format int32 */
   endPage?: number;
   checkpoint?: string;
+  autoRetry: boolean;
   forceCreating: boolean;
   /** @minLength 1 */
   downloadPath: string;
@@ -1533,6 +1542,13 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestM
   ids: number[];
   /** [0: NotSet, 1: StopOthers, 2: Ignore] */
   actionOnConflict: BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsExHentaiDownloadTaskAddInputModel {
+  /** [1: SingleWork, 2: Watched, 3: List, 4: Torrent] */
+  type: BakabaseInsideWorldModelsConstantsExHentaiDownloadTaskType;
+  /** @minLength 1 */
+  link: string;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsFileDecompressRequestModel {
@@ -2225,11 +2241,11 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[];
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTask {
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
   /** @format int32 */
   code: number;
   message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTask[];
+  data?: BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem {
@@ -2251,6 +2267,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldModelsModelsEntitiesDownloadTask[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
@@ -5297,7 +5320,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesDownloadTask, any>({
         path: `/download-task`,
         method: "POST",
         body: data,
@@ -5431,84 +5454,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
-  };
-  downloadTaskParseTask = {
-    /**
-     * No description
-     *
-     * @tags DownloadTaskParseTask
-     * @name GetAllDownloadTaskParseTasks
-     * @request GET:/download-task-parse-task/all
-     */
-    getAllDownloadTaskParseTasks: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloadTaskParserModelsDomainDownloadTaskParseTask,
-        any
-      >({
-        path: `/download-task-parse-task/all`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
 
     /**
      * No description
      *
-     * @tags DownloadTaskParseTask
-     * @name DeleteAllDownloadTaskParseTasks
-     * @request DELETE:/download-task-parse-task/all
+     * @tags DownloadTask
+     * @name AddExHentaiDownloadTask
+     * @request POST:/download-task/exhentai
      */
-    deleteAllDownloadTaskParseTasks: (params: RequestParams = {}) =>
+    addExHentaiDownloadTask: (
+      data: BakabaseInsideWorldModelsRequestModelsExHentaiDownloadTaskAddInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/download-task-parse-task/all`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DownloadTaskParseTask
-     * @name AddDownloadTaskParseTasks
-     * @request POST:/download-task-parse-task
-     */
-    addDownloadTaskParseTasks: (data: Record<string, string[]>, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/download-task-parse-task`,
+        path: `/download-task/exhentai`,
         method: "POST",
         body: data,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DownloadTaskParseTask
-     * @name DeleteDownloadTaskParseTask
-     * @request DELETE:/download-task-parse-task/{id}
-     */
-    deleteDownloadTaskParseTask: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/download-task-parse-task/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DownloadTaskParseTask
-     * @name StartAllDownloadTaskParseTasks
-     * @request POST:/download-task-parse-task/start
-     */
-    startAllDownloadTaskParseTasks: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/download-task-parse-task/start`,
-        method: "POST",
         format: "json",
         ...params,
       }),
@@ -8242,6 +8204,87 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsListResponse1SystemCollectionsGenericList1SystemString, any>({
         path: `/playlist/${id}/files`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
+  postParser = {
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name GetAllPostParserTasks
+     * @request GET:/post-parser/task/all
+     */
+    getAllPostParserTasks: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask,
+        any
+      >({
+        path: `/post-parser/task/all`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name DeleteAllPostParserTasks
+     * @request DELETE:/post-parser/task/all
+     */
+    deleteAllPostParserTasks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task/all`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name AddPostParserTasks
+     * @request POST:/post-parser/task
+     */
+    addPostParserTasks: (data: Record<string, string[]>, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name DeletePostParserTask
+     * @request DELETE:/post-parser/task/{id}
+     */
+    deletePostParserTask: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/task/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PostParser
+     * @name StartAllPostParserTasks
+     * @request POST:/post-parser/start
+     */
+    startAllPostParserTasks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/post-parser/start`,
+        method: "POST",
         format: "json",
         ...params,
       }),

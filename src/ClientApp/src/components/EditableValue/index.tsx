@@ -18,7 +18,7 @@ type ComponentCommonProps<TValue> = {
 };
 
 type ViewerProps<TValue> = ComponentCommonProps<TValue> & {
-  isReadonly?: boolean;
+  isReadOnly?: boolean;
 };
 
 type EditorProps<TValue> = ComponentCommonProps<TValue> & {
@@ -54,7 +54,7 @@ function EditableValue<TValue,
   const [editingValue, setEditingValue] = useState<TValue>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // console.log(commonProps);
+  console.log(Viewer, viewerProps, commonProps);
 
   return (
     <div className={'flex items-center gap-2'}>
@@ -101,7 +101,7 @@ function EditableValue<TValue,
           <Viewer
             {...viewerProps as unknown as TViewerProps}
             {...commonProps}
-            isReadonly
+            isReadOnly
           />
           <Button
             variant={'light'}

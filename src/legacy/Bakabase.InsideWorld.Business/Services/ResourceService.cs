@@ -202,6 +202,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             InternalProperty.FileModifiedAt => r => r.FileModifiedAt,
                             InternalProperty.Category => r => r.CategoryId.ToString(),
                             InternalProperty.MediaLibrary => r => new List<string> {r.MediaLibraryId.ToString()},
+                            InternalProperty.MediaLibraryV2 => r => r.MediaLibraryId.ToString(),
                             _ => null
                         });
                         context.PropertyValueMap[PropertyPool.Internal] = getValue.Where(x => x.Value != null)

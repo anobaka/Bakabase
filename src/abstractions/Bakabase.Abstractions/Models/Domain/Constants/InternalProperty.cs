@@ -1,4 +1,6 @@
-﻿namespace Bakabase.Abstractions.Models.Domain.Constants;
+﻿using Bakabase.InsideWorld.Models.Constants;
+
+namespace Bakabase.Abstractions.Models.Domain.Constants;
 
 public enum InternalProperty
 {
@@ -12,4 +14,5 @@ public enum InternalProperty
     FileModifiedAt = 19,
     Category = 20,
     MediaLibrary = 21,
+    MediaLibraryV2 = ResourceProperty.MediaLibraryV2
 }

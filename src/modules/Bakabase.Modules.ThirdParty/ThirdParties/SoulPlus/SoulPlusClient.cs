@@ -16,47 +16,29 @@ using static Bakabase.Abstractions.Components.Configuration.InternalOptions;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
 
-public class SoulPlusClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IBOptions<ThirdPartyOptions> thirdPartyOptions, IBOptions<SoulPlusOptions> options)
+public class SoulPlusClient(
+    IHttpClientFactory httpClientFactory,
+    ILoggerFactory loggerFactory,
+    IBOptions<ThirdPartyOptions> thirdPartyOptions,
+    IBOptions<SoulPlusOptions> options)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
     public async Task<SoulPlusPost> GetPostAsync(string link)
     {
-        if (thirdPartyOptions.Value.CurlExecutable.IsNullOrEmpty())
+        var html = await GetHtml(link);
+
+        if (html.Contains("此帖被管理员关闭，暂时不能浏览") || html.Contains("用户被禁言,该主题自动屏蔽"))
         {
-            throw new Exception("Curl executable is not set");
+            throw new Exception("Post is deleted");
         }
 
-        if (options.Value.Cookie.IsNullOrEmpty())
-        {
-            throw new Exception("Cookie is not set");
-        }
-
-        var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = thirdPartyOptions.Value.CurlExecutable,
-                Arguments = $"""
-                             --cookie "{options.Value.Cookie}" -H "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0" {link}
-                             """,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                StandardOutputEncoding = Encoding.UTF8
-            }
-        };
-
-        process.Start();
-        await process.WaitForExitAsync();
-
-        var html = await process.StandardOutput.ReadToEndAsync();
         var cq = new CQ(html);
-        var topicContent = cq["#read_tpc"].Text();
+        var title = cq["#subject_tpc"].Text();
 
         var post = new SoulPlusPost
         {
-            Title = cq["#subject_tpc"].Text(),
-            Html = ""
+            Title = title,
+            Html = html,
         };
 
         var bought = cq[".s3.f12.fn"];
@@ -78,25 +60,7 @@ public class SoulPlusClient(IHttpClientFactory httpClientFactory, ILoggerFactory
                         ContentHtml = tpcContentElement.Html()
                     });
                 }
-                // var quote = b.Cq().Parent().Next("blockquote")!;
-                // var text = quote.Html();
-                //
-                // text = WebUtility.HtmlDecode(text);
-                //
-                // text = string.Join(Environment.NewLine, text.Split("<br />"));
-                // var passwordLines = text.Split('\n').Select(a => a.Trim()).Where(a =>
-                //     passwordPrefixes.Any(c => a.StartsWith(c, StringComparison.OrdinalIgnoreCase))).Select(c =>
-                //     passwordPrefixes.Aggregate(c, (current, p) => current.Replace(p, string.Empty))
-                //         .Trim(':', '：')).ToArray();
-                // if (passwordLines.Any())
-                // {
-                //     title = passwordLines.Aggregate(title, (current, p) => current + $"[{p}]");
-                // }
-                //
-                // quotes.AppendLine(text);
             }
-
-            // sb.AppendLine(title).AppendLine(quotes.ToString());
         }
         else
         {
@@ -120,9 +84,43 @@ public class SoulPlusClient(IHttpClientFactory httpClientFactory, ILoggerFactory
         return post;
     }
 
+    protected async Task<string> GetHtml(string url)
+    {
+        if (thirdPartyOptions.Value.CurlExecutable.IsNullOrEmpty())
+        {
+            throw new Exception("Curl executable is not set");
+        }
+
+        if (options.Value.Cookie.IsNullOrEmpty())
+        {
+            throw new Exception("Cookie is not set");
+        }
+
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = thirdPartyOptions.Value.CurlExecutable,
+                Arguments = $"""
+                             --cookie "{options.Value.Cookie}" -H "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0" {url}
+                             """,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8
+            }
+        };
+
+        process.Start();
+        await process.WaitForExitAsync();
+
+        return await process.StandardOutput.ReadToEndAsync();
+
+    }
+
     public async Task BuyLockedContent(string url)
     {
-        await HttpClient.GetStringAsync(url);
+        await GetHtml(url);
     }
 
     protected override string HttpClientName => HttpClientNames.SoulPlus;

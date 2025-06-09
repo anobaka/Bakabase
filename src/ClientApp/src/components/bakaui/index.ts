@@ -38,6 +38,7 @@ import Kbd from './components/Kbd';
 import NumberInput from './components/NumberInput';
 import Tree from './components/Tree';
 import Alert from './components/Alert';
+import { CircularProgressProps, CircularProgress } from './components/CircularProgress';
 
 export {
   Alert,
@@ -109,4 +110,6 @@ export {
   Kbd,
   NumberInput,
   Tree,
+  CircularProgressProps,
+  CircularProgress,
 };

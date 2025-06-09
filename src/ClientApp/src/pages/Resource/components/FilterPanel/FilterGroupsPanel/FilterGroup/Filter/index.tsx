@@ -3,16 +3,14 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useUpdateEffect } from 'react-use';
-import { DropdownItem, DropdownMenu, DropdownTrigger } from "@heroui/react";
 import { ApiOutlined, DeleteOutlined, DisconnectOutlined } from '@ant-design/icons';
 import type { ResourceSearchFilter } from '../../models';
 import PropertySelector from '@/components/PropertySelector';
 import { PropertyPool, SearchOperation } from '@/sdk/constants';
-import { Button, Dropdown, Tooltip } from '@/components/bakaui';
+import { Button, Dropdown, Tooltip, DropdownItem, DropdownMenu, DropdownTrigger } from '@/components/bakaui';
 import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
-import DeleteAndDisable from '@/pages/Resource/components/FilterPanel/FilterGroupsPanel/DeleteAndDisable';
 
 interface IProps {
   filter: ResourceSearchFilter;

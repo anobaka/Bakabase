@@ -472,15 +472,6 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Parse posts.
-        /// </summary>
-        internal static string DownloadTaskParser_ParseAll_TaskName {
-            get {
-                return ResourceManager.GetString("DownloadTaskParser_ParseAll_TaskName", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to English.
         /// </summary>
         internal static string English {
@@ -756,6 +747,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string PathsShouldBeInSameDirectory {
             get {
                 return ResourceManager.GetString("PathsShouldBeInSameDirectory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Parse posts.
+        /// </summary>
+        internal static string PostParser_ParseAll_TaskName {
+            get {
+                return ResourceManager.GetString("PostParser_ParseAll_TaskName", resourceCulture);
             }
         }
         

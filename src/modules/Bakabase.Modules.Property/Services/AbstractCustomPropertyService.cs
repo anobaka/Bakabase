@@ -256,8 +256,8 @@ namespace Bakabase.Modules.Property.Services
             var propertyDescriptor = PropertyInternals.DescriptorMap[property.Type];
             var targetPropertyDescriptor = PropertyInternals.DescriptorMap[type];
 
-            var allowAddingNewDataDynamically =
-                (property.Options as IAllowAddingNewDataDynamically)?.AllowAddingNewDataDynamically ?? false;
+            // var allowAddingNewDataDynamically =
+            //     (property.Options as IAllowAddingNewDataDynamically)?.AllowAddingNewDataDynamically ?? false;
             var options = property.Options;
 
             var fakeNewProperty = property with
@@ -275,7 +275,7 @@ namespace Bakabase.Modules.Property.Services
             // fakeNewProperty.Type = type;
             // fakeNewProperty.BizValueType = targetPropertyDescriptor.BizValueType;
             // fakeNewProperty.DbValueType = targetPropertyDescriptor.DbValueType;
-            fakeNewProperty.SetAllowAddingNewDataDynamically(true);
+            // fakeNewProperty.SetAllowAddingNewDataDynamically(true);
 
             var newValues = new List<CustomPropertyValue>();
             property.Options = options;
@@ -300,7 +300,7 @@ namespace Bakabase.Modules.Property.Services
             }
 
             // roll back some options
-            fakeNewProperty.SetAllowAddingNewDataDynamically(allowAddingNewDataDynamically);
+            // fakeNewProperty.SetAllowAddingNewDataDynamically(allowAddingNewDataDynamically);
             await Put(fakeNewProperty.ToCustomProperty());
             await CustomPropertyValueService.UpdateRange(newValues);
             return BaseResponseBuilder.Ok;
@@ -311,21 +311,21 @@ namespace Bakabase.Modules.Property.Services
             return await Update(resource.ToDbModel());
         }
 
-        public async Task<BaseResponse> EnableAddingNewDataDynamically(int id)
-        {
-            var property = await GetByKey(id, CustomPropertyAdditionalItem.None);
-            if (property.Options is IAllowAddingNewDataDynamically a)
-            {
-                a.AllowAddingNewDataDynamically = true;
-            }
-
-            await Put(id, new CustomPropertyAddOrPutDto
-            {
-                Name = property.Name,
-                Options = JsonConvert.SerializeObject(property.Options),
-                Type = property.Type
-            });
-            return BaseResponseBuilder.Ok;
-        }
+        // public async Task<BaseResponse> EnableAddingNewDataDynamically(int id)
+        // {
+        //     var property = await GetByKey(id, CustomPropertyAdditionalItem.None);
+        //     // if (property.Options is IAllowAddingNewDataDynamically a)
+        //     // {
+        //     //     a.AllowAddingNewDataDynamically = true;
+        //     // }
+        //
+        //     await Put(id, new CustomPropertyAddOrPutDto
+        //     {
+        //         Name = property.Name,
+        //         Options = JsonConvert.SerializeObject(property.Options),
+        //         Type = property.Type
+        //     });
+        //     return BaseResponseBuilder.Ok;
+        // }
     }
 }

@@ -414,36 +414,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("SpecialTexts");
                 });
 
-            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.DownloadTaskParser.Models.Db.DownloadTaskParseTaskDbModel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Error")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Items")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Link")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("ParsedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Source")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Title")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DownloadTaskParseTasks");
-                });
-
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Legacy.Models.LegacyDbResource", b =>
                 {
                     b.Property<int>("Id")
@@ -521,6 +491,36 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("UpdateDt");
 
                     b.ToTable("Resources");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.PostParser.Models.Db.PostParserTaskDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Items")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Link")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ParsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PostParserTasks");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Models.Db.ResourceCacheDbModel", b =>

@@ -22,4 +22,5 @@ public interface IMediaLibraryV2Service
     Task Delete(int id);
     Task Sync(int id);
     Task SyncAll(int[]? ids = null);
+    Task StartSyncAll(int[]? ids = null);
 }
