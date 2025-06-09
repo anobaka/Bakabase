@@ -202,20 +202,20 @@ public class MediaLibraryV2Service<TDbContext>(
         const string taskConflictKey = "SyncMediaLibrary";
         var taskIds = ids.Select(id => $"{taskConflictKey}_{id}").ToList();
 
-        foreach (var id in ids)
-        {
-            var taskId = $"{taskConflictKey}_{id}";
-            var taskHandlerBuilder = new BTaskHandlerBuilder
-            {
-                ConflictKeys = [taskConflictKey],
-                Id = taskId,
-                Run = async args =>
-                {
-                    var scope = args.RootServiceProvider.CreateAsyncScope();
-                    var service = scope.ServiceProvider.GetRequiredService<IMediaLibraryV2Service>();
-
-                }
-            }
-        }
+        // foreach (var id in ids)
+        // {
+        //     var taskId = $"{taskConflictKey}_{id}";
+        //     var taskHandlerBuilder = new BTaskHandlerBuilder
+        //     {
+        //         ConflictKeys = [taskConflictKey],
+        //         Id = taskId,
+        //         Run = async args =>
+        //         {
+        //             var scope = args.RootServiceProvider.CreateAsyncScope();
+        //             var service = scope.ServiceProvider.GetRequiredService<IMediaLibraryV2Service>();
+        //
+        //         }
+        //     }
+        // }
     }
 }

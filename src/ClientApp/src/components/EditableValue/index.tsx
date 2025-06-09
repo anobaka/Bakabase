@@ -64,6 +64,7 @@ function EditableValue<TValue,
             {...editorProps as unknown as TEditorProps}
             {...commonProps}
             onValueChange={v => setEditingValue(v)}
+            value={editingValue}
           />
           <Button
             variant={'light'}

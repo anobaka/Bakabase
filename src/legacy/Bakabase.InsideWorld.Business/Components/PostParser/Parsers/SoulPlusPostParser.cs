@@ -55,7 +55,7 @@ public class SoulPlusPostParser(
 
     public override async Task<PostParserTask> Parse(string link, CancellationToken ct)
     {
-        var post = await spClient.GetPostAsync(link);
+        var post = await spClient.GetPostAsync(link, ct);
         if (post.LockedContents != null)
         {
             var boughtSomething = false;
@@ -73,13 +73,13 @@ public class SoulPlusPostParser(
                 }
 
                 // ignore fails on buying contents
-                await spClient.BuyLockedContent(lc.Url!);
+                await spClient.BuyLockedContent(lc.Url!, ct);
                 boughtSomething = true;
             }
 
             if (boughtSomething)
             {
-                post = await spClient.GetPostAsync(link);
+                post = await spClient.GetPostAsync(link, ct);
             }
         }
 

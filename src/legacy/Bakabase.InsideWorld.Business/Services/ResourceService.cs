@@ -1126,9 +1126,15 @@ namespace Bakabase.InsideWorld.Business.Services
             await _orm.UpdateByKey(id, r => r.PlayedAt = null);
         }
 
-        public async Task<Resource[]> GetAllGeneratedByMediaLibraryV2(ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
+        public async Task<Resource[]> GetAllGeneratedByMediaLibraryV2(int[]? ids = null,ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
-            return (await GetAll(x=>x.CategoryId == 0, additionalItems)).ToArray();
+            Expression<Func<ResourceDbModel, bool>> exp = x => x.CategoryId == 0;
+            if (ids?.Any() == true)
+            {
+                exp = exp.And(x => ids.Contains(x.MediaLibraryId));
+            }
+
+            return (await GetAll(exp, additionalItems)).ToArray();
         }
 
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)

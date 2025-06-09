@@ -50,7 +50,7 @@ public class MultipleChoicePropertyDescriptor
         var goodValues = bizValue.TrimAndRemoveEmpty();
         if (goodValues?.Any() == true)
         {
-            property.Options ??= new MultipleChoicePropertyOptions {AllowAddingNewDataDynamically = true};
+            property.Options ??= new MultipleChoicePropertyOptions();
             var options = (property.Options as MultipleChoicePropertyOptions)!;
             var propertyChanged = options.AddChoices(true, goodValues.ToArray(), null);
             var stringValues = goodValues.Select(v => options.Choices?.Find(c => c.Label == v)?.Value).OfType<string>()

@@ -9,9 +9,11 @@ using System;
 using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
+using CliWrap;
 using static Bakabase.Abstractions.Components.Configuration.InternalOptions;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.SoulPlus;
@@ -23,9 +25,9 @@ public class SoulPlusClient(
     IBOptions<SoulPlusOptions> options)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
-    public async Task<SoulPlusPost> GetPostAsync(string link)
+    public async Task<SoulPlusPost> GetPostAsync(string link, CancellationToken ct)
     {
-        var html = await GetHtml(link);
+        var html = await GetHtml(link, ct);
 
         if (html.Contains("此帖被管理员关闭，暂时不能浏览") || html.Contains("用户被禁言,该主题自动屏蔽"))
         {
@@ -84,7 +86,7 @@ public class SoulPlusClient(
         return post;
     }
 
-    protected async Task<string> GetHtml(string url)
+    protected async Task<string> GetHtml(string url, CancellationToken ct)
     {
         if (thirdPartyOptions.Value.CurlExecutable.IsNullOrEmpty())
         {
@@ -96,31 +98,29 @@ public class SoulPlusClient(
             throw new Exception("Cookie is not set");
         }
 
-        var process = new Process
+        var htmlSb = new StringBuilder();
+        var command = Cli.Wrap($"\"{thirdPartyOptions.Value.CurlExecutable}\"").WithArguments([
+            "--cookie", options.Value.Cookie,
+            "-H",
+            "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0",
+            url
+        ], true)
+            .WithValidation(CommandResultValidation.None)
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(htmlSb));
+        var result = await command.ExecuteAsync(ct);
+        if (!result.IsSuccess)
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = thirdPartyOptions.Value.CurlExecutable,
-                Arguments = $"""
-                             --cookie "{options.Value.Cookie}" -H "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0" {url}
-                             """,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                StandardOutputEncoding = Encoding.UTF8
-            }
-        };
+            throw new Exception(
+                $"Failed to execute command: {Environment.NewLine}{command}{Environment.NewLine}Exit code: {result.ExitCode}, output: {htmlSb}");
+        }
 
-        process.Start();
-        await process.WaitForExitAsync();
-
-        return await process.StandardOutput.ReadToEndAsync();
+        return htmlSb.ToString();
 
     }
 
-    public async Task BuyLockedContent(string url)
+    public async Task BuyLockedContent(string url, CancellationToken ct)
     {
-        await GetHtml(url);
+        await GetHtml(url, ct);
     }
 
     protected override string HttpClientName => HttpClientNames.SoulPlus;
