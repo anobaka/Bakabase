@@ -21,7 +21,7 @@ export default ({
   const renderInner = () => {
     if (value?.url) {
       return (
-        <ExternalLink to={value.url}>
+        <ExternalLink href={value.url}>
           {value.text ?? value.url}
         </ExternalLink>
       );

@@ -221,8 +221,8 @@ export default (props: Props) => {
                   selection: property ? [property] : [],
                   onSubmit: async properties => {
                     patchTargetOptions({
-                      propertyId: properties[0].id,
-                      propertyPool: properties[0].pool,
+                      propertyId: properties[0]!.id,
+                      propertyPool: properties[0]!.pool,
                     });
                     onPropertyChanged?.();
                   },

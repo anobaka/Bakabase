@@ -163,7 +163,7 @@
     <value>文件修改时间</value>
   </data>
   <data name="BuiltinPropertyName_MediaLibrary" xml:space="preserve">
-    <value>媒体库</value>
+    <value>媒体库(旧)</value>
   </data>
   <data name="PropertyPoolName_Internal" xml:space="preserve">
     <value>内部</value>
@@ -224,5 +224,11 @@
   </data>
   <data name="UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType" xml:space="preserve">
     <value>这是一个引用值类型，如果需要使用该类型，您需要至少创建一个该类型的属性并设置它的选项，这样才能确保您在对应的编辑器中有数据可以选择。</value>
+  </data>
+  <data name="BuiltinPropertyName_MediaLibraryV2" xml:space="preserve">
+    <value>媒体库</value>
+  </data>
+  <data name="BuiltinPropertyName_PlayedAt" xml:space="preserve">
+    <value>播放时间</value>
   </data>
 </root>

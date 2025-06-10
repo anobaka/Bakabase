@@ -1,27 +1,31 @@
+import { MdOutlineAccessTime, MdOutlineCheckBox, MdOutlineTextFormat, MdOutlineTextSnippet } from 'react-icons/md';
+import type { IconType } from 'react-icons';
+import { TbNumber123 } from 'react-icons/tb';
+import { LuCalendarDays, LuLink, LuTags } from 'react-icons/lu';
+import { PiTreeView } from 'react-icons/pi';
 import { StandardValueType } from '@/sdk/constants';
-import type { CustomIconProps } from '@/components/CustomIcon';
-import CustomIcon from '@/components/CustomIcon';
 
-interface IProps extends Omit<CustomIconProps, 'type'>{
+type Props = IconType & {
   valueType: StandardValueType;
-}
-
-const StandardValueTypeIconMap: Record<StandardValueType, string> = {
-  [StandardValueType.String]: 'single-line-text',
-  [StandardValueType.ListString]: 'multiline-text',
-  [StandardValueType.Decimal]: 'number',
-  [StandardValueType.Link]: 'link',
-  [StandardValueType.Boolean]: 'checkbox',
-  [StandardValueType.DateTime]: 'date-time',
-  [StandardValueType.Time]: 'time',
-  [StandardValueType.ListListString]: 'multi_level',
-  [StandardValueType.ListTag]: 'multi_level',
 };
 
-export default ({ valueType, ...props }: IProps) => {
+const StandardValueTypeIconMap: Record<StandardValueType, IconType> = {
+  [StandardValueType.String]: MdOutlineTextFormat,
+  [StandardValueType.ListString]: MdOutlineTextSnippet,
+  [StandardValueType.Decimal]: TbNumber123,
+  [StandardValueType.Link]: LuLink,
+  [StandardValueType.Boolean]: MdOutlineCheckBox,
+  [StandardValueType.DateTime]: LuCalendarDays,
+  [StandardValueType.Time]: MdOutlineAccessTime,
+  [StandardValueType.ListListString]: PiTreeView,
+  [StandardValueType.ListTag]: LuTags,
+};
+
+export default ({ valueType, ...props }: Props) => {
+  const Icon = StandardValueTypeIconMap[valueType];
   return (
-    <CustomIcon
-      type={StandardValueTypeIconMap[valueType]}
+    <Icon
+      className={'text-medium'}
       {...props}
     />
   );

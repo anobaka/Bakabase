@@ -142,11 +142,20 @@ namespace Bakabase.Modules.Property.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Media library.
+        ///   Looks up a localized string similar to Media library(Old).
         /// </summary>
         internal static string BuiltinPropertyName_MediaLibrary {
             get {
                 return ResourceManager.GetString("BuiltinPropertyName_MediaLibrary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Media library.
+        /// </summary>
+        internal static string BuiltinPropertyName_MediaLibraryV2 {
+            get {
+                return ResourceManager.GetString("BuiltinPropertyName_MediaLibraryV2", resourceCulture);
             }
         }
         
@@ -156,6 +165,15 @@ namespace Bakabase.Modules.Property.Resources {
         internal static string BuiltinPropertyName_ParentResource {
             get {
                 return ResourceManager.GetString("BuiltinPropertyName_ParentResource", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Played at.
+        /// </summary>
+        internal static string BuiltinPropertyName_PlayedAt {
+            get {
+                return ResourceManager.GetString("BuiltinPropertyName_PlayedAt", resourceCulture);
             }
         }
         

@@ -5,7 +5,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import BApi from '@/sdk/BApi';
 
 type Props = {
-  taskId: string;
+  id: string;
 } & ButtonProps;
 
 export default (props: Props) => {
@@ -13,13 +13,13 @@ export default (props: Props) => {
   const { createPortal } = useBakabaseContext();
 
   const stop = async () => {
-    const rsp = await BApi.backgroundTask.stopBackgroundTask(props.taskId, { confirm: false });
+    const rsp = await BApi.backgroundTask.stopBackgroundTask(props.id, { confirm: false });
     if (rsp.code == 202) {
       createPortal(Modal, {
         defaultVisible: true,
         title: t('Stop Task'),
         children: rsp.message ?? t('Sure to stop the task?'),
-        onOk: async () => await BApi.backgroundTask.stopBackgroundTask(props.taskId, { confirm: true }),
+        onOk: async () => await BApi.backgroundTask.stopBackgroundTask(props.id, { confirm: true }),
       });
     }
   };

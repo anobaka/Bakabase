@@ -40,4 +40,5 @@ public interface IBakabaseLocalizer
     string? WrongPassword();
     string DeletingInvalidResources(int count);
     string PostParser_ParseAll_TaskName();
+    string SyncMediaLibrary(string name);
 }

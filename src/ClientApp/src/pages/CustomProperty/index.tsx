@@ -24,11 +24,12 @@ import {
   TableBody,
   Divider,
 } from '@/components/bakaui';
-import Property from '@/components/Property';
+import Property from '@/components/Property/v2';
 import type { IProperty } from '@/components/Property/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import TypeConversionRuleOverviewDialog from '@/pages/CustomProperty/components/TypeConversionRuleOverviewDialog';
 import CustomPropertySortModal from '@/components/CustomPropertySortModal';
+import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
 
 export default () => {
   const { t } = useTranslation();
@@ -121,8 +122,9 @@ export default () => {
                 <Chip
                   radius={'sm'}
                   size={'sm'}
+                  variant={'flat'}
                 >
-                  {ps[0].typeName}
+                  <PropertyTypeIcon type={ps[0].type} textVariant={'default'} />
                 </Chip>
               </div>
               <div className={'flex items-start gap-2 flex-wrap'}>
@@ -131,10 +133,11 @@ export default () => {
                     <Property
                       property={p}
                       onSaved={loadProperties}
-                      editablePortal={'click'}
                       key={p.id}
                       editable
                       removable
+                      hidePool
+                      hideType
                       onRemoved={() => {
                         loadProperties();
                       }}

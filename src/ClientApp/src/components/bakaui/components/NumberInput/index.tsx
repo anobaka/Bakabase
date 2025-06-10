@@ -1,3 +1,3 @@
-import { NumberInput } from '@heroui/react';
+import { NumberInput, NumberInputProps } from '@heroui/react';
 
-export default NumberInput;
+export { NumberInput, NumberInputProps };

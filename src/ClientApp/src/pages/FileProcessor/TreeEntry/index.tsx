@@ -470,7 +470,7 @@ const TreeEntry = (props: TreeEntryProps) => {
                 <BTaskStopButton
                   color={'warning'}
                   size={'small'}
-                  taskId={entryRef.current.task.id}
+                  id={entryRef.current.task.id}
                 />
               </div>
             </div>

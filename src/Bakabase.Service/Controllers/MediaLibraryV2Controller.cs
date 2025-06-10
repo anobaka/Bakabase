@@ -67,7 +67,7 @@ public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : Controll
     [SwaggerOperation(OperationId = "SyncMediaLibraryV2")]
     public async Task<BaseResponse> Sync(int id)
     {
-        await service.Sync(id);
+        await service.StartSyncAll([id]);
         return BaseResponseBuilder.Ok;
     }
 
@@ -75,7 +75,7 @@ public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : Controll
     [SwaggerOperation(OperationId = "SyncAllMediaLibrariesV2")]
     public async Task<BaseResponse> SyncAll()
     {
-        await service.SyncAll();
+        await service.StartSyncAll();
         return BaseResponseBuilder.Ok;
     }
 }

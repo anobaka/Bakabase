@@ -35,7 +35,7 @@ import Rating from './components/Rating';
 import Image from './components/Image';
 import { Radio, RadioGroup } from './components/Radio';
 import Kbd from './components/Kbd';
-import NumberInput from './components/NumberInput';
+import { NumberInput, NumberInputProps } from './components/NumberInput';
 import Tree from './components/Tree';
 import Alert from './components/Alert';
 import { CircularProgressProps, CircularProgress } from './components/CircularProgress';
@@ -109,6 +109,7 @@ export {
   TableRowProps,
   Kbd,
   NumberInput,
+  NumberInputProps,
   Tree,
   CircularProgressProps,
   CircularProgress,

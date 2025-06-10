@@ -144,7 +144,7 @@ export default ({
           <BTaskStopButton
             size={'sm'}
             color={'danger'}
-            taskId={displayingTask.id}
+            id={displayingTask.id}
           />
         </div>
       )}

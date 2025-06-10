@@ -886,6 +886,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Sync media library: {0}.
+        /// </summary>
+        internal static string SyncMediaLibrary {
+            get {
+                return ResourceManager.GetString("SyncMediaLibrary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Type {0} is not found.
         /// </summary>
         internal static string TypeIsNotFound {

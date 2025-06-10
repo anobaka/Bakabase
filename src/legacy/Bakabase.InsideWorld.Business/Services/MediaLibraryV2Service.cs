@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
@@ -34,12 +35,15 @@ public class MediaLibraryV2Service<TDbContext>(
     IResourceService resourceService,
     IPropertyService propertyService,
     FullMemoryCacheResourceService<TDbContext, ResourceCacheDbModel, int> cacheOrm,
-    IBOptions<ResourceOptions> resourceOptions, BTaskManager btm)
+    IBOptions<ResourceOptions> resourceOptions,
+    BTaskManager btm,
+    IBakabaseLocalizer localizer
+)
     : IMediaLibraryV2Service where TDbContext : DbContext
 {
     public async Task Add(MediaLibraryV2AddOrPutInputModel model)
     {
-        await orm.Add(new MediaLibraryV2DbModel { Path = model.Path, Name = model.Name });
+        await orm.Add(new MediaLibraryV2DbModel {Path = model.Path, Name = model.Name});
     }
 
     public async Task Put(int id, MediaLibraryV2AddOrPutInputModel model)
@@ -200,22 +204,31 @@ public class MediaLibraryV2Service<TDbContext>(
         }
 
         const string taskConflictKey = "SyncMediaLibrary";
-        var taskIds = ids.Select(id => $"{taskConflictKey}_{id}").ToList();
+        var mlMap = (await GetByKeys(ids)).ToDictionary(d => d.Id, d => d);
 
-        // foreach (var id in ids)
-        // {
-        //     var taskId = $"{taskConflictKey}_{id}";
-        //     var taskHandlerBuilder = new BTaskHandlerBuilder
-        //     {
-        //         ConflictKeys = [taskConflictKey],
-        //         Id = taskId,
-        //         Run = async args =>
-        //         {
-        //             var scope = args.RootServiceProvider.CreateAsyncScope();
-        //             var service = scope.ServiceProvider.GetRequiredService<IMediaLibraryV2Service>();
-        //
-        //         }
-        //     }
-        // }
+        foreach (var id in ids)
+        {
+            var taskId = $"{taskConflictKey}_{id}";
+            if (!btm.IsPending(taskId))
+            {
+                var taskHandlerBuilder = new BTaskHandlerBuilder
+                {
+                    ConflictKeys = [taskConflictKey],
+                    Id = taskId,
+                    Run = async args =>
+                    {
+                        var scope = args.RootServiceProvider.CreateAsyncScope();
+                        var service = scope.ServiceProvider.GetRequiredService<IMediaLibraryV2Service>();
+                        await service.Sync(id);
+                    },
+                    GetName = () =>
+                        localizer.SyncMediaLibrary(mlMap?.GetValueOrDefault(id)?.Name ?? localizer.Unknown()),
+                    ResourceType = BTaskResourceType.Any,
+                    Type = BTaskType.Any,
+                    DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore
+                };
+                await btm.Enqueue(taskHandlerBuilder);
+            }
+        }
     }
 }

@@ -35,7 +35,7 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
 
-  const [options, setOptions] = useState(propOptions ?? { allowAddingNewDataDynamically: true });
+  const [options, setOptions] = useState(propOptions ?? {});
   const [editingKey, setEditingKey] = useState<string>();
   const [expandKeys, setExpandKeys] = useState<React.Key[] | undefined>(options.data?.map(d => d.value));
 

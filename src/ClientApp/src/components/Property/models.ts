@@ -1,6 +1,6 @@
 import type { PropertyPool, StandardValueType } from '@/sdk/constants';
 
-import { PropertyType } from '@/sdk/constants';
+import type { PropertyType } from '@/sdk/constants';
 import type { MultilevelData } from '@/components/StandardValue/models';
 
 export interface IProperty {
@@ -43,31 +43,12 @@ export type Tag = {
 
 export type TagsPropertyOptions = {
   tags: Tag[];
-  allowAddingNewDataDynamically: boolean;
-};
-
-export const PropertyTypeIconMap: {[key in PropertyType]?: string} = {
-  [PropertyType.SingleLineText]: 'FontSizeOutlined',
-  [PropertyType.MultilineText]: 'OrderedListOutlined',
-  [PropertyType.SingleChoice]: 'AppstoreOutlined',
-  [PropertyType.MultipleChoice]: 'UnorderedListOutlined',
-  [PropertyType.Multilevel]: 'ApartmentOutlined',
-  [PropertyType.Number]: 'FieldBinaryOutlined',
-  [PropertyType.Percentage]: 'PercentageOutlined',
-  [PropertyType.Rating]: 'StarOutlined',
-  [PropertyType.Boolean]: 'CheckSquareOutlined',
-  [PropertyType.Link]: 'LinkOutlined',
-  [PropertyType.Attachment]: 'PaperClipOutlined',
-  [PropertyType.Formula]: 'FunctionOutlined',
-  [PropertyType.Time]: 'HistoryOutlined',
-  [PropertyType.Date]: 'CalendarOutlined',
-  [PropertyType.DateTime]: 'CalendarOutlined',
-  [PropertyType.Tags]: 'TagsOutlined',
+  // allowAddingNewDataDynamically: boolean;
 };
 
 export interface ChoicePropertyOptions {
   choices: IChoice[];
-  allowAddingNewDataDynamically: boolean;
+  // allowAddingNewDataDynamically: boolean;
   defaultValue?: string;
 }
 
@@ -86,7 +67,7 @@ export interface RatingPropertyOptions {
 
 export interface MultilevelPropertyOptions {
   data?: MultilevelData<string>[];
-  allowAddingNewDataDynamically: boolean;
+  // allowAddingNewDataDynamically: boolean;
   defaultValue?: string;
 }
 

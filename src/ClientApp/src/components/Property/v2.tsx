@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { DatabaseOutlined, DisconnectOutlined, LinkOutlined } from '@ant-design/icons';
-import { AiOutlineDelete, AiOutlineEdit, AiOutlineEllipsis } from 'react-icons/ai';
+import { AiOutlineDelete, AiOutlineEdit } from 'react-icons/ai';
 import { useBakabaseContext } from '../ContextProvider/BakabaseContextProvider';
 import styles from './index.module.scss';
 import type { IProperty } from './models';
-import { PropertyTypeIconMap } from './models';
 import Label from './components/Label';
 import PropertyModal from '@/components/PropertyModal';
-import { Button, Card, CardBody, Chip, Icon, Tooltip } from '@/components/bakaui';
+import { Button, Card, CardBody, Chip, Tooltip } from '@/components/bakaui';
 import type { PropertyType } from '@/sdk/constants';
 import { PropertyPool } from '@/sdk/constants';
 import PropertyPoolIcon from '@/components/Property/components/PropertyPoolIcon';
@@ -18,6 +17,9 @@ type Props = {
   property: IProperty;
   onClick?: () => any;
   disabled?: boolean;
+
+  hidePool?: boolean;
+  hideType?: boolean;
 
   removable?: boolean;
   editable?: boolean;
@@ -33,6 +35,8 @@ export {
 
 export default ({
                   property,
+                  hidePool,
+                  hideType,
                   onClick,
                   onSaved,
                   onRemoved,
@@ -47,8 +51,6 @@ export default ({
 
   const editable = property.pool == PropertyPool.Custom && props.editable;
   const removable = property.pool == PropertyPool.Custom && props.removable;
-
-  const icon = property.type == undefined ? undefined : PropertyTypeIconMap[property.type];
 
   const renderBottom = () => {
     if (property.pool != PropertyPool.Custom) {
@@ -166,10 +168,12 @@ export default ({
       >
         <Card isPressable onPress={onClick}>
           <CardBody className={'flex flex-col gap-1'}>
-            <div className="flex items-center gap-1">
-              <PropertyTypeIcon type={property.type} />
-              <PropertyPoolIcon pool={property.pool} />
-            </div>
+            {(hidePool || hideType) && (
+              <div className="flex items-center gap-1">
+                {!hideType && <PropertyTypeIcon type={property.type} />}
+                {!hidePool && <PropertyPoolIcon pool={property.pool} />}
+              </div>
+            )}
             <div className={'text-medium text-left'}>{property.name}</div>
           </CardBody>
         </Card>
@@ -180,10 +184,12 @@ export default ({
   return (
     <Card isPressable onPress={onClick}>
       <CardBody className={'flex flex-col gap-1'}>
-        <div className="flex items-center gap-1">
-          <PropertyTypeIcon type={property.type} />
-          <PropertyPoolIcon pool={property.pool} />
-        </div>
+        {(hidePool || hideType) && (
+          <div className="flex items-center gap-1">
+            {!hideType && <PropertyTypeIcon type={property.type} />}
+            {!hidePool && <PropertyPoolIcon pool={property.pool} />}
+          </div>
+        )}
         <div className={'text-medium text-left'}>{property.name}</div>
       </CardBody>
     </Card>

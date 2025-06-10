@@ -23,4 +23,5 @@ public record BTaskHandlerBuilder
     public required BTaskResourceType ResourceType { get; init; }
     public object[]? ResourceKeys { get; set; }
     public bool StartNow { get; set; }
+    public BTaskDuplicateIdHandling DuplicateIdHandling { get; set; } = BTaskDuplicateIdHandling.Reject;
 }

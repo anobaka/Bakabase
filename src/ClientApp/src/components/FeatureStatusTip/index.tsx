@@ -44,7 +44,7 @@ export default ({
         You can urge the author or make suggestions on
         <ExternalLink
           className={'px-1'}
-          to={'https://github.com/anobaka/InsideWorld'}
+          href={'https://github.com/anobaka/InsideWorld'}
         >Github</ExternalLink>
         or
         <Chip
@@ -90,7 +90,7 @@ export default ({
         <>
           {t('For more information, you can visit:')}
           <ExternalLink
-            to={url}
+            href={url}
             className={'px-1'}
           >
             {url}

@@ -172,5 +172,10 @@ namespace Bakabase.InsideWorld.Business.Components
         {
             return this[nameof(PostParser_ParseAll_TaskName)];
         }
+
+        public string SyncMediaLibrary(string name)
+        {
+            return this[nameof(SyncMediaLibrary), name];
+        }
     }
 }

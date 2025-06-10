@@ -408,4 +408,7 @@
   <data name="PostParser_ParseAll_TaskName" xml:space="preserve">
     <value>解析帖子</value>
   </data>
+  <data name="SyncMediaLibrary" xml:space="preserve">
+    <value>同步媒体库：{0}</value>
+  </data>
 </root>

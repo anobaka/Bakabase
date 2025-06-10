@@ -163,7 +163,7 @@
     <value>File modified at</value>
   </data>
   <data name="BuiltinPropertyName_MediaLibrary" xml:space="preserve">
-    <value>Media library</value>
+    <value>Media library(Old)</value>
   </data>
   <data name="PropertyPoolName_Internal" xml:space="preserve">
     <value>Internal</value>
@@ -224,5 +224,11 @@
   </data>
   <data name="UnavailablePropertyTypeForManuallySettingValue_DueTo_NoPropertyWithReferenceValueType" xml:space="preserve">
     <value>This is a type with reference value, to use this type, you should create at least one property with this type and setup its options to make sure you can select something in editor.</value>
+  </data>
+  <data name="BuiltinPropertyName_MediaLibraryV2" xml:space="preserve">
+    <value>Media library</value>
+  </data>
+  <data name="BuiltinPropertyName_PlayedAt" xml:space="preserve">
+    <value>Played at</value>
   </data>
 </root>

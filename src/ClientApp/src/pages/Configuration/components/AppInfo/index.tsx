@@ -26,6 +26,7 @@ import {
   Snippet,
   Tooltip, Chip,
 } from '@/components/bakaui';
+import BApi from '@/sdk/BApi';
 
 
 export default ({ appInfo }) => {
@@ -51,6 +52,8 @@ export default ({ appInfo }) => {
     return () => {
     };
   }, []);
+
+  const apiDocumentUrl = `${appContext.serverAddresses?.find(x => !x.includes('0.0.0.0'))}/swagger`;
 
   const renderNewVersion = () => {
     if (!updaterContext || updaterContext.status == DependentComponentStatus.NotInstalled) {
@@ -95,7 +98,7 @@ export default ({ appInfo }) => {
                       >
                         {newVersion.installers.map((i) => (
                           <div key={i.url}>
-                            <ExternalLink to={i.url} >{i.name}({bytesToSize(i.size)})</ExternalLink>
+                            <ExternalLink href={i.url} >{i.name}({bytesToSize(i.size)})</ExternalLink>
                           </div>
                         ))}
                       </Balloon>
@@ -171,6 +174,12 @@ export default ({ appInfo }) => {
         </div>
       ),
       // value: <Snippet hideSymbol>{appInfo.appDataPath}</Snippet>,
+    },
+    {
+      label: 'API document',
+      value: (
+        <ExternalLink href={apiDocumentUrl}>{apiDocumentUrl}</ExternalLink>
+      ),
     },
     {
       label: 'App Data Path',

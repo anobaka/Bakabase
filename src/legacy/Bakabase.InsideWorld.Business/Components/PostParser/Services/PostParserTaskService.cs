@@ -79,7 +79,7 @@ public class PostParserTaskService<TDbContext>(
     public async Task ParseAll(Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt,
         CancellationToken ct)
     {
-        var pendingData = await orm.GetAll(x => !x.ParsedAt.HasValue && x.Error == null);
+        var pendingData = await orm.GetAll(x => !x.ParsedAt.HasValue);
         var groups = pendingData.GroupBy(d => d.Source)
             .ToDictionary(d => d.Key, d => d.Select(c => c.ToDomainModel()).ToList());
         var tasks = new List<Task>();
@@ -88,7 +88,6 @@ public class PostParserTaskService<TDbContext>(
         foreach (var g in groups)
         {
             var parser = _parserMap[g.Key];
-
             tasks.Add(Task.Run((Func<Task>) StartBySource, ct));
             continue;
 

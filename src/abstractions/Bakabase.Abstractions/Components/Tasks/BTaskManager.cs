@@ -77,31 +77,29 @@ public class BTaskManager : IAsyncDisposable
     /// </summary>
     /// <param name="taskBuilder"></param>
     /// <exception cref="Exception"></exception>
-    public void Enqueue(BTaskHandlerBuilder taskBuilder)
+    public async Task Enqueue(BTaskHandlerBuilder taskBuilder)
     {
         var handler = _buildHandler(taskBuilder);
 
         if (!_taskMap.TryAdd(handler.Id, handler))
         {
-            throw new Exception(_localizer.BTask_FailedToRunTaskDueToIdExisting(handler.Task.Name));
+            switch (taskBuilder.DuplicateIdHandling)
+            {
+                case BTaskDuplicateIdHandling.Reject:
+                    throw new Exception(_localizer.BTask_FailedToRunTaskDueToIdExisting(handler.Task.Name));
+                case BTaskDuplicateIdHandling.Ignore:
+                    return;
+                case BTaskDuplicateIdHandling.Replace:
+                    await Stop(taskBuilder.Id);
+                    await Clean(taskBuilder.Id);
+                    await Enqueue(taskBuilder);
+                    return;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
 
         _ = OnAllTasksChange();
-    }
-
-    /// <summary>
-    /// You don't need to start task manually, the daemon will do it for you automatically.
-    /// </summary>
-    /// <param name="taskBuilder"></param>
-    /// <exception cref="Exception"></exception>
-    public void EnqueueSafely(BTaskHandlerBuilder taskBuilder)
-    {
-        var handler = _buildHandler(taskBuilder);
-
-        if (_taskMap.TryAdd(handler.Id, handler))
-        {
-            _ = OnAllTasksChange();
-        }
     }
 
     private BTaskHandler _buildHandler(BTaskHandlerBuilder builder)

@@ -408,4 +408,7 @@ The version of lux is not limited.</value>
   <data name="PostParser_ParseAll_TaskName" xml:space="preserve">
     <value>Parse posts</value>
   </data>
+  <data name="SyncMediaLibrary" xml:space="preserve">
+    <value>Sync media library: {0}</value>
+  </data>
 </root>

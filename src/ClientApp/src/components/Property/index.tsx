@@ -4,13 +4,13 @@ import { DatabaseOutlined, DisconnectOutlined, LinkOutlined } from '@ant-design/
 import { useBakabaseContext } from '../ContextProvider/BakabaseContextProvider';
 import styles from './index.module.scss';
 import type { IProperty } from './models';
-import { PropertyTypeIconMap } from './models';
 import Label from './components/Label';
 import ClickableIcon from '@/components/ClickableIcon';
 import PropertyModal from '@/components/PropertyModal';
 import { Chip, Icon, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { PropertyPool, PropertyType, ResourceProperty } from '@/sdk/constants';
+import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
 
 type Props = {
   property: IProperty;
@@ -47,8 +47,6 @@ export default ({
 
   const editable = property.pool == PropertyPool.Custom && props.editable;
   const removable = property.pool == PropertyPool.Custom && props.removable;
-
-  const icon = property.type == undefined ? undefined : PropertyTypeIconMap[property.type];
 
   const renderBottom = () => {
     if (property.pool != PropertyPool.Custom) {
@@ -164,9 +162,9 @@ export default ({
             content={t(PropertyType[property.type!])}
           >
             <div className={styles.type}>
-              <Icon
-                type={icon}
-                className={'text-base'}
+              <PropertyTypeIcon
+                type={property.type}
+                textVariant={'none'}
               />
             </div>
           </Tooltip>

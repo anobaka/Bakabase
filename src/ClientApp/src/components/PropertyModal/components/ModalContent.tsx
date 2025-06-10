@@ -31,7 +31,6 @@ import {
   type ChoicePropertyOptions,
   type NumberPropertyOptions,
   type PercentagePropertyOptions,
-  PropertyTypeIconMap,
   type RatingPropertyOptions,
   type TagsPropertyOptions,
 } from '@/components/Property/models';
@@ -42,6 +41,7 @@ import TagList from '@/components/PropertyModal/components/TagList';
 import { optimizeOptions } from '@/components/PropertyModal/helpers';
 import BApi from '@/sdk/BApi';
 import { buildLogger } from '@/components/utils';
+import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
 
 
 const UnderDevelopmentGroupKey = 'UnderDevelopment';
@@ -136,21 +136,21 @@ export default ({
                   });
                 }}
               />
-              <Switch
-                className={'mt-4'}
-                size={'sm'}
-                isSelected={options?.allowAddingNewDataDynamically}
-                onValueChange={c => {
-                  patchProperty({
-                    options: {
-                      ...options,
-                      allowAddingNewDataDynamically: c,
-                    },
-                  });
-                }}
-              >
-                {t('Allow adding new options while choosing')}
-              </Switch>
+              {/* <Switch */}
+              {/*   className={'mt-4'} */}
+              {/*   size={'sm'} */}
+              {/*   isSelected={options?.allowAddingNewDataDynamically} */}
+              {/*   onValueChange={c => { */}
+              {/*     patchProperty({ */}
+              {/*       options: { */}
+              {/*         ...options, */}
+              {/*         allowAddingNewDataDynamically: c, */}
+              {/*       }, */}
+              {/*     }); */}
+              {/*   }} */}
+              {/* > */}
+              {/*   {t('Allow adding new options while choosing')} */}
+              {/* </Switch> */}
               <Select
                 className={'mt-2'}
                 size={'sm'}
@@ -336,21 +336,21 @@ export default ({
                 }}
                 checkUsage={checkValueUsage}
               />
-              <Switch
-                className={'mt-4'}
-                size={'sm'}
-                isSelected={options?.allowAddingNewDataDynamically}
-                onValueChange={c => {
-                  patchProperty({
-                    options: {
-                      ...options,
-                      allowAddingNewDataDynamically: c,
-                    },
-                  });
-                }}
-              >
-                {t('Allow adding new options while choosing')}
-              </Switch>
+              {/* <Switch */}
+              {/*   className={'mt-4'} */}
+              {/*   size={'sm'} */}
+              {/*   isSelected={options?.allowAddingNewDataDynamically} */}
+              {/*   onValueChange={c => { */}
+              {/*     patchProperty({ */}
+              {/*       options: { */}
+              {/*         ...options, */}
+              {/*         allowAddingNewDataDynamically: c, */}
+              {/*       }, */}
+              {/*     }); */}
+              {/*   }} */}
+              {/* > */}
+              {/*   {t('Allow adding new options while choosing')} */}
+              {/* </Switch> */}
             </>
           );
         }
@@ -369,13 +369,7 @@ export default ({
         }}
       >
         {property.type == undefined ? t('Select a type') : (
-          <>
-            <Icon
-              type={PropertyTypeIconMap[property.type]!}
-              className={'text-base'}
-            />
-            {t(PropertyType[property.type])}
-          </>
+          <PropertyTypeIcon type={property.type} textVariant={'default'} />
         )}
       </Button>
     );
@@ -449,8 +443,7 @@ export default ({
                               variant={'light'}
                               className={'justify-start'}
                             >
-                              <Icon type={PropertyTypeIconMap[type]!} className={'text-medium'} />
-                              {t(PropertyType[type])}
+                              <PropertyTypeIcon type={type} textVariant={'default'} />
                             </Button>
                           </Tooltip>
                         );
@@ -580,8 +573,7 @@ export default ({
                             setTypeGroupsVisible(false);
                           }}
                         >
-                          <Icon type={PropertyTypeIconMap[type]!} className={'text-medium'} />
-                          {t(PropertyType[type])}
+                          <PropertyTypeIcon type={type} textVariant={'default'} />
                         </Button>
                       );
                     })}

@@ -1,33 +1,35 @@
-import i18n from 'i18next';
-import { Balloon, Dialog, Message, Switch } from '@alifd/next';
+import { Switch } from '@alifd/next';
 import React, { useEffect, useState } from 'react';
 import Cookies from 'universal-cookie';
 import { useTranslation } from 'react-i18next';
 import type { Key } from '@react-types/shared';
 import toast from 'react-hot-toast';
-import Title from '@/components/Title';
+import { AiOutlineNumber } from 'react-icons/ai';
 import CustomIcon from '@/components/CustomIcon';
-import { MoveCoreData, PatchAppOptions } from '@/sdk/apis';
-import FileSelector from '@/components/FileSelector';
+import { PatchAppOptions } from '@/sdk/apis';
 import store from '@/store';
 import BApi from '@/sdk/BApi';
+import type { ChipProps, NumberInputProps } from '@/components/bakaui';
+import { Link } from '@/components/bakaui';
 import {
   Button,
-  Select,
-  Notification,
-  Modal,
+  Chip,
   Input,
-  TableHeader,
-  TableColumn,
+  Modal,
+  Notification,
+  NumberInput,
+  Select,
+  Table,
   TableBody,
-  TableRow, TableCell, Tooltip,
-  Table, NumberInput,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+  Tooltip,
 } from '@/components/bakaui';
 import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel } from '@/sdk/Api';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import FeatureStatusTip from '@/components/FeatureStatusTip';
-import appContext from '@/models/appContext';
-import { EditableChipWithNumberInput } from '@/components/EditableValue';
+import { EditableValue } from '@/components/EditableValue';
 
 const cookies = new Cookies();
 
@@ -206,24 +208,44 @@ export default ({
         const minPort = 5000;
         const maxPort = 65000;
         return (
-          <EditableChipWithNumberInput
-            min={minPort}
-            max={maxPort}
-            placeholder={t('Port number')}
-            className={'max-w-[320px]'}
-            description={(
-              <div>
+          <EditableValue<number, NumberInputProps, ChipProps & { value: number }>
+            Viewer={({
+                       value,
+                       ...props
+                     }) => (
+                       value ? <Chip
+                         variant={'flat'}
+                         radius={'sm'}
+                         startContent={<AiOutlineNumber className={'text-medium'} />}
+                         {...props}
+                       >
+                         {value}
+                       </Chip> : null
+            )}
+            Editor={(props) => (<NumberInput
+              formatOptions={{ useGrouping: false }}
+              min={minPort}
+              max={maxPort}
+              placeholder={t('Port number')}
+              className={'max-w-[320px]'}
+              description={(
                 <div>
-                  {t('Current listening port is {{port}}', { port: appContext?.serverAddresses?.[0]?.split(':').slice(-1)[0] })}
+                  <div>
+                    {t('Current listening port is {{port}}', { port: appContext?.serverAddresses?.[0]?.split(':').slice(-1)[0] })}
+                  </div>
+                  <div>
+                    {t('The configurable port range is {{min}}-{{max}}', {
+                      min: minPort,
+                      max: maxPort,
+                    })}
+                  </div>
+                  <div>
+                    {t('Changes will take effect after restarting the application')}
+                  </div>
                 </div>
-                <div>
-                  {t('The configurable port range is {{min}}-{{max}}', { min: minPort, max: maxPort })}
-                </div>
-                <div>
-                  {t('Changes will take effect after restarting the application')}
-                </div>
-              </div>
-          )}
+              )}
+              {...props}
+            />)}
             value={appOptions.listeningPort}
             onSubmit={async v => {
               await BApi.options.putAppOptions({
@@ -232,6 +254,20 @@ export default ({
               });
             }}
           />
+        );
+      },
+    },
+    {
+      label: '123',
+      renderValue: () => {
+        return (
+          <Link
+            onPress={e => {
+            e.preventDefault();
+            window.open('http://baidu.com', '_blank');
+          }}
+            href={'http://baidu.com'}
+          >123</Link>
         );
       },
     },
@@ -253,7 +289,11 @@ export default ({
               return (
                 <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
                   <TableCell>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                    >
                       {t(c.label)}
                       {c.tip && (
                         <>

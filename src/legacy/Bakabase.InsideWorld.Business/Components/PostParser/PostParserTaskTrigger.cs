@@ -45,6 +45,7 @@ public class PostParserTaskTrigger
                     args.CancellationToken);
             },
             StartNow = false,
+            DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore
         };
 
         optionsMonitor.OnChange(async o =>
@@ -75,7 +76,7 @@ public class PostParserTaskTrigger
 
     protected async Task Enable()
     {
-        _btm.EnqueueSafely(_taskBuilder);
+        await _btm.Enqueue(_taskBuilder);
     }
 
     protected async Task Disable()

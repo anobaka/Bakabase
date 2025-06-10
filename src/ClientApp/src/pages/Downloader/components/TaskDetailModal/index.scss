@@ -1,6 +1,6 @@
 .download-task-detail {
 
-  width: 700px;
+  width: 1000px;
 
   .next-dialog-body {
     min-height: 400px;
@@ -8,11 +8,15 @@
 
   .grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 8fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 8fr);
     gap: 10px;
     .label, .value {
       display: flex;
       align-items: center;
+    }
+
+    .label {
+      justify-content: flex-end;
     }
   }
 

@@ -14,7 +14,7 @@ import {
 import NameIcon from '@/pages/Downloader/components/NameIcon';
 
 import './index.scss';
-import { Balloon, Button, Dialog, Divider, Icon, Input, NumberPicker, Select, Tag } from '@alifd/next';
+import { Balloon, Dialog, Divider, Icon, Input, NumberPicker, Select, Tag } from '@alifd/next';
 import i18n from 'i18next';
 import { useUpdateEffect } from 'react-use';
 import {
@@ -32,6 +32,13 @@ import FileSelector from '@/components/FileSelector';
 import store from '@/store';
 import dependentComponentIds from '@/core/models/Constants/DependentComponentIds';
 import { useTranslation } from 'react-i18next';
+import { Checkbox, Modal, Button } from '@/components/bakaui';
+import ExHentai from './ExHentai';
+import type { components } from '@/sdk/BApi2';
+import type { DestroyableProps } from '@/components/bakaui/types';
+import ThirdPartyIcon from '@/components/ThirdPartyIcon';
+
+type IntervalUnit = 'd' | 'h' | 'm' | 's';
 
 const timeUnits = [
   {
@@ -57,7 +64,32 @@ const timeUnits = [
 ].map((a) => ({
   ...a,
   label: `${i18n.t(a.label)}(s)`,
+  value: a.value as IntervalUnit,
 }));
+
+type TypeOptions = {
+  type: number;
+  name: string;
+  hasPageRange?: boolean;
+};
+
+const OptionsMap: {[key in ThirdPartyId]?: TypeOptions[]} = {
+  [ThirdPartyId.Bilibili]: [{
+    type: BilibiliDownloadTaskType.Favorites,
+    name: BilibiliDownloadTaskType[BilibiliDownloadTaskType.Favorites],
+    hasPageRange: true,
+  }],
+  [ThirdPartyId.ExHentai]: [ExHentaiDownloadTaskType.List, ExHentaiDownloadTaskType.Watched],
+  [ThirdPartyId.Pixiv]: [PixivDownloadTaskType.Search, PixivDownloadTaskType.Following],
+};
+
+const ThirdPartyIdTypeWithPageRangeMap: { [key in ThirdPartyId]?: number[] } = {
+
+};
+
+const hasPageRange = (thirdPartyId: ThirdPartyId, type: number) => {
+  return ThirdPartyIdTypeWithPageRangeMap[thirdPartyId]?.includes(type) || false;
+};
 
 const createIntervalFormItem = (value, onValueChange, unit, onUnitChange) => {
   return {
@@ -108,26 +140,32 @@ const convertTaskToForm = (task) => {
   };
 };
 
+type Form = components['schemas']['Bakabase.InsideWorld.Models.RequestModels.DownloadTaskCreateRequestModel'];
+
+type Props = {
+  id?: number;
+} & DestroyableProps;
+
 export default ({
-  onCreatedOrUpdated,
-  onClose,
-  taskId,
-}) => {
+                  // onCreatedOrUpdated,
+                  // onClose,
+  onDestroyed,
+                  id,
+                }: Props) => {
   const { t } = useTranslation();
 
-  const [thirdPartyId, setThirdPartyId] = useState<ThirdPartyId | undefined>();
+  const isAdding = !(id > 0);
+
   const [type, setType] = useState<number | undefined>();
-  const [form, setForm] = useState<any>({
-    intervalUnit: 'd',
+  const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>();
+  const [form, setForm] = useState<Form>({
+    autoRetry: true,
   });
 
   const [configurationsVisible, setConfigurationsVisible] = useState(false);
 
   const [bilibiliFavorites, setBilibiliFavorites] = useState([]);
   const [gettingBilibiliFavorites, setGettingBilibiliFavorites] = useState(false);
-
-  const isCreatingTask = taskId == 0;
-  const disableEditing = !isCreatingTask;
 
   const [exHentaiOptions, setExHentaiOptions] = useState({});
   const [pixivOptions, setPixivOptions] = useState({});
@@ -154,6 +192,7 @@ export default ({
     return {
       intervalUnit: 'd',
       downloadPath: options?.downloader?.defaultPath,
+      autoRetry: true,
     };
   };
 
@@ -173,9 +212,9 @@ export default ({
         setBilibiliOptions(a.data);
       });
 
-    if (taskId > 0) {
+    if (id > 0) {
       GetDownloadTask({
-        id: taskId,
+        id: id,
       })
         .invoke((b) => {
           if (!b.code) {
@@ -190,7 +229,7 @@ export default ({
   }, []);
 
   useUpdateEffect(() => {
-    if (taskId == 0) {
+    if (id == 0) {
       setType(undefined);
       setForm(createDefaultFormValue());
     }
@@ -260,7 +299,7 @@ export default ({
             }
           }}
           checked={type == type.value}
-          disabled={disableEditing}
+          disabled={!isAdding}
         >
           {t(type.label)}
         </Tag.Selectable>
@@ -302,7 +341,7 @@ export default ({
         onChange={onChange}
         value={value}
         placeholder={placeholder == undefined ? undefined : t(placeholder)}
-        disabled={disableEditing}
+        disabled={!isAdding}
       />
     );
   };
@@ -313,31 +352,21 @@ export default ({
     }
 
     const items: any[] = [];
-
-    let hasPages = false;
     switch (thirdPartyId) {
       case ThirdPartyId.ExHentai:
-        switch (type) {
-          case ExHentaiDownloadTaskType.SingleWork:
-            items.push({
-              label: 'Urls',
-              component: createSimpleFormInput(true, 'One url for one line'),
-            });
-            break;
-          case ExHentaiDownloadTaskType.Watched:
-            items.push({
-              label: 'Url',
-              component: createSimpleFormInput(false, '\'https://exhentai.org/watched\' by default'),
-            });
-            break;
-          case ExHentaiDownloadTaskType.List:
-            items.push({
-              label: 'Url',
-              component: createSimpleFormInput(false),
-            });
-            hasPages = true;
-            break;
-        }
+        items.push(
+          <ExHentai
+            type={type}
+            isReadOnly={!isAdding}
+            onValueChange={v => {
+              setForm({
+                ...false,
+                keyAndNames: v,
+              });
+            }}
+            value={form.keyAndNames}
+          />,
+        );
         break;
       case ThirdPartyId.Pixiv: {
         switch (type) {
@@ -407,7 +436,7 @@ export default ({
               component: (
                 gettingBilibiliFavorites ? (
                   <Icon type={'loading'} />
-                )
+                  )
                   : bilibiliFavorites.length > 0 ? bilibiliFavorites.map((f: any) => {
                     return (
                       <Tag.Selectable
@@ -424,7 +453,7 @@ export default ({
                           });
                         }}
                         checked={f.id in (form.keyAndNames || {})}
-                        disabled={disableEditing}
+                        disabled={!isAdding}
                       >
                         {f.title}({f.media_count})
                       </Tag.Selectable>
@@ -482,7 +511,7 @@ export default ({
     });
     items.push(intervalComponent);
 
-    if (hasPages) {
+    if (hasPageRange(thirdPartyId, type)) {
       items.push({
         label: 'Pages',
         tip: 'Set a page range if you don\'t want to download them all. The minimal page number is 1.',
@@ -550,6 +579,24 @@ export default ({
         </Button>
       ),
     });
+
+    items.push({
+      label: 'Auto retry',
+      tip: 'Retry automatically when the downloading task failed.',
+      component: (
+        <Checkbox
+          isSelected={form.autoRetry}
+          onValueChange={(v) => {
+            setForm({
+              ...form,
+              autoRetry: v,
+            });
+          }}
+        />
+      ),
+    });
+
+    // console.log(form);
 
     return (
       <>
@@ -648,17 +695,18 @@ export default ({
           }}
         />
       )}
-      <Dialog
-        title={taskId > 0 ? t('Download task') : t('Creating download task')}
+      <Modal
+        onDestroyed={onDestroyed}
+        size={'xl'}
+        defaultVisible
+        title={isAdding ? t('Creating download task') : t('Download task')}
         className={'download-task-detail'}
-        visible
-        closeable
         onOk={() => {
-          if (isCreatingTask) {
+          if (isAdding) {
             createDownloadTask();
           } else {
             PutDownloadTask({
-              id: taskId,
+              id: id,
               model: buildTask(),
             })
               .invoke((a) => {
@@ -677,8 +725,6 @@ export default ({
           </div>
           <div className="sources value">
             {thirdPartyIds.map((tpId) => {
-              // todo: This is a temporary solution.
-              // Tag.Selectable with disabled status will block the hover event, which makes the balloon not working.
               let blockChanging = false;
               let disabledTip: string | undefined;
               if (tpId.value == ThirdPartyId.Bilibili) {
@@ -689,6 +735,14 @@ export default ({
                   );
                 }
               }
+
+              const isSelected = form.thirdPartyId == tpId.value;
+
+              const tag1 = (
+                <Button color={isSelected ? 'primary' : undefined} isDisabled={}>
+                  <ThirdPartyIcon thirdPartyId={tpId.value} />
+                </Button>
+              );
 
               const tag = (
                 <Tag.Selectable
@@ -702,7 +756,7 @@ export default ({
                       setThirdPartyId(tpId.value);
                     }
                   }}
-                  disabled={disableEditing}
+                  disabled={!isAdding}
                   checked={thirdPartyId == tpId.value}
                 >
                   <img src={NameIcon[tpId.value]} alt="" />
@@ -735,7 +789,7 @@ export default ({
           )}
         </div>
         {renderFormItems()}
-      </Dialog>
+      </Modal>
     </>
   );
 };

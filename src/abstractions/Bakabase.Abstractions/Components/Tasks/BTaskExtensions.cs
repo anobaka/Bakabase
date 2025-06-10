@@ -20,7 +20,7 @@ public static class BTaskExtensions
         await manager.Initialize();
         foreach (var t in predefinedTasks)
         {
-            manager.Enqueue(t);
+            await manager.Enqueue(t);
         }
     }
 }

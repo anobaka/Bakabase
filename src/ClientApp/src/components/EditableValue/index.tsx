@@ -1,11 +1,8 @@
 import { AiOutlineCheck, AiOutlineClose, AiOutlineEdit } from 'react-icons/ai';
 import type { ReactNode } from 'react';
 import React, { useState, FC, ReactElement } from 'react';
-import EditableSnippetWithInput from './components/EditableSnippetWithInput';
-import EditableChipWithNumberInput from './components/EditableChipWithNumberInput';
 import { Button } from '@/components/bakaui';
 import { isPromise } from '@/components/utils';
-import IntrinsicAttributes = React.JSX.IntrinsicAttributes;
 
 // export type SimpleEditableValueProps<TValue> = {
 //   onSubmit?: (value?: TValue) => any | Promise<any>;
@@ -123,6 +120,4 @@ function EditableValue<TValue,
 
 export {
   EditableValue,
-  EditableSnippetWithInput,
-  EditableChipWithNumberInput,
 };

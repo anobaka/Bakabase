@@ -31,8 +31,8 @@ import EnhancerSelectorV2 from '@/components/EnhancerSelectorV2';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import SynchronizationConfirmModal from '@/pages/Category/components/SynchronizationConfirmModal';
 import DeleteEnhancementsModal from '@/pages/Category/components/DeleteEnhancementsModal';
-import { PropertyTypeIconMap } from '@/components/Property/models';
 import EnhancerIcon from '@/components/Enhancer/components/EnhancerIcon';
+import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
 
 const EditMode = {
   CoverSelectOrder: 1,
@@ -642,7 +642,7 @@ export default (({
                   className="flex flex-wrap gap-1"
                 >
                   {category.customProperties?.map((e, i) => {
-                    // console.log(e, PropertyTypeIconMap[e.type]);
+                    // console.log(e);
                     return (
                       <Button
                         size={'sm'}
@@ -656,7 +656,7 @@ export default (({
                           );
                         }}
                       >
-                        <Icon type={PropertyTypeIconMap[e.type]} className={'text-base'} />
+                        <PropertyTypeIcon type={e.type} textVariant={'none'} />
                         {e.name}
                       </Button>
                     );

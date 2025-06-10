@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuestionCircleOutlined } from '@ant-design/icons';
-import { AiOutlineCheck, AiOutlineClose, AiOutlineEdit } from 'react-icons/ai';
-import type { InputProps } from '@heroui/react';
+import type { InputProps, SnippetProps } from '@heroui/react';
 import Component from './components/Component';
 import store from '@/store';
 import {
-  Button,
   Input,
   Popover,
   Snippet,
@@ -18,7 +16,6 @@ import {
   TableRow,
 } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
-import EditableInput from '@/components/EditableValue/components/EditableSnippetWithInput';
 import { EditableValue } from '@/components/EditableValue';
 
 export default () => {
@@ -91,12 +88,15 @@ export default () => {
                 {t('curl')}
               </TableCell>
               <TableCell>
-                <EditableValue<InputProps, InputProps, string>
+                <EditableValue<string, InputProps, SnippetProps & { value: string }>
                   Viewer={({
                              value,
                              ...props
-                           }) => (<Snippet symbol={<>&nbsp;</>} {...props}>{value}</Snippet>)}
+                           }) => (value ? (<Snippet symbol={<>&nbsp;</>} {...props}>{value}</Snippet>) : null)}
                   Editor={Input}
+                  editorProps={{
+                    placeholder: t('path/to/curl.exe'),
+                  }}
                   onSubmit={async v => await BApi.options.putThirdPartyOptions({
                     ...thirdPartyOptions,
                     curlExecutable: v,
@@ -110,7 +110,15 @@ export default () => {
                 {t('Ollama endpoint')}
               </TableCell>
               <TableCell>
-                <EditableInput
+                <EditableValue<string, InputProps, SnippetProps & { value: string }>
+                  Viewer={({
+                             value,
+                             ...props
+                           }) => (value ? (<Snippet symbol={<>&nbsp;</>} {...props}>{value}</Snippet>) : null)}
+                  Editor={Input}
+                  editorProps={{
+                    placeholder: t('http://localhost:11434'),
+                  }}
                   onSubmit={async v => await BApi.options.putAiOptions({
                     ...aiOptions,
                     ollamaEndpoint: v,
